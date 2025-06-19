@@ -33,7 +33,9 @@ export function BugReportSummary({ bugData, loading }: BugReportSummaryProps) {
 
   // Function to copy report to clipboard
   const copyToClipboard = () => {
-    const text = `Bug Report Summary:
+    const text = `Bug Report Summary
+Generated on: ${new Date().toLocaleString()}
+
 Total Bugs: ${bugData.total}
 UI Bugs: ${bugData.ui}
 Minor Bugs: ${bugData.minor}

@@ -235,13 +235,13 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const filteredData = combinedData.filter(item => {
     const statusMatch = filterStatus === "all" || item.status === filterStatus;
     const priorityMatch = filterPriority === "all" || item.priority === filterPriority;
-    const moduleMatch = filterModule === "all" || item.module === filterModule;
+    const moduleMatch = filterModule === "all" || item.module === filterModule || item.module === 'No Module';
     const searchMatch = searchQuery === "" || 
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.module.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.assignee.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesSeverity = severityFilter === "all" || 
+    const matchesSeverity = severityFilter === "all" || 
       (item.type === 'bug' && item.severity === severityFilter) ||
       (item.type === 'testcase');
 
@@ -408,6 +408,75 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       setEditTestCaseDialogOpen(true);
     } else {
       setEditBugDialogOpen(true);
+    }
+  };
+
+  // Delete mutations
+  const deleteTestCaseMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/test-cases/${id}`);
+      if (!res.ok) {
+        throw new Error("Failed to delete test case");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/test-cases`] });
+      toast({
+        title: "Test case deleted",
+        description: "Test case has been deleted successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete test case.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteBugMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/bugs/${id}`);
+      if (!res.ok) {
+        throw new Error("Failed to delete bug");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/bugs`] });
+      toast({
+        title: "Bug deleted",
+        description: "Bug has been deleted successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete bug.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle delete item
+  const handleDeleteItem = async (item: any) => {
+    if (!confirm(`Are you sure you want to delete this ${item.type === 'testcase' ? 'test case' : 'bug'}?`)) {
+      return;
+    }
+
+    const [type, itemId] = item.id.split('-');
+    const numericId = parseInt(itemId);
+
+    try {
+      if (type === 'testcase') {
+        await deleteTestCaseMutation.mutateAsync(numericId);
+      } else if (type === 'bug') {
+        await deleteBugMutation.mutateAsync(numericId);
+      }
+    } catch (error) {
+      console.error('Delete failed:', error);
     }
   };
 
@@ -904,6 +973,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                         size="sm"
                         onClick={() => handleViewItem(item)}
                         title="View Details"
+                        className="hover:bg-blue-50 hover:text-blue-600"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -912,8 +982,18 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                         size="sm"
                         onClick={() => handleEditItem(item)}
                         title="Edit Item"
+                        className="hover:bg-green-50 hover:text-green-600"
                       >
                         <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteItem(item)}
+                        title="Delete Item"
+                        className="hover:bg-red-50 hover:text-red-600"
+                      >
+                        <X className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>

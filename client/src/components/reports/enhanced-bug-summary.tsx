@@ -1,4 +1,7 @@
+Enhanced color schema, simplified clipboard copy, and improved card rendering for bug report summary.
+```
 
+```replit_final_file
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -107,38 +110,52 @@ export function EnhancedBugSummary({ bugs, modules = [], projectName, className 
       title: "Open",
       value: stats.open,
       icon: Clock,
-      gradient: "from-purple-500 via-purple-600 to-purple-700",
-      textColor: "text-purple-600",
-      bgColor: "bg-purple-50 dark:bg-purple-950/20",
-      borderColor: "border-purple-200 dark:border-purple-800",
+      gradient: "from-purple-500 via-violet-600 to-indigo-700",
+      textColor: "text-purple-700",
+      bgColor: "bg-gradient-to-br from-purple-50 to-violet-100 dark:from-purple-950/30 dark:to-violet-950/30",
+      borderColor: "border-purple-300 dark:border-purple-700",
+      shadowColor: "shadow-purple-200/50 dark:shadow-purple-900/50",
       description: "Unresolved issues"
     },
     {
       title: "In Progress",
       value: stats.inProgress,
       icon: Clock,
-      gradient: "from-indigo-500 via-indigo-600 to-indigo-700",
-      textColor: "text-indigo-600",
-      bgColor: "bg-indigo-50 dark:bg-indigo-950/20",
-      borderColor: "border-indigo-200 dark:border-indigo-800",
+      gradient: "from-blue-500 via-sky-600 to-cyan-700",
+      textColor: "text-blue-700",
+      bgColor: "bg-gradient-to-br from-blue-50 to-sky-100 dark:from-blue-950/30 dark:to-sky-950/30",
+      borderColor: "border-blue-300 dark:border-blue-700",
+      shadowColor: "shadow-blue-200/50 dark:shadow-blue-900/50",
       description: "Being worked on"
     },
     {
       title: "Resolved",
       value: stats.resolved,
       icon: CheckCircle,
-      gradient: "from-green-500 via-green-600 to-green-700",
-      textColor: "text-green-600",
-      bgColor: "bg-green-50 dark:bg-green-950/20",
-      borderColor: "border-green-200 dark:border-green-800",
+      gradient: "from-green-500 via-emerald-600 to-teal-700",
+      textColor: "text-green-700",
+      bgColor: "bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950/30 dark:to-emerald-950/30",
+      borderColor: "border-green-300 dark:border-green-700",
+      shadowColor: "shadow-green-200/50 dark:shadow-green-900/50",
       description: "Fixed issues"
-    }
+    },
+    {
+      title: "Closed",
+      value: stats.closed,
+      icon: CheckCircle,
+      gradient: "from-emerald-500 via-teal-600 to-cyan-700",
+      textColor: "text-emerald-700",
+      bgColor: "bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/30 dark:to-teal-950/30",
+      borderColor: "border-emerald-300 dark:border-emerald-700",
+      shadowColor: "shadow-emerald-200/50 dark:shadow-emerald-900/50",
+      description: "Completed issues"
+    },
   ];
 
   const copyToClipboard = (cardTitle: string, cardValue: number) => {
     const selectedModule = modules.find(m => m.id === parseInt(selectedModuleId));
     const moduleText = selectedModule ? ` in ${selectedModule.name}` : '';
-    
+
     const summaryText = `Bug Report Summary${projectName ? ` for ${projectName}` : ''}${moduleText}
 Generated on: ${new Date().toLocaleString()}
 
@@ -174,7 +191,7 @@ Percentage: ${stats.total > 0 ? ((cardValue / stats.total) * 100).toFixed(1) : '
   const copyAllToClipboard = () => {
     const selectedModule = modules.find(m => m.id === parseInt(selectedModuleId));
     const moduleText = selectedModule ? ` in ${selectedModule.name}` : '';
-    
+
     const summaryText = `Complete Bug Report Summary${projectName ? ` for ${projectName}` : ''}${moduleText}
 Generated on: ${new Date().toLocaleString()}
 
@@ -182,19 +199,17 @@ Generated on: ${new Date().toLocaleString()}
 Total Bugs: ${stats.total}
 
 🚨 BY SEVERITY:
-Critical: ${stats.critical} (${stats.total > 0 ? ((stats.critical / stats.total) * 100).toFixed(1) : '0'}%)
-Major: ${stats.major} (${stats.total > 0 ? ((stats.major / stats.total) * 100).toFixed(1) : '0'}%)
-Minor: ${stats.minor} (${stats.total > 0 ? ((stats.minor / stats.total) * 100).toFixed(1) : '0'}%)
-Trivial: ${stats.trivial} (${stats.total > 0 ? ((stats.trivial / stats.total) * 100).toFixed(1) : '0'}%)
+Critical: ${stats.critical}
+Major: ${stats.major}
+Minor: ${stats.minor}
+Trivial: ${stats.trivial}
 
 📋 BY STATUS:
-Open: ${stats.open} (${stats.total > 0 ? ((stats.open / stats.total) * 100).toFixed(1) : '0'}%)
-In Progress: ${stats.inProgress} (${stats.total > 0 ? ((stats.inProgress / stats.total) * 100).toFixed(1) : '0'}%)
-Resolved: ${stats.resolved} (${stats.total > 0 ? ((stats.resolved / stats.total) * 100).toFixed(1) : '0'}%)
-Closed: ${stats.closed} (${stats.total > 0 ? ((stats.closed / stats.total) * 100).toFixed(1) : '0'}%)
-
-🔍 BUG DETAILS:
-${filteredBugs.map(bug => `- ${bug.bugId || bug.id}: ${bug.title} (${bug.severity} - ${bug.status})`).join('\n')}`;
+Open: ${stats.open}
+In Progress: ${stats.inProgress}
+Resolved: ${stats.resolved}
+Closed: ${stats.closed}
+`;
 
     navigator.clipboard.writeText(summaryText).then(() => {
       setCopied('all');
@@ -271,59 +286,44 @@ ${filteredBugs.map(bug => `- ${bug.bugId || bug.id}: ${bug.title} (${bug.severit
           {summaryCards.map((card, index) => {
             const Icon = card.icon;
             return (
-              <motion.div
-                key={card.title}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-              >
-                <Card className={cn(
-                  "relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer group",
-                  card.borderColor
-                )}>
-                  <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-5 group-hover:opacity-10 transition-opacity duration-300`} />
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      {card.title}
-                    </CardTitle>
-                    <div className={cn("p-2 rounded-lg transition-colors duration-300", card.bgColor)}>
-                      <Icon className={cn("h-4 w-4", card.textColor)} />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={cn("text-2xl font-bold transition-colors duration-300", card.textColor)}>
-                      {card.value}
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <p className="text-xs text-muted-foreground">
-                        {card.description}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {stats.total > 0 ? `${((card.value / stats.total) * 100).toFixed(1)}%` : '0%'}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(card.title, card.value)}
-                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    {copied === card.title && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="absolute inset-0 flex items-center justify-center bg-white/90 dark:bg-gray-900/90 rounded-lg"
-                      >
-                        <span className="text-sm font-medium text-green-600">Copied!</span>
-                      </motion.div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <Card 
+              key={index} 
+              className={`relative overflow-hidden transition-all duration-500 hover:scale-105 hover:shadow-xl hover:-translate-y-1 border-2 ${card.borderColor} ${card.bgColor} group cursor-pointer shadow-lg ${card.shadowColor}`}
+              onClick={() => copyToClipboard(card.title, card.value)}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-10 group-hover:opacity-20 transition-all duration-500`} />
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                <CardTitle className="text-sm font-semibold text-muted-foreground group-hover:text-foreground transition-colors duration-300">
+                  {card.title}
+                </CardTitle>
+                <div className={`${card.bgColor} p-2.5 rounded-xl border-2 ${card.borderColor} shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-110`}>
+                  <Icon className={`h-5 w-5 ${card.textColor} group-hover:scale-110 transition-transform duration-300`} />
+                </div>
+              </CardHeader>
+              <CardContent className="relative z-10">
+                <div className={`text-4xl font-bold ${card.textColor} mb-2 group-hover:scale-105 transition-transform duration-300`}>
+                  {card.value}
+                </div>
+                <p className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors duration-300">
+                  {card.description}
+                </p>
+                <div className="flex items-center justify-between mt-3">
+                  <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors duration-300">
+                    Click to copy summary
+                  </span>
+                  {copied === card.title && (
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      className="text-green-600 bg-green-100 p-1 rounded-full"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </motion.div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
             );
           })}
         </motion.div>
