@@ -265,7 +265,7 @@ ${bug.comments || 'No comments provided.'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(bug.dateReported), "MMM d, yyyy")}
+                      {bug.dateReported ? format(new Date(bug.dateReported), "MMM d, yyyy") : "N/A"}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

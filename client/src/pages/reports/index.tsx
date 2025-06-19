@@ -29,6 +29,7 @@ import autoTable from "jspdf-autotable";
 import Papa from "papaparse";
 import { BugReportSummary } from "@/components/reports/bug-report-summary";
 import { useLocation } from "wouter";
+import { EnhancedBugSummary } from "@/components/reports/enhanced-bug-summary";
 
 export default function ReportsPage() {
   const [, setLocation] = useLocation();
@@ -273,7 +274,7 @@ export default function ReportsPage() {
       doc.setFontSize(24);
       doc.setTextColor(0, 0, 0);
       doc.text("PROJECT REPORT", 105, 50, { align: 'center' });
-      
+
       doc.setFontSize(20);
       doc.text(selectedProject.name, 105, 70, { align: 'center' });
 
@@ -388,7 +389,7 @@ export default function ReportsPage() {
             doc.addPage();
             doc.setFontSize(14);
             doc.text(`MODULE: ${module.name}`, 14, 20);
-            
+
             doc.setFontSize(10);
             doc.text(`Description: ${module.description || "No description"}`, 14, 30);
 
@@ -527,31 +528,31 @@ export default function ReportsPage() {
 
       doc.setFontSize(10);
       let summaryY = 35;
-      
+
       doc.text(`Project ${selectedProject.name} Analysis:`, 14, summaryY);
       summaryY += 10;
-      
+
       doc.text(`• Overall test execution is ${passRate}% complete with ${passedCount} tests passed out of ${testCases.length}.`, 14, summaryY);
       summaryY += 8;
-      
+
       if (failedCount > 0) {
         doc.text(`• ${failedCount} test cases have failed and require attention.`, 14, summaryY);
         summaryY += 8;
       }
-      
+
       if (blockedCount > 0) {
         doc.text(`• ${blockedCount} test cases are currently blocked and need resolution.`, 14, summaryY);
         summaryY += 8;
       }
-      
+
       doc.text(`• There are ${bugs.length} total bugs reported with ${openBugsCount} still open.`, 14, summaryY);
       summaryY += 8;
-      
+
       if (criticalBugs > 0) {
         doc.text(`• ${criticalBugs} critical bugs require immediate attention.`, 14, summaryY);
         summaryY += 8;
       }
-      
+
       doc.text(`• Bug resolution rate: ${bugs.length > 0 ? Math.round(((resolvedBugsCount + closedBugsCount) / bugs.length) * 100) : 0}%`, 14, summaryY);
 
       // Save PDF
@@ -691,12 +692,23 @@ export default function ReportsPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Project summary */}
+            <div className="grid gap-6">
+            {/* Enhanced Bug Summary */}
+            {selectedProject && (
+              <EnhancedBugSummary
+                bugs={bugs || []}
+                modules={modules || []}
+                projectName={selectedProject.name}
+                className="mb-6"
+              />
+            )}
+
+            {/* Project Summary */}
             <Card>
               <CardHeader>
-                <CardTitle>{selectedProject?.name}</CardTitle>
+                <CardTitle>Project Overview</CardTitle>
                 <CardDescription>
-                  {selectedProject?.description || "No description provided"}
+                  Summary statistics for {selectedProject?.name || "selected project"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -731,8 +743,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Test Case Progress Bar */}
-                  <div>
+                  {/* Test Case Progress Bar */}<div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium">Test Case Execution Progress</span>
                       <span className="text-sm text-gray-500">{passRate}% Complete</span>

@@ -225,8 +225,14 @@ class MemStorage implements IStorage {
   async createModule(insertModule: InsertModule): Promise<Module> {
     // Generate sequential module ID starting from 1 for each project
     const existingModules = Array.from(this.modules.values())
-      .filter(module => module.projectId === insertModule.projectId);
-    const nextModuleId = existingModules.length + 1;
+      .filter(module => module.projectId === insertModule.projectId)
+      .map(module => {
+        const match = module.moduleId?.match(/MOD-(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(num => !isNaN(num));
+    
+    const nextModuleId = existingModules.length > 0 ? Math.max(...existingModules) + 1 : 1;
 
     const module: Module = {
       id: this.getNextId(),

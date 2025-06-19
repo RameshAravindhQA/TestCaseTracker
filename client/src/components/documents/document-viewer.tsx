@@ -137,7 +137,7 @@ export function DocumentViewer({ document, isOpen, onClose }: DocumentViewerProp
             </div>
           )}
 
-          {isImage && (
+          {isImage && !hasError && (
             <div className="flex items-center justify-center min-h-full p-4">
               <img
                 src={document.fileUrl}
@@ -145,7 +145,7 @@ export function DocumentViewer({ document, isOpen, onClose }: DocumentViewerProp
                 className="max-w-none transition-transform duration-200"
                 style={{
                   transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                  maxHeight: hasError ? '0' : 'none'
+                  maxHeight: 'none'
                 }}
                 onLoad={handleImageLoad}
                 onError={handleImageError}
