@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
@@ -614,7 +615,6 @@ export default function ReportsPage() {
   return (
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
-      <div>
         <div className="mb-6 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Reports</h1>
@@ -743,7 +743,9 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Test Case Progress Bar */}<div>                    <div className="flex justify-between items-center mb-2">
+                  {/* Test Case Progress Bar */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium">Test Case Execution Progress</span>
                       <span className="text-sm text-gray-500">{passRate}% Complete</span>
                     </div>
@@ -958,8 +960,6 @@ export default function ReportsPage() {
               </Card>
             </div>
 
-
-
             {/* Bug stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
@@ -1048,8 +1048,8 @@ export default function ReportsPage() {
                 </CardFooter>
               </Card>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </MainLayout>
   );
