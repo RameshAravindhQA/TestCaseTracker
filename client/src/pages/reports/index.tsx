@@ -1050,7 +1050,7 @@ export default function ReportsPage() {
               </Card>
             </div>
           </div>
-        )}
+          )}
         </div>
       </div>
     </MainLayout>
