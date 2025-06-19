@@ -858,7 +858,7 @@ class MemStorage implements IStorage {
   }
 
   async getDocumentFolders(projectId: number): Promise<DocumentFolder[]> {
-    return Array.from(```text
+    return Array.from(this```text
 this.documentFolders.values()).filter(folder => folder.projectId === projectId);
   }
 
@@ -1393,3 +1393,7 @@ const memStorage = new MemStorage();
 (memStorage as any).initializeDefaultData();
 export const storage: IStorage = memStorage;
 console.log("✅ In-memory storage initialized successfully");
+
+export async function closeConnection() {
+  console.log("In-memory storage - no connection to close");
+}
