@@ -223,7 +223,7 @@ class MemStorage implements IStorage {
   }
 
   async createModule(insertModule: InsertModule): Promise<Module> {
-    // Generate sequential module ID starting from 1
+    // Generate sequential module ID starting from 1 for each project
     const existingModules = Array.from(this.modules.values())
       .filter(module => module.projectId === insertModule.projectId);
     const nextModuleId = existingModules.length + 1;
@@ -252,32 +252,47 @@ class MemStorage implements IStorage {
   }
 
   // Test case operations
-  async getTestCases(projectId: number, moduleId?: number): Promise<TestCase[]> {
-    return this.getTestCasesByProject(projectId).then(testCases => {
-      if (moduleId) {
-        return testCases.filter(tc => tc.moduleId === moduleId);
-      }
-      return testCases;
-    });
+  async getTestCases(): Promise<TestCase[]> {
+    return Array.from(this.testCases.values());
   }
 
   async getTestCasesByProject(projectId: number): Promise<TestCase[]> {
     return Array.from(this.testCases.values()).filter(tc => tc.projectId === projectId);
   }
 
-  async createTestCase(data: Omit<TestCase, 'id' | 'createdAt' | 'updatedAt'>): Promise<TestCase> {
-    const id = this.nextId++;
+  async getTestCase(id: number): Promise<TestCase | undefined> {
+    return this.testCases.get(id);
+  }
+
+  async createTestCase(insertTestCase: InsertTestCase): Promise<TestCase> {
+    const id = this.getNextId();
     const now = new Date();
 
+    // Auto-generate test case ID if not provided
+    let testCaseId = insertTestCase.testCaseId;
+    if (!testCaseId || testCaseId.trim() === '') {
+      // Find the highest existing test case number for this project
+      const existingTestCases = Array.from(this.testCases.values())
+        .filter(tc => tc.projectId === insertTestCase.projectId)
+        .map(tc => tc.testCaseId)
+        .filter(id => id && id.match(/^TC-(\d+)$/))
+        .map(id => parseInt(id.replace('TC-', ''), 10))
+        .filter(num => !isNaN(num));
+      
+      const nextNumber = existingTestCases.length > 0 ? Math.max(...existingTestCases) + 1 : 1;
+      testCaseId = `TC-${String(nextNumber).padStart(3, '0')}`;
+    }
+
     const testCase: TestCase = {
-      ...data,
+      ...insertTestCase,
       id,
+      testCaseId,
       createdAt: now,
       updatedAt: now
     };
 
     this.testCases.set(id, testCase);
-    this.recordActivity('test_case', 'created', testCase.id, data.assignedTo || 1);
+    this.recordActivity('test_case', 'created', testCase.id, insertTestCase.createdById);
     return testCase;
   }
 
@@ -301,20 +316,47 @@ class MemStorage implements IStorage {
   }
 
   // Bug operations
-  async createBug(data: Omit<Bug, 'id' | 'createdAt' | 'updatedAt'>): Promise<Bug> {
-    const id = this.nextId++;
+  async createBug(insertBug: InsertBug): Promise<Bug> {
+    const id = this.getNextId();
     const now = new Date();
 
+    // Auto-generate bug ID if not provided
+    let bugId = insertBug.bugId;
+    if (!bugId || bugId.trim() === '') {
+      // Find the highest existing bug number
+      const existingBugs = Array.from(this.bugs.values())
+        .map(bug => bug.bugId)
+        .filter(id => id && id.match(/^BUG-(\d+)$/))
+        .map(id => parseInt(id.replace('BUG-', ''), 10))
+        .filter(num => !isNaN(num));
+      
+      const nextNumber = existingBugs.length > 0 ? Math.max(...existingBugs) + 1 : 1;
+      bugId = `BUG-${String(nextNumber).padStart(3, '0')}`;
+    }
+
     const bug: Bug = {
-      ...data,
+      ...insertBug,
       id,
+      bugId,
       createdAt: now,
       updatedAt: now
     };
 
     this.bugs.set(id, bug);
-    this.recordActivity('bug', 'created', bug.id, data.assignedTo);
+    this.recordActivity('bug', 'created', bug.id, insertBug.reportedById);
     return bug;
+  }
+
+  async getBugs(): Promise<Bug[]> {
+    return Array.from(this.bugs.values());
+  }
+
+  async getBugsByProject(projectId: number): Promise<Bug[]> {
+    return Array.from(this.bugs.values()).filter(bug => bug.projectId === projectId);
+  }
+
+  async getBug(id: number): Promise<Bug | undefined> {
+    return this.bugs.get(id);
   }
 
   async getBugs(filters?: { projectId?: number; status?: string; severity?: string }): Promise<Bug[]> {
@@ -1269,6 +1311,24 @@ class MemStorage implements IStorage {
 
   async updateTraceabilityMatrixCell(id: number, cell: any): Promise<any> {
     return cell; // Placeholder for now
+  }
+
+  // Helper method to record activities
+  private recordActivity(entityType: string, action: string, entityId: number, userId: number) {
+    const activity = {
+      id: this.getNextId(),
+      entityType,
+      action,
+      entityId,
+      userId,
+      timestamp: new Date(),
+      details: {
+        entityType,
+        action,
+        entityId
+      }
+    };
+    this.activities.set(activity.id, activity);
   }
 
   // Initialize with some default data
