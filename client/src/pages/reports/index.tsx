@@ -703,7 +703,6 @@ export default function ReportsPage() {
               />
             )}
 
-            <div className="grid gap-6">
             {/* Project Summary */}
             <Card>
               <CardHeader>
@@ -1049,8 +1048,7 @@ export default function ReportsPage() {
                 </CardFooter>
               </Card>
             </div>
-          </div>
-            )}
+          )}
         </div>
       </div>
     </MainLayout>
