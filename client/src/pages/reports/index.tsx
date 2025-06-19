@@ -692,7 +692,6 @@ export default function ReportsPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="grid gap-6">
             {/* Enhanced Bug Summary */}
             {selectedProject && (
               <EnhancedBugSummary
@@ -703,6 +702,7 @@ export default function ReportsPage() {
               />
             )}
 
+            <div className="grid gap-6">
             {/* Project Summary */}
             <Card>
               <CardHeader>
