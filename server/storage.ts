@@ -223,21 +223,29 @@ class MemStorage implements IStorage {
   }
 
   async createModule(insertModule: InsertModule): Promise<Module> {
-    // Generate sequential module ID starting from 1 for each project
-    const existingModules = Array.from(this.modules.values())
-      .filter(module => module.projectId === insertModule.projectId)
-      .map(module => {
-        const match = module.moduleId?.match(/MOD-(\d+)$/);
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter(num => !isNaN(num));
-    
-    const nextModuleId = existingModules.length > 0 ? Math.max(...existingModules) + 1 : 1;
+    // Auto-generate module ID if not provided
+    let moduleId = insertModule.moduleId;
+    if (!moduleId || moduleId.trim() === '') {
+      // Get the highest existing module number for this specific project only
+      const existingModules = Array.from(this.modules.values())
+        .filter(module => module.projectId === insertModule.projectId)
+        .map(module => module.moduleId)
+        .filter(id => id && id.match(/^MOD-(\d+)$/))
+        .map(id => {
+          const match = id.match(/^MOD-(\d+)$/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(num => !isNaN(num));
+
+      // Start from 1 for each project
+      const nextNumber = existingModules.length > 0 ? Math.max(...existingModules) + 1 : 1;
+      moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
+    }
 
     const module: Module = {
       id: this.getNextId(),
       ...insertModule,
-      moduleId: `MOD-${nextModuleId}`,
+      moduleId: moduleId,
       createdAt: new Date(),
     };
     this.modules.set(module.id, module);
@@ -280,18 +288,18 @@ class MemStorage implements IStorage {
       // Get the module to extract the first 3 letters of its name
       const module = this.modules.get(insertTestCase.moduleId);
       let modulePrefix = 'TC';
-      
+
       if (module && module.name) {
         // Extract first 3 letters from module name and convert to uppercase
         const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, ''); // Remove non-alphabetic characters
         modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
-        
+
         // If module name has less than 3 letters, pad with 'X'
         if (modulePrefix.length < 3) {
           modulePrefix = modulePrefix.padEnd(3, 'X');
         }
       }
-      
+
       // Find the highest existing test case number for this module with the same prefix
       const prefixPattern = new RegExp(`^${modulePrefix}-TC-(\\d+)$`);
       const existingTestCases = Array.from(this.testCases.values())
@@ -303,7 +311,7 @@ class MemStorage implements IStorage {
           return match ? parseInt(match[1], 10) : 0;
         })
         .filter(num => !isNaN(num));
-      
+
       const nextNumber = existingTestCases.length > 0 ? Math.max(...existingTestCases) + 1 : 1;
       testCaseId = `${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
     }
@@ -354,7 +362,7 @@ class MemStorage implements IStorage {
         .filter(id => id && id.match(/^BUG-(\d+)$/))
         .map(id => parseInt(id.replace('BUG-', ''), 10))
         .filter(num => !isNaN(num));
-      
+
       const nextNumber = existingBugs.length > 0 ? Math.max(...existingBugs) + 1 : 1;
       bugId = `BUG-${String(nextNumber).padStart(3, '0')}`;
     }
@@ -850,7 +858,8 @@ class MemStorage implements IStorage {
   }
 
   async getDocumentFolders(projectId: number): Promise<DocumentFolder[]> {
-    return Array.from(this.documentFolders.values()).filter(folder => folder.projectId === projectId);
+    return Array.from(```text
+this.documentFolders.values()).filter(folder => folder.projectId === projectId);
   }
 
   async getDocumentFolder(id: number): Promise<DocumentFolder | undefined> {

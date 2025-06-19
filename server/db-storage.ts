@@ -150,8 +150,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createModule(insertModule: InsertModule): Promise<Module> {
+    // Auto-generate module ID if not provided
+    let moduleId = insertModule.moduleId;
+    if (!moduleId || moduleId.trim() === '') {
+      // Get the highest existing module number for this specific project only
+      const existingModules = await db.select()
+        .from(modules)
+        .where(eq(modules.projectId, insertModule.projectId));
+      
+      const moduleNumbers = existingModules
+        .map(module => module.moduleId)
+        .filter(id => id && id.match(/^MOD-(\d+)$/))
+        .map(id => {
+          const match = id.match(/^MOD-(\d+)$/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(num => !isNaN(num));
+      
+      // Start from 1 for each project
+      const nextNumber = moduleNumbers.length > 0 ? Math.max(...moduleNumbers) + 1 : 1;
+      moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
+    }
+
     const [newModule] = await db.insert(modules).values({
       ...insertModule,
+      moduleId,
       createdAt: new Date()
     }).returning();
     return newModule;

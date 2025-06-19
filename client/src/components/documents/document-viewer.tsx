@@ -6,24 +6,24 @@ import type { Document } from "@/types";
 
 interface DocumentViewerProps {
   document: Document | null;
-  isOpen: boolean;
   onClose: () => void;
+  onDownload: () => void;
 }
 
-export function DocumentViewer({ document, isOpen, onClose }: DocumentViewerProps) {
+export function DocumentViewer({ document, onClose, onDownload }: DocumentViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
 
   useEffect(() => {
-    if (isOpen && document) {
+    if (document) {
       setIsLoading(true);
       setHasError(false);
       setZoom(1);
       setRotation(0);
     }
-  }, [isOpen, document]);
+  }, [document]);
 
   if (!document) return null;
 
@@ -64,7 +64,7 @@ export function DocumentViewer({ document, isOpen, onClose }: DocumentViewerProp
   const handleRotate = () => setRotation(prev => (prev + 90) % 360);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={!!document} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[95vh] p-0 overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b bg-background">
           <div className="flex-1 min-w-0">

@@ -1670,13 +1670,14 @@ export default function DocumentsPage() {
         </Dialog>
 
         {/* Document Viewer */}
-        {selectedDocument && viewDocumentOpen && (
-          <DocumentViewer
-            document={selectedDocument}
-            onClose={() => setViewDocumentOpen(false)}
-            onDownload={() => handleDownloadDocument(selectedDocument)}
-          />
-        )}
+        <DocumentViewer
+          document={viewDocumentOpen ? selectedDocument : null}
+          onClose={() => {
+            setViewDocumentOpen(false);
+            setSelectedDocument(null);
+          }}
+          onDownload={() => selectedDocument && handleDownloadDocument(selectedDocument)}
+        />
 
         {/* Delete Document Confirmation */}
         <AlertDialog open={deleteDocumentDialog} onOpenChange={setDeleteDocumentDialog}>
