@@ -1,7 +1,3 @@
-Enhanced color schema, simplified clipboard copy, and improved card rendering for bug report summary.
-```
-
-```replit_final_file
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
