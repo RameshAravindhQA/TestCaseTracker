@@ -4,17 +4,24 @@ modules = ["nodejs-20", "web", "bash"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Start Application"
+runButton = "Start TestCaseTracker"
 
 [[workflows.workflow]]
-name = "Start Application"
-mode = "single"
-author = "agent"
+name = "Start TestCaseTracker"
+author = 42215223
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run db:migrate"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
-waitForPort = 5008
 
 [deployment]
 run = ["sh", "-c", "python app.py"]
