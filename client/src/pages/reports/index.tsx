@@ -614,6 +614,7 @@ export default function ReportsPage() {
   return (
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
+      <div>
         <div className="mb-6 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Reports</h1>
