@@ -693,7 +693,6 @@ export default function ReportsPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div>
             {/* Enhanced Bug Summary */}
             {selectedProject && (
               <EnhancedBugSummary
@@ -1052,7 +1051,6 @@ export default function ReportsPage() {
             </div>
           </div>
             )}
-          </div>
         </div>
       </div>
     </MainLayout>
