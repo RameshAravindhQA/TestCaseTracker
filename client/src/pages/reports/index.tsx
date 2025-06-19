@@ -743,8 +743,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Test Case Progress Bar */}<div>
-                    <div className="flex justify-between items-center mb-2">
+                  {/* Test Case Progress Bar */}<div>                    <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium">Test Case Execution Progress</span>
                       <span className="text-sm text-gray-500">{passRate}% Complete</span>
                     </div>
@@ -1052,6 +1051,7 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
+    </div>
     </MainLayout>
   );
 }
