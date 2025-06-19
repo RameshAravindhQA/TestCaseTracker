@@ -271,16 +271,35 @@ class MemStorage implements IStorage {
     // Auto-generate test case ID if not provided
     let testCaseId = insertTestCase.testCaseId;
     if (!testCaseId || testCaseId.trim() === '') {
-      // Find the highest existing test case number for this project
+      // Get the module to extract the first 3 letters of its name
+      const module = this.modules.get(insertTestCase.moduleId);
+      let modulePrefix = 'TC';
+      
+      if (module && module.name) {
+        // Extract first 3 letters from module name and convert to uppercase
+        const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, ''); // Remove non-alphabetic characters
+        modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
+        
+        // If module name has less than 3 letters, pad with 'X'
+        if (modulePrefix.length < 3) {
+          modulePrefix = modulePrefix.padEnd(3, 'X');
+        }
+      }
+      
+      // Find the highest existing test case number for this module with the same prefix
+      const prefixPattern = new RegExp(`^${modulePrefix}-TC-(\\d+)$`);
       const existingTestCases = Array.from(this.testCases.values())
-        .filter(tc => tc.projectId === insertTestCase.projectId)
+        .filter(tc => tc.moduleId === insertTestCase.moduleId)
         .map(tc => tc.testCaseId)
-        .filter(id => id && id.match(/^TC-(\d+)$/))
-        .map(id => parseInt(id.replace('TC-', ''), 10))
+        .filter(id => id && prefixPattern.test(id))
+        .map(id => {
+          const match = id.match(prefixPattern);
+          return match ? parseInt(match[1], 10) : 0;
+        })
         .filter(num => !isNaN(num));
       
       const nextNumber = existingTestCases.length > 0 ? Math.max(...existingTestCases) + 1 : 1;
-      testCaseId = `TC-${String(nextNumber).padStart(3, '0')}`;
+      testCaseId = `${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
     }
 
     const testCase: TestCase = {
