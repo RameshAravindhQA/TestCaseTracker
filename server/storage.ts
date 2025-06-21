@@ -855,7 +855,8 @@ class MemStorage implements IStorage {
     const bugs = Array.from(this.bugs.values());
     const bugStatusCounts = {
       open: bugs.filter(bug => bug.status === 'Open').length,
-      inProgress: bugs.filter(bug => bug.status === 'In Progress').length,
+      inProgress: bugs<replit_final_file>
+.filter(bug => bug.status === 'In Progress').length,
       resolved: bugs.filter(bug => bug.status === 'Resolved').length,
       closed: bugs.filter(bug => bug.status === 'Closed').length,
       critical: bugs.filter(bug => bug.severity === 'Critical').length,

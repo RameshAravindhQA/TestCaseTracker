@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProjectSelect } from "@/components/ui/project-select";
@@ -66,8 +65,8 @@ export default function TestSheetsPage() {
   const queryClient = useQueryClient();
 
   // Fetch projects
-  const { data: projects } = useQuery<Project[]>({
-    queryKey: ['/api/projects'],
+  const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
   });
 
   // Fetch test sheets for selected project
@@ -98,7 +97,7 @@ export default function TestSheetsPage() {
           namedRanges: [],
         },
       };
-      
+
       return apiRequest('POST', '/api/test-sheets', sheetData);
     },
     onSuccess: () => {
@@ -168,7 +167,7 @@ export default function TestSheetsPage() {
 
   const handleCreateSheet = () => {
     if (!selectedProjectId || !newSheetName.trim()) return;
-    
+
     createTestSheetMutation.mutate({
       name: newSheetName.trim(),
       projectId: selectedProjectId,
@@ -177,7 +176,7 @@ export default function TestSheetsPage() {
 
   const handleDuplicateSheet = () => {
     if (!selectedSheet || !duplicateSheetName.trim()) return;
-    
+
     duplicateTestSheetMutation.mutate({
       id: selectedSheet.id,
       name: duplicateSheetName.trim(),
@@ -186,7 +185,7 @@ export default function TestSheetsPage() {
 
   const handleDeleteSheet = () => {
     if (!selectedSheet) return;
-    
+
     deleteTestSheetMutation.mutate(selectedSheet.id);
   };
 
@@ -218,7 +217,7 @@ export default function TestSheetsPage() {
             Select Project
           </Label>
           <div className="mt-1 max-w-md">
-            <ProjectSelect
+          <ProjectSelect
               value={selectedProjectId}
               onValueChange={setSelectedProjectId}
               placeholder="Choose a project to view test sheets"

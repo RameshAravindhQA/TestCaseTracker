@@ -1414,13 +1414,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Fix module IDs for a project (admin only)
-  apiRouter.post("/projects/:projectId/fix-module-ids", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+  apiRouter.post("/projects/:projectId/fix-module-ids", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const project = await storage.getProject(projectId);
       
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Check if user has access to this project
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+        
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
       }
       
       const modules = await storage.getModules(projectId);
