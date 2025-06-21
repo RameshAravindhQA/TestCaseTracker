@@ -882,7 +882,8 @@ class MemStorage implements IStorage {
         projectName: project.name,
         description: project.description,
         status: project.status,
-        createdAt: project.createdAt,
+        ```text
+createdAt: project.createdAt,
         totalModules: modules.length,
         totalTestCases: testCases.length,
         totalBugs: bugs.length,
@@ -898,11 +899,11 @@ class MemStorage implements IStorage {
   // Test Sheets methods
   async getTestSheets(projectId?: number): Promise<any[]> {
     let results = Array.from(this.testSheets.values());
-    
+
     if (projectId) {
       results = results.filter(sheet => sheet.projectId === projectId);
     }
-    
+
     console.log(`Storage: getTestSheets(${projectId}) returning ${results.length} sheets`);
     return results;
   }
@@ -914,7 +915,7 @@ class MemStorage implements IStorage {
   async createTestSheet(data: any): Promise<any> {
     const id = this.getNextId();
     const now = new Date().toISOString();
-    
+
     const newSheet = {
       id,
       ...data,
@@ -936,7 +937,7 @@ class MemStorage implements IStorage {
       ...data, 
       updatedAt: new Date().toISOString() 
     };
-    
+
     this.testSheets.set(id, updatedSheet);
     return updatedSheet;
   }
@@ -953,7 +954,7 @@ class MemStorage implements IStorage {
 
     const newId = this.getNextId();
     const now = new Date().toISOString();
-    
+
     const duplicatedSheet = {
       id: newId,
       name,
