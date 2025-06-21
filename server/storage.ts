@@ -237,7 +237,7 @@ class MemStorage implements IStorage {
         })
         .filter(num => !isNaN(num));
 
-      // Start from 1 for each project
+      // Start from 1 for each project - always increment from the highest existing number
       const nextNumber = existingModules.length > 0 ? Math.max(...existingModules) + 1 : 1;
       moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
     }

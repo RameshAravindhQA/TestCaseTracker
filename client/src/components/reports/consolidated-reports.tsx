@@ -58,29 +58,54 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   // Fetch project data
   const { data: project } = useQuery<Project>({
     queryKey: [`/api/projects/${currentProjectId}`],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/projects/${currentProjectId}`);
+      if (!response.ok) throw new Error("Failed to fetch project");
+      return response.json();
+    },
     enabled: !!currentProjectId,
   });
 
   // Fetch modules
   const { data: modules } = useQuery<Module[]>({
     queryKey: [`/api/projects/${currentProjectId}/modules`],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/projects/${currentProjectId}/modules`);
+      if (!response.ok) throw new Error("Failed to fetch modules");
+      return response.json();
+    },
     enabled: !!currentProjectId,
   });
 
   // Fetch users
   const { data: users } = useQuery<User[]>({
     queryKey: ["/api/users"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/users");
+      if (!response.ok) throw new Error("Failed to fetch users");
+      return response.json();
+    },
   });
 
   // Fetch test cases
   const { data: testCases, isLoading: isTestCasesLoading } = useQuery<TestCase[]>({
     queryKey: [`/api/projects/${currentProjectId}/test-cases`],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/projects/${currentProjectId}/test-cases`);
+      if (!response.ok) throw new Error("Failed to fetch test cases");
+      return response.json();
+    },
     enabled: !!currentProjectId,
   });
 
   // Fetch bugs
   const { data: bugs, isLoading: isBugsLoading } = useQuery<Bug[]>({
     queryKey: [`/api/projects/${currentProjectId}/bugs`],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/projects/${currentProjectId}/bugs`);
+      if (!response.ok) throw new Error("Failed to fetch bugs");
+      return response.json();
+    },
     enabled: !!currentProjectId,
   });
 
@@ -364,30 +389,30 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const getStatusColor = (status: string, type: string) => {
     if (type === 'testcase') {
       switch (status) {
-        case 'Pass': return 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border-green-300';
-        case 'Fail': return 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border-red-300';
-        case 'Blocked': return 'bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border-orange-300';
-        case 'Not Executed': return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border-gray-300';
-        default: return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border-gray-300';
+        case 'Pass': return 'bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-semibold shadow-lg';
+        case 'Fail': return 'bg-gradient-to-r from-red-500 via-rose-600 to-pink-500 text-white border-0 font-semibold shadow-lg';
+        case 'Blocked': return 'bg-gradient-to-r from-orange-500 via-amber-600 to-yellow-500 text-white border-0 font-semibold shadow-lg';
+        case 'Not Executed': return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg';
+        default: return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg';
       }
     } else {
       switch (status) {
-        case 'Open': return 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border-red-300';
-        case 'In Progress': return 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border-blue-300';
-        case 'Resolved': return 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border-green-300';
-        case 'Closed': return 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border-purple-300';
-        default: return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border-gray-300';
+        case 'Open': return 'bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-semibold shadow-lg';
+        case 'In Progress': return 'bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-600 text-white border-0 font-semibold shadow-lg';
+        case 'Resolved': return 'bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600 text-white border-0 font-semibold shadow-lg';
+        case 'Closed': return 'bg-gradient-to-r from-purple-600 via-violet-700 to-indigo-600 text-white border-0 font-semibold shadow-lg';
+        default: return 'bg-gradient-to-r from-slate-600 via-gray-700 to-zinc-600 text-white border-0 font-semibold shadow-lg';
       }
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'Critical': return 'bg-gradient-to-r from-red-500 to-red-600 text-white';
-      case 'High': return 'bg-gradient-to-r from-red-400 to-red-500 text-white';
-      case 'Medium': return 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-black';
-      case 'Low': return 'bg-gradient-to-r from-green-400 to-green-500 text-white';
-      default: return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white';
+      case 'Critical': return 'bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-bold shadow-xl';
+      case 'High': return 'bg-gradient-to-r from-orange-600 via-red-600 to-rose-600 text-white border-0 font-bold shadow-lg';
+      case 'Medium': return 'bg-gradient-to-r from-yellow-500 via-amber-600 to-orange-500 text-white border-0 font-bold shadow-lg';
+      case 'Low': return 'bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-bold shadow-lg';
+      default: return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-bold shadow-lg';
     }
   };
 
@@ -744,48 +769,75 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
           </div>
         </div>
 
-        {/* Enhanced Stats Bar with Gradients */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
-            <div className="text-sm text-blue-600 font-medium flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              Total Items
-            </div>
-            <div className="text-2xl font-bold text-blue-900">{combinedData.length}</div>
-            <div className="text-xs text-blue-700 mt-1">
-              {testCases?.length || 0} test cases, {bugs?.length || 0} bugs
-            </div>
-          </div>
-          <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
-            <div className="text-sm text-green-600 font-medium flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Test Pass Rate
-            </div>
-            <div className="text-2xl font-bold text-green-900">{passRate}%</div>
-            <div className="text-xs text-green-700 mt-1">
-              {passedTestCases} of {totalTestCases} passed
+        {/* Enhanced Stats Bar with Advanced Gradients */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+          <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+            <div className="relative z-10">
+              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-2">
+                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                  <Target className="h-4 w-4 text-white" />
+                </div>
+                Total Items
+              </div>
+              <div className="text-3xl font-bold text-white mb-1">{combinedData.length}</div>
+              <div className="text-xs text-white/80">
+                {testCases?.length || 0} test cases, {bugs?.length || 0} bugs
+              </div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full"></div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg border border-red-200">
-            <div className="text-sm text-red-600 font-medium flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Open Bugs
-            </div>
-            <div className="text-2xl font-bold text-red-900">{metrics.bugs.open}</div>
-            <div className="text-xs text-red-700 mt-1">
-              {metrics.bugs.critical} critical, {metrics.bugs.major} major
+          
+          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500 via-green-600 to-teal-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+            <div className="relative z-10">
+              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-2">
+                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                  <CheckCircle className="h-4 w-4 text-white" />
+                </div>
+                Test Pass Rate
+              </div>
+              <div className="text-3xl font-bold text-white mb-1">{passRate}%</div>
+              <div className="text-xs text-white/80">
+                {passedTestCases} of {totalTestCases} passed
+              </div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full"></div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
-            <div className="text-sm text-purple-600 font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              In Progress
+          
+          <div className="relative overflow-hidden bg-gradient-to-br from-red-500 via-rose-600 to-pink-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+            <div className="relative z-10">
+              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-2">
+                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                  <AlertTriangle className="h-4 w-4 text-white" />
+                </div>
+                Open Bugs
+              </div>
+              <div className="text-3xl font-bold text-white mb-1">{metrics.bugs.open}</div>
+              <div className="text-xs text-white/80">
+                {metrics.bugs.critical} critical, {metrics.bugs.major} major
+              </div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full"></div>
             </div>
-            <div className="text-2xl font-bold text-purple-900">
-              {metrics.bugs.inProgress + metrics.testCases.blocked}
-            </div>
-            <div className="text-xs text-purple-700 mt-1">
-              Active work items
+          </div>
+          
+          <div className="relative overflow-hidden bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+            <div className="relative z-10">
+              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-2">
+                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                  <Clock className="h-4 w-4 text-white" />
+                </div>
+                In Progress
+              </div>
+              <div className="text-3xl font-bold text-white mb-1">
+                {metrics.bugs.inProgress + metrics.testCases.blocked}
+              </div>
+              <div className="text-xs text-white/80">
+                Active work items
+              </div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full"></div>
             </div>
           </div>
         </div>
@@ -856,30 +908,32 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
-        <div className="bg-white rounded-lg border">
+        <div className="bg-gradient-to-br from-white via-gray-50 to-blue-50 rounded-xl border border-gray-200 shadow-lg overflow-hidden">
           <Table>
-            <TableHeader className="bg-gradient-to-r from-gray-50 to-gray-100">
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Module</TableHead>
-                <TableHead>Title/Feature</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Progress</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
+            <TableHeader className="bg-gradient-to-r from-slate-800 via-gray-900 to-slate-800">
+              <TableRow className="border-0">
+                <TableHead className="text-white font-semibold">Type</TableHead>
+                <TableHead className="text-white font-semibold">Module</TableHead>
+                <TableHead className="text-white font-semibold">Title/Feature</TableHead>
+                <TableHead className="text-white font-semibold">Priority</TableHead>
+                <TableHead className="text-white font-semibold">Status</TableHead>
+                <TableHead className="text-white font-semibold">Progress</TableHead>
+                <TableHead className="text-white font-semibold">Created</TableHead>
+                <TableHead className="text-white font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.map((item) => (
-                <TableRow key={item.id} className="hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100">
+              {filteredData.map((item, index) => (
+                <TableRow key={item.id} className="hover:bg-gradient-to-r hover:from-blue-50 hover:via-indigo-50 hover:to-purple-50 transition-all duration-300 border-b border-gray-100">
                   <TableCell>
-                    <Badge variant="outline" className={item.type === 'testcase' ? 'border-blue-200 text-blue-700 bg-gradient-to-r from-blue-50 to-blue-100' : 'border-red-200 text-red-700 bg-gradient-to-r from-red-50 to-red-100'}>
+                    <Badge variant="outline" className={item.type === 'testcase' 
+                      ? 'border-0 text-white font-semibold bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600 shadow-md hover:shadow-lg transition-all duration-300' 
+                      : 'border-0 text-white font-semibold bg-gradient-to-r from-red-500 via-rose-600 to-pink-600 shadow-md hover:shadow-lg transition-all duration-300'}>
                       {item.type === 'testcase' ? 'Test Case' : 'Bug'}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="bg-gradient-to-r from-gray-100 to-gray-200">{item.module}</Badge>
+                    <Badge variant="secondary" className="bg-gradient-to-r from-slate-200 via-gray-300 to-slate-200 text-slate-700 font-medium border-0 shadow-sm">{item.module}</Badge>
                   </TableCell>
                   <TableCell className="max-w-md">
                     <div className="truncate font-medium">{item.title}</div>
