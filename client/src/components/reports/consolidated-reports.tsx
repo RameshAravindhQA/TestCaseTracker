@@ -69,6 +69,13 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   // Use the first project if no currentProjectId is provided
   const effectiveProjectId = currentProjectId || (allProjects && allProjects.length > 0 ? allProjects[0].id : undefined);
 
+  // Auto-select first project for better UX
+  React.useEffect(() => {
+    if (allProjects && allProjects.length > 0 && !currentProjectId) {
+      console.log("Auto-selecting first project:", allProjects[0].id);
+    }
+  }, [allProjects, currentProjectId]);
+
   // Debug logging for project ID resolution
   console.log("ConsolidatedReports Debug:", {
     selectedProjectId,

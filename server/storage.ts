@@ -270,12 +270,25 @@ class MemStorage implements IStorage {
   }
 
   // Test case operations
-  async getTestCases(): Promise<TestCase[]> {
-    return Array.from(this.testCases.values());
+  async getTestCases(projectId?: number, moduleId?: number): Promise<TestCase[]> {
+    let results = Array.from(this.testCases.values());
+    
+    if (projectId) {
+      results = results.filter(tc => tc.projectId === projectId);
+    }
+    
+    if (moduleId) {
+      results = results.filter(tc => tc.moduleId === moduleId);
+    }
+    
+    console.log(`Storage: getTestCases(${projectId}, ${moduleId}) returning ${results.length} test cases`);
+    return results;
   }
 
   async getTestCasesByProject(projectId: number): Promise<TestCase[]> {
-    return Array.from(this.testCases.values()).filter(tc => tc.projectId === projectId);
+    const results = Array.from(this.testCases.values()).filter(tc => tc.projectId === projectId);
+    console.log(`Storage: getTestCasesByProject(${projectId}) returning ${results.length} test cases`);
+    return results;
   }
 
   async getTestCase(id: number): Promise<TestCase | undefined> {
@@ -384,12 +397,25 @@ class MemStorage implements IStorage {
     return bug;
   }
 
-  async getBugs(): Promise<Bug[]> {
-    return Array.from(this.bugs.values());
+  async getBugs(projectId?: number, moduleId?: number): Promise<Bug[]> {
+    let results = Array.from(this.bugs.values());
+    
+    if (projectId) {
+      results = results.filter(bug => bug.projectId === projectId);
+    }
+    
+    if (moduleId) {
+      results = results.filter(bug => bug.moduleId === moduleId);
+    }
+    
+    console.log(`Storage: getBugs(${projectId}, ${moduleId}) returning ${results.length} bugs`);
+    return results;
   }
 
   async getBugsByProject(projectId: number): Promise<Bug[]> {
-    return Array.from(this.bugs.values()).filter(bug => bug.projectId === projectId);
+    const results = Array.from(this.bugs.values()).filter(bug => bug.projectId === projectId);
+    console.log(`Storage: getBugsByProject(${projectId}) returning ${results.length} bugs`);
+    return results;
   }
 
   async getBug(id: number): Promise<Bug | undefined> {
@@ -1384,8 +1410,172 @@ class MemStorage implements IStorage {
     };
 
     this.users.set(1, defaultAdmin);
-    this.nextId = 2;
-    this.moduleCounter = 1;
+
+    // Add a sample project
+    const sampleProject = {
+      id: 1,
+      name: "Sample Test Project",
+      description: "A sample project for testing consolidated reports",
+      status: "Active",
+      createdById: 1,
+      createdAt: new Date(),
+    };
+    this.projects.set(1, sampleProject);
+
+    // Add sample modules
+    const authModule = {
+      id: 1,
+      moduleId: "MOD-001",
+      name: "Authentication",
+      projectId: 1,
+      description: "User authentication and authorization",
+      status: "Active",
+      createdAt: new Date(),
+    };
+    const dashboardModule = {
+      id: 2,
+      moduleId: "MOD-002", 
+      name: "Dashboard",
+      projectId: 1,
+      description: "Main dashboard functionality",
+      status: "Active",
+      createdAt: new Date(),
+    };
+    this.modules.set(1, authModule);
+    this.modules.set(2, dashboardModule);
+
+    // Add sample test cases
+    const testCase1 = {
+      id: 1,
+      testCaseId: "AUTH-TC-001",
+      moduleId: 1,
+      projectId: 1,
+      feature: "User Login",
+      scenario: "Valid user credentials",
+      title: "Login with valid credentials",
+      description: "Test login functionality with valid username and password",
+      steps: "1. Navigate to login page\n2. Enter valid credentials\n3. Click login",
+      expectedResult: "User should be logged in successfully",
+      status: "Pass",
+      priority: "High",
+      assignedTo: 1,
+      createdById: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const testCase2 = {
+      id: 2,
+      testCaseId: "AUTH-TC-002",
+      moduleId: 1,
+      projectId: 1,
+      feature: "User Login",
+      scenario: "Invalid user credentials",
+      title: "Login with invalid credentials",
+      description: "Test login functionality with invalid credentials",
+      steps: "1. Navigate to login page\n2. Enter invalid credentials\n3. Click login",
+      expectedResult: "Should show error message",
+      status: "Fail",
+      priority: "High",
+      assignedTo: 1,
+      createdById: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const testCase3 = {
+      id: 3,
+      testCaseId: "DASH-TC-001",
+      moduleId: 2,
+      projectId: 1,
+      feature: "Dashboard",
+      scenario: "Load dashboard data",
+      title: "Dashboard data loading",
+      description: "Test dashboard loads with proper data",
+      steps: "1. Login to application\n2. Navigate to dashboard\n3. Verify data loads",
+      expectedResult: "Dashboard should display all data correctly",
+      status: "Blocked",
+      priority: "Medium",
+      assignedTo: 1,
+      createdById: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    this.testCases.set(1, testCase1);
+    this.testCases.set(2, testCase2);
+    this.testCases.set(3, testCase3);
+
+    // Add sample bugs
+    const bug1 = {
+      id: 1,
+      bugId: "BUG-001",
+      moduleId: 1,
+      projectId: 1,
+      title: "Login button not responsive",
+      description: "Login button does not respond to clicks on mobile devices",
+      severity: "Critical",
+      priority: "High",
+      status: "Open",
+      assignedTo: 1,
+      reportedById: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const bug2 = {
+      id: 2,
+      bugId: "BUG-002",
+      moduleId: 2,
+      projectId: 1,
+      title: "Dashboard loading slowly",
+      description: "Dashboard takes too long to load on first visit",
+      severity: "Major",
+      priority: "Medium",
+      status: "In Progress",
+      assignedTo: 1,
+      reportedById: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const bug3 = {
+      id: 3,
+      bugId: "BUG-003",
+      moduleId: 1,
+      projectId: 1,
+      title: "Password reset email format",
+      description: "Password reset email has incorrect formatting",
+      severity: "Minor",
+      priority: "Low",
+      status: "Resolved",
+      assignedTo: 1,
+      reportedById: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    this.bugs.set(1, bug1);
+    this.bugs.set(2, bug2);
+    this.bugs.set(3, bug3);
+
+    // Add project member
+    this.addProjectMember({
+      projectId: 1,
+      userId: 1,
+      role: "Admin",
+    });
+
+    this.nextId = 10;
+    this.moduleCounter = 3;
+    
+    console.log("✅ Initialized sample data:", {
+      users: this.users.size,
+      projects: this.projects.size,
+      modules: this.modules.size,
+      testCases: this.testCases.size,
+      bugs: this.bugs.size
+    });
   }
 
   // Reset storage method for testing

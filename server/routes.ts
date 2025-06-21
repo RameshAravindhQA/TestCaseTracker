@@ -1700,7 +1700,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const testCases = await storage.getTestCases(projectId, moduleId);
-      console.log(`[API] Returning ${testCases.length} test cases for project ${projectId}`);
+      console.log(`[API] Returning ${testCases.length} test cases for project ${projectId}:`, testCases.map(tc => ({ id: tc.id, title: tc.feature || tc.title, status: tc.status })));
+      
+      // Add cache headers for real-time data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json(testCases);
     } catch (error) {
       console.error("Get test cases error:", error);
@@ -1923,7 +1929,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const bugs = await storage.getBugs(projectId, moduleId);
-      console.log(`[API] Returning ${bugs.length} bugs for project ${projectId}`);
+      console.log(`[API] Returning ${bugs.length} bugs for project ${projectId}:`, bugs.map(bug => ({ id: bug.id, title: bug.title, status: bug.status, severity: bug.severity })));
+      
+      // Add cache headers for real-time data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json(bugs);
     } catch (error) {
       console.error("Get bugs error:", error);
