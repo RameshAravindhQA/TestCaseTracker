@@ -98,6 +98,8 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       if (!response.ok) throw new Error("Failed to fetch users");
       return response.json();
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Fetch test cases
@@ -728,10 +730,26 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
   if (isTestCasesLoading || isBugsLoading || !effectiveProjectId) {
     return (
-      <div className="space-y-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <Skeleton key={i} className="h-16 w-full" />
-        ))}
+      <div className="space-y-4 p-4">
+        <Skeleton className="h-12 w-full" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  // Show loading state if users data is still loading
+  if (!users) {
+    return (
+      <div className="space-y-4 p-4">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading users data...</p>
+        </div>
       </div>
     );
   }
@@ -784,73 +802,81 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
         {/* Enhanced Stats Bar with Advanced Gradients */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-          <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+          <div className="group relative overflow-hidden bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative z-10">
-              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-2">
-                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-3">
+                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm group-hover:bg-white/30 transition-all duration-300">
                   <Target className="h-4 w-4 text-white" />
                 </div>
                 Total Items
               </div>
-              <div className="text-3xl font-bold text-white mb-1">{combinedData.length}</div>
+              <div className="text-3xl font-bold text-white mb-2 group-hover:scale-110 transition-transform duration-300">{combinedData.length}</div>
               <div className="text-xs text-white/80">
                 {testCases?.length || 0} test cases, {bugs?.length || 0} bugs
               </div>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full"></div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full group-hover:from-white/20"></div>
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-300 via-blue-300 to-indigo-300 opacity-50"></div>
             </div>
           </div>
           
-          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500 via-green-600 to-teal-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+          <div className="group relative overflow-hidden bg-gradient-to-br from-emerald-500 via-green-600 to-teal-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative z-10">
-              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-2">
-                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-3">
+                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm group-hover:bg-white/30 transition-all duration-300">
                   <CheckCircle className="h-4 w-4 text-white" />
                 </div>
                 Test Pass Rate
               </div>
-              <div className="text-3xl font-bold text-white mb-1">{passRate}%</div>
+              <div className="text-3xl font-bold text-white mb-2 group-hover:scale-110 transition-transform duration-300">{passRate}%</div>
               <div className="text-xs text-white/80">
                 {passedTestCases} of {totalTestCases} passed
               </div>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full"></div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full group-hover:from-white/20"></div>
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-teal-300 via-green-300 to-emerald-300 opacity-50"></div>
             </div>
           </div>
           
-          <div className="relative overflow-hidden bg-gradient-to-br from-red-500 via-rose-600 to-pink-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+          <div className="group relative overflow-hidden bg-gradient-to-br from-red-500 via-rose-600 to-pink-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative z-10">
-              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-2">
-                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-3">
+                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm group-hover:bg-white/30 transition-all duration-300">
                   <AlertTriangle className="h-4 w-4 text-white" />
                 </div>
                 Open Bugs
               </div>
-              <div className="text-3xl font-bold text-white mb-1">{metrics.bugs.open}</div>
+              <div className="text-3xl font-bold text-white mb-2 group-hover:scale-110 transition-transform duration-300">{metrics.bugs.open}</div>
               <div className="text-xs text-white/80">
                 {metrics.bugs.critical} critical, {metrics.bugs.major} major
               </div>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full"></div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full group-hover:from-white/20"></div>
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-pink-300 via-rose-300 to-red-300 opacity-50"></div>
             </div>
           </div>
           
-          <div className="relative overflow-hidden bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+          <div className="group relative overflow-hidden bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative z-10">
-              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-2">
-                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-3">
+                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm group-hover:bg-white/30 transition-all duration-300">
                   <Clock className="h-4 w-4 text-white" />
                 </div>
                 In Progress
               </div>
-              <div className="text-3xl font-bold text-white mb-1">
+              <div className="text-3xl font-bold text-white mb-2 group-hover:scale-110 transition-transform duration-300">
                 {metrics.bugs.inProgress + metrics.testCases.blocked}
               </div>
               <div className="text-xs text-white/80">
                 Active work items
               </div>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full"></div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full group-hover:from-white/20"></div>
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-300 via-violet-300 to-purple-300 opacity-50"></div>
             </div>
           </div>
         </div>
@@ -1036,10 +1062,32 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
           </Table>
 
           {filteredData.length === 0 && (
-            <div className="text-center py-12">
-              <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No items found</h3>
-              <p className="text-gray-600">Try adjusting your filters or search query.</p>
+            <div className="text-center py-16">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-xl opacity-50"></div>
+                <div className="relative z-10 p-8">
+                  <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-4 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                    <AlertTriangle className="h-10 w-10 text-white" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3">No items found</h3>
+                  <p className="text-gray-600 mb-4">
+                    {combinedData.length === 0 
+                      ? "No test cases or bugs have been created for this project yet." 
+                      : "Try adjusting your filters or search query to see more results."
+                    }
+                  </p>
+                  {combinedData.length === 0 && (
+                    <div className="mt-6">
+                      <Button onClick={() => navigate('/test-cases')} className="mr-2">
+                        Create Test Case
+                      </Button>
+                      <Button onClick={() => navigate('/bugs')} variant="outline">
+                        Report Bug
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>

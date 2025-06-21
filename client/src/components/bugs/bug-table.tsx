@@ -280,8 +280,8 @@ ${bug.comments || 'No comments provided.'}
                     <TableCell>
                       {(() => {
                         const reportedByUser = users?.find(u => u.id === bug.reportedById);
-                        if (!reportedByUser) return <span className="text-gray-400">Unknown</span>;
-                        
+                        if (!reportedByUser || !users) return <span className="text-gray-400">Unknown</span>;
+
                         const getInitials = (name: string) => {
                           const parts = name.trim().split(' ');
                           if (parts.length >= 2) {
@@ -289,7 +289,7 @@ ${bug.comments || 'No comments provided.'}
                           }
                           return name.substring(0, 2).toUpperCase();
                         };
-                        
+
                         return (
                           <div 
                             className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium cursor-pointer hover:scale-110 transition-transform"
@@ -320,7 +320,7 @@ ${bug.comments || 'No comments provided.'}
                             <Edit className="mr-2 h-4 w-4" />
                             <span>Edit</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => copyToClipboard(bug)}>
+                          <DropdownMenuItem onClick={()={() => copyToClipboard(bug)}>
                             <ClipboardCopy className="mr-2 h-4 w-4" />
                             <span>Make a Copy</span>
                           </DropdownMenuItem>

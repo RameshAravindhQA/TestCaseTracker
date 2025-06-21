@@ -858,7 +858,8 @@ class MemStorage implements IStorage {
   }
 
   async getDocumentFolders(projectId: number): Promise<DocumentFolder[]>{
-    return Array.from(this.documentFolders.values()).filter(folder => folder.projectId === projectId);
+    return```text
+Array.from(this.documentFolders.values()).filter(folder => folder.projectId === projectId);
   }
 
   async getDocumentFolder(id: number): Promise<DocumentFolder | undefined> {
@@ -1409,7 +1410,7 @@ class MemStorage implements IStorage {
     this.moduleCounter = 1;
     this.testCaseCounter = 1;
     this.bugCounter = 1;
-    
+
     // Re-initialize default data
     this.initializeDefaultData();
   }
