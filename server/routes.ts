@@ -1679,9 +1679,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectId = parseInt(req.params.projectId);
       const moduleId = req.query.moduleId ? parseInt(req.query.moduleId as string) : undefined;
       
+      console.log(`[API] Fetching test cases for project ${projectId}, module: ${moduleId}`);
+      
       const project = await storage.getProject(projectId);
       
       if (!project) {
+        console.log(`[API] Project ${projectId} not found`);
         return res.status(404).json({ message: "Project not found" });
       }
       
@@ -1691,11 +1694,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
         
         if (!isMember && project.createdById !== req.session.userId) {
+          console.log(`[API] User ${req.session.userId} doesn't have access to project ${projectId}`);
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
       
       const testCases = await storage.getTestCases(projectId, moduleId);
+      console.log(`[API] Returning ${testCases.length} test cases for project ${projectId}`);
       res.json(testCases);
     } catch (error) {
       console.error("Get test cases error:", error);
@@ -1897,9 +1902,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectId = parseInt(req.params.projectId);
       const moduleId = req.query.moduleId ? parseInt(req.query.moduleId as string) : undefined;
       
+      console.log(`[API] Fetching bugs for project ${projectId}, module: ${moduleId}`);
+      
       const project = await storage.getProject(projectId);
       
       if (!project) {
+        console.log(`[API] Project ${projectId} not found`);
         return res.status(404).json({ message: "Project not found" });
       }
       
@@ -1909,11 +1917,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
         
         if (!isMember && project.createdById !== req.session.userId) {
+          console.log(`[API] User ${req.session.userId} doesn't have access to project ${projectId}`);
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
       
       const bugs = await storage.getBugs(projectId, moduleId);
+      console.log(`[API] Returning ${bugs.length} bugs for project ${projectId}`);
       res.json(bugs);
     } catch (error) {
       console.error("Get bugs error:", error);
