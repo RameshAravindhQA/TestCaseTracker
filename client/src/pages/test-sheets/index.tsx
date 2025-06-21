@@ -83,9 +83,18 @@ export default function TestSheetsPage() {
   // Fetch test sheets for selected project
   const { data: testSheets, isLoading } = useQuery<TestSheet[]>({
     queryKey: [`/api/test-sheets`, selectedProjectId],
-    queryFn: () => selectedProjectId ? 
-      apiRequest('GET', `/api/test-sheets?projectId=${selectedProjectId}`) : 
-      Promise.resolve([]),
+    queryFn: async () => {
+      if (!selectedProjectId) return [];
+      try {
+        const response = await apiRequest('GET', `/api/test-sheets?projectId=${selectedProjectId}`);
+        const data = await response.json();
+        console.log('Test sheets loaded:', data);
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error('Error loading test sheets:', error);
+        return [];
+      }
+    },
     enabled: !!selectedProjectId,
   });
 
