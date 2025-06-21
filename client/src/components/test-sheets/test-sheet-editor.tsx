@@ -43,7 +43,7 @@ import {
   Minus,
   X,
   FileSpreadsheet,
-  BorderAll,
+  Grid3X3,
   Square,
 } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
@@ -467,7 +467,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
 
           {/* Border tools */}
           <Button size="sm" variant="outline" onClick={() => addBorder("all")}>
-            <BorderAll className="h-4 w-4" />
+            <Grid3X3 className="h-4 w-4" />
           </Button>
 
           <Select value={borderStyle} onValueChange={setBorderStyle}>
