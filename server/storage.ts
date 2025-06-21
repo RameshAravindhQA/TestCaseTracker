@@ -272,15 +272,15 @@ class MemStorage implements IStorage {
   // Test case operations
   async getTestCases(projectId?: number, moduleId?: number): Promise<TestCase[]> {
     let results = Array.from(this.testCases.values());
-    
+
     if (projectId) {
       results = results.filter(tc => tc.projectId === projectId);
     }
-    
+
     if (moduleId) {
       results = results.filter(tc => tc.moduleId === moduleId);
     }
-    
+
     console.log(`Storage: getTestCases(${projectId}, ${moduleId}) returning ${results.length} test cases`);
     return results;
   }
@@ -399,15 +399,15 @@ class MemStorage implements IStorage {
 
   async getBugs(projectId?: number, moduleId?: number): Promise<Bug[]> {
     let results = Array.from(this.bugs.values());
-    
+
     if (projectId) {
       results = results.filter(bug => bug.projectId === projectId);
     }
-    
+
     if (moduleId) {
       results = results.filter(bug => bug.moduleId === moduleId);
     }
-    
+
     console.log(`Storage: getBugs(${projectId}, ${moduleId}) returning ${results.length} bugs`);
     return results;
   }
@@ -849,8 +849,7 @@ class MemStorage implements IStorage {
       passed: testCases.filter(tc => tc.status === 'Pass').length,
       failed: testCases.filter(tc => tc.status === 'Fail').length,
       blocked: testCases.filter(tc => tc.status === 'Blocked').length,
-      notExecuted: testCases.filter(tc => tc.status === 'Not Executed' || !tc.status).length
-    };
+      notExecuted: testCases.filter(tc => tc.status === 'Not Executed' || !tc.status).length    };
 
     // Real-time bug status counts
     const bugs = Array.from(this.bugs.values());
@@ -1568,7 +1567,7 @@ class MemStorage implements IStorage {
 
     this.nextId = 10;
     this.moduleCounter = 3;
-    
+
     console.log("✅ Initialized sample data:", {
       users: this.users.size,
       projects: this.projects.size,
@@ -1576,6 +1575,36 @@ class MemStorage implements IStorage {
       testCases: this.testCases.size,
       bugs: this.bugs.size
     });
+  }
+
+  async updateTestCase(id: number, data: Partial<TestCase>): Promise<TestCase | null> {
+    const testCase = this.testCases.get(id);
+    if (!testCase) return null;
+
+    const updatedTestCase = { ...testCase, ...data, updatedAt: new Date() };
+    this.testCases.set(id, updatedTestCase);
+    this.recordActivity('test_case', 'updated', id, data.assignedTo || testCase.assignedTo || 1);
+    return updatedTestCase;
+  }
+
+  async updateTestCaseStatus(id: number, status: string): Promise<TestCase | null> {
+    console.log(`Storage: updateTestCaseStatus(${id}, ${status})`);
+    return this.updateTestCase(id, { status });
+  }
+
+  async updateBug(id: number, data: Partial<Bug>): Promise<Bug | null> {
+    const bug = this.bugs.get(id);
+    if (!bug) return null;
+
+    const updatedBug = { ...bug, ...data, updatedAt: new Date() };
+    this.bugs.set(id, updatedBug);
+    this.recordActivity('bug', 'updated', id, data.assignedTo || bug.assignedTo);
+    return updatedBug;
+  }
+
+  async updateBugStatus(id: number, status: string): Promise<Bug | null> {
+    console.log(`Storage: updateBugStatus(${id}, ${status})`);
+    return this.updateBug(id, { status });
   }
 
   // Reset storage method for testing

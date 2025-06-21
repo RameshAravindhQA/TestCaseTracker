@@ -121,13 +121,33 @@ export default function ConsolidatedReports() {
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, type, status }: UpdateStatusRequest) => {
       const endpoint = type === 'testcase' ? `/api/test-cases/${id}` : `/api/bugs/${id}`;
-      const response = await fetch(endpoint, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      if (!response.ok) throw new Error(`Failed to update ${type} status`);
-      return response.json();
+      try {
+        const response = await fetch(endpoint, {
+          method: 'PATCH',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ status })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Status update failed:', response.status, errorText);
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          return await response.json();
+        } else {
+          console.warn('Non-JSON response received:', await response.text());
+          return { success: true };
+        }
+      } catch (error) {
+        console.error('Status update error:', error);
+        throw error;
+      }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProject}/test-cases`] });
@@ -137,10 +157,11 @@ export default function ConsolidatedReports() {
         description: `${variables.type === 'testcase' ? 'Test case' : 'Bug'} status updated successfully`
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Update status mutation error:', error);
       toast({
         title: 'Error',
-        description: `Failed to update status: ${error.message}`,
+        description: `Failed to update status: ${error.message || 'Unknown error occurred'}`,
         variant: 'destructive'
       });
     }
@@ -247,8 +268,19 @@ export default function ConsolidatedReports() {
       if (Object.keys(pendingStatusUpdates).length <= 1) {
         setHasUnsavedChanges(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save status change:', error);
+      // Revert the pending status change on error
+      setPendingStatusUpdates(prev => {
+        const updated = { ...prev };
+        delete updated[key];
+        return updated;
+      });
+      toast({
+        title: 'Error',
+        description: `Failed to save status change: ${error.message || 'Please try again'}`,
+        variant: 'destructive'
+      });
     }
   };
 
