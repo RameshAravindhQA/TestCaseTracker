@@ -884,7 +884,6 @@ class MemStorage implements IStorage {
         status: project.status,
         createdAt: project.createdAt,
         totalModules: modules.length,
-```tool_code
         totalTestCases: testCases.length,
         totalBugs: bugs.length,
         modules: modules.map(m => m.name).join(';'),
