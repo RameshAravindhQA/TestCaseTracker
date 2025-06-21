@@ -943,69 +943,6 @@ export const cellValueSchema = z.object({
 // This CellValue type is already defined earlier in the file
 // export type CellValue = z.infer<typeof cellValueSchema>;
 
-// Test Sheet Schema
-export const insertTestSheetSchema = z.object({
-  name: z.string().min(1, "Sheet name is required").max(100, "Sheet name too long"),
-  projectId: z.number().int().positive("Project ID must be a positive integer"),
-  data: z.object({
-    cells: z.record(z.string(), z.object({
-      value: z.any(),
-      formula: z.string().optional(),
-      type: z.enum(['text', 'number', 'date', 'boolean', 'formula']),
-      style: z.object({
-        fontWeight: z.enum(['normal', 'bold']).optional(),
-        fontStyle: z.enum(['normal', 'italic']).optional(),
-        textAlign: z.enum(['left', 'center', 'right']).optional(),
-        backgroundColor: z.string().optional(),
-        color: z.string().optional(),
-        fontSize: z.number().optional(),
-        border: z.object({
-          top: z.string().optional(),
-          right: z.string().optional(),
-          bottom: z.string().optional(),
-          left: z.string().optional(),
-        }).optional(),
-      }).optional(),
-      validation: z.object({
-        type: z.enum(['list', 'number', 'date', 'text']),
-        criteria: z.any(),
-        errorMessage: z.string().optional(),
-      }).optional(),
-    })),
-    rows: z.number().int().min(1),
-    cols: z.number().int().min(1),
-  }),
-  metadata: z.object({
-    version: z.number().int().min(1),
-    lastModifiedBy: z.number().int().positive(),
-    collaborators: z.array(z.number().int().positive()),
-    chartConfigs: z.array(z.object({
-      id: z.string(),
-      type: z.enum(['line', 'bar', 'pie', 'column']),
-      title: z.string(),
-      dataRange: z.string(),
-      position: z.object({
-        x: z.number(),
-        y: z.number(),
-        width: z.number(),
-        height: z.number(),
-      }),
-    })),
-    namedRanges: z.array(z.object({
-      name: z.string(),
-      range: z.string(),
-      description: z.string().optional(),
-    })),
-  }),
-  createdById: z.number().int().positive("Created by ID must be a positive integer"),
-});
-
-export type TestSheet = z.infer<typeof insertTestSheetSchema> & {
-  id: number;
-  createdAt: string;
-  updatedAt: string;
-};
-
 // Test Sheets schema
 export const insertTestSheetSchema = z.object({
   name: z.string().min(1, "Sheet name is required"),
