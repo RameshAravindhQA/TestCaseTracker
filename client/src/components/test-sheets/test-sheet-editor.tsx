@@ -43,6 +43,8 @@ import {
   Minus,
   X,
   FileSpreadsheet,
+  BorderAll,
+  Square,
 } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
 
@@ -59,14 +61,25 @@ interface SelectedCell {
   cellId: string;
 }
 
+interface CellRange {
+  startRow: number;
+  startCol: number;
+  endRow: number;
+  endCol: number;
+}
+
 export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheetEditorProps) {
   const [sheetData, setSheetData] = useState(sheet.data);
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
+  const [selectedRange, setSelectedRange] = useState<CellRange | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState<{ row: number; col: number } | null>(null);
   const [formulaBarValue, setFormulaBarValue] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [bgColorPickerOpen, setBgColorPickerOpen] = useState(false);
   const [showChartDialog, setShowChartDialog] = useState(false);
+  const [borderStyle, setBorderStyle] = useState("1px solid #000000");
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -139,6 +152,61 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
       });
     },
   });
+
+  // Handle range selection
+  const isInSelectedRange = (row: number, col: number): boolean => {
+    if (!selectedRange) return false;
+    return row >= selectedRange.startRow && row <= selectedRange.endRow &&
+           col >= selectedRange.startCol && col <= selectedRange.endCol;
+  };
+
+  // Handle cell mouse down (start selection)
+  const handleCellMouseDown = (row: number, col: number, event: React.MouseEvent) => {
+    event.preventDefault();
+    
+    if (event.shiftKey && selectedCell) {
+      // Extend selection
+      setSelectedRange({
+        startRow: Math.min(selectedCell.row, row),
+        startCol: Math.min(selectedCell.col, col),
+        endRow: Math.max(selectedCell.row, row),
+        endCol: Math.max(selectedCell.col, col),
+      });
+    } else {
+      // Start new selection
+      const cellId = getCellId(row, col);
+      setSelectedCell({ row, col, cellId });
+      setSelectedRange(null);
+      setDragStart({ row, col });
+      setIsDragging(true);
+      
+      const cellData = getCellData(row, col);
+      if (cellData.formula) {
+        setFormulaBarValue(cellData.formula);
+      } else {
+        setFormulaBarValue(String(cellData.value || ''));
+      }
+      setIsEditing(false);
+    }
+  };
+
+  // Handle cell mouse enter (extend selection during drag)
+  const handleCellMouseEnter = (row: number, col: number) => {
+    if (isDragging && dragStart) {
+      setSelectedRange({
+        startRow: Math.min(dragStart.row, row),
+        startCol: Math.min(dragStart.col, col),
+        endRow: Math.max(dragStart.row, row),
+        endCol: Math.max(dragStart.col, col),
+      });
+    }
+  };
+
+  // Handle mouse up (end selection)
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setDragStart(null);
+  };
 
   // Handle cell click
   const handleCellClick = (row: number, col: number) => {
@@ -249,17 +317,94 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
 
   // Format cell style
   const formatCell = (property: string, value: any) => {
-    if (!selectedCell) return;
+    if (selectedRange) {
+      // Apply to range
+      for (let row = selectedRange.startRow; row <= selectedRange.endRow; row++) {
+        for (let col = selectedRange.startCol; col <= selectedRange.endCol; col++) {
+          const currentCell = getCellData(row, col);
+          updateCell(row, col, {
+            style: {
+              ...currentCell.style,
+              [property]: value,
+            },
+          });
+        }
+      }
+    } else if (selectedCell) {
+      // Apply to single cell
+      const { row, col } = selectedCell;
+      const currentCell = getCellData(row, col);
+      
+      updateCell(row, col, {
+        style: {
+          ...currentCell.style,
+          [property]: value,
+        },
+      });
+    }
+  };
 
-    const { row, col } = selectedCell;
-    const currentCell = getCellData(row, col);
+  // Add border to selected cells
+  const addBorder = (borderType: string = "all") => {
+    if (selectedRange) {
+      for (let row = selectedRange.startRow; row <= selectedRange.endRow; row++) {
+        for (let col = selectedRange.startCol; col <= selectedRange.endCol; col++) {
+          const currentCell = getCellData(row, col);
+          const border = {
+            top: borderType === "all" || borderType === "top" ? borderStyle : currentCell.style?.border?.top,
+            right: borderType === "all" || borderType === "right" ? borderStyle : currentCell.style?.border?.right,
+            bottom: borderType === "all" || borderType === "bottom" ? borderStyle : currentCell.style?.border?.bottom,
+            left: borderType === "all" || borderType === "left" ? borderStyle : currentCell.style?.border?.left,
+          };
+          
+          updateCell(row, col, {
+            style: {
+              ...currentCell.style,
+              border,
+            },
+          });
+        }
+      }
+    } else if (selectedCell) {
+      const { row, col } = selectedCell;
+      const currentCell = getCellData(row, col);
+      const border = {
+        top: borderStyle,
+        right: borderStyle,
+        bottom: borderStyle,
+        left: borderStyle,
+      };
+      
+      updateCell(row, col, {
+        style: {
+          ...currentCell.style,
+          border,
+        },
+      });
+    }
+  };
+
+  // Insert SUM formula for selected range
+  const insertSumFormula = () => {
+    if (!selectedRange || !selectedCell) return;
     
-    updateCell(row, col, {
-      style: {
-        ...currentCell.style,
-        [property]: value,
-      },
-    });
+    const startCellId = getCellId(selectedRange.startRow, selectedRange.startCol);
+    const endCellId = getCellId(selectedRange.endRow, selectedRange.endCol);
+    const sumFormula = `=SUM(${startCellId}:${endCellId})`;
+    
+    // Insert in cell below the selection
+    const targetRow = selectedRange.endRow + 1;
+    const targetCol = selectedRange.startCol;
+    
+    if (targetRow < sheetData.rows) {
+      handleFormulaBarChange(sumFormula);
+      setSelectedCell({ 
+        row: targetRow, 
+        col: targetCol, 
+        cellId: getCellId(targetRow, targetCol) 
+      });
+      setFormulaBarValue(sumFormula);
+    }
   };
 
   // Export to CSV
@@ -317,6 +462,35 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
             <Download className="h-4 w-4 mr-1" />
             Export CSV
           </Button>
+
+          <Separator orientation="vertical" className="h-6" />
+
+          {/* Border tools */}
+          <Button size="sm" variant="outline" onClick={() => addBorder("all")}>
+            <BorderAll className="h-4 w-4" />
+          </Button>
+
+          <Select value={borderStyle} onValueChange={setBorderStyle}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Border style" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1px solid #000000">Thin</SelectItem>
+              <SelectItem value="2px solid #000000">Medium</SelectItem>
+              <SelectItem value="3px solid #000000">Thick</SelectItem>
+              <SelectItem value="1px dashed #000000">Dashed</SelectItem>
+              <SelectItem value="1px dotted #000000">Dotted</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {selectedRange && (
+            <Button size="sm" variant="outline" onClick={insertSumFormula}>
+              <div className="flex items-center gap-1">
+                <span>Σ</span>
+                <span className="text-xs">SUM</span>
+              </div>
+            </Button>
+          )}
 
           <Separator orientation="vertical" className="h-6" />
 
@@ -406,7 +580,10 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         {/* Formula Bar */}
         <div className="flex items-center gap-2 p-2 border-b">
           <Label className="text-sm font-medium min-w-fit">
-            {selectedCell ? selectedCell.cellId : 'A1'}
+            {selectedRange 
+              ? `${getCellId(selectedRange.startRow, selectedRange.startCol)}:${getCellId(selectedRange.endRow, selectedRange.endCol)}`
+              : selectedCell ? selectedCell.cellId : 'A1'
+            }
           </Label>
           <Input
             value={formulaBarValue}
@@ -423,8 +600,13 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         </div>
 
         {/* Spreadsheet Grid */}
-        <div className="flex-1 overflow-auto" ref={gridRef}>
-          <div className="relative min-w-fit min-h-fit">
+        <div 
+          className="flex-1 overflow-auto" 
+          ref={gridRef}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
+          <div className="relative min-w-fit min-h-fit" style={{ userSelect: 'none' }}>
             {/* Column Headers */}
             <div className="flex sticky top-0 bg-gray-50 z-10">
               <div className="w-12 h-8 border border-gray-300 bg-gray-100"></div>
@@ -450,20 +632,29 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
                 {Array.from({ length: sheetData.cols }, (_, col) => {
                   const cellData = getCellData(row, col);
                   const isSelected = selectedCell?.row === row && selectedCell?.col === col;
+                  const isInRange = isInSelectedRange(row, col);
+                  
+                  const cellStyle = {
+                    backgroundColor: isSelected ? '#e3f2fd' : isInRange ? '#f3e5f5' : cellData.style?.backgroundColor,
+                    color: cellData.style?.color,
+                    fontWeight: cellData.style?.fontWeight,
+                    fontStyle: cellData.style?.fontStyle,
+                    textAlign: cellData.style?.textAlign as any,
+                    borderTop: cellData.style?.border?.top || '1px solid #e0e0e0',
+                    borderRight: cellData.style?.border?.right || '1px solid #e0e0e0',
+                    borderBottom: cellData.style?.border?.bottom || '1px solid #e0e0e0',
+                    borderLeft: cellData.style?.border?.left || '1px solid #e0e0e0',
+                  };
                   
                   return (
                     <div
                       key={`${row}-${col}`}
-                      className={`w-24 h-8 border border-gray-300 cursor-cell relative flex items-center px-1 text-sm ${
-                        isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                      className={`w-24 h-8 cursor-cell relative flex items-center px-1 text-sm ${
+                        isSelected ? 'ring-2 ring-blue-500' : isInRange ? 'ring-1 ring-purple-300' : 'hover:bg-gray-50'
                       }`}
-                      style={{
-                        backgroundColor: cellData.style?.backgroundColor,
-                        color: cellData.style?.color,
-                        fontWeight: cellData.style?.fontWeight,
-                        fontStyle: cellData.style?.fontStyle,
-                        textAlign: cellData.style?.textAlign,
-                      }}
+                      style={cellStyle}
+                      onMouseDown={(e) => handleCellMouseDown(row, col, e)}
+                      onMouseEnter={() => handleCellMouseEnter(row, col)}
                       onClick={() => handleCellClick(row, col)}
                       onDoubleClick={() => handleCellDoubleClick(row, col)}
                     >

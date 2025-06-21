@@ -124,13 +124,63 @@ export class FormulaEngine {
   }
 
   private replaceCellReferences(formula: string, context: Record<string, any>): string {
-    // Replace cell references like A1, B2, etc.
+    // Replace range references like A1:A10 first
+    formula = formula.replace(/\b([A-Z]+\d+):([A-Z]+\d+)\b/g, (match, start, end) => {
+      const range = this.expandRange(start, end, context);
+      return `[${range.join(',')}]`;
+    });
+    
+    // Replace single cell references like A1, B2, etc.
     return formula.replace(/\b[A-Z]+\d+\b/g, (match) => {
       const value = context[match];
       if (value === undefined || value === null) return '0';
       if (typeof value === 'string') return `"${value}"`;
       return String(value);
     });
+  }
+
+  private expandRange(startCell: string, endCell: string, context: Record<string, any>): number[] {
+    const startMatch = startCell.match(/([A-Z]+)(\d+)/);
+    const endMatch = endCell.match(/([A-Z]+)(\d+)/);
+    
+    if (!startMatch || !endMatch) return [];
+    
+    const startCol = this.columnLetterToNumber(startMatch[1]);
+    const startRow = parseInt(startMatch[2]);
+    const endCol = this.columnLetterToNumber(endMatch[1]);
+    const endRow = parseInt(endMatch[2]);
+    
+    const values: number[] = [];
+    
+    for (let row = startRow; row <= endRow; row++) {
+      for (let col = startCol; col <= endCol; col++) {
+        const cellId = this.numberToColumnLetter(col) + row;
+        const value = context[cellId];
+        if (!isNaN(Number(value))) {
+          values.push(Number(value));
+        }
+      }
+    }
+    
+    return values;
+  }
+
+  private columnLetterToNumber(letter: string): number {
+    let result = 0;
+    for (let i = 0; i < letter.length; i++) {
+      result = result * 26 + (letter.charCodeAt(i) - 64);
+    }
+    return result;
+  }
+
+  private numberToColumnLetter(num: number): string {
+    let result = '';
+    while (num > 0) {
+      num--;
+      result = String.fromCharCode(65 + (num % 26)) + result;
+      num = Math.floor(num / 26);
+    }
+    return result;
   }
 
   private replaceFunctionCalls(formula: string): string {
