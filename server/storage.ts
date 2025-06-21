@@ -858,8 +858,7 @@ class MemStorage implements IStorage {
   }
 
   async getDocumentFolders(projectId: number): Promise<DocumentFolder[]>{
-    return```text
-Array.from(this.documentFolders.values()).filter(folder => folder.projectId === projectId);
+    return Array.from(this.documentFolders.values()).filter(folder => folder.projectId === projectId);
   }
 
   async getDocumentFolder(id: number): Promise<DocumentFolder | undefined> {
