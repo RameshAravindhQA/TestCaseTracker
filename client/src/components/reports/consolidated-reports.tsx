@@ -140,35 +140,35 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
   });
 
-    // Mutation for updating status
-    const updateStatusMutation = useMutation({
-      mutationFn: async ({ itemId, type, status }: { itemId: string, type: 'testcase' | 'bug', status: string }) => {
-        const id = itemId.split('-')[1];
-        if (type === 'testcase') {
-          const response = await apiRequest('PUT', `/api/test-cases/${id}`, { status });
-          return response.json();
-        } else {
-          const response = await apiRequest('PUT', `/api/bugs/${id}`, { status });
-          return response.json();
-        }
-      },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/test-cases`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/bugs`] });
-        toast({
-          title: "Status Updated",
-          description: "Item status has been updated successfully.",
-        });
-        setEditingItem(null);
-      },
-      onError: (error) => {
-        toast({
-          title: "Update Failed",
-          description: "Failed to update item status.",
-          variant: "destructive",
-        });
-      },
-    });
+  // Mutation for updating status
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ itemId, type, status }: { itemId: string, type: 'testcase' | 'bug', status: string }) => {
+      const id = itemId.split('-')[1];
+      if (type === 'testcase') {
+        const response = await apiRequest('PUT', `/api/test-cases/${id}`, { status });
+        return response.json();
+      } else {
+        const response = await apiRequest('PUT', `/api/bugs/${id}`, { status });
+        return response.json();
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/bugs`] });
+      toast({
+        title: "Status Updated",
+        description: "Item status has been updated successfully.",
+      });
+      setEditingItem(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update item status.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Calculate metrics
   const metrics = {
@@ -364,30 +364,30 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const getStatusColor = (status: string, type: string) => {
     if (type === 'testcase') {
       switch (status) {
-        case 'Pass': return 'bg-green-100 text-green-800 border-green-200';
-        case 'Fail': return 'bg-red-100 text-red-800 border-red-200';
-        case 'Blocked': return 'bg-orange-100 text-orange-800 border-orange-200';
-        case 'Not Executed': return 'bg-gray-100 text-gray-800 border-gray-200';
-        default: return 'bg-gray-100 text-gray-800 border-gray-200';
+        case 'Pass': return 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border-green-300';
+        case 'Fail': return 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border-red-300';
+        case 'Blocked': return 'bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border-orange-300';
+        case 'Not Executed': return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border-gray-300';
+        default: return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border-gray-300';
       }
     } else {
       switch (status) {
-        case 'Open': return 'bg-red-100 text-red-800 border-red-200';
-        case 'In Progress': return 'bg-blue-100 text-blue-800 border-blue-200';
-        case 'Resolved': return 'bg-green-100 text-green-800 border-green-200';
-        case 'Closed': return 'bg-gray-100 text-gray-800 border-gray-200';
-        default: return 'bg-gray-100 text-gray-800 border-gray-200';
+        case 'Open': return 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border-red-300';
+        case 'In Progress': return 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border-blue-300';
+        case 'Resolved': return 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border-green-300';
+        case 'Closed': return 'bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border-purple-300';
+        default: return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border-gray-300';
       }
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'Critical': return 'bg-red-500 text-white';
-      case 'High': return 'bg-red-400 text-white';
-      case 'Medium': return 'bg-yellow-400 text-black';
-      case 'Low': return 'bg-green-400 text-white';
-      default: return 'bg-gray-400 text-white';
+      case 'Critical': return 'bg-gradient-to-r from-red-500 to-red-600 text-white';
+      case 'High': return 'bg-gradient-to-r from-red-400 to-red-500 text-white';
+      case 'Medium': return 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-black';
+      case 'Low': return 'bg-gradient-to-r from-green-400 to-green-500 text-white';
+      default: return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white';
     }
   };
 
@@ -744,30 +744,54 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
           </div>
         </div>
 
-        {/* Stats Bar */}
+        {/* Enhanced Stats Bar with Gradients */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <div className="text-sm text-blue-600 font-medium">Total Items</div>
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+            <div className="text-sm text-blue-600 font-medium flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Total Items
+            </div>
             <div className="text-2xl font-bold text-blue-900">{combinedData.length}</div>
+            <div className="text-xs text-blue-700 mt-1">
+              {testCases?.length || 0} test cases, {bugs?.length || 0} bugs
+            </div>
           </div>
-          <div className="bg-green-50 p-3 rounded-lg">
-            <div className="text-sm text-green-600 font-medium">Test Pass Rate</div>
+          <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+            <div className="text-sm text-green-600 font-medium flex items-center gap-2">
+              <CheckCircle className="h-4 w-4" />
+              Test Pass Rate
+            </div>
             <div className="text-2xl font-bold text-green-900">{passRate}%</div>
+            <div className="text-xs text-green-700 mt-1">
+              {passedTestCases} of {totalTestCases} passed
+            </div>
           </div>
-          <div className="bg-red-50 p-3 rounded-lg">
-            <div className="text-sm text-red-600 font-medium">Open Bugs</div>
+          <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg border border-red-200">
+            <div className="text-sm text-red-600 font-medium flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Open Bugs
+            </div>
             <div className="text-2xl font-bold text-red-900">{metrics.bugs.open}</div>
+            <div className="text-xs text-red-700 mt-1">
+              {metrics.bugs.critical} critical, {metrics.bugs.major} major
+            </div>
           </div>
-          <div className="bg-purple-50 p-3 rounded-lg">
-            <div className="text-sm text-purple-600 font-medium">In Progress</div>
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+            <div className="text-sm text-purple-600 font-medium flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              In Progress
+            </div>
             <div className="text-2xl font-bold text-purple-900">
               {metrics.bugs.inProgress + metrics.testCases.blocked}
+            </div>
+            <div className="text-xs text-purple-700 mt-1">
+              Active work items
             </div>
           </div>
         </div>
 
-        {/* Filters and Search */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
           <Input
             placeholder="Search items..."
             value={searchQuery}
@@ -813,9 +837,9 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                   {module.name}
                 </SelectItem>
               ))}
-          </SelectContent>
+            </SelectContent>
           </Select>
-                  <Select value={severityFilter} onValueChange={setSeverityFilter}>
+          <Select value={severityFilter} onValueChange={setSeverityFilter}>
             <SelectTrigger>
               <SelectValue placeholder="Filter by Severity" />
             </SelectTrigger>
@@ -828,58 +852,14 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
             </SelectContent>
           </Select>
         </div>
-
-        {/* Bulk Actions */}
-        {selectedItems.length > 0 && (
-          <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg">
-            <span className="text-sm font-medium text-blue-900">
-              {selectedItems.length} items selected
-            </span>
-            <Select value={bulkStatus} onValueChange={setBulkStatus}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Update status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Pass">Pass</SelectItem>
-                <SelectItem value="Fail">Fail</SelectItem>
-                <SelectItem value="Blocked">Blocked</SelectItem>
-                <SelectItem value="Not Executed">Not Executed</SelectItem>
-                <SelectItem value="Open">Open</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Resolved">Resolved</SelectItem>
-                <SelectItem value="Closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={handleBulkStatusUpdate} size="sm">
-              Update Selected
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setSelectedItems([])}>
-              Clear Selection
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
         <div className="bg-white rounded-lg border">
           <Table>
-            <TableHeader className="bg-gray-50">
+            <TableHeader className="bg-gradient-to-r from-gray-50 to-gray-100">
               <TableRow>
-                <TableHead className="w-12">
-                  <input
-                    type="checkbox"
-                    checked={selectedItems.length === filteredData.length && filteredData.length > 0}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedItems(filteredData.map(item => item.id));
-                      } else {
-                        setSelectedItems([]);
-                      }
-                    }}
-                    className="rounded"
-                  />
-                </TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Module</TableHead>
                 <TableHead>Title/Feature</TableHead>
@@ -892,28 +872,14 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
             </TableHeader>
             <TableBody>
               {filteredData.map((item) => (
-                <TableRow key={item.id} className="hover:bg-gray-50">
+                <TableRow key={item.id} className="hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100">
                   <TableCell>
-                    <input
-                      type="checkbox"
-                      checked={selectedItems.includes(item.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedItems([...selectedItems, item.id]);
-                        } else {
-                          setSelectedItems(selectedItems.filter(id => id !== item.id));
-                        }
-                      }}
-                      className="rounded"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={item.type === 'testcase' ? 'border-blue-200 text-blue-700' : 'border-red-200 text-red-700'}>
+                    <Badge variant="outline" className={item.type === 'testcase' ? 'border-blue-200 text-blue-700 bg-gradient-to-r from-blue-50 to-blue-100' : 'border-red-200 text-red-700 bg-gradient-to-r from-red-50 to-red-100'}>
                       {item.type === 'testcase' ? 'Test Case' : 'Bug'}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{item.module}</Badge>
+                    <Badge variant="secondary" className="bg-gradient-to-r from-gray-100 to-gray-200">{item.module}</Badge>
                   </TableCell>
                   <TableCell className="max-w-md">
                     <div className="truncate font-medium">{item.title}</div>
@@ -930,10 +896,10 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                   </TableCell>
                   <TableCell>
                     <Select
-                      value={statusUpdateQueue[item.id]?.status || item.status}
+                      value={item.status}
                       onValueChange={(value) => handleIndividualStatusUpdate(item.id, value)}
                     >
-                      <SelectTrigger className={`w-32 border-0 ${getStatusColor(statusUpdateQueue[item.id]?.status || item.status, item.type)}`}>
+                      <SelectTrigger className={`w-32 border-0 ${getStatusColor(item.status, item.type)}`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

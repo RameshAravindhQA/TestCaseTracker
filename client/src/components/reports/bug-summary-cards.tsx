@@ -1,8 +1,9 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bug } from "@/types";
-import { Copy, AlertTriangle, AlertCircle, Info, CheckCircle, Clock } from "lucide-react";
+import { Copy, AlertTriangle, AlertCircle, Info, CheckCircle, Clock, Shield, Zap, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BugSummaryCardsProps {
@@ -27,57 +28,71 @@ export function BugSummaryCards({ bugs, projectName }: BugSummaryCardsProps) {
       title: "Total Bugs",
       value: totalBugs,
       icon: AlertTriangle,
-      gradient: "from-blue-500 to-blue-600",
-      textColor: "text-blue-600",
-      bgColor: "bg-blue-50",
+      gradient: "from-indigo-500 via-purple-500 to-pink-500",
+      bgGradient: "from-indigo-50 via-purple-50 to-pink-50",
+      textColor: "text-indigo-700",
+      iconBg: "bg-gradient-to-r from-indigo-500 to-purple-600",
+      border: "border-indigo-200",
     },
     {
       title: "Critical",
       value: criticalBugs,
-      icon: AlertCircle,
-      gradient: "from-red-500 to-red-600",
-      textColor: "text-red-600",
-      bgColor: "bg-red-50",
+      icon: Shield,
+      gradient: "from-red-500 via-rose-500 to-pink-500",
+      bgGradient: "from-red-50 via-rose-50 to-pink-50",
+      textColor: "text-red-700",
+      iconBg: "bg-gradient-to-r from-red-500 to-rose-600",
+      border: "border-red-200",
     },
     {
       title: "Major",
       value: majorBugs,
-      icon: AlertTriangle,
-      gradient: "from-orange-500 to-orange-600",
-      textColor: "text-orange-600",
-      bgColor: "bg-orange-50",
+      icon: Zap,
+      gradient: "from-orange-500 via-amber-500 to-yellow-500",
+      bgGradient: "from-orange-50 via-amber-50 to-yellow-50",
+      textColor: "text-orange-700",
+      iconBg: "bg-gradient-to-r from-orange-500 to-amber-600",
+      border: "border-orange-200",
     },
     {
       title: "Minor",
       value: minorBugs,
       icon: Info,
-      gradient: "from-yellow-500 to-yellow-600",
-      textColor: "text-yellow-600",
-      bgColor: "bg-yellow-50",
+      gradient: "from-yellow-400 via-lime-400 to-green-400",
+      bgGradient: "from-yellow-50 via-lime-50 to-green-50",
+      textColor: "text-yellow-700",
+      iconBg: "bg-gradient-to-r from-yellow-500 to-lime-600",
+      border: "border-yellow-200",
     },
     {
       title: "Trivial",
       value: trivialBugs,
-      icon: Info,
-      gradient: "from-gray-500 to-gray-600",
-      textColor: "text-gray-600",
-      bgColor: "bg-gray-50",
+      icon: Star,
+      gradient: "from-gray-400 via-slate-400 to-zinc-400",
+      bgGradient: "from-gray-50 via-slate-50 to-zinc-50",
+      textColor: "text-gray-700",
+      iconBg: "bg-gradient-to-r from-gray-500 to-slate-600",
+      border: "border-gray-200",
     },
     {
       title: "Open",
       value: openBugs,
       icon: Clock,
-      gradient: "from-purple-500 to-purple-600",
-      textColor: "text-purple-600",
-      bgColor: "bg-purple-50",
+      gradient: "from-purple-500 via-violet-500 to-indigo-500",
+      bgGradient: "from-purple-50 via-violet-50 to-indigo-50",
+      textColor: "text-purple-700",
+      iconBg: "bg-gradient-to-r from-purple-500 to-violet-600",
+      border: "border-purple-200",
     },
     {
       title: "Closed",
       value: closedBugs,
       icon: CheckCircle,
-      gradient: "from-green-500 to-green-600",
-      textColor: "text-green-600",
-      bgColor: "bg-green-50",
+      gradient: "from-emerald-500 via-teal-500 to-cyan-500",
+      bgGradient: "from-emerald-50 via-teal-50 to-cyan-50",
+      textColor: "text-emerald-700",
+      iconBg: "bg-gradient-to-r from-emerald-500 to-teal-600",
+      border: "border-emerald-200",
     },
   ];
 
@@ -114,39 +129,55 @@ ${bugs.map(bug => `- ${bug.bugId || bug.id}: ${bug.title} (${bug.severity} - ${b
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Bug Reports Summary</h2>
+          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+            Bug Reports Summary
+          </h2>
           {projectName && (
-            <p className="text-muted-foreground">Project: {projectName}</p>
+            <p className="text-muted-foreground mt-1 text-lg">Project: {projectName}</p>
           )}
         </div>
-        <Button onClick={copyToClipboard} variant="outline">
+        <Button onClick={copyToClipboard} variant="outline" className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 hover:from-blue-100 hover:to-indigo-100">
           <Copy className="mr-2 h-4 w-4" />
           Copy to Clipboard
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {summaryData.map((item, index) => {
           const Icon = item.icon;
           return (
-            <Card key={index} className="relative overflow-hidden">
-              <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-5`} />
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+            <Card key={index} className={`relative overflow-hidden ${item.border} shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105`}>
+              <div className={`absolute inset-0 bg-gradient-to-br ${item.bgGradient} opacity-40`} />
+              <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${item.gradient}`} />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                <CardTitle className={`text-sm font-medium ${item.textColor}`}>
                   {item.title}
                 </CardTitle>
-                <div className={`${item.bgColor} p-2 rounded-lg`}>
-                  <Icon className={`h-4 w-4 ${item.textColor}`} />
+                <div className={`${item.iconBg} p-3 rounded-xl shadow-lg`}>
+                  <Icon className="h-5 w-5 text-white" />
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${item.textColor}`}>
+              <CardContent className="relative z-10">
+                <div className={`text-3xl font-bold ${item.textColor} mb-2`}>
                   {item.value}
                 </div>
-                <div className="flex items-center space-x-1 text-xs text-muted-foreground mt-1">
-                  <span>
-                    {totalBugs > 0 ? `${((item.value / totalBugs) * 100).toFixed(1)}%` : '0%'} of total
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                    <span>
+                      {totalBugs > 0 ? `${((item.value / totalBugs) * 100).toFixed(1)}%` : '0%'} of total
+                    </span>
+                  </div>
+                  <div className={`w-12 h-2 bg-gradient-to-r ${item.gradient} rounded-full opacity-60`} />
+                </div>
+                
+                {/* Progress bar */}
+                <div className="mt-3">
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full bg-gradient-to-r ${item.gradient} transition-all duration-500`}
+                      style={{ width: totalBugs > 0 ? `${(item.value / totalBugs) * 100}%` : '0%' }}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -155,12 +186,14 @@ ${bugs.map(bug => `- ${bug.bugId || bug.id}: ${bug.title} (${bug.severity} - ${b
       </div>
 
       {totalBugs === 0 && (
-        <Card>
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
           <CardContent className="flex items-center justify-center h-32">
             <div className="text-center">
-              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-              <p className="text-lg font-medium">No bugs found!</p>
-              <p className="text-muted-foreground">Great job on maintaining quality!</p>
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <CheckCircle className="h-8 w-8 text-white" />
+              </div>
+              <p className="text-xl font-semibold text-green-800">No bugs found!</p>
+              <p className="text-green-600 mt-1">Excellent work on maintaining quality!</p>
             </div>
           </CardContent>
         </Card>

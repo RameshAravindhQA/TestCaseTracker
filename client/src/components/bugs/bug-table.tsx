@@ -152,7 +152,8 @@ ${bug.comments || 'No comments provided.'}
                 <TableHead>Severity</TableHead>
                 <TableHead>Priority</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Reported</TableHead>
+                <TableHead>Reported By</TableHead>
+                    <TableHead>Date</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -263,6 +264,29 @@ ${bug.comments || 'No comments provided.'}
                       >
                         {bug.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const reportedByUser = users?.find(u => u.id === bug.reportedById);
+                        if (!reportedByUser) return <span className="text-gray-400">Unknown</span>;
+                        
+                        const getInitials = (name: string) => {
+                          const parts = name.trim().split(' ');
+                          if (parts.length >= 2) {
+                            return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+                          }
+                          return name.substring(0, 2).toUpperCase();
+                        };
+                        
+                        return (
+                          <div 
+                            className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium cursor-pointer hover:scale-110 transition-transform"
+                            title={reportedByUser.name || `${reportedByUser.firstName} ${reportedByUser.lastName}`.trim()}
+                          >
+                            {getInitials(reportedByUser.name || `${reportedByUser.firstName} ${reportedByUser.lastName}`.trim())}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       {bug.dateReported ? format(new Date(bug.dateReported), "MMM d, yyyy") : "N/A"}
