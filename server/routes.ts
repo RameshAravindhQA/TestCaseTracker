@@ -5361,6 +5361,204 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Test Sheets API routes
+  apiRouter.get("/test-sheets", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
+      const sheets = await storage.getTestSheets(projectId);
+      res.json(sheets);
+    } catch (error) {
+      logger.error('Error fetching test sheets:', error);
+      res.status(500).json({ error: 'Failed to fetch test sheets' });
+    }
+  });
+
+  apiRouter.get("/test-sheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const sheet = await storage.getTestSheet(id);
+      
+      if (!sheet) {
+        return res.status(404).json({ error: 'Test sheet not found' });
+      }
+      
+      res.json(sheet);
+    } catch (error) {
+      logger.error(`Error fetching test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to fetch test sheet' });
+    }
+  });
+
+  apiRouter.post("/test-sheets", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      const sheetData = insertTestSheetSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+        metadata: {
+          ...req.body.metadata,
+          lastModifiedBy: req.session.userId,
+        }
+      });
+
+      const newSheet = await storage.createTestSheet(sheetData);
+      
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId,
+        action: "created",
+        entityType: "test_sheet",
+        entityId: newSheet.id,
+        details: {
+          projectId: newSheet.projectId,
+          sheetName: newSheet.name,
+        }
+      });
+      
+      res.status(201).json(newSheet);
+    } catch (error) {
+      logger.error('Error creating test sheet:', error);
+      res.status(500).json({ error: 'Failed to create test sheet' });
+    }
+  });
+
+  apiRouter.put("/test-sheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      const existingSheet = await storage.getTestSheet(id);
+      if (!existingSheet) {
+        return res.status(404).json({ error: 'Test sheet not found' });
+      }
+
+      const updateData = {
+        ...req.body,
+        metadata: {
+          ...req.body.metadata,
+          lastModifiedBy: req.session.userId,
+          version: (existingSheet.metadata.version || 1) + 1,
+        }
+      };
+
+      const updatedSheet = await storage.updateTestSheet(id, updateData);
+      
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId,
+        action: "updated",
+        entityType: "test_sheet",
+        entityId: id,
+        details: {
+          projectId: updatedSheet.projectId,
+          sheetName: updatedSheet.name,
+        }
+      });
+      
+      res.json(updatedSheet);
+    } catch (error) {
+      logger.error(`Error updating test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to update test sheet' });
+    }
+  });
+
+  apiRouter.delete("/test-sheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      const existingSheet = await storage.getTestSheet(id);
+      if (!existingSheet) {
+        return res.status(404).json({ error: 'Test sheet not found' });
+      }
+
+      await storage.deleteTestSheet(id);
+      
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId,
+        action: "deleted",
+        entityType: "test_sheet",
+        entityId: id,
+        details: {
+          projectId: existingSheet.projectId,
+          sheetName: existingSheet.name,
+        }
+      });
+      
+      res.status(204).end();
+    } catch (error) {
+      logger.error(`Error deleting test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to delete test sheet' });
+    }
+  });
+
+  apiRouter.post("/test-sheets/:id/duplicate", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { name } = req.body;
+      
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      if (!name) {
+        return res.status(400).json({ error: 'Sheet name is required' });
+      }
+
+      const duplicatedSheet = await storage.duplicateTestSheet(id, name, req.session.userId);
+      
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId,
+        action: "duplicated",
+        entityType: "test_sheet",
+        entityId: duplicatedSheet.id,
+        details: {
+          projectId: duplicatedSheet.projectId,
+          sheetName: duplicatedSheet.name,
+          originalSheetId: id,
+        }
+      });
+      
+      res.status(201).json(duplicatedSheet);
+    } catch (error) {
+      logger.error(`Error duplicating test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to duplicate test sheet' });
+    }
+  });
+
+  apiRouter.post("/test-sheets/:id/export", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { format } = req.body; // 'csv' | 'xlsx' | 'json'
+      
+      const sheet = await storage.getTestSheet(id);
+      if (!sheet) {
+        return res.status(404).json({ error: 'Test sheet not found' });
+      }
+
+      // Export logic will be implemented in the frontend
+      res.json({ 
+        success: true, 
+        message: 'Export request processed',
+        sheet: sheet 
+      });
+    } catch (error) {
+      logger.error(`Error exporting test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to export test sheet' });
+    }
+  });
+
   // Flow Diagrams API routes
   apiRouter.get("/flow-diagrams", isAuthenticated, async (req, res) => {
     try {

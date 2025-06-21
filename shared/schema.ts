@@ -510,29 +510,29 @@ export const insertTimeSheetSchema = baseTimeSheetSchema
   .extend({
     // More robust description validation
     description: z.string().min(3, "Description must be at least 3 characters"),
-    
+
     // Very flexible projectId handling - accepts string or number
     // We'll store it as a string in the database to avoid integer overflow issues
     projectId: z.preprocess(
       (val) => {
         // For null or undefined, return an empty string
         if (val === null || val === undefined) return "";
-        
+
         // If it's already a string, just return it
         if (typeof val === 'string') return val;
-        
+
         // If it's a number, convert to string
         if (typeof val === 'number') return String(val);
-        
+
         // For any other type, convert to string
         return String(val);
       },
       z.string()
     ),
-    
+
     // Ensure userId is a safe integer
     userId: z.coerce.number().int().positive("User ID must be positive").max(2147483647, "User ID is too large"),
-    
+
     // Make customerId optional and validate as integer if present
     customerId: z.union([
       z.string().transform(val => {
@@ -542,7 +542,7 @@ export const insertTimeSheetSchema = baseTimeSheetSchema
       z.number().int().positive("Customer ID must be positive"),
       z.undefined()
     ]).optional(),
-    
+
     // Make folderId optional and validate as integer if present
     folderId: z.union([
       z.string().transform(val => {
@@ -561,13 +561,13 @@ export const insertTimeSheetSchema = baseTimeSheetSchema
       }
       return asNumber;
     }),
-    
+
     // Accept string inputs for all date fields and convert during processing
     workDate: z.union([
       z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
       z.date()
     ]),
-    
+
     // Accept time as a string in HH:MM format or null for default values
     startTime: z.preprocess(
       // Preprocess ensures we get a consistent format
@@ -586,7 +586,7 @@ export const insertTimeSheetSchema = baseTimeSheetSchema
       z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, "Start time must be in HH:MM format")
         .default("09:00")
     ),
-    
+
     // Accept end time as a string in HH:MM format or null for default values
     endTime: z.preprocess(
       // Preprocess ensures we get a consistent format
@@ -605,7 +605,7 @@ export const insertTimeSheetSchema = baseTimeSheetSchema
       z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, "End time must be in HH:MM format")
         .default("17:00")
     ),
-    
+
     // Ensure hours is a safe integer with a reasonable maximum
     hours: z.coerce.number().min(0).max(24)
   })
@@ -615,30 +615,30 @@ export const insertTimeSheetSchema = baseTimeSheetSchema
     if (!data.startTime) {
       data.startTime = "09:00";
     }
-    
+
     // Handle null or invalid endTime
     if (!data.endTime) {
       data.endTime = "17:00";
     }
-    
+
     if (data.workDate) {
       if (data.workDate instanceof Date && isNaN(data.workDate.getTime())) {
         // Handle the case where Date constructor failed
         data.workDate = new Date();
       }
-      
+
       // Note: We no longer need to convert startTime and endTime to Date objects
       // as they are directly handled in their preprocessors
     }
-    
+
     // Ensure hours is within safe integer range
     if (data.hours !== undefined) {
       data.hours = Math.min(Math.max(0, data.hours), 24);
     }
-    
+
     return data;
   });
-  
+
 export type TimeSheet = typeof timeSheets.$inferSelect;
 // Use our enhanced schema type for InsertTimeSheet
 export type InsertTimeSheet = z.infer<typeof insertTimeSheetSchema>;
@@ -942,3 +942,134 @@ export const cellValueSchema = z.object({
 
 // This CellValue type is already defined earlier in the file
 // export type CellValue = z.infer<typeof cellValueSchema>;
+
+// Test Sheet Schema
+export const insertTestSheetSchema = z.object({
+  name: z.string().min(1, "Sheet name is required").max(100, "Sheet name too long"),
+  projectId: z.number().int().positive("Project ID must be a positive integer"),
+  data: z.object({
+    cells: z.record(z.string(), z.object({
+      value: z.any(),
+      formula: z.string().optional(),
+      type: z.enum(['text', 'number', 'date', 'boolean', 'formula']),
+      style: z.object({
+        fontWeight: z.enum(['normal', 'bold']).optional(),
+        fontStyle: z.enum(['normal', 'italic']).optional(),
+        textAlign: z.enum(['left', 'center', 'right']).optional(),
+        backgroundColor: z.string().optional(),
+        color: z.string().optional(),
+        fontSize: z.number().optional(),
+        border: z.object({
+          top: z.string().optional(),
+          right: z.string().optional(),
+          bottom: z.string().optional(),
+          left: z.string().optional(),
+        }).optional(),
+      }).optional(),
+      validation: z.object({
+        type: z.enum(['list', 'number', 'date', 'text']),
+        criteria: z.any(),
+        errorMessage: z.string().optional(),
+      }).optional(),
+    })),
+    rows: z.number().int().min(1),
+    cols: z.number().int().min(1),
+  }),
+  metadata: z.object({
+    version: z.number().int().min(1),
+    lastModifiedBy: z.number().int().positive(),
+    collaborators: z.array(z.number().int().positive()),
+    chartConfigs: z.array(z.object({
+      id: z.string(),
+      type: z.enum(['line', 'bar', 'pie', 'column']),
+      title: z.string(),
+      dataRange: z.string(),
+      position: z.object({
+        x: z.number(),
+        y: z.number(),
+        width: z.number(),
+        height: z.number(),
+      }),
+    })),
+    namedRanges: z.array(z.object({
+      name: z.string(),
+      range: z.string(),
+      description: z.string().optional(),
+    })),
+  }),
+  createdById: z.number().int().positive("Created by ID must be a positive integer"),
+});
+
+export type TestSheet = z.infer<typeof insertTestSheetSchema> & {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type InsertTestSheet = z.infer<typeof insertTestSheetSchema>;
+
+export {
+  insertUserSchema,
+  createUserSchema,
+  projects,
+  insertProjectSchema,
+  projectMembers,
+  insertProjectMemberSchema,
+  modules,
+  insertModuleSchema,
+  testCases,
+  insertTestCaseSchema,
+  bugs,
+  insertBugSchema,
+  activities,
+  insertActivitySchema,
+  testingTypes,
+  insertTestingTypeSchema,
+  testingTypeFields,
+  insertTestingTypeFieldSchema,
+  users,
+  documentFolders,
+  insertDocumentFolderSchema,
+  documents,
+  insertDocumentSchema,
+  customers,
+  insertCustomerSchema,
+  tags,
+  insertTagSchema,
+  timeSheetFolders,
+  insertTimeSheetFolderSchema,
+  traceabilityMatrix,
+  insertTraceabilityMatrixSchema,
+  traceabilityModules,
+  insertTraceabilityModuleSchema,
+  traceabilityMarkers,
+  insertTraceabilityMarkerSchema,
+  traceabilityMatrixCells,
+  insertTraceabilityMatrixCellSchema,
+  matrixCells,
+  insertMatrixCellSchema,
+  customMarkers,
+  insertCustomMarkerSchema,
+  timeSheets,
+  insertTimeSheetSchema,
+   customerProjects,
+  insertCustomerProjectSchema,
+  automationScripts,
+  insertAutomationScriptSchema,
+  automationRuns,
+  insertAutomationRunSchema,
+  automationSchedules,
+  insertAutomationScheduleSchema,
+  automationEnvironments,
+  insertAutomationEnvironmentSchema,
+  sprints,
+  insertSprintSchema,
+  kanbanColumns,
+  insertKanbanColumnSchema,
+  kanbanCards,
+  insertKanbanCardSchema,
+  sprintsRelations,
+  kanbanColumnsRelations,
+  kanbanCardsRelations,
+  cellValueSchema,
+};

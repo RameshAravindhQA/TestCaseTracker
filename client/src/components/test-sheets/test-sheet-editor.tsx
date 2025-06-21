@@ -1,0 +1,516 @@
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import { TestSheet, CellData, CellValue } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { formulaEngine } from "@/lib/formula-engine";
+import {
+  Save,
+  Download,
+  Upload,
+  Bold,
+  Italic,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Palette,
+  BarChart3,
+  Plus,
+  Minus,
+  X,
+  FileSpreadsheet,
+} from "lucide-react";
+import { HexColorPicker } from "react-colorful";
+
+interface TestSheetEditorProps {
+  sheet: TestSheet;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: () => void;
+}
+
+interface SelectedCell {
+  row: number;
+  col: number;
+  cellId: string;
+}
+
+export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheetEditorProps) {
+  const [sheetData, setSheetData] = useState(sheet.data);
+  const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
+  const [formulaBarValue, setFormulaBarValue] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [bgColorPickerOpen, setBgColorPickerOpen] = useState(false);
+  const [showChartDialog, setShowChartDialog] = useState(false);
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Convert column number to letter (0 -> A, 1 -> B, etc.)
+  const getColumnLetter = (colIndex: number): string => {
+    let result = '';
+    while (colIndex >= 0) {
+      result = String.fromCharCode(65 + (colIndex % 26)) + result;
+      colIndex = Math.floor(colIndex / 26) - 1;
+    }
+    return result;
+  };
+
+  // Convert cell coordinates to cell ID (row 0, col 0 -> A1)
+  const getCellId = (row: number, col: number): string => {
+    return `${getColumnLetter(col)}${row + 1}`;
+  };
+
+  // Get cell data or create empty cell
+  const getCellData = (row: number, col: number): CellData => {
+    const cellId = getCellId(row, col);
+    return sheetData.cells[cellId] || {
+      value: '',
+      type: 'text',
+      style: {},
+    };
+  };
+
+  // Update cell data
+  const updateCell = useCallback((row: number, col: number, updates: Partial<CellData>) => {
+    const cellId = getCellId(row, col);
+    setSheetData(prev => ({
+      ...prev,
+      cells: {
+        ...prev.cells,
+        [cellId]: {
+          ...getCellData(row, col),
+          ...updates,
+        },
+      },
+    }));
+  }, [sheetData.cells]);
+
+  // Save sheet mutation
+  const saveSheetMutation = useMutation({
+    mutationFn: async (data: typeof sheetData) => {
+      return apiRequest('PUT', `/api/test-sheets/${sheet.id}`, {
+        ...sheet,
+        data,
+        metadata: {
+          ...sheet.metadata,
+          version: sheet.metadata.version + 1,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Sheet saved",
+        description: "Your changes have been saved successfully.",
+      });
+      onSave();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to save sheet: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle cell click
+  const handleCellClick = (row: number, col: number) => {
+    const cellId = getCellId(row, col);
+    setSelectedCell({ row, col, cellId });
+    
+    const cellData = getCellData(row, col);
+    if (cellData.formula) {
+      setFormulaBarValue(cellData.formula);
+    } else {
+      setFormulaBarValue(String(cellData.value || ''));
+    }
+    setIsEditing(false);
+  };
+
+  // Handle cell double click to start editing
+  const handleCellDoubleClick = (row: number, col: number) => {
+    setSelectedCell({ row, col, cellId: getCellId(row, col) });
+    setIsEditing(true);
+  };
+
+  // Handle formula bar change
+  const handleFormulaBarChange = (value: string) => {
+    setFormulaBarValue(value);
+    
+    if (selectedCell) {
+      let cellValue: any = value;
+      let cellType: CellData['type'] = 'text';
+      let formula: string | undefined;
+
+      // Determine cell type and process value
+      if (value.startsWith('=')) {
+        cellType = 'formula';
+        formula = value;
+        // Evaluate formula
+        try {
+          const context = Object.keys(sheetData.cells).reduce((acc, cellId) => {
+            acc[cellId] = sheetData.cells[cellId].value;
+            return acc;
+          }, {} as Record<string, any>);
+          cellValue = formulaEngine.evaluate(value, context);
+        } catch (error) {
+          cellValue = '#ERROR!';
+        }
+      } else if (!isNaN(Number(value)) && value.trim() !== '') {
+        cellType = 'number';
+        cellValue = Number(value);
+      } else if (value.toLowerCase() === 'true' || value.toLowerCase() === 'false') {
+        cellType = 'boolean';
+        cellValue = value.toLowerCase() === 'true';
+      } else if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        cellType = 'date';
+        cellValue = value;
+      }
+
+      updateCell(selectedCell.row, selectedCell.col, {
+        value: cellValue,
+        type: cellType,
+        formula,
+      });
+    }
+  };
+
+  // Handle key press in grid
+  const handleKeyPress = (event: React.KeyboardEvent) => {
+    if (!selectedCell) return;
+
+    const { row, col } = selectedCell;
+
+    switch (event.key) {
+      case 'ArrowUp':
+        if (row > 0) handleCellClick(row - 1, col);
+        event.preventDefault();
+        break;
+      case 'ArrowDown':
+        if (row < sheetData.rows - 1) handleCellClick(row + 1, col);
+        event.preventDefault();
+        break;
+      case 'ArrowLeft':
+        if (col > 0) handleCellClick(row, col - 1);
+        event.preventDefault();
+        break;
+      case 'ArrowRight':
+        if (col < sheetData.cols - 1) handleCellClick(row, col + 1);
+        event.preventDefault();
+        break;
+      case 'Enter':
+        if (row < sheetData.rows - 1) handleCellClick(row + 1, col);
+        event.preventDefault();
+        break;
+      case 'Tab':
+        if (col < sheetData.cols - 1) handleCellClick(row, col + 1);
+        else if (row < sheetData.rows - 1) handleCellClick(row + 1, 0);
+        event.preventDefault();
+        break;
+      case 'Delete':
+      case 'Backspace':
+        updateCell(row, col, { value: '', type: 'text', formula: undefined });
+        setFormulaBarValue('');
+        event.preventDefault();
+        break;
+      case 'F2':
+        setIsEditing(true);
+        event.preventDefault();
+        break;
+    }
+  };
+
+  // Format cell style
+  const formatCell = (property: string, value: any) => {
+    if (!selectedCell) return;
+
+    const { row, col } = selectedCell;
+    const currentCell = getCellData(row, col);
+    
+    updateCell(row, col, {
+      style: {
+        ...currentCell.style,
+        [property]: value,
+      },
+    });
+  };
+
+  // Export to CSV
+  const exportToCSV = () => {
+    const csvData: string[][] = [];
+    
+    for (let row = 0; row < sheetData.rows; row++) {
+      const rowData: string[] = [];
+      for (let col = 0; col < sheetData.cols; col++) {
+        const cellData = getCellData(row, col);
+        rowData.push(String(cellData.value || ''));
+      }
+      csvData.push(rowData);
+    }
+
+    const csvContent = csvData.map(row => 
+      row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${sheet.name}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const selectedCellData = selectedCell ? getCellData(selectedCell.row, selectedCell.col) : null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-screen-xl h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileSpreadsheet className="h-5 w-5" />
+            {sheet.name}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Toolbar */}
+        <div className="flex items-center gap-2 p-2 border-b">
+          <Button 
+            size="sm" 
+            onClick={() => saveSheetMutation.mutate(sheetData)}
+            disabled={saveSheetMutation.isPending}
+          >
+            <Save className="h-4 w-4 mr-1" />
+            Save
+          </Button>
+          
+          <Separator orientation="vertical" className="h-6" />
+          
+          <Button size="sm" variant="outline" onClick={exportToCSV}>
+            <Download className="h-4 w-4 mr-1" />
+            Export CSV
+          </Button>
+
+          <Separator orientation="vertical" className="h-6" />
+
+          {/* Formatting tools */}
+          <Button
+            size="sm"
+            variant={selectedCellData?.style?.fontWeight === 'bold' ? 'default' : 'outline'}
+            onClick={() => formatCell('fontWeight', 
+              selectedCellData?.style?.fontWeight === 'bold' ? 'normal' : 'bold'
+            )}
+          >
+            <Bold className="h-4 w-4" />
+          </Button>
+
+          <Button
+            size="sm"
+            variant={selectedCellData?.style?.fontStyle === 'italic' ? 'default' : 'outline'}
+            onClick={() => formatCell('fontStyle', 
+              selectedCellData?.style?.fontStyle === 'italic' ? 'normal' : 'italic'
+            )}
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
+
+          <Button
+            size="sm"
+            variant={selectedCellData?.style?.textAlign === 'left' ? 'default' : 'outline'}
+            onClick={() => formatCell('textAlign', 'left')}
+          >
+            <AlignLeft className="h-4 w-4" />
+          </Button>
+
+          <Button
+            size="sm"
+            variant={selectedCellData?.style?.textAlign === 'center' ? 'default' : 'outline'}
+            onClick={() => formatCell('textAlign', 'center')}
+          >
+            <AlignCenter className="h-4 w-4" />
+          </Button>
+
+          <Button
+            size="sm"
+            variant={selectedCellData?.style?.textAlign === 'right' ? 'default' : 'outline'}
+            onClick={() => formatCell('textAlign', 'right')}
+          >
+            <AlignRight className="h-4 w-4" />
+          </Button>
+
+          <Popover open={colorPickerOpen} onOpenChange={setColorPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button size="sm" variant="outline">
+                <Palette className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="space-y-4">
+                <Label>Text Color</Label>
+                <HexColorPicker
+                  color={selectedCellData?.style?.color || '#000000'}
+                  onChange={(color) => formatCell('color', color)}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Popover open={bgColorPickerOpen} onOpenChange={setBgColorPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button size="sm" variant="outline">
+                <div 
+                  className="w-4 h-4 border border-gray-300"
+                  style={{ backgroundColor: selectedCellData?.style?.backgroundColor || '#ffffff' }}
+                />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="space-y-4">
+                <Label>Background Color</Label>
+                <HexColorPicker
+                  color={selectedCellData?.style?.backgroundColor || '#ffffff'}
+                  onChange={(color) => formatCell('backgroundColor', color)}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Formula Bar */}
+        <div className="flex items-center gap-2 p-2 border-b">
+          <Label className="text-sm font-medium min-w-fit">
+            {selectedCell ? selectedCell.cellId : 'A1'}
+          </Label>
+          <Input
+            value={formulaBarValue}
+            onChange={(e) => setFormulaBarValue(e.target.value)}
+            onBlur={() => handleFormulaBarChange(formulaBarValue)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleFormulaBarChange(formulaBarValue);
+              }
+            }}
+            placeholder="Enter value or formula (=SUM(A1:A10))"
+            className="flex-1"
+          />
+        </div>
+
+        {/* Spreadsheet Grid */}
+        <div className="flex-1 overflow-auto" ref={gridRef}>
+          <div className="relative min-w-fit min-h-fit">
+            {/* Column Headers */}
+            <div className="flex sticky top-0 bg-gray-50 z-10">
+              <div className="w-12 h-8 border border-gray-300 bg-gray-100"></div>
+              {Array.from({ length: sheetData.cols }, (_, col) => (
+                <div
+                  key={col}
+                  className="w-24 h-8 border border-gray-300 bg-gray-100 flex items-center justify-center text-sm font-medium"
+                >
+                  {getColumnLetter(col)}
+                </div>
+              ))}
+            </div>
+
+            {/* Rows */}
+            {Array.from({ length: sheetData.rows }, (_, row) => (
+              <div key={row} className="flex">
+                {/* Row Header */}
+                <div className="w-12 h-8 border border-gray-300 bg-gray-100 flex items-center justify-center text-sm font-medium sticky left-0 z-10">
+                  {row + 1}
+                </div>
+
+                {/* Cells */}
+                {Array.from({ length: sheetData.cols }, (_, col) => {
+                  const cellData = getCellData(row, col);
+                  const isSelected = selectedCell?.row === row && selectedCell?.col === col;
+                  
+                  return (
+                    <div
+                      key={`${row}-${col}`}
+                      className={`w-24 h-8 border border-gray-300 cursor-cell relative flex items-center px-1 text-sm ${
+                        isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                      }`}
+                      style={{
+                        backgroundColor: cellData.style?.backgroundColor,
+                        color: cellData.style?.color,
+                        fontWeight: cellData.style?.fontWeight,
+                        fontStyle: cellData.style?.fontStyle,
+                        textAlign: cellData.style?.textAlign,
+                      }}
+                      onClick={() => handleCellClick(row, col)}
+                      onDoubleClick={() => handleCellDoubleClick(row, col)}
+                    >
+                      {isEditing && isSelected ? (
+                        <Input
+                          value={formulaBarValue}
+                          onChange={(e) => setFormulaBarValue(e.target.value)}
+                          onBlur={() => {
+                            handleFormulaBarChange(formulaBarValue);
+                            setIsEditing(false);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleFormulaBarChange(formulaBarValue);
+                              setIsEditing(false);
+                            } else if (e.key === 'Escape') {
+                              setIsEditing(false);
+                            }
+                          }}
+                          className="w-full h-full border-none p-0 text-sm"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="truncate w-full">
+                          {cellData.type === 'formula' ? cellData.value : (cellData.value || '')}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+          <Button 
+            onClick={() => saveSheetMutation.mutate(sheetData)}
+            disabled={saveSheetMutation.isPending}
+          >
+            {saveSheetMutation.isPending ? "Saving..." : "Save Changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -1375,6 +1375,44 @@ class MemStorage implements IStorage {
     return cell; // Placeholder for now
   }
 
+  // Test Sheets
+  async getTestSheets(projectId?: number): Promise<any[]> {
+    let results = Array.from(this.testSheets.values());
+
+    if (projectId) {
+      results = results.filter(sheet => sheet.projectId === projectId);
+    }
+
+    return results;
+  }
+
+  async getTestSheet(id: number): Promise<any | undefined> {
+    return this.testSheets.get(id);
+  }
+
+  async createTestSheet(sheet: any): Promise<any> {
+    const newSheet = {
+      id: this.getNextId(),
+      ...sheet,
+      createdAt: new Date(),
+    };
+    this.testSheets.set(newSheet.id, newSheet);
+    return newSheet;
+  }
+
+  async updateTestSheet(id: number, sheetData: any): Promise<any | undefined> {
+    const sheet = this.testSheets.get(id);
+    if (!sheet) return undefined;
+
+    const updatedSheet = { ...sheet, ...sheetData, updatedAt: new Date() };
+    this.testSheets.set(id, updatedSheet);
+    return updatedSheet;
+  }
+
+  async deleteTestSheet(id: number): Promise<boolean> {
+    return this.testSheets.delete(id);
+  }
+
   // Helper method to record activities
   private recordActivity(entityType: string, action: string, entityId: number, userId: number) {
     const activity = {
@@ -1632,10 +1670,12 @@ class MemStorage implements IStorage {
     this.moduleCounter = 1;
     this.testCaseCounter = 1;
     this.bugCounter = 1;
+    this.testSheets.clear(); // Clear test sheets during reset
 
     // Re-initialize default data
     this.initializeDefaultData();
   }
+  private testSheets = new Map<number, any>();
 }
 
 // Create and export the storage instance

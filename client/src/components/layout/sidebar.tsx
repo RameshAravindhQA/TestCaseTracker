@@ -63,26 +63,26 @@ const SidebarComponent = ({ className }: SidebarProps) => {
   const [location] = useLocation();
   const { toast } = useToast();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  
+
   const { data: user } = useQuery<User>({
     queryKey: ["/api/auth/user"],
   });
-  
+
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSuccess: () => {
       // Clear all query cache
       queryClient.clear();
-      
+
       // Remove auth status from localStorage
       localStorage.removeItem('isAuthenticated');
       localStorage.removeItem('lastLoginTime');
-      
+
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account",
       });
-      
+
       // Redirect to login page
       window.location.href = "/login";
     },
@@ -98,7 +98,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
   const handleLogout = () => {
     setLogoutDialogOpen(true);
   };
-  
+
   const confirmLogout = () => {
     logoutMutation.mutate();
   };
@@ -174,7 +174,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       icon: <Settings className="h-5 w-5" />,
     },
   ], []);
-  
+
   const userItems: NavItem[] = useMemo(() => [
     {
       name: "My Profile",
@@ -245,7 +245,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                     </span>
                   )}
                 </Link>
-                
+
                 {/* Render submenu if item has children */}
                 {item.children && item.children.length > 0 && (
                   <div className="pl-9 mt-1 space-y-1">
@@ -350,7 +350,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
           {logoutMutation.isPending ? "Logging out..." : "Logout"}
         </Button>
       </div>
-      
+
       {/* Logout Confirmation Dialog */}
       <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
         <AlertDialogContent>

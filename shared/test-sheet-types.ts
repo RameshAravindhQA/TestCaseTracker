@@ -1,55 +1,4 @@
-// Re-export all types from the main types file to ensure consistency
-export * from '../types';
 
-// This ensures all imports work from both @/types and @/types/index
-
-export interface TestCase {
-  id: number;
-  testCaseId: string;
-  feature: string;
-  scenario: string;
-  priority: "Low" | "Medium" | "High" | "Critical";
-  status: "Pass" | "Fail" | "Blocked" | "Not Executed";
-  description?: string;
-  preConditions?: string;
-  testSteps?: string;
-  expectedResult?: string;
-  actualResult?: string;
-  comments?: string;
-  createdAt: string;
-  updatedAt: string;
-  projectId: number;
-  moduleId?: number;
-  assignedTo?: number;
-  tags?: string[];
-  attachments?: FileAttachment[];
-}
-
-export interface Bug {
-  id: number;
-  bugId: string;
-  title: string;
-  severity: "Critical" | "Major" | "Minor" | "Trivial";
-  priority: "High" | "Medium" | "Low";
-  status: "Open" | "In Progress" | "Resolved" | "Closed";
-  description?: string;
-  environment?: string;
-  preConditions?: string;
-  stepsToReproduce: string;
-  expectedResult: string;
-  actualResult: string;
-  comments?: string;
-  dateReported: string;
-  createdAt: string;
-  updatedAt: string;
-  projectId: number;
-  moduleId?: number;
-  assignedTo?: number;
-  tags?: string[];
-  attachments?: FileAttachment[];
-}
-
-// Test Sheet Types
 export interface TestSheet {
   id: number;
   name: string;
@@ -128,6 +77,16 @@ export interface NamedRange {
   description?: string;
 }
 
-// Flow Diagram Types
-export interface FlowDiagram {
+export interface FormulaEngine {
+  evaluate(formula: string, context: Record<string, any>): any;
+  getDependencies(formula: string): string[];
+}
+
+export interface SheetChange {
+  id: string;
+  userId: number;
+  timestamp: string;
+  type: 'cell_update' | 'row_insert' | 'row_delete' | 'col_insert' | 'col_delete';
+  data: any;
+  previousData?: any;
 }

@@ -129,6 +129,9 @@ function Router() {
       <Route path="/traceability-matrix">
         <ProtectedComponent Component={TraceabilityMatrixPage} />
       </Route>
+      <Route path="/test-sheets">
+         <ProtectedLazyComponent Component={lazy(() => import("./pages/test-sheets"))} />
+      </Route>
 
       {/* Catch-all 404 route - make sure this is last */}
       <Route path="/:rest*">
