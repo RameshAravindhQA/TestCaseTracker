@@ -1413,6 +1413,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Fix module IDs for a project (admin only)
+  apiRouter.post("/projects/:projectId/fix-module-ids", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const project = await storage.getProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      const modules = await storage.getModules(projectId);
+      const sortedModules = modules.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      
+      // Update module IDs to start from 1
+      for (let i = 0; i < sortedModules.length; i++) {
+        const newModuleId = `MOD-${i + 1}`;
+        await storage.updateModule(sortedModules[i].id, { moduleId: newModuleId });
+      }
+      
+      res.json({ message: `Fixed ${sortedModules.length} module IDs`, modules: sortedModules.length });
+    } catch (error) {
+      console.error("Fix module IDs error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Modules routes
   apiRouter.get("/projects/:projectId/modules", isAuthenticated, async (req, res) => {
     try {

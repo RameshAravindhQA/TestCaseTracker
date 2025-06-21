@@ -243,7 +243,7 @@ class MemStorage implements IStorage {
 
       // Always start from 1 for the first module in a project
       const nextNumber = existingModules.length > 0 ? Math.max(...existingModules) + 1 : 1;
-      moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
+      moduleId = `MOD-${nextNumber}`;
     }
 
     const module: Module = {

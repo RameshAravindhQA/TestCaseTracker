@@ -245,10 +245,10 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     ...(testCases?.map(tc => ({
       id: `tc-${tc.id}`,
       type: 'testcase' as const,
-      title: tc.feature || tc.scenario || 'Untitled Test Case',
+      title: tc.feature || tc.scenario || tc.title || 'Untitled Test Case',
       module: modules?.find(m => m.id === tc.moduleId)?.name || 'No Module',
-      status: tc.status,
-      priority: tc.priority,
+      status: tc.status || 'Not Executed',
+      priority: tc.priority || 'Medium',
       assignee: users?.find(u => u.id === tc.assignedTo)?.name || 'Unassigned',
       createdAt: tc.createdAt,
       description: tc.description || '',
@@ -258,15 +258,15 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     ...(bugs?.map(bug => ({
       id: `bug-${bug.id}`,
       type: 'bug' as const,
-      title: bug.title,
+      title: bug.title || 'Untitled Bug',
       module: modules?.find(m => m.id === bug.moduleId)?.name || 'No Module',
-      status: bug.status,
-      priority: bug.priority,
+      status: bug.status || 'Open',
+      priority: bug.priority || 'Medium',
       assignee: users?.find(u => u.id === bug.assignedTo)?.name || 'Unassigned',
       createdAt: bug.createdAt,
       description: bug.description || '',
       progress: bug.status === 'Resolved' ? 100 : bug.status === 'Closed' ? 100 : bug.status === 'In Progress' ? 50 : 0,
-      severity: bug.severity,
+      severity: bug.severity || 'Medium',
       originalData: bug
     })) || [])
   ];
@@ -1081,6 +1081,9 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                       : "Try adjusting your filters or search query to see more results."
                     }
                   </p>
+                  <div className="text-sm text-gray-500 mt-2">
+                    Debug: Total items: {combinedData.length}, Test cases: {testCases?.length || 0}, Bugs: {bugs?.length || 0}, Project ID: {effectiveProjectId}
+                  </div>
                   {combinedData.length === 0 && (
                     <div className="mt-6">
                       <Button onClick={() => navigate('/test-cases')} className="mr-2">
