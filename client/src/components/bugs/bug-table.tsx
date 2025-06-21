@@ -254,7 +254,8 @@ ${bug.comments || 'No comments provided.'}
                           ? "border-red-200 bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-white dark:border-red-700" 
                           : bug.priority === "Medium" 
                           ? "border-yellow-200 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-white dark:border-yellow-700" 
-                          : "border-green-200 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-white dark:border-green-700"
+                          : bug.priority === "Low"
+                          ? "border-green-200 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-white dark:border-green-700"
                       }>
                         {bug.priority}
                       </Badge>
@@ -320,7 +321,7 @@ ${bug.comments || 'No comments provided.'}
                             <Edit className="mr-2 h-4 w-4" />
                             <span>Edit</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={()={() => copyToClipboard(bug)}>
+                          <DropdownMenuItem onClick={() => copyToClipboard(bug)}>
                             <ClipboardCopy className="mr-2 h-4 w-4" />
                             <span>Make a Copy</span>
                           </DropdownMenuItem>

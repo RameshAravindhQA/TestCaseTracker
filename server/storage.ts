@@ -155,8 +155,10 @@ class MemStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
+    const existingIds = Array.from(this.users.values()).map(u => u.id);
+    const id = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
     const user: User = {
-      id: this.getNextId(),
+      id: id,
       ...insertUser,
       createdAt: new Date(),
     };
@@ -187,8 +189,10 @@ class MemStorage implements IStorage {
   }
 
   async createProject(insertProject: InsertProject): Promise<Project> {
+    const existingIds = Array.from(this.projects.values()).map(p => p.id);
+    const id = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
     const project: Project = {
-      id: this.getNextId(),
+      id: id,
       ...insertProject,
       createdAt: new Date(),
     };
