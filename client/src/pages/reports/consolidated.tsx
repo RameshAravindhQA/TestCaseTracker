@@ -755,7 +755,7 @@ export default function ConsolidatedReports() {
                   <SelectItem value="Blocked">Mark as Blocked</SelectItem>
                   <SelectItem value="In Progress">Mark as In Progress</SelectItem>
                   <SelectItem value="Resolved">Mark as Resolved</SelectItem>
-                  <SelectItem value="Closed">Mark as Closed</SelectItem>
+                  <SelectItem value="Closed">SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" onClick={clearSelection} className="text-black">Clear Selection</Button>
@@ -848,7 +848,7 @@ export default function ConsolidatedReports() {
                           value={currentStatus} 
                           onValueChange={(value) => handleStatusChange(item, value)}
                         >
-                          <SelectTrigger className={`w-32 text-black ${hasPendingChange ? 'border-yellow-500 bg-yellow-50' : ''}`}>
+                          <SelectTrigger className={`w-32 ${getStatusColor(item.status, item.type)}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>

@@ -69,71 +69,82 @@ Open: ${openBugs}, In Progress: ${inProgressBugs}, Resolved: ${resolvedBugs}, Cl
       title: "Total Bugs",
       value: totalBugsAll,
       icon: AlertTriangle,
-      gradient: "from-indigo-500 via-purple-500 to-pink-500",
-      bgGradient: "from-indigo-50 via-purple-50 to-pink-50",
-      textColor: "text-indigo-700",
-      iconBg: "bg-gradient-to-r from-indigo-500 to-purple-600",
-      border: "border-indigo-200",
+      bgColor: "bg-blue-100",
+      textColor: "text-blue-700",
+      iconColor: "text-blue-600",
+      borderColor: "border-blue-200",
     },
     {
       title: "Critical",
       value: criticalBugsAll,
       icon: Shield,
-      gradient: "from-red-500 via-rose-500 to-pink-500",
-      bgGradient: "from-red-50 via-rose-50 to-pink-50",
-      textColor: "text-red-700",
-      iconBg: "bg-gradient-to-r from-red-500 to-rose-600",
-      border: "border-red-200",
+      bgColor: "bg-red-100",
+      textColor: "text-red-700", 
+      iconColor: "text-red-600",
+      borderColor: "border-red-200",
     },
     {
       title: "Major",
       value: majorBugsAll,
       icon: Zap,
-      gradient: "from-orange-500 via-amber-500 to-yellow-500",
-      bgGradient: "from-orange-50 via-amber-50 to-yellow-50",
+      bgColor: "bg-orange-100",
       textColor: "text-orange-700",
-      iconBg: "bg-gradient-to-r from-orange-500 to-amber-600",
-      border: "border-orange-200",
+      iconColor: "text-orange-600",
+      borderColor: "border-orange-200",
     },
     {
       title: "Minor",
       value: minorBugsAll,
       icon: Info,
-      gradient: "from-yellow-400 via-lime-400 to-green-400",
-      bgGradient: "from-yellow-50 via-lime-50 to-green-50",
+      bgColor: "bg-yellow-100",
       textColor: "text-yellow-700",
-      iconBg: "bg-gradient-to-r from-yellow-500 to-lime-600",
-      border: "border-yellow-200",
+      iconColor: "text-yellow-600",
+      borderColor: "border-yellow-200",
     },
     {
       title: "Trivial",
       value: trivialBugsAll,
       icon: Star,
-      gradient: "from-gray-400 via-slate-400 to-zinc-400",
-      bgGradient: "from-gray-50 via-slate-50 to-zinc-50",
+      bgColor: "bg-gray-100",
       textColor: "text-gray-700",
-      iconBg: "bg-gradient-to-r from-gray-500 to-slate-600",
-      border: "border-gray-200",
+      iconColor: "text-gray-600",
+      borderColor: "border-gray-200",
     },
     {
       title: "Open",
       value: openBugsAll,
       icon: Clock,
-      gradient: "from-purple-500 via-violet-500 to-indigo-500",
-      bgGradient: "from-purple-50 via-violet-50 to-indigo-50",
+      bgColor: "bg-purple-100",
       textColor: "text-purple-700",
-      iconBg: "bg-gradient-to-r from-purple-500 to-violet-600",
-      border: "border-purple-200",
+      iconColor: "text-purple-600",
+      borderColor: "border-purple-200",
+    },
+    {
+      title: "In Progress",
+      value: inProgressBugs,
+      icon: Clock,
+      bgColor: "bg-blue-100",
+      textColor: "text-blue-700",
+      iconColor: "text-blue-600",
+      borderColor: "border-blue-200",
+    },
+    {
+      title: "Resolved",
+      value: resolvedBugs,
+      icon: CheckCircle,
+      bgColor: "bg-green-100",
+      textColor: "text-green-700",
+      iconColor: "text-green-600",
+      borderColor: "border-green-200",
     },
     {
       title: "Closed",
-      value: closedBugsAll,
+      value: closedBugs,
       icon: CheckCircle,
-      gradient: "from-emerald-500 via-teal-500 to-cyan-500",
-      bgGradient: "from-emerald-50 via-teal-50 to-cyan-50",
-      textColor: "text-emerald-700",
-      iconBg: "bg-gradient-to-r from-emerald-500 to-teal-600",
-      border: "border-emerald-200",
+      bgColor: "bg-green-100",
+      textColor: "text-green-700",
+      iconColor: "text-green-600",
+      borderColor: "border-green-200",
     },
   ];
 
@@ -187,35 +198,32 @@ ${bugs.map(bug => `- ${bug.bugId || bug.id}: ${bug.title} (${bug.severity} - ${b
         {summaryData.map((item, index) => {
           const Icon = item.icon;
           return (
-            <Card key={index} className={`relative overflow-hidden ${item.border} shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105`}>
-              <div className={`absolute inset-0 bg-gradient-to-br ${item.bgGradient} opacity-40`} />
-              <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${item.gradient}`} />
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <Card key={index} className={`relative overflow-hidden ${item.borderColor} ${item.bgColor} shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105`}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className={`text-sm font-medium ${item.textColor}`}>
                   {item.title}
                 </CardTitle>
-                <div className={`${item.iconBg} p-3 rounded-xl shadow-lg`}>
-                  <Icon className="h-5 w-5 text-white" />
+                <div className="p-2 rounded-lg bg-white/50">
+                  <Icon className={`h-5 w-5 ${item.iconColor}`} />
                 </div>
               </CardHeader>
-              <CardContent className="relative z-10">
+              <CardContent>
                 <div className={`text-3xl font-bold ${item.textColor} mb-2`}>
                   {item.value}
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                  <div className="flex items-center space-x-1 text-xs text-gray-600">
                     <span>
                       {totalBugsAll > 0 ? `${((item.value / totalBugsAll) * 100).toFixed(1)}%` : '0%'} of total
                     </span>
                   </div>
-                  <div className={`w-12 h-2 bg-gradient-to-r ${item.gradient} rounded-full opacity-60`} />
                 </div>
 
                 {/* Progress bar */}
                 <div className="mt-3">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-white/50 rounded-full h-2">
                     <div 
-                      className={`h-2 rounded-full bg-gradient-to-r ${item.gradient} transition-all duration-500`}
+                      className={`h-2 rounded-full ${item.iconColor.replace('text-', 'bg-')} transition-all duration-500`}
                       style={{ width: totalBugsAll > 0 ? `${(item.value / totalBugsAll) * 100}%` : '0%' }}
                     />
                   </div>
