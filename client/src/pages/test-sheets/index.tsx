@@ -65,9 +65,19 @@ export default function TestSheetsPage() {
   const queryClient = useQueryClient();
 
   // Fetch projects
-  const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
+  const { data: projects, isLoading: isProjectsLoading, error: projectsError } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
-    queryFn: () => apiRequest('GET', '/api/projects').then(res => res.json()),
+    queryFn: async () => {
+      try {
+        const response = await apiRequest('GET', '/api/projects');
+        const data = await response.json();
+        console.log('Projects loaded:', data);
+        return data;
+      } catch (error) {
+        console.error('Error loading projects:', error);
+        throw error;
+      }
+    },
   });
 
   // Fetch test sheets for selected project
@@ -218,11 +228,17 @@ export default function TestSheetsPage() {
             Select Project
           </Label>
           <div className="mt-1 max-w-md">
-          <ProjectSelect
-              value={selectedProjectId}
-              onValueChange={setSelectedProjectId}
-              placeholder="Choose a project to view test sheets"
-            />
+            {isProjectsLoading ? (
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+            ) : projectsError ? (
+              <div className="text-red-600 text-sm">Error loading projects</div>
+            ) : (
+              <ProjectSelect
+                value={selectedProjectId}
+                onValueChange={setSelectedProjectId}
+                placeholder="Choose a project to view test sheets"
+              />
+            )}
           </div>
         </div>
 
