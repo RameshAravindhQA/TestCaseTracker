@@ -153,11 +153,12 @@ export class DatabaseStorage implements IStorage {
     // Auto-generate module ID if not provided
     let moduleId = insertModule.moduleId;
     if (!moduleId || moduleId.trim() === '') {
-      // Get the highest existing module number for this specific project only
+      // Get existing modules for this specific project only
       const existingModules = await db.select()
         .from(modules)
         .where(eq(modules.projectId, insertModule.projectId));
       
+      // Extract module numbers from existing module IDs for this project
       const moduleNumbers = existingModules
         .map(module => module.moduleId)
         .filter(id => id && id.match(/^MOD-(\d+)$/))
@@ -167,7 +168,7 @@ export class DatabaseStorage implements IStorage {
         })
         .filter(num => !isNaN(num));
       
-      // Start from 1 for each project
+      // Always start from 1 for each project, increment based on existing modules in this project only
       const nextNumber = moduleNumbers.length > 0 ? Math.max(...moduleNumbers) + 1 : 1;
       moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
     }

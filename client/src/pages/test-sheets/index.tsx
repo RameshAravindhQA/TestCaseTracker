@@ -234,8 +234,10 @@ export default function TestSheetsPage() {
               <div className="text-red-600 text-sm">Error loading projects</div>
             ) : (
               <ProjectSelect
-                value={selectedProjectId}
-                onValueChange={setSelectedProjectId}
+                projects={projects}
+                isLoading={isProjectsLoading}
+                selectedProjectId={selectedProjectId || ""}
+                onChange={(value) => setSelectedProjectId(Number(value))}
                 placeholder="Choose a project to view test sheets"
               />
             )}
