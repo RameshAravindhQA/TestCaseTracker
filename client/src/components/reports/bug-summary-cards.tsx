@@ -117,7 +117,7 @@ Open: ${openBugs}, In Progress: ${inProgressBugs}, Resolved: ${resolvedBugs}, Cl
       title: "In Progress",
       value: inProgressBugs,
       icon: Clock,
-      bgGradient: "bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-600",
+      bgGradient: "bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-500",
       textColor: "text-white",
       iconColor: "text-white",
     },

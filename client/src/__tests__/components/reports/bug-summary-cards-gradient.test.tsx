@@ -72,7 +72,7 @@ describe('Bug Summary Cards Gradient Implementation', () => {
   it('should apply correct gradient patterns for each card type', () => {
     render(<BugSummaryCards bugs={mockBugs} projectName="Test Project" />);
 
-    // Check for specific gradient patterns
+    // Check for specific gradient patterns matching consolidated reports
     const indigo_blue_cyan = document.querySelectorAll('[class*="from-indigo-500"][class*="via-blue-600"][class*="to-cyan-500"]');
     expect(indigo_blue_cyan.length).toBeGreaterThan(0); // Total Bugs card
 
@@ -82,8 +82,11 @@ describe('Bug Summary Cards Gradient Implementation', () => {
     const emerald_green_teal = document.querySelectorAll('[class*="from-emerald-500"][class*="via-green-600"][class*="to-teal-500"]');
     expect(emerald_green_teal.length).toBeGreaterThan(0); // Resolved card
 
-    const purple_violet_indigo = document.querySelectorAll('[class*="from-purple-600"][class*="via-violet-700"][class*="to-indigo-600"]');
-    expect(purple_violet_indigo.length).toBeGreaterThan(0); // Closed card
+    const purple_violet_indigo_closed = document.querySelectorAll('[class*="from-purple-600"][class*="via-violet-700"][class*="to-indigo-600"]');
+    expect(purple_violet_indigo_closed.length).toBeGreaterThan(0); // Closed card
+
+    const purple_violet_indigo_progress = document.querySelectorAll('[class*="from-purple-500"][class*="via-violet-600"][class*="to-indigo-500"]');
+    expect(purple_violet_indigo_progress.length).toBeGreaterThan(0); // In Progress card
   });
 
   it('should display correct counts for each severity and status', () => {
