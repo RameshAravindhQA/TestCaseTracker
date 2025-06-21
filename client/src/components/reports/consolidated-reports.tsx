@@ -39,7 +39,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterModule, setFilterModule] = useState<string>("all");
   const [statusUpdateQueue, setStatusUpdateQueue] = useState<{[key: string]: {id: number, type: 'testcase' | 'bug', status: string}}>({});
-  const [isFullScreen, setIsFullScreen] = useState(true);
+  const [isFullScreen, setIsFullScreen] = useState(false); // Changed default to false
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState("");
@@ -56,7 +56,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const currentProjectId = selectedProjectId || projectId;
 
   // Fetch all projects first
-  const { data: allProjects } = useQuery<Project[]>({
+  const { data: allProjects, isLoading: isProjectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/projects");
@@ -67,6 +67,16 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
   // Use the first project if no currentProjectId is provided
   const effectiveProjectId = currentProjectId || (allProjects && allProjects.length > 0 ? allProjects[0].id : undefined);
+
+  // Debug logging for project ID resolution
+  console.log("ConsolidatedReports Debug:", {
+    selectedProjectId,
+    projectId,
+    currentProjectId,
+    effectiveProjectId,
+    allProjectsCount: allProjects?.length || 0,
+    isProjectsLoading
+  });
 
   // Fetch project data
   const { data: project } = useQuery<Project>({
@@ -103,25 +113,49 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   });
 
   // Fetch test cases
-  const { data: testCases, isLoading: isTestCasesLoading } = useQuery<TestCase[]>({
+  const { data: testCases, isLoading: isTestCasesLoading, error: testCasesError } = useQuery<TestCase[]>({
     queryKey: [`/api/projects/${effectiveProjectId}/test-cases`],
     queryFn: async () => {
+      if (!effectiveProjectId) {
+        console.log("No effective project ID for test cases");
+        return [];
+      }
+      console.log(`Fetching test cases for project ${effectiveProjectId}`);
       const response = await apiRequest("GET", `/api/projects/${effectiveProjectId}/test-cases`);
-      if (!response.ok) throw new Error("Failed to fetch test cases");
-      return response.json();
+      if (!response.ok) {
+        console.error(`Failed to fetch test cases: ${response.status} ${response.statusText}`);
+        throw new Error("Failed to fetch test cases");
+      }
+      const data = await response.json();
+      console.log(`Fetched ${data.length} test cases`);
+      return data;
     },
     enabled: !!effectiveProjectId,
+    retry: 3,
+    staleTime: 30000, // 30 seconds
   });
 
   // Fetch bugs
-  const { data: bugs, isLoading: isBugsLoading } = useQuery<Bug[]>({
+  const { data: bugs, isLoading: isBugsLoading, error: bugsError } = useQuery<Bug[]>({
     queryKey: [`/api/projects/${effectiveProjectId}/bugs`],
     queryFn: async () => {
+      if (!effectiveProjectId) {
+        console.log("No effective project ID for bugs");
+        return [];
+      }
+      console.log(`Fetching bugs for project ${effectiveProjectId}`);
       const response = await apiRequest("GET", `/api/projects/${effectiveProjectId}/bugs`);
-      if (!response.ok) throw new Error("Failed to fetch bugs");
-      return response.json();
+      if (!response.ok) {
+        console.error(`Failed to fetch bugs: ${response.status} ${response.statusText}`);
+        throw new Error("Failed to fetch bugs");
+      }
+      const data = await response.json();
+      console.log(`Fetched ${data.length} bugs`);
+      return data;
     },
     enabled: !!effectiveProjectId,
+    retry: 3,
+    staleTime: 30000, // 30 seconds
   });
 
   // Update test case status mutation
@@ -210,7 +244,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
   });
 
-  // Calculate metrics
+  // Calculate metrics with debug logging
   const metrics = {
     testCases: {
       total: testCases?.length || 0,
@@ -230,6 +264,22 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     }
   };
 
+  // Debug logging for metrics
+  console.log("Consolidated Reports Metrics:", {
+    testCases: {
+      data: testCases,
+      metrics: metrics.testCases
+    },
+    bugs: {
+      data: bugs,
+      metrics: metrics.bugs
+    },
+    errors: {
+      testCasesError,
+      bugsError
+    }
+  });
+
   const totalTestCases = testCases?.length || 0;
   const passedTestCases = testCases?.filter(tc => tc.status === "Pass").length || 0;
   const totalBugs = bugs?.length || 0;
@@ -240,9 +290,9 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     ? Math.round((metrics.testCases.passed / metrics.testCases.total) * 100) 
     : 0;
 
-  // Combined data for unified view
+  // Combined data for unified view with better error handling
   const combinedData = [
-    ...(testCases?.map(tc => ({
+    ...(Array.isArray(testCases) ? testCases.map(tc => ({
       id: `tc-${tc.id}`,
       type: 'testcase' as const,
       title: tc.feature || tc.scenario || tc.title || 'Untitled Test Case',
@@ -254,8 +304,8 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       description: tc.description || '',
       progress: tc.status === 'Pass' ? 100 : tc.status === 'Fail' ? 0 : tc.status === 'Blocked' ? 25 : 50,
       originalData: tc
-    })) || []),
-    ...(bugs?.map(bug => ({
+    })) : []),
+    ...(Array.isArray(bugs) ? bugs.map(bug => ({
       id: `bug-${bug.id}`,
       type: 'bug' as const,
       title: bug.title || 'Untitled Bug',
@@ -268,8 +318,15 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       progress: bug.status === 'Resolved' ? 100 : bug.status === 'Closed' ? 100 : bug.status === 'In Progress' ? 50 : 0,
       severity: bug.severity || 'Medium',
       originalData: bug
-    })) || [])
+    })) : [])
   ];
+
+  // Debug combined data
+  console.log("Combined Data:", {
+    testCasesCount: Array.isArray(testCases) ? testCases.length : 0,
+    bugsCount: Array.isArray(bugs) ? bugs.length : 0,
+    combinedDataCount: combinedData.length
+  });
 
   // Filter combined data
   const filteredData = combinedData.filter(item => {
@@ -728,9 +785,18 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     }
   };
 
-  if (isTestCasesLoading || isBugsLoading || !effectiveProjectId) {
+  if (isProjectsLoading || isTestCasesLoading || isBugsLoading || !effectiveProjectId) {
     return (
       <div className="space-y-4 p-4">
+        <div className="text-center py-4">
+          <p className="text-sm text-gray-600">Loading consolidated reports...</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Project ID: {effectiveProjectId || 'Not available'} | 
+            Projects Loading: {isProjectsLoading ? 'Yes' : 'No'} | 
+            Test Cases Loading: {isTestCasesLoading ? 'Yes' : 'No'} | 
+            Bugs Loading: {isBugsLoading ? 'Yes' : 'No'}
+          </p>
+        </div>
         <Skeleton className="h-12 w-full" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -738,6 +804,26 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
           ))}
         </div>
         <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  // Show error state if data fetching failed
+  if (testCasesError || bugsError) {
+    return (
+      <div className="space-y-4 p-4">
+        <div className="text-center py-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h3 className="text-red-800 font-semibold">Error Loading Data</h3>
+            <div className="mt-2 text-sm text-red-600">
+              {testCasesError && <p>Test Cases: {testCasesError.message}</p>}
+              {bugsError && <p>Bugs: {bugsError.message}</p>}
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Project ID: {effectiveProjectId} | Please try refreshing the page.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1081,8 +1167,16 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                       : "Try adjusting your filters or search query to see more results."
                     }
                   </p>
-                  <div className="text-sm text-gray-500 mt-2">
-                    Debug: Total items: {combinedData.length}, Test cases: {testCases?.length || 0}, Bugs: {bugs?.length || 0}, Project ID: {effectiveProjectId}
+                  <div className="text-sm text-gray-500 mt-2 space-y-1">
+                    <div>Debug Info:</div>
+                    <div>• Project ID: {effectiveProjectId}</div>
+                    <div>• Project Name: {project?.name || 'Not loaded'}</div>
+                    <div>• Test Cases: {Array.isArray(testCases) ? testCases.length : 'Not array'}</div>
+                    <div>• Bugs: {Array.isArray(bugs) ? bugs.length : 'Not array'}</div>
+                    <div>• Combined Data: {combinedData.length}</div>
+                    <div>• Modules: {modules?.length || 0}</div>
+                    <div>• Users: {users?.length || 0}</div>
+                    <div>• Loading States: Projects({isProjectsLoading}), TestCases({isTestCasesLoading}), Bugs({isBugsLoading})</div>
                   </div>
                   {combinedData.length === 0 && (
                     <div className="mt-6">

@@ -126,5 +126,17 @@
   "main": "postcss.config.js",
   "keywords": [],
   "author": "",
-  "description": ""
+  "description": "",
+  "scripts": {
+    "dev": "tsx server/index.ts",
+    "build": "tsc && vite build",
+    "start": "node dist/server/index.js",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "test:consolidated-reports": "vitest run client/src/__tests__/components/reports/consolidated-reports-data-fix.test.tsx"
+  }
 }
