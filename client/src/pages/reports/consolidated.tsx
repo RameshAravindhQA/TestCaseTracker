@@ -54,8 +54,7 @@ export default function ConsolidatedReports() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ConsolidatedItem | null>(null);
-  const [pendingStatusUpdates, setPendingStatusUpdates] = useState<{[key: string]: string}>({});
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
 
   const queryClient = useQueryClient();
 
@@ -244,40 +243,19 @@ export default function ConsolidatedReports() {
     item.status === 'In Progress' || item.status === 'Blocked'
   ).length;
 
-  const handleStatusChange = (item: ConsolidatedItem, newStatus: string) => {
-    const key = `${item.type}-${item.id}`;
-    setPendingStatusUpdates(prev => ({ ...prev, [key]: newStatus }));
-    setHasUnsavedChanges(true);
-
-    // Auto-save after 2 seconds
-    setTimeout(() => {
-      saveStatusChange(item, newStatus, key);
-    }, 2000);
-  };
-
-  const saveStatusChange = async (item: ConsolidatedItem, newStatus: string, key: string) => {
+  const handleStatusChange = async (item: ConsolidatedItem, newStatus: string) => {
     const type = item.type === 'Test Case' ? 'testcase' : 'bug';
     try {
       await updateStatusMutation.mutateAsync({ id: item.id, type, status: newStatus });
-      setPendingStatusUpdates(prev => {
-        const updated = { ...prev };
-        delete updated[key];
-        return updated;
+      toast({
+        title: 'Success',
+        description: `${item.type} status updated to ${newStatus}`,
       });
-      if (Object.keys(pendingStatusUpdates).length <= 1) {
-        setHasUnsavedChanges(false);
-      }
     } catch (error: any) {
-      console.error('Failed to save status change:', error);
-      // Revert the pending status change on error
-      setPendingStatusUpdates(prev => {
-        const updated = { ...prev };
-        delete updated[key];
-        return updated;
-      });
+      console.error('Failed to update status:', error);
       toast({
         title: 'Error',
-        description: `Failed to save status change: ${error.message || 'Please try again'}`,
+        description: `Failed to update status: ${error.message || 'Please try again'}`,
         variant: 'destructive'
       });
     }
@@ -478,19 +456,19 @@ export default function ConsolidatedReports() {
   const getStatusColor = (status: string, type: string) => {
     if (type === 'Test Case') {
       switch (status) {
-        case 'Pass': return 'bg-green-500 text-white';
-        case 'Fail': return 'bg-red-500 text-white';
-        case 'Blocked': return 'bg-orange-500 text-white';
-        case 'Not Executed': return 'bg-gray-500 text-white';
-        default: return 'bg-gray-500 text-white';
+        case 'Pass': return 'bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        case 'Fail': return 'bg-gradient-to-r from-red-500 via-rose-600 to-pink-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        case 'Blocked': return 'bg-gradient-to-r from-orange-500 via-amber-600 to-yellow-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        case 'Not Executed': return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        default: return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
       }
     } else {
       switch (status) {
-        case 'Open': return 'bg-red-500 text-white';
-        case 'In Progress': return 'bg-blue-500 text-white';
-        case 'Resolved': return 'bg-green-500 text-white';
-        case 'Closed': return 'bg-purple-500 text-white';
-        default: return 'bg-gray-500 text-white';
+        case 'Open': return 'bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        case 'In Progress': return 'bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        case 'Resolved': return 'bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        case 'Closed': return 'bg-gradient-to-r from-purple-600 via-violet-700 to-indigo-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        default: return 'bg-gradient-to-r from-slate-600 via-gray-700 to-zinc-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
       }
     }
   };
@@ -569,16 +547,7 @@ export default function ConsolidatedReports() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          {hasUnsavedChanges && (
-            <Button 
-              onClick={saveAllChanges}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Save All ({Object.keys(pendingStatusUpdates).length})
-            </Button>
-          )}
+          
         </div>
       </div>
 
@@ -807,9 +776,7 @@ export default function ConsolidatedReports() {
             </TableHeader>
             <TableBody>
               {filteredData.map((item) => {
-                const key = `${item.type}-${item.id}`;
-                const currentStatus = pendingStatusUpdates[key] || item.status;
-                const hasPendingChange = pendingStatusUpdates[key] !== undefined;
+                const currentStatus = item.status;
 
                 return (
                   <TableRow key={`${item.type}-${item.id}`}>
@@ -848,7 +815,7 @@ export default function ConsolidatedReports() {
                           value={currentStatus} 
                           onValueChange={(value) => handleStatusChange(item, value)}
                         >
-                          <SelectTrigger className={`w-32 border-0 ${getStatusColor(item.status, item.type)}`}>
+                          <SelectTrigger className={`w-32 border-0 ${getStatusColor(currentStatus, item.type)}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -869,9 +836,6 @@ export default function ConsolidatedReports() {
                             )}
                           </SelectContent>
                         </Select>
-                        {hasPendingChange && (
-                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-                        )}
                       </div>
                     </TableCell>
                     <TableCell>
