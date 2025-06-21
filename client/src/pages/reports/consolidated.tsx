@@ -755,7 +755,7 @@ export default function ConsolidatedReports() {
                   <SelectItem value="Blocked">Mark as Blocked</SelectItem>
                   <SelectItem value="In Progress">Mark as In Progress</SelectItem>
                   <SelectItem value="Resolved">Mark as Resolved</SelectItem>
-                  <SelectItem value="Closed">SelectItem>
+                  <SelectItem value="Closed">Mark as Closed</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" onClick={clearSelection} className="text-black">Clear Selection</Button>

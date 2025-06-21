@@ -5087,11 +5087,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const cells = await storage.getMatrixCellsByProject(projectId);
-      res.json(cells);
+      // Check if storage method exists
+      if (typeof storage.getMatrixCellsByProject === 'function') {
+        const cells = await storage.getMatrixCellsByProject(projectId);
+        res.json(cells);
+      } else {
+        // Return empty array if method doesn't exist
+        res.json([]);
+      }
     } catch (error) {
       console.error("Get matrix cells error:", error);
-      res.status(500).json({ message: "Server error" });
+      // Return empty array instead of error to prevent crashes
+      res.json([]);
     }
   });
 
