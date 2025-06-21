@@ -67,6 +67,7 @@ export default function TestSheetsPage() {
   // Fetch projects
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
+    queryFn: () => apiRequest('GET', '/api/projects').then(res => res.json()),
   });
 
   // Fetch test sheets for selected project
