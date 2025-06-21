@@ -256,6 +256,7 @@ ${bug.comments || 'No comments provided.'}
                           ? "border-yellow-200 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-white dark:border-yellow-700" 
                           : bug.priority === "Low"
                           ? "border-green-200 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-white dark:border-green-700"
+                          : "border-gray-200 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:border-gray-600"
                       }>
                         {bug.priority}
                       </Badge>
