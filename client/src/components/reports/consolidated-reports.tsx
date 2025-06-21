@@ -262,8 +262,17 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
         return response.json();
       }
     },
+    onMutate: async ({ itemId, status }) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
+      await queryClient.cancelQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+
+      // Return a context object with the snapshotted value
+      return { itemId, status };
+    },
     onSuccess: (_, variables) => {
       console.log(`Successfully updated ${variables.type} ${variables.itemId} to ${variables.status}`);
+      // Force refetch to get the latest data
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
       toast({
@@ -274,6 +283,9 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
     onError: (error: any, variables) => {
       console.error(`Failed to update ${variables.type} ${variables.itemId}:`, error);
+      // Revert the optimistic update
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
       toast({
         title: "Update Failed",
         description: `Failed to update ${variables.type === 'testcase' ? 'test case' : 'bug'} status: ${error.message}`,
@@ -1202,11 +1214,15 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                   </TableCell>
                   <TableCell>
                     <Select
+                      key={`${item.id}-${item.status}`}
                       value={item.status}
-                      onValueChange={(value) => handleIndividualStatusUpdate(item.id, value)}
+                      onValueChange={(value) => {
+                        console.log(`Status change requested: ${item.id} from ${item.status} to ${value}`);
+                        handleIndividualStatusUpdate(item.id, value);
+                      }}
                     >
                       <SelectTrigger className={`w-32 border-0 ${getStatusColor(item.status, item.type)}`}>
-                        <SelectValue />
+                        <SelectValue placeholder={item.status} />
                       </SelectTrigger>
                       <SelectContent>
                         {item.type === 'testcase' ? (
