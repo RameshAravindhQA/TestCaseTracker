@@ -603,7 +603,7 @@ export default function ConsolidatedReports() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Progress value{item.progress} className="w-16 h-2" />
+                        <Progress value={item.progress} className="w-16 h-2" />
                         <span className="text-xs text-gray-600">{item.progress}%</span>
                       </div>
                     </TableCell>
