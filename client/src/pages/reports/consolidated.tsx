@@ -497,11 +497,11 @@ export default function ConsolidatedReports() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'Critical': return 'bg-red-600 text-white';
-      case 'High': return 'bg-orange-500 text-white';
-      case 'Medium': return 'bg-yellow-500 text-black';
-      case 'Low': return 'bg-green-500 text-white';
-      default: return 'bg-gray-500 text-white';
+      case 'Critical': return 'bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-bold shadow-xl hover:shadow-2xl transition-all duration-300';
+      case 'High': return 'bg-gradient-to-r from-orange-600 via-red-600 to-rose-600 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
+      case 'Medium': return 'bg-gradient-to-r from-yellow-500 via-amber-600 to-orange-500 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
+      case 'Low': return 'bg-gradient-to-r from-lime-500 via-green-600 to-emerald-500 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
+      default: return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
     }
   };
 
@@ -848,23 +848,23 @@ export default function ConsolidatedReports() {
                           value={currentStatus} 
                           onValueChange={(value) => handleStatusChange(item, value)}
                         >
-                          <SelectTrigger className={`w-32 ${getStatusColor(item.status, item.type)}`}>
+                          <SelectTrigger className={`w-32 border-0 ${getStatusColor(item.status, item.type)}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {item.type === 'Test Case' ? (
                               <>
-                                <SelectItem value="Not Executed">Not Executed</SelectItem>
-                                <SelectItem value="Pass">Pass</SelectItem>
-                                <SelectItem value="Fail">Fail</SelectItem>
-                                <SelectItem value="Blocked">Blocked</SelectItem>
+                                <SelectItem value="Not Executed" className="bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Not Executed</SelectItem>
+                                <SelectItem value="Pass" className="bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Pass</SelectItem>
+                                <SelectItem value="Fail" className="bg-gradient-to-r from-red-500 via-rose-600 to-pink-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Fail</SelectItem>
+                                <SelectItem value="Blocked" className="bg-gradient-to-r from-orange-500 via-amber-600 to-yellow-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Blocked</SelectItem>
                               </>
                             ) : (
                               <>
-                                <SelectItem value="Open">Open</SelectItem>
-                                <SelectItem value="In Progress">In Progress</SelectItem>
-                                <SelectItem value="Resolved">Resolved</SelectItem>
-                                <SelectItem value="Closed">Closed</SelectItem>
+                                <SelectItem value="Open" className="bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Open</SelectItem>
+                                <SelectItem value="In Progress" className="bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">In Progress</SelectItem>
+                                <SelectItem value="Resolved" className="bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Resolved</SelectItem>
+                                <SelectItem value="Closed" className="bg-gradient-to-r from-purple-600 via-violet-700 to-indigo-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Closed</SelectItem>
                               </>
                             )}
                           </SelectContent>

@@ -244,27 +244,39 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const updateStatusMutation = useMutation({
     mutationFn: async ({ itemId, type, status }: { itemId: string, type: 'testcase' | 'bug', status: string }) => {
       const id = itemId.split('-')[1];
+      console.log(`Updating ${type} ${id} to status: ${status}`);
+      
       if (type === 'testcase') {
-        const response = await apiRequest('PUT', `/api/test-cases/${id}`, { status });
+        const response = await apiRequest('PATCH', `/api/test-cases/${id}`, { status });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to update test case: ${response.status} - ${errorText}`);
+        }
         return response.json();
       } else {
-        const response = await apiRequest('PUT', `/api/bugs/${id}`, { status });
+        const response = await apiRequest('PATCH', `/api/bugs/${id}`, { status });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to update bug: ${response.status} - ${errorText}`);
+        }
         return response.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      console.log(`Successfully updated ${variables.type} ${variables.itemId} to ${variables.status}`);
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
       toast({
         title: "Status Updated",
-        description: "Item status has been updated successfully.",
+        description: `${variables.type === 'testcase' ? 'Test case' : 'Bug'} status has been updated to ${variables.status}.`,
       });
       setEditingItem(null);
     },
-    onError: (error) => {
+    onError: (error: any, variables) => {
+      console.error(`Failed to update ${variables.type} ${variables.itemId}:`, error);
       toast({
         title: "Update Failed",
-        description: "Failed to update item status.",
+        description: `Failed to update ${variables.type === 'testcase' ? 'test case' : 'bug'} status: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -529,7 +541,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       case 'Critical': return 'bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-bold shadow-xl hover:shadow-2xl transition-all duration-300';
       case 'High': return 'bg-gradient-to-r from-orange-600 via-red-600 to-rose-600 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
       case 'Medium': return 'bg-gradient-to-r from-yellow-500 via-amber-600 to-orange-500 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
-      case 'Low': return 'bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
+      case 'Low': return 'bg-gradient-to-r from-lime-500 via-green-600 to-emerald-500 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
       default: return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
     }
   };
@@ -1199,17 +1211,17 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                       <SelectContent>
                         {item.type === 'testcase' ? (
                           <>
-                            <SelectItem value="Pass" className="bg-green-100 text-green-800 hover:bg-green-200">Pass</SelectItem>
-                            <SelectItem value="Fail" className="bg-red-100 text-red-800 hover:bg-red-200">Fail</SelectItem>
-                            <SelectItem value="Blocked" className="bg-orange-100 text-orange-800 hover:bg-orange-200">Blocked</SelectItem>
-                            <SelectItem value="Not Executed" className="bg-gray-100 text-gray-800 hover:bg-gray-200">Not Executed</SelectItem>
+                            <SelectItem value="Pass" className="bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-emerald-600 focus:via-green-700 focus:to-teal-600">Pass</SelectItem>
+                            <SelectItem value="Fail" className="bg-gradient-to-r from-red-500 via-rose-600 to-pink-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-red-600 focus:via-rose-700 focus:to-pink-600">Fail</SelectItem>
+                            <SelectItem value="Blocked" className="bg-gradient-to-r from-orange-500 via-amber-600 to-yellow-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-orange-600 focus:via-amber-700 focus:to-yellow-600">Blocked</SelectItem>
+                            <SelectItem value="Not Executed" className="bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-slate-600 focus:via-gray-700 focus:to-zinc-600">Not Executed</SelectItem>
                           </>
                         ) : (
                           <>
-                            <SelectItem value="Open" className="bg-red-100 text-red-800 hover:bg-red-200">Open</SelectItem>
-                            <SelectItem value="In Progress" className="bg-blue-100 text-blue-800 hover:bg-blue-200">In Progress</SelectItem>
-                            <SelectItem value="Resolved" className="bg-green-100 text-green-800 hover:bg-green-200">Resolved</SelectItem>
-                            <SelectItem value="Closed" className="bg-purple-100 text-purple-800 hover:bg-purple-200">Closed</SelectItem>
+                            <SelectItem value="Open" className="bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-red-700 focus:via-rose-800 focus:to-pink-700">Open</SelectItem>
+                            <SelectItem value="In Progress" className="bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-blue-700 focus:via-indigo-800 focus:to-purple-700">In Progress</SelectItem>
+                            <SelectItem value="Resolved" className="bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-emerald-700 focus:via-green-800 focus:to-teal-700">Resolved</SelectItem>
+                            <SelectItem value="Closed" className="bg-gradient-to-r from-purple-600 via-violet-700 to-indigo-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-purple-700 focus:via-violet-800 focus:to-indigo-700">Closed</SelectItem>
                           </>
                         )}
                       </SelectContent>

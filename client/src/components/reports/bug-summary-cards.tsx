@@ -69,82 +69,73 @@ Open: ${openBugs}, In Progress: ${inProgressBugs}, Resolved: ${resolvedBugs}, Cl
       title: "Total Bugs",
       value: totalBugsAll,
       icon: AlertTriangle,
-      bgColor: "bg-blue-100",
-      textColor: "text-blue-700",
-      iconColor: "text-blue-600",
-      borderColor: "border-blue-200",
+      bgGradient: "bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-500",
+      textColor: "text-white",
+      iconColor: "text-white",
     },
     {
       title: "Critical",
       value: criticalBugsAll,
       icon: Shield,
-      bgColor: "bg-red-100",
-      textColor: "text-red-700", 
-      iconColor: "text-red-600",
-      borderColor: "border-red-200",
+      bgGradient: "bg-gradient-to-br from-red-500 via-rose-600 to-pink-500",
+      textColor: "text-white", 
+      iconColor: "text-white",
     },
     {
       title: "Major",
       value: majorBugsAll,
       icon: Zap,
-      bgColor: "bg-orange-100",
-      textColor: "text-orange-700",
-      iconColor: "text-orange-600",
-      borderColor: "border-orange-200",
+      bgGradient: "bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-500",
+      textColor: "text-white",
+      iconColor: "text-white",
     },
     {
       title: "Minor",
       value: minorBugsAll,
       icon: Info,
-      bgColor: "bg-yellow-100",
-      textColor: "text-yellow-700",
-      iconColor: "text-yellow-600",
-      borderColor: "border-yellow-200",
+      bgGradient: "bg-gradient-to-br from-yellow-500 via-lime-600 to-green-500",
+      textColor: "text-white",
+      iconColor: "text-white",
     },
     {
       title: "Trivial",
       value: trivialBugsAll,
       icon: Star,
-      bgColor: "bg-gray-100",
-      textColor: "text-gray-700",
-      iconColor: "text-gray-600",
-      borderColor: "border-gray-200",
+      bgGradient: "bg-gradient-to-br from-slate-500 via-gray-600 to-zinc-500",
+      textColor: "text-white",
+      iconColor: "text-white",
     },
     {
       title: "Open",
       value: openBugsAll,
       icon: Clock,
-      bgColor: "bg-purple-100",
-      textColor: "text-purple-700",
-      iconColor: "text-purple-600",
-      borderColor: "border-purple-200",
+      bgGradient: "bg-gradient-to-br from-red-500 via-rose-600 to-pink-500",
+      textColor: "text-white",
+      iconColor: "text-white",
     },
     {
       title: "In Progress",
       value: inProgressBugs,
       icon: Clock,
-      bgColor: "bg-blue-100",
-      textColor: "text-blue-700",
-      iconColor: "text-blue-600",
-      borderColor: "border-blue-200",
+      bgGradient: "bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-600",
+      textColor: "text-white",
+      iconColor: "text-white",
     },
     {
       title: "Resolved",
       value: resolvedBugs,
       icon: CheckCircle,
-      bgColor: "bg-green-100",
-      textColor: "text-green-700",
-      iconColor: "text-green-600",
-      borderColor: "border-green-200",
+      bgGradient: "bg-gradient-to-br from-emerald-500 via-green-600 to-teal-500",
+      textColor: "text-white",
+      iconColor: "text-white",
     },
     {
       title: "Closed",
       value: closedBugs,
       icon: CheckCircle,
-      bgColor: "bg-green-100",
-      textColor: "text-green-700",
-      iconColor: "text-green-600",
-      borderColor: "border-green-200",
+      bgGradient: "bg-gradient-to-br from-purple-600 via-violet-700 to-indigo-600",
+      textColor: "text-white",
+      iconColor: "text-white",
     },
   ];
 
@@ -198,37 +189,25 @@ ${bugs.map(bug => `- ${bug.bugId || bug.id}: ${bug.title} (${bug.severity} - ${b
         {summaryData.map((item, index) => {
           const Icon = item.icon;
           return (
-            <Card key={index} className={`relative overflow-hidden ${item.borderColor} ${item.bgColor} shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105`}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className={`text-sm font-medium ${item.textColor}`}>
+            <Card key={index} className={`group relative overflow-hidden ${item.bgGradient} p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0`}>
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative z-10">
+                <div className={`text-sm ${item.textColor}/90 font-medium flex items-center gap-2 mb-3`}>
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm group-hover:bg-white/30 transition-all duration-300">
+                    <Icon className={`h-4 w-4 ${item.iconColor}`} />
+                  </div>
                   {item.title}
-                </CardTitle>
-                <div className="p-2 rounded-lg bg-white/50">
-                  <Icon className={`h-5 w-5 ${item.iconColor}`} />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-3xl font-bold ${item.textColor} mb-2`}>
+                <div className={`text-3xl font-bold ${item.textColor} mb-2 group-hover:scale-110 transition-transform duration-300`}>
                   {item.value}
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1 text-xs text-gray-600">
-                    <span>
-                      {totalBugsAll > 0 ? `${((item.value / totalBugsAll) * 100).toFixed(1)}%` : '0%'} of total
-                    </span>
-                  </div>
+                <div className={`text-xs ${item.textColor}/80`}>
+                  {totalBugsAll > 0 ? `${((item.value / totalBugsAll) * 100).toFixed(1)}%` : '0%'} of total
                 </div>
-
-                {/* Progress bar */}
-                <div className="mt-3">
-                  <div className="w-full bg-white/50 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full ${item.iconColor.replace('text-', 'bg-')} transition-all duration-500`}
-                      style={{ width: totalBugsAll > 0 ? `${(item.value / totalBugsAll) * 100}%` : '0%' }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
+                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full group-hover:from-white/20"></div>
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-white/30 via-white/20 to-white/30 opacity-50"></div>
+              </div>
             </Card>
           );
         })}
