@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -130,13 +129,13 @@ export default function ConsolidatedReports() {
           },
           body: JSON.stringify({ status })
         });
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Status update failed:', response.status, errorText);
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           return await response.json();
@@ -249,7 +248,7 @@ export default function ConsolidatedReports() {
     const key = `${item.type}-${item.id}`;
     setPendingStatusUpdates(prev => ({ ...prev, [key]: newStatus }));
     setHasUnsavedChanges(true);
-    
+
     // Auto-save after 2 seconds
     setTimeout(() => {
       saveStatusChange(item, newStatus, key);
@@ -340,7 +339,7 @@ export default function ConsolidatedReports() {
 
   const handleDelete = async (item: ConsolidatedItem) => {
     if (!confirm(`Are you sure you want to delete this ${item.type.toLowerCase()}?`)) return;
-    
+
     try {
       if (item.type === 'Test Case') {
         await deleteTestCaseMutation.mutateAsync(item.id);
@@ -474,6 +473,36 @@ export default function ConsolidatedReports() {
 
   const goBack = () => {
     window.history.back();
+  };
+
+  const getStatusColor = (status: string, type: string) => {
+    if (type === 'Test Case') {
+      switch (status) {
+        case 'Pass': return 'bg-green-500 text-white';
+        case 'Fail': return 'bg-red-500 text-white';
+        case 'Blocked': return 'bg-orange-500 text-white';
+        case 'Not Executed': return 'bg-gray-500 text-white';
+        default: return 'bg-gray-500 text-white';
+      }
+    } else {
+      switch (status) {
+        case 'Open': return 'bg-red-500 text-white';
+        case 'In Progress': return 'bg-blue-500 text-white';
+        case 'Resolved': return 'bg-green-500 text-white';
+        case 'Closed': return 'bg-purple-500 text-white';
+        default: return 'bg-gray-500 text-white';
+      }
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'Critical': return 'bg-red-600 text-white';
+      case 'High': return 'bg-orange-500 text-white';
+      case 'Medium': return 'bg-yellow-500 text-black';
+      case 'Low': return 'bg-green-500 text-white';
+      default: return 'bg-gray-500 text-white';
+    }
   };
 
   if (isProjectsLoading || (selectedProject && (isTestCasesLoading || isBugsLoading))) {
@@ -781,7 +810,7 @@ export default function ConsolidatedReports() {
                 const key = `${item.type}-${item.id}`;
                 const currentStatus = pendingStatusUpdates[key] || item.status;
                 const hasPendingChange = pendingStatusUpdates[key] !== undefined;
-                
+
                 return (
                   <TableRow key={`${item.type}-${item.id}`}>
                     <TableCell>

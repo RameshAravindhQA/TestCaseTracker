@@ -507,30 +507,30 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const getStatusColor = (status: string, type: string) => {
     if (type === 'testcase') {
       switch (status) {
-        case 'Pass': return 'bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-semibold shadow-lg';
-        case 'Fail': return 'bg-gradient-to-r from-red-500 via-rose-600 to-pink-500 text-white border-0 font-semibold shadow-lg';
-        case 'Blocked': return 'bg-gradient-to-r from-orange-500 via-amber-600 to-yellow-500 text-white border-0 font-semibold shadow-lg';
-        case 'Not Executed': return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg';
-        default: return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg';
+        case 'Pass': return 'bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        case 'Fail': return 'bg-gradient-to-r from-red-500 via-rose-600 to-pink-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        case 'Blocked': return 'bg-gradient-to-r from-orange-500 via-amber-600 to-yellow-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        case 'Not Executed': return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        default: return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
       }
     } else {
       switch (status) {
-        case 'Open': return 'bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-semibold shadow-lg';
-        case 'In Progress': return 'bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-600 text-white border-0 font-semibold shadow-lg';
-        case 'Resolved': return 'bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600 text-white border-0 font-semibold shadow-lg';
-        case 'Closed': return 'bg-gradient-to-r from-purple-600 via-violet-700 to-indigo-600 text-white border-0 font-semibold shadow-lg';
-        default: return 'bg-gradient-to-r from-slate-600 via-gray-700 to-zinc-600 text-white border-0 font-semibold shadow-lg';
+        case 'Open': return 'bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        case 'In Progress': return 'bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        case 'Resolved': return 'bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        case 'Closed': return 'bg-gradient-to-r from-purple-600 via-violet-700 to-indigo-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        default: return 'bg-gradient-to-r from-slate-600 via-gray-700 to-zinc-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
       }
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'Critical': return 'bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-bold shadow-xl';
-      case 'High': return 'bg-gradient-to-r from-orange-600 via-red-600 to-rose-600 text-white border-0 font-bold shadow-lg';
-      case 'Medium': return 'bg-gradient-to-r from-yellow-500 via-amber-600 to-orange-500 text-white border-0 font-bold shadow-lg';
-      case 'Low': return 'bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-bold shadow-lg';
-      default: return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-bold shadow-lg';
+      case 'Critical': return 'bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-bold shadow-xl hover:shadow-2xl transition-all duration-300';
+      case 'High': return 'bg-gradient-to-r from-orange-600 via-red-600 to-rose-600 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
+      case 'Medium': return 'bg-gradient-to-r from-yellow-500 via-amber-600 to-orange-500 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
+      case 'Low': return 'bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
+      default: return 'bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-300';
     }
   };
 
@@ -997,7 +997,12 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
         {/* Enhanced Stats Bar with Advanced Gradients */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-          <div className="group relative overflow-hidden bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="group relative overflow-hidden bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0"
+          >
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative z-10">
@@ -1014,7 +1019,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full group-hover:from-white/20"></div>
               <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-300 via-blue-300 to-indigo-300 opacity-50"></div>
             </div>
-          </div>
+          </motion.div>
           
           <div className="group relative overflow-hidden bg-gradient-to-br from-emerald-500 via-green-600 to-teal-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0">
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
@@ -1194,17 +1199,17 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                       <SelectContent>
                         {item.type === 'testcase' ? (
                           <>
-                            <SelectItem value="Pass">Pass</SelectItem>
-                            <SelectItem value="Fail">Fail</SelectItem>
-                            <SelectItem value="Blocked">Blocked</SelectItem>
-                            <SelectItem value="Not Executed">Not Executed</SelectItem>
+                            <SelectItem value="Pass" className="bg-green-100 text-green-800 hover:bg-green-200">Pass</SelectItem>
+                            <SelectItem value="Fail" className="bg-red-100 text-red-800 hover:bg-red-200">Fail</SelectItem>
+                            <SelectItem value="Blocked" className="bg-orange-100 text-orange-800 hover:bg-orange-200">Blocked</SelectItem>
+                            <SelectItem value="Not Executed" className="bg-gray-100 text-gray-800 hover:bg-gray-200">Not Executed</SelectItem>
                           </>
                         ) : (
                           <>
-                            <SelectItem value="Open">Open</SelectItem>
-                            <SelectItem value="In Progress">In Progress</SelectItem>
-                            <SelectItem value="Resolved">Resolved</SelectItem>
-                            <SelectItem value="Closed">Closed</SelectItem>
+                            <SelectItem value="Open" className="bg-red-100 text-red-800 hover:bg-red-200">Open</SelectItem>
+                            <SelectItem value="In Progress" className="bg-blue-100 text-blue-800 hover:bg-blue-200">In Progress</SelectItem>
+                            <SelectItem value="Resolved" className="bg-green-100 text-green-800 hover:bg-green-200">Resolved</SelectItem>
+                            <SelectItem value="Closed" className="bg-purple-100 text-purple-800 hover:bg-purple-200">Closed</SelectItem>
                           </>
                         )}
                       </SelectContent>
