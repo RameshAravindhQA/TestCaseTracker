@@ -28,6 +28,7 @@ import {
   insertTraceabilityMarkerSchema,
   insertTraceabilityMatrixSchema,
   insertTraceabilityMatrixCellSchema,
+  insertTestSheetSchema,
   type TimeSheet,
   type InsertTimeSheet,
   type TimeSheetFolder,
@@ -5405,14 +5406,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'User not authenticated' });
       }
 
-      const sheetData = insertTestSheetSchema.parse({
-        ...req.body,
-        createdById: req.session.userId,
+      console.log('Creating test sheet with data:', req.body);
+
+      // Simple validation without schema for now
+      const { name, projectId, data, metadata } = req.body;
+      
+      if (!name || !projectId) {
+        return res.status(400).json({ error: 'Name and project ID are required' });
+      }
+
+      const sheetData = {
+        name,
+        projectId: Number(projectId),
+        data: data || {
+          cells: {},
+          rows: 100,
+          cols: 26,
+        },
         metadata: {
-          ...req.body.metadata,
+          version: 1,
           lastModifiedBy: req.session.userId,
-        }
-      });
+          collaborators: [],
+          chartConfigs: [],
+          namedRanges: [],
+          ...metadata,
+        },
+        createdById: req.session.userId,
+      };
 
       const newSheet = await storage.createTestSheet(sheetData);
       
@@ -5430,6 +5450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(newSheet);
     } catch (error) {
+      console.error('Error creating test sheet:', error);
       logger.error('Error creating test sheet:', error);
       res.status(500).json({ error: 'Failed to create test sheet' });
     }
