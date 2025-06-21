@@ -156,6 +156,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       icon: <FileBarChart className="h-5 w-5" />,
     },
     {
+      name: "Test Sheets",
+      href: "/test-sheets",
+      icon: <FormInput className="h-5 w-5" />,
+    },
+    {
       name: "Traceability Matrix",
       href: "/traceability-matrix",
       icon: <ListFilter className="h-5 w-5" />,
