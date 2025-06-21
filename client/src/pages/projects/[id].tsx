@@ -910,7 +910,8 @@ export default function ProjectDetailPage() {
 
             <div>
               <h3 className="text-sm font-medium">Expected Result</h3>
-              <p className="text-sm text-gray-700 mt-1">{selectedBug?.expectedResult}</p            </div>
+              <p className="text-sm text-gray-700 mt-1">{selectedBug?.expectedResult}</p>
+            </div>
 
             <div>
               <h3 className="text-sm font-medium">Actual Result</h3>
