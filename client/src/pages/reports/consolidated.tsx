@@ -13,11 +13,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { useToast } from '../../hooks/use-toast';
 import { ProjectSelect } from '../../components/ui/project-select';
-import { ModuleSelect } from '../../components/ui/module-select';
 import { TestCaseForm } from '../../components/test-cases/test-case-form';
 import { BugForm } from '../../components/bugs/bug-form';
-import { RefreshCw, TrendingUp, AlertTriangle, CheckCircle, Clock, Target, Minimize2, Maximize2, Eye, Edit, MoreHorizontal, Trash } from 'lucide-react';
+import { RefreshCw, TrendingUp, AlertTriangle, CheckCircle, Clock, Target, Minimize2, Maximize2, Eye, Edit, MoreHorizontal, Trash, ArrowLeft, Download, Save } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import Papa from 'papaparse';
 
 interface ConsolidatedItem {
   id: number;
@@ -53,6 +55,8 @@ export default function ConsolidatedReports() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ConsolidatedItem | null>(null);
+  const [pendingStatusUpdates, setPendingStatusUpdates] = useState<{[key: string]: string}>({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -221,8 +225,42 @@ export default function ConsolidatedReports() {
   ).length;
 
   const handleStatusChange = (item: ConsolidatedItem, newStatus: string) => {
+    const key = `${item.type}-${item.id}`;
+    setPendingStatusUpdates(prev => ({ ...prev, [key]: newStatus }));
+    setHasUnsavedChanges(true);
+    
+    // Auto-save after 2 seconds
+    setTimeout(() => {
+      saveStatusChange(item, newStatus, key);
+    }, 2000);
+  };
+
+  const saveStatusChange = async (item: ConsolidatedItem, newStatus: string, key: string) => {
     const type = item.type === 'Test Case' ? 'testcase' : 'bug';
-    updateStatusMutation.mutate({ id: item.id, type, status: newStatus });
+    try {
+      await updateStatusMutation.mutateAsync({ id: item.id, type, status: newStatus });
+      setPendingStatusUpdates(prev => {
+        const updated = { ...prev };
+        delete updated[key];
+        return updated;
+      });
+      if (Object.keys(pendingStatusUpdates).length <= 1) {
+        setHasUnsavedChanges(false);
+      }
+    } catch (error) {
+      console.error('Failed to save status change:', error);
+    }
+  };
+
+  const saveAllChanges = async () => {
+    for (const [key, status] of Object.entries(pendingStatusUpdates)) {
+      const [type, idStr] = key.split('-');
+      const id = parseInt(idStr);
+      const item = consolidatedData.find(i => i.id === id && i.type === (type === 'Test' ? 'Test Case' : 'Bug'));
+      if (item) {
+        await saveStatusChange(item, status, key);
+      }
+    }
   };
 
   const handleBulkStatusUpdate = (newStatus: string) => {
@@ -282,6 +320,130 @@ export default function ConsolidatedReports() {
     }
   };
 
+  const exportToCSV = () => {
+    try {
+      const csvData = filteredData.map(item => ({
+        Type: item.type,
+        Module: item.moduleName,
+        'Title/Feature': item.title,
+        Priority: item.priority,
+        Status: item.status,
+        Progress: `${item.progress}%`,
+        Created: item.created,
+        Severity: item.severity || 'N/A'
+      }));
+
+      const csv = Papa.unparse(csvData);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `consolidated-report-${Date.now()}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      toast({
+        title: "Export successful",
+        description: "Consolidated report exported to CSV",
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Failed to export consolidated report",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const exportToPDF = () => {
+    try {
+      const doc = new jsPDF();
+
+      // Add title
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Consolidated Report`, 14, 20);
+
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "normal");
+      const project = projects.find(p => p.id === selectedProject);
+      doc.text(`${project?.name || 'Project'}`, 14, 30);
+
+      // Add date
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 40);
+
+      // Add summary
+      doc.setFillColor(240, 248, 255);
+      doc.rect(14, 45, 180, 35, 'F');
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text('Executive Summary', 18, 55);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      let yPos = 62;
+      doc.text(`Total Items: ${totalItems}`, 18, yPos);
+      yPos += 5;
+      doc.text(`Test Pass Rate: ${testPassRate}%`, 18, yPos);
+      yPos += 5;
+      doc.text(`Total Bugs: ${bugs.length}`, 18, yPos);
+      yPos += 5;
+      doc.text(`Open Bugs: ${openBugs}`, 18, yPos);
+
+      yPos = 90;
+
+      // Add table
+      const tableData = filteredData.map(item => [
+        item.type,
+        item.moduleName,
+        item.title.substring(0, 30) + (item.title.length > 30 ? '...' : ''),
+        item.priority,
+        item.status,
+        `${item.progress}%`,
+        item.created
+      ]);
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Type', 'Module', 'Title/Feature', 'Priority', 'Status', 'Progress', 'Created']],
+        body: tableData,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [59, 130, 246] },
+        columnStyles: {
+          0: { cellWidth: 20 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 40 },
+          3: { cellWidth: 20 },
+          4: { cellWidth: 25 },
+          5: { cellWidth: 15 },
+          6: { cellWidth: 20 }
+        }
+      });
+
+      doc.save(`consolidated-report-${Date.now()}.pdf`);
+
+      toast({
+        title: "Export successful",
+        description: "Consolidated report exported to PDF",
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Failed to export consolidated report",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const goBack = () => {
+    window.history.back();
+  };
+
   if (isProjectsLoading || (selectedProject && (isTestCasesLoading || isBugsLoading))) {
     return (
       <div className="space-y-4 p-6">
@@ -301,13 +463,42 @@ export default function ConsolidatedReports() {
     <div className="space-y-6 p-6">
       {/* Page Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-black">
-            Consolidated Reports
-          </h1>
-          <p className="text-gray-600 mt-1">Complete project overview and status management</p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goBack}
+            className="text-black"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-black">
+              Consolidated Reports
+            </h1>
+            <p className="text-gray-600 mt-1">Complete project overview and status management</p>
+          </div>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={exportToCSV}
+            className="text-black"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={exportToPDF}
+            className="text-black"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
           <Button 
             variant="outline" 
             size="sm" 
@@ -317,6 +508,16 @@ export default function ConsolidatedReports() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
+          {hasUnsavedChanges && (
+            <Button 
+              onClick={saveAllChanges}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save All ({Object.keys(pendingStatusUpdates).length})
+            </Button>
+          )}
         </div>
       </div>
 
@@ -444,12 +645,19 @@ export default function ConsolidatedReports() {
             </div>
             <div>
               <label className="text-sm font-medium text-black mb-2 block">All Modules</label>
-              <ModuleSelect
-                value={selectedModule}
-                onValueChange={setSelectedModule}
-                modules={modules}
-                includeAll={true}
-              />
+              <Select value={selectedModule} onValueChange={setSelectedModule}>
+                <SelectTrigger className="text-black">
+                  <SelectValue placeholder="Select a module" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Modules</SelectItem>
+                  {modules.map((module: any) => (
+                    <SelectItem key={module.id} value={module.id.toString()}>
+                      {module.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium text-black mb-2 block">All Severity</label>
@@ -537,98 +745,109 @@ export default function ConsolidatedReports() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.map((item) => (
-                <TableRow key={`${item.type}-${item.id}`}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedItems.includes(item.id)}
-                      onCheckedChange={() => toggleItemSelection(item.id)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={item.type === 'Test Case' ? 'default' : 'destructive'} className="text-white">
-                      {item.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="text-black">
-                      {item.moduleName}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate font-medium text-black">{item.title}</TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={
-                        item.priority === 'Critical' ? 'destructive' :
-                        item.priority === 'High' ? 'destructive' :
-                        item.priority === 'Medium' ? 'default' : 'secondary'
-                      }
-                      className="text-white"
-                    >
-                      {item.priority}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Select 
-                      value={item.status} 
-                      onValueChange={(value) => handleStatusChange(item, value)}
-                    >
-                      <SelectTrigger className="w-32 text-black">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {item.type === 'Test Case' ? (
-                          <>
-                            <SelectItem value="Not Executed">Not Executed</SelectItem>
-                            <SelectItem value="Pass">Pass</SelectItem>
-                            <SelectItem value="Fail">Fail</SelectItem>
-                            <SelectItem value="Blocked">Blocked</SelectItem>
-                          </>
-                        ) : (
-                          <>
-                            <SelectItem value="Open">Open</SelectItem>
-                            <SelectItem value="In Progress">In Progress</SelectItem>
-                            <SelectItem value="Resolved">Resolved</SelectItem>
-                            <SelectItem value="Closed">Closed</SelectItem>
-                          </>
+              {filteredData.map((item) => {
+                const key = `${item.type}-${item.id}`;
+                const currentStatus = pendingStatusUpdates[key] || item.status;
+                const hasPendingChange = pendingStatusUpdates[key] !== undefined;
+                
+                return (
+                  <TableRow key={`${item.type}-${item.id}`}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedItems.includes(item.id)}
+                        onCheckedChange={() => toggleItemSelection(item.id)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={item.type === 'Test Case' ? 'default' : 'destructive'} className="text-white">
+                        {item.type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-black">
+                        {item.moduleName}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate font-medium text-black">{item.title}</TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={
+                          item.priority === 'Critical' ? 'destructive' :
+                          item.priority === 'High' ? 'destructive' :
+                          item.priority === 'Medium' ? 'default' : 'secondary'
+                        }
+                        className="text-white"
+                      >
+                        {item.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="relative">
+                        <Select 
+                          value={currentStatus} 
+                          onValueChange={(value) => handleStatusChange(item, value)}
+                        >
+                          <SelectTrigger className={`w-32 text-black ${hasPendingChange ? 'border-yellow-500 bg-yellow-50' : ''}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {item.type === 'Test Case' ? (
+                              <>
+                                <SelectItem value="Not Executed">Not Executed</SelectItem>
+                                <SelectItem value="Pass">Pass</SelectItem>
+                                <SelectItem value="Fail">Fail</SelectItem>
+                                <SelectItem value="Blocked">Blocked</SelectItem>
+                              </>
+                            ) : (
+                              <>
+                                <SelectItem value="Open">Open</SelectItem>
+                                <SelectItem value="In Progress">In Progress</SelectItem>
+                                <SelectItem value="Resolved">Resolved</SelectItem>
+                                <SelectItem value="Closed">Closed</SelectItem>
+                              </>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {hasPendingChange && (
+                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
                         )}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Progress value={item.progress} className="w-16 h-2" />
-                      <span className="text-xs text-black">{item.progress}%</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-black">{item.created}</div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="text-black">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => handleView(item)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(item)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(item)} className="text-red-600">
-                          <Trash className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Progress value={item.progress} className="w-16 h-2" />
+                        <span className="text-xs text-black">{item.progress}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-black">{item.created}</div>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="text-black">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => handleView(item)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(item)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDelete(item)} className="text-red-600">
+                            <Trash className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
 
