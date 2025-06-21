@@ -55,26 +55,39 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
   const currentProjectId = selectedProjectId || projectId;
 
+  // Fetch all projects first
+  const { data: allProjects } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/projects");
+      if (!response.ok) throw new Error("Failed to fetch projects");
+      return response.json();
+    },
+  });
+
+  // Use the first project if no currentProjectId is provided
+  const effectiveProjectId = currentProjectId || (allProjects && allProjects.length > 0 ? allProjects[0].id : undefined);
+
   // Fetch project data
   const { data: project } = useQuery<Project>({
-    queryKey: [`/api/projects/${currentProjectId}`],
+    queryKey: [`/api/projects/${effectiveProjectId}`],
     queryFn: async () => {
-      const response = await apiRequest("GET", `/api/projects/${currentProjectId}`);
+      const response = await apiRequest("GET", `/api/projects/${effectiveProjectId}`);
       if (!response.ok) throw new Error("Failed to fetch project");
       return response.json();
     },
-    enabled: !!currentProjectId,
+    enabled: !!effectiveProjectId,
   });
 
   // Fetch modules
   const { data: modules } = useQuery<Module[]>({
-    queryKey: [`/api/projects/${currentProjectId}/modules`],
+    queryKey: [`/api/projects/${effectiveProjectId}/modules`],
     queryFn: async () => {
-      const response = await apiRequest("GET", `/api/projects/${currentProjectId}/modules`);
+      const response = await apiRequest("GET", `/api/projects/${effectiveProjectId}/modules`);
       if (!response.ok) throw new Error("Failed to fetch modules");
       return response.json();
     },
-    enabled: !!currentProjectId,
+    enabled: !!effectiveProjectId,
   });
 
   // Fetch users
@@ -89,24 +102,24 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
   // Fetch test cases
   const { data: testCases, isLoading: isTestCasesLoading } = useQuery<TestCase[]>({
-    queryKey: [`/api/projects/${currentProjectId}/test-cases`],
+    queryKey: [`/api/projects/${effectiveProjectId}/test-cases`],
     queryFn: async () => {
-      const response = await apiRequest("GET", `/api/projects/${currentProjectId}/test-cases`);
+      const response = await apiRequest("GET", `/api/projects/${effectiveProjectId}/test-cases`);
       if (!response.ok) throw new Error("Failed to fetch test cases");
       return response.json();
     },
-    enabled: !!currentProjectId,
+    enabled: !!effectiveProjectId,
   });
 
   // Fetch bugs
   const { data: bugs, isLoading: isBugsLoading } = useQuery<Bug[]>({
-    queryKey: [`/api/projects/${currentProjectId}/bugs`],
+    queryKey: [`/api/projects/${effectiveProjectId}/bugs`],
     queryFn: async () => {
-      const response = await apiRequest("GET", `/api/projects/${currentProjectId}/bugs`);
+      const response = await apiRequest("GET", `/api/projects/${effectiveProjectId}/bugs`);
       if (!response.ok) throw new Error("Failed to fetch bugs");
       return response.json();
     },
-    enabled: !!currentProjectId,
+    enabled: !!effectiveProjectId,
   });
 
   // Update test case status mutation
@@ -125,7 +138,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
     },
     onError: (error: any) => {
       console.error('Test case update error:', error);
@@ -153,7 +166,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/bugs`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
     },
     onError: (error: any) => {
       console.error('Bug update error:', error);
@@ -178,8 +191,8 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/test-cases`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/bugs`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
       toast({
         title: "Status Updated",
         description: "Item status has been updated successfully.",
@@ -417,7 +430,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   };
 
   const handleOpenConsolidatedReports = () => {
-    navigate(`/reports/consolidated?projectId=${currentProjectId}`);
+    navigate(`/reports/consolidated?projectId=${effectiveProjectId}`);
   };
 
   // Handle view item in dialog
@@ -446,7 +459,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
       toast({
         title: "Test case deleted",
         description: "Test case has been deleted successfully.",
@@ -470,7 +483,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/bugs`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
       toast({
         title: "Bug deleted",
         description: "Bug has been deleted successfully.",
@@ -713,7 +726,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     }
   };
 
-  if (isTestCasesLoading || isBugsLoading) {
+  if (isTestCasesLoading || isBugsLoading || !effectiveProjectId) {
     return (
       <div className="space-y-4">
         {Array.from({ length: 8 }).map((_, i) => (
@@ -1138,7 +1151,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
               onSuccess={() => {
                 setEditTestCaseDialogOpen(false);
                 // Refresh data
-                queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/test-cases`] });
+                queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
               }}
             />
           )}
@@ -1162,7 +1175,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
               onSuccess={() => {
                 setEditBugDialogOpen(false);
                 // Refresh data
-                queryClient.invalidateQueries({ queryKey: [`/api/projects/${currentProjectId}/bugs`] });
+                queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
               }}
             />
           )}

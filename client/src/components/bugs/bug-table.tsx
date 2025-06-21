@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bug } from "@/types";
+import { Bug, User } from "@/types";
 import { format } from "date-fns";
 import { Edit, Trash, Eye, Paperclip, ClipboardCopy, Filter } from "lucide-react";
 import {
@@ -23,6 +23,8 @@ import { TagFilter } from "@/components/test-cases/tag-filter";
 import { TestCaseTags } from "@/components/test-cases/test-case-tags";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface BugTableProps {
   bugs: Bug[];
@@ -39,6 +41,16 @@ export function BugTable({ bugs, onEdit, onDelete, onView }: BugTableProps) {
   const projectIds = [...new Set(bugs.map(bug => bug.projectId))];
   // Use the first project ID if available
   const projectId = projectIds.length > 0 ? projectIds[0] : undefined;
+
+  // Fetch users
+  const { data: users } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/users");
+      if (!response.ok) throw new Error("Failed to fetch users");
+      return response.json();
+    },
+  });
 
   // Filter bugs by selected tags
   const filteredBugs = selectedTags.length > 0

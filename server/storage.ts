@@ -237,7 +237,7 @@ class MemStorage implements IStorage {
         })
         .filter(num => !isNaN(num));
 
-      // Start from 1 for each project - always increment from the highest existing number
+      // Always start from 1 for the first module in a project
       const nextNumber = existingModules.length > 0 ? Math.max(...existingModules) + 1 : 1;
       moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
     }
@@ -1382,6 +1382,36 @@ class MemStorage implements IStorage {
     this.users.set(1, defaultAdmin);
     this.nextId = 2;
     this.moduleCounter = 1;
+  }
+
+  // Reset storage method for testing
+  resetStorage() {
+    this.users.clear();
+    this.projects.clear();
+    this.modules.clear();
+    this.testCases.clear();
+    this.bugs.clear();
+    this.documents.clear();
+    this.documentFolders.clear();
+    this.customers.clear();
+    this.tags.clear();
+    this.kanbanColumns.clear();
+    this.kanbanCards.clear();
+    this.customMarkers.clear();
+    this.matrixCells.clear();
+    this.projectMembers.clear();
+    this.activities.clear();
+    this.timeSheets.clear();
+    this.timeSheetFolders.clear();
+    this.customerProjects.clear();
+    this.sprints.clear();
+    this.nextId = 1;
+    this.moduleCounter = 1;
+    this.testCaseCounter = 1;
+    this.bugCounter = 1;
+    
+    // Re-initialize default data
+    this.initializeDefaultData();
   }
 }
 
