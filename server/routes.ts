@@ -2964,6 +2964,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Test Sheets routes
+  apiRouter.get("/test-sheets", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      
+      const testSheets = await storage.getTestSheets(projectId);
+      res.json(testSheets);
+    } catch (error) {
+      console.error("Get test sheets error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/test-sheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const testSheet = await storage.getTestSheet(id);
+      
+      if (!testSheet) {
+        return res.status(404).json({ message: "Test sheet not found" });
+      }
+      
+      res.json(testSheet);
+    } catch (error) {
+      console.error("Get test sheet error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/test-sheets", isAuthenticated, async (req, res) => {
+    try {
+      const testSheetData = {
+        ...req.body,
+        createdById: req.session.userId,
+      };
+
+      const testSheet = await storage.createTestSheet(testSheetData);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "created",
+        entityType: "testSheet",
+        entityId: testSheet.id,
+        details: {
+          projectId: testSheet.projectId,
+          sheetName: testSheet.name,
+        }
+      });
+
+      res.status(201).json(testSheet);
+    } catch (error) {
+      console.error("Create test sheet error:", error);
+      res.status(400).json({ message: "Invalid test sheet data" });
+    }
+  });
+
+  apiRouter.put("/test-sheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const testSheet = await storage.getTestSheet(id);
+      
+      if (!testSheet) {
+        return res.status(404).json({ message: "Test sheet not found" });
+      }
+
+      const updatedTestSheet = await storage.updateTestSheet(id, req.body);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "updated",
+        entityType: "testSheet",
+        entityId: id,
+        details: {
+          projectId: testSheet.projectId,
+          sheetName: testSheet.name,
+        }
+      });
+
+      res.json(updatedTestSheet);
+    } catch (error) {
+      console.error("Update test sheet error:", error);
+      res.status(400).json({ message: "Invalid test sheet data" });
+    }
+  });
+
+  apiRouter.delete("/test-sheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const testSheet = await storage.getTestSheet(id);
+      
+      if (!testSheet) {
+        return res.status(404).json({ message: "Test sheet not found" });
+      }
+
+      const success = await storage.deleteTestSheet(id);
+
+      if (success) {
+        // Log activity
+        await storage.createActivity({
+          userId: req.session.userId!,
+          action: "deleted",
+          entityType: "testSheet",
+          entityId: id,
+          details: {
+            projectId: testSheet.projectId,
+            sheetName: testSheet.name,
+          }
+        });
+      }
+
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete test sheet error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/test-sheets/:id/duplicate", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name } = req.body;
+
+      if (!name) {
+        return res.status(400).json({ message: "Sheet name is required" });
+      }
+
+      const duplicatedSheet = await storage.duplicateTestSheet(id, name, req.session.userId!);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "duplicated",
+        entityType: "testSheet",
+        entityId: duplicatedSheet.id,
+        details: {
+          projectId: duplicatedSheet.projectId,
+          sheetName: duplicatedSheet.name,
+          originalSheetId: id,
+        }
+      });
+
+      res.status(201).json(duplicatedSheet);
+    } catch (error) {
+      console.error("Duplicate test sheet error:", error);
+      res.status(400).json({ message: "Failed to duplicate test sheet" });
+    }
+  });
+
   // Prefix all API routes with /api
   // Customer routes
   apiRouter.get("/customers", isAuthenticated, async (req, res) => {

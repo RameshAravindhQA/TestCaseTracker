@@ -897,64 +897,80 @@ class MemStorage implements IStorage {
 
   // Test Sheets methods
   async getTestSheets(projectId?: number): Promise<any[]> {
-    // For now, return empty array - implement with actual database later
-    return [];
+    let results = Array.from(this.testSheets.values());
+    
+    if (projectId) {
+      results = results.filter(sheet => sheet.projectId === projectId);
+    }
+    
+    console.log(`Storage: getTestSheets(${projectId}) returning ${results.length} sheets`);
+    return results;
   }
 
   async getTestSheet(id: number): Promise<any | null> {
-    // For now, return null - implement with actual database later
-    return null;
+    return this.testSheets.get(id) || null;
   }
 
   async createTestSheet(data: any): Promise<any> {
-    // For now, create a mock test sheet
+    const id = this.getNextId();
+    const now = new Date().toISOString();
+    
     const newSheet = {
-      id: Date.now(), // Use timestamp as temporary ID
+      id,
       ...data,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
 
+    this.testSheets.set(id, newSheet);
     console.log('Created test sheet:', newSheet);
     return newSheet;
   }
 
   async updateTestSheet(id: number, data: any): Promise<any> {
-    // For now, return updated data
-    return {
-      id,
-      ...data,
-      updatedAt: new Date().toISOString(),
+    const sheet = this.testSheets.get(id);
+    if (!sheet) return null;
+
+    const updatedSheet = { 
+      ...sheet, 
+      ...data, 
+      updatedAt: new Date().toISOString() 
     };
+    
+    this.testSheets.set(id, updatedSheet);
+    return updatedSheet;
   }
 
   async deleteTestSheet(id: number): Promise<boolean> {
-    // For now, return true
-    return true;
+    return this.testSheets.delete(id);
   }
 
   async duplicateTestSheet(id: number, name: string, userId: number): Promise<any> {
-    // For now, create a new mock sheet
-    return {
-      id: Date.now(),
+    const originalSheet = this.testSheets.get(id);
+    if (!originalSheet) {
+      throw new Error('Original sheet not found');
+    }
+
+    const newId = this.getNextId();
+    const now = new Date().toISOString();
+    
+    const duplicatedSheet = {
+      id: newId,
       name,
-      projectId: 1, // Default project
-      data: {
-        cells: {},
-        rows: 100,
-        cols: 26,
-      },
+      projectId: originalSheet.projectId,
+      data: { ...originalSheet.data },
       metadata: {
+        ...originalSheet.metadata,
         version: 1,
         lastModifiedBy: userId,
-        collaborators: [],
-        chartConfigs: [],
-        namedRanges: [],
       },
       createdById: userId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
+
+    this.testSheets.set(newId, duplicatedSheet);
+    return duplicatedSheet;
   }
 
   // Flow Diagrams methods (placeholder)
