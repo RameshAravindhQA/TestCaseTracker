@@ -1,10 +1,65 @@
-import { 
-  User, Project, Module, TestCase, Bug, Document, DocumentFolder, 
-  Customer, Tag, KanbanColumn, KanbanCard, CustomMarker, MatrixCell,
-  InsertUser, InsertProject, InsertModule, InsertTestCase, InsertBug, 
-  InsertDocument, InsertDocumentFolder, InsertCustomer, InsertTag,
-  InsertKanbanColumn, InsertKanbanCard, InsertCustomMarker, InsertMatrixCell
-} from "../shared/schema";
+import {
+  User,
+  Project,
+  ProjectMember,
+  Module,
+  TestCase,
+  Bug,
+  Activity,
+  TimeSheet,
+  TimeSheetFolder,
+  Customer,
+  CustomerProject,
+  AutomationScript,
+  AutomationRun,
+  AutomationSchedule,
+  AutomationEnvironment,
+  Sprint,
+  KanbanColumn,
+  KanbanCard,
+  CustomMarker,
+  MatrixCell,
+  TraceabilityMatrix,
+  TraceabilityMatrixCell,
+  TraceabilityMarker,
+  TraceabilityModule,
+  TestSheet,
+  InsertUser,
+  InsertProject,
+  InsertProjectMember,
+  InsertModule,
+  InsertTestCase,
+  InsertBug,
+  InsertActivity,
+  InsertTimeSheet,
+  InsertTimeSheetFolder,
+  InsertCustomer,
+  InsertCustomerProject,
+  InsertAutomationScript,
+  InsertAutomationRun,
+  InsertAutomationSchedule,
+  InsertAutomationEnvironment,
+  InsertSprint,
+  InsertKanbanColumn,
+  InsertKanbanCard,
+  InsertCustomMarker,
+  InsertMatrixCell,
+  InsertTraceabilityMatrix,
+  InsertTraceabilityMatrixCell,
+  InsertTraceabilityMarker,
+  InsertTraceabilityModule,
+  InsertTestSheet,
+  DocumentFolder,
+  InsertDocumentFolder,
+  Document,
+  InsertDocument,
+  Tag,
+  InsertTag,
+  TestingType,
+  InsertTestingType,
+  TestingTypeField,
+  InsertTestingTypeField,
+} from "@shared/schema";
 
 export interface IStorage {
   // User operations
@@ -106,6 +161,13 @@ export interface IStorage {
   createMatrixCell(cell: InsertMatrixCell): Promise<MatrixCell>;
   updateMatrixCell(id: number, cellData: Partial<MatrixCell>): Promise<MatrixCell | undefined>;
   deleteMatrixCell(id: number): Promise<boolean>;
+
+  // Test Sheet operations
+  getTestSheets(projectId?: number): Promise<TestSheet[]>;
+  getTestSheet(id: number): Promise<TestSheet | undefined>;
+  createTestSheet(sheet: InsertTestSheet): Promise<TestSheet>;
+  updateTestSheet(id: number, sheetData: Partial<TestSheet>): Promise<TestSheet | undefined>;
+  deleteTestSheet(id: number): Promise<boolean>;
 }
 
 /**
@@ -114,6 +176,7 @@ export interface IStorage {
 class MemStorage implements IStorage {
   private users = new Map<number, User>();
   private projects = new Map<number, Project>();
+  private projectMembers = new Map<number, any>();
   private modules = new Map<number, Module>();
   private testCases = new Map<number, TestCase>();
   private bugs = new Map<number, Bug>();
@@ -125,6 +188,7 @@ class MemStorage implements IStorage {
   private kanbanCards = new Map<number, KanbanCard>();
   private customMarkers = new Map<number, CustomMarker>();
   private matrixCells = new Map<number, MatrixCell>();
+  private testSheets = new Map<number, any>();
 
   private nextId = 1;
   private moduleCounter = 1;
@@ -136,6 +200,7 @@ class MemStorage implements IStorage {
   private timeSheetFolders = new Map<number, any>();
   private customerProjects = new Map<number, any>();
   private sprints = new Map<number, any>();
+  private testSheetIdCounter = 1;
 
   private getNextId(): number {
     return this.nextId++;
@@ -819,6 +884,7 @@ class MemStorage implements IStorage {
         status: project.status,
         createdAt: project.createdAt,
         totalModules: modules.length,
+```tool_code
         totalTestCases: testCases.length,
         totalBugs: bugs.length,
         modules: modules.map(m => m.name).join(';'),
@@ -828,6 +894,44 @@ class MemStorage implements IStorage {
     }
 
     return exportData;
+  }
+
+  // Test Sheets methods
+  async getTestSheets(projectId?: number): Promise<any[]> {
+    let results = Array.from(this.testSheets.values());
+
+    if (projectId) {
+      results = results.filter(sheet => sheet.projectId === projectId);
+    }
+
+    return results;
+  }
+
+  async getTestSheet(id: number): Promise<any | undefined> {
+    return this.testSheets.get(id);
+  }
+
+  async createTestSheet(sheet: any): Promise<any> {
+    const newSheet = {
+      id: this.getNextId(),
+      ...sheet,
+      createdAt: new Date(),
+    };
+    this.testSheets.set(newSheet.id, newSheet);
+    return newSheet;
+  }
+
+  async updateTestSheet(id: number, sheetData: Partial<any>): Promise<any | undefined> {
+    const sheet = this.testSheets.get(id);
+    if (!sheet) return undefined;
+
+    const updatedSheet = { ...sheet, ...sheetData };
+    this.testSheets.set(id, updatedSheet);
+    return updatedSheet;
+  }
+
+  async deleteTestSheet(id: number): Promise<boolean> {
+    return this.testSheets.delete(id);
   }
 
   // Dashboard Stats
@@ -855,8 +959,7 @@ class MemStorage implements IStorage {
     const bugs = Array.from(this.bugs.values());
     const bugStatusCounts = {
       open: bugs.filter(bug => bug.status === 'Open').length,
-      inProgress: bugs<replit_final_file>
-.filter(bug => bug.status === 'In Progress').length,
+      inProgress: bugs.filter(bug => bug.status === 'In Progress').length,
       resolved: bugs.filter(bug => bug.status === 'Resolved').length,
       closed: bugs.filter(bug => bug.status === 'Closed').length,
       critical: bugs.filter(bug => bug.severity === 'Critical').length,
@@ -1376,44 +1479,6 @@ class MemStorage implements IStorage {
     return cell; // Placeholder for now
   }
 
-  // Test Sheets
-  async getTestSheets(projectId?: number): Promise<any[]> {
-    let results = Array.from(this.testSheets.values());
-
-    if (projectId) {
-      results = results.filter(sheet => sheet.projectId === projectId);
-    }
-
-    return results;
-  }
-
-  async getTestSheet(id: number): Promise<any | undefined> {
-    return this.testSheets.get(id);
-  }
-
-  async createTestSheet(sheet: any): Promise<any> {
-    const newSheet = {
-      id: this.getNextId(),
-      ...sheet,
-      createdAt: new Date(),
-    };
-    this.testSheets.set(newSheet.id, newSheet);
-    return newSheet;
-  }
-
-  async updateTestSheet(id: number, sheetData: any): Promise<any | undefined> {
-    const sheet = this.testSheets.get(id);
-    if (!sheet) return undefined;
-
-    const updatedSheet = { ...sheet, ...sheetData, updatedAt: new Date() };
-    this.testSheets.set(id, updatedSheet);
-    return updatedSheet;
-  }
-
-  async deleteTestSheet(id: number): Promise<boolean> {
-    return this.testSheets.delete(id);
-  }
-
   // Helper method to record activities
   private recordActivity(entityType: string, action: string, entityId: number, userId: number) {
     const activity = {
@@ -1671,12 +1736,12 @@ class MemStorage implements IStorage {
     this.moduleCounter = 1;
     this.testCaseCounter = 1;
     this.bugCounter = 1;
+    this.testSheetIdCounter = 1;
     this.testSheets.clear(); // Clear test sheets during reset
 
     // Re-initialize default data
     this.initializeDefaultData();
   }
-  private testSheets = new Map<number, any>();
 }
 
 // Create and export the storage instance

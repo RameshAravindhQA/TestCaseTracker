@@ -1006,5 +1006,68 @@ export type TestSheet = z.infer<typeof insertTestSheetSchema> & {
   updatedAt: string;
 };
 
+// Test Sheets schema
+export const insertTestSheetSchema = z.object({
+  name: z.string().min(1, "Sheet name is required"),
+  projectId: z.number(),
+  data: z.object({
+    cells: z.record(z.string(), z.object({
+      value: z.any(),
+      formula: z.string().optional(),
+      type: z.enum(['text', 'number', 'date', 'boolean', 'formula']),
+      style: z.object({
+        fontWeight: z.enum(['normal', 'bold']).optional(),
+        fontStyle: z.enum(['normal', 'italic']).optional(),
+        textAlign: z.enum(['left', 'center', 'right']).optional(),
+        backgroundColor: z.string().optional(),
+        color: z.string().optional(),
+        fontSize: z.number().optional(),
+        border: z.object({
+          top: z.string().optional(),
+          right: z.string().optional(),
+          bottom: z.string().optional(),
+          left: z.string().optional(),
+        }).optional(),
+      }).optional(),
+      validation: z.object({
+        type: z.enum(['list', 'number', 'date', 'text']),
+        criteria: z.any(),
+        errorMessage: z.string().optional(),
+      }).optional(),
+    })),
+    rows: z.number(),
+    cols: z.number(),
+  }),
+  metadata: z.object({
+    version: z.number(),
+    lastModifiedBy: z.number(),
+    collaborators: z.array(z.number()),
+    chartConfigs: z.array(z.object({
+      id: z.string(),
+      type: z.enum(['line', 'bar', 'pie', 'column']),
+      title: z.string(),
+      dataRange: z.string(),
+      position: z.object({
+        x: z.number(),
+        y: z.number(),
+        width: z.number(),
+        height: z.number(),
+      }),
+    })),
+    namedRanges: z.array(z.object({
+      name: z.string(),
+      range: z.string(),
+      description: z.string().optional(),
+    })),
+  }),
+  createdById: z.number(),
+});
+
+export type TestSheet = z.infer<typeof insertTestSheetSchema> & {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type InsertTestSheet = z.infer<typeof insertTestSheetSchema>;
 
