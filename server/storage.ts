@@ -1833,6 +1833,10 @@ class MemStorage implements IStorage {
   }
 
    // GitHub Integration methods
+  async getAllGitHubConfigs(): Promise<any[]> {
+    return this.githubConfigs;
+  }
+
   async getGitHubConfig(projectId: number): Promise<any | undefined> {
     return this.githubConfigs.find(config => config.projectId === projectId);
   }

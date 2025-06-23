@@ -5523,6 +5523,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // GitHub Integration routes
+  apiRouter.get("/github/configs", isAuthenticated, async (req, res) => {
+    try {
+      const configs = await storage.getAllGitHubConfigs();
+      
+      // Don't expose access tokens in the response
+      const safeConfigs = configs.map(({ accessToken, ...config }) => config);
+      
+      res.json(safeConfigs);
+    } catch (error) {
+      console.error("Get all GitHub configs error:", error);
+      res.status(500).json({ message: "Failed to fetch GitHub configurations" });
+    }
+  });
+
   apiRouter.get("/github/config/:projectId", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);

@@ -35,6 +35,7 @@ import {
   Star,
   ExternalLink,
   ChevronRight,
+  Github,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -129,6 +130,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       name: "Bug Reports",
       href: "/bugs",
       icon: <BugPlay className="h-5 w-5" />,
+    },
+    {
+      name: "GitHub Integration",
+      href: "/github",
+      icon: <Github className="h-5 w-5" />,
     },
     {
       name: "Automation",
