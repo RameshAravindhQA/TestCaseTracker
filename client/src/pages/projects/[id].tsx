@@ -19,7 +19,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ModuleForm } from "@/components/modules/module-form";
-import { ModuleTable } from "@/components/modules/module-table";
 import { TestCaseTable } from "@/components/test-cases/test-case-table";
 import { BugTable } from "@/components/bugs/bug-table";
 import { GitHubConfigForm } from "@/components/github/github-config-form";
