@@ -62,13 +62,10 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = 5000;
-  // Test database connection before starting server
-  testConnection().then((connected) => {
-    if (!connected) {
-      console.warn("⚠️  Database connection failed, but server will start anyway");
-    }
+  // Using in-memory storage - no database connection needed
+  console.log("✅ Using in-memory storage");
 
-    server.listen(
+  server.listen(
     {
       port,
       host: "0.0.0.0",
@@ -78,5 +75,4 @@ app.use((req, res, next) => {
       log(`serving on port ${port}`);
     },
   );
-  });
 })();

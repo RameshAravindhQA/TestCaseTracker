@@ -1902,13 +1902,11 @@ class MemStorage implements IStorage {
 
 // Create and export the storage instance
 console.log("🔄 Initializing in-memory storage...");
-// import { InMemoryStorage } from './storage';
 import { DatabaseStorage } from './db-storage';
 
-// Use PostgreSQL database storage
-export const storage: IStorage = new DatabaseStorage();
-// Initialize with default data
-(storage as any).initializeDefaultData();
+// Use in-memory storage for development/testing
+const memoryStorage = new MemStorage();
+export const storage: IStorage = memoryStorage;
 console.log("✅ In-memory storage initialized successfully");
 
 export async function closeConnection() {
