@@ -4,7 +4,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { registerRoutes } from './routes.js';
-import { setupViteDevMiddleware } from './vite.js';
+import { setupVite } from './vite.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,7 +52,7 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Development mode setup
 if (process.env.NODE_ENV !== 'production') {
-  setupViteDevMiddleware(app);
+  // Note: setupVite requires a server instance, will be called after server creation
 } else {
   // Production static file serving
   app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
@@ -81,12 +81,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const PORT = process.env.PORT || 5000;
 
   // Register routes and start server
-  registerRoutes(app).then((server) => {
-    server.listen(PORT, '0.0.0.0', () => {
+  registerRoutes(app).then(async (server) => {
+    const httpServer = server.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Using in-memory storage`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
+
+    // Setup Vite in development mode
+    if (process.env.NODE_ENV !== 'production') {
+      await setupVite(app, httpServer);
+    }
   }).catch((error) => {
     console.error('Failed to start server:', error);
     process.exit(1);
