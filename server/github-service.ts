@@ -1,4 +1,3 @@
-
 import { logger } from "./logger";
 import { storage } from "./storage";
 import type { GitHubConfig, GitHubIssuePayload, InsertGitHubIssue } from "@shared/github-types";
@@ -11,7 +10,7 @@ export class GitHubService {
     body?: any
   ) {
     const url = `https://api.github.com/repos/${config.repoOwner}/${config.repoName}${endpoint}`;
-    
+
     const headers = {
       'Authorization': `Bearer ${config.accessToken}`,
       'Accept': 'application/vnd.github.v3+json',
@@ -40,7 +39,7 @@ export class GitHubService {
 
   async createIssue(config: GitHubConfig, payload: GitHubIssuePayload) {
     logger.info(`Creating GitHub issue in ${config.repoOwner}/${config.repoName}`);
-    
+
     const issueData = {
       title: payload.title,
       body: payload.body,
@@ -49,9 +48,9 @@ export class GitHubService {
     };
 
     const response = await this.makeGitHubRequest(config, '/issues', 'POST', issueData);
-    
+
     logger.info(`Created GitHub issue #${response.number}: ${response.html_url}`);
-    
+
     return {
       number: response.number,
       id: response.id,
@@ -62,14 +61,14 @@ export class GitHubService {
 
   async updateIssue(config: GitHubConfig, issueNumber: number, updates: Partial<GitHubIssuePayload>) {
     logger.info(`Updating GitHub issue #${issueNumber} in ${config.repoOwner}/${config.repoName}`);
-    
+
     const response = await this.makeGitHubRequest(
       config, 
       `/issues/${issueNumber}`, 
       'PATCH', 
       updates
     );
-    
+
     return {
       number: response.number,
       id: response.id,
@@ -86,9 +85,9 @@ export class GitHubService {
 
   async getIssue(config: GitHubConfig, issueNumber: number) {
     logger.info(`Fetching GitHub issue #${issueNumber} from ${config.repoOwner}/${config.repoName}`);
-    
+
     const response = await this.makeGitHubRequest(config, `/issues/${issueNumber}`);
-    
+
     return {
       number: response.number,
       id: response.id,
@@ -104,9 +103,9 @@ export class GitHubService {
   formatBugAsGitHubIssue(bug: any): GitHubIssuePayload {
     const severity = bug.severity || 'Medium';
     const priority = bug.priority || 'Medium';
-    
+
     let labels = [`bug`, `severity:${severity.toLowerCase()}`, `priority:${priority.toLowerCase()}`];
-    
+
     if (bug.tags && Array.isArray(bug.tags)) {
       labels = labels.concat(bug.tags.map((tag: any) => 
         typeof tag === 'string' ? tag : tag.name
