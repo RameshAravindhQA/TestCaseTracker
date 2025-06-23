@@ -1841,8 +1841,7 @@ class MemStorage implements IStorage {
     const config = {
       id: this.githubConfigs.length + 1,
       ...data,
-      createdAt:```python
- new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
     this.githubConfigs.push(config);
     return config;
