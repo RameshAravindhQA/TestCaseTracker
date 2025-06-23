@@ -299,11 +299,22 @@ class MemStorage implements IStorage {
     if (!moduleId || moduleId.trim() === '') {
       // Get existing modules for this specific project only
       const projectModules = Array.from(this.modules.values())
-        .filter(module => module.projectId === moduleData.projectId)
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        .filter(module => module.projectId === moduleData.projectId);
 
-      // Simply count existing modules and add 1 for the next sequential number (starting from 1)
-      const nextNumber = projectModules.length + 1;
+      // Find the highest module number for this project
+      let maxNumber = 0;
+      projectModules.forEach(module => {
+        const match = module.moduleId.match(/^MOD-(\d+)$/);
+        if (match) {
+          const number = parseInt(match[1], 10);
+          if (number > maxNumber) {
+            maxNumber = number;
+          }
+        }
+      });
+
+      // Generate next sequential number starting from 1
+      const nextNumber = maxNumber + 1;
       moduleId = `MOD-${nextNumber}`;
     }
 

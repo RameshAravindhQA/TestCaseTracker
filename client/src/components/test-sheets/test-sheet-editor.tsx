@@ -110,20 +110,26 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     };
   };
 
-  // Update cell data
+  // Update cell data with enhanced persistence
   const updateCell = useCallback((row: number, col: number, updates: Partial<CellData>) => {
     const cellId = getCellId(row, col);
     setSheetData(prev => {
       const currentCell = prev.cells[cellId] || { value: '', type: 'text' as const, style: {} };
-      const newCell = { ...currentCell, ...updates };
+      const newCell = { 
+        ...currentCell, 
+        ...updates,
+        lastModified: new Date().toISOString(),
+        id: cellId 
+      };
       console.log('UpdateCell - Row:', row, 'Col:', col, 'CellId:', cellId, 'Updates:', updates, 'NewCell:', newCell);
+      
+      // Create new cells object to ensure immutability
+      const newCells = { ...prev.cells };
+      newCells[cellId] = newCell;
       
       return {
         ...prev,
-        cells: {
-          ...prev.cells,
-          [cellId]: newCell,
-        },
+        cells: newCells,
       };
     });
   }, []);
@@ -162,12 +168,17 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     const autoSaveTimer = setTimeout(() => {
       if (JSON.stringify(sheetData) !== JSON.stringify(sheet.data)) {
         console.log('Auto-saving sheet data changes');
-        saveSheetMutation.mutate(sheetData);
+        // Create a deep copy to ensure data persistence
+        const dataToSave = {
+          ...sheetData,
+          cells: { ...sheetData.cells }
+        };
+        saveSheetMutation.mutate(dataToSave);
       }
-    }, 2000); // Auto-save after 2 seconds of inactivity
+    }, 1500); // Reduced auto-save delay for better UX
 
     return () => clearTimeout(autoSaveTimer);
-  }, [sheetData]);
+  }, [sheetData, sheet.data, saveSheetMutation]);
 
   // Handle range selection
   const isInSelectedRange = (row: number, col: number): boolean => {
@@ -244,7 +255,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     setIsEditing(true);
   };
 
-  // Handle formula bar change
+  // Handle formula bar change with enhanced persistence
   const handleFormulaBarChange = (value: string) => {
     setFormulaBarValue(value);
     
@@ -260,12 +271,14 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         // Evaluate formula
         try {
           const context = Object.keys(sheetData.cells).reduce((acc, cellId) => {
-            acc[cellId] = sheetData.cells[cellId].value;
+            const cell = sheetData.cells[cellId];
+            acc[cellId] = cell?.value || '';
             return acc;
           }, {} as Record<string, any>);
           cellValue = formulaEngine.evaluate(value, context);
         } catch (error) {
           cellValue = '#ERROR!';
+          console.error('Formula evaluation error:', error);
         }
       } else if (!isNaN(Number(value)) && value.trim() !== '' && value.trim() !== '.') {
         cellType = 'number';
@@ -281,23 +294,12 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         cellValue = value;
       }
 
-      // Update cell with immediate state preservation
-      const cellId = getCellId(selectedCell.row, selectedCell.col);
-      setSheetData(prev => {
-        const newData = {
-          ...prev,
-          cells: {
-            ...prev.cells,
-            [cellId]: {
-              ...getCellData(selectedCell.row, selectedCell.col),
-              value: cellValue,
-              type: cellType,
-              formula,
-            },
-          },
-        };
-        console.log('Cell updated:', cellId, newData.cells[cellId]);
-        return newData;
+      // Use updateCell function for consistency
+      updateCell(selectedCell.row, selectedCell.col, {
+        value: cellValue,
+        type: cellType,
+        formula,
+        lastModified: new Date().toISOString()
       });
     }
   };
