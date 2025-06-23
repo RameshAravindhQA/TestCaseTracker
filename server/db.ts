@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 const connectionString = process.env.DATABASE_URL || 
+  process.env.REPLIT_DB_URL || 
   "postgresql://username:password@localhost:5432/testcasetracker";
 
 console.log("🔄 Connecting to PostgreSQL database...");
