@@ -1906,6 +1906,8 @@ import { DatabaseStorage } from './db-storage';
 
 // Use in-memory storage for development/testing
 const memoryStorage = new MemStorage();
+// Initialize with default data
+(memoryStorage as any).initializeDefaultData();
 export const storage: IStorage = memoryStorage;
 console.log("✅ In-memory storage initialized successfully");
 
