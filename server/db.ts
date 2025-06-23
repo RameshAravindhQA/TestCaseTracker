@@ -1,9 +1,15 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
-const connectionString = process.env.DATABASE_URL || 
-  process.env.REPLIT_DB_URL || 
-  "postgresql://username:password@localhost:5432/testcasetracker";
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  console.error("❌ DATABASE_URL environment variable is not set!");
+  console.log("Please create a PostgreSQL database in Replit:");
+  console.log("1. Click on the 'Database' tab in the sidebar");
+  console.log("2. Click 'Create Database' and select 'PostgreSQL'");
+  process.exit(1);
+}
 
 console.log("🔄 Connecting to PostgreSQL database...");
 
