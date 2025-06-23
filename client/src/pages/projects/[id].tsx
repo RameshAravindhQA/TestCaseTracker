@@ -75,6 +75,7 @@ export default function ProjectDetailPage() {
   const [selectedBug, setSelectedBug] = useState<Bug | null>(null);
   const [selectedModuleForTestCase, setSelectedModuleForTestCase] = useState<Module | null>(null);
   const [showGitHubConfig, setShowGitHubConfig] = useState(false);
+  const [showCreateModule, setShowCreateModule] = useState(false);
 
   // Fetch project details
   const { data: project, isLoading: isProjectLoading } = useQuery<Project>({
@@ -426,7 +427,7 @@ export default function ProjectDetailPage() {
                 <Edit className="h-4 w-4" />
                 Edit Project
               </Button>
-              <Button onClick={() => setShowCreateModule(true)}>
+              <Button onClick={handleAddModule}>
                 Add Module
               </Button>
               <Button 
