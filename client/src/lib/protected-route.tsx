@@ -43,6 +43,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           // Clear localStorage auth flag since server says we're not authenticated
           localStorage.removeItem('isAuthenticated');
           navigate("/login");
+        } else {
+          console.log("User authenticated successfully:", user);
         }
         setIsCheckingAuth(false);
       }
