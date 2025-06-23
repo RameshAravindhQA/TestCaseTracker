@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { createServer } from "http";
+import { testConnection } from "./db";
 
 const app = express();
 app.use(express.json());
@@ -37,7 +39,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  const server = createServer(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -60,7 +62,13 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = 5000;
-  server.listen(
+  // Test database connection before starting server
+  testConnection().then((connected) => {
+    if (!connected) {
+      console.warn("⚠️  Database connection failed, but server will start anyway");
+    }
+
+    server.listen(
     {
       port,
       host: "0.0.0.0",
@@ -70,4 +78,5 @@ app.use((req, res, next) => {
       log(`serving on port ${port}`);
     },
   );
+  });
 })();

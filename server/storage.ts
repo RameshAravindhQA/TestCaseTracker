@@ -889,7 +889,8 @@ class MemStorage implements IStorage {
   }
 
   // CSV Export for Projects
-  async exportProjectsCSV(): Promise<any[]> {
+  async exportProjectsCSV(): Promise<any[]>```text
+: {
     const projects = await this.getProjects();
     const exportData = [];
 
@@ -1843,6 +1844,7 @@ class MemStorage implements IStorage {
 
   async createGitHubConfig(data: any): Promise<any> {
     const config = {
+      ```text
       id: this.githubConfigs.length + 1,
       ...data,
       createdAt: new Date().toISOString(),
@@ -1900,10 +1902,13 @@ class MemStorage implements IStorage {
 
 // Create and export the storage instance
 console.log("🔄 Initializing in-memory storage...");
-const memStorage = new MemStorage();
+// import { InMemoryStorage } from './storage';
+import { DatabaseStorage } from './db-storage';
+
+// Use PostgreSQL database storage
+export const storage: IStorage = new DatabaseStorage();
 // Initialize with default data
-(memStorage as any).initializeDefaultData();
-export const storage: IStorage = memStorage;
+(storage as any).initializeDefaultData();
 console.log("✅ In-memory storage initialized successfully");
 
 export async function closeConnection() {
