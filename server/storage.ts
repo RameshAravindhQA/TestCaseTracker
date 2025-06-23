@@ -1,7 +1,4 @@
-` tags.
 
-```
-<replit_final_file>
 export interface User {
   id: number;
   firstName: string;
