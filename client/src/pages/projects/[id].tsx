@@ -115,16 +115,6 @@ export default function ProjectDetailPage() {
     queryKey: [`/api/projects/${projectId}/activities`],
   });
 
-  // Fetch users
-  const { data: users } = useQuery({
-    queryKey: ["/api/users"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/users");
-      if (!response.ok) throw new Error("Failed to fetch users");
-      return response.json();
-    },
-  });
-
   // Delete mutations
   const deleteModuleMutation = useMutation({
     mutationFn: async (moduleId: number) => {
