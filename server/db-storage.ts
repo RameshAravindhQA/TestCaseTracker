@@ -159,9 +159,9 @@ export class DatabaseStorage implements IStorage {
         .where(eq(modules.projectId, insertModule.projectId))
         .orderBy(modules.createdAt);
       
-      // Simply count existing modules and add 1 for the next sequential number
+      // Simply count existing modules and add 1 for the next sequential number (starting from 1)
       const nextNumber = existingModules.length + 1;
-      moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
+      moduleId = `MOD-${nextNumber}`;
     }
 
     const [newModule] = await db.insert(modules).values({

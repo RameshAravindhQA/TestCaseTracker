@@ -302,9 +302,9 @@ class MemStorage implements IStorage {
         .filter(module => module.projectId === moduleData.projectId)
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
-      // Simply count existing modules and add 1 for the next sequential number
+      // Simply count existing modules and add 1 for the next sequential number (starting from 1)
       const nextNumber = projectModules.length + 1;
-      moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
+      moduleId = `MOD-${nextNumber}`;
     }
 
     const module: Module = {
