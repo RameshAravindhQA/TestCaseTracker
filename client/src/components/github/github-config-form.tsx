@@ -21,10 +21,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { Loader2, TestTube } from "lucide-react";
 
 const githubConfigSchema = z.object({
+  projectId: z.number().min(1, "Please select a project"),
   repoOwner: z.string().min(1, "Repository owner is required"),
   repoName: z.string().min(1, "Repository name is required"),
   accessToken: z.string().min(1, "GitHub access token is required"),
@@ -37,90 +46,64 @@ type GitHubConfigFormData = z.infer<typeof githubConfigSchema>;
 interface GitHubConfigFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projectId: number;
+  projectId?: number;
   config?: any;
 }
 
-export function GitHubConfigForm({
-  open,
-  onOpenChange,
-  projectId,
-  config,
-}: GitHubConfigFormProps) {
+export function GitHubConfigForm({ open, onOpenChange, projectId, config }: GitHubConfigFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const form = useForm<GitHubConfigFormData>({
     resolver: zodResolver(githubConfigSchema),
     defaultValues: {
+      projectId: projectId || config?.projectId || 0,
       repoOwner: config?.repoOwner || "",
       repoName: config?.repoName || "",
       accessToken: config?.accessToken || "",
       webhookSecret: config?.webhookSecret || "",
-      isActive: config?.isActive ?? true,
+      isActive: config?.isActive !== undefined ? config.isActive : true,
     },
   });
 
-  const mutation = useMutation({
-    mutationFn: async (data: GitHubConfigFormData) => {
-      const url = config 
-        ? `/api/github/config/${config.id}`
-        : `/api/github/config`;
-      
-      const method = config ? 'PATCH' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, projectId }),
-      });
-
+  // Fetch projects for the dropdown
+  const { data: projects } = useQuery({
+    queryKey: ['/api/projects'],
+    queryFn: async () => {
+      const response = await fetch('/api/projects');
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to save GitHub configuration');
+        throw new Error('Failed to fetch projects');
       }
-
       return response.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: config 
-          ? "GitHub configuration updated successfully" 
-          : "GitHub configuration created successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ['github-config'] });
-      onOpenChange(false);
-      form.reset();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
 
-  const testConnection = useMutation({
-    mutationFn: async (data: GitHubConfigFormData) => {
+  // Test connection mutation
+  const testConnectionMutation = useMutation({
+    mutationFn: async (data: Partial<GitHubConfigFormData>) => {
       const response = await fetch('/api/github/test-connection', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          repoOwner: data.repoOwner,
+          repoName: data.repoName,
+          accessToken: data.accessToken,
+        }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Connection test failed');
+        const error = await response.text();
+        throw new Error(error || 'Connection test failed');
       }
 
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Success",
-        description: "GitHub connection test successful!",
+        title: "Connection Successful",
+        description: "GitHub repository connection is working correctly",
       });
     },
     onError: (error: Error) => {
@@ -132,21 +115,82 @@ export function GitHubConfigForm({
     },
   });
 
+  // Save configuration mutation
+  const saveConfigMutation = useMutation({
+    mutationFn: async (data: GitHubConfigFormData) => {
+      const url = config ? `/api/github/config/${config.id}` : '/api/github/config';
+      const method = config ? 'PATCH' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || 'Failed to save configuration');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: config ? "Configuration Updated" : "Configuration Created",
+        description: config ? "GitHub integration updated successfully" : "GitHub integration created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['github-configs'] });
+      onOpenChange(false);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Save Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: GitHubConfigFormData) => {
-    mutation.mutate(data);
+    saveConfigMutation.mutate(data);
   };
 
   const handleTestConnection = () => {
     const formData = form.getValues();
-    testConnection.mutate(formData);
+    if (!formData.repoOwner || !formData.repoName || !formData.accessToken) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in repository owner, name, and access token before testing",
+        variant: "destructive",
+      });
+      return;
+    }
+    testConnectionMutation.mutate(formData);
   };
+
+  // Reset form when dialog opens/closes or config changes
+  React.useEffect(() => {
+    if (open) {
+      form.reset({
+        projectId: projectId || config?.projectId || 0,
+        repoOwner: config?.repoOwner || "",
+        repoName: config?.repoName || "",
+        accessToken: config?.accessToken || "",
+        webhookSecret: config?.webhookSecret || "",
+        isActive: config?.isActive !== undefined ? config.isActive : true,
+      });
+    }
+  }, [open, config, projectId, form]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {config ? 'Update' : 'Configure'} GitHub Integration
+            {config ? "Edit GitHub Integration" : "Setup GitHub Integration"}
           </DialogTitle>
         </DialogHeader>
 
@@ -154,34 +198,61 @@ export function GitHubConfigForm({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="repoOwner"
+              name="projectId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Repository Owner</FormLabel>
-                  <FormControl>
-                    <Input placeholder="github-username or org-name" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    The GitHub username or organization name
-                  </FormDescription>
+                  <FormLabel>Project</FormLabel>
+                  <Select
+                    value={field.value.toString()}
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a project" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {projects?.map((project: any) => (
+                        <SelectItem key={project.id} value={project.id.toString()}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="repoName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Repository Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="repository-name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="repoOwner"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Repository Owner</FormLabel>
+                    <FormControl>
+                      <Input placeholder="username or organization" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="repoName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Repository Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="repository-name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -192,12 +263,12 @@ export function GitHubConfigForm({
                   <FormControl>
                     <Input 
                       type="password" 
-                      placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" 
+                      placeholder="ghp_xxxxxxxxxxxx" 
                       {...field} 
                     />
                   </FormControl>
                   <FormDescription>
-                    Personal access token with 'repo' and 'issues' permissions
+                    Personal access token with repository access permissions
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -213,12 +284,12 @@ export function GitHubConfigForm({
                   <FormControl>
                     <Input 
                       type="password" 
-                      placeholder="webhook-secret" 
+                      placeholder="Webhook secret for security" 
                       {...field} 
                     />
                   </FormControl>
                   <FormDescription>
-                    Secret for validating GitHub webhooks
+                    Optional secret for webhook validation
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -246,28 +317,31 @@ export function GitHubConfigForm({
               )}
             />
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleTestConnection}
-                disabled={testConnection.isPending}
+                disabled={testConnectionMutation.isPending}
                 className="flex-1"
               >
-                {testConnection.isPending ? "Testing..." : "Test Connection"}
+                {testConnectionMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <TestTube className="h-4 w-4 mr-2" />
+                )}
+                Test Connection
               </Button>
               
               <Button
                 type="submit"
-                disabled={mutation.isPending}
+                disabled={saveConfigMutation.isPending}
                 className="flex-1"
               >
-                {mutation.isPending 
-                  ? "Saving..." 
-                  : config 
-                    ? "Update" 
-                    : "Save"
-                }
+                {saveConfigMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : null}
+                {config ? "Update" : "Create"} Integration
               </Button>
             </div>
           </form>
