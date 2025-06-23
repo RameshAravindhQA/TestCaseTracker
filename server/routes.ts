@@ -356,36 +356,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       //   return res.status(401).json({ message: "Please verify your email before logging in" });
       // }
       
-      // Regenerate session to prevent session fixation attacks
-      req.session.regenerate((err) => {
-        if (err) {
-          console.error("Session regeneration error:", err);
-          // Continue without regeneration if it fails
+      // Set session data directly without regeneration to avoid session issues
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      req.session.userName = user.firstName; // Use firstName since name might not exist
+      req.session.userEmail = user.email;
+      
+      // Save session explicitly
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("Session save error:", saveErr);
+          return res.status(500).json({ message: "Session save failed" });
         }
         
-        // Set session data
-        req.session.userId = user.id;
-        req.session.userRole = user.role;
-        req.session.userName = user.firstName; // Use firstName since name might not exist
-        req.session.userEmail = user.email;
-        
-        // Save session explicitly
-        req.session.save((saveErr) => {
-          if (saveErr) {
-            console.error("Session save error:", saveErr);
-            return res.status(500).json({ message: "Session save failed" });
-          }
-          
-          console.log("Login successful - Session set and saved:", {
-            sessionId: req.sessionID,
-            userId: req.session.userId,
-            userEmail: req.session.userEmail
-          });
-          
-          // Return user without sensitive data
-          const { password: _, ...userWithoutPassword } = user;
-          res.json(userWithoutPassword);
+        console.log("Login successful - Session set and saved:", {
+          sessionId: req.sessionID,
+          userId: req.session.userId,
+          userEmail: req.session.userEmail
         });
+        
+        // Return user without sensitive data
+        const { password: _, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
       });
     } catch (error) {
       console.error("Login error:", error);
