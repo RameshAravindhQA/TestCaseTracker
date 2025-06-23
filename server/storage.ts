@@ -882,8 +882,7 @@ class MemStorage implements IStorage {
         projectName: project.name,
         description: project.description,
         status: project.status,
-        ```text
-createdAt: project.createdAt,
+        createdAt: project.createdAt,
         totalModules: modules.length,
         totalTestCases: testCases.length,
         totalBugs: bugs.length,
