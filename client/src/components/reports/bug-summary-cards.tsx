@@ -229,3 +229,33 @@ ${bugs.map(bug => `- ${bug.bugId || bug.id}: ${bug.title} (${bug.severity} - ${b
     </div>
   );
 }
+
+const getSeverityGradient = (severity: string): string => {
+  switch (severity) {
+    case 'Critical':
+      return 'bg-gradient-to-br from-red-900 via-red-950 to-black text-white shadow-2xl border-red-600/50';
+    case 'Major':
+      return 'bg-gradient-to-br from-orange-800 via-orange-900 to-red-900 text-white shadow-2xl border-orange-600/50';
+    case 'Minor':
+      return 'bg-gradient-to-br from-yellow-700 via-yellow-800 to-orange-800 text-white shadow-2xl border-yellow-600/50';
+    case 'Trivial':
+      return 'bg-gradient-to-br from-gray-800 via-gray-900 to-black text-white shadow-2xl border-gray-600/50';
+    default:
+      return 'bg-gradient-to-br from-gray-800 via-gray-900 to-black text-white shadow-2xl border-gray-600/50';
+  }
+};
+
+const getStatusGradient = (status: string): string => {
+  switch (status) {
+    case 'Open':
+      return 'bg-gradient-to-br from-red-800 via-red-900 to-black text-white shadow-2xl border-red-600/50';
+    case 'In Progress':
+      return 'bg-gradient-to-br from-blue-800 via-blue-900 to-indigo-900 text-white shadow-2xl border-blue-600/50';
+    case 'Resolved':
+      return 'bg-gradient-to-br from-green-800 via-green-900 to-emerald-900 text-white shadow-2xl border-green-600/50';
+    case 'Closed':
+      return 'bg-gradient-to-br from-gray-800 via-gray-900 to-black text-white shadow-2xl border-gray-600/50';
+    default:
+      return 'bg-gradient-to-br from-gray-800 via-gray-900 to-black text-white shadow-2xl border-gray-600/50';
+  }
+};

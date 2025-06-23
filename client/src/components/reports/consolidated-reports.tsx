@@ -175,9 +175,9 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
     enabled: !!effectiveProjectId,
     retry: 2,
-    staleTime: 10000, // 10 seconds
+    staleTime: 0, // Always fresh data
     refetchOnWindowFocus: true,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
 
   // Fetch bugs
@@ -207,9 +207,9 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
     enabled: !!effectiveProjectId,
     retry: 2,
-    staleTime: 10000, // 10 seconds
+    staleTime: 0, // Always fresh data
     refetchOnWindowFocus: true,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
 
   // Update test case status mutation
@@ -555,12 +555,18 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     try {
       if (type === 'testcase') {
         await updateTestCaseMutation.mutateAsync({ id: numericId, status: newStatus });
+        // Force immediate refetch and cache invalidation
+        await refetchTestCases();
+        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
         toast({
           title: "Status updated",
           description: `Test case status updated to ${newStatus}`,
         });
       } else if (type === 'bug') {
         await updateBugMutation.mutateAsync({ id: numericId, status: newStatus });
+        // Force immediate refetch and cache invalidation
+        await refetchBugs();
+        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
         toast({
           title: "Status updated",
           description: `Bug status updated to ${newStatus}`,
@@ -1183,88 +1189,88 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
           </div>
         </div>
 
-        {/* Enhanced Stats Bar with Advanced Gradients */}
+        {/* Enhanced Stats Bar with Darker Advanced Gradients */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="group relative overflow-hidden bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0"
+            className="group relative overflow-hidden bg-gradient-to-br from-slate-800 via-gray-900 to-black p-6 rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:scale-105 border border-gray-700"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent group-hover:from-white/10"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative z-10">
-              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-3">
-                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm group-hover:bg-white/30 transition-all duration-300">
-                  <Target className="h-4 w-4 text-white" />
+              <div className="text-sm text-gray-300 font-medium flex items-center gap-2 mb-3">
+                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm group-hover:bg-white/20 transition-all duration-300">
+                  <Target className="h-4 w-4 text-blue-400" />
                 </div>
                 Total Items
               </div>
               <div className="text-3xl font-bold text-white mb-2 group-hover:scale-110 transition-transform duration-300">{combinedData.length}</div>
-              <div className="text-xs text-white/80">
+              <div className="text-xs text-gray-400">
                 {testCases?.length || 0} test cases, {bugs?.length || 0} bugs
               </div>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full group-hover:from-white/20"></div>
-              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-300 via-blue-300 to-indigo-300 opacity-50"></div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-500/20 to-transparent rounded-bl-full group-hover:from-blue-400/30"></div>
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 opacity-70"></div>
             </div>
           </motion.div>
 
-          <div className="group relative overflow-hidden bg-gradient-to-br from-emerald-500 via-green-600 to-teal-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div className="group relative overflow-hidden bg-gradient-to-br from-emerald-900 via-green-900 to-teal-900 p-6 rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:scale-105 border border-emerald-700">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent group-hover:from-white/10"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative z-10">
-              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-3">
-                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm group-hover:bg-white/30 transition-all duration-300">
-                  <CheckCircle className="h-4 w-4 text-white" />
+              <div className="text-sm text-gray-300 font-medium flex items-center gap-2 mb-3">
+                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm group-hover:bg-white/20 transition-all duration-300">
+                  <CheckCircle className="h-4 w-4 text-emerald-400" />
                 </div>
                 Test Pass Rate
               </div>
               <div className="text-3xl font-bold text-white mb-2 group-hover:scale-110 transition-transform duration-300">{passRate}%</div>
-              <div className="text-xs text-white/80">
+              <div className="text-xs text-gray-400">
                 {passedTestCases} of {totalTestCases} passed
               </div>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full group-hover:from-white/20"></div>
-              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-teal-300 via-green-300 to-emerald-300 opacity-50"></div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-500/20 to-transparent rounded-bl-full group-hover:from-emerald-400/30"></div>
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 opacity-70"></div>
             </div>
           </div>
 
-          <div className="group relative overflow-hidden bg-gradient-to-br from-red-500 via-rose-600 to-pink-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div className="group relative overflow-hidden bg-gradient-to-br from-red-900 via-rose-900 to-pink-900 p-6 rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:scale-105 border border-red-700">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent group-hover:from-white/10"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative z-10">
-              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-3">
-                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm group-hover:bg-white/30 transition-all duration-300">
-                  <AlertTriangle className="h-4 w-4 text-white" />
+              <div className="text-sm text-gray-300 font-medium flex items-center gap-2 mb-3">
+                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm group-hover:bg-white/20 transition-all duration-300">
+                  <AlertTriangle className="h-4 w-4 text-red-400" />
                 </div>
                 Open Bugs
               </div>
               <div className="text-3xl font-bold text-white mb-2 group-hover:scale-110 transition-transform duration-300">{metrics.bugs.open}</div>
-              <div className="text-xs text-white/80">
+              <div className="text-xs text-gray-400">
                 {metrics.bugs.critical} critical, {metrics.bugs.major} major
               </div>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full group-hover:from-white/20"></div>
-              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-pink-300 via-rose-300 to-red-300 opacity-50"></div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-red-500/20 to-transparent rounded-bl-full group-hover:from-red-400/30"></div>
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 opacity-70"></div>
             </div>
           </div>
 
-          <div className="group relative overflow-hidden bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div className="group relative overflow-hidden bg-gradient-to-br from-purple-900 via-violet-900 to-indigo-900 p-6 rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:scale-105 border border-purple-700">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent group-hover:from-white/10"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative z-10">
-              <div className="text-sm text-white/90 font-medium flex items-center gap-2 mb-3">
-                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm group-hover:bg-white/30 transition-all duration-300">
-                  <Clock className="h-4 w-4 text-white" />
+              <div className="text-sm text-gray-300 font-medium flex items-center gap-2 mb-3">
+                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm group-hover:bg-white/20 transition-all duration-300">
+                  <Clock className="h-4 w-4 text-purple-400" />
                 </div>
                 In Progress
               </div>
               <div className="text-3xl font-bold text-white mb-2 group-hover:scale-110 transition-transform duration-300">
                 {metrics.bugs.inProgress + metrics.testCases.blocked}
               </div>
-              <div className="text-xs text-white/80">
+              <div className="text-xs text-gray-400">
                 Active work items
               </div>
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-bl-full group-hover:from-white/20"></div>
-              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-300 via-violet-300 to-purple-300 opacity-50"></div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-purple-500/20 to-transparent rounded-bl-full group-hover:from-purple-400/30"></div>
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 opacity-70"></div>
             </div>
           </div>
         </div>

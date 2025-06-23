@@ -54,6 +54,43 @@
   };
 
   const { testExecutionData, bugTrendData } = generateRealTimeData();
+// Fetch projects for the current user with real-time updates
+  const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/projects");
+      if (!response.ok) throw new Error("Failed to fetch projects");
+      return response.json();
+    },
+    staleTime: 0, // Always fresh data
+    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchOnWindowFocus: true,
+  });
+// Fetch test cases with real-time updates
+  const { data: testCases } = useQuery<TestCase[]>({
+    queryKey: ["/api/test-cases"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/test-cases");
+      if (!response.ok) throw new Error("Failed to fetch test cases");
+      return response.json();
+    },
+    staleTime: 0, // Always fresh data
+    refetchInterval: 5000, // Refetch every 5 seconds
+    refetchOnWindowFocus: true,
+  });
+
+  // Fetch bugs with real-time updates
+  const { data: bugs } = useQuery<Bug[]>({
+    queryKey: ["/api/bugs"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/bugs");
+      if (!response.ok) throw new Error("Failed to fetch bugs");
+      return response.json();
+    },
+    staleTime: 0, // Always fresh data
+    refetchInterval: 5000, // Refetch every 5 seconds
+    refetchOnWindowFocus: true,
+  });
 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>

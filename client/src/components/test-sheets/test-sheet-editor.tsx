@@ -113,21 +113,25 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   // Update cell data
   const updateCell = useCallback((row: number, col: number, updates: Partial<CellData>) => {
     const cellId = getCellId(row, col);
-    setSheetData(prev => ({
-      ...prev,
-      cells: {
-        ...prev.cells,
-        [cellId]: {
-          ...getCellData(row, col),
-          ...updates,
+    setSheetData(prev => {
+      const currentCell = prev.cells[cellId] || { value: '', type: 'text' as const, style: {} };
+      const newCell = { ...currentCell, ...updates };
+      console.log('UpdateCell - Row:', row, 'Col:', col, 'CellId:', cellId, 'Updates:', updates, 'NewCell:', newCell);
+      
+      return {
+        ...prev,
+        cells: {
+          ...prev.cells,
+          [cellId]: newCell,
         },
-      },
-    }));
-  }, [sheetData.cells]);
+      };
+    });
+  }, []);
 
-  // Save sheet mutation
+  // Save sheet mutation with auto-save
   const saveSheetMutation = useMutation({
     mutationFn: async (data: typeof sheetData) => {
+      console.log('Saving sheet data:', data);
       return apiRequest('PUT', `/api/test-sheets/${sheet.id}`, {
         ...sheet,
         data,
@@ -152,6 +156,18 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
       });
     },
   });
+
+  // Auto-save effect when sheet data changes
+  useEffect(() => {
+    const autoSaveTimer = setTimeout(() => {
+      if (JSON.stringify(sheetData) !== JSON.stringify(sheet.data)) {
+        console.log('Auto-saving sheet data changes');
+        saveSheetMutation.mutate(sheetData);
+      }
+    }, 2000); // Auto-save after 2 seconds of inactivity
+
+    return () => clearTimeout(autoSaveTimer);
+  }, [sheetData]);
 
   // Handle range selection
   const isInSelectedRange = (row: number, col: number): boolean => {
@@ -265,11 +281,23 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         cellValue = value;
       }
 
-      // Update cell with proper state management
-      updateCell(selectedCell.row, selectedCell.col, {
-        value: cellValue,
-        type: cellType,
-        formula,
+      // Update cell with immediate state preservation
+      const cellId = getCellId(selectedCell.row, selectedCell.col);
+      setSheetData(prev => {
+        const newData = {
+          ...prev,
+          cells: {
+            ...prev.cells,
+            [cellId]: {
+              ...getCellData(selectedCell.row, selectedCell.col),
+              value: cellValue,
+              type: cellType,
+              formula,
+            },
+          },
+        };
+        console.log('Cell updated:', cellId, newData.cells[cellId]);
+        return newData;
       });
     }
   };
