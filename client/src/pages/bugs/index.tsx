@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { TestCaseTags } from "@/components/test-cases/test-case-tags";
+import { GitHubIssueButton } from "@/components/github/github-issue-button";
 
 export default function BugsPage() {
   const { toast } = useToast();
@@ -431,32 +432,35 @@ export default function BugsPage() {
                 </div>
               )}
 
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setViewDialogOpen(false)}
-                >
-                  Close
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setViewDialogOpen(false);
-                    handleMakeCopy(selectedBug!);
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Copy className="h-4 w-4" />
-                  Make as Copy
-                </Button>
-                <Button
-                  onClick={() => {
-                    setViewDialogOpen(false);
-                    handleEdit(selectedBug!);
-                  }}
-                >
-                  Edit
-                </Button>
+              <div className="flex justify-between items-center">
+                <GitHubIssueButton bug={selectedBug} projectId={selectedBug?.projectId || 0} />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setViewDialogOpen(false)}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setViewDialogOpen(false);
+                      handleMakeCopy(selectedBug!);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Make as Copy
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setViewDialogOpen(false);
+                      handleEdit(selectedBug!);
+                    }}
+                  >
+                    Edit
+                  </Button>
+                </div>
               </div>
             </div>
           </DialogContent>

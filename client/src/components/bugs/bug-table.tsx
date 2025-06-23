@@ -25,6 +25,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { GitHubIssueButton } from "@/components/github/github-issue-button";
 
 interface BugTableProps {
   bugs: Bug[];

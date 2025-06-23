@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -49,6 +48,7 @@ import {
   Edit, Plus, ArrowLeft, Trash, Layers, CheckSquare, Bug as BugIcon, FileText, Loader2, Github, Settings
 } from "lucide-react";
 import { ProjectExport } from "@/components/project/project-export";
+import { GitHubIssueButton } from "@/components/github/github-issue-button";
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -655,9 +655,12 @@ export default function ProjectDetailPage() {
             ) : (
               <BugTable
                 bugs={bugs || []}
+                users={users || []}
+                modules={modules || []}
+                projectId={parseInt(projectId!)}
+                onView={handleViewBug}
                 onEdit={handleEditBug}
                 onDelete={handleDeleteBug}
-                onView={handleViewBug}
               />
             )}
           </TabsContent>
@@ -894,7 +897,9 @@ export default function ProjectDetailPage() {
                     ? "border-red-200 bg-red-100 text-red-800" 
                     : selectedBug?.priority === "Medium" 
                     ? "border-yellow-200 bg-yellow-100 text-yellow-800" 
-                    : "border-green-200 bg-green-100 text-green-800"
+                    : selectedBug?.priority === "Minor"
+                    ? "border-green-200 bg-green-100 text-green-800"
+                    : "outline"
                 }>
                   {selectedBug?.priority}
                 </Badge>
@@ -902,8 +907,7 @@ export default function ProjectDetailPage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-medium">Status</h3>
-              <Badge variant={
+              <h3 className="text-sm font-medium">Status</h3><Badge variant={
                 selectedBug?.status === "Open" 
                   ? "destructive" 
                   : selectedBug?.status === "In Progress" 
@@ -950,21 +954,24 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setViewBugDialogOpen(false)}
-              >
-                Close
-              </Button>
-              <Button
-                onClick={() => {
-                  setViewBugDialogOpen(false);
-                  handleEditBug(selectedBug!);
-                }}
-              >
-                Edit
-              </Button>
+            <div className="flex justify-between items-center">
+              <GitHubIssueButton bug={selectedBug} projectId={parseInt(projectId!)} />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setViewBugDialogOpen(false)}
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => {
+                    setViewBugDialogOpen(false);
+                    handleEditBug(selectedBug!);
+                  }}
+                >
+                  Edit Bug
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
