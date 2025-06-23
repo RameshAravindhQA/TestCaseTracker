@@ -52,12 +52,15 @@ export function LoginForm() {
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('lastLoginTime', new Date().toString());
       
-      // Invalidate the user data query to refetch with new credentials
+      // Invalidate and refetch the user data query immediately
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
       
-      // Use navigate instead of window.location for better routing
-      console.log("Login successful, redirecting to dashboard...");
-      navigate("/dashboard");
+      // Small delay to ensure state updates, then navigate
+      setTimeout(() => {
+        console.log("Login successful, redirecting to dashboard...");
+        navigate("/dashboard");
+      }, 100);
     },
     onError: (error: any) => {
       console.error("Login error:", error);

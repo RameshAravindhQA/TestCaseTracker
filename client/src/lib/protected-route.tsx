@@ -36,10 +36,16 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         return;
       }
 
+      // If we have localStorage auth, allow access temporarily while checking server
+      if (isLocallyAuthenticated && isLoading) {
+        setIsCheckingAuth(false);
+        return;
+      }
+
       // Wait for the query to complete
       if (!isLoading) {
         if (isError || !user) {
-          console.log("User not authenticated, redirecting to login");
+          console.log("User not authenticated on server, redirecting to login");
           // Clear localStorage auth flag since server says we're not authenticated
           localStorage.removeItem('isAuthenticated');
           navigate("/login");
