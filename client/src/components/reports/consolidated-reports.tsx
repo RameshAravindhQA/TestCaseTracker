@@ -25,7 +25,13 @@ import {
   Edit,
   Trash2,
   Eye,
-  Save
+  Save,
+  RefreshCw,
+  Maximize2,
+  Minimize2,
+  X,
+  BarChart3,
+  Target
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -52,6 +58,14 @@ import {
 import { TestCaseForm } from "@/components/test-cases/test-case-form";
 import { BugForm } from "@/components/bugs/bug-form";
 import { TestCaseTags } from "@/components/test-cases/test-case-tags";
+import { Input } from "@/components/ui/input";
+import { useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Skeleton } from "@/components/ui/skeleton";
+import { User } from "next-auth/types";
+import { jsPDF } from "jspdf";
+import autoTable from 'jspdf-autotable';
+import Papa from 'papaparse';
 
 interface ConsolidatedReportsProps {
   selectedProjectId?: number;
@@ -61,6 +75,7 @@ interface ConsolidatedReportsProps {
 
 export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: ConsolidatedReportsProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
@@ -683,17 +698,18 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     }
   };
 
-    const handleStatusEdit = (item: any) => {
+  const handleStatusEdit = (item: any) => {
+    const [type, itemId] = item.id.split('-');
     setEditingItem({
-      id: item.id,
-      type: item.type,
+      id: parseInt(itemId),
+      type: type as 'testcase' | 'bug',
       status: item.status
     });
     setNewStatus(item.status);
     setStatusUpdateDialog(true);
   };
 
-    const handleStatusUpdate = () => {
+  const handleStatusUpdate = () => {
     if (!editingItem || !newStatus) return;
 
     if (editingItem.type === 'testcase') {
@@ -741,7 +757,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
         throw new Error("Failed to delete bug");
       }
       return res.json();
-    },
+        },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
       toast({
@@ -982,32 +998,6 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
         title: "Export failed",
         description: "Failed to export consolidated report",
         variant: "destructive",
-      });
-    }
-  };
-
-  const handleStatusEdit = (item: any) => {
-    setEditingItem({
-      id: item.id,
-      type: item.type,
-      status: item.status
-    });
-    setNewStatus(item.status);
-    setStatusUpdateDialog(true);
-  };
-
-    const handleStatusUpdate = () => {
-    if (!editingItem || !newStatus) return;
-
-    if (editingItem.type === 'testcase') {
-      updateTestCaseStatusMutation.mutate({
-        id: editingItem.id,
-        status: newStatus
-      });
-    } else if (editingItem.type === 'bug') {
-      updateBugStatusMutation.mutate({
-        id: editingItem.id,
-        status: newStatus
       });
     }
   };

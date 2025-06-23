@@ -291,33 +291,30 @@ class MemStorage implements IStorage {
     return this.modules.get(id);
   }
 
-  async createModule(insertModule: InsertModule): Promise<Module> {
-    // Auto-generate module ID if not provided
-    let moduleId = insertModule.moduleId;
-    if (!moduleId || moduleId.trim() === '') {
-      // Get the highest existing module number for this specific project only
-      const existingModules = Array.from(this.modules.values())
-        .filter(module => module.projectId === insertModule.projectId)
-        .map(module => module.moduleId)
-        .filter(id => id && id.match(/^MOD-(\d+)$/))
-        .map(id => {
-          const match = id.match(/^MOD-(\d+)$/);
-          return match ? parseInt(match[1], 10) : 0;
-        })
-        .filter(num => !isNaN(num));
+  async createModule(moduleData: InsertModule): Promise<Module> {
+    const id = this.modules.size + 1;
 
-      // Always start from 1 for the first module in a project
-      const nextNumber = existingModules.length > 0 ? Math.max(...existingModules) + 1 : 1;
-      moduleId = `MOD-${nextNumber}`;
+    // Auto-generate module ID if not provided
+    let moduleId = moduleData.moduleId;
+    if (!moduleId || moduleId.trim() === '') {
+      // Get existing modules for this specific project only
+      const projectModules = Array.from(this.modules.values())
+        .filter(module => module.projectId === moduleData.projectId)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+      // Simply count existing modules and add 1 for the next sequential number
+      const nextNumber = projectModules.length + 1;
+      moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
     }
 
     const module: Module = {
-      id: this.getNextId(),
-      ...insertModule,
-      moduleId: moduleId,
+      id,
+      ...moduleData,
+      moduleId,
       createdAt: new Date(),
     };
-    this.modules.set(module.id, module);
+
+    this.modules.set(id, module);
     return module;
   }
 
@@ -888,8 +885,7 @@ class MemStorage implements IStorage {
         totalBugs: bugs.length,
         modules: modules.map(m => m.name).join(';'),
         testCases: testCases.map(tc => `${tc.testCaseId}:${tc.title}`).join(';'),
-        bugs: bugs.map(b => `${b.bugId}:${b.title}`).join(';')
-      });
+        bugs: bugs.map(b => `${b.bugId}:${b.title}`).join(';')      });
     }
 
     return exportData;
