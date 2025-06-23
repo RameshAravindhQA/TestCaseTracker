@@ -35,6 +35,90 @@ export class FormulaEngine {
       return values.length > 0 ? Math.min(...values) : 0;
     };
 
+    // Advanced mathematical functions
+    this.functions.POWER = (base: number, exponent: number) => {
+      return Math.pow(Number(base), Number(exponent));
+    };
+
+    this.functions.SQRT = (value: number) => {
+      return Math.sqrt(Number(value));
+    };
+
+    this.functions.ABS = (value: number) => {
+      return Math.abs(Number(value));
+    };
+
+    this.functions.ROUND = (value: number, digits: number = 0) => {
+      const multiplier = Math.pow(10, Number(digits));
+      return Math.round(Number(value) * multiplier) / multiplier;
+    };
+
+    this.functions.CEILING = (value: number) => {
+      return Math.ceil(Number(value));
+    };
+
+    this.functions.FLOOR = (value: number) => {
+      return Math.floor(Number(value));
+    };
+
+    this.functions.MOD = (dividend: number, divisor: number) => {
+      return Number(dividend) % Number(divisor);
+    };
+
+    this.functions.PI = () => {
+      return Math.PI;
+    };
+
+    this.functions.E = () => {
+      return Math.E;
+    };
+
+    this.functions.SIN = (value: number) => {
+      return Math.sin(Number(value));
+    };
+
+    this.functions.COS = (value: number) => {
+      return Math.cos(Number(value));
+    };
+
+    this.functions.TAN = (value: number) => {
+      return Math.tan(Number(value));
+    };
+
+    this.functions.ASIN = (value: number) => {
+      return Math.asin(Number(value));
+    };
+
+    this.functions.ACOS = (value: number) => {
+      return Math.acos(Number(value));
+    };
+
+    this.functions.ATAN = (value: number) => {
+      return Math.atan(Number(value));
+    };
+
+    this.functions.LOG = (value: number, base: number = Math.E) => {
+      return Math.log(Number(value)) / Math.log(Number(base));
+    };
+
+    this.functions.LOG10 = (value: number) => {
+      return Math.log10(Number(value));
+    };
+
+    this.functions.EXP = (value: number) => {
+      return Math.exp(Number(value));
+    };
+
+    this.functions.RANDOM = () => {
+      return Math.random();
+    };
+
+    this.functions.RANDBETWEEN = (min: number, max: number) => {
+      const minVal = Math.ceil(Number(min));
+      const maxVal = Math.floor(Number(max));
+      return Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal;
+    };
+
     // Text functions
     this.functions.CONCATENATE = (...args: any[]) => {
       return args.flat().join('');
@@ -197,6 +281,11 @@ export class FormulaEngine {
 
   private safeEval(expression: string): any {
     try {
+      // Handle basic arithmetic operations first
+      if (this.isSimpleArithmetic(expression)) {
+        return this.evaluateArithmetic(expression);
+      }
+
       // Create a safe evaluation context
       const func = new Function('functions', `
         const { ${Object.keys(this.functions).join(', ')} } = functions;
@@ -206,6 +295,22 @@ export class FormulaEngine {
       return func(this.functions);
     } catch (error) {
       return '#ERROR!';
+    }
+  }
+
+  private isSimpleArithmetic(expression: string): boolean {
+    // Check if expression contains only numbers, operators, and parentheses
+    return /^[\d\s+\-*/().]+$/.test(expression);
+  }
+
+  private evaluateArithmetic(expression: string): number {
+    try {
+      // Use Function constructor for safe arithmetic evaluation
+      const func = new Function('return ' + expression);
+      const result = func();
+      return typeof result === 'number' ? result : Number(result);
+    } catch (error) {
+      throw new Error('Invalid arithmetic expression');
     }
   }
 

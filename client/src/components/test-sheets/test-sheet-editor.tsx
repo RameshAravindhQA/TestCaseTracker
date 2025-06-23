@@ -251,7 +251,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         } catch (error) {
           cellValue = '#ERROR!';
         }
-      } else if (!isNaN(Number(value)) && value.trim() !== '') {
+      } else if (!isNaN(Number(value)) && value.trim() !== '' && value.trim() !== '.') {
         cellType = 'number';
         cellValue = Number(value);
       } else if (value.toLowerCase() === 'true' || value.toLowerCase() === 'false') {
@@ -260,13 +260,24 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
       } else if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
         cellType = 'date';
         cellValue = value;
+      } else {
+        cellType = 'text';
+        cellValue = value;
       }
 
-      updateCell(selectedCell.row, selectedCell.col, {
-        value: cellValue,
-        type: cellType,
-        formula,
-      });
+      // Force update the cell data
+      setSheetData(prev => ({
+        ...prev,
+        cells: {
+          ...prev.cells,
+          [selectedCell.cellId]: {
+            value: cellValue,
+            type: cellType,
+            formula,
+            style: getCellData(selectedCell.row, selectedCell.col).style || {},
+          },
+        },
+      }));
     }
   };
 
@@ -311,6 +322,13 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
       case 'F2':
         setIsEditing(true);
         event.preventDefault();
+        break;
+      case '=':
+        if (!isEditing) {
+          setFormulaBarValue('=');
+          setIsEditing(true);
+          event.preventDefault();
+        }
         break;
     }
   };
@@ -386,24 +404,31 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
 
   // Insert SUM formula for selected range
   const insertSumFormula = () => {
-    if (!selectedRange || !selectedCell) return;
+    insertFormulaForRange('SUM');
+  };
+
+  // Insert formula for selected range
+  const insertFormulaForRange = (functionName: string) => {
+    if (!selectedRange) return;
     
     const startCellId = getCellId(selectedRange.startRow, selectedRange.startCol);
     const endCellId = getCellId(selectedRange.endRow, selectedRange.endCol);
-    const sumFormula = `=SUM(${startCellId}:${endCellId})`;
+    const formula = `=${functionName}(${startCellId}:${endCellId})`;
     
     // Insert in cell below the selection
     const targetRow = selectedRange.endRow + 1;
     const targetCol = selectedRange.startCol;
     
     if (targetRow < sheetData.rows) {
-      handleFormulaBarChange(sumFormula);
+      const targetCellId = getCellId(targetRow, targetCol);
       setSelectedCell({ 
         row: targetRow, 
         col: targetCol, 
-        cellId: getCellId(targetRow, targetCol) 
+        cellId: targetCellId 
       });
-      setFormulaBarValue(sumFormula);
+      setFormulaBarValue(formula);
+      handleFormulaBarChange(formula);
+      setSelectedRange(null);
     }
   };
 
@@ -431,6 +456,22 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     a.download = `${sheet.name}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // Insert function into formula bar
+  const insertFunction = (functionName: string) => {
+    const currentValue = formulaBarValue;
+    let newValue = '';
+    
+    if (functionName === 'PI' || functionName === 'E') {
+      newValue = currentValue + `${functionName}()`;
+    } else if (functionName === 'RANDOM') {
+      newValue = currentValue + `${functionName}()`;
+    } else {
+      newValue = currentValue + `${functionName}()`;
+    }
+    
+    setFormulaBarValue(newValue);
   };
 
   const selectedCellData = selectedCell ? getCellData(selectedCell.row, selectedCell.col) : null;
@@ -484,13 +525,73 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
           </Select>
 
           {selectedRange && (
-            <Button size="sm" variant="outline" onClick={insertSumFormula}>
-              <div className="flex items-center gap-1">
-                <span>Σ</span>
-                <span className="text-xs">SUM</span>
-              </div>
-            </Button>
+            <>
+              <Button size="sm" variant="outline" onClick={insertSumFormula}>
+                <div className="flex items-center gap-1">
+                  <span>Σ</span>
+                  <span className="text-xs">SUM</span>
+                </div>
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => insertFormulaForRange('AVERAGE')}>
+                <div className="flex items-center gap-1">
+                  <span>μ</span>
+                  <span className="text-xs">AVG</span>
+                </div>
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => insertFormulaForRange('COUNT')}>
+                <div className="flex items-center gap-1">
+                  <span>#</span>
+                  <span className="text-xs">COUNT</span>
+                </div>
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => insertFormulaForRange('MAX')}>
+                <div className="flex items-center gap-1">
+                  <span>↑</span>
+                  <span className="text-xs">MAX</span>
+                </div>
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => insertFormulaForRange('MIN')}>
+                <div className="flex items-center gap-1">
+                  <span>↓</span>
+                  <span className="text-xs">MIN</span>
+                </div>
+              </Button>
+            </>
           )}
+
+          <Separator orientation="vertical" className="h-6" />
+
+          {/* Mathematical operations dropdown */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button size="sm" variant="outline">
+                <span className="text-xs">fx</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="space-y-2">
+                <Label>Mathematical Functions</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('SUM')}>SUM</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('AVERAGE')}>AVERAGE</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('COUNT')}>COUNT</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('MAX')}>MAX</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('MIN')}>MIN</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('POWER')}>POWER</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('SQRT')}>SQRT</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('ABS')}>ABS</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('ROUND')}>ROUND</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('SIN')}>SIN</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('COS')}>COS</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('TAN')}>TAN</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('LOG')}>LOG</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('LOG10')}>LOG10</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('PI')}>PI</Button>
+                  <Button size="sm" variant="ghost" onClick={() => insertFunction('E')}>E</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <Separator orientation="vertical" className="h-6" />
 
