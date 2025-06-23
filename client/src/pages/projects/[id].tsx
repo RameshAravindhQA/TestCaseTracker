@@ -14,7 +14,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Project, Module, TestCase, Bug, Activity, FormattedActivity } from "@/types";
+import { Project, Module, TestCase, Bug, Activity, FormattedActivity, User } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -108,6 +108,16 @@ export default function ProjectDetailPage() {
       return response.json();
     },
     enabled: !!project?.id,
+  });
+
+  // Fetch users
+  const { data: users } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/users");
+      if (!response.ok) throw new Error("Failed to fetch users");
+      return response.json();
+    },
   });
 
   // Fetch activities
