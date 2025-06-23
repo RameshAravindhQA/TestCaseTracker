@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Github, ExternalLink, AlertCircle } from "lucide-react";
@@ -96,23 +95,29 @@ export function GitHubIssueButton({ bug, projectId }: GitHubIssueButtonProps) {
 
   const syncIssueMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/github/issues/${existingIssue.id}/sync`, {
+      const response = await fetch(`/api/github/sync/${bug.id}`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to sync GitHub issue');
+        const errorData = await response.text();
+        throw new Error(errorData || 'Failed to sync issue');
       }
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Issue Synced",
-        description: "GitHub issue status updated successfully",
+        description: data.newStatus ? 
+          `Bug status updated from ${data.previousStatus} to ${data.newStatus}` :
+          "Bug status is already in sync",
       });
       queryClient.invalidateQueries({ queryKey: ['github-issue', bug.id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${bug.projectId}/bugs`] });
     },
     onError: (error: Error) => {
       toast({
@@ -153,7 +158,7 @@ export function GitHubIssueButton({ bug, projectId }: GitHubIssueButtonProps) {
           Issue #{existingIssue.githubIssueNumber}
           <ExternalLink className="h-4 w-4 ml-2" />
         </Button>
-        
+
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>

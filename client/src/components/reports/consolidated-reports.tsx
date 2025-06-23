@@ -283,6 +283,34 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
   });
 
+  // GitHub sync mutation
+  const syncWithGithubMutation = useMutation({
+    mutationFn: async (bugId: number) => {
+      const response = await apiRequest("POST", `/api/github/sync/${bugId}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to sync: ${response.status} - ${errorText}`);
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+      toast({
+        title: "GitHub Sync Successful",
+        description: data.newStatus ? 
+          `Bug status updated from ${data.previousStatus} to ${data.newStatus}` :
+          "Bug status is already in sync",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sync Failed",
+        description: error.message || "Failed to sync with GitHub",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Mutation for updating status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ itemId, type, status }: { itemId: string, type: 'testcase' | 'bug', status: string }) => {

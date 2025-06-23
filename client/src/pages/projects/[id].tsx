@@ -50,6 +50,7 @@ import {
 } from "lucide-react";
 import { ProjectExport } from "@/components/project/project-export";
 import { GitHubIssueButton } from "@/components/github/github-issue-button";
+import { RefreshCw } from "lucide-react";
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -375,6 +376,54 @@ export default function ProjectDetailPage() {
     sessionStorage.setItem('bugReferrer', `/projects/${projectId}`);
   }, [projectId]);
 
+  const syncAllMutation = useMutation({
+    mutationFn: async () => {
+      // Get all bugs for this project
+      const bugsResponse = await apiRequest("GET", `/api/projects/${projectId}/bugs`);
+      if (!bugsResponse.ok) {
+        throw new Error("Failed to fetch bugs");
+      }
+      const bugs = await bugsResponse.json();
+
+      // Sync each bug that might have GitHub issues
+      const syncPromises = bugs.map(async (bug: any) => {
+        try {
+          const response = await apiRequest("POST", `/api/github/sync/${bug.id}`);
+          if (response.ok) {
+            return await response.json();
+          }
+        } catch (error) {
+          console.warn(`Failed to sync bug ${bug.id}:`, error);
+          return null;
+        }
+      });
+
+      const results = await Promise.allSettled(syncPromises);
+      const successful = results.filter(r => r.status === 'fulfilled' && r.value).length;
+      const total = bugs.length;
+
+      return { successful, total };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/bugs`] });
+      toast({
+        title: "GitHub Sync Complete",
+        description: `Synchronized ${data.successful} out of ${data.total} bugs with GitHub`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sync Failed",
+        description: error.message || "Failed to sync with GitHub",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSyncAllGithubIssues = () => {
+    syncAllMutation.mutate();
+  };
+
   return (
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
@@ -448,6 +497,14 @@ export default function ProjectDetailPage() {
                 <Github className="h-4 w-4 mr-2" />
                 {githubConfig ? 'Configure GitHub' : 'Setup GitHub'}
               </Button>
+              <Button
+                  variant="outline"
+                  onClick={handleSyncAllGithubIssues}
+                  disabled={syncAllMutation.isPending}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${syncAllMutation.isPending ? 'animate-spin' : ''}`} />
+                  {syncAllMutation.isPending ? 'Syncing...' : 'Sync All GitHub Issues'}
+                </Button>
 
               {project && (
                 <ProjectExport 
@@ -840,7 +897,8 @@ export default function ProjectDetailPage() {
 
             {selectedTestCase?.comments && (
               <div>
-                <h3 className="text-sm font-medium">Comments</h3>
+                <h3``text
+className="text-sm font-medium">Comments</h3>
                 <p className="text-sm text-gray-700 mt-1">{selectedTestCase.comments}</p>
               </div>
             )}

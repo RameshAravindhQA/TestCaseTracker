@@ -180,6 +180,36 @@ ${bug.comments || 'No additional comments.'}
       return false;
     }
   }
+
+  async syncIssueStatus(config: GitHubConfig, issueNumber: number, bugId: number) {
+    logger.info(`Syncing GitHub issue #${issueNumber} status with bug ${bugId}`);
+
+    try {
+      const githubIssue = await this.getIssue(config, issueNumber);
+      
+      // Map GitHub status to TestCaseTracker status
+      let bugStatus = 'Open';
+      if (githubIssue.state === 'closed') {
+        bugStatus = 'Resolved';
+      } else if (githubIssue.state === 'open') {
+        // Check labels to determine if it's in progress
+        if (githubIssue.labels.includes('in-progress') || githubIssue.labels.includes('in progress')) {
+          bugStatus = 'In Progress';
+        } else {
+          bugStatus = 'Open';
+        }
+      }
+
+      return {
+        githubStatus: githubIssue.state,
+        bugStatus: bugStatus,
+        needsUpdate: true
+      };
+    } catch (error) {
+      logger.error(`Failed to sync issue status for #${issueNumber}:`, error);
+      throw error;
+    }
+  }
 }
 
 export const githubService = new GitHubService();

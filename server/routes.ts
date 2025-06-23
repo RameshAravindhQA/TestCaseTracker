@@ -5533,6 +5533,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // GitHub sync endpoint
+  apiRouter.post("/github/sync/:bugId", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      
+      // Get the bug
+      const bug = await storage.getBug(bugId);
+      if (!bug) {
+        return res.status(404).json({ message: "Bug not found" });
+      }
+
+      // Get GitHub config for the project
+      const githubConfig = await storage.getGitHubConfig(bug.projectId);
+      if (!githubConfig || !githubConfig.isActive) {
+        return res.status(400).json({ message: "GitHub integration not configured for this project" });
+      }
+
+      // Get GitHub issue for this bug
+      const githubIssue = await storage.getGitHubIssueByBugId(bugId);
+      if (!githubIssue) {
+        return res.status(400).json({ message: "No GitHub issue found for this bug" });
+      }
+
+      // Sync status
+      const syncResult = await githubService.syncIssueStatus(githubConfig, githubIssue.githubIssueNumber, bugId);
+      
+      if (syncResult.needsUpdate) {
+        // Update bug status in the system
+        const updatedBug = await storage.updateBug(bugId, { 
+          status: syncResult.bugStatus 
+        });
+
+        // Update GitHub issue record
+        await storage.updateGitHubIssue(githubIssue.id, {
+          status: syncResult.githubStatus
+        });
+
+        // Log activity
+        await storage.createActivity({
+          userId: req.session.userId!,
+          action: "synced from GitHub",
+          entityType: "bug",
+          entityId: bugId,
+          details: { 
+            bugId: bug.bugId,
+            title: bug.title,
+            oldStatus: bug.status,
+            newStatus: syncResult.bugStatus,
+            githubIssueNumber: githubIssue.githubIssueNumber
+          }
+        });
+
+        res.json({
+          message: "Bug status synced successfully",
+          bug: updatedBug,
+          githubStatus: syncResult.githubStatus,
+          previousStatus: bug.status,
+          newStatus: syncResult.bugStatus
+        });
+      } else {
+        res.json({
+          message: "Bug status is already in sync",
+          status: bug.status
+        });
+      }
+    } catch (error) {
+      console.error("GitHub sync error:", error);
+      res.status(500).json({ 
+        message: "Failed to sync with GitHub", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
   // GitHub Integration routes
   apiRouter.get("/github/configs", isAuthenticated, async (req, res) => {
     try {
