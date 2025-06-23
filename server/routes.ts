@@ -287,8 +287,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }),
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      secure: process.env.NODE_ENV === "production",
+      secure: false, // Set to false for development
       httpOnly: true,
+      sameSite: 'lax' // Add sameSite for better compatibility
     }
   }));
   
@@ -355,15 +356,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       //   return res.status(401).json({ message: "Please verify your email before logging in" });
       // }
       
-      // Set session
+      // Set session data directly without regeneration to avoid session issues
       req.session.userId = user.id;
       req.session.userRole = user.role;
-      req.session.userName = user.name;
+      req.session.userName = user.firstName; // Use firstName since name might not exist
       req.session.userEmail = user.email;
       
-      // Return user without sensitive data
-      const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      // Save session explicitly
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("Session save error:", saveErr);
+          return res.status(500).json({ message: "Session save failed" });
+        }
+        
+        console.log("Login successful - Session set and saved:", {
+          sessionId: req.sessionID,
+          userId: req.session.userId,
+          userEmail: req.session.userEmail
+        });
+        
+        // Return user without sensitive data
+        const { password: _, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Server error" });
@@ -382,19 +397,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user
   apiRouter.get("/auth/user", async (req, res) => {
     try {
+      console.log("GET /api/auth/user - Session data:", {
+        sessionId: req.sessionID,
+        userId: req.session?.userId,
+        hasSession: !!req.session
+      });
+      
       // Check if user is logged in
-      if (!req.session.userId) {
+      if (!req.session || !req.session.userId) {
+        console.log("No session or userId found");
         return res.status(401).json({ message: "Not authenticated" });
       }
       
       // Get user from storage
       const user = await storage.getUser(req.session.userId);
       if (!user) {
+        console.log(`User not found for ID: ${req.session.userId}`);
         return res.status(404).json({ message: "User not found" });
       }
       
+      console.log(`User found: ${user.email}`);
+      
       // Return user without sensitive data
-      const { password, ...userWithoutPassword } = user;
+      const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
       console.error("Get user error:", error);
@@ -534,21 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get current user
-  apiRouter.get("/user/current", isAuthenticated, async (req, res) => {
-    try {
-      const user = await storage.getUser(req.session.userId!);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const { password, tempPassword, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error) {
-      console.error("Get current user error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
+  
   
   // Users management endpoints - available only to admins
   apiRouter.get("/users", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
