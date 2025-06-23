@@ -77,12 +77,14 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // Start server only if this file is run directly (not imported for testing)
+export default app;
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const PORT = process.env.PORT || 5000;
 
   // Register routes and start server
-  registerRoutes(app).then(async (server) => {
-    const httpServer = server.listen(PORT, '0.0.0.0', () => {
+  registerRoutes(app).then(async () => {
+    const httpServer = app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Using in-memory storage`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -92,6 +94,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     if (process.env.NODE_ENV !== 'production') {
       await setupVite(app, httpServer);
     }
+
+    return httpServer;
   }).catch((error) => {
     console.error('Failed to start server:', error);
     process.exit(1);
