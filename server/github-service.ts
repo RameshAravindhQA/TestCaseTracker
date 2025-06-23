@@ -100,6 +100,27 @@ export class GitHubService {
     };
   }
 
+  async getAllIssues(config: GitHubConfig) {
+    logger.info(`Fetching all GitHub issues from ${config.repoOwner}/${config.repoName}`);
+
+    // Get all issues (GitHub API returns both issues and pull requests, but we filter for issues only)
+    const response = await this.makeGitHubRequest(config, '/issues?state=all&per_page=100');
+
+    // Filter out pull requests (they have a pull_request property)
+    const issues = response.filter((item: any) => !item.pull_request);
+
+    return issues.map((issue: any) => ({
+      number: issue.number,
+      id: issue.id,
+      title: issue.title,
+      body: issue.body,
+      state: issue.state,
+      url: issue.html_url,
+      labels: issue.labels.map((label: any) => label.name),
+      assignees: issue.assignees.map((assignee: any) => assignee.login)
+    }));
+  }
+
   formatBugAsGitHubIssue(bug: any): GitHubIssuePayload {
     const severity = bug.severity || 'Medium';
     const priority = bug.priority || 'Medium';

@@ -5740,6 +5740,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GitHub sync endpoints
+  apiRouter.post("/github/sync/github-to-system", isAuthenticated, async (req, res) => {
+    try {
+      let syncedCount = 0;
+      
+      // Get all active GitHub configurations
+      const configs = await storage.getAllGitHubConfigs();
+      const activeConfigs = configs.filter(config => config.isActive);
+      
+      if (activeConfigs.length === 0) {
+        return res.status(400).json({ message: "No active GitHub configurations found" });
+      }
+      
+      const { githubService } = await import('./github-service');
+      
+      for (const config of activeConfigs) {
+        try {
+          // Get all GitHub issues for this repository
+          const githubIssues = await githubService.getAllIssues(config);
+          
+          for (const issue of githubIssues) {
+            // Check if we already have this issue in our system
+            const existingIssue = await storage.getGitHubIssueByGitHubId(issue.id);
+            
+            if (existingIssue) {
+              // Update existing issue status if it changed
+              if (existingIssue.status !== issue.state) {
+                await storage.updateGitHubIssue(existingIssue.id, {
+                  status: issue.state as 'open' | 'closed'
+                });
+                syncedCount++;
+              }
+            }
+            // Note: We don't create new bugs from GitHub issues automatically
+            // as that would require more complex mapping logic
+          }
+        } catch (error) {
+          console.error(`Error syncing from GitHub config ${config.id}:`, error);
+        }
+      }
+      
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "synced from GitHub",
+        entityType: "github_integration",
+        entityId: 0,
+        details: { 
+          syncedCount,
+          direction: "github-to-system"
+        }
+      });
+      
+      res.json({ 
+        message: "Sync from GitHub completed", 
+        syncedCount,
+        configsProcessed: activeConfigs.length
+      });
+    } catch (error) {
+      console.error("GitHub to system sync error:", error);
+      res.status(500).json({ message: "Failed to sync from GitHub" });
+    }
+  });
+
+  apiRouter.post("/github/sync/system-to-github", isAuthenticated, async (req, res) => {
+    try {
+      let syncedCount = 0;
+      
+      // Get all active GitHub configurations
+      const configs = await storage.getAllGitHubConfigs();
+      const activeConfigs = configs.filter(config => config.isActive);
+      
+      if (activeConfigs.length === 0) {
+        return res.status(400).json({ message: "No active GitHub configurations found" });
+      }
+      
+      const { githubService } = await import('./github-service');
+      
+      for (const config of activeConfigs) {
+        try {
+          // Get all bugs for this project that don't have GitHub issues yet
+          const bugs = await storage.getBugs(config.projectId);
+          const bugsWithoutGitHubIssues = [];
+          
+          for (const bug of bugs) {
+            const existingIssue = await storage.getGitHubIssueByBugId(bug.id);
+            if (!existingIssue) {
+              bugsWithoutGitHubIssues.push(bug);
+            }
+          }
+          
+          // Create GitHub issues for bugs that don't have them
+          for (const bug of bugsWithoutGitHubIssues) {
+            try {
+              const issuePayload = githubService.formatBugAsGitHubIssue(bug);
+              const githubIssue = await githubService.createIssue(config, issuePayload);
+              
+              await storage.createGitHubIssue({
+                bugId: bug.id,
+                githubIssueNumber: githubIssue.number,
+                githubIssueId: githubIssue.id,
+                githubUrl: githubIssue.url,
+                status: githubIssue.state as 'open' | 'closed'
+              });
+              
+              syncedCount++;
+            } catch (error) {
+              console.error(`Error creating GitHub issue for bug ${bug.id}:`, error);
+            }
+          }
+        } catch (error) {
+          console.error(`Error syncing to GitHub config ${config.id}:`, error);
+        }
+      }
+      
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "synced to GitHub",
+        entityType: "github_integration",
+        entityId: 0,
+        details: { 
+          syncedCount,
+          direction: "system-to-github"
+        }
+      });
+      
+      res.json({ 
+        message: "Sync to GitHub completed", 
+        syncedCount,
+        configsProcessed: activeConfigs.length
+      });
+    } catch (error) {
+      console.error("System to GitHub sync error:", error);
+      res.status(500).json({ message: "Failed to sync to GitHub" });
+    }
+  });
+
   // GitHub Webhook endpoint
   apiRouter.post("/github/webhook", async (req, res) => {
     try {

@@ -1837,6 +1837,10 @@ class MemStorage implements IStorage {
     return this.githubConfigs;
   }
 
+  async getAllGitHubConfigs(): Promise<any[]> {
+    return this.githubConfigs;
+  }
+
   async getGitHubConfig(projectId: number): Promise<any | undefined> {
     return this.githubConfigs.find(config => config.projectId === projectId);
   }
