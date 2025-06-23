@@ -265,19 +265,41 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         cellValue = value;
       }
 
-      // Force update the cell data
-      setSheetData(prev => ({
-        ...prev,
-        cells: {
-          ...prev.cells,
-          [selectedCell.cellId]: {
-            value: cellValue,
-            type: cellType,
-            formula,
-            style: getCellData(selectedCell.row, selectedCell.col).style || {},
-          },
-        },
-      }));
+      // Update cell with proper state management
+      updateCell(selectedCell.row, selectedCell.col, {
+        value: cellValue,
+        type: cellType,
+        formula,
+      });
+    }
+  };
+
+  // Handle cell input change during editing
+  const handleCellInputChange = (value: string) => {
+    setFormulaBarValue(value);
+  };
+
+  // Handle cell input blur (finish editing)
+  const handleCellInputBlur = () => {
+    handleFormulaBarChange(formulaBarValue);
+    setIsEditing(false);
+  };
+
+  // Handle cell input key down
+  const handleCellInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleFormulaBarChange(formulaBarValue);
+      setIsEditing(false);
+      e.preventDefault();
+    } else if (e.key === 'Escape') {
+      const cellData = selectedCell ? getCellData(selectedCell.row, selectedCell.col) : null;
+      if (cellData?.formula) {
+        setFormulaBarValue(cellData.formula);
+      } else {
+        setFormulaBarValue(String(cellData?.value || ''));
+      }
+      setIsEditing(false);
+      e.preventDefault();
     }
   };
 
@@ -762,20 +784,10 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
                       {isEditing && isSelected ? (
                         <Input
                           value={formulaBarValue}
-                          onChange={(e) => setFormulaBarValue(e.target.value)}
-                          onBlur={() => {
-                            handleFormulaBarChange(formulaBarValue);
-                            setIsEditing(false);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              handleFormulaBarChange(formulaBarValue);
-                              setIsEditing(false);
-                            } else if (e.key === 'Escape') {
-                              setIsEditing(false);
-                            }
-                          }}
-                          className="w-full h-full border-none p-0 text-sm"
+                          onChange={(e) => handleCellInputChange(e.target.value)}
+                          onBlur={handleCellInputBlur}
+                          onKeyDown={handleCellInputKeyDown}
+                          className="w-full h-full border-none p-0 text-sm bg-transparent"
                           autoFocus
                         />
                       ) : (

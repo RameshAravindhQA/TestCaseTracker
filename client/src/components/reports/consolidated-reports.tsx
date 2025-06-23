@@ -1,27 +1,54 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Project, TestCase, Bug, Module } from "@/types";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { TestCase, Bug, Project, User, Module } from "@/types";
-import { Save, RefreshCw, TrendingUp, AlertTriangle, CheckCircle, Clock, Filter, Activity, Target, Maximize2, Minimize2, X, Download, Eye, Edit, Calendar, User as UserIcon, Tag, Flag } from "lucide-react";
-import { motion } from "framer-motion";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { useLocation } from "wouter";
-import { BarChart3 } from "lucide-react";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
-import Papa from "papaparse";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ProjectSelect } from "@/components/ui/project-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  AlertTriangle, 
+  CheckCircle, 
+  Clock, 
+  FileText, 
+  Bug as BugIcon, 
+  TestTube,
+  Download,
+  Filter,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Eye,
+  Save
+} from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { TestCaseForm } from "@/components/test-cases/test-case-form";
 import { BugForm } from "@/components/bugs/bug-form";
 import { TestCaseTags } from "@/components/test-cases/test-case-tags";
@@ -51,8 +78,9 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const [editBugDialogOpen, setEditBugDialogOpen] = useState(false);
   const [selectedItemForView, setSelectedItemForView] = useState<any>(null);
   const [severityFilter, setSeverityFilter] = useState<string>("all");
-  const [editingItem, setEditingItem] = useState<string | null>(null);
-  const [newStatus, setNewStatus] = useState("");
+  const [editingItem, setEditingItem] = useState<{ id: number; type: 'testcase' | 'bug'; status: string } | null>(null);
+  const [newStatus, setNewStatus] = useState<string>("");
+  const [statusUpdateDialog, setStatusUpdateDialog] = useState(false);
 
   const currentProjectId = selectedProjectId || projectId;
 
@@ -245,7 +273,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     mutationFn: async ({ itemId, type, status }: { itemId: string, type: 'testcase' | 'bug', status: string }) => {
       const id = itemId.split('-')[1];
       console.log(`Updating ${type} ${id} to status: ${status}`);
-      
+
       if (type === 'testcase') {
         const response = await apiRequest('PATCH', `/api/test-cases/${id}`, { status });
         if (!response.ok) {
@@ -289,6 +317,77 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       toast({
         title: "Update Failed",
         description: `Failed to update ${variables.type === 'testcase' ? 'test case' : 'bug'} status: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for exporting to PDF
+  const exportToPDFMutation = useMutation({
+    mutationFn: async () => {
+      // Dummy implementation, replace with actual API call
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({ ok: true });
+        }, 1000);
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Export successful",
+        description: "Consolidated report exported to PDF.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Export failed",
+        description: "Failed to export consolidated report.",
+        variant: "destructive",
+      });
+    },
+  });
+
+   // Update test case status mutation
+  const updateTestCaseStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      return apiRequest('PUT', `/api/test-cases/${id}`, { status });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Status updated",
+        description: "Test case status updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/test-cases`, selectedProjectId] });
+      setStatusUpdateDialog(false);
+      setEditingItem(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update test case status: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update bug status mutation
+  const updateBugStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      return apiRequest('PUT', `/api/bugs/${id}`, { status });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Status updated",
+        description: "Bug status updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/bugs`, selectedProjectId] });
+      setStatusUpdateDialog(false);
+      setEditingItem(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update bug status: ${error}`,
         variant: "destructive",
       });
     },
@@ -387,7 +486,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     }) : [];
 
     const combined = [...testCaseItems, ...bugItems];
-    
+
     console.log("Combined Data Created:", {
       testCaseItems: testCaseItems.length,
       bugItems: bugItems.length,
@@ -575,6 +674,32 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       setEditTestCaseDialogOpen(true);
     } else {
       setEditBugDialogOpen(true);
+    }
+  };
+
+    const handleStatusEdit = (item: any) => {
+    setEditingItem({
+      id: item.id,
+      type: item.type,
+      status: item.status
+    });
+    setNewStatus(item.status);
+    setStatusUpdateDialog(true);
+  };
+
+    const handleStatusUpdate = () => {
+    if (!editingItem || !newStatus) return;
+
+    if (editingItem.type === 'testcase') {
+      updateTestCaseStatusMutation.mutate({
+        id: editingItem.id,
+        status: newStatus
+      });
+    } else if (editingItem.type === 'bug') {
+      updateBugStatusMutation.mutate({
+        id: editingItem.id,
+        status: newStatus
+      });
     }
   };
 
@@ -855,6 +980,45 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     }
   };
 
+  const handleStatusEdit = (item: any) => {
+    setEditingItem({
+      id: item.id,
+      type: item.type,
+      status: item.status
+    });
+    setNewStatus(item.status);
+    setStatusUpdateDialog(true);
+  };
+
+    const handleStatusUpdate = () => {
+    if (!editingItem || !newStatus) return;
+
+    if (editingItem.type === 'testcase') {
+      updateTestCaseStatusMutation.mutate({
+        id: editingItem.id,
+        status: newStatus
+      });
+    } else if (editingItem.type === 'bug') {
+      updateBugStatusMutation.mutate({
+        id: editingItem.id,
+        status: newStatus
+      });
+    }
+  };
+
+  const handleExportPDF = () => {
+    if (!selectedProjectId) {
+      toast({
+        title: "Error",
+        description: "Please select a project first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    exportToPDFMutation.mutate();
+  };
+
   // Show loading state only when actually loading critical data
   if (isProjectsLoading || (effectiveProjectId && (isTestCasesLoading || isBugsLoading))) {
     return (
@@ -1044,7 +1208,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
               <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-300 via-blue-300 to-indigo-300 opacity-50"></div>
             </div>
           </motion.div>
-          
+
           <div className="group relative overflow-hidden bg-gradient-to-br from-emerald-500 via-green-600 to-teal-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0">
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -1063,7 +1227,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
               <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-teal-300 via-green-300 to-emerald-300 opacity-50"></div>
             </div>
           </div>
-          
+
           <div className="group relative overflow-hidden bg-gradient-to-br from-red-500 via-rose-600 to-pink-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0">
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -1082,7 +1246,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
               <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-pink-300 via-rose-300 to-red-300 opacity-50"></div>
             </div>
           </div>
-          
+
           <div className="group relative overflow-hidden bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-500 p-6 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border-0">
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:from-white/20"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -1255,35 +1419,35 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleViewItem(item)}
-                        title="View Details"
-                        className="hover:bg-blue-50 hover:text-blue-600"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleEditItem(item)}
-                        title="Edit Item"
-                        className="hover:bg-green-50 hover:text-green-600"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDeleteItem(item)}
-                        title="Delete Item"
-                        className="hover:bg-red-50 hover:text-red-600"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleViewItem(item)}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                             onClick={() => handleEditItem(item)}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleStatusEdit(item)}>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Update Status
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteItem(item)}>
+                            <X className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
@@ -1484,6 +1648,57 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
               }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+            {/* Status Update Dialog */}
+      <Dialog open={statusUpdateDialog} onOpenChange={setStatusUpdateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Status</DialogTitle>
+            <DialogDescription>
+              Update the status for this {editingItem?.type === 'testcase' ? 'test case' : 'bug'}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={newStatus} onValueChange={setNewStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {editingItem?.type === 'testcase' ? (
+                    <>
+                      <SelectItem value="Pass">Pass</SelectItem>
+                      <SelectItem value="Fail">Fail</SelectItem>
+                      <SelectItem value="Blocked">Blocked</SelectItem>
+                      <SelectItem value="Not Executed">Not Executed</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="Open">Open</SelectItem>
+                      <SelectItem value="In Progress">In Progress</SelectItem>
+                      <SelectItem value="Resolved">Resolved</SelectItem>
+                      <SelectItem value="Closed">Closed</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStatusUpdateDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleStatusUpdate}
+              disabled={updateTestCaseStatusMutation.isPending || updateBugStatusMutation.isPending}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {updateTestCaseStatusMutation.isPending || updateBugStatusMutation.isPending ? "Updating..." : "Update Status"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </motion.div>
