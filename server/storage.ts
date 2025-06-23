@@ -168,6 +168,16 @@ export interface IStorage {
   createTestSheet(sheet: InsertTestSheet): Promise<TestSheet>;
   updateTestSheet(id: number, sheetData: Partial<TestSheet>): Promise<TestSheet | undefined>;
   deleteTestSheet(id: number): Promise<boolean>;
+
+   // GitHub Integration methods
+  getGitHubConfig(projectId: number): Promise<any | undefined>;
+  createGitHubConfig(data: any): Promise<any>;
+  updateGitHubConfig(id: number, data: any): Promise<any | null>;
+  createGitHubIssue(data: any): Promise<any>;
+  getGitHubIssue(id: number): Promise<any | undefined>;
+  getGitHubIssueByBugId(bugId: number): Promise<any | undefined>;
+  getGitHubIssueByGitHubId(githubId: number): Promise<any | undefined>;
+  updateGitHubIssue(id: number, data: any): Promise<any | null>;
 }
 
 /**
@@ -189,6 +199,9 @@ class MemStorage implements IStorage {
   private customMarkers = new Map<number, CustomMarker>();
   private matrixCells = new Map<number, MatrixCell>();
   private testSheets = new Map<number, any>();
+  private flowDiagrams: any[] = [];
+  private githubConfigs: any[] = [];
+  private githubIssues: any[] = [];
 
   private nextId = 1;
   private moduleCounter = 1;
@@ -1817,6 +1830,68 @@ class MemStorage implements IStorage {
 
     // Re-initialize default data
     this.initializeDefaultData();
+  }
+
+   // GitHub Integration methods
+  async getGitHubConfig(projectId: number): Promise<any | undefined> {
+    return this.githubConfigs.find(config => config.projectId === projectId);
+  }
+
+  async createGitHubConfig(data: any): Promise<any> {
+    const config = {
+      id: this.githubConfigs.length + 1,
+      ...data,
+      createdAt:```python
+ new Date().toISOString(),
+    };
+    this.githubConfigs.push(config);
+    return config;
+  }
+
+  async updateGitHubConfig(id: number, data: any): Promise<any | null> {
+    const index = this.githubConfigs.findIndex(config => config.id === id);
+    if (index === -1) return null;
+
+    this.githubConfigs[index] = {
+      ...this.githubConfigs[index],
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+    return this.githubConfigs[index];
+  }
+
+  async createGitHubIssue(data: any): Promise<any> {
+    const issue = {
+      id: this.githubIssues.length + 1,
+      ...data,
+      createdAt: new Date().toISOString(),
+    };
+    this.githubIssues.push(issue);
+    return issue;
+  }
+
+  async getGitHubIssue(id: number): Promise<any | undefined> {
+    return this.githubIssues.find(issue => issue.id === id);
+  }
+
+  async getGitHubIssueByBugId(bugId: number): Promise<any | undefined> {
+    return this.githubIssues.find(issue => issue.bugId === bugId);
+  }
+
+  async getGitHubIssueByGitHubId(githubId: number): Promise<any | undefined> {
+    return this.githubIssues.find(issue => issue.githubIssueId === githubId);
+  }
+
+  async updateGitHubIssue(id: number, data: any): Promise<any | null> {
+    const index = this.githubIssues.findIndex(issue => issue.id === id);
+    if (index === -1) return null;
+
+    this.githubIssues[index] = {
+      ...this.githubIssues[index],
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+    return this.githubIssues[index];
   }
 }
 

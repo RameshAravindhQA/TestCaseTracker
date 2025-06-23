@@ -19,10 +19,12 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ModuleForm } from "@/components/modules/module-form";
+import { ModuleTable } from "@/components/modules/module-table";
 import { TestCaseTable } from "@/components/test-cases/test-case-table";
+import { BugTable } from "@/components/bugs/bug-table";
+import { GitHubConfigForm } from "@/components/github/github-config-form";
 import { TestCaseForm } from "@/components/test-cases/test-case-form";
 import { TestCaseTags } from "@/components/test-cases/test-case-tags";
-import { BugTable } from "@/components/bugs/bug-table";
 import { BugForm } from "@/components/bugs/bug-form";
 import { ImportExport } from "@/components/test-cases/import-export";
 import { format, formatDistance } from "date-fns";
@@ -45,7 +47,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { 
-  Edit, Plus, ArrowLeft, Trash, Layers, CheckSquare, Bug as BugIcon, FileText, Loader2
+  Edit, Plus, ArrowLeft, Trash, Layers, CheckSquare, Bug as BugIcon, FileText, Loader2, Github, Settings
 } from "lucide-react";
 import { ProjectExport } from "@/components/project/project-export";
 
@@ -73,6 +75,7 @@ export default function ProjectDetailPage() {
   const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
   const [selectedBug, setSelectedBug] = useState<Bug | null>(null);
   const [selectedModuleForTestCase, setSelectedModuleForTestCase] = useState<Module | null>(null);
+  const [showGitHubConfig, setShowGitHubConfig] = useState(false);
 
   // Fetch project details
   const { data: project, isLoading: isProjectLoading } = useQuery<Project>({
@@ -92,6 +95,18 @@ export default function ProjectDetailPage() {
   // Fetch bugs
   const { data: bugs, isLoading: isBugsLoading } = useQuery<Bug[]>({
     queryKey: [`/api/projects/${projectId}/bugs`],
+  });
+
+    // Fetch GitHub config
+  const { data: githubConfig } = useQuery({
+    queryKey: ["github-config", project?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/github/config/${project?.id}`);
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error("Failed to fetch GitHub config");
+      return response.json();
+    },
+    enabled: !!project?.id,
   });
 
   // Fetch activities
@@ -411,6 +426,16 @@ export default function ProjectDetailPage() {
               >
                 <Edit className="h-4 w-4" />
                 Edit Project
+              </Button>
+              <Button onClick={() => setShowCreateModule(true)}>
+                Add Module
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowGitHubConfig(true)}
+              >
+                <Github className="h-4 w-4 mr-2" />
+                {githubConfig ? 'Configure GitHub' : 'Setup GitHub'}
               </Button>
 
               {project && (
@@ -1034,6 +1059,12 @@ export default function ProjectDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <GitHubConfigForm
+        open={showGitHubConfig}
+        onOpenChange={setShowGitHubConfig}
+        projectId={projectId}
+        config={githubConfig}
+      />
     </MainLayout>
   );
 }

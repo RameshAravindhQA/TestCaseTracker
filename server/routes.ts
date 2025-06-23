@@ -5522,6 +5522,242 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // GitHub Integration routes
+  apiRouter.get("/github/config/:projectId", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const config = await storage.getGitHubConfig(projectId);
+      
+      if (!config) {
+        return res.status(404).json({ message: "GitHub configuration not found" });
+      }
+      
+      // Don't expose the access token in the response
+      const { accessToken, ...safeConfig } = config;
+      res.json(safeConfig);
+    } catch (error) {
+      console.error("Get GitHub config error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/github/config", isAuthenticated, async (req, res) => {
+    try {
+      const configData = {
+        ...req.body,
+        createdById: req.session.userId!,
+      };
+      
+      const config = await storage.createGitHubConfig(configData);
+      
+      // Don't expose the access token in the response
+      const { accessToken, ...safeConfig } = config;
+      
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "configured",
+        entityType: "github_integration",
+        entityId: config.id,
+        details: { 
+          projectId: config.projectId,
+          repository: `${config.repoOwner}/${config.repoName}`
+        }
+      });
+      
+      res.status(201).json(safeConfig);
+    } catch (error) {
+      console.error("Create GitHub config error:", error);
+      res.status(400).json({ message: "Invalid GitHub configuration data" });
+    }
+  });
+
+  apiRouter.patch("/github/config/:id", isAuthenticated, async (req, res) => {
+    try {
+      const configId = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      const updatedConfig = await storage.updateGitHubConfig(configId, updateData);
+      
+      if (!updatedConfig) {
+        return res.status(404).json({ message: "GitHub configuration not found" });
+      }
+      
+      // Don't expose the access token in the response
+      const { accessToken, ...safeConfig } = updatedConfig;
+      res.json(safeConfig);
+    } catch (error) {
+      console.error("Update GitHub config error:", error);
+      res.status(400).json({ message: "Invalid GitHub configuration data" });
+    }
+  });
+
+  apiRouter.post("/github/test-connection", isAuthenticated, async (req, res) => {
+    try {
+      const { repoOwner, repoName, accessToken } = req.body;
+      
+      const testConfig = {
+        repoOwner,
+        repoName,
+        accessToken,
+        id: 0,
+        projectId: 0,
+        isActive: true,
+        createdById: 0,
+        createdAt: new Date().toISOString()
+      };
+      
+      const { githubService } = await import('./github-service');
+      const isValid = await githubService.validateConnection(testConfig);
+      
+      if (isValid) {
+        res.json({ message: "Connection successful" });
+      } else {
+        res.status(400).json({ message: "Connection failed" });
+      }
+    } catch (error) {
+      console.error("GitHub connection test error:", error);
+      res.status(400).json({ message: "Connection test failed" });
+    }
+  });
+
+  apiRouter.post("/github/issues", isAuthenticated, async (req, res) => {
+    try {
+      const { bugId } = req.body;
+      
+      const bug = await storage.getBug(bugId);
+      if (!bug) {
+        return res.status(404).json({ message: "Bug not found" });
+      }
+      
+      const config = await storage.getGitHubConfig(bug.projectId);
+      if (!config || !config.isActive) {
+        return res.status(400).json({ message: "GitHub integration not configured for this project" });
+      }
+      
+      const { githubService } = await import('./github-service');
+      const issuePayload = githubService.formatBugAsGitHubIssue(bug);
+      
+      const githubIssue = await githubService.createIssue(config, issuePayload);
+      
+      const githubIssueRecord = await storage.createGitHubIssue({
+        bugId: bug.id,
+        githubIssueNumber: githubIssue.number,
+        githubIssueId: githubIssue.id,
+        githubUrl: githubIssue.url,
+        status: githubIssue.state as 'open' | 'closed'
+      });
+      
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "created GitHub issue",
+        entityType: "bug",
+        entityId: bugId,
+        details: { 
+          githubIssueNumber: githubIssue.number,
+          githubUrl: githubIssue.url
+        }
+      });
+      
+      res.status(201).json(githubIssueRecord);
+    } catch (error) {
+      console.error("Create GitHub issue error:", error);
+      res.status(500).json({ message: "Failed to create GitHub issue" });
+    }
+  });
+
+  apiRouter.get("/github/issues/bug/:bugId", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const issue = await storage.getGitHubIssueByBugId(bugId);
+      
+      if (!issue) {
+        return res.status(404).json({ message: "GitHub issue not found for this bug" });
+      }
+      
+      res.json(issue);
+    } catch (error) {
+      console.error("Get GitHub issue error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/github/issues/:id/sync", isAuthenticated, async (req, res) => {
+    try {
+      const issueId = parseInt(req.params.id);
+      const githubIssue = await storage.getGitHubIssue(issueId);
+      
+      if (!githubIssue) {
+        return res.status(404).json({ message: "GitHub issue not found" });
+      }
+      
+      const bug = await storage.getBug(githubIssue.bugId);
+      if (!bug) {
+        return res.status(404).json({ message: "Associated bug not found" });
+      }
+      
+      const config = await storage.getGitHubConfig(bug.projectId);
+      if (!config) {
+        return res.status(400).json({ message: "GitHub configuration not found" });
+      }
+      
+      const { githubService } = await import('./github-service');
+      const latestIssue = await githubService.getIssue(config, githubIssue.githubIssueNumber);
+      
+      // Update local record with latest GitHub data
+      await storage.updateGitHubIssue(issueId, {
+        status: latestIssue.state as 'open' | 'closed'
+      });
+      
+      res.json({ message: "Issue synced successfully" });
+    } catch (error) {
+      console.error("Sync GitHub issue error:", error);
+      res.status(500).json({ message: "Failed to sync GitHub issue" });
+    }
+  });
+
+  // GitHub Webhook endpoint
+  apiRouter.post("/github/webhook", async (req, res) => {
+    try {
+      const payload = req.body;
+      const event = req.headers['x-github-event'];
+      
+      if (event === 'issues') {
+        const action = payload.action;
+        const issue = payload.issue;
+        
+        if (action === 'closed' || action === 'reopened') {
+          // Find the GitHub issue record
+          const githubIssue = await storage.getGitHubIssueByGitHubId(issue.id);
+          
+          if (githubIssue) {
+            // Update the status
+            await storage.updateGitHubIssue(githubIssue.id, {
+              status: issue.state as 'open' | 'closed'
+            });
+            
+            // Optionally update the bug status as well
+            if (action === 'closed') {
+              await storage.updateBug(githubIssue.bugId, {
+                status: 'Resolved'
+              });
+            } else if (action === 'reopened') {
+              await storage.updateBug(githubIssue.bugId, {
+                status: 'Reopened'
+              });
+            }
+            
+            logger.info(`GitHub issue ${issue.number} ${action}, updated bug ${githubIssue.bugId}`);
+          }
+        }
+      }
+      
+      res.status(200).json({ message: "Webhook processed" });
+    } catch (error) {
+      console.error("GitHub webhook error:", error);
+      res.status(500).json({ message: "Webhook processing failed" });
+    }
+  });
+
   // Test Sheets API routes
   apiRouter.get("/test-sheets", isAuthenticated, async (req, res) => {
     try {
