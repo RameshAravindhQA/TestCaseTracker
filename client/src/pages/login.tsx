@@ -18,15 +18,9 @@ export default function Login() {
     // Check both API response and localStorage for authentication status
     const isAuthenticatedInLocalStorage = localStorage.getItem('isAuthenticated') === 'true';
     
-    if (isAuthenticatedInLocalStorage) {
-      console.log("User already authenticated via localStorage, redirecting to dashboard");
-      navigate("/dashboard");
-      return;
-    }
-    
-    if (!isLoading && user) {
-      console.log("User already authenticated via API, redirecting to dashboard");
-      navigate("/dashboard");
+    if ((!isLoading && user) || isAuthenticatedInLocalStorage) {
+      console.log("User already authenticated, redirecting to dashboard");
+      window.location.href = window.location.origin + "/dashboard";
     }
   }, [user, isLoading, navigate]);
   

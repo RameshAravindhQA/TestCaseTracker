@@ -48,19 +48,15 @@ export function LoginForm() {
         description: "You have been logged in to your account",
       });
       
-      // Set authentication in localStorage first
+      // Invalidate the user data query to refetch with new credentials
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Force redirect with hard page reload
+      console.log("Login successful, redirecting to dashboard...");
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('lastLoginTime', new Date().toString());
-      
-      // Invalidate and refetch the user data query immediately
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
-      
-      // Small delay to ensure state updates, then navigate
-      setTimeout(() => {
-        console.log("Login successful, redirecting to dashboard...");
-        navigate("/dashboard");
-      }, 100);
+      // Use absolute URL to ensure proper redirection
+      window.location.href = window.location.origin + "/dashboard";
     },
     onError: (error: any) => {
       console.error("Login error:", error);

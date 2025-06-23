@@ -68,9 +68,6 @@ function Router() {
       <Route path="/dashboard">
         <ProtectedComponent Component={Dashboard} />
       </Route>
-      <Route path="/dashboard/*">
-        <ProtectedComponent Component={Dashboard} />
-      </Route>
       <Route path="/">
         <ProtectedComponent Component={Dashboard} />
       </Route>

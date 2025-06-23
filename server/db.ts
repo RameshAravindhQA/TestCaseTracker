@@ -1,47 +1,20 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+// Mock database file for in-memory storage mode
+// This file replaces the PostgreSQL connection to avoid import errors
 
-const connectionString = process.env.DATABASE_URL;
+console.log("🔄 Using in-memory storage - no database connection required");
 
-if (!connectionString) {
-  console.error("❌ DATABASE_URL environment variable is not set!");
-  console.log("Please create a PostgreSQL database in Replit:");
-  console.log("1. Click on the 'Database' tab in the sidebar");
-  console.log("2. Click 'Create Database' and select 'PostgreSQL'");
-  process.exit(1);
-}
+// Mock database instance for compatibility
+export const db = null;
 
-console.log("🔄 Connecting to PostgreSQL database...");
-
-const client = postgres(connectionString, {
-  ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
-  max: 20,
-  idle_timeout: 20,
-  connect_timeout: 10,
-});
-
-export const db = drizzle(client);
-
-// Test database connection
+// Mock connection test function
 export async function testConnection() {
-  try {
-    await client`SELECT 1`;
-    console.log("✅ PostgreSQL database connected successfully");
-    return true;
-  } catch (error) {
-    console.error("❌ Database connection failed:", error);
-    return false;
-  }
+  console.log("✅ In-memory storage ready");
+  return true;
 }
 
-// Close connection function
+// Mock close connection function
 export async function closeConnection() {
-  try {
-    await client.end();
-    console.log("Database connection closed");
-  } catch (error) {
-    console.error("Error closing database connection:", error);
-  }
+  console.log("In-memory storage - no connection to close");
 }
 
 import {
