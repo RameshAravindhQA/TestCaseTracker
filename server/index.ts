@@ -3,8 +3,8 @@ import session from 'express-session';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { apiRouter } from './routes';
-import { setupViteDevMiddleware } from './vite';
+import { registerRoutes } from './routes.js';
+import { setupViteDevMiddleware } from './vite.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,14 +47,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes
-app.use('/api', apiRouter);
-
-// Handle API errors properly
-app.use('/api/*', (req, res) => {
-  res.status(404).json({ error: 'API endpoint not found' });
-});
-
 // Static file serving
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
@@ -88,9 +80,15 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 if (import.meta.url === `file://${process.argv[1]}`) {
   const PORT = process.env.PORT || 5000;
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Using in-memory storage`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  // Register routes and start server
+  registerRoutes(app).then((server) => {
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Using in-memory storage`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  }).catch((error) => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   });
 }
