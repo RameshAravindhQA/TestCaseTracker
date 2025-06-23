@@ -132,6 +132,9 @@ function Router() {
       <Route path="/test-sheets">
          <ProtectedLazyComponent Component={lazy(() => import("./pages/test-sheets"))} />
       </Route>
+      <Route path="/github">
+        <ProtectedLazyComponent Component={lazy(() => import("./pages/github"))} />
+      </Route>
 
       {/* Catch-all 404 route - make sure this is last */}
       <Route path="/:rest*">
