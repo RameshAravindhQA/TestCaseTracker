@@ -855,7 +855,8 @@ class MemStorage implements IStorage {
     return Array.from(this.customMarkers.values());
   }
 
-  async updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null> {
+  async updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker```text
+ | null> {
     const marker = this.customMarkers.get(id);
     if (!marker) return null;
 

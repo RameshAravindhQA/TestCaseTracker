@@ -32,7 +32,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
   const { toast } = useToast();
   const [isImportOpen, setIsImportOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  
+
   // Generate a formatted date string for file names
   const getFormattedDate = () => {
     const now = new Date();
@@ -45,7 +45,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
       const promises = testCases.map((testCase) => {
         // Handle module ID more carefully
         let finalModuleId: number | null = null;
-        
+
         // If a module ID is provided in props, use that as it's pre-validated
         if (moduleId) {
           finalModuleId = moduleId;
@@ -62,7 +62,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
             console.error('Invalid module ID format:', testCase.moduleId);
           }
         }
-        
+
         // If we still don't have a valid module ID, the request will fail
         // The server should handle this with proper validation
         return apiRequest("POST", `/api/projects/${projectId}/test-cases`, {
@@ -124,19 +124,19 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
 
       // Generate CSV
       const csv = Papa.unparse(csvData);
-      
+
       // Create download link
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      
+
       // Create a descriptive filename with project and module (if available)
       const dateStr = getFormattedDate();
       const projectStr = projectName ? projectName.replace(/[^a-z0-9]/gi, '-').toLowerCase() : `project-${projectId}`;
       const moduleStr = moduleName && moduleId ? `-${moduleName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}` : '';
       const filename = `test-cases-${projectStr}${moduleStr}-${dateStr}.csv`;
-      
+
       link.setAttribute("download", filename);
       link.style.visibility = "hidden";
       document.body.appendChild(link);
@@ -169,19 +169,19 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
         console.error('Failed to fetch bugs for PDF report:', error);
         // Continue without bugs
       }
-      
+
       const doc = new jsPDF();
-      
+
       // Add title
       doc.setFontSize(18);
       doc.text("Test Cases Report", 14, 20);
-      
+
       // Add metadata
       doc.setFontSize(10);
-      
+
       let currentY = 30;
       const lineSpacing = 5;
-      
+
       // Add project information
       if (projectName) {
         doc.text(`Project: ${projectName}`, 14, currentY);
@@ -189,7 +189,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
         doc.text(`Project ID: ${projectId}`, 14, currentY);
       }
       currentY += lineSpacing;
-      
+
       // Add module information if available
       if (moduleId) {
         if (moduleName) {
@@ -199,15 +199,15 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
         }
         currentY += lineSpacing;
       }
-      
+
       // Add generation date
       doc.text(`Generated: ${new Date().toLocaleString()}`, 14, currentY);
       currentY += lineSpacing;
-      
+
       // Add test case count
       doc.text(`Total Test Cases: ${testCases.length}`, 14, currentY);
       currentY += lineSpacing + 5; // Add extra space before table
-      
+
       // Add status counts
       const statusCounts = {
         Pass: testCases.filter(tc => tc.status === 'Pass').length,
@@ -215,28 +215,28 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
         Blocked: testCases.filter(tc => tc.status === 'Blocked').length,
         'Not Executed': testCases.filter(tc => tc.status === 'Not Executed').length,
       };
-      
+
       // Calculate pass rate
       const passRate = testCases.length > 0 
         ? Math.round((statusCounts.Pass / testCases.length) * 100) 
         : 0;
-        
+
       doc.text(`Status Summary:`, 14, currentY);
       currentY += lineSpacing;
       doc.text(`Pass: ${statusCounts.Pass} (${passRate}%) | Fail: ${statusCounts.Fail} | Blocked: ${statusCounts.Blocked} | Not Executed: ${statusCounts['Not Executed']}`, 14, currentY);
       currentY += lineSpacing + 5;
-      
+
       // Add bugs count if available
       if (bugs.length > 0) {
         doc.text(`Bug Reports: ${bugs.length}`, 14, currentY);
         currentY += lineSpacing + 5;
       }
-      
+
       // Test Cases section
       doc.setFontSize(14);
       doc.text("Test Cases", 14, currentY);
       currentY += lineSpacing + 5;
-      
+
       // Prepare table data with ONLY ID, Feature, Objective, Tags, Status, Priority
       const tableData = testCases.map(tc => [
         tc.testCaseId,
@@ -246,7 +246,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
         tc.status,
         tc.priority
       ]);
-      
+
       // Add test cases table
       autoTable(doc, {
         head: [['Test Case ID', 'Feature', 'Objective', 'Tags', 'Status', 'Priority']],
@@ -263,22 +263,22 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
           5: { cellWidth: 20 }
         }
       });
-      
+
       // Add bug reports section if there are bugs
       if (bugs.length > 0) {
         // Get the current y position after the test case table
         currentY = (doc as any).lastAutoTable.finalY + 20;
-        
+
         // Start a new page if near the bottom
         if (currentY > 250) {
           doc.addPage();
           currentY = 20;
         }
-        
+
         doc.setFontSize(14);
         doc.text("Bug Reports", 14, currentY);
         currentY += lineSpacing + 5;
-        
+
         // Prepare bug table data
         const bugTableData = bugs.map(bug => [
           bug.bugId,
@@ -287,7 +287,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
           bug.severity,
           bug.priority
         ]);
-        
+
         // Add bug table
         autoTable(doc, {
           head: [['Bug ID', 'Title', 'Status', 'Severity', 'Priority']],
@@ -297,13 +297,13 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
           headStyles: { fillColor: [220, 53, 69] }, // Red color for bugs
         });
       }
-      
+
       // Create a descriptive filename with project and module (if available)
       const dateStr = getFormattedDate();
       const projectStr = projectName ? projectName.replace(/[^a-z0-9]/gi, '-').toLowerCase() : `project-${projectId}`;
       const moduleStr = moduleName && moduleId ? `-${moduleName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}` : '';
       const filename = `test-cases-${projectStr}${moduleStr}-${dateStr}.pdf`;
-      
+
       // Save PDF
       doc.save(filename);
 
@@ -371,12 +371,12 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
           relatedBugs: ""
         }
       ];
-      
+
       // Get project prefix for template
       const projectResponse = await apiRequest('GET', `/api/projects/${projectId}`);
       const projectData = await projectResponse.json();
       const projectPrefix = projectData.prefix || 'BEG';
-      
+
       // Add more information at the top of the CSV file as comments
       let csvText = `# Test Case Import Template for ${projectName || 'Project'}\n`;
       csvText += '# Generated on ' + new Date().toLocaleString() + '\n';
@@ -395,29 +395,29 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
       csvText += '# - TC-###: Sequential test case number with 3 digits (001, 002, etc.)\n';
       csvText += '#\n# The template below contains example data. Please replace with your actual test cases.\n';
       csvText += '#\n';
-      
+
       // Generate CSV and append our comments
       const csv = Papa.unparse(templateData);
       csvText += csv;
-      
+
       // Create download link
       const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      
+
       // Create a descriptive filename
       const dateStr = getFormattedDate();
       const projectStr = projectName ? projectName.replace(/[^a-z0-9]/gi, '-').toLowerCase() : `project-${projectId}`;
       const moduleStr = moduleName && moduleId ? `-${moduleName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}` : '';
       const filename = `test-cases-template-${projectStr}${moduleStr}-${dateStr}.csv`;
-      
+
       link.setAttribute("download", filename);
       link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast({
         title: "Template downloaded",
         description: "CSV template has been downloaded. Fill it with your test cases and import.",
@@ -430,7 +430,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
       });
     }
   };
-  
+
   // Download template for Excel imports
   const downloadTemplateExcel = () => {
     toast({
@@ -444,7 +444,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     // Just validate the file exists - we'll parse it when the user clicks "Import"
     toast({
       title: "File selected",
@@ -490,7 +490,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
               Upload a CSV or Excel file with test cases. The file should have columns for feature, testObjective, testSteps, expectedResult, and moduleId.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="flex justify-between items-center mb-4">
               <Button 
@@ -523,7 +523,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button 
               variant="secondary" 
@@ -543,12 +543,12 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                     skipEmptyLines: true,
                     complete: async (results: Papa.ParseResult<CSVTestCase>) => {
                       const parsedData = results.data;
-                      
+
                       // Validate required fields
                       const invalidRows = parsedData.filter(
                         row => !row.feature || !row.testObjective || !row.testSteps || !row.expectedResult || !row.moduleId
                       );
-                      
+
                       if (invalidRows.length > 0) {
                         toast({
                           title: "Invalid file data",
@@ -557,12 +557,12 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         });
                         return;
                       }
-                      
+
                       // Validate module IDs against available modules
                       // Use the current module ID from props if provided
                       const selectedModuleId = moduleId;
                       const validModuleIds = new Set<string>(); // Will be populated if we need to fetch modules
-                      
+
                       // Fetch valid module IDs for current project
                       const validateModuleIds = async () => {
                         try {
@@ -570,16 +570,16 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                           if (selectedModuleId) {
                             // Add the module ID from props to valid list
                             validModuleIds.add(selectedModuleId.toString());
-                            
+
                             // Strictly validate ALL rows have matching module IDs
                             const invalidModules = parsedData.filter(row => {
                               // Skip rows with missing moduleId - they'll be fixed later
                               if (!row.moduleId) return false;
-                              
+
                               // Check if the moduleId matches the selected module
                               return row.moduleId.toString() !== selectedModuleId.toString();
                             });
-                            
+
                             // If any rows have non-matching module IDs, show error and reject
                             if (invalidModules.length > 0) {
                               toast({
@@ -589,19 +589,19 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                               });
                               return false;
                             }
-                            
+
                             // All valid, ensure all rows use the correct module ID
                             parsedData.forEach(row => {
                               row.moduleId = selectedModuleId.toString();
                             });
-                            
+
                             return true;
                           }
-                          
+
                           // Otherwise, fetch modules and validate
                           const response = await apiRequest(`/api/projects/${projectId}/modules`);
                           const modules = await response.json();
-                          
+
                           if (Array.isArray(modules)) {
                             if (modules.length === 0) {
                               toast({
@@ -611,16 +611,16 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                               });
                               return false;
                             }
-                            
+
                             // Add all valid module IDs to the set
                             modules.forEach(module => {
                               validModuleIds.add(module.id.toString());
                             });
-                            
+
                             // If CSV has moduleId column, validate or correct those values
                             const firstModuleId = modules[0].id.toString();
                             let correctedModuleCount = 0;
-                            
+
                             parsedData.forEach(row => {
                               // If moduleId is missing or invalid, use the first module
                               if (!row.moduleId || !validModuleIds.has(row.moduleId.toString())) {
@@ -628,14 +628,14 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                                 correctedModuleCount++;
                               }
                             });
-                            
+
                             if (correctedModuleCount > 0) {
                               toast({
                                 title: "Module IDs corrected",
                                 description: `Corrected ${correctedModuleCount} rows with missing or invalid module IDs.`,
                               });
                             }
-                            
+
                             return true;
                           } else {
                             toast({
@@ -654,7 +654,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                           return false;
                         }
                       };
-                      
+
                       // Check if modules are valid before proceeding
                       const modulesValid = await validateModuleIds();
                       if (!modulesValid) return;
@@ -663,13 +663,13 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       const project = await apiRequest('GET', `/api/projects/${projectId}`);
                       const projectData = await project.json();
                       const projectPrefix = projectData.prefix || 'DEF';
-                      
+
                       let currentModule = null;
                       if (moduleId) {
                         const moduleResponse = await apiRequest('GET', `/api/modules/${moduleId}`);
                         currentModule = await moduleResponse.json();
                       }
-                      
+
                       // Check for test case IDs that already exist in current test cases
                       const existingTestCaseIds = new Set(
                         Array.isArray(testCases) ? testCases.map(tc => tc?.testCaseId) : []
@@ -677,16 +677,16 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       const duplicateIds: string[] = [];
                       const invalidFormatIds: string[] = [];
                       const newTestCases: CSVTestCase[] = [];
-                      
+
                       // Function to validate test case ID format
                       const validateTestCaseIdFormat = (testCaseId: string, modulePrefix: string): boolean => {
                         if (!testCaseId) return false;
-                        
+
                         // Expected format: PROJECT-MODULE-TC-###
                         const expectedPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-\\d{3}$`);
                         return expectedPattern.test(testCaseId);
                       };
-                      
+
                       // Function to get module prefix from module name
                       const getModulePrefix = (moduleName: string): string => {
                         const cleanModuleName = moduleName.replace(/[^a-zA-Z]/g, '');
@@ -696,11 +696,11 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         }
                         return prefix;
                       };
-                      
+
                       // Process each row and separate duplicates from new test cases
                       parsedData.forEach((row, index) => {
                         let modulePrefix = 'MOD'; // Default
-                        
+
                         // Get module prefix from current module or try to determine from test case ID
                         if (currentModule) {
                           modulePrefix = getModulePrefix(currentModule.name);
@@ -711,7 +711,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                             modulePrefix = parts[1];
                           }
                         }
-                        
+
                         // Add generated testCaseId if missing
                         if (!row.testCaseId) {
                           // Find the highest existing number for this format
@@ -723,10 +723,10 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                               return match ? parseInt(match[1], 10) : 0;
                             })
                             .filter(num => !isNaN(num));
-                          
+
                           const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
                           row.testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
-                          
+
                           // Add to existing set to avoid duplicates within this import
                           existingTestCaseIds.add(row.testCaseId);
                         } else {
@@ -736,20 +736,20 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                             return; // Skip this row
                           }
                         }
-                        
+
                         // Sanitize and standardize data
                         // Enforce status values
                         const validStatuses = ['Not Executed', 'Pass', 'Fail', 'Blocked'];
                         if (!validStatuses.includes(row.status)) {
                           row.status = 'Not Executed'; // Default to Not Executed for invalid statuses
                         }
-                        
+
                         // Enforce priority values
                         const validPriorities = ['High', 'Medium', 'Low'];
                         if (!validPriorities.includes(row.priority)) {
                           row.priority = 'Medium'; // Default to Medium for invalid priorities
                         }
-                        
+
                         // Ensure moduleId is valid if using the one from CSV
                         if (!moduleId && row.moduleId && !validModuleIds.has(row.moduleId)) {
                           // If we're here the validation earlier would have caught it,
@@ -758,11 +758,11 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                             title: "Invalid module ID corrected",
                             description: `Row ${index + 1}: Module ID ${row.moduleId} was invalid and has been corrected.`,
                           });
-                          
+
                           // Take the first valid module ID if available, otherwise mark as invalid
                           const firstValidModuleId = validModuleIds.size > 0 ? 
                             Array.from(validModuleIds)[0] : undefined;
-                          
+
                           if (firstValidModuleId) {
                             row.moduleId = firstValidModuleId;
                           } else {
@@ -770,7 +770,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                             return;
                           }
                         }
-                        
+
                         // Check if test case ID already exists
                         if (existingTestCaseIds.has(row.testCaseId)) {
                           duplicateIds.push(row.testCaseId);
@@ -780,7 +780,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                           existingTestCaseIds.add(row.testCaseId);
                         }
                       });
-                      
+
                       // Show validation errors
                       if (invalidFormatIds.length > 0) {
                         toast({
@@ -789,7 +789,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                           variant: "destructive",
                         });
                       }
-                      
+
                       // Warn about duplicate test case IDs
                       if (duplicateIds.length > 0) {
                         toast({
@@ -797,7 +797,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                           description: `Skipped ${duplicateIds.length} test cases with IDs that already exist: ${duplicateIds.slice(0, 3).join(", ")}${duplicateIds.length > 3 ? ` and ${duplicateIds.length - 3} more` : ''}.`,
                         });
                       }
-                      
+
                       if (newTestCases.length === 0) {
                         const totalSkipped = duplicateIds.length + invalidFormatIds.length;
                         toast({
@@ -809,7 +809,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         });
                         return;
                       }
-                  
+
                       // Import valid test cases
                       toast({
                         title: "Importing test cases",
