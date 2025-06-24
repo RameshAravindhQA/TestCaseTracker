@@ -19,17 +19,17 @@ async function setupVirtualDisplay(): Promise<void> {
     const { exec } = require('child_process');
     const util = require('util');
     const execPromise = util.promisify(exec);
-    
+
     // Start Xvfb virtual display
     await execPromise('pkill Xvfb || true'); // Kill any existing Xvfb
     await execPromise('Xvfb :99 -screen 0 1280x720x24 &');
-    
+
     // Wait a moment for Xvfb to start
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     // Set DISPLAY environment variable
     process.env.DISPLAY = ':99';
-    
+
     logger.info('Virtual display setup completed');
   } catch (error) {
     logger.warn('Could not setup virtual display:', error);
@@ -69,7 +69,7 @@ export async function startRecording(sessionId: string, url: string) {
   try {
     // Setup virtual display
     await setupVirtualDisplay();
-    
+
     // Import Playwright dynamically
     let playwright;
     try {
