@@ -175,7 +175,7 @@ export class DatabaseStorage implements IStorage {
       .filter(num => !isNaN(num));
 
     const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-    const moduleId = `${projectPrefix}-MOD-${nextNumber.toString().padStart(2, '0')}`;
+    const moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
 
     console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
 

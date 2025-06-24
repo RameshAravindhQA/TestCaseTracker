@@ -372,19 +372,23 @@ class MemStorage implements IStorage {
 
     if (projectId) {
       results = results.filter(tc => tc.projectId === projectId);
+      console.log(`Storage: Filtered by projectId ${projectId}, found ${results.length} test cases`);
     }
 
     if (moduleId) {
       results = results.filter(tc => tc.moduleId === moduleId);
+      console.log(`Storage: Filtered by moduleId ${moduleId}, found ${results.length} test cases`);
     }
 
-    console.log(`Storage: getTestCasesByFilters(${projectId}, ${moduleId}) returning ${results.length} test cases`);
+    console.log(`Storage: getTestCasesByFilters(${projectId}, ${moduleId}) returning ${results.length} test cases:`,
+      results.map(tc => ({ id: tc.id, testCaseId: tc.testCaseId, projectId: tc.projectId, moduleId: tc.moduleId })));
     return results;
   }
 
   async getTestCasesByProject(projectId: number): Promise<TestCase[]> {
     const results = Array.from(this.testCases.values()).filter(tc => tc.projectId === projectId);
-    console.log(`Storage: getTestCasesByProject(${projectId}) returning ${results.length} test cases`);
+    console.log(`Storage: getTestCasesByProject(${projectId}) returning ${results.length} test cases:`, 
+      results.map(tc => ({ id: tc.id, testCaseId: tc.testCaseId, projectId: tc.projectId })));
     return results;
   }
 
@@ -419,10 +423,10 @@ class MemStorage implements IStorage {
         }
       }
 
-      // Find the highest existing test case number for this module with the same prefix
+      // Find the highest existing test case number for this project and module with the same prefix
       const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
       const existingTestCases = Array.from(this.testCases.values())
-        .filter(tc => tc.moduleId === insertTestCase.moduleId)
+        .filter(tc => tc.moduleId === insertTestCase.moduleId && tc.projectId === insertTestCase.projectId)
         .map(tc => tc.testCaseId)
         .filter(id => id && prefixPattern.test(id))
         .map(id => {

@@ -1711,8 +1711,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const testCases = await storage.getTestCases(projectId, moduleId);
-      console.log(`[API] Returning ${testCases.length} test cases for project ${projectId}:`, testCases.map(tc => ({ id: tc.id, title: tc.feature || tc.title, status: tc.status })));
+      // Use project-specific filtering to ensure test cases belong to this project
+      let testCases;
+      if (moduleId) {
+        // Validate that the module belongs to this project
+        const module = await storage.getModule(moduleId);
+        if (!module || module.projectId !== projectId) {
+          console.log(`[API] Module ${moduleId} not found or doesn't belong to project ${projectId}`);
+          return res.status(400).json({ message: "Invalid module for this project" });
+        }
+        testCases = await storage.getTestCasesByFilters(projectId, moduleId);
+      } else {
+        testCases = await storage.getTestCasesByProject(projectId);
+      }
+      
+      console.log(`[API] Returning ${testCases.length} test cases for project ${projectId}:`, 
+        testCases.map(tc => ({ id: tc.id, testCaseId: tc.testCaseId, feature: tc.feature, projectId: tc.projectId })));
       
       // Add cache headers for real-time data
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
