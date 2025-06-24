@@ -879,8 +879,7 @@ class MemStorage implements IStorage {
       timestamp: new Date(),
     };
     this.activities.set(newActivity.id, newActivity);
-    return```python
-newActivity;
+    return newActivity;
   }
 
   // CSV Export for Projects
