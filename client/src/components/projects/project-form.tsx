@@ -22,6 +22,7 @@ import { DialogFooter } from "@/components/ui/dialog";
 const projectSchema = z.object({
   name: z.string().min(3, { message: "Project name must be at least 3 characters" }),
   description: z.string().optional(),
+  prefix: z.string().min(2, "Prefix must be at least 2 characters").max(5, "Prefix must be at most 5 characters").regex(/^[A-Z]+$/, "Prefix must contain only uppercase letters"),
   status: z.enum(["Active", "Completed", "On Hold"]),
 });
 
@@ -41,6 +42,7 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
     defaultValues: {
       name: project?.name || "",
       description: project?.description || "",
+      prefix: project?.prefix || "",
       status: project?.status || "Active",
     },
   });
@@ -123,6 +125,28 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
                 <Input placeholder="E-Commerce Website Redesign" {...field} />
               </FormControl>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="prefix"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Project Prefix</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="BEG" 
+                  {...field} 
+                  style={{ textTransform: 'uppercase' }}
+                  onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                  maxLength={5}
+                />
+              </FormControl>
+              <FormMessage />
+              <p className="text-sm text-muted-foreground">
+                2-5 uppercase letters used for module IDs (e.g., BEG-MOD-01)
+              </p>
             </FormItem>
           )}
         />

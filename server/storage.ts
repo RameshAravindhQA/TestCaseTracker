@@ -304,6 +304,14 @@ class MemStorage implements IStorage {
     // Auto-generate module ID if not provided
     let moduleId = moduleData.moduleId;
     if (!moduleId || moduleId.trim() === '') {
+      // Get the project to access its prefix
+      const project = this.projects.get(moduleData.projectId);
+      if (!project) {
+        throw new Error(`Project with ID ${moduleData.projectId} not found`);
+      }
+
+      const projectPrefix = project.prefix || 'DEF'; // Default prefix if not set
+      
       // Get existing modules for this specific project only
       const projectModules = Array.from(this.modules.values())
         .filter(module => module.projectId === moduleData.projectId);
@@ -311,17 +319,18 @@ class MemStorage implements IStorage {
       console.log('Project modules found:', projectModules.length, 'for project:', moduleData.projectId);
 
       // Find the highest module number for this project to ensure proper sequencing
+      const modulePattern = new RegExp(`^${projectPrefix}-MOD-(\\d+)$`);
       const existingNumbers = projectModules
         .map(module => {
-          const match = module.moduleId?.match(/^MOD-(\d+)$/);
+          const match = module.moduleId?.match(modulePattern);
           return match ? parseInt(match[1], 10) : 0;
         })
         .filter(num => !isNaN(num));
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
+      moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
       
-      console.log('Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'existing numbers:', existingNumbers);
+      console.log('Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
     }
 
     const module: Module = {
@@ -390,23 +399,28 @@ class MemStorage implements IStorage {
     // Auto-generate test case ID if not provided
     let testCaseId = insertTestCase.testCaseId;
     if (!testCaseId || testCaseId.trim() === '') {
-      // Get the module to extract the first 3 letters of its name
+      // Get the module and project to build the test case ID
       const module = this.modules.get(insertTestCase.moduleId);
-      let modulePrefix = 'TC';
+      const project = this.projects.get(insertTestCase.projectId);
+      
+      if (!module || !project) {
+        throw new Error(`Module or Project not found`);
+      }
 
-      if (module && module.name) {
-        // Extract first 3 letters from module name and convert to uppercase
-        const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, ''); // Remove non-alphabetic characters
+      const projectPrefix = project.prefix || 'DEF';
+      
+      // Get module name prefix (first 3 letters of module name)
+      let modulePrefix = 'MOD';
+      if (module.name) {
+        const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '');
         modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
-
-        // If module name has less than 3 letters, pad with 'X'
         if (modulePrefix.length < 3) {
           modulePrefix = modulePrefix.padEnd(3, 'X');
         }
       }
 
       // Find the highest existing test case number for this module with the same prefix
-      const prefixPattern = new RegExp(`^${modulePrefix}-TC-(\\d+)$`);
+      const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
       const existingTestCases = Array.from(this.testCases.values())
         .filter(tc => tc.moduleId === insertTestCase.moduleId)
         .map(tc => tc.testCaseId)
@@ -418,7 +432,7 @@ class MemStorage implements IStorage {
         .filter(num => !isNaN(num));
 
       const nextNumber = existingTestCases.length > 0 ? Math.max(...existingTestCases) + 1 : 1;
-      testCaseId = `${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
+      testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
     }
 
     const testCase: TestCase = {
@@ -1639,6 +1653,7 @@ class MemStorage implements IStorage {
       id: 1,
       name: "Sample Test Project",
       description: "A sample project for testing consolidated reports",
+      prefix: "SMP",
       status: "Active",
       createdById: 1,
       createdAt: new Date(),
@@ -1648,7 +1663,7 @@ class MemStorage implements IStorage {
     // Add sample modules
     const authModule = {
       id: 1,
-      moduleId: "MOD-01",
+      moduleId: "SMP-MOD-01",
       name: "Authentication",
       projectId: 1,
       description: "User authentication and authorization",
@@ -1657,7 +1672,7 @@ class MemStorage implements IStorage {
     };
     const dashboardModule = {
       id: 2,
-      moduleId: "MOD-02", 
+      moduleId: "SMP-MOD-02", 
       name: "Dashboard",
       projectId: 1,
       description: "Main dashboard functionality",
@@ -1670,7 +1685,7 @@ class MemStorage implements IStorage {
     // Add sample test cases
     const testCase1 = {
       id: 1,
-      testCaseId: "AUTH-TC-001",
+      testCaseId: "SMP-AUT-TC-001",
       moduleId: 1,
       projectId: 1,
       feature: "User Login",
@@ -1689,7 +1704,7 @@ class MemStorage implements IStorage {
 
     const testCase2 = {
       id: 2,
-      testCaseId: "AUTH-TC-002",
+      testCaseId: "SMP-AUT-TC-002",
       moduleId: 1,
       projectId: 1,
       feature: "User Login",
@@ -1708,7 +1723,7 @@ class MemStorage implements IStorage {
 
     const testCase3 = {
       id: 3,
-      testCaseId: "DASH-TC-001",
+      testCaseId: "SMP-DAS-TC-001",
       moduleId: 2,
       projectId: 1,
       feature: "Dashboard",

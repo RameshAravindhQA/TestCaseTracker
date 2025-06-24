@@ -53,6 +53,7 @@ export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
+  prefix: text("prefix").notNull(), // 3-letter project prefix for IDs
   status: text("status", { enum: ["Active", "Completed", "On Hold"] }).notNull().default("Active"),
   customerId: integer("customer_id"),
   createdById: integer("created_by_id").notNull(),
@@ -62,6 +63,8 @@ export const projects = pgTable("projects", {
 export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
   createdAt: true,
+}).extend({
+  prefix: z.string().min(2, "Prefix must be at least 2 characters").max(5, "Prefix must be at most 5 characters").regex(/^[A-Z]+$/, "Prefix must contain only uppercase letters")
 });
 
 // Project members table (many-to-many)
