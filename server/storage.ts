@@ -353,7 +353,7 @@ class MemStorage implements IStorage {
       createdAt: new Date(),
     };
 
-    console.log('Module object created:', module);
+    console.log('Module object created with moduleId:', module.moduleId, 'and database ID:', module.id);
 
     this.modules.set(id, module);
 

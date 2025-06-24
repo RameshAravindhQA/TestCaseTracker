@@ -207,6 +207,11 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     console.log('DB: Created module with moduleId:', module.moduleId, 'and database ID:', module.id);
+    
+    // Ensure the moduleId is properly set and not overridden by database ID
+    if (!module.moduleId || module.moduleId.trim() === '') {
+      console.error('ERROR: Module created without proper moduleId!', module);
+    }
 
     return module;
   }
