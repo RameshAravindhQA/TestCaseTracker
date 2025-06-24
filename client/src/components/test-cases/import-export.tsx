@@ -450,10 +450,40 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Just validate the file exists - we'll parse it when the user clicks "Import"
+    console.log('File selected:', file.name, 'Type:', file.type, 'Size:', file.size);
+
+    // Validate file type
+    const validTypes = [
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+    
+    const validExtensions = ['.csv', '.xlsx', '.xls'];
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+    
+    if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select a CSV or Excel file (.csv, .xlsx, .xls)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select a file smaller than 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "File selected",
-      description: `Selected ${file.name}. Click Import to continue.`,
+      description: `Selected ${file.name} (${(file.size / 1024).toFixed(1)}KB). Click Import to continue.`,
     });
   };
 
@@ -546,8 +576,58 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                   Papa.parse<CSVTestCase>(file, {
                     header: true,
                     skipEmptyLines: true,
+                    transformHeader: (header) => {
+                      // Clean up header names and map common variations
+                      const cleanHeader = header.trim().toLowerCase();
+                      const headerMap: { [key: string]: string } = {
+                        'test case id': 'testCaseId',
+                        'testcaseid': 'testCaseId',
+                        'test_case_id': 'testCaseId',
+                        'module id': 'moduleId',
+                        'moduleid': 'moduleId',
+                        'module_id': 'moduleId',
+                        'test objective': 'testObjective',
+                        'testobjective': 'testObjective',
+                        'test_objective': 'testObjective',
+                        'test steps': 'testSteps',
+                        'teststeps': 'testSteps',
+                        'test_steps': 'testSteps',
+                        'expected result': 'expectedResult',
+                        'expectedresult': 'expectedResult',
+                        'expected_result': 'expectedResult',
+                        'actual result': 'actualResult',
+                        'actualresult': 'actualResult',
+                        'actual_result': 'actualResult',
+                        'pre conditions': 'preConditions',
+                        'preconditions': 'preConditions',
+                        'pre_conditions': 'preConditions'
+                      };
+                      return headerMap[cleanHeader] || header;
+                    },
                     complete: async (results: Papa.ParseResult<CSVTestCase>) => {
                       const parsedData = results.data;
+
+                      console.log('CSV Parse Results:', results);
+                      console.log('Parsed Data:', parsedData);
+
+                      if (results.errors && results.errors.length > 0) {
+                        console.error('CSV Parsing Errors:', results.errors);
+                        toast({
+                          title: "CSV Parsing Error",
+                          description: `CSV file contains errors: ${results.errors.slice(0, 3).map(e => e.message).join('; ')}`,
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
+                      if (!parsedData || parsedData.length === 0) {
+                        toast({
+                          title: "Empty CSV File",
+                          description: "The CSV file appears to be empty or contains no valid data rows.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
 
                       // Enhanced validation with detailed error reporting
                       const invalidRows = [];
@@ -557,6 +637,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         const missingFields = [];
                         const rowNumber = index + 2; // +2 because index starts at 0 and first row is header
 
+                        // Check for required fields
                         if (!row.feature || String(row.feature).trim() === '') {
                           missingFields.push('feature');
                         }
@@ -572,19 +653,58 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
 
                         if (missingFields.length > 0) {
                           invalidRows.push(row);
-                          errorDetails.push(`Row ${rowNumber}: Missing ${missingFields.join(', ')}`);
+                          errorDetails.push(`Row ${rowNumber}: Missing required fields: ${missingFields.join(', ')}`);
                         }
 
-                        // Validate status values
+                        // Validate and fix status values
                         const validStatuses = ['Not Executed', 'Pass', 'Fail', 'Blocked'];
                         if (row.status && !validStatuses.includes(row.status)) {
-                          errorDetails.push(`Row ${rowNumber}: Invalid status '${row.status}'. Valid values: ${validStatuses.join(', ')}`);
+                          // Try to map common variations
+                          const statusMap: { [key: string]: string } = {
+                            'not executed': 'Not Executed',
+                            'notexecuted': 'Not Executed',
+                            'pending': 'Not Executed',
+                            'pass': 'Pass',
+                            'passed': 'Pass',
+                            'success': 'Pass',
+                            'fail': 'Fail',
+                            'failed': 'Fail',
+                            'failure': 'Fail',
+                            'block': 'Blocked',
+                            'blocked': 'Blocked'
+                          };
+                          const normalizedStatus = statusMap[row.status.toLowerCase()];
+                          if (normalizedStatus) {
+                            row.status = normalizedStatus;
+                          } else {
+                            errorDetails.push(`Row ${rowNumber}: Invalid status '${row.status}'. Valid values: ${validStatuses.join(', ')}`);
+                          }
+                        } else if (!row.status) {
+                          row.status = 'Not Executed'; // Default status
                         }
 
-                        // Validate priority values
-                        const validPriorities = ['High', 'Medium', 'Low', 'Critical'];
+                        // Validate and fix priority values
+                        const validPriorities = ['High', 'Medium', 'Low'];
                         if (row.priority && !validPriorities.includes(row.priority)) {
-                          errorDetails.push(`Row ${rowNumber}: Invalid priority '${row.priority}'. Valid values: ${validPriorities.join(', ')}`);
+                          // Try to map common variations
+                          const priorityMap: { [key: string]: string } = {
+                            'high': 'High',
+                            'critical': 'High',
+                            'urgent': 'High',
+                            'medium': 'Medium',
+                            'normal': 'Medium',
+                            'standard': 'Medium',
+                            'low': 'Low',
+                            'minor': 'Low'
+                          };
+                          const normalizedPriority = priorityMap[row.priority.toLowerCase()];
+                          if (normalizedPriority) {
+                            row.priority = normalizedPriority;
+                          } else {
+                            errorDetails.push(`Row ${rowNumber}: Invalid priority '${row.priority}'. Valid values: ${validPriorities.join(', ')}`);
+                          }
+                        } else if (!row.priority) {
+                          row.priority = 'Medium'; // Default priority
                         }
                       });
 
@@ -629,33 +749,17 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         try {
                           // If a specific module is provided in props, use it for strict validation
                           if (selectedModuleId) {
+                            console.log(`Using selected module ID: ${selectedModuleId}`);
+                            
                             // Add the module ID from props to valid list
                             validModuleIds.add(selectedModuleId.toString());
 
-                            // Strictly validate ALL rows have matching module IDs
-                            const invalidModules = parsedData.filter(row => {
-                              // Skip rows with missing moduleId - they'll be fixed later
-                              if (!row.moduleId) return false;
-
-                              // Check if the moduleId matches the selected module
-                              return row.moduleId.toString() !== selectedModuleId.toString();
-                            });
-
-                            // If any rows have non-matching module IDs, show error and reject
-                            if (invalidModules.length > 0) {
-                              toast({
-                                title: "Module ID mismatch",
-                                description: `Found ${invalidModules.length} test cases with module IDs that don't match the current module. This operation only supports importing to the current module (ID: ${selectedModuleId}).`,
-                                variant: "destructive",
-                              });
-                              return false;
-                            }
-
-                            // All valid, ensure all rows use the correct module ID
+                            // For CSV imports to a specific module, assign the module ID to all rows
                             parsedData.forEach(row => {
                               row.moduleId = selectedModuleId.toString();
                             });
 
+                            console.log(`Assigned module ID ${selectedModuleId} to all ${parsedData.length} test cases`);
                             return true;
                           }
 
@@ -719,6 +823,8 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       // Check if modules are valid before proceeding
                       const modulesValid = await validateModuleIds();
                       if (!modulesValid) return;
+
+                      console.log(`Import validation passed. Processing ${parsedData.length} test cases...`);
 
                       // Get project and module information for validation
                       const project = await apiRequest('GET', `/api/projects/${projectId}`);

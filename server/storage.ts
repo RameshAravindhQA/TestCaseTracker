@@ -341,7 +341,7 @@ class MemStorage implements IStorage {
       console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix);
 
       // Find the highest module number for this project with the correct prefix pattern
-      const modulePattern = new RegExp(`^${projectPrefix}-${modulePrefix}-MOD-(\\d+)$`);
+      const modulePattern = new RegExp(`^${projectPrefix}-[A-Z]{3}-MOD-(\\d+)$`);
       const existingNumbers = projectModules
         .map(module => {
           if (!module.moduleId) return 0;
