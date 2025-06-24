@@ -308,9 +308,13 @@ class MemStorage implements IStorage {
       const projectModules = Array.from(this.modules.values())
         .filter(module => module.projectId === moduleData.projectId);
 
+      console.log('Project modules found:', projectModules.length, 'for project:', moduleData.projectId);
+
       // Simply count existing modules and add 1 for the next sequential number
       const nextNumber = projectModules.length + 1;
       moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
+      
+      console.log('Generated module ID:', moduleId, 'for project:', moduleData.projectId);
     }
 
     const module: Module = {
@@ -1637,7 +1641,7 @@ class MemStorage implements IStorage {
     // Add sample modules
     const authModule = {
       id: 1,
-      moduleId: "MOD-001",
+      moduleId: "MOD-01",
       name: "Authentication",
       projectId: 1,
       description: "User authentication and authorization",
@@ -1646,7 +1650,7 @@ class MemStorage implements IStorage {
     };
     const dashboardModule = {
       id: 2,
-      moduleId: "MOD-002", 
+      moduleId: "MOD-02", 
       name: "Dashboard",
       projectId: 1,
       description: "Main dashboard functionality",

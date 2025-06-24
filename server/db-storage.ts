@@ -149,14 +149,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createModule(data: any): Promise<any> {
-    // Get existing modules for this project to determine the next sequential number
+    // Get existing modules for this specific project only
     const existingModules = await db
       .select()
       .from(modules)
       .where(eq(modules.projectId, data.projectId));
 
+    console.log('DB: Project modules found:', existingModules.length, 'for project:', data.projectId);
+
     const nextNumber = existingModules.length + 1;
     const moduleId = `MOD-${nextNumber.toString().padStart(2, '0')}`;
+
+    console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId);
 
     const [module] = await db
       .insert(modules)
