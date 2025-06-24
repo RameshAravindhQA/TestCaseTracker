@@ -12,7 +12,8 @@
     "test:coverage": "vitest run --coverage",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "test:consolidated-reports": "vitest run client/src/__tests__/components/reports/consolidated-reports-data-fix.test.tsx"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -72,6 +73,7 @@
     "papaparse": "^5.5.2",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
+    "playwright": "^1.53.1",
     "react": "^18.3.1",
     "react-colorful": "^5.6.1",
     "react-day-picker": "^8.10.1",
@@ -126,17 +128,5 @@
   "main": "postcss.config.js",
   "keywords": [],
   "author": "",
-  "description": "",
-  "scripts": {
-    "dev": "tsx server/index.ts",
-    "build": "tsc && vite build",
-    "start": "node dist/server/index.js",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio",
-    "test:consolidated-reports": "vitest run client/src/__tests__/components/reports/consolidated-reports-data-fix.test.tsx"
-  }
+  "description": ""
 }

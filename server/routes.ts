@@ -4166,10 +4166,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { startRecording } = await import('./automation-service');
       
       // Start the recording
-      const result = startRecording(sessionId, url);
+      const result = await startRecording(sessionId, url);
       
       res.json({
-        message: "Recording started - simulated browser will run for 15 seconds",
+        message: "Recording started - browser window should open or fallback to simulation",
         sessionId: result.sessionId,
         url,
         testCaseId,
@@ -4178,6 +4178,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Start recording error:", error);
       res.status(500).json({ message: "Failed to start recording" });
+    }
+  });
+
+  apiRouter.post("/automation/record/stop/:sessionId", isAuthenticated, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      
+      // Import the automation service functions
+      const { stopRecording } = await import('./automation-service');
+      
+      // Stop the recording
+      const result = await stopRecording(sessionId);
+      
+      res.json({
+        message: "Recording stopped",
+        sessionId,
+        status: result.status,
+        scriptContent: result.scriptContent
+      });
+    } catch (error) {
+      console.error("Stop recording error:", error);
+      res.status(500).json({ message: "Failed to stop recording" });
     }
   });
 

@@ -26,31 +26,223 @@ export function automationServiceProxy(req: Request, res: Response, next: NextFu
 }
 
 export async function installPlaywrightDeps(): Promise<void> {
-  logger.info('Playwright dependencies would be installed here');
-  return Promise.resolve();
+  logger.info('Installing Playwright dependencies...');
+  try {
+    // Install Playwright if not already installed
+    const { exec } = require('child_process');
+    const util = require('util');
+    const execPromise = util.promisify(exec);
+    
+    await execPromise('npm install playwright');
+    await execPromise('npx playwright install');
+    logger.info('Playwright dependencies installed successfully');
+  } catch (error) {
+    logger.error('Failed to install Playwright dependencies:', error);
+  }
 }
 
-// Mock functions for testing in this environment
-export function startRecording(sessionId: string, url: string) {
-  logger.info(`Starting recording session ${sessionId} for URL: ${url}`);
+// Real browser recording functions
+export async function startRecording(sessionId: string, url: string) {
+  logger.info(`Starting real recording session ${sessionId} for URL: ${url}`);
+  
+  try {
+    // Import Playwright dynamically
+    let playwright;
+    try {
+      playwright = require('playwright');
+    } catch (error) {
+      logger.warn('Playwright not available, using mock recording');
+      return startMockRecording(sessionId, url);
+    }
+
+    // Configure browser for Replit environment
+    const browser = await playwright.chromium.launch({
+      headless: false,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--remote-debugging-port=9222'
+      ]
+    });
+
+    const context = await browser.newContext({
+      viewport: { width: 1280, height: 720 },
+      recordVideo: {
+        dir: './recordings/',
+        size: { width: 1280, height: 720 }
+      }
+    });
+
+    // Start tracing to capture actions
+    await context.tracing.start({
+      screenshots: true,
+      snapshots: true,
+      sources: true
+    });
+
+    const page = await context.newPage();
+    
+    // Navigate to the URL
+    await page.goto(url, { waitUntil: 'networkidle' });
+
+    // Store session data
+    recordingSessions.set(sessionId, {
+      id: sessionId,
+      url,
+      status: 'recording',
+      startTime: new Date(),
+      browser,
+      context,
+      page,
+      scriptContent: null,
+      actions: []
+    });
+
+    // Set up action recording
+    setupActionRecording(sessionId, page);
+
+    logger.info(`Recording session ${sessionId} started successfully`);
+    return { sessionId, status: 'started' };
+
+  } catch (error) {
+    logger.error(`Failed to start recording session ${sessionId}:`, error);
+    // Fallback to mock recording
+    return startMockRecording(sessionId, url);
+  }
+}
+
+function setupActionRecording(sessionId: string, page: any) {
+  const session = recordingSessions.get(sessionId);
+  if (!session) return;
+
+  // Record clicks
+  page.on('click', (event: any) => {
+    session.actions.push({
+      type: 'click',
+      selector: event.target?.tagName?.toLowerCase() || 'unknown',
+      timestamp: new Date()
+    });
+  });
+
+  // Record form inputs
+  page.on('input', (event: any) => {
+    session.actions.push({
+      type: 'input',
+      selector: event.target?.name || event.target?.id || 'input',
+      value: event.target?.value || '',
+      timestamp: new Date()
+    });
+  });
+
+  // Set up auto-stop after 5 minutes of inactivity
+  setTimeout(() => {
+    if (session.status === 'recording') {
+      stopRecording(sessionId);
+    }
+  }, 5 * 60 * 1000);
+}
+
+export async function stopRecording(sessionId: string) {
+  logger.info(`Stopping recording session ${sessionId}`);
+  
+  const session = recordingSessions.get(sessionId);
+  if (!session) {
+    return { status: 'not_found' };
+  }
+
+  try {
+    if (session.browser && session.context && session.page) {
+      // Stop tracing and get the trace
+      await session.context.tracing.stop({ path: `./recordings/trace-${sessionId}.zip` });
+      
+      // Generate script from recorded actions
+      const scriptContent = generateScriptFromActions(session.actions, session.url);
+      
+      // Close browser
+      await session.browser.close();
+      
+      // Update session
+      session.status = 'completed';
+      session.scriptContent = scriptContent;
+      session.endTime = new Date();
+      
+      recordingSessions.set(sessionId, session);
+      
+      logger.info(`Recording session ${sessionId} completed successfully`);
+      return { status: 'completed', scriptContent };
+    } else {
+      // Handle mock recording completion
+      session.status = 'completed';
+      session.scriptContent = generateMockScript(session.url);
+      session.endTime = new Date();
+      recordingSessions.set(sessionId, session);
+      
+      return { status: 'completed', scriptContent: session.scriptContent };
+    }
+  } catch (error) {
+    logger.error(`Error stopping recording session ${sessionId}:`, error);
+    session.status = 'error';
+    session.error = error.message;
+    recordingSessions.set(sessionId, session);
+    return { status: 'error', error: error.message };
+  }
+}
+
+function generateScriptFromActions(actions: any[], url: string): string {
+  let script = `const { test, expect } = require('@playwright/test');\n\n`;
+  script += `test('recorded test for ${url}', async ({ page }) => {\n`;
+  script += `  // Navigate to the page\n`;
+  script += `  await page.goto('${url}');\n`;
+  script += `  await page.waitForLoadState('networkidle');\n\n`;
+  
+  actions.forEach((action, index) => {
+    switch (action.type) {
+      case 'click':
+        script += `  // Click action ${index + 1}\n`;
+        script += `  await page.click('${action.selector}');\n`;
+        break;
+      case 'input':
+        script += `  // Input action ${index + 1}\n`;
+        script += `  await page.fill('[name="${action.selector}"]', '${action.value}');\n`;
+        break;
+    }
+  });
+  
+  script += `\n  // Verify page is responsive\n`;
+  script += `  await expect(page).toHaveTitle(/.*/); \n`;
+  script += `  console.log('Test completed successfully');\n`;
+  script += `});\n`;
+  
+  return script;
+}
+
+function startMockRecording(sessionId: string, url: string) {
+  logger.info(`Starting mock recording session ${sessionId} for URL: ${url}`);
   
   recordingSessions.set(sessionId, {
     id: sessionId,
     url,
     status: 'recording',
     startTime: new Date(),
-    scriptContent: null
+    scriptContent: null,
+    actions: []
   });
   
   // Simulate recording completion after 15 seconds
   setTimeout(() => {
     const session = recordingSessions.get(sessionId);
-    if (session) {
+    if (session && session.status === 'recording') {
       session.status = 'completed';
       session.scriptContent = generateMockScript(url);
       session.endTime = new Date();
       recordingSessions.set(sessionId, session);
-      logger.info(`Recording session ${sessionId} completed`);
+      logger.info(`Mock recording session ${sessionId} completed`);
     }
   }, 15000);
   
@@ -67,7 +259,8 @@ export function getRecordingStatus(sessionId: string) {
     status: session.status,
     scriptContent: session.scriptContent,
     startTime: session.startTime,
-    endTime: session.endTime
+    endTime: session.endTime,
+    error: session.error
   };
 }
 

@@ -347,6 +347,39 @@ export default function AutomationPage() {
     executeScriptMutation.mutate(script.id);
   };
 
+  const handleStopRecording = async (sessionId: string) => {
+    try {
+      const response = await apiRequest('POST', `/api/automation/record/stop/${sessionId}`, {});
+      const data = await response.json();
+      
+      if (data.status === 'completed') {
+        // Update the session in local state
+        setRecordingSessions(prev => {
+          const updated = new Map(prev);
+          const session = updated.get(sessionId);
+          if (session) {
+            session.status = 'completed';
+            session.scriptContent = data.scriptContent;
+            session.endTime = new Date();
+            updated.set(sessionId, session);
+          }
+          return updated;
+        });
+        
+        toast({
+          title: 'Recording stopped',
+          description: 'Your test recording has been completed successfully.',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Failed to stop recording',
+        description: 'An error occurred while stopping the recording.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const handleSaveRecording = (sessionId: string) => {
     const session = recordingSessions.get(sessionId);
     if (!session || !session.scriptContent) {
@@ -587,12 +620,32 @@ export default function AutomationPage() {
                     {Array.from(recordingSessions.entries()).map(([sessionId, session]) => (
                       <div key={sessionId} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between">
-                          <div>
+                          <div className="flex-1">
                             <h4 className="font-medium">Recording Session</h4>
                             <p className="text-sm text-gray-600">URL: {session.url}</p>
                             <p className="text-sm text-gray-600">Status: {session.status}</p>
+                            {session.status === 'recording' && (
+                              <p className="text-sm text-blue-600 mt-1">
+                                ⏺️ Recording in progress... Perform your test actions in the browser window.
+                              </p>
+                            )}
+                            {session.status === 'completed' && (
+                              <p className="text-sm text-green-600 mt-1">
+                                ✅ Recording completed successfully!
+                              </p>
+                            )}
                           </div>
                           <div className="flex gap-2">
+                            {session.status === 'recording' && (
+                              <Button
+                                onClick={() => handleStopRecording(sessionId)}
+                                variant="destructive"
+                                size="sm"
+                              >
+                                <Square className="h-4 w-4 mr-1" />
+                                Stop Recording
+                              </Button>
+                            )}
                             {session.status === 'completed' && (
                               <>
                                 <Input
