@@ -131,10 +131,18 @@ export default function AutomationPage() {
       setRecordingSessions(prev => new Map(prev.set(data.sessionId, session)));
       setRecordingDialogOpen(false);
       
-      toast({
-        title: 'Recording started',
-        description: 'A new browser window has opened. Perform your test actions there.'
-      });
+      if (data.fallbackMode) {
+        toast({
+          title: 'Recording started (Simulation Mode)',
+          description: 'Browser automation is not available in this environment. Using simulation mode for testing.',
+          variant: 'default'
+        });
+      } else {
+        toast({
+          title: 'Recording started',
+          description: 'A new browser window should open. Perform your test actions there.'
+        });
+      }
       
       // Start polling for recording status
       pollRecordingStatus(data.sessionId);

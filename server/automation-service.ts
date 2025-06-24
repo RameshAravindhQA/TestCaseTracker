@@ -67,8 +67,18 @@ export async function startRecording(sessionId: string, url: string) {
         '--no-default-browser-check',
         '--disable-web-security',
         '--disable-features=VizDisplayCompositor',
-        '--remote-debugging-port=9222'
-      ]
+        '--remote-debugging-port=9222',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-blink-features=AutomationControlled',
+        '--use-fake-ui-for-media-stream',
+        '--use-fake-device-for-media-stream',
+        '--disable-extensions'
+      ],
+      env: {
+        DISPLAY: process.env.DISPLAY || ':99'
+      }
     });
 
     const context = await browser.newContext({
@@ -112,8 +122,14 @@ export async function startRecording(sessionId: string, url: string) {
 
   } catch (error) {
     logger.error(`Failed to start recording session ${sessionId}:`, error);
-    // Fallback to mock recording
-    return startMockRecording(sessionId, url);
+    logger.info('Browser automation may not work in this environment. Using simulation mode.');
+    // Fallback to mock recording with enhanced messaging
+    const mockSession = startMockRecording(sessionId, url);
+    return {
+      ...mockSession,
+      message: 'Browser recording not available in this environment. Using simulation mode.',
+      fallbackMode: true
+    };
   }
 }
 

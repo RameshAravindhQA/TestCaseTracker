@@ -7,6 +7,7 @@ import { GitHubConfigForm } from "@/components/github/github-config-form";
 import { Github, Settings, ExternalLink, Plus, Edit, ArrowLeft, Minimize2, Maximize2, RefreshCw, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { MainLayout } from "@/components/layout/main-layout";
 import {
   Table,
   TableBody,
@@ -107,17 +108,19 @@ export default function GitHubIntegrationPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header with navigation and control buttons */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">GitHub Integration</h1>
-            <p className="text-muted-foreground">
-              Manage GitHub integrations for your projects to create and sync issues automatically.
-            </p>
-          </div>
-        </div>
+    <MainLayout>
+      <div className="container mx-auto py-6">
+        <div className="space-y-6">
+          {/* Header with navigation and control buttons */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">GitHub Integration</h1>
+                <p className="text-muted-foreground">
+                  Manage GitHub integrations for your projects to create and sync issues automatically.
+                </p>
+              </div>
+            </div>
         <div className="flex items-center gap-2">
           <Button 
             variant="outline" 
@@ -236,12 +239,14 @@ export default function GitHubIntegrationPage() {
       </Card>
 
       {/* GitHub Configuration Form */}
-      <GitHubConfigForm
-        open={isConfigDialogOpen}
-        onOpenChange={setIsConfigDialogOpen}
-        projectId={editingConfig?.projectId || 0}
-        config={editingConfig}
-      />
-    </div>
+          <GitHubConfigForm
+            open={isConfigDialogOpen}
+            onOpenChange={setIsConfigDialogOpen}
+            projectId={editingConfig?.projectId || 0}
+            config={editingConfig}
+          />
+        </div>
+      </div>
+    </MainLayout>
   );
 }
