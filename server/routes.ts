@@ -1843,6 +1843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
+      // Ensure proper JSON response
       res.status(201).json(testCase);
     } catch (error) {
       console.error("Create test case error:", error);

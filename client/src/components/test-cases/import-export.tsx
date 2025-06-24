@@ -42,7 +42,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
   // Import mutation
   const importTestCasesMutation = useMutation({
     mutationFn: async (testCases: CSVTestCase[]) => {
-      const promises = testCases.map((testCase) => {
+      const promises = testCases.map(async (testCase) => {
         // Handle module ID more carefully
         let finalModuleId: number | null = null;
 
@@ -63,13 +63,23 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
           }
         }
 
-        // If we still don't have a valid module ID, the request will fail
-        // The server should handle this with proper validation
-        return apiRequest("POST", `/api/projects/${projectId}/test-cases`, {
-          ...testCase,
-          moduleId: finalModuleId,
-          projectId,
-        });
+        try {
+          const response = await apiRequest("POST", `/api/projects/${projectId}/test-cases`, {
+            ...testCase,
+            moduleId: finalModuleId,
+            projectId,
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+          }
+          
+          return response.json();
+        } catch (error) {
+          console.error('Failed to import test case:', error);
+          throw error;
+        }
       });
       return Promise.all(promises);
     },
@@ -978,11 +988,19 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       }
 
                       // Import valid test cases
-                      toast({
-                        title: "Importing test cases",
-                        description: `Importing ${newTestCases.length} new test cases...`,
-                      });
-                      importTestCasesMutation.mutate(newTestCases);
+                      if (newTestCases.length > 0) {
+                        toast({
+                          title: "Importing test cases",
+                          description: `Importing ${newTestCases.length} new test cases...`,
+                        });
+                        importTestCasesMutation.mutate(newTestCases);
+                      } else {
+                        toast({
+                          title: "No test cases to import",
+                          description: "All test cases were filtered out due to validation errors.",
+                          variant: "destructive",
+                        });
+                      }
                     },
                     error: (error: Error) => {
                       toast({

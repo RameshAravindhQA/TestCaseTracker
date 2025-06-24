@@ -33,12 +33,6 @@ export default function Login() {
             alt="NavaDhiti Logo" 
             className="h-auto w-64 mx-auto mb-4" 
           />
-          <h1 className="text-2xl font-bold tracking-tight">
-            Sign in to NavaDhiti
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Enter your credentials to access your account
-          </p>
         </div>
 
         <div className="flex flex-col space-y-4">

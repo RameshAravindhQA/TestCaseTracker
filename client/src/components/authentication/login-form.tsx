@@ -91,7 +91,7 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md mx-auto shadow-lg border border-gray-100">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Welcome Back</CardTitle>
+        <CardTitle className="text-2xl font-bold tracking-tight">Sign in to NavaDhiti</CardTitle>
         <CardDescription>
           Enter your credentials to access your account
         </CardDescription>

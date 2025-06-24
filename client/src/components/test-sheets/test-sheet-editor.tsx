@@ -193,15 +193,16 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         // Create a deep copy to ensure data persistence
         const dataToSave = {
           ...sheetData,
-          cells: JSON.parse(JSON.stringify(sheetData.cells)) // Deep clone
+          cells: JSON.parse(JSON.stringify(sheetData.cells)), // Deep clone
+          lastModified: new Date().toISOString()
         };
         console.log('Saving data:', dataToSave);
         saveSheetMutation.mutate(dataToSave);
       }
-    }, 2000); // Increased delay to allow for multiple quick changes
+    }, 1500); // Reduced delay for more responsive saving
 
     return () => clearTimeout(autoSaveTimer);
-  }, [sheetData.cells, sheetData.lastModified, saveSheetMutation]);
+  }, [sheetData.cells, sheetData.version, saveSheetMutation]);
 
   // Handle range selection
   const isInSelectedRange = (row: number, col: number): boolean => {
@@ -340,7 +341,9 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
 
   // Handle cell input blur (finish editing)
   const handleCellInputBlur = () => {
-    handleFormulaBarChange(formulaBarValue);
+    if (formulaBarValue !== '') {
+      handleFormulaBarChange(formulaBarValue);
+    }
     setIsEditing(false);
   };
 
@@ -850,7 +853,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
                           autoFocus
                         />
                       ) : (
-                        <span className="truncate w-full">
+                        <span className="truncate w-full" title={String(cellData.value || '')}>
                           {cellData.type === 'formula' ? cellData.value : (cellData.value || '')}
                         </span>
                       )}

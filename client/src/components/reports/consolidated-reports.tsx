@@ -330,21 +330,22 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       console.log(`Updating ${type} ${id} to status: ${status}`);
 
       try {
+        let response;
         if (type === 'testcase') {
-          const response = await apiRequest('PUT', `/api/test-cases/${id}`, { status });
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to update test case: ${response.status} - ${errorText}`);
-          }
-          return response.json();
+          response = await apiRequest('PUT', `/api/test-cases/${id}`, { status });
         } else {
-          const response = await apiRequest('PUT', `/api/bugs/${id}`, { status });
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to update bug: ${response.status} - ${errorText}`);
-          }
-          return response.json();
+          response = await apiRequest('PUT', `/api/bugs/${id}`, { status });
         }
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Status update failed for ${type} ${id}:`, errorText);
+          throw new Error(`Failed to update ${type}: ${response.status} - ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log(`Successfully updated ${type} ${id}:`, result);
+        return result;
       } catch (error) {
         console.error(`API call failed for ${type} ${id}:`, error);
         throw error;
@@ -1471,12 +1472,14 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                       <Select
                         value={item.status}
                         onValueChange={(newStatus) => {
-                          console.log('Status change triggered:', { item: item.id, newStatus });
-                          updateStatusMutation.mutate({
-                            itemId: item.id,
-                            type: item.type as 'testcase' | 'bug',
-                            status: newStatus
-                          });
+                          console.log('Status change triggered:', { item: item.id, newStatus, currentStatus: item.status });
+                          if (newStatus !== item.status) {
+                            updateStatusMutation.mutate({
+                              itemId: item.id,
+                              type: item.type as 'testcase' | 'bug',
+                              status: newStatus
+                            });
+                          }
                         }}
                         disabled={updateStatusMutation.isPending}
                       >
