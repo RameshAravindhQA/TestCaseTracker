@@ -157,10 +157,18 @@ export class DatabaseStorage implements IStorage {
 
     console.log('DB: Project modules found:', existingModules.length, 'for project:', data.projectId);
 
-    const nextNumber = existingModules.length + 1;
+    // Find the highest module number for this project to ensure proper sequencing
+    const existingNumbers = existingModules
+      .map(module => {
+        const match = module.moduleId?.match(/^MOD-(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(num => !isNaN(num));
+
+    const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
     const moduleId = `MOD-${nextNumber.toString().padStart(2, '0')}`;
 
-    console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId);
+    console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId, 'existing numbers:', existingNumbers);
 
     const [module] = await db
       .insert(modules)

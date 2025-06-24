@@ -310,11 +310,18 @@ class MemStorage implements IStorage {
 
       console.log('Project modules found:', projectModules.length, 'for project:', moduleData.projectId);
 
-      // Simply count existing modules and add 1 for the next sequential number
-      const nextNumber = projectModules.length + 1;
+      // Find the highest module number for this project to ensure proper sequencing
+      const existingNumbers = projectModules
+        .map(module => {
+          const match = module.moduleId?.match(/^MOD-(\d+)$/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(num => !isNaN(num));
+
+      const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
       moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
       
-      console.log('Generated module ID:', moduleId, 'for project:', moduleData.projectId);
+      console.log('Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'existing numbers:', existingNumbers);
     }
 
     const module: Module = {
