@@ -149,35 +149,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createModule(data: any): Promise<any> {
-    // Get the project to access its prefix
-    const [project] = await db.select().from(projects).where(eq(projects.id, data.projectId));
-    if (!project) {
-      throw new Error(`Project with ID ${data.projectId} not found`);
+    // Auto-generate module ID if not provided
+    let moduleId = data.moduleId;
+    if (!moduleId || moduleId.trim() === '') {
+      // Get the project to access its prefix
+      const [project] = await db.select().from(projects).where(eq(projects.id, data.projectId));
+      if (!project) {
+        throw new Error(`Project with ID ${data.projectId} not found`);
+      }
+
+      const projectPrefix = project.prefix || 'DEF'; // Default prefix if not set
+
+      // Get existing modules for this specific project only
+      const existingModules = await db
+        .select()
+        .from(modules)
+        .where(eq(modules.projectId, data.projectId));
+
+      console.log('DB: Project modules found:', existingModules.length, 'for project:', data.projectId);
+
+      // Find the highest module number for this project to ensure proper sequencing
+      const modulePattern = new RegExp(`^${projectPrefix}-MOD-(\\d+)$`);
+      const existingNumbers = existingModules
+        .map(module => {
+          const match = module.moduleId?.match(modulePattern);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(num => !isNaN(num));
+
+      const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+      moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
+
+      console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
     }
-
-    const projectPrefix = project.prefix || 'DEF'; // Default prefix if not set
-
-    // Get existing modules for this specific project only
-    const existingModules = await db
-      .select()
-      .from(modules)
-      .where(eq(modules.projectId, data.projectId));
-
-    console.log('DB: Project modules found:', existingModules.length, 'for project:', data.projectId);
-
-    // Find the highest module number for this project to ensure proper sequencing
-    const modulePattern = new RegExp(`^${projectPrefix}-MOD-(\\d+)$`);
-    const existingNumbers = existingModules
-      .map(module => {
-        const match = module.moduleId?.match(modulePattern);
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter(num => !isNaN(num));
-
-    const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-    const moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
-
-    console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
 
     const [module] = await db
       .insert(modules)
