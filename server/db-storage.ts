@@ -206,6 +206,8 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
 
+    console.log('DB: Created module with moduleId:', module.moduleId, 'and database ID:', module.id);
+
     return module;
   }
 
