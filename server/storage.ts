@@ -1847,8 +1847,7 @@ class MemStorage implements IStorage {
   async createGitHubConfig(data: any): Promise<any> {
     const config = {
       id: this.githubConfigs.length + 1,
-      ...```text
-data,
+      ...data,
       createdAt: new Date().toISOString(),
     };
     this.githubConfigs.push(config);
