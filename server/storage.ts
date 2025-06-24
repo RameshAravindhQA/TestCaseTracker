@@ -885,8 +885,7 @@ class MemStorage implements IStorage {
 
   // Activity operations
   async getActivities(limit = 10): Promise<any[]> {
-    return Array.from```text
-this.activities.values())
+    return Array.from(this.activities.values())
       .sort((a, b) => (b.timestamp || b.createdAt).getTime() - (a.timestamp || a.createdAt).getTime())
       .slice(0, limit);
   }
