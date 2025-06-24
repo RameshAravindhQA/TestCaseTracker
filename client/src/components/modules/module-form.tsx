@@ -58,11 +58,11 @@ export function ModuleForm({ module, projectId, onSuccess }: ModuleFormProps) {
       });
       // Store the project ID in localStorage for persistence
       localStorage.setItem('modules_selectedProjectId', JSON.stringify(projectId));
-      
+
       // Ensure we preserve the search query
       const savedQuery = localStorage.getItem('modules_searchQuery') || "";
       localStorage.setItem('modules_searchQuery', savedQuery);
-      
+
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/modules`] });
       form.reset();
       if (onSuccess) onSuccess();
@@ -88,11 +88,11 @@ export function ModuleForm({ module, projectId, onSuccess }: ModuleFormProps) {
       });
       // Store the project ID in localStorage for persistence
       localStorage.setItem('modules_selectedProjectId', JSON.stringify(projectId));
-      
+
       // Ensure we preserve the search query
       const savedQuery = localStorage.getItem('modules_searchQuery') || "";
       localStorage.setItem('modules_searchQuery', savedQuery);
-      
+
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/modules`] });
       if (onSuccess) onSuccess();
     },

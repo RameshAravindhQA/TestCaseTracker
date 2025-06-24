@@ -297,6 +297,10 @@ class MemStorage implements IStorage {
   }
 
   async createModule(moduleData: InsertModule): Promise<Module> {
+    const id = this.getNextId();
+    
+    console.log('Creating module with ID:', id, 'Data:', moduleData);
+    
     // Auto-generate module ID if not provided
     let moduleId = moduleData.moduleId;
     if (!moduleId || moduleId.trim() === '') {
@@ -318,7 +322,7 @@ class MemStorage implements IStorage {
 
       // Generate next sequential number starting from 1
       const nextNumber = maxNumber + 1;
-      moduleId = `MOD-${nextNumber}`;
+      moduleId = `MOD-${String(nextNumber).padStart(3, '0')}`;
     }
 
     const module: Module = {
@@ -328,7 +332,12 @@ class MemStorage implements IStorage {
       createdAt: new Date(),
     };
 
+    console.log('Module object created:', module);
+
     this.modules.set(id, module);
+    
+    console.log('Module stored, total modules:', this.modules.size);
+    
     return module;
   }
 
