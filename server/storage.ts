@@ -887,7 +887,7 @@ class MemStorage implements IStorage {
   }
 
   // CSV Export for Projects
-  async exportProjectsCSV(): Promise<any[]> {
+  async exportProjectsCSV(): Promise<any[]>{
     const projects = await this.getProjects();
     const exportData = [];
 
@@ -1903,8 +1903,80 @@ class MemStorage implements IStorage {
 // Create and export the storage instance
 console.log("🔄 Initializing in-memory storage...");
 const memStorage = new MemStorage();
+
+// Initialize database
+(memStorage as any).initializeDatabase = async function() {
+    console.log("🔄 Initializing database...");
+
+    try {
+      // Test connection first
+      //await this.testConnection(); // no testConnection method in MemStorage
+
+      // Create default super admin
+      await this.createDefaultSuperAdmin();
+
+      console.log("✅ Database initialized successfully");
+    } catch (error) {
+      console.error("❌ Database initialization failed:", error);
+      throw error;
+    }
+  };
+
+  // Create default super admin user
+(memStorage as any).createDefaultSuperAdmin = async function() {
+    const defaultAdminEmail = "ramesh@navadhiti.com";
+    const defaultAdminPassword = "P@ssw0rd";
+
+    try {
+      // Check if admin already exists
+      const existingAdmin = await this.getUserByEmail(defaultAdminEmail);
+
+      if (existingAdmin) {
+        console.log("ℹ️ Default super admin already exists");
+        return existingAdmin;
+      }
+
+      // Import bcrypt for password hashing
+      const bcrypt = await import("bcrypt");
+
+      // Hash the default password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(defaultAdminPassword, salt);
+
+      // Create the default super admin user
+      const adminUser = {
+        firstName: "Ramesh",
+        lastName: "Admin",
+        email: defaultAdminEmail,
+        password: hashedPassword,
+        role: "Admin" as const,
+        status: "Active" as const,
+        phoneNumber: null,
+        profilePicture: null,
+        theme: "light" as const,
+        lastLoginAt: null,
+        tempPassword: null,
+        tempPasswordUsed: null,
+        resetToken: null,
+        resetTokenExpires: null,
+        verificationToken: null,
+        verified: true
+      };
+
+      const createdAdmin = await this.createUser(adminUser);
+      console.log("✅ Default super admin created successfully:", defaultAdminEmail);
+
+      return createdAdmin;
+    } catch (error) {
+      console.error("❌ Failed to create default super admin:", error);
+      // Don't throw error to prevent app startup failure
+      return null;
+    }
+  };
+
 // Initialize with default data
 (memStorage as any).initializeDefaultData();
+
 export const storage: IStorage = memStorage;
 console.log("✅ In-memory storage initialized successfully");
 
