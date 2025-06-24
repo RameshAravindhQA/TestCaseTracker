@@ -45,6 +45,7 @@ export default function RecordPlaybackComponent() {
   const [scriptDescription, setScriptDescription] = useState('');
   const [scriptContent, setScriptContent] = useState('');
   const [scriptType, setScriptType] = useState('playwright');
+  const [recordingUrl, setRecordingUrl] = useState('https://www.google.com');
   
   // Fetch all projects for the project selector
   const { data: projects = [] } = useQuery({
@@ -60,7 +61,8 @@ export default function RecordPlaybackComponent() {
       const scriptId = `record-${Date.now()}`;
       
       const response = await apiRequest('POST', '/api/automation/record/start', {
-        scriptId
+        sessionId: scriptId,
+        url: recordingUrl || 'https://www.google.com'
       });
       
       const data = await response.json();
@@ -332,6 +334,19 @@ export default function RecordPlaybackComponent() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="recording-url">Website URL</Label>
+                <Input 
+                  id="recording-url" 
+                  placeholder="Enter website URL to record" 
+                  value={recordingUrl}
+                  onChange={(e) => setRecordingUrl(e.target.value)}
+                  disabled={recordingState.status !== 'idle'}
+                />
+              </div>
+            </div>
+            
             {recordingState.status === 'error' && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />

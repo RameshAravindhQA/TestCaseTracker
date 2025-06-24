@@ -14,6 +14,28 @@ export function stopAutomationService(): void {
   logger.info('Automation service stopped');
 }
 
+async function setupVirtualDisplay(): Promise<void> {
+  try {
+    const { exec } = require('child_process');
+    const util = require('util');
+    const execPromise = util.promisify(exec);
+    
+    // Start Xvfb virtual display
+    await execPromise('pkill Xvfb || true'); // Kill any existing Xvfb
+    await execPromise('Xvfb :99 -screen 0 1280x720x24 &');
+    
+    // Wait a moment for Xvfb to start
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Set DISPLAY environment variable
+    process.env.DISPLAY = ':99';
+    
+    logger.info('Virtual display setup completed');
+  } catch (error) {
+    logger.warn('Could not setup virtual display:', error);
+  }
+}
+
 export function automationServiceProxy(req: Request, res: Response, next: NextFunction) {
   // Handle automation endpoints
   if (req.path.startsWith('/api/automation/')) {
@@ -45,6 +67,9 @@ export async function startRecording(sessionId: string, url: string) {
   logger.info(`Starting real recording session ${sessionId} for URL: ${url}`);
 
   try {
+    // Setup virtual display
+    await setupVirtualDisplay();
+    
     // Import Playwright dynamically
     let playwright;
     try {
@@ -73,11 +98,13 @@ export async function startRecording(sessionId: string, url: string) {
         '--disable-blink-features=AutomationControlled',
         '--use-fake-ui-for-media-stream',
         '--use-fake-device-for-media-stream',
-        '--disable-extensions'
+        '--disable-extensions',
+        '--display=:99'
       ],
       env: {
-        DISPLAY: process.env.DISPLAY || ':99'
-      }
+        DISPLAY: ':99'
+      },
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
     });
 
     const context = await browser.newContext({

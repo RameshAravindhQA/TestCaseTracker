@@ -4156,10 +4156,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Playwright Automation Routes
   apiRouter.post("/automation/record/start", isAuthenticated, async (req, res) => {
     try {
-      const { sessionId, url, testCaseId, engine = 'playwright' } = req.body;
+      const { sessionId, url = 'https://www.google.com', testCaseId, engine = 'playwright' } = req.body;
       
-      if (!sessionId || !url) {
-        return res.status(400).json({ message: "Session ID and URL are required" });
+      if (!sessionId) {
+        return res.status(400).json({ message: "Session ID is required" });
       }
       
       // Import the automation service functions
