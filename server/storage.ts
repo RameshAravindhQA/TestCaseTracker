@@ -316,21 +316,22 @@ class MemStorage implements IStorage {
       const projectModules = Array.from(this.modules.values())
         .filter(module => module.projectId === moduleData.projectId);
 
-      console.log('Project modules found:', projectModules.length, 'for project:', moduleData.projectId);
+      console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix);
 
-      // Find the highest module number for this project to ensure proper sequencing
+      // Find the highest module number for this project with the correct prefix
       const modulePattern = new RegExp(`^${projectPrefix}-MOD-(\\d+)$`);
       const existingNumbers = projectModules
         .map(module => {
-          const match = module.moduleId?.match(modulePattern);
+          if (!module.moduleId) return 0;
+          const match = module.moduleId.match(modulePattern);
           return match ? parseInt(match[1], 10) : 0;
         })
-        .filter(num => !isNaN(num));
+        .filter(num => !isNaN(num) && num > 0);
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
       moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
       
-      console.log('Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
+      console.log('Storage: Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
     }
 
     const module: Module = {

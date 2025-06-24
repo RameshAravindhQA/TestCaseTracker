@@ -102,9 +102,9 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
     const formattedData = {
       ...data,
       prefix,
-      startDate: data.startDate ? new Date(data.startDate) : null,
-      endDate: data.endDate ? new Date(data.endDate) : null,
     };
+    
+    console.log('Submitting project with prefix:', prefix, 'for project:', data.name);
     
     if (isEditing) {
       updateProjectMutation.mutate(formattedData as any);

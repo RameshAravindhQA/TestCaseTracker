@@ -166,16 +166,17 @@ export class DatabaseStorage implements IStorage {
         .from(modules)
         .where(eq(modules.projectId, data.projectId));
 
-      console.log('DB: Project modules found:', existingModules.length, 'for project:', data.projectId);
+      console.log('DB: Project modules found:', existingModules.length, 'for project:', data.projectId, 'with prefix:', projectPrefix);
 
-      // Find the highest module number for this project to ensure proper sequencing
+      // Find the highest module number for this project with the correct prefix
       const modulePattern = new RegExp(`^${projectPrefix}-MOD-(\\d+)$`);
       const existingNumbers = existingModules
         .map(module => {
-          const match = module.moduleId?.match(modulePattern);
+          if (!module.moduleId) return 0;
+          const match = module.moduleId.match(modulePattern);
           return match ? parseInt(match[1], 10) : 0;
         })
-        .filter(num => !isNaN(num));
+        .filter(num => !isNaN(num) && num > 0);
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
       moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
