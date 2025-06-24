@@ -321,13 +321,23 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
   };
 
   // Download template for CSV imports
-  const downloadTemplateCSV = () => {
+  const downloadTemplateCSV = async () => {
     try {
+      // Get project prefix for template
+      let projectPrefix = 'BEG';
+      try {
+        const projectResponse = await apiRequest('GET', `/api/projects/${projectId}`);
+        const projectData = await projectResponse.json();
+        projectPrefix = projectData.prefix || 'BEG';
+      } catch (error) {
+        console.warn('Could not fetch project prefix, using default:', error);
+      }
+
       // Create template with all required columns and example data
       // Clearly marking REQUIRED vs OPTIONAL fields in the headers
       const templateData = [
         {
-          testCaseId: `${projectName ? projectName.substring(0, 3).toUpperCase() : 'BEG'}-REG-TC-001 (OPTIONAL - Generated automatically if not provided)`,
+          testCaseId: `${projectPrefix}-REG-TC-001 (OPTIONAL - Generated automatically if not provided)`,
           moduleId: moduleId ? moduleId.toString() + " (REQUIRED - Current module ID is set automatically)" : "(REQUIRED - Module ID number)",
           feature: "Login Feature (REQUIRED)",
           testObjective: "Verify user can login with valid credentials (REQUIRED)",
@@ -349,7 +359,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
           relatedBugs: "(OPTIONAL - Will be processed during import)"
         },
         {
-          testCaseId: `${projectName ? projectName.substring(0, 3).toUpperCase() : 'BEG'}-REG-TC-002`,
+          testCaseId: `${projectPrefix}-REG-TC-002`,
           moduleId: moduleId ? moduleId.toString() : "",
           feature: "Registration",
           testObjective: "Verify new user registration with valid information",
@@ -371,11 +381,6 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
           relatedBugs: ""
         }
       ];
-
-      // Get project prefix for template
-      const projectResponse = await apiRequest('GET', `/api/projects/${projectId}`);
-      const projectData = await projectResponse.json();
-      const projectPrefix = projectData.prefix || 'BEG';
 
       // Add more information at the top of the CSV file as comments
       let csvText = `# Test Case Import Template for ${projectName || 'Project'}\n`;
