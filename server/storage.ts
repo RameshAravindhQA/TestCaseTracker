@@ -304,14 +304,34 @@ class MemStorage implements IStorage {
     // Auto-generate module ID if not provided
     let moduleId = moduleData.moduleId;
     if (!moduleId || moduleId.trim() === '') {
+      // Get the project to access its details
+      const project = this.projects.get(moduleData.projectId);
+      if (!project) {
+        throw new Error(`Project with ID ${moduleData.projectId} not found`);
+      }
+
+      // Get project prefix (first 2-5 letters of project name, or use project.prefix if available)
+      let projectPrefix = project.prefix;
+      if (!projectPrefix) {
+        // Extract first 2-5 letters from project name
+        const cleanProjectName = project.name.replace(/[^a-zA-Z]/g, '');
+        if (cleanProjectName.length >= 5) {
+          projectPrefix = cleanProjectName.substring(0, 5).toUpperCase();
+        } else if (cleanProjectName.length >= 3) {
+          projectPrefix = cleanProjectName.substring(0, cleanProjectName.length).toUpperCase();
+        } else {
+          projectPrefix = cleanProjectName.toUpperCase().padEnd(3, 'X');
+        }
+      }
+
       // Get existing modules for this specific project only
       const projectModules = Array.from(this.modules.values())
         .filter(module => module.projectId === moduleData.projectId);
 
-      console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId);
+      console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix);
 
-      // Find the highest module number for this project
-      const modulePattern = /^MOD-(\d+)$/;
+      // Find the highest module number for this project with the correct prefix
+      const modulePattern = new RegExp(`^${projectPrefix}-MOD-(\\d+)$`);
       const existingNumbers = projectModules
         .map(module => {
           if (!module.moduleId) return 0;
@@ -321,9 +341,9 @@ class MemStorage implements IStorage {
         .filter(num => !isNaN(num) && num > 0);
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
+      moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
 
-      console.log('Storage: Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'existing numbers:', existingNumbers);
+      console.log('Storage: Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
     }
 
     const module: Module = {

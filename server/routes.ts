@@ -1438,9 +1438,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const modules = await storage.getModules(projectId);
       const sortedModules = modules.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       
-      // Update module IDs to start from 1
+      // Get project prefix
+      let projectPrefix = project.prefix;
+      if (!projectPrefix) {
+        // Extract first 2-5 letters from project name
+        const cleanProjectName = project.name.replace(/[^a-zA-Z]/g, '');
+        if (cleanProjectName.length >= 5) {
+          projectPrefix = cleanProjectName.substring(0, 5).toUpperCase();
+        } else if (cleanProjectName.length >= 3) {
+          projectPrefix = cleanProjectName.substring(0, cleanProjectName.length).toUpperCase();
+        } else {
+          projectPrefix = cleanProjectName.toUpperCase().padEnd(3, 'X');
+        }
+      }
+      
+      // Update module IDs to start from 01 with project prefix
       for (let i = 0; i < sortedModules.length; i++) {
-        const newModuleId = `MOD-${i + 1}`;
+        const newModuleId = `${projectPrefix}-MOD-${String(i + 1).padStart(2, '0')}`;
         await storage.updateModule(sortedModules[i].id, { moduleId: newModuleId });
       }
       

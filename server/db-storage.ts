@@ -152,13 +152,25 @@ export class DatabaseStorage implements IStorage {
     // Auto-generate module ID if not provided
     let moduleId = data.moduleId;
     if (!moduleId || moduleId.trim() === '') {
-      // Get the project to access its prefix
+      // Get the project to access its details
       const [project] = await db.select().from(projects).where(eq(projects.id, data.projectId));
       if (!project) {
         throw new Error(`Project with ID ${data.projectId} not found`);
       }
 
-      const projectPrefix = project.prefix || 'DEF'; // Default prefix if not set
+      // Get project prefix (first 2-5 letters of project name, or use project.prefix if available)
+      let projectPrefix = project.prefix;
+      if (!projectPrefix) {
+        // Extract first 2-5 letters from project name
+        const cleanProjectName = project.name.replace(/[^a-zA-Z]/g, '');
+        if (cleanProjectName.length >= 5) {
+          projectPrefix = cleanProjectName.substring(0, 5).toUpperCase();
+        } else if (cleanProjectName.length >= 3) {
+          projectPrefix = cleanProjectName.substring(0, cleanProjectName.length).toUpperCase();
+        } else {
+          projectPrefix = cleanProjectName.toUpperCase().padEnd(3, 'X');
+        }
+      }
 
       // Get existing modules for this specific project only
       const existingModules = await db
@@ -168,8 +180,8 @@ export class DatabaseStorage implements IStorage {
 
       console.log('DB: Project modules found:', existingModules.length, 'for project:', data.projectId, 'with prefix:', projectPrefix);
 
-      // Find the highest module number for this project
-      const modulePattern = /^MOD-(\d+)$/;
+      // Find the highest module number for this project with the correct prefix
+      const modulePattern = new RegExp(`^${projectPrefix}-MOD-(\\d+)$`);
       const existingNumbers = existingModules
         .map(module => {
           if (!module.moduleId) return 0;
@@ -179,9 +191,9 @@ export class DatabaseStorage implements IStorage {
         .filter(num => !isNaN(num) && num > 0);
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
+      moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
 
-      console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId, 'existing numbers:', existingNumbers);
+      console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
     }
 
     const [module] = await db
