@@ -327,7 +327,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
       // Clearly marking REQUIRED vs OPTIONAL fields in the headers
       const templateData = [
         {
-          testCaseId: "TC-001 (OPTIONAL - Generated automatically if not provided)",
+          testCaseId: `${projectName ? projectName.substring(0, 3).toUpperCase() : 'BEG'}-REG-TC-001 (OPTIONAL - Generated automatically if not provided)`,
           moduleId: moduleId ? moduleId.toString() + " (REQUIRED - Current module ID is set automatically)" : "(REQUIRED - Module ID number)",
           feature: "Login Feature (REQUIRED)",
           testObjective: "Verify user can login with valid credentials (REQUIRED)",
@@ -349,7 +349,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
           relatedBugs: "(OPTIONAL - Will be processed during import)"
         },
         {
-          testCaseId: "TC-002",
+          testCaseId: `${projectName ? projectName.substring(0, 3).toUpperCase() : 'BEG'}-REG-TC-002`,
           moduleId: moduleId ? moduleId.toString() : "",
           feature: "Registration",
           testObjective: "Verify new user registration with valid information",
@@ -372,6 +372,11 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
         }
       ];
       
+      // Get project prefix for template
+      const projectResponse = await apiRequest('GET', `/api/projects/${projectId}`);
+      const projectData = await projectResponse.json();
+      const projectPrefix = projectData.prefix || 'BEG';
+      
       // Add more information at the top of the CSV file as comments
       let csvText = `# Test Case Import Template for ${projectName || 'Project'}\n`;
       csvText += '# Generated on ' + new Date().toLocaleString() + '\n';
@@ -383,6 +388,11 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
       csvText += '# - expectedResult: What should happen when the test is passed\n';
       csvText += '# - status: Must be one of: "Not Executed", "Pass", "Fail", "Blocked"\n';
       csvText += '# - priority: Must be one of: "High", "Medium", "Low"\n';
+      csvText += '#\n# TEST CASE ID FORMAT:\n';
+      csvText += `# - testCaseId: Must follow format ${projectPrefix}-[MODULE]-TC-### (e.g., ${projectPrefix}-REG-TC-001)\n`;
+      csvText += `# - PROJECT PREFIX: ${projectPrefix} (automatically applied)\n`;
+      csvText += '# - MODULE PREFIX: 3-letter abbreviation of module name (e.g., REG for Registration)\n';
+      csvText += '# - TC-###: Sequential test case number with 3 digits (001, 002, etc.)\n';
       csvText += '#\n# The template below contains example data. Please replace with your actual test cases.\n';
       csvText += '#\n';
       
@@ -649,18 +659,82 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       const modulesValid = await validateModuleIds();
                       if (!modulesValid) return;
 
+                      // Get project and module information for validation
+                      const project = await apiRequest('GET', `/api/projects/${projectId}`);
+                      const projectData = await project.json();
+                      const projectPrefix = projectData.prefix || 'DEF';
+                      
+                      let currentModule = null;
+                      if (moduleId) {
+                        const moduleResponse = await apiRequest('GET', `/api/modules/${moduleId}`);
+                        currentModule = await moduleResponse.json();
+                      }
+                      
                       // Check for test case IDs that already exist in current test cases
                       const existingTestCaseIds = new Set(
                         Array.isArray(testCases) ? testCases.map(tc => tc?.testCaseId) : []
                       );
                       const duplicateIds: string[] = [];
+                      const invalidFormatIds: string[] = [];
                       const newTestCases: CSVTestCase[] = [];
+                      
+                      // Function to validate test case ID format
+                      const validateTestCaseIdFormat = (testCaseId: string, modulePrefix: string): boolean => {
+                        if (!testCaseId) return false;
+                        
+                        // Expected format: PROJECT-MODULE-TC-###
+                        const expectedPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-\\d{3}$`);
+                        return expectedPattern.test(testCaseId);
+                      };
+                      
+                      // Function to get module prefix from module name
+                      const getModulePrefix = (moduleName: string): string => {
+                        const cleanModuleName = moduleName.replace(/[^a-zA-Z]/g, '');
+                        let prefix = cleanModuleName.substring(0, 3).toUpperCase();
+                        if (prefix.length < 3) {
+                          prefix = prefix.padEnd(3, 'X');
+                        }
+                        return prefix;
+                      };
                       
                       // Process each row and separate duplicates from new test cases
                       parsedData.forEach((row, index) => {
+                        let modulePrefix = 'MOD'; // Default
+                        
+                        // Get module prefix from current module or try to determine from test case ID
+                        if (currentModule) {
+                          modulePrefix = getModulePrefix(currentModule.name);
+                        } else if (row.testCaseId) {
+                          // Try to extract module prefix from existing test case ID
+                          const parts = row.testCaseId.split('-');
+                          if (parts.length >= 3) {
+                            modulePrefix = parts[1];
+                          }
+                        }
+                        
                         // Add generated testCaseId if missing
                         if (!row.testCaseId) {
-                          row.testCaseId = `TC-${Date.now()}-${index + 1}`;
+                          // Find the highest existing number for this format
+                          const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
+                          const existingNumbers = Array.from(existingTestCaseIds)
+                            .filter(id => id && prefixPattern.test(id))
+                            .map(id => {
+                              const match = id.match(prefixPattern);
+                              return match ? parseInt(match[1], 10) : 0;
+                            })
+                            .filter(num => !isNaN(num));
+                          
+                          const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+                          row.testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
+                          
+                          // Add to existing set to avoid duplicates within this import
+                          existingTestCaseIds.add(row.testCaseId);
+                        } else {
+                          // Validate existing test case ID format
+                          if (!validateTestCaseIdFormat(row.testCaseId, modulePrefix)) {
+                            invalidFormatIds.push(row.testCaseId);
+                            return; // Skip this row
+                          }
                         }
                         
                         // Sanitize and standardize data
@@ -707,6 +781,15 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         }
                       });
                       
+                      // Show validation errors
+                      if (invalidFormatIds.length > 0) {
+                        toast({
+                          title: "Invalid test case ID format",
+                          description: `${invalidFormatIds.length} test cases have invalid ID format. Expected format: ${projectPrefix}-[MODULE]-TC-### (e.g., ${projectPrefix}-REG-TC-001). Invalid IDs: ${invalidFormatIds.slice(0, 3).join(", ")}${invalidFormatIds.length > 3 ? ` and ${invalidFormatIds.length - 3} more` : ''}.`,
+                          variant: "destructive",
+                        });
+                      }
+                      
                       // Warn about duplicate test case IDs
                       if (duplicateIds.length > 0) {
                         toast({
@@ -716,9 +799,12 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       }
                       
                       if (newTestCases.length === 0) {
+                        const totalSkipped = duplicateIds.length + invalidFormatIds.length;
                         toast({
                           title: "No test cases to import",
-                          description: "All test case IDs already exist in the system.",
+                          description: totalSkipped > 0 
+                            ? `All ${totalSkipped} test cases were skipped due to validation errors.`
+                            : "All test case IDs already exist in the system.",
                           variant: "destructive",
                         });
                         return;
