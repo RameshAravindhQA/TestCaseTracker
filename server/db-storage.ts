@@ -168,8 +168,8 @@ export class DatabaseStorage implements IStorage {
 
       console.log('DB: Project modules found:', existingModules.length, 'for project:', data.projectId, 'with prefix:', projectPrefix);
 
-      // Find the highest module number for this project with the correct prefix
-      const modulePattern = new RegExp(`^${projectPrefix}-MOD-(\\d+)$`);
+      // Find the highest module number for this project
+      const modulePattern = /^MOD-(\d+)$/;
       const existingNumbers = existingModules
         .map(module => {
           if (!module.moduleId) return 0;
@@ -179,9 +179,9 @@ export class DatabaseStorage implements IStorage {
         .filter(num => !isNaN(num) && num > 0);
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
+      moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
 
-      console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
+      console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId, 'existing numbers:', existingNumbers);
     }
 
     const [module] = await db

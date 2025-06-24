@@ -304,22 +304,14 @@ class MemStorage implements IStorage {
     // Auto-generate module ID if not provided
     let moduleId = moduleData.moduleId;
     if (!moduleId || moduleId.trim() === '') {
-      // Get the project to access its prefix
-      const project = this.projects.get(moduleData.projectId);
-      if (!project) {
-        throw new Error(`Project with ID ${moduleData.projectId} not found`);
-      }
-
-      const projectPrefix = project.prefix || 'DEF'; // Default prefix if not set
-
       // Get existing modules for this specific project only
       const projectModules = Array.from(this.modules.values())
         .filter(module => module.projectId === moduleData.projectId);
 
-      console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix);
+      console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId);
 
-      // Find the highest module number for this project with the correct prefix
-      const modulePattern = new RegExp(`^${projectPrefix}-MOD-(\\d+)$`);
+      // Find the highest module number for this project
+      const modulePattern = /^MOD-(\d+)$/;
       const existingNumbers = projectModules
         .map(module => {
           if (!module.moduleId) return 0;
@@ -329,9 +321,9 @@ class MemStorage implements IStorage {
         .filter(num => !isNaN(num) && num > 0);
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
+      moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
 
-      console.log('Storage: Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
+      console.log('Storage: Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'existing numbers:', existingNumbers);
     }
 
     const module: Module = {
@@ -1655,9 +1647,6 @@ class MemStorage implements IStorage {
 
     // Set counters to start fresh
     this.nextId = 2;
-    this.moduleCounter = 1;
-    this.testCaseCounter = 1;
-    this.bugCounter = 1;
 
     console.log("✅ Initialized clean storage with admin user only:", {
       users: this.users.size,
@@ -1700,9 +1689,6 @@ class MemStorage implements IStorage {
     this.customerProjects.clear();
     this.sprints.clear();
     this.nextId = 1;
-    this.moduleCounter = 1;
-    this.testCaseCounter = 1;
-    this.bugCounter = 1;
     this.testSheetIdCounter = 1;
     this.testSheets.clear(); // Clear test sheets during reset
 
