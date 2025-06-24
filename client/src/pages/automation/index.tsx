@@ -85,10 +85,13 @@ export default function AutomationPage() {
     enabled: !!selectedProjectId,
     queryFn: async () => {
       let url = `/api/projects/${selectedProjectId}/test-cases`;
-      if (selectedModuleId && selectedModuleId !== "all" && typeof selectedModuleId === "number") {
+      if (selectedModuleId && selectedModuleId !== "all" && selectedModuleId !== "" && typeof selectedModuleId === "number") {
         url += `?moduleId=${selectedModuleId}`;
       }
       const res = await apiRequest("GET", url);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch test cases: ${res.status}`);
+      }
       return res.json();
     },
   });
@@ -407,7 +410,9 @@ export default function AutomationPage() {
             isLoading={isProjectsLoading}
             selectedProjectId={selectedProjectId}
             onChange={(value) => {
-              setSelectedProjectId(parseInt(value));
+              const projectId = parseInt(value);
+              console.log('Selected project ID:', projectId);
+              setSelectedProjectId(projectId);
               setSelectedModuleId("");
               setSelectedTestCaseId("");
             }}
@@ -440,15 +445,25 @@ export default function AutomationPage() {
             disabled={!selectedProjectId}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select test case (optional)" />
+              <SelectValue placeholder={
+                isTestCasesLoading ? "Loading test cases..." : 
+                filteredTestCases?.length === 0 ? "No test cases available" :
+                "Select test case (optional)"
+              } />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">No specific test case</SelectItem>
-              {filteredTestCases?.map((testCase) => (
-                <SelectItem key={testCase.id} value={testCase.id.toString()}>
-                  {testCase.testCaseId} - {testCase.feature}
-                </SelectItem>
-              ))}
+              {isTestCasesLoading ? (
+                <SelectItem value="loading" disabled>Loading...</SelectItem>
+              ) : filteredTestCases?.length === 0 ? (
+                <SelectItem value="empty" disabled>No test cases found</SelectItem>
+              ) : (
+                filteredTestCases?.map((testCase) => (
+                  <SelectItem key={testCase.id} value={testCase.id.toString()}>
+                    {testCase.testCaseId} - {testCase.feature}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -466,12 +481,24 @@ export default function AutomationPage() {
                 <CardTitle>Automation Scripts</CardTitle>
               </CardHeader>
               <CardContent>
-                {isScriptsLoading ? (
+                {!selectedProjectId ? (
+                  <p className="text-center text-gray-500">Please select a project to view automation scripts.</p>
+                ) : isScriptsLoading ? (
                   <div className="text-center">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto" />
                   </div>
                 ) : scripts?.length === 0 ? (
-                  <p className="text-center text-gray-500">No automation scripts found. Start by recording a new script.</p>
+                  <div className="text-center">
+                    <p className="text-gray-500 mb-4">No automation scripts found for this project.</p>
+                    <p className="text-sm text-gray-400">Available test cases: {filteredTestCases?.length || 0}</p>
+                    <Button 
+                      onClick={() => setRecordingDialogOpen(true)} 
+                      variant="outline" 
+                      className="mt-2"
+                    >
+                      Start Recording a Script
+                    </Button>
+                  </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
