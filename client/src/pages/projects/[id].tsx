@@ -897,8 +897,7 @@ export default function ProjectDetailPage() {
 
             {selectedTestCase?.comments && (
               <div>
-                <h3``text
-className="text-sm font-medium">Comments</h3>
+                <h3 className="text-sm font-medium">Comments</h3>
                 <p className="text-sm text-gray-700 mt-1">{selectedTestCase.comments}</p>
               </div>
             )}
