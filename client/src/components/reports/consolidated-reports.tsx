@@ -315,26 +315,31 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
   });
 
-  // Mutation for updating status
+  // Mutation for updating status with proper error handling
   const updateStatusMutation = useMutation({
     mutationFn: async ({ itemId, type, status }: { itemId: string, type: 'testcase' | 'bug', status: string }) => {
       const id = itemId.split('-')[1];
       console.log(`Updating ${type} ${id} to status: ${status}`);
 
-      if (type === 'testcase') {
-        const response = await apiRequest('PATCH', `/api/test-cases/${id}`, { status });
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to update test case: ${response.status} - ${errorText}`);
+      try {
+        if (type === 'testcase') {
+          const response = await apiRequest('PATCH', `/api/test-cases/${id}`, { status });
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to update test case: ${response.status} - ${errorText}`);
+          }
+          return response.json();
+        } else {
+          const response = await apiRequest('PATCH', `/api/bugs/${id}`, { status });
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to update bug: ${response.status} - ${errorText}`);
+          }
+          return response.json();
         }
-        return response.json();
-      } else {
-        const response = await apiRequest('PATCH', `/api/bugs/${id}`, { status });
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to update bug: ${response.status} - ${errorText}`);
-        }
-        return response.json();
+      } catch (error) {
+        console.error(`API call failed for ${type} ${id}:`, error);
+        throw error;
       }
     },
     onMutate: async ({ itemId, status }) => {
@@ -1458,13 +1463,14 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                       <Select
                         value={item.status}
                         onValueChange={(newStatus) => {
-                          updateStatusMutationNew.mutate({
-                            id: parseInt(item.id.split('-')[1]),
-                            type: item.type === 'testcase' ? 'testCase' : 'bug',
+                          console.log('Status change triggered:', { item: item.id, newStatus });
+                          updateStatusMutation.mutate({
+                            itemId: item.id,
+                            type: item.type as 'testcase' | 'bug',
                             status: newStatus
                           });
                         }}
-                        disabled={updateStatusMutationNew.isPending}
+                        disabled={updateStatusMutation.isPending}
                       >
                         <SelectTrigger className={`w-32 border-0 ${getStatusColor(item.status, item.type)}`}>
                           <SelectValue placeholder={item.status} />

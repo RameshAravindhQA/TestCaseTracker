@@ -110,7 +110,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     };
   };
 
-  // Update cell data with enhanced persistence
+  // Update cell data with enhanced persistence and immediate state reflection
   const updateCell = useCallback((row: number, col: number, updates: Partial<CellData>) => {
     const cellId = getCellId(row, col);
     console.log('UpdateCell called - Row:', row, 'Col:', col, 'CellId:', cellId, 'Updates:', updates);
@@ -121,28 +121,36 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         ...currentCell, 
         ...updates,
         lastModified: new Date().toISOString(),
-        id: cellId 
+        id: cellId,
+        // Ensure value persistence
+        value: updates.value !== undefined ? updates.value : currentCell.value
       };
       
       console.log('UpdateCell - Previous cell:', currentCell, 'New cell:', newCell);
       
-      // Create completely new state object to force re-render
-      const newCells = {};
-      Object.keys(prev.cells).forEach(key => {
-        newCells[key] = { ...prev.cells[key] };
-      });
+      // Create completely new state object to force re-render and ensure persistence
+      const newCells = { ...prev.cells };
       newCells[cellId] = newCell;
       
       const newSheetData = {
         ...prev,
         cells: newCells,
-        lastModified: new Date().toISOString()
+        lastModified: new Date().toISOString(),
+        version: (prev.version || 0) + 1 // Add version tracking
       };
       
       console.log('UpdateCell - New sheet data:', newSheetData);
+      
+      // Immediately persist to localStorage as backup
+      try {
+        localStorage.setItem(`sheet_${sheet.id}_backup`, JSON.stringify(newSheetData));
+      } catch (error) {
+        console.warn('Failed to backup to localStorage:', error);
+      }
+      
       return newSheetData;
     });
-  }, []);
+  }, [sheet.id]);
 
   // Save sheet mutation with auto-save
   const saveSheetMutation = useMutation({
@@ -270,10 +278,9 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     setIsEditing(true);
   };
 
-  // Handle formula bar change with enhanced persistence
+  // Handle formula bar change with enhanced persistence and immediate UI update
   const handleFormulaBarChange = (value: string) => {
     console.log('Formula bar change:', value, 'Selected cell:', selectedCell);
-    setFormulaBarValue(value);
     
     if (selectedCell) {
       let cellValue: any = value;
@@ -312,12 +319,16 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
 
       console.log('Updating cell with:', { value: cellValue, type: cellType, formula });
       
+      // Update formula bar value immediately to reflect user input
+      setFormulaBarValue(value);
+      
       // Use updateCell function for better persistence
       updateCell(selectedCell.row, selectedCell.col, {
         value: cellValue,
         type: cellType,
         formula,
-        style: getCellData(selectedCell.row, selectedCell.col).style || {}
+        style: getCellData(selectedCell.row, selectedCell.col).style || {},
+        timestamp: new Date().toISOString() // Add timestamp for debugging
       });
     }
   };

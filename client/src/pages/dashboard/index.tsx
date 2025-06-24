@@ -1,6 +1,9 @@
-// Generate real-time data based on actual test cases and bugs
+// Generate real-time data based only on actual test cases and bugs
   const generateRealTimeData = () => {
-    if (!testCases || !bugs) return { testExecutionData: [], bugTrendData: [] };
+    // Return empty data if no actual test cases or bugs exist
+    if (!testCases || testCases.length === 0 || !bugs || bugs.length === 0) {
+      return { testExecutionData: [], bugTrendData: [] };
+    }
 
     const today = new Date();
     const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -23,10 +26,11 @@
 
       return {
         name: index === 6 ? 'Today' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        pass: pass || (index < 6 ? Math.floor(Math.random() * 20) + 10 : pass),
-        fail: fail || (index < 6 ? Math.floor(Math.random() * 10) + 2 : fail),
-        blocked: blocked || (index < 6 ? Math.floor(Math.random() * 5) + 1 : blocked),
-        notExecuted: notExecuted || (index < 6 ? Math.floor(Math.random() * 15) + 5 : notExecuted),
+        pass: pass,
+        fail: fail,
+        blocked: blocked,
+        notExecuted: notExecuted,
+        tests: pass + fail + blocked + notExecuted
       };
     });
 
@@ -43,10 +47,12 @@
 
       return {
         name: index === 6 ? 'Today' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        critical: critical || (index < 6 ? Math.floor(Math.random() * 3) : critical),
-        major: major || (index < 6 ? Math.floor(Math.random() * 5) + 2 : major),
-        minor: minor || (index < 6 ? Math.floor(Math.random() * 8) + 3 : minor),
-        trivial: trivial || (index < 6 ? Math.floor(Math.random() * 10) + 5 : trivial),
+        critical: critical,
+        major: major,
+        minor: minor,
+        trivial: trivial,
+        discovered: critical + major + minor + trivial,
+        resolved: dayBugs.filter(bug => bug.status === 'Resolved' || bug.status === 'Closed').length
       };
     });
 
@@ -96,25 +102,25 @@
           title="Total Projects"
           value={stats?.totalProjects || 0}
           icon={Folder}
-          trend={stats?.totalProjects > 0 ? "+20.1% from last month" : "Create your first project"}
+          trend={stats?.totalProjects > 0 ? "Active projects" : "Create your first project"}
         />
         <StatsCard
           title="Test Cases"
           value={stats?.totalTestCases || 0}
           icon={FileText}
-          trend={stats?.totalTestCases > 0 ? "+180.1% from last month" : "No test cases yet"}
+          trend={stats?.totalTestCases > 0 ? "Test cases created" : "No test cases yet"}
         />
         <StatsCard
           title="Open Bugs"
           value={stats?.openBugs || 0}
           icon={Bug}
-          trend={stats?.openBugs > 0 ? "+19% from last month" : "No open bugs"}
+          trend={stats?.openBugs > 0 ? "Requires attention" : "No open bugs"}
         />
         <StatsCard
           title="Pass Rate"
           value={`${stats?.passRate || 0}%`}
           icon={CheckCircle}
-          trend={stats?.passRate > 0 ? "+201 since last hour" : "No test results yet"}
+          trend={stats?.passRate > 0 ? "Current success rate" : "No test results yet"}
         />
       </div>
 {/* Charts Section */}

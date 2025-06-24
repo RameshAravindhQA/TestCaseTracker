@@ -338,7 +338,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
       const templateData = [
         {
           testCaseId: `${projectPrefix}-REG-TC-001 (OPTIONAL - Generated automatically if not provided)`,
-          moduleId: moduleId ? moduleId.toString() + " (REQUIRED - Current module ID is set automatically)" : "(REQUIRED - Module ID number)",
+          moduleId: moduleId ? `MOD-${String(moduleId).padStart(3, '0')} (REQUIRED - Current module ID is set automatically)` : "(REQUIRED - Module ID in format MOD-XXX)",
           feature: "Login Feature (REQUIRED)",
           testObjective: "Verify user can login with valid credentials (REQUIRED)",
           testSteps: "1. Navigate to login page\n2. Enter valid username\n3. Enter valid password\n4. Click login button (REQUIRED)",
@@ -549,25 +549,62 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                     complete: async (results: Papa.ParseResult<CSVTestCase>) => {
                       const parsedData = results.data;
 
-                      // Validate required fields
-                      const invalidRows = parsedData.filter(
-                        row => !row.feature || !row.testObjective || !row.testSteps || !row.expectedResult
-                      );
+                      // Enhanced validation with detailed error reporting
+                      const invalidRows = [];
+                      const errorDetails = [];
+
+                      parsedData.forEach((row, index) => {
+                        const missingFields = [];
+                        const rowNumber = index + 2; // +2 because index starts at 0 and first row is header
+
+                        if (!row.feature || String(row.feature).trim() === '') {
+                          missingFields.push('feature');
+                        }
+                        if (!row.testObjective || String(row.testObjective).trim() === '') {
+                          missingFields.push('testObjective');
+                        }
+                        if (!row.testSteps || String(row.testSteps).trim() === '') {
+                          missingFields.push('testSteps');
+                        }
+                        if (!row.expectedResult || String(row.expectedResult).trim() === '') {
+                          missingFields.push('expectedResult');
+                        }
+
+                        if (missingFields.length > 0) {
+                          invalidRows.push(row);
+                          errorDetails.push(`Row ${rowNumber}: Missing ${missingFields.join(', ')}`);
+                        }
+
+                        // Validate status values
+                        const validStatuses = ['Not Executed', 'Pass', 'Fail', 'Blocked'];
+                        if (row.status && !validStatuses.includes(row.status)) {
+                          errorDetails.push(`Row ${rowNumber}: Invalid status '${row.status}'. Valid values: ${validStatuses.join(', ')}`);
+                        }
+
+                        // Validate priority values
+                        const validPriorities = ['High', 'Medium', 'Low', 'Critical'];
+                        if (row.priority && !validPriorities.includes(row.priority)) {
+                          errorDetails.push(`Row ${rowNumber}: Invalid priority '${row.priority}'. Valid values: ${validPriorities.join(', ')}`);
+                        }
+                      });
+
+                      if (invalidRows.length > 0) {
+                        toast({
+                          title: "CSV Validation Failed",
+                          description: `Found ${invalidRows.length} invalid rows. Details: ${errorDetails.slice(0, 3).join('; ')}${errorDetails.length > 3 ? ` and ${errorDetails.length - 3} more errors` : ''}`,
+                          variant: "destructive",
+                        });
+                        return;
+                      }
 
                       const missingModuleRows = parsedData.filter(
                         row => !row.moduleId && !moduleId
                       );
 
-                      if (invalidRows.length > 0) {
-                        const missingFields = [];
-                        if (parsedData.some(row => !row.feature)) missingFields.push('feature');
-                        if (parsedData.some(row => !row.testObjective)) missingFields.push('testObjective');
-                        if (parsedData.some(row => !row.testSteps)) missingFields.push('testSteps');
-                        if (parsedData.some(row => !row.expectedResult)) missingFields.push('expectedResult');
-                        
+                      if (missingModuleRows.length > 0) {
                         toast({
-                          title: "Validation Error",
-                          description: `Found ${invalidRows.length} rows with missing required fields: ${missingFields.join(', ')}. Please check your CSV file and ensure all required fields are filled.`,
+                          title: "Module ID Missing",
+                          description: `Found ${missingModuleRows.length} rows without module ID. Please ensure moduleId is provided in CSV or select a specific module for import.`,
                           variant: "destructive",
                         });
                         return;
