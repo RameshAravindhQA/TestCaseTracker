@@ -1,4 +1,3 @@
-
 import { Request, Response, NextFunction } from 'express';
 import { logger } from './logger';
 
@@ -32,7 +31,7 @@ export async function installPlaywrightDeps(): Promise<void> {
     const { exec } = require('child_process');
     const util = require('util');
     const execPromise = util.promisify(exec);
-    
+
     await execPromise('npm install playwright');
     await execPromise('npx playwright install');
     logger.info('Playwright dependencies installed successfully');
@@ -44,7 +43,7 @@ export async function installPlaywrightDeps(): Promise<void> {
 // Real browser recording functions
 export async function startRecording(sessionId: string, url: string) {
   logger.info(`Starting real recording session ${sessionId} for URL: ${url}`);
-  
+
   try {
     // Import Playwright dynamically
     let playwright;
@@ -97,7 +96,7 @@ export async function startRecording(sessionId: string, url: string) {
     });
 
     const page = await context.newPage();
-    
+
     // Navigate to the URL
     await page.goto(url, { waitUntil: 'networkidle' });
 
@@ -166,7 +165,7 @@ function setupActionRecording(sessionId: string, page: any) {
 
 export async function stopRecording(sessionId: string) {
   logger.info(`Stopping recording session ${sessionId}`);
-  
+
   const session = recordingSessions.get(sessionId);
   if (!session) {
     return { status: 'not_found' };
@@ -176,20 +175,20 @@ export async function stopRecording(sessionId: string) {
     if (session.browser && session.context && session.page) {
       // Stop tracing and get the trace
       await session.context.tracing.stop({ path: `./recordings/trace-${sessionId}.zip` });
-      
+
       // Generate script from recorded actions
       const scriptContent = generateScriptFromActions(session.actions, session.url);
-      
+
       // Close browser
       await session.browser.close();
-      
+
       // Update session
       session.status = 'completed';
       session.scriptContent = scriptContent;
       session.endTime = new Date();
-      
+
       recordingSessions.set(sessionId, session);
-      
+
       logger.info(`Recording session ${sessionId} completed successfully`);
       return { status: 'completed', scriptContent };
     } else {
@@ -198,7 +197,7 @@ export async function stopRecording(sessionId: string) {
       session.scriptContent = generateMockScript(session.url);
       session.endTime = new Date();
       recordingSessions.set(sessionId, session);
-      
+
       return { status: 'completed', scriptContent: session.scriptContent };
     }
   } catch (error) {
@@ -216,7 +215,7 @@ function generateScriptFromActions(actions: any[], url: string): string {
   script += `  // Navigate to the page\n`;
   script += `  await page.goto('${url}');\n`;
   script += `  await page.waitForLoadState('networkidle');\n\n`;
-  
+
   actions.forEach((action, index) => {
     switch (action.type) {
       case 'click':
@@ -229,18 +228,18 @@ function generateScriptFromActions(actions: any[], url: string): string {
         break;
     }
   });
-  
+
   script += `\n  // Verify page is responsive\n`;
   script += `  await expect(page).toHaveTitle(/.*/); \n`;
   script += `  console.log('Test completed successfully');\n`;
   script += `});\n`;
-  
+
   return script;
 }
 
 function startMockRecording(sessionId: string, url: string) {
   logger.info(`Starting mock recording session ${sessionId} for URL: ${url}`);
-  
+
   recordingSessions.set(sessionId, {
     id: sessionId,
     url,
@@ -249,7 +248,7 @@ function startMockRecording(sessionId: string, url: string) {
     scriptContent: null,
     actions: []
   });
-  
+
   // Simulate recording completion after 15 seconds
   setTimeout(() => {
     const session = recordingSessions.get(sessionId);
@@ -261,7 +260,7 @@ function startMockRecording(sessionId: string, url: string) {
       logger.info(`Mock recording session ${sessionId} completed`);
     }
   }, 15000);
-  
+
   return { sessionId, status: 'started' };
 }
 
@@ -270,7 +269,7 @@ export function getRecordingStatus(sessionId: string) {
   if (!session) {
     return { status: 'not_found' };
   }
-  
+
   return {
     status: session.status,
     scriptContent: session.scriptContent,
@@ -282,14 +281,14 @@ export function getRecordingStatus(sessionId: string) {
 
 export function executeScript(sessionId: string, scriptContent: string) {
   logger.info(`Executing script for session ${sessionId}`);
-  
+
   executionSessions.set(sessionId, {
     id: sessionId,
     status: 'running',
     startTime: new Date(),
     scriptContent
   });
-  
+
   // Simulate execution completion after 10 seconds
   setTimeout(() => {
     const session = executionSessions.get(sessionId);
@@ -305,7 +304,7 @@ export function executeScript(sessionId: string, scriptContent: string) {
       logger.info(`Execution session ${sessionId} ${session.status}`);
     }
   }, 10000);
-  
+
   return { sessionId, status: 'started' };
 }
 
@@ -314,7 +313,7 @@ export function getExecutionStatus(sessionId: string) {
   if (!session) {
     return { status: 'not_found' };
   }
-  
+
   return {
     status: session.status,
     results: session.results,
@@ -329,18 +328,18 @@ function generateMockScript(url: string): string {
 test('recorded test for ${url}', async ({ page }) => {
   // Navigate to the page
   await page.goto('${url}');
-  
+
   // Wait for page to load
   await page.waitForLoadState('networkidle');
-  
+
   // Example interactions (these would be actual recorded actions)
   // await page.click('button[type="submit"]');
   // await page.fill('input[name="username"]', 'testuser');
   // await page.fill('input[name="password"]', 'testpass');
-  
+
   // Verify page title or content
   await expect(page).toHaveTitle(/.*/);
-  
+
   console.log('Test completed successfully');
 });`;
 }
