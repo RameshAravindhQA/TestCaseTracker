@@ -259,3 +259,13 @@ const getStatusGradient = (status: string): string => {
       return 'bg-gradient-to-br from-gray-800 via-gray-900 to-black text-white shadow-2xl border-gray-600/50';
   }
 };
+
+const getGradientClass = (severity: string) => {
+    const gradients = {
+      'Critical': 'bg-gradient-to-br from-red-700 to-red-900',
+      'Major': 'bg-gradient-to-br from-orange-700 to-orange-900', 
+      'Minor': 'bg-gradient-to-br from-yellow-600 to-yellow-800',
+      'Low': 'bg-gradient-to-br from-blue-700 to-blue-900'
+    };
+    return gradients[severity as keyof typeof gradients] || 'bg-gradient-to-br from-gray-700 to-gray-900';
+  };

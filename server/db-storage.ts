@@ -156,7 +156,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(modules.projectId, data.projectId));
 
     const nextNumber = existingModules.length + 1;
-    const moduleId = `MOD-${nextNumber.toString().padStart(3, '0')}`;
+    const moduleId = `MOD-${nextNumber.toString().padStart(2, '0')}`;
 
     const [module] = await db
       .insert(modules)

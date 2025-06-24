@@ -310,7 +310,7 @@ class MemStorage implements IStorage {
 
       // Simply count existing modules and add 1 for the next sequential number
       const nextNumber = projectModules.length + 1;
-      moduleId = `MOD-${String(nextNumber).padStart(3, '0')}`;
+      moduleId = `MOD-${String(nextNumber).padStart(2, '0')}`;
     }
 
     const module: Module = {
