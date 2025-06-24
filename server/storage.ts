@@ -879,19 +879,19 @@ class MemStorage implements IStorage {
       timestamp: new Date(),
     };
     this.activities.set(newActivity.id, newActivity);
-    return newActivity;
+    return```python
+newActivity;
   }
 
   // CSV Export for Projects
-  async exportProjectsCSV(): Promise<any[]>{
+  async exportProjectsCSV(): Promise<any[]> {
     const projects = await this.getProjects();
     const exportData = [];
 
     for (const project of projects) {
-      const modules = await this.getModules(project.id);
-      const testCases = await this.getTestCases(project.id);
-```
-      const bugs = await this.getBugs(project.id);
+      const modules = await this.getModulesByProject(project.id);
+      const testCases = await this.getTestCasesByProject(project.id);
+      const bugs = await this.getBugsByProject(project.id);
 
       exportData.push({
         projectId: project.id,
@@ -1844,7 +1844,7 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
     };
     this.githubConfigs.push(config);
-```
+
     return config;
   }
 
