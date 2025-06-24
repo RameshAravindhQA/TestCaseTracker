@@ -324,14 +324,24 @@ class MemStorage implements IStorage {
         }
       }
 
+      // Get module name prefix (first 3 letters of module name)
+      let modulePrefix = 'MOD';
+      if (moduleData.name) {
+        const cleanModuleName = moduleData.name.replace(/[^a-zA-Z]/g, '');
+        modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
+        if (modulePrefix.length < 3) {
+          modulePrefix = modulePrefix.padEnd(3, 'X');
+        }
+      }
+
       // Get existing modules for this specific project only
       const projectModules = Array.from(this.modules.values())
         .filter(module => module.projectId === moduleData.projectId);
 
       console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix);
 
-      // Find the highest module number for this project with the correct prefix
-      const modulePattern = new RegExp(`^${projectPrefix}-MOD-(\\d+)$`);
+      // Find the highest module number for this project with the correct prefix pattern
+      const modulePattern = new RegExp(`^${projectPrefix}-${modulePrefix}-MOD-(\\d+)$`);
       const existingNumbers = projectModules
         .map(module => {
           if (!module.moduleId) return 0;
@@ -341,9 +351,9 @@ class MemStorage implements IStorage {
         .filter(num => !isNaN(num) && num > 0);
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
+      moduleId = `${projectPrefix}-${modulePrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
 
-      console.log('Storage: Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
+      console.log('Storage: Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix, 'module prefix:', modulePrefix, 'existing numbers:', existingNumbers);
     }
 
     const module: Module = {
@@ -855,8 +865,7 @@ class MemStorage implements IStorage {
     return Array.from(this.customMarkers.values());
   }
 
-  async updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker```text
- | null> {
+  async updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null> {
     const marker = this.customMarkers.get(id);
     if (!marker) return null;
 

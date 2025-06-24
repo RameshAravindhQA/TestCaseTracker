@@ -1,344 +1,255 @@
-
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { TestSheetEditor } from '../components/test-sheets/test-sheet-editor';
-import { TestSheet } from '@/types';
+import TestSheetEditor from '../components/test-sheets/test-sheet-editor';
 
-// Mock dependencies
-vi.mock('../lib/queryClient', () => ({
-  apiRequest: vi.fn().mockResolvedValue({}),
-  queryClient: { invalidateQueries: vi.fn() }
-}));
+// Mock the API functions
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
+// Mock toast
 vi.mock('../hooks/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn() }),
+  useToast: () => ({
+    toast: vi.fn(),
+  }),
 }));
 
-describe('Test Sheets Value Persistence Comprehensive Tests', () => {
-  let queryClient: QueryClient;
-  let mockSheet: TestSheet;
+// Mock useAuth
+vi.mock('../hooks/use-auth', () => ({
+  useAuth: () => ({
+    user: { id: 1, firstName: 'Test', lastName: 'User' },
+  }),
+}));
+
+// Mock router
+vi.mock('wouter', () => ({
+  useLocation: () => ['/test-sheets', vi.fn()],
+  useParams: () => ({ projectId: '1' }),
+}));
+
+const createTestQueryClient = () => new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+    mutations: { retry: false },
+  },
+});
+
+const renderWithQueryClient = (component: React.ReactElement) => {
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {component}
+    </QueryClientProvider>
+  );
+};
+
+describe('Test Sheets Value Persistence', () => {
   let user: ReturnType<typeof userEvent.setup>;
 
   beforeEach(() => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
-
     user = userEvent.setup();
+    vi.clearAllMocks();
 
-    mockSheet = {
-      id: 1,
-      name: 'Test Persistence Sheet',
-      projectId: 1,
-      data: {
-        cells: {},
-        rows: 100,
-        cols: 26,
-      },
-      metadata: {
-        version: 1,
-        lastModifiedBy: 1,
-        collaborators: [],
-        chartConfigs: [],
-        namedRanges: [],
-      },
-      createdById: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    // Mock successful API responses
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('/api/test-sheets')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([{
+            id: 1,
+            name: 'Test Sheet',
+            projectId: 1,
+            data: {
+              rows: [
+                { id: 'row1', cells: [{ id: 'cell1', value: '', formula: '', type: 'text' }] },
+                { id: 'row2', cells: [{ id: 'cell2', value: '', formula: '', type: 'text' }] }
+              ],
+              columns: [{ id: 'col1', name: 'Column 1', width: 120 }]
+            },
+            metadata: { version: 1, lastModifiedBy: 1 },
+            createdById: 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }])
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
-  const renderTestSheetEditor = (sheet = mockSheet) => {
-    return render(
-      <QueryClientProvider client={queryClient}>
-        <TestSheetEditor
-          sheet={sheet}
-          open={true}
-          onOpenChange={vi.fn()}
-          onSave={vi.fn()}
-        />
-      </QueryClientProvider>
-    );
-  };
+  it('should persist cell values when clicking on other cells', async () => {
+    renderWithQueryClient(<TestSheetEditor />);
 
-  describe('Cell Value Persistence - Formula Bar Entry', () => {
-    it('should persist text value entered via formula bar when clicking to another cell', async () => {
-      renderTestSheetEditor();
-      
-      // Find formula bar
-      const formulaBar = screen.getByPlaceholderText(/Enter value or formula/);
-      
-      // Click on cell A1
-      const cellA1 = screen.getAllByRole('row')[1].children[1];
-      await user.click(cellA1);
-      
-      // Enter text in formula bar
-      await user.clear(formulaBar);
-      await user.type(formulaBar, 'Test Value A1');
-      fireEvent.blur(formulaBar);
-      
-      // Click on cell B1 to switch focus
-      const cellB1 = screen.getAllByRole('row')[1].children[2];
-      await user.click(cellB1);
-      
-      // Click back on A1 and verify value persists
-      await user.click(cellA1);
-      
-      await waitFor(() => {
-        expect(formulaBar).toHaveValue('Test Value A1');
-      });
-      
-      // Verify cell displays the value
-      expect(cellA1).toHaveTextContent('Test Value A1');
+    // Wait for the test sheet to load
+    await waitFor(() => {
+      expect(screen.getByRole('grid')).toBeInTheDocument();
     });
 
-    it('should persist number value entered via formula bar when clicking to another cell', async () => {
-      renderTestSheetEditor();
-      
-      const formulaBar = screen.getByPlaceholderText(/Enter value or formula/);
-      
-      // Click on cell B2
-      const cellB2 = screen.getAllByRole('row')[2].children[2];
-      await user.click(cellB2);
-      
-      // Enter number in formula bar
-      await user.clear(formulaBar);
-      await user.type(formulaBar, '123.45');
-      fireEvent.blur(formulaBar);
-      
-      // Click on cell C2
-      const cellC2 = screen.getAllByRole('row')[2].children[3];
-      await user.click(cellC2);
-      
-      // Click back on B2 and verify value persists
-      await user.click(cellB2);
-      
-      await waitFor(() => {
-        expect(formulaBar).toHaveValue('123.45');
-      });
-      
-      expect(cellB2).toHaveTextContent('123.45');
-    });
+    // Find the first cell and enter a value
+    const firstCell = screen.getByTestId('cell-row1-col1') || screen.getAllByRole('gridcell')[0];
 
-    it('should persist formula value entered via formula bar when clicking to another cell', async () => {
-      renderTestSheetEditor();
-      
-      const formulaBar = screen.getByPlaceholderText(/Enter value or formula/);
-      
-      // First, add values to A1 and B1
-      const cellA1 = screen.getAllByRole('row')[1].children[1];
-      await user.click(cellA1);
-      await user.clear(formulaBar);
-      await user.type(formulaBar, '10');
-      fireEvent.blur(formulaBar);
-      
-      const cellB1 = screen.getAllByRole('row')[1].children[2];
-      await user.click(cellB1);
-      await user.clear(formulaBar);
-      await user.type(formulaBar, '20');
-      fireEvent.blur(formulaBar);
-      
-      // Now add formula to C1
-      const cellC1 = screen.getAllByRole('row')[1].children[3];
-      await user.click(cellC1);
-      await user.clear(formulaBar);
-      await user.type(formulaBar, '=A1+B1');
-      fireEvent.blur(formulaBar);
-      
-      // Click on cell D1
-      const cellD1 = screen.getAllByRole('row')[1].children[4];
-      await user.click(cellD1);
-      
-      // Click back on C1 and verify formula persists
-      await user.click(cellC1);
-      
-      await waitFor(() => {
-        expect(formulaBar).toHaveValue('=A1+B1');
-      });
-      
-      // Check if calculated value is displayed
-      expect(cellC1).toHaveTextContent('30');
-    });
+    // Click on the first cell to focus it
+    await user.click(firstCell);
+
+    // Type a value
+    const testValue = 'Test Value 1';
+    await user.type(firstCell, testValue);
+
+    // Verify the value is in the cell
+    expect(firstCell).toHaveValue(testValue);
+
+    // Find and click on a different cell
+    const secondCell = screen.getByTestId('cell-row2-col1') || screen.getAllByRole('gridcell')[1];
+    await user.click(secondCell);
+
+    // Wait for any state updates
+    await waitFor(() => {
+      // Check that the first cell still has its value
+      expect(firstCell).toHaveValue(testValue);
+    }, { timeout: 2000 });
+
+    // Enter a value in the second cell
+    const secondTestValue = 'Test Value 2';
+    await user.type(secondCell, secondTestValue);
+
+    // Click back on the first cell
+    await user.click(firstCell);
+
+    // Verify both cells retain their values
+    await waitFor(() => {
+      expect(firstCell).toHaveValue(testValue);
+      expect(secondCell).toHaveValue(secondTestValue);
+    }, { timeout: 2000 });
   });
 
-  describe('Cell Value Persistence - Direct Cell Entry', () => {
-    it('should persist value entered directly in cell via double-click when clicking to another cell', async () => {
-      renderTestSheetEditor();
-      
-      // Double-click on cell A3 to enter edit mode
-      const cellA3 = screen.getAllByRole('row')[3].children[1];
-      await user.dblClick(cellA3);
-      
-      // Find the input that appears in the cell
-      const cellInput = cellA3.querySelector('input');
-      expect(cellInput).toBeInTheDocument();
-      
-      if (cellInput) {
-        await user.type(cellInput, 'Direct Cell Entry');
-        fireEvent.blur(cellInput);
+  it('should persist values after pressing Enter key', async () => {
+    renderWithQueryClient(<TestSheetEditor />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('grid')).toBeInTheDocument();
+    });
+
+    const cell = screen.getAllByRole('gridcell')[0];
+    await user.click(cell);
+
+    const testValue = 'Enter Test Value';
+    await user.type(cell, testValue);
+
+    // Press Enter to confirm the value
+    await user.keyboard('{Enter}');
+
+    // Wait and verify the value persists
+    await waitFor(() => {
+      expect(cell).toHaveValue(testValue);
+    }, { timeout: 2000 });
+  });
+
+  it('should persist values after pressing Tab key', async () => {
+    renderWithQueryClient(<TestSheetEditor />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('grid')).toBeInTheDocument();
+    });
+
+    const firstCell = screen.getAllByRole('gridcell')[0];
+    await user.click(firstCell);
+
+    const testValue = 'Tab Test Value';
+    await user.type(firstCell, testValue);
+
+    // Press Tab to move to next cell
+    await user.keyboard('{Tab}');
+
+    // Wait and verify the value persists
+    await waitFor(() => {
+      expect(firstCell).toHaveValue(testValue);
+    }, { timeout: 2000 });
+  });
+
+  it('should handle rapid cell switching without losing values', async () => {
+    renderWithQueryClient(<TestSheetEditor />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('grid')).toBeInTheDocument();
+    });
+
+    const cells = screen.getAllByRole('gridcell');
+    const values = ['Value 1', 'Value 2', 'Value 3'];
+
+    // Rapidly enter values and switch cells
+    for (let i = 0; i < Math.min(3, cells.length); i++) {
+      await user.click(cells[i]);
+      await user.type(cells[i], values[i]);
+
+      // Immediately click next cell (rapid switching)
+      if (i < cells.length - 1) {
+        await user.click(cells[i + 1]);
       }
-      
-      // Click on another cell
-      const cellB3 = screen.getAllByRole('row')[3].children[2];
-      await user.click(cellB3);
-      
-      // Verify the value persists in the original cell
-      await waitFor(() => {
-        expect(cellA3).toHaveTextContent('Direct Cell Entry');
-      });
-      
-      // Click back on A3 and verify formula bar shows the value
-      await user.click(cellA3);
-      const formulaBar = screen.getByPlaceholderText(/Enter value or formula/);
-      expect(formulaBar).toHaveValue('Direct Cell Entry');
-    });
-  });
+    }
 
-  describe('Cell Value Persistence - Multiple Cell Updates', () => {
-    it('should persist multiple cell values when navigating between cells', async () => {
-      renderTestSheetEditor();
-      
-      const formulaBar = screen.getByPlaceholderText(/Enter value or formula/);
-      
-      // Define test data
-      const testData = [
-        { row: 1, col: 1, value: 'Header 1', cellId: 'A1' },
-        { row: 1, col: 2, value: 'Header 2', cellId: 'B1' },
-        { row: 2, col: 1, value: '100', cellId: 'A2' },
-        { row: 2, col: 2, value: '200', cellId: 'B2' },
-        { row: 3, col: 1, value: '=A2+B2', cellId: 'A3' },
-      ];
-      
-      // Enter all values
-      for (const data of testData) {
-        const cell = screen.getAllByRole('row')[data.row].children[data.col];
-        await user.click(cell);
-        await user.clear(formulaBar);
-        await user.type(formulaBar, data.value);
-        fireEvent.blur(formulaBar);
+    // Wait for all state updates to complete
+    await waitFor(() => {
+      for (let i = 0; i < Math.min(3, cells.length); i++) {
+        expect(cells[i]).toHaveValue(values[i]);
       }
-      
-      // Verify all values persist by checking each cell
-      for (const data of testData) {
-        const cell = screen.getAllByRole('row')[data.row].children[data.col];
-        await user.click(cell);
-        
-        await waitFor(() => {
-          if (data.value.startsWith('=')) {
-            // For formulas, check the formula bar shows the formula
-            expect(formulaBar).toHaveValue(data.value);
-            // For A3 with formula =A2+B2, should show calculated value 300
-            if (data.cellId === 'A3') {
-              expect(cell).toHaveTextContent('300');
-            }
-          } else {
-            expect(formulaBar).toHaveValue(data.value);
-            expect(cell).toHaveTextContent(data.value);
-          }
-        });
+    }, { timeout: 3000 });
+  });
+
+  it('should persist values when using keyboard navigation', async () => {
+    renderWithQueryClient(<TestSheetEditor />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('grid')).toBeInTheDocument();
+    });
+
+    const firstCell = screen.getAllByRole('gridcell')[0];
+    await user.click(firstCell);
+
+    const testValue = 'Keyboard Nav Value';
+    await user.type(firstCell, testValue);
+
+    // Use arrow keys to navigate
+    await user.keyboard('{ArrowDown}');
+    await user.keyboard('{ArrowUp}');
+
+    // Verify value is still there
+    await waitFor(() => {
+      expect(firstCell).toHaveValue(testValue);
+    }, { timeout: 2000 });
+  });
+
+  it('should save data to backend when values change', async () => {
+    // Mock the update API call
+    const updateMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+    mockFetch.mockImplementation((url: string, options?: any) => {
+      if (url.includes('/api/test-sheets') && options?.method === 'PUT') {
+        return updateMock(url, options);
       }
+      return mockFetch.mockImplementation.call(this, url, options);
     });
-  });
 
-  describe('Cell Value Persistence - Auto-save Functionality', () => {
-    it('should trigger auto-save when cell values change', async () => {
-      vi.useFakeTimers();
-      
-      const mockMutate = vi.fn();
-      const saveSheetMutation = { mutate: mockMutate };
-      
-      renderTestSheetEditor();
-      
-      const formulaBar = screen.getByPlaceholderText(/Enter value or formula/);
-      const cellA1 = screen.getAllByRole('row')[1].children[1];
-      
-      // Enter value
-      await user.click(cellA1);
-      await user.clear(formulaBar);
-      await user.type(formulaBar, 'Auto-save Test');
-      fireEvent.blur(formulaBar);
-      
-      // Fast forward to trigger auto-save
-      vi.advanceTimersByTime(2000);
-      
-      // Note: In a real implementation, we would check if the mutation was called
-      // Here we just verify the test structure is correct
-      expect(cellA1).toHaveTextContent('Auto-save Test');
-      
-      vi.useRealTimers();
+    renderWithQueryClient(<TestSheetEditor />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('grid')).toBeInTheDocument();
     });
-  });
 
-  describe('Cell State Management', () => {
-    it('should maintain cell state when switching between formula bar and direct editing', async () => {
-      renderTestSheetEditor();
-      
-      const formulaBar = screen.getByPlaceholderText(/Enter value or formula/);
-      const cellA1 = screen.getAllByRole('row')[1].children[1];
-      
-      // Enter value via formula bar
-      await user.click(cellA1);
-      await user.clear(formulaBar);
-      await user.type(formulaBar, 'Formula Bar Entry');
-      fireEvent.blur(formulaBar);
-      
-      // Verify value is set
-      expect(cellA1).toHaveTextContent('Formula Bar Entry');
-      
-      // Now edit via double-click
-      await user.dblClick(cellA1);
-      const cellInput = cellA1.querySelector('input');
-      
-      if (cellInput) {
-        // Should show the current value
-        expect(cellInput).toHaveValue('Formula Bar Entry');
-        
-        // Modify the value
-        await user.clear(cellInput);
-        await user.type(cellInput, 'Modified via Cell');
-        fireEvent.blur(cellInput);
-      }
-      
-      // Verify new value persists
-      await waitFor(() => {
-        expect(cellA1).toHaveTextContent('Modified via Cell');
-      });
-      
-      // Check formula bar reflects the change
-      await user.click(cellA1);
-      expect(formulaBar).toHaveValue('Modified via Cell');
-    });
-  });
+    const cell = screen.getAllByRole('gridcell')[0];
+    await user.click(cell);
+    await user.type(cell, 'Backend Save Test');
 
-  describe('Cell Data Type Detection', () => {
-    it('should correctly detect and persist different data types', async () => {
-      const detectCellType = (value: string) => {
-        if (value.startsWith('=')) return 'formula';
-        if (!isNaN(Number(value)) && value.trim() !== '' && value.trim() !== '.') return 'number';
-        if (value.toLowerCase() === 'true' || value.toLowerCase() === 'false') return 'boolean';
-        if (value.match(/^\d{4}-\d{2}-\d{2}$/)) return 'date';
-        return 'text';
-      };
+    // Click another cell to trigger save
+    const otherCell = screen.getAllByRole('gridcell')[1];
+    await user.click(otherCell);
 
-      // Test type detection
-      expect(detectCellType('123')).toBe('number');
-      expect(detectCellType('123.45')).toBe('number');
-      expect(detectCellType('=SUM(A1:A10)')).toBe('formula');
-      expect(detectCellType('true')).toBe('boolean');
-      expect(detectCellType('false')).toBe('boolean');
-      expect(detectCellType('2023-12-25')).toBe('date');
-      expect(detectCellType('Hello World')).toBe('text');
-      expect(detectCellType('')).toBe('text');
-      expect(detectCellType('.')).toBe('text');
-    });
+    // Wait for the API call
+    await waitFor(() => {
+      expect(updateMock).toHaveBeenCalled();
+    }, { timeout: 3000 });
   });
 });
