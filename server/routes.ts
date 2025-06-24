@@ -1435,7 +1435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const modules = await storage.getModules(projectId);
+      const modules = await storage.getModulesByProject(projectId);
       const sortedModules = modules.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       
       // Get project prefix
@@ -1452,13 +1452,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      console.log(`Fixing module IDs for project "${project.name}" (ID: ${projectId})`);
+      console.log(`Using prefix: ${projectPrefix}`);
+      console.log(`Found ${sortedModules.length} modules to fix`);
+      
       // Update module IDs to start from 01 with project prefix
+      const updatedModules = [];
       for (let i = 0; i < sortedModules.length; i++) {
         const newModuleId = `${projectPrefix}-MOD-${String(i + 1).padStart(2, '0')}`;
-        await storage.updateModule(sortedModules[i].id, { moduleId: newModuleId });
+        console.log(`Updating module ${sortedModules[i].id}: ${sortedModules[i].moduleId} -> ${newModuleId}`);
+        const updatedModule = await storage.updateModule(sortedModules[i].id, { moduleId: newModuleId });
+        updatedModules.push(updatedModule);
       }
       
-      res.json({ message: `Fixed ${sortedModules.length} module IDs`, modules: sortedModules.length });
+      res.json({ 
+        message: `Fixed ${sortedModules.length} module IDs with prefix ${projectPrefix}`, 
+        modules: sortedModules.length,
+        prefix: projectPrefix,
+        updatedModules: updatedModules.map(m => ({ id: m?.id, moduleId: m?.moduleId, name: m?.name }))
+      });
     } catch (error) {
       console.error("Fix module IDs error:", error);
       res.status(500).json({ message: "Server error" });
