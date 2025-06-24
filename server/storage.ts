@@ -346,7 +346,11 @@ class MemStorage implements IStorage {
   }
 
   // Test case operations
-  async getTestCases(projectId?: number, moduleId?: number): Promise<TestCase[]> {
+  async getTestCases(): Promise<TestCase[]> {
+    return Array.from(this.testCases.values());
+  }
+
+  async getTestCasesByFilters(projectId?: number, moduleId?: number): Promise<TestCase[]> {
     let results = Array.from(this.testCases.values());
 
     if (projectId) {
@@ -357,7 +361,7 @@ class MemStorage implements IStorage {
       results = results.filter(tc => tc.moduleId === moduleId);
     }
 
-    console.log(`Storage: getTestCases(${projectId}, ${moduleId}) returning ${results.length} test cases`);
+    console.log(`Storage: getTestCasesByFilters(${projectId}, ${moduleId}) returning ${results.length} test cases`);
     return results;
   }
 
@@ -498,7 +502,7 @@ class MemStorage implements IStorage {
     return this.bugs.get(id);
   }
 
-  async getBugs(filters?: { projectId?: number; status?: string; severity?: string }): Promise<Bug[]> {
+  async getBugsWithFilters(filters?: { projectId?: number; status?: string; severity?: string }): Promise<Bug[]> {
     let bugs = Array.from(this.bugs.values());
 
     if (filters?.projectId) {
@@ -900,7 +904,8 @@ class MemStorage implements IStorage {
         totalBugs: bugs.length,
         modules: modules.map(m => m.name).join(';'),
         testCases: testCases.map(tc => `${tc.testCaseId}:${tc.title}`).join(';'),
-        bugs: bugs.map(b => `${b.bugId}:${b.title}`).join(';')      });
+        bugs: bugs.map(b => `${b.bugId}:${b.title}`).join(';')
+      });
     }
 
     return exportData;
@@ -1824,10 +1829,6 @@ class MemStorage implements IStorage {
   }
 
    // GitHub Integration methods
-  async getAllGitHubConfigs(): Promise<any[]> {
-    return this.githubConfigs;
-  }
-
   async getAllGitHubConfigs(): Promise<any[]> {
     return this.githubConfigs;
   }
