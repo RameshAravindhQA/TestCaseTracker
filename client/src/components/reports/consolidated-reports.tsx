@@ -235,7 +235,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const updateTestCaseMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
       try {
-        const res = await apiRequest("PATCH", `/api/test-cases/${id}`, { status });
+        const res = await apiRequest("PUT", `/api/test-cases/${id}`, { status });
         if (!res.ok) {
           const errorText = await res.text();
           throw new Error(`Failed to update test case: ${res.status} - ${errorText}`);
@@ -248,6 +248,10 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
+      toast({
+        title: "Status updated",
+        description: "Test case status updated successfully.",
+      });
     },
     onError: (error: any) => {
       console.error('Test case update error:', error);
@@ -263,7 +267,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const updateBugMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
       try {
-        const res = await apiRequest("PATCH", `/api/bugs/${id}`, { status });
+        const res = await apiRequest("PUT", `/api/bugs/${id}`, { status });
         if (!res.ok) {
           const errorText = await res.text();
           throw new Error(`Failed to update bug: ${res.status} - ${errorText}`);
@@ -276,6 +280,10 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+      toast({
+        title: "Status updated",
+        description: "Bug status updated successfully.",
+      });
     },
     onError: (error: any) => {
       console.error('Bug update error:', error);
@@ -323,14 +331,14 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
       try {
         if (type === 'testcase') {
-          const response = await apiRequest('PATCH', `/api/test-cases/${id}`, { status });
+          const response = await apiRequest('PUT', `/api/test-cases/${id}`, { status });
           if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`Failed to update test case: ${response.status} - ${errorText}`);
           }
           return response.json();
         } else {
-          const response = await apiRequest('PATCH', `/api/bugs/${id}`, { status });
+          const response = await apiRequest('PUT', `/api/bugs/${id}`, { status });
           if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`Failed to update bug: ${response.status} - ${errorText}`);

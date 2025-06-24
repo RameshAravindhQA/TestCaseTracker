@@ -539,7 +539,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
             <Button
               type="button"
               disabled={importTestCasesMutation.isPending}
-              onClick={() => {
+              onClick={async () => {
                 if (fileRef.current?.files?.length) {
                   // If a file is already selected, start import
                   const file = fileRef.current.files[0];

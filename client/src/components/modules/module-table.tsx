@@ -70,7 +70,7 @@ export function ModuleTable({ modules, projectId, onEdit, onDelete, onViewTestCa
               >
                 <TableCell className="font-medium text-muted-foreground">
                   <span className="font-mono text-sm bg-blue-50 px-2 py-1 rounded border">
-                    MOD-{String(module.id).padStart(3, '0')}
+                    {module.moduleId || `MOD-${String(module.id).padStart(3, '0')}`}
                   </span>
                 </TableCell>
                 <TableCell className="font-medium">

@@ -131,3 +131,14 @@ export interface NamedRange {
 // Flow Diagram Types
 export interface FlowDiagram {
 }
+
+export interface Module {
+  id: number;
+  moduleId?: string;
+  name: string;
+  description?: string;
+  projectId: number;
+  status: "Active" | "Completed" | "On Hold";
+  createdAt: string;
+  updatedAt: string;
+}
