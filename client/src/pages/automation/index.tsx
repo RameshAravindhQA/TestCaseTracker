@@ -435,15 +435,15 @@ export default function AutomationPage() {
           </Select>
 
           <Select
-            value={selectedTestCaseId ? selectedTestCaseId.toString() : ""}
-            onValueChange={(value) => setSelectedTestCaseId(value ? parseInt(value) : "")}
+            value={selectedTestCaseId ? selectedTestCaseId.toString() : "none"}
+            onValueChange={(value) => setSelectedTestCaseId(value === "none" ? "" : parseInt(value))}
             disabled={!selectedProjectId}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select test case (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No specific test case</SelectItem>
+              <SelectItem value="none">No specific test case</SelectItem>
               {filteredTestCases?.map((testCase) => (
                 <SelectItem key={testCase.id} value={testCase.id.toString()}>
                   {testCase.testCaseId} - {testCase.feature}
