@@ -153,11 +153,10 @@ export class DatabaseStorage implements IStorage {
     // Auto-generate module ID if not provided
     let moduleId = insertModule.moduleId;
     if (!moduleId || moduleId.trim() === '') {
-      // Get existing modules for this specific project only, ordered by creation date
+      // Get existing modules for this specific project only
       const existingModules = await db.select()
         .from(modules)
-        .where(eq(modules.projectId, insertModule.projectId))
-        .orderBy(modules.createdAt);
+        .where(eq(modules.projectId, insertModule.projectId));
       
       // Simply count existing modules and add 1 for the next sequential number (starting from 1)
       const nextNumber = existingModules.length + 1;
