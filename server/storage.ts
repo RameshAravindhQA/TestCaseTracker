@@ -311,7 +311,7 @@ class MemStorage implements IStorage {
       }
 
       const projectPrefix = project.prefix || 'DEF'; // Default prefix if not set
-      
+
       // Get existing modules for this specific project only
       const projectModules = Array.from(this.modules.values())
         .filter(module => module.projectId === moduleData.projectId);
@@ -330,7 +330,7 @@ class MemStorage implements IStorage {
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
       moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
-      
+
       console.log('Storage: Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
     }
 
@@ -407,13 +407,13 @@ class MemStorage implements IStorage {
       // Get the module and project to build the test case ID
       const module = this.modules.get(insertTestCase.moduleId);
       const project = this.projects.get(insertTestCase.projectId);
-      
+
       if (!module || !project) {
         throw new Error(`Module or Project not found`);
       }
 
       const projectPrefix = project.prefix || 'DEF';
-      
+
       // Get module name prefix (first 3 letters of module name)
       let modulePrefix = 'MOD';
       if (module.name) {
@@ -1636,9 +1636,9 @@ class MemStorage implements IStorage {
     this.activities.set(activity.id, activity);
   }
 
-  // Initialize with some default data
+  // Initialize with default data
   private initializeDefaultData() {
-    // Add default admin user
+    // Add default admin user only
     const defaultAdmin = {
       id: 1,
       firstName: "Admin",
@@ -1653,166 +1653,13 @@ class MemStorage implements IStorage {
 
     this.users.set(1, defaultAdmin);
 
-    // Add a sample project
-    const sampleProject = {
-      id: 1,
-      name: "Sample Test Project",
-      description: "A sample project for testing consolidated reports",
-      prefix: "SMP",
-      status: "Active",
-      createdById: 1,
-      createdAt: new Date(),
-    };
-    this.projects.set(1, sampleProject);
+    // Set counters to start fresh
+    this.nextId = 2;
+    this.moduleCounter = 1;
+    this.testCaseCounter = 1;
+    this.bugCounter = 1;
 
-    // Add sample modules
-    const authModule = {
-      id: 1,
-      moduleId: "SMP-MOD-01",
-      name: "Authentication",
-      projectId: 1,
-      description: "User authentication and authorization",
-      status: "Active",
-      createdAt: new Date(),
-    };
-    const dashboardModule = {
-      id: 2,
-      moduleId: "SMP-MOD-02", 
-      name: "Dashboard",
-      projectId: 1,
-      description: "Main dashboard functionality",
-      status: "Active",
-      createdAt: new Date(),
-    };
-    this.modules.set(1, authModule);
-    this.modules.set(2, dashboardModule);
-
-    // Add sample test cases
-    const testCase1 = {
-      id: 1,
-      testCaseId: "SMP-AUT-TC-001",
-      moduleId: 1,
-      projectId: 1,
-      feature: "User Login",
-      scenario: "Valid user credentials",
-      title: "Login with valid credentials",
-      description: "Test login functionality with valid username and password",
-      steps: "1. Navigate to login page\n2. Enter valid credentials\n3. Click login",
-      expectedResult: "User should be logged in successfully",
-      status: "Pass",
-      priority: "High",
-      assignedTo: 1,
-      createdById: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const testCase2 = {
-      id: 2,
-      testCaseId: "SMP-AUT-TC-002",
-      moduleId: 1,
-      projectId: 1,
-      feature: "User Login",
-      scenario: "Invalid user credentials",
-      title: "Login with invalid credentials",
-      description: "Test login functionality with invalid credentials",
-      steps: "1. Navigate to login page\n2. Enter invalid credentials\n3. Click login",
-      expectedResult: "Should show error message",
-      status: "Fail",
-      priority: "High",
-      assignedTo: 1,
-      createdById: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const testCase3 = {
-      id: 3,
-      testCaseId: "SMP-DAS-TC-001",
-      moduleId: 2,
-      projectId: 1,
-      feature: "Dashboard",
-      scenario: "Load dashboard data",
-      title: "Dashboard data loading",
-      description: "Test dashboard loads with proper data",
-      steps: "1. Login to application\n2. Navigate to dashboard\n3. Verify data loads",
-      expectedResult: "Dashboard should display all data correctly",
-      status: "Blocked",
-      priority: "Medium",
-      assignedTo: 1,
-      createdById: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    this.testCases.set(1, testCase1);
-    this.testCases.set(2, testCase2);
-    this.testCases.set(3, testCase3);
-
-    // Add sample bugs
-    const bug1 = {
-      id: 1,
-      bugId: "BUG-001",
-      moduleId: 1,
-      projectId: 1,
-      title: "Login button not responsive",
-      description: "Login button does not respond to clicks on mobile devices",
-      severity: "Critical",
-      priority: "High",
-      status: "Open",
-      assignedTo: 1,
-      reportedById: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const bug2 = {
-      id: 2,
-      bugId: "BUG-002",
-      moduleId: 2,
-      projectId: 1,
-      title: "Dashboard loading slowly",
-      description: "Dashboard takes too long to load on first visit",
-      severity: "Major",
-      priority: "Medium",
-      status: "In Progress",
-      assignedTo: 1,
-      reportedById: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const bug3 = {
-      id: 3,
-      bugId: "BUG-003",
-      moduleId: 1,
-      projectId: 1,
-      title: "Password reset email format",
-      description: "Password reset email has incorrect formatting",
-      severity: "Minor",
-      priority: "Low",
-      status: "Resolved",
-      assignedTo: 1,
-      reportedById: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    this.bugs.set(1, bug1);
-    this.bugs.set(2, bug2);
-    this.bugs.set(3, bug3);
-
-    // Add project member
-    this.addProjectMember({
-      projectId: 1,
-      userId: 1,
-      role: "Admin",
-    });
-
-    this.nextId = 10;
-    this.moduleCounter = 3;
-
-    console.log("✅ Initialized sample data:", {
+    console.log("✅ Initialized clean storage with admin user only:", {
       users: this.users.size,
       projects: this.projects.size,
       modules: this.modules.size,
