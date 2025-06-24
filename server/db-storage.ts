@@ -187,8 +187,8 @@ export class DatabaseStorage implements IStorage {
     const [module] = await db
       .insert(modules)
       .values({
-        moduleId,
         ...data,
+        moduleId,
         createdAt: new Date(),
         updatedAt: new Date(),
       })

@@ -97,7 +97,15 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
 
   const onSubmit = (data: ProjectFormValues) => {
     // Auto-generate prefix from project name (first 3 letters, uppercase)
-    const prefix = data.name.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase().padEnd(3, 'X');
+    const cleanName = data.name.replace(/[^a-zA-Z]/g, '');
+    let prefix = cleanName.substring(0, 3).toUpperCase();
+    
+    // If we don't have 3 letters, pad with 'X' or use 'DEF' if completely empty
+    if (prefix.length === 0) {
+      prefix = 'DEF';
+    } else if (prefix.length < 3) {
+      prefix = prefix.padEnd(3, 'X');
+    }
     
     const formattedData = {
       ...data,
