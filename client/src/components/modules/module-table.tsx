@@ -68,7 +68,7 @@ export function ModuleTable({ modules, projectId, onEdit, onDelete, onViewTestCa
                 
               >
                 <TableCell className="font-medium text-muted-foreground">
-                  MOD-{module.id}
+                  {module.moduleId || `MOD-${module.id}`}
                 </TableCell>
                 <TableCell className="font-medium">
                   <div 
