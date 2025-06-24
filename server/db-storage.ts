@@ -1,4 +1,3 @@
-
 import { db } from './db';
 import { 
   type User, type InsertUser,
@@ -44,7 +43,7 @@ import { eq, and, desc, asc } from 'drizzle-orm';
  * Complete PostgreSQL database storage implementation
  */
 export class DatabaseStorage implements IStorage {
-  
+
   // User operations
   async getUser(id: number): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.id, id));
@@ -95,9 +94,9 @@ export class DatabaseStorage implements IStorage {
     const userProjectIds = await db.select({ projectId: projectMembers.projectId })
       .from(projectMembers)
       .where(eq(projectMembers.userId, userId));
-    
+
     if (userProjectIds.length === 0) return [];
-    
+
     return await db.select().from(projects)
       .where(eq(projects.id, userProjectIds[0].projectId));
   }
@@ -149,26 +148,27 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async createModule(insertModule: InsertModule): Promise<Module> {
-    // Auto-generate module ID if not provided
-    let moduleId = insertModule.moduleId;
-    if (!moduleId || moduleId.trim() === '') {
-      // Get existing modules for this specific project only
-      const existingModules = await db.select()
-        .from(modules)
-        .where(eq(modules.projectId, insertModule.projectId));
-      
-      // Simply count existing modules and add 1 for the next sequential number (starting from 1)
-      const nextNumber = existingModules.length + 1;
-      moduleId = `MOD-${nextNumber}`;
-    }
+  async createModule(data: any): Promise<any> {
+    // Get existing modules for this project to determine the next sequential number
+    const existingModules = await db
+      .select()
+      .from(modules)
+      .where(eq(modules.projectId, data.projectId));
 
-    const [newModule] = await db.insert(modules).values({
-      ...insertModule,
-      moduleId,
-      createdAt: new Date()
-    }).returning();
-    return newModule;
+    const nextNumber = existingModules.length + 1;
+    const moduleId = `MOD-${nextNumber.toString().padStart(3, '0')}`;
+
+    const [module] = await db
+      .insert(modules)
+      .values({
+        moduleId,
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    return module;
   }
 
   async updateModule(id: number, moduleData: Partial<Module>): Promise<Module | undefined> {
@@ -326,7 +326,7 @@ export class DatabaseStorage implements IStorage {
   // TimeSheet operations
   async getTimeSheets(projectId?: number, userId?: number): Promise<TimeSheet[]> {
     let query = db.select().from(timeSheets);
-    
+
     if (projectId && userId) {
       return await query.where(and(eq(timeSheets.projectId, projectId), eq(timeSheets.userId, userId)));
     } else if (projectId) {
@@ -334,7 +334,7 @@ export class DatabaseStorage implements IStorage {
     } else if (userId) {
       return await query.where(eq(timeSheets.userId, userId));
     }
-    
+
     return await query;
   }
 
@@ -519,9 +519,9 @@ export class DatabaseStorage implements IStorage {
     const projectIds = await db.select({ projectId: customerProjects.projectId })
       .from(customerProjects)
       .where(eq(customerProjects.customerId, customerId));
-    
+
     if (projectIds.length === 0) return [];
-    
+
     return await db.select().from(projects)
       .where(eq(projects.id, projectIds[0].projectId));
   }
@@ -530,9 +530,9 @@ export class DatabaseStorage implements IStorage {
     const customerIds = await db.select({ customerId: customerProjects.customerId })
       .from(customerProjects)
       .where(eq(customerProjects.projectId, projectId));
-    
+
     if (customerIds.length === 0) return [];
-    
+
     return await db.select().from(customers)
       .where(eq(customers.id, customerIds[0].customerId));
   }
@@ -561,13 +561,13 @@ export class DatabaseStorage implements IStorage {
     const projectsResult = await db.select().from(projects);
     const testCasesResult = await db.select().from(testCases);
     const bugsResult = await db.select().from(bugs);
-    
+
     const totalProjects = projectsResult.length;
     const totalTestCases = testCasesResult.length;
     const passedTests = testCasesResult.filter(tc => tc.status === 'Pass').length;
     const openBugs = bugsResult.filter(bug => bug.status === 'Open' || bug.status === 'In Progress').length;
     const passRate = totalTestCases > 0 ? Math.round((passedTests / totalTestCases) * 100) : 0;
-    
+
     return {
       totalProjects,
       totalTestCases,
@@ -742,7 +742,7 @@ export class DatabaseStorage implements IStorage {
   // Kanban Column operations
   async getKanbanColumns(projectId?: number, sprintId?: number): Promise<KanbanColumn[]> {
     let query = db.select().from(kanbanColumns);
-    
+
     if (projectId && sprintId) {
       return await query.where(and(eq(kanbanColumns.projectId, projectId), eq(kanbanColumns.sprintId, sprintId)));
     } else if (projectId) {
@@ -750,7 +750,7 @@ export class DatabaseStorage implements IStorage {
     } else if (sprintId) {
       return await query.where(eq(kanbanColumns.sprintId, sprintId));
     }
-    
+
     return await query;
   }
 
@@ -784,16 +784,16 @@ export class DatabaseStorage implements IStorage {
   // Kanban Card operations
   async getKanbanCards(columnId?: number, sprintId?: number, projectId?: number): Promise<KanbanCard[]> {
     let query = db.select().from(kanbanCards);
-    
+
     const conditions = [];
     if (columnId !== undefined) conditions.push(eq(kanbanCards.columnId, columnId));
     if (sprintId !== undefined) conditions.push(eq(kanbanCards.sprintId, sprintId));
     if (projectId !== undefined) conditions.push(eq(kanbanCards.projectId, projectId));
-    
+
     if (conditions.length > 0) {
       return await query.where(and(...conditions));
     }
-    
+
     return await query;
   }
 
@@ -848,7 +848,7 @@ export class DatabaseStorage implements IStorage {
 
   async upsertMatrixCell(cell: InsertMatrixCell): Promise<MatrixCell> {
     const existingCell = await this.getMatrixCell(cell.rowModuleId, cell.colModuleId, cell.projectId);
-    
+
     if (existingCell) {
       const [updatedCell] = await db.update(matrixCells)
         .set({
@@ -863,7 +863,7 @@ export class DatabaseStorage implements IStorage {
           )
         )
         .returning();
-      
+
       return updatedCell;
     } else {
       const [newCell] = await db.insert(matrixCells)
@@ -872,7 +872,7 @@ export class DatabaseStorage implements IStorage {
           createdAt: new Date()
         })
         .returning();
-      
+
       return newCell;
     }
   }
@@ -886,7 +886,7 @@ export class DatabaseStorage implements IStorage {
           eq(matrixCells.projectId, projectId)
         )
       );
-    
+
     return true;
   }
 
@@ -912,7 +912,7 @@ export class DatabaseStorage implements IStorage {
         createdAt: new Date()
       })
       .returning();
-    
+
     return newMarker;
   }
 
@@ -924,7 +924,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(customMarkers.id, id))
       .returning();
-    
+
     return updatedMarker;
   }
 

@@ -298,9 +298,9 @@ class MemStorage implements IStorage {
 
   async createModule(moduleData: InsertModule): Promise<Module> {
     const id = this.getNextId();
-    
+
     console.log('Creating module with ID:', id, 'Data:', moduleData);
-    
+
     // Auto-generate module ID if not provided
     let moduleId = moduleData.moduleId;
     if (!moduleId || moduleId.trim() === '') {
@@ -310,7 +310,7 @@ class MemStorage implements IStorage {
 
       // Simply count existing modules and add 1 for the next sequential number
       const nextNumber = projectModules.length + 1;
-      moduleId = `MOD-${nextNumber}`;
+      moduleId = `MOD-${String(nextNumber).padStart(3, '0')}`;
     }
 
     const module: Module = {
@@ -323,9 +323,9 @@ class MemStorage implements IStorage {
     console.log('Module object created:', module);
 
     this.modules.set(id, module);
-    
+
     console.log('Module stored, total modules:', this.modules.size);
-    
+
     return module;
   }
 
@@ -885,7 +885,8 @@ class MemStorage implements IStorage {
 
   // Activity operations
   async getActivities(limit = 10): Promise<any[]> {
-    return Array.from(this.activities.values())
+    return Array.from```text
+this.activities.values())
       .sort((a, b) => (b.timestamp || b.createdAt).getTime() - (a.timestamp || a.createdAt).getTime())
       .slice(0, limit);
   }
@@ -1841,8 +1842,7 @@ class MemStorage implements IStorage {
     return this.githubConfigs.find(config => config.projectId === projectId);
   }
 
-  async createGitHubConfig(data: any): Promise<any> {
-    const config = {
+  async createGitHubConfig(data: any): Promise<any> {    const config = {
       id: this.githubConfigs.length + 1,
       ...data,
       createdAt: new Date().toISOString(),
