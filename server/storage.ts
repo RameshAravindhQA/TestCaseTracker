@@ -305,8 +305,6 @@ class MemStorage implements IStorage {
   }
 
   async createModule(moduleData: InsertModule): Promise<Module> {
-    const id = this.modules.size + 1;
-
     // Auto-generate module ID if not provided
     let moduleId = moduleData.moduleId;
     if (!moduleId || moduleId.trim() === '') {
