@@ -113,6 +113,8 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   // Update cell data with enhanced persistence
   const updateCell = useCallback((row: number, col: number, updates: Partial<CellData>) => {
     const cellId = getCellId(row, col);
+    console.log('UpdateCell called - Row:', row, 'Col:', col, 'CellId:', cellId, 'Updates:', updates);
+    
     setSheetData(prev => {
       const currentCell = prev.cells[cellId] || { value: '', type: 'text' as const, style: {} };
       const newCell = { 
@@ -121,16 +123,24 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         lastModified: new Date().toISOString(),
         id: cellId 
       };
-      console.log('UpdateCell - Row:', row, 'Col:', col, 'CellId:', cellId, 'Updates:', updates, 'NewCell:', newCell);
       
-      // Create new cells object to ensure immutability
-      const newCells = { ...prev.cells };
+      console.log('UpdateCell - Previous cell:', currentCell, 'New cell:', newCell);
+      
+      // Create completely new state object to force re-render
+      const newCells = {};
+      Object.keys(prev.cells).forEach(key => {
+        newCells[key] = { ...prev.cells[key] };
+      });
       newCells[cellId] = newCell;
       
-      return {
+      const newSheetData = {
         ...prev,
         cells: newCells,
+        lastModified: new Date().toISOString()
       };
+      
+      console.log('UpdateCell - New sheet data:', newSheetData);
+      return newSheetData;
     });
   }, []);
 
@@ -165,20 +175,25 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
 
   // Auto-save effect when sheet data changes
   useEffect(() => {
+    console.log('Sheet data changed, scheduling auto-save...', sheetData);
     const autoSaveTimer = setTimeout(() => {
-      if (JSON.stringify(sheetData) !== JSON.stringify(sheet.data)) {
+      const hasChanges = JSON.stringify(sheetData.cells) !== JSON.stringify(sheet.data.cells);
+      console.log('Auto-save check - Has changes:', hasChanges);
+      
+      if (hasChanges) {
         console.log('Auto-saving sheet data changes');
         // Create a deep copy to ensure data persistence
         const dataToSave = {
           ...sheetData,
-          cells: { ...sheetData.cells }
+          cells: JSON.parse(JSON.stringify(sheetData.cells)) // Deep clone
         };
+        console.log('Saving data:', dataToSave);
         saveSheetMutation.mutate(dataToSave);
       }
-    }, 1500); // Reduced auto-save delay for better UX
+    }, 2000); // Increased delay to allow for multiple quick changes
 
     return () => clearTimeout(autoSaveTimer);
-  }, [sheetData, sheet.data, saveSheetMutation]);
+  }, [sheetData.cells, sheetData.lastModified, saveSheetMutation]);
 
   // Handle range selection
   const isInSelectedRange = (row: number, col: number): boolean => {
@@ -257,6 +272,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
 
   // Handle formula bar change with enhanced persistence
   const handleFormulaBarChange = (value: string) => {
+    console.log('Formula bar change:', value, 'Selected cell:', selectedCell);
     setFormulaBarValue(value);
     
     if (selectedCell) {
@@ -294,22 +310,14 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         cellValue = value;
       }
 
-      // Use updateCell function for consistency and force re-render
-      const cellId = getCellId(selectedCell.row, selectedCell.col);
-      setSheetData(prev => {
-        const newCells = { ...prev.cells };
-        newCells[cellId] = {
-          value: cellValue,
-          type: cellType,
-          formula,
-          style: prev.cells[cellId]?.style || {},
-          lastModified: new Date().toISOString()
-        };
-        
-        return {
-          ...prev,
-          cells: newCells,
-        };
+      console.log('Updating cell with:', { value: cellValue, type: cellType, formula });
+      
+      // Use updateCell function for better persistence
+      updateCell(selectedCell.row, selectedCell.col, {
+        value: cellValue,
+        type: cellType,
+        formula,
+        style: getCellData(selectedCell.row, selectedCell.col).style || {}
       });
     }
   };

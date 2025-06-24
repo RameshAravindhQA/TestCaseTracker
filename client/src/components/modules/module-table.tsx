@@ -70,7 +70,7 @@ export function ModuleTable({ modules, projectId, onEdit, onDelete, onViewTestCa
               >
                 <TableCell className="font-medium text-muted-foreground">
                   <span className="font-mono text-sm">
-                    {project?.prefix || 'BEG'}-{module.name.substring(0, 3).toUpperCase()}-MOD-{String(module.id).padStart(2, '0')}
+                    {module.moduleId || `${project?.prefix || 'BEG'}-${module.name.substring(0, 3).toUpperCase()}-MOD-01`}
                   </span>
                 </TableCell>
                 <TableCell className="font-medium">

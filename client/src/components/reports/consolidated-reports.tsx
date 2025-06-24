@@ -65,7 +65,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { User } from "next-auth/types";
 import { jsPDF } from "jspdf";
 import autoTable from 'jspdf-autotable';
-import Papa from 'papaparse';
+import Papa from 'csv-parse';
+import { cn } from "@/lib/utils";
 
 interface ConsolidatedReportsProps {
   selectedProjectId?: number;
@@ -96,6 +97,9 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const [editingItem, setEditingItem] = useState<{ id: number; type: 'testcase' | 'bug'; status: string } | null>(null);
   const [newStatus, setNewStatus] = useState<string>("");
   const [statusUpdateDialog, setStatusUpdateDialog] = useState(false);
+  const [selectedPriority, setSelectedPriority] = useState<string>('');
+  const [selectedModule, setSelectedModule] = useState<string>('');
+  const [selectedSeverity, setSelectedSeverity] = useState<string>('');
 
   const currentProjectId = selectedProjectId || projectId;
 
@@ -144,7 +148,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const { data: modules } = useQuery<Module[]>({
     queryKey: [`/api/projects/${effectiveProjectId}/modules`],
     queryFn: async () => {
-      const response = await apiRequest("GET", `/api/projects/${effectiveProjectId}/modules`);
+      const response = await apiRequest("GET", `/api/projects/${effectiveProjectId}/modules");
       if (!response.ok) throw new Error("Failed to fetch modules");
       return response.json();
     },
@@ -435,6 +439,32 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       });
     },
   });
+
+    // Status update mutation
+    const updateStatusMutationNew = useMutation({
+      mutationFn: async ({ id, type, status }: { id: number, type: 'testCase' | 'bug', status: string }) => {
+        const endpoint = type === 'testCase' ? `/api/test-cases/${id}` : `/api/bugs/${id}`;
+        return apiRequest('PUT', endpoint, { status });
+      },
+      onSuccess: () => {
+        toast({
+          title: "Status Updated",
+          description: "Item status has been updated successfully.",
+        });
+        // Refresh the data
+        if (selectedProjectId) {
+          queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/test-cases`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/bugs`] });
+        }
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: `Failed to update status: ${error}`,
+          variant: "destructive",
+        });
+      },
+    });
 
   // Calculate metrics with debug logging
   const metrics = {
@@ -735,6 +765,30 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     });
     setNewStatus(item.status);
     setStatusUpdateDialog(true);
+  };
+
+  const handleStatusUpdateNew = async (item: any, status: string) => {
+    const [type, itemId] = item.id.split('-');
+    const id = parseInt(itemId);
+
+    if (isNaN(id)) {
+      toast({
+        title: "Error",
+        description: "Invalid item ID.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await updateStatusMutationNew.mutateAsync({
+        id: id,
+        type: type === 'testcase' ? 'testCase' : 'bug',
+        status: status,
+      });
+    } catch (error) {
+      console.error("Failed to update status:", error);
+    }
   };
 
   const handleStatusUpdate = () => {
@@ -1401,36 +1455,39 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Select
-                      key={`${item.id}-${item.status}`}
-                      value={item.status}
-                      onValueChange={(value) => {
-                        console.log(`Status change requested: ${item.id} from ${item.status} to ${value}`);
-                        handleIndividualStatusUpdate(item.id, value);
-                      }}
-                    >
-                      <SelectTrigger className={`w-32 border-0 ${getStatusColor(item.status, item.type)}`}>
-                        <SelectValue placeholder={item.status} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {item.type === 'testcase' ? (
-                          <>
-                            <SelectItem value="Pass" className="bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-emerald-600 focus:via-green-700 focus:to-teal-600">Pass</SelectItem>
-                            <SelectItem value="Fail" className="bg-gradient-to-r from-red-500 via-rose-600 to-pink-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-red-600 focus:via-rose-700 focus:to-pink-600">Fail</SelectItem>
-                            <SelectItem value="Blocked" className="bg-gradient-to-r from-orange-500 via-amber-600 to-yellow-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-orange-600 focus:via-amber-700 focus:to-yellow-600">Blocked</SelectItem>
-                            <SelectItem value="Not Executed" className="bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-slate-600 focus:via-gray-700 focus:to-zinc-600">Not Executed</SelectItem>
-                          </>
-                        ) : (
-                          <>
-                            <SelectItem value="Open" className="bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-red-700 focus:via-rose-800 focus:to-pink-700">Open</SelectItem>
-                            <SelectItem value="In Progress" className="bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-blue-700 focus:via-indigo-800 focus:to-purple-700">In Progress</SelectItem>
-                            <SelectItem value="Resolved" className="bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-emerald-700 focus:via-green-800 focus:to-teal-700">Resolved</SelectItem>
-                            <SelectItem value="Closed" className="bg-gradient-to-r from-purple-600 via-violet-700 to-indigo-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-purple-700 focus:via-violet-800 focus:to-indigo-700">Closed</SelectItem>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
+                      <Select
+                        value={item.status}
+                        onValueChange={(newStatus) => {
+                          updateStatusMutationNew.mutate({
+                            id: parseInt(item.id.split('-')[1]),
+                            type: item.type === 'testcase' ? 'testCase' : 'bug',
+                            status: newStatus
+                          });
+                        }}
+                        disabled={updateStatusMutationNew.isPending}
+                      >
+                        <SelectTrigger className={`w-32 border-0 ${getStatusColor(item.status, item.type)}`}>
+                          <SelectValue placeholder={item.status} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {item.type === 'testcase' ? (
+                            <>
+                              <SelectItem value="Pass" className="bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-emerald-600 focus:via-green-700 focus:to-teal-600">Pass</SelectItem>
+                              <SelectItem value="Fail" className="bg-gradient-to-r from-red-500 via-rose-600 to-pink-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-red-600 focus:via-rose-700 focus:to-pink-600">Fail</SelectItem>
+                              <SelectItem value="Blocked" className="bg-gradient-to-r from-orange-500 via-amber-600 to-yellow-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-orange-600 focus:via-amber-700 focus:to-yellow-600">Blocked</SelectItem>
+                              <SelectItem value="Not Executed" className="bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-slate-600 focus:via-gray-700 focus:to-zinc-600">Not Executed</SelectItem>
+                            </>
+                          ) : (
+                            <>
+                              <SelectItem value="Open" className="bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-red-700 focus:via-rose-800 focus:to-pink-700">Open</SelectItem>
+                              <SelectItem value="In Progress" className="bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-blue-700 focus:via-indigo-800 focus:to-purple-700">In Progress</SelectItem>
+                              <SelectItem value="Resolved" className="bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-emerald-700 focus:via-green-800 focus:to-teal-700">Resolved</SelectItem>
+                              <SelectItem value="Closed" className="bg-gradient-to-r from-purple-600 via-violet-700 to-indigo-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-purple-700 focus:via-violet-800 focus:to-indigo-700">Closed</SelectItem>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Progress value={item.progress} className="w-16 h-2" />

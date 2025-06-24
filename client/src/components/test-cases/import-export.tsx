@@ -551,13 +551,32 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
 
                       // Validate required fields
                       const invalidRows = parsedData.filter(
-                        row => !row.feature || !row.testObjective || !row.testSteps || !row.expectedResult || !row.moduleId
+                        row => !row.feature || !row.testObjective || !row.testSteps || !row.expectedResult
+                      );
+
+                      const missingModuleRows = parsedData.filter(
+                        row => !row.moduleId && !moduleId
                       );
 
                       if (invalidRows.length > 0) {
+                        const missingFields = [];
+                        if (parsedData.some(row => !row.feature)) missingFields.push('feature');
+                        if (parsedData.some(row => !row.testObjective)) missingFields.push('testObjective');
+                        if (parsedData.some(row => !row.testSteps)) missingFields.push('testSteps');
+                        if (parsedData.some(row => !row.expectedResult)) missingFields.push('expectedResult');
+                        
                         toast({
-                          title: "Invalid file data",
-                          description: `Found ${invalidRows.length} rows with missing required fields.`,
+                          title: "Validation Error",
+                          description: `Found ${invalidRows.length} rows with missing required fields: ${missingFields.join(', ')}. Please check your CSV file and ensure all required fields are filled.`,
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
+                      if (missingModuleRows.length > 0) {
+                        toast({
+                          title: "Module ID Missing",
+                          description: `Found ${missingModuleRows.length} rows without module ID. Please ensure moduleId is provided in CSV or select a specific module for import.`,
                           variant: "destructive",
                         });
                         return;

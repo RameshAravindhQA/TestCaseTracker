@@ -91,6 +91,62 @@
     refetchInterval: 5000, // Refetch every 5 seconds
     refetchOnWindowFocus: true,
   });
+<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatsCard
+          title="Total Projects"
+          value={stats?.totalProjects || 0}
+          icon={Folder}
+          trend={stats?.totalProjects > 0 ? "+20.1% from last month" : "Create your first project"}
+        />
+        <StatsCard
+          title="Test Cases"
+          value={stats?.totalTestCases || 0}
+          icon={FileText}
+          trend={stats?.totalTestCases > 0 ? "+180.1% from last month" : "No test cases yet"}
+        />
+        <StatsCard
+          title="Open Bugs"
+          value={stats?.openBugs || 0}
+          icon={Bug}
+          trend={stats?.openBugs > 0 ? "+19% from last month" : "No open bugs"}
+        />
+        <StatsCard
+          title="Pass Rate"
+          value={`${stats?.passRate || 0}%`}
+          icon={CheckCircle}
+          trend={stats?.passRate > 0 ? "+201 since last hour" : "No test results yet"}
+        />
+      </div>
+{/* Charts Section */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Test Status Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats && stats.totalTestCases > 0 ? (
+              <TestStatusChart
+                data={[
+                  { name: 'Passed', value: stats.testCaseStatusCounts?.Pass || 0, color: '#22c55e' },
+                  { name: 'Failed', value: stats.testCaseStatusCounts?.Fail || 0, color: '#ef4444' },
+                  { name: 'Blocked', value: stats.testCaseStatusCounts?.Blocked || 0, color: '#f59e0b' },
+                  { name: 'Not Executed', value: stats.testCaseStatusCounts?.['Not Executed'] || 0, color: '#6b7280' },
+                ]}
+              />
+            ) : (
+              <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No test cases available</p>
+                  <p className="text-sm">Create a project and add test cases to see statistics</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
