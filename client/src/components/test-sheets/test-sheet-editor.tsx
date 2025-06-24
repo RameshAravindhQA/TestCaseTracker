@@ -294,12 +294,22 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         cellValue = value;
       }
 
-      // Use updateCell function for consistency
-      updateCell(selectedCell.row, selectedCell.col, {
-        value: cellValue,
-        type: cellType,
-        formula,
-        lastModified: new Date().toISOString()
+      // Use updateCell function for consistency and force re-render
+      const cellId = getCellId(selectedCell.row, selectedCell.col);
+      setSheetData(prev => {
+        const newCells = { ...prev.cells };
+        newCells[cellId] = {
+          value: cellValue,
+          type: cellType,
+          formula,
+          style: prev.cells[cellId]?.style || {},
+          lastModified: new Date().toISOString()
+        };
+        
+        return {
+          ...prev,
+          cells: newCells,
+        };
       });
     }
   };

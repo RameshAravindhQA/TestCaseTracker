@@ -1843,23 +1843,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Invalid module ID" });
         }
       }
+
+      // Process the update data with proper updatedAt timestamp
+      const updateData = {
+        ...req.body,
+        updatedAt: new Date()
+      };
       
-      const updatedTestCase = await storage.updateTestCase(testCaseId, req.body);
+      const updatedTestCase = await storage.updateTestCase(testCaseId, updateData);
       
-      // Log activity
-      await storage.createActivity({
-        userId: req.session.userId!,
-        action: "updated",
-        entityType: "testCase",
-        entityId: testCaseId,
-        details: { 
-          projectId: testCase.projectId,
-          projectName: project?.name,
-          testCaseId: testCase.testCaseId,
-          feature: testCase.feature,
-          status: req.body.status
-        }
-      });
+      // Log activity with specific status change if status was updated
+      if (req.body.status && req.body.status !== testCase.status) {
+        await storage.createActivity({
+          userId: req.session.userId!,
+          action: `status changed to ${req.body.status}`,
+          entityType: "testCase",
+          entityId: testCaseId,
+          details: { 
+            projectId: testCase.projectId,
+            projectName: project?.name,
+            testCaseId: testCase.testCaseId,
+            feature: testCase.feature,
+            prevStatus: testCase.status,
+            newStatus: req.body.status
+          }
+        });
+      } else {
+        await storage.createActivity({
+          userId: req.session.userId!,
+          action: "updated",
+          entityType: "testCase",
+          entityId: testCaseId,
+          details: { 
+            projectId: testCase.projectId,
+            projectName: project?.name,
+            testCaseId: testCase.testCaseId,
+            feature: testCase.feature
+          }
+        });
+      }
+      
+      // Set cache headers to prevent caching
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
       
       res.json(updatedTestCase);
     } catch (error) {
@@ -2100,14 +2127,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Invalid test case ID" });
         }
       }
+
+      // Process the update data with proper updatedAt timestamp
+      const updateData = {
+        ...req.body,
+        updatedAt: new Date()
+      };
       
-      const updatedBug = await storage.updateBug(bugId, req.body);
+      const updatedBug = await storage.updateBug(bugId, updateData);
       
       // Log status change activity specifically
       if (req.body.status && req.body.status !== bug.status) {
         await storage.createActivity({
           userId: req.session.userId!,
-          action: `marked as ${req.body.status}`,
+          action: `status changed to ${req.body.status}`,
           entityType: "bug",
           entityId: bugId,
           details: { 
@@ -2117,6 +2150,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             title: bug.title,
             prevStatus: bug.status,
             newStatus: req.body.status
+          }
+        });
+      } else if (req.body.severity && req.body.severity !== bug.severity) {
+        await storage.createActivity({
+          userId: req.session.userId!,
+          action: `severity changed to ${req.body.severity}`,
+          entityType: "bug",
+          entityId: bugId,
+          details: { 
+            projectId: bug.projectId,
+            projectName: project?.name,
+            bugId: bug.bugId,
+            title: bug.title,
+            prevSeverity: bug.severity,
+            newSeverity: req.body.severity
           }
         });
       } else {
@@ -2134,6 +2182,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
       }
+      
+      // Set cache headers to prevent caching
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
       
       res.json(updatedBug);
     } catch (error) {

@@ -430,9 +430,22 @@ class MemStorage implements IStorage {
     const testCase = this.testCases.get(id);
     if (!testCase) return null;
 
-    const updatedTestCase = { ...testCase, ...data, updatedAt: new Date() };
+    const updatedTestCase = { 
+      ...testCase, 
+      ...data, 
+      updatedAt: new Date() 
+    };
+
+    // Force immediate persistence
     this.testCases.set(id, updatedTestCase);
-    this.recordActivity('test_case', 'updated', id, data.assignedTo || testCase.assignedTo || 1);
+
+    // Log activity for status changes specifically
+    if (data.status && data.status !== testCase.status) {
+      this.recordActivity('test_case', `status_changed_to_${data.status}`, id, data.assignedTo || testCase.assignedTo || 1);
+    } else {
+      this.recordActivity('test_case', 'updated', id, data.assignedTo || testCase.assignedTo || 1);
+    }
+
     return updatedTestCase;
   }
 
@@ -526,9 +539,24 @@ class MemStorage implements IStorage {
     const bug = this.bugs.get(id);
     if (!bug) return null;
 
-    const updatedBug = { ...bug, ...data, updatedAt: new Date() };
+    const updatedBug = { 
+      ...bug, 
+      ...data, 
+      updatedAt: new Date() 
+    };
+
+    // Force immediate persistence
     this.bugs.set(id, updatedBug);
-    this.recordActivity('bug', 'updated', id, data.assignedTo || bug.assignedTo);
+
+    // Log activity for status and severity changes specifically
+    if (data.status && data.status !== bug.status) {
+      this.recordActivity('bug', `status_changed_to_${data.status}`, id, data.assignedTo || bug.assignedTo);
+    } else if (data.severity && data.severity !== bug.severity) {
+      this.recordActivity('bug', `severity_changed_to_${data.severity}`, id, data.assignedTo || bug.assignedTo);
+    } else {
+      this.recordActivity('bug', 'updated', id, data.assignedTo || bug.assignedTo);
+    }
+
     return updatedBug;
   }
 
@@ -1765,29 +1793,9 @@ class MemStorage implements IStorage {
     });
   }
 
-  async updateTestCase(id: number, data: Partial<TestCase>): Promise<TestCase | null> {
-    const testCase = this.testCases.get(id);
-    if (!testCase) return null;
-
-    const updatedTestCase = { ...testCase, ...data, updatedAt: new Date() };
-    this.testCases.set(id, updatedTestCase);
-    this.recordActivity('test_case', 'updated', id, data.assignedTo || testCase.assignedTo || 1);
-    return updatedTestCase;
-  }
-
   async updateTestCaseStatus(id: number, status: string): Promise<TestCase | null> {
     console.log(`Storage: updateTestCaseStatus(${id}, ${status})`);
     return this.updateTestCase(id, { status });
-  }
-
-  async updateBug(id: number, data: Partial<Bug>): Promise<Bug | null> {
-    const bug = this.bugs.get(id);
-    if (!bug) return null;
-
-    const updatedBug = { ...bug, ...data, updatedAt: new Date() };
-    this.bugs.set(id, updatedBug);
-    this.recordActivity('bug', 'updated', id, data.assignedTo || bug.assignedTo);
-    return updatedBug;
   }
 
   async updateBugStatus(id: number, status: string): Promise<Bug | null> {
@@ -1839,7 +1847,8 @@ class MemStorage implements IStorage {
   async createGitHubConfig(data: any): Promise<any> {
     const config = {
       id: this.githubConfigs.length + 1,
-      ...data,
+      ...```text
+data,
       createdAt: new Date().toISOString(),
     };
     this.githubConfigs.push(config);
