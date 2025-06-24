@@ -4162,24 +4162,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Session ID and URL are required" });
       }
       
-      // Store recording session info
-      const sessionData = {
-        sessionId,
+      // Import the automation service functions
+      const { startRecording } = await import('./automation-service');
+      
+      // Start the recording
+      const result = startRecording(sessionId, url);
+      
+      res.json({
+        message: "Recording started - simulated browser will run for 15 seconds",
+        sessionId: result.sessionId,
         url,
         testCaseId,
-        engine,
-        status: 'recording',
-        startTime: new Date(),
-        userId: req.session.userId
-      };
-      
-      // In a real implementation, this would start Playwright codegen
-      // For now, we'll simulate it
-      res.json({
-        message: "Recording started",
-        sessionId,
-        url,
-        testCaseId
+        status: result.status
       });
     } catch (error) {
       console.error("Start recording error:", error);
@@ -4191,37 +4185,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { sessionId } = req.params;
       
-      // Simulate recording completion after some time
-      // In a real implementation, this would check the actual Playwright process
-      const now = Date.now();
-      const sessionStart = parseInt(sessionId.split('-')[1]);
-      const elapsed = now - sessionStart;
+      // Import the automation service functions
+      const { getRecordingStatus } = await import('./automation-service');
       
-      if (elapsed > 10000) { // 10 seconds simulation
-        const scriptContent = `
-const { test, expect } = require('@playwright/test');
-
-test('recorded test', async ({ page }) => {
-  await page.goto('${req.body.url || 'https://example.com'}');
-  // Recorded actions would be here
-  await page.click('button');
-  await page.fill('input[type="text"]', 'test value');
-  await expect(page).toHaveTitle(/Expected Title/);
-});
-        `;
-        
+      const status = getRecordingStatus(sessionId);
+      
+      if (status.status === 'not_found') {
+        return res.status(404).json({ message: "Recording session not found" });
+      }
+      
+      if (status.status === 'completed') {
         res.json({
           status: 'completed',
-          scriptContent: scriptContent.trim()
+          scriptContent: status.scriptContent
         });
       } else {
         res.json({
-          status: 'recording'
+          status: status.status
         });
       }
     } catch (error) {
       console.error("Get recording status error:", error);
       res.status(500).json({ message: "Failed to get recording status" });
+    }
+  });
+
+  apiRouter.post("/automation/execute", isAuthenticated, async (req, res) => {
+    try {
+      const { sessionId, scriptContent } = req.body;
+      
+      if (!sessionId || !scriptContent) {
+        return res.status(400).json({ message: "Session ID and script content are required" });
+      }
+      
+      const { executeScript } = await import('./automation-service');
+      const result = executeScript(sessionId, scriptContent);
+      
+      res.json({
+        message: "Script execution started",
+        sessionId: result.sessionId,
+        status: result.status
+      });
+    } catch (error) {
+      console.error("Execute script error:", error);
+      res.status(500).json({ message: "Failed to execute script" });
+    }
+  });
+
+  apiRouter.get("/automation/execute/status/:sessionId", isAuthenticated, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      
+      const { getExecutionStatus } = await import('./automation-service');
+      const status = getExecutionStatus(sessionId);
+      
+      if (status.status === 'not_found') {
+        return res.status(404).json({ message: "Execution session not found" });
+      }
+      
+      res.json(status);
+    } catch (error) {
+      console.error("Get execution status error:", error);
+      res.status(500).json({ message: "Failed to get execution status" });
     }
   });
 

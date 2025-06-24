@@ -88,11 +88,14 @@ export default function AutomationPage() {
       if (selectedModuleId && selectedModuleId !== "all" && selectedModuleId !== "" && typeof selectedModuleId === "number") {
         url += `?moduleId=${selectedModuleId}`;
       }
+      console.log('Fetching test cases from:', url);
       const res = await apiRequest("GET", url);
       if (!res.ok) {
         throw new Error(`Failed to fetch test cases: ${res.status}`);
       }
-      return res.json();
+      const data = await res.json();
+      console.log('Test cases fetched:', data);
+      return data;
     },
   });
 
@@ -384,9 +387,11 @@ export default function AutomationPage() {
   };
 
   const filteredTestCases = testCases?.filter(testCase => {
-    if (!selectedModuleId || selectedModuleId === "all") return true;
+    if (!selectedModuleId || selectedModuleId === "all" || selectedModuleId === "") return true;
     return testCase.moduleId === Number(selectedModuleId);
   }) || [];
+  
+  console.log('Filtered test cases:', filteredTestCases, 'Selected module ID:', selectedModuleId);
 
   return (
     <MainLayout>
