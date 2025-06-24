@@ -18,10 +18,7 @@ import {
   insertTimeSheetFolderSchema,
   insertCustomerSchema,
   insertCustomerProjectSchema,
-  insertAutomationScriptSchema,
-  insertAutomationRunSchema,
-  insertAutomationScheduleSchema,
-  insertAutomationEnvironmentSchema,
+  
   insertSprintSchema,
   insertKanbanColumnSchema,
   insertKanbanCardSchema,
@@ -37,14 +34,7 @@ import {
   type InsertCustomer,
   type CustomerProject,
   type InsertCustomerProject,
-  type AutomationScript,
-  type InsertAutomationScript,
-  type AutomationRun,
-  type InsertAutomationRun,
-  type AutomationSchedule,
-  type InsertAutomationSchedule,
-  type AutomationEnvironment,
-  type InsertAutomationEnvironment,
+  
   type Sprint,
   type InsertSprint,
   type KanbanColumn,
@@ -4153,185 +4143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Playwright Automation Routes
-  apiRouter.post("/automation/record/start", isAuthenticated, async (req, res) => {
-    try {
-      const { sessionId, url = 'https://www.google.com', testCaseId, engine = 'playwright' } = req.body;
-      
-      if (!sessionId) {
-        return res.status(400).json({ message: "Session ID is required" });
-      }
-      
-      // Import the automation service functions
-      const { startRecording } = await import('./automation-service');
-      
-      // Start the recording
-      const result = await startRecording(sessionId, url);
-      
-      res.json({
-        message: "Recording started - browser window should open or fallback to simulation",
-        sessionId: result.sessionId,
-        url,
-        testCaseId,
-        status: result.status
-      });
-    } catch (error) {
-      console.error("Start recording error:", error);
-      res.status(500).json({ message: "Failed to start recording" });
-    }
-  });
-
-  apiRouter.post("/automation/record/stop/:sessionId", isAuthenticated, async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      
-      // Import the automation service functions
-      const { stopRecording } = await import('./automation-service');
-      
-      // Stop the recording
-      const result = await stopRecording(sessionId);
-      
-      res.json({
-        message: "Recording stopped",
-        sessionId,
-        status: result.status,
-        scriptContent: result.scriptContent
-      });
-    } catch (error) {
-      console.error("Stop recording error:", error);
-      res.status(500).json({ message: "Failed to stop recording" });
-    }
-  });
-
-  apiRouter.get("/automation/record/status/:sessionId", isAuthenticated, async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      
-      // Import the automation service functions
-      const { getRecordingStatus } = await import('./automation-service');
-      
-      const status = getRecordingStatus(sessionId);
-      
-      if (status.status === 'not_found') {
-        return res.status(404).json({ message: "Recording session not found" });
-      }
-      
-      if (status.status === 'completed') {
-        res.json({
-          status: 'completed',
-          scriptContent: status.scriptContent
-        });
-      } else {
-        res.json({
-          status: status.status
-        });
-      }
-    } catch (error) {
-      console.error("Get recording status error:", error);
-      res.status(500).json({ message: "Failed to get recording status" });
-    }
-  });
-
-  apiRouter.post("/automation/execute", isAuthenticated, async (req, res) => {
-    try {
-      const { sessionId, scriptContent } = req.body;
-      
-      if (!sessionId || !scriptContent) {
-        return res.status(400).json({ message: "Session ID and script content are required" });
-      }
-      
-      const { executeScript } = await import('./automation-service');
-      const result = executeScript(sessionId, scriptContent);
-      
-      res.json({
-        message: "Script execution started",
-        sessionId: result.sessionId,
-        status: result.status
-      });
-    } catch (error) {
-      console.error("Execute script error:", error);
-      res.status(500).json({ message: "Failed to execute script" });
-    }
-  });
-
-  apiRouter.get("/automation/execute/status/:sessionId", isAuthenticated, async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      
-      const { getExecutionStatus } = await import('./automation-service');
-      const status = getExecutionStatus(sessionId);
-      
-      if (status.status === 'not_found') {
-        return res.status(404).json({ message: "Execution session not found" });
-      }
-      
-      res.json(status);
-    } catch (error) {
-      console.error("Get execution status error:", error);
-      res.status(500).json({ message: "Failed to get execution status" });
-    }
-  });
-
-  apiRouter.post("/automation/scripts/:id/execute", isAuthenticated, async (req, res) => {
-    try {
-      const scriptId = parseInt(req.params.id);
-      const { sessionId } = req.body;
-      
-      const script = await storage.getAutomationScript(scriptId);
-      if (!script) {
-        return res.status(404).json({ message: "Script not found" });
-      }
-      
-      // Store execution session info
-      const sessionData = {
-        sessionId,
-        scriptId,
-        status: 'running',
-        startTime: new Date(),
-        userId: req.session.userId
-      };
-      
-      res.json({
-        message: "Execution started",
-        sessionId,
-        scriptId
-      });
-    } catch (error) {
-      console.error("Execute script error:", error);
-      res.status(500).json({ message: "Failed to execute script" });
-    }
-  });
-
-  apiRouter.get("/automation/execute/status/:sessionId", isAuthenticated, async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      
-      // Simulate execution completion
-      const now = Date.now();
-      const sessionStart = parseInt(sessionId.split('-')[1]);
-      const elapsed = now - sessionStart;
-      
-      if (elapsed > 8000) { // 8 seconds simulation
-        const success = Math.random() > 0.3; // 70% success rate
-        
-        res.json({
-          status: success ? 'completed' : 'error',
-          results: {
-            duration: elapsed,
-            success,
-            message: success ? 'Test passed successfully' : 'Test failed - assertion error'
-          }
-        });
-      } else {
-        res.json({
-          status: 'running'
-        });
-      }
-    } catch (error) {
-      console.error("Get execution status error:", error);
-      res.status(500).json({ message: "Failed to get execution status" });
-    }
-  });
+  
   /*
       console.error("Get automation scripts error:", error);
       res.status(500).json({ message: "Server error" });

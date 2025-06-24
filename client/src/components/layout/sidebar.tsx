@@ -137,11 +137,6 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       icon: <Github className="h-5 w-5" />,
     },
     {
-      name: "Automation",
-      href: "/automation",
-      icon: <Terminal className="h-5 w-5" />,
-    },
-    {
       name: "Functional Flow",
       href: "/functional-flow",
       icon: <BoxSelect className="h-5 w-5" />,

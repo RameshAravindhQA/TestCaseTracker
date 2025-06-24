@@ -24,7 +24,6 @@ import ProfilePage from "@/pages/profile";
 import UsersPage from "@/pages/users/index";
 import SettingsPage from "@/pages/settings/index";
 import TimeSheetsPage from "@/pages/timesheets/index";
-import AutomationPage from "@/pages/automation/index";
 import KanbanPage from "@/pages/kanban-page";
 import TestUploadPage from "@/pages/test-upload";
 import TraceabilityMatrixPage from "@/pages/traceability-matrix";
@@ -112,9 +111,6 @@ function Router() {
       </Route>
       <Route path="/timesheets">
         <ProtectedComponent Component={TimeSheetsPage} />
-      </Route>
-      <Route path="/automation">
-        <ProtectedComponent Component={AutomationPage} />
       </Route>
       <Route path="/functional-flow">
         <ProtectedComponent Component={FunctionalFlowPage} />

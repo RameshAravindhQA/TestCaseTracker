@@ -10,10 +10,6 @@ import {
   TimeSheetFolder,
   Customer,
   CustomerProject,
-  AutomationScript,
-  AutomationRun,
-  AutomationSchedule,
-  AutomationEnvironment,
   Sprint,
   KanbanColumn,
   KanbanCard,
@@ -35,10 +31,6 @@ import {
   InsertTimeSheetFolder,
   InsertCustomer,
   InsertCustomerProject,
-  InsertAutomationScript,
-  InsertAutomationRun,
-  InsertAutomationSchedule,
-  InsertAutomationEnvironment,
   InsertSprint,
   InsertKanbanColumn,
   InsertKanbanCard,
@@ -894,6 +886,7 @@ class MemStorage implements IStorage {
     for (const project of projects) {
       const modules = await this.getModules(project.id);
       const testCases = await this.getTestCases(project.id);
+```
       const bugs = await this.getBugs(project.id);
 
       exportData.push({
@@ -1850,6 +1843,7 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
     };
     this.githubConfigs.push(config);
+```
     return config;
   }
 
