@@ -883,6 +883,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       const invalidFormatIds: string[] = [];
                       const newTestCases: CSVTestCase[] = [];
                       const idPatternMismatch: string[] = [];
+                      const missingTestCaseIdRows: number[] = [];
 
                       // Function to validate test case ID format
                       const validateTestCaseIdFormat = (testCaseId: string, modulePrefix: string): boolean => {
@@ -956,29 +957,10 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                           }
                         }
 
-                        // Add generated testCaseId if missing
-                        if (!row.testCaseId) {
-                          // Find the highest existing number for this format
-                          const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
-                          const existingNumbers = Array.from(existingTestCaseIds)
-                            .filter(id => id && prefixPattern.test(id))
-                            .map(id => {
-                              const match = id.match(prefixPattern);
-                              return match ? parseInt(match[1], 10) : 0;
-                            })
-                            .filter(num => !isNaN(num));
-
-                          const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-                          row.testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
-
-                          // Add to existing set to avoid duplicates within this import
-                          existingTestCaseIds.add(row.testCaseId);
-                        } else {
-                          // Validate existing test case ID format
-                          if (!validateTestCaseIdFormat(row.testCaseId, modulePrefix)) {
-                            invalidFormatIds.push(row.testCaseId);
-                            return; // Skip this row
-                          }
+                        // Validate that test case ID is provided
+                        if (!row.testCaseId || row.testCaseId.trim() === '') {
+                          missingTestCaseIdRows.push(index + 1);
+                          return;
                         }
                          // Validate Test Case ID and Module ID Pattern Match
                         if (row.testCaseId && row.moduleId) {
@@ -1031,6 +1013,16 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         }
                       });
 
+                      // Check for missing test case IDs
+                      if (missingTestCaseIdRows.length > 0) {
+                        toast({
+                          title: "Missing Test Case IDs",
+                          description: `Test case IDs are required. Missing in rows: ${missingTestCaseIdRows.join(', ')}`,
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
                       // Show validation errors
                       if (invalidFormatIds.length > 0) {
                         toast({
@@ -1056,11 +1048,11 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       }
 
                       if (newTestCases.length === 0) {
-                        const totalSkipped = duplicateIds.length + invalidFormatIds.length + idPatternMismatch.length;
+                        const totalSkipped = duplicateIds.length + invalidFormatIds.length + idPatternMismatch.length + missingTestCaseIdRows.length;
                         toast({
                           title: "No test cases to import",
                           description: totalSkipped > 0
-                            ? `All ${totalSkipped} test cases were skipped due to validation errors (${duplicateIds.length} duplicates, ${invalidFormatIds.length} invalid formats, ${idPatternMismatch.length} pattern mismatches).`
+                            ? `All ${totalSkipped} test cases were skipped due to validation errors (${duplicateIds.length} duplicates, ${invalidFormatIds.length} invalid formats, ${idPatternMismatch.length} pattern mismatches, ${missingTestCaseIdRows.length} missing test case IDs).`
                             : "All test case IDs already exist in the system.",
                           variant: "destructive",
                         });
