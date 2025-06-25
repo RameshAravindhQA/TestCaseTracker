@@ -224,25 +224,48 @@ ${bug.comments || 'No additional comments.'}
     }
   }
 
-  async syncBugToGitHub(bugId: number): Promise<void> {
+  async syncBugToGitHub(bugId: number): Promise<{ created: boolean; issueNumber?: number; url?: string }> {
     try {
       const bug = await storage.getBug(bugId);
       if (!bug) {
         console.warn(`Bug with ID ${bugId} not found, skipping sync`);
-        return;
+        return { created: false };
       }
 
       const project = await storage.getProject(bug.projectId);
       if (!project) {
         console.warn(`Project with ID ${bug.projectId} not found, skipping sync`);
-        return;
+        return { created: false };
       }
 
       const config = await storage.getGitHubConfig(project.id);
-      if (!config) {
-        console.warn(`GitHub configuration not found for project ${project.id}, skipping sync`);
-        return;
+      if (!config || !config.isActive) {
+        console.warn(`GitHub configuration not found or inactive for project ${project.id}, skipping sync`);
+        return { created: false };
       }
+
+      // Check if bug already has a GitHub issue
+      const existingIssue = await storage.getGitHubIssueByBugId(bugId);
+      if (existingIssue) {
+        logger.info(`Bug ${bugId} already has GitHub issue #${existingIssue.githubIssueNumber}`);
+        return { created: false, issueNumber: existingIssue.githubIssueNumber, url: existingIssue.githubUrl };
+      }
+
+      // Create GitHub issue
+      const issuePayload = this.formatBugAsGitHubIssue(bug);
+      const githubIssue = await this.createIssue(config, issuePayload);
+
+      // Store GitHub issue in database
+      await storage.createGitHubIssue({
+        bugId: bug.id,
+        githubIssueNumber: githubIssue.number,
+        githubIssueId: githubIssue.id,
+        githubUrl: githubIssue.url,
+        status: githubIssue.state as 'open' | 'closed'
+      });
+
+      logger.info(`Created GitHub issue #${githubIssue.number} for bug ${bugId}`);
+      return { created: true, issueNumber: githubIssue.number, url: githubIssue.url };
     } catch (error) {
       console.error(`Error syncing bug ${bugId} to GitHub:`, error);
       throw error;
