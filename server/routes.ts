@@ -6610,6 +6610,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // No need for the separate flow diagrams router since we've already
   // added those routes directly to the apiRouter
   
+  // Bug Comments API routes
+  apiRouter.get("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const comments = await storage.getBugComments(bugId);
+      res.json(comments);
+    } catch (error) {
+      console.error('Error fetching bug comments:', error);
+      res.status(500).json({ error: 'Failed to fetch bug comments' });
+    }
+  });
+
+  apiRouter.post("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const { content } = req.body;
+      
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: 'Comment content is required' });
+      }
+
+      const comment = await storage.createBugComment({
+        bugId,
+        userId: req.session.userId!,
+        content: content.trim()
+      });
+
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error('Error creating bug comment:', error);
+      res.status(500).json({ error: 'Failed to create bug comment' });
+    }
+  });
+
+  apiRouter.put("/bugs/:bugId/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const { content } = req.body;
+      
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: 'Comment content is required' });
+      }
+
+      const comment = await storage.updateBugComment(commentId, req.session.userId!, {
+        content: content.trim()
+      });
+
+      if (!comment) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+
+      res.json(comment);
+    } catch (error) {
+      console.error('Error updating bug comment:', error);
+      res.status(500).json({ error: 'Failed to update bug comment' });
+    }
+  });
+
   // Notebooks API routes
   apiRouter.get("/notebooks", isAuthenticated, async (req, res) => {
     try {

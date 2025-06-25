@@ -693,7 +693,28 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     console.log(`Updating ${type} ${numericId} to status: ${newStatus}`);
 
     try {
-      // Direct API call for immediate update
+      // Optimistic update first
+      if (type === 'testcase') {
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], (oldData: any[]) => {
+          if (!Array.isArray(oldData)) return oldData;
+          return oldData.map(item => 
+            item.id === numericId 
+              ? { ...item, status: newStatus, updatedAt: new Date().toISOString() }
+              : item
+          );
+        });
+      } else {
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], (oldData: any[]) => {
+          if (!Array.isArray(oldData)) return oldData;
+          return oldData.map(item => 
+            item.id === numericId 
+              ? { ...item, status: newStatus, updatedAt: new Date().toISOString() }
+              : item
+          );
+        });
+      }
+
+      // Direct API call for server update
       let response;
       if (type === 'testcase') {
         response = await apiRequest('PUT', `/api/test-cases/${numericId}`, { 
@@ -708,19 +729,18 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       }
 
       if (!response.ok) {
-        throw new Error(`Failed to update ${type}: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Failed to update ${type}: ${response.status} - ${errorText}`);
       }
 
-      // Force immediate data refresh
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
-      
-      // Force refetch
-      if (type === 'testcase') {
-        refetchTestCases();
-      } else {
-        refetchBugs();
-      }
+      const updatedItem = await response.json();
+      console.log(`Successfully updated ${type}:`, updatedItem);
+
+      // Verify update with fresh data
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+      }, 100);
 
       toast({
         title: "Status Updated",
@@ -729,6 +749,14 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
     } catch (error: any) {
       console.error(`Failed to update ${type} ${numericId}:`, error);
+      
+      // Revert optimistic update on error
+      if (type === 'testcase') {
+        refetchTestCases();
+      } else {
+        refetchBugs();
+      }
+      
       toast({
         title: "Update Failed",
         description: error.message || "Failed to update status",

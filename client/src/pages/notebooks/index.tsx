@@ -192,11 +192,11 @@ export default function NotebooksPage() {
         {/* Header */}
         <div className="mb-6 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
-              <BookOpen className="h-6 w-6" />
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <BookOpen className="h-8 w-8 text-blue-600" />
               Notebooks
             </h1>
-            <p className="mt-1 text-sm text-gray-600">Create and organize your notes with rich formatting</p>
+            <p className="mt-2 text-sm text-gray-600">Create and organize your notes with rich formatting</p>
           </div>
 
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

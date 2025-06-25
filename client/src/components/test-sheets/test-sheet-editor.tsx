@@ -263,7 +263,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
       },
     });
 
-  // Auto-save effect when sheet data changes
+  // Enhanced auto-save with real-time persistence
   useEffect(() => {
     console.log('Sheet data changed, scheduling auto-save...', sheetData);
     const autoSaveTimer = setTimeout(() => {
@@ -276,15 +276,23 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         const dataToSave = {
           ...sheetData,
           cells: JSON.parse(JSON.stringify(sheetData.cells)), // Deep clone
-          lastModified: new Date().toISOString()
+          lastModified: new Date().toISOString(),
+          version: (sheetData.version || 0) + 1
         };
         console.log('Saving data:', dataToSave);
         saveSheetMutation.mutate(dataToSave);
+        
+        // Also backup to localStorage for immediate recovery
+        try {
+          localStorage.setItem(`sheet_${sheet.id}_realtime`, JSON.stringify(dataToSave));
+        } catch (error) {
+          console.warn('Failed to backup to localStorage:', error);
+        }
       }
-    }, 1500); // Reduced delay for more responsive saving
+    }, 800); // Reduced delay for more responsive saving
 
     return () => clearTimeout(autoSaveTimer);
-  }, [sheetData.cells, sheetData.version, saveSheetMutation]);
+  }, [sheetData.cells, sheetData.version, saveSheetMutation, sheet.id]);
 
   // Handle range selection
   const isInSelectedRange = (row: number, col: number): boolean => {
@@ -380,8 +388,17 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
       if (value.startsWith('=')) {
         cellType = 'formula';
         formula = value;
-        // Keep original value for display, evaluate on blur
-        cellValue = value;
+        // Evaluate formula immediately for real-time feedback
+        try {
+          const context = Object.keys(sheetData.cells).reduce((acc, cellId) => {
+            const cell = sheetData.cells[cellId];
+            acc[cellId] = cell?.value || '';
+            return acc;
+          }, {} as Record<string, any>);
+          cellValue = formulaEngine.evaluate(value, context);
+        } catch (error) {
+          cellValue = value; // Show formula if evaluation fails
+        }
       } else if (!isNaN(Number(value)) && value.trim() !== '' && value.trim() !== '.') {
         cellType = 'number';
         cellValue = Number(value);
@@ -396,15 +413,40 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         cellValue = value;
       }
 
-      // Update cell immediately to prevent value loss
+      // Update cell immediately with real-time persistence
       updateCell(row, col, {
         value: cellValue,
         type: cellType,
         formula,
-        style: getCellData(row, col).style || {}
+        style: getCellData(row, col).style || {},
+        lastModified: new Date().toISOString()
       });
+
+      // Trigger immediate save for critical data
+      const currentData = {
+        ...sheetData,
+        cells: {
+          ...sheetData.cells,
+          [getCellId(row, col)]: {
+            value: cellValue,
+            type: cellType,
+            formula,
+            style: getCellData(row, col).style || {},
+            lastModified: new Date().toISOString()
+          }
+        },
+        lastModified: new Date().toISOString(),
+        version: (sheetData.version || 0) + 1
+      };
+
+      // Debounced auto-save for performance
+      clearTimeout(window.autoSaveTimeout);
+      window.autoSaveTimeout = setTimeout(() => {
+        console.log('Real-time save triggered for cell change');
+        saveSheetMutation.mutate(currentData);
+      }, 500);
     }
-  }, [selectedCell, updateCell]);
+  }, [selectedCell, updateCell, sheetData, saveSheetMutation]);
 
   const handleFormulaBarBlur = useCallback(() => {
     if (selectedCell && formulaBarValue !== null && formulaBarValue !== undefined) {

@@ -1,6 +1,11 @@
 import { Bug, User } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Bug } from "@/types";
+import { format } from "date-fns";
+import { Calendar, User, AlertTriangle, Flag, Settings, FileText, List, Target, Zap } from "lucide-react";
+import { BugComments } from "./bug-comments";
 
 interface BugDetailsProps {
   bug: Bug;
@@ -85,6 +90,13 @@ export function BugDetails({ bug, users = [] }: BugDetailsProps) {
             <p className="text-sm text-gray-700 mt-1">{bug.comments}</p>
           </div>
         )}
+      </CardContent>
+    </Card>
+
+    {/* Comments Section */}
+    <Card>
+      <CardContent className="pt-6">
+        <BugComments bugId={bug.id} />
       </CardContent>
     </Card>
   );

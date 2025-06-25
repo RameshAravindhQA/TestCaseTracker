@@ -25,28 +25,46 @@ export interface TestCase {
   attachments?: FileAttachment[];
 }
 
+export interface BugComment {
+  id: number;
+  bugId: number;
+  userId: number;
+  content: string;
+  createdAt: string;
+  updatedAt?: string;
+  author?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+}
+
 export interface Bug {
   id: number;
   bugId: string;
   title: string;
-  severity: "Critical" | "Major" | "Minor" | "Trivial";
-  priority: "High" | "Medium" | "Low";
-  status: "Open" | "In Progress" | "Resolved" | "Closed";
-  description?: string;
-  environment?: string;
-  preConditions?: string;
+  description: string;
   stepsToReproduce: string;
   expectedResult: string;
   actualResult: string;
+  severity: "Critical" | "Major" | "Medium" | "Minor";
+  priority: "Critical" | "High" | "Medium" | "Low";
+  status: "Open" | "In Progress" | "Resolved" | "Closed";
+  environment?: string;
+  preConditions?: string;
+  testData?: string;
+  attachments?: string[];
   comments?: string;
-  dateReported: string;
-  createdAt: string;
-  updatedAt: string;
   projectId: number;
   moduleId?: number;
   assignedTo?: number;
+  reportedBy: number;
+  dateReported: string;
+  updatedAt?: string;
+  createdAt: string;
+  githubIssueNumber?: number;
   tags?: string[];
-  attachments?: FileAttachment[];
+  bugComments?: BugComment[];
 }
 
 // Test Sheet Types

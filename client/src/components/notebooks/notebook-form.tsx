@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -17,7 +16,7 @@ interface NotebookFormProps {
 export function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [formData, setFormData] = useState({
     title: notebook?.title || '',
     content: notebook?.content || '',
@@ -53,24 +52,35 @@ export function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
     },
   });
 
+  // Update notebook mutation
   const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest("PUT", `/api/notebooks/${notebook?.id}`, data);
+    mutationFn: async (data: Partial<Notebook>) => {
+      console.log('Updating notebook with data:', data);
+      const response = await apiRequest("PUT", `/api/notebooks/${notebook?.id}`, {
+        ...data,
+        updatedAt: new Date().toISOString()
+      });
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to update notebook: ${errorText}`);
       }
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notebooks'] });
+    onSuccess: (updatedNotebook) => {
+      console.log('Notebook updated successfully:', updatedNotebook);
+      queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
+      queryClient.setQueryData(["/api/notebooks"], (oldData: Notebook[] | undefined) => {
+        if (!oldData) return [updatedNotebook];
+        return oldData.map(n => n.id === updatedNotebook.id ? updatedNotebook : n);
+      });
       toast({
         title: "Success",
         description: "Notebook updated successfully.",
       });
-      onSuccess?.();
+      onSuccess();
     },
     onError: (error: any) => {
+      console.error('Notebook update error:', error);
       toast({
         title: "Error",
         description: `Failed to update notebook: ${error.message}`,
@@ -81,7 +91,7 @@ export function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title.trim()) {
       toast({
         title: "Error",
@@ -91,10 +101,22 @@ export function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
       return;
     }
 
+    console.log('Form submitted with data:', formData);
+    const submitData = {
+      title: formData.title.trim(),
+      content: formData.content || '',
+      color: formData.color || '#ffffff',
+      isPinned: formData.isPinned || false,
+      isArchived: formData.isArchived || false,
+      tags: formData.tags || []
+    };
+
     if (notebook) {
-      updateMutation.mutate(formData);
+      console.log('Updating notebook with:', submitData);
+      updateMutation.mutate(submitData);
     } else {
-      createMutation.mutate(formData);
+      console.log('Creating new notebook with:', submitData);
+      createMutation.mutate(submitData);
     }
   };
 
@@ -143,7 +165,7 @@ export function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
           />
           Pinned
         </label>
-        
+
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
