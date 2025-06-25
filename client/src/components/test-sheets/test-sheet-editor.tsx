@@ -44,6 +44,8 @@ import {
   FileSpreadsheet,
   Grid3X3,
   Square,
+  Edit2,
+  Check,
 } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
 
@@ -85,10 +87,13 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
   const [findText, setFindText] = useState("");
   const [replaceText, setReplaceText] = useState("");
+  const [editingName, setEditingName] = useState(false);
+  const [sheetName, setSheetName] = useState(sheet.name);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const gridRef = useRef<HTMLDivElement>(null);
+  const formulaBarRef = useRef<HTMLInputElement>(null);
 
   // Convert column number to letter (0 -> A, 1 -> B, etc.)
   const getColumnLetter = (colIndex: number): string => {
@@ -125,7 +130,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
 
       // Ensure value is properly preserved and handle all data types
       let newValue = updates.value !== undefined ? updates.value : currentCell.value;
-      
+
       // Ensure we preserve the original input for display purposes
       if (updates.formula) {
         // For formulas, store both the formula and calculated value
@@ -197,6 +202,33 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
       });
     },
   });
+
+    // Update sheet name mutation
+    const updateNameMutation = useMutation({
+      mutationFn: async (newName: string) => {
+        const res = await apiRequest("PUT", `/api/test-sheets/${sheet.id}`, {
+          name: newName
+        });
+        return res.json();
+      },
+      onSuccess: () => {
+        toast({
+          title: "Name updated",
+          description: "Sheet name has been updated successfully.",
+        });
+        setEditingName(false);
+        if (onSave) onSave();
+      },
+      onError: (error) => {
+        toast({
+          title: "Update failed",
+          description: `Failed to update sheet name: ${error}`,
+          variant: "destructive",
+        });
+        setSheetName(sheet.name); // Reset to original name
+        setEditingName(false);
+      },
+    });
 
   // Auto-save effect when sheet data changes
   useEffect(() => {
@@ -298,18 +330,26 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   };
 
   // Handle formula bar change with enhanced persistence and immediate UI update
-  const handleFormulaBarChange = (value: string) => {
-    console.log('Formula bar change:', value, 'Selected cell:', selectedCell);
+  const handleFormulaBarChange = useCallback((value: string) => {
+    setFormulaBarValue(value);
+    // Don't immediately update cellData on every keystroke
+    // This will be handled on blur or cell switch
+  }, []);
 
+  const handleFormulaBarBlur = useCallback(() => {
     if (selectedCell) {
-      let cellValue: any = value;
+      const currentValue = formulaBarValue;
+      const row = selectedCell.row;
+      const col = selectedCell.col;
+
+      let cellValue: any = currentValue;
       let cellType: CellData['type'] = 'text';
       let formula: string | undefined;
 
       // Determine cell type and process value
-      if (value.startsWith('=')) {
+      if (currentValue.startsWith('=')) {
         cellType = 'formula';
-        formula = value;
+        formula = currentValue;
         // Evaluate formula
         try {
           const context = Object.keys(sheetData.cells).reduce((acc, cellId) => {
@@ -317,40 +357,41 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
             acc[cellId] = cell?.value || '';
             return acc;
           }, {} as Record<string, any>);
-          cellValue = formulaEngine.evaluate(value, context);
+          cellValue = formulaEngine.evaluate(currentValue, context);
         } catch (error) {
           cellValue = '#ERROR!';
           console.error('Formula evaluation error:', error);
         }
-      } else if (!isNaN(Number(value)) && value.trim() !== '' && value.trim() !== '.') {
+      } else if (!isNaN(Number(currentValue)) && currentValue.trim() !== '' && currentValue.trim() !== '.') {
         cellType = 'number';
-        cellValue = Number(value);
-      } else if (value.toLowerCase() === 'true' || value.toLowerCase() === 'false') {
+        cellValue = Number(currentValue);
+      } else if (currentValue.toLowerCase() === 'true' || currentValue.toLowerCase() === 'false') {
         cellType = 'boolean';
-        cellValue = value.toLowerCase() === 'true';
-      } else if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        cellValue = currentValue.toLowerCase() === 'true';
+      } else if (currentValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
         cellType = 'date';
-        cellValue = value;
+        cellValue = currentValue;
       } else {
         cellType = 'text';
-        cellValue = value;
+        cellValue = currentValue;
       }
 
-      console.log('Updating cell with - Raw value:', value, 'Processed value:', cellValue, 'Type:', cellType, 'Formula:', formula);
-
-      // Use updateCell function for better persistence
-      updateCell(selectedCell.row, selectedCell.col, {
+      updateCell(row, col, {
         value: cellValue,
         type: cellType,
         formula,
-        style: getCellData(selectedCell.row, selectedCell.col).style || {},
+        style: getCellData(row, col).style || {},
         timestamp: new Date().toISOString() // Add timestamp for debugging
       });
-
-      // Update formula bar to show the original input for formulas
-      setFormulaBarValue(value);
     }
-  };
+  }, [formulaBarValue, sheetData.cells, updateCell, selectedCell]);
+
+  const handleFormulaBarKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && selectedCell) {
+      handleFormulaBarBlur();
+      setIsEditing(false);
+    }
+  }, [handleFormulaBarBlur, selectedCell]);
 
   // Handle cell input change during editing
   const handleCellInputChange = (value: string) => {
@@ -643,7 +684,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         const prefix = match[1];
         const number = parseInt(match[2]);
         const suffix = match[3];
-        
+
         let counter = 0;
         for (let r = dragFillStart.row; r <= endRow; r++) {
           for (let c = dragFillStart.col; c <= endCol; c++) {
@@ -680,7 +721,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     if (!selectedRange && !selectedCell) return;
 
     const cellsToCopy: { [key: string]: CellData } = {};
-    
+
     if (selectedRange) {
       for (let row = selectedRange.startRow; row <= selectedRange.endRow; row++) {
         for (let col = selectedRange.startCol; col <= selectedRange.endCol; col++) {
@@ -694,7 +735,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     }
 
     setCopiedCells(cellsToCopy);
-    
+
     toast({
       title: "Copied",
       description: `Copied ${Object.keys(cellsToCopy).length} cell(s)`,
@@ -721,7 +762,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     copiedEntries.forEach(([cellId, cellData]) => {
       const col = cellId.charCodeAt(0) - 65;
       const row = parseInt(cellId.substring(1)) - 1;
-      
+
       const newRow = row + rowOffset;
       const newCol = col + colOffset;
 
@@ -752,7 +793,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
       for (let col = 0; col < sheetData.cols; col++) {
         const cellData = getCellData(row, col);
         const cellValue = String(cellData.value || '');
-        
+
         if (cellValue.includes(findText)) {
           const newValue = cellValue.replace(
             replaceAll ? new RegExp(findText, 'g') : findText,
@@ -760,7 +801,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
           );
           updatedCells.push({ row, col, newValue });
           replacedCount++;
-          
+
           if (!replaceAll) break;
         }
       }
@@ -788,14 +829,64 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
 
   const selectedCellData = selectedCell ? getCellData(selectedCell.row, selectedCell.col) : null;
 
+  const handleNameSave = () => {
+    if (sheetName.trim() && sheetName !== sheet.name) {
+      updateNameMutation.mutate(sheetName.trim());
+    } else {
+      setEditingName(false);
+      setSheetName(sheet.name);
+    }
+  };
+
+  const handleNameKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleNameSave();
+    } else if (e.key === 'Escape') {
+      setEditingName(false);
+      setSheetName(sheet.name);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-screen-xl h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b">
+          <div className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
-            {sheet.name}
-          </DialogTitle>
+            {editingName ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={sheetName}
+                  onChange={(e) => setSheetName(e.target.value)}
+                  onKeyDown={handleNameKeyPress}
+                  onBlur={handleNameSave}
+                  className="text-lg font-semibold border-none p-0 h-auto focus:ring-0"
+                  autoFocus
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleNameSave}
+                  disabled={updateNameMutation.isPending}
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-lg font-semibold">{sheetName}</DialogTitle>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEditingName(true)}
+                  className="h-6 w-6 p-0"
+                >
+                  <Edit2 className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+            <Badge variant="outline">v{sheet.metadata.version}</Badge>
+          </div>
         </DialogHeader>
 
         {/* Toolbar */}
@@ -1001,12 +1092,8 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
           <Input
             value={formulaBarValue}
             onChange={(e) => setFormulaBarValue(e.target.value)}
-            onBlur={() => handleFormulaBarChange(formulaBarValue)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleFormulaBarChange(formulaBarValue);
-              }
-            }}
+            onBlur={handleFormulaBarBlur}
+            onKeyDown={handleFormulaBarKeyDown}
             placeholder="Enter value or formula (=SUM(A1:A10))"
             className="flex-1"
           />

@@ -1307,10 +1307,29 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     >
       {/* Header */}
       <div className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b p-4">
+        {/* Project Selection */}
+        {!selectedProjectId && !projectId && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h2 className="text-lg font-semibold text-blue-900 mb-3">Select a Project</h2>
+            <ProjectSelect
+              projects={allProjects || []}
+              isLoading={isProjectsLoading}
+              selectedProjectId={effectiveProjectId || ""}
+              onChange={(value) => {
+                const projectId = Number(value);
+                if (projectId && allProjects) {
+                  window.location.href = `/reports/consolidated?projectId=${projectId}`;
+                }
+              }}
+              placeholder="Choose a project to view consolidated reports"
+            />
+          </div>
+        )}
+        
         <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Consolidated Reports - {project?.name}
+              Consolidated Reports {project?.name ? `- ${project.name}` : ''}
             </h1>
             <p className="text-gray-600 mt-1">Comprehensive project overview and status management</p>
             <div className="text-xs text-gray-500 mt-1">

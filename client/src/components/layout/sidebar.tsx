@@ -394,9 +394,5 @@ const SidebarComponent = ({ className }: SidebarProps) => {
   );
 };
 
-// Always return the same component instance to prevent re-renders completely
-// This is the most aggressive optimization possible to prevent profile pic reloading
-export const Sidebar = memo(SidebarComponent, () => {
-  // Always return true to skip all re-renders
-  return true;
-});
+// Memoize the SidebarComponent to prevent unnecessary re-renders
+export const Sidebar = memo(SidebarComponent);

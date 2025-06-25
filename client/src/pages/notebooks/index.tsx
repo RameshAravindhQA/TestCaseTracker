@@ -73,7 +73,7 @@ export default function NotebooksPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
       toast({ title: "Success", description: "Notebook created successfully" });
       resetForm();
-      setShowCreateDialog(false);
+      setCreateDialogOpen(false);
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -92,6 +92,7 @@ export default function NotebooksPage() {
       toast({ title: "Success", description: "Notebook updated successfully" });
       setEditingNotebook(null);
       resetForm();
+      setCreateDialogOpen(false);
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -369,33 +370,40 @@ export default function NotebooksPage() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.2, delay: index * 0.03 }}
               >
-                <Card className={`${getColorClass(notebook.color)} hover:shadow-lg transition-shadow duration-200`}>
+                <Card 
+                  className={`${getColorClass(notebook.color)} hover:shadow-lg transition-shadow duration-200 cursor-pointer`}
+                  onClick={() => handleEdit(notebook)}
+                >
                   <CardHeader className="flex items-start justify-between">
                     <CardTitle className="text-lg font-semibold line-clamp-2">
                       {highlightText(notebook.title, searchQuery)}
                     </CardTitle>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
+                        <Button 
+                          variant="ghost" 
+                          className="h-8 w-8 p-0 rounded-full"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <MoreHorizontal className="h-4 w-4" />
                           <span className="sr-only">Open menu</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" forceMount>
-                        <DropdownMenuItem onClick={() => handleEdit(notebook)}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(notebook); }}>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleTogglePin(notebook)}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleTogglePin(notebook); }}>
                           <Pin className="h-4 w-4 mr-2" />
                           {notebook.isPinned ? "Unpin" : "Pin"}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleArchive(notebook)}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleArchive(notebook); }}>
                           <Archive className="h-4 w-4 mr-2" />
                           {notebook.isArchived ? "Unarchive" : "Archive"}
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleDelete(notebook)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(notebook); }}
                           className="text-red-600 focus:bg-red-600 focus:text-white"
                         >
                           <Trash className="h-4 w-4 mr-2" />
