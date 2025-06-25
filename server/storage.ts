@@ -838,18 +838,18 @@ class MemStorage implements IStorage {
       .sort((a, b) => a.position - b.position);
   }
 
-  async updateKanbanCard(id: number, data: Partial<KanbanCard>): Promise<KanbanCard | null> {
+  async updateKanbanCard(id: number, cardData: any): Promise<any> {
     const card = this.kanbanCards.get(id);
-```tool_code
-if (!card) return null;
+    if (!card) return null;
 
-    const updatedCard = { ...card, ...data };
+    const updatedCard = { ...card, ...cardData };
     this.kanbanCards.set(id, updatedCard);
     return updatedCard;
   }
 
   async deleteKanbanCard(id: number): Promise<boolean> {
-    return this.kanbanCards.delete(id);
+    return```tool_code
+ this.kanbanCards.delete(id);
   }
 
   // Custom marker operations
@@ -1806,7 +1806,7 @@ This commit introduces GitHub integration storage methods to the MemStorage clas
 
     try {
       // Test connection first
-      //await this.testConnection(); // no testConnection method in MemStorage
+      //await this.testConnection(); // no testConnection method in Memorage
 
       // Create default super admin
       await this.createDefaultSuperAdmin();
