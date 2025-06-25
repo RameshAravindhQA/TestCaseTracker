@@ -20,6 +20,7 @@ import { Download } from "lucide-react";
 
 export default function GitHubIntegrationPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<any>(null);
@@ -87,6 +88,35 @@ export default function GitHubIntegrationPage() {
     onError: (error: Error) => {
       toast({
         title: "Sync Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Sync from GitHub for specific project mutation
+  const syncFromGitHubMutation = useMutation({
+    mutationFn: async (projectId: number) => {
+      const response = await fetch(`/api/github/sync-from-github/${projectId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to sync from GitHub');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Sync from GitHub Successful",
+        description: `Synced ${data.syncedCount || 0} out of ${data.totalIssues || 0} GitHub issues`,
+      });
+      refetchConfigs();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Sync from GitHub Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -222,14 +252,29 @@ export default function GitHubIntegrationPage() {
                       {new Date(config.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditConfig(config)}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditConfig(config)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => syncFromGitHubMutation.mutate(config.projectId)}
+                          disabled={syncFromGitHubMutation.isPending}
+                        >
+                          {syncFromGitHubMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4 mr-2" />
+                          )}
+                          Sync from GitHub
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

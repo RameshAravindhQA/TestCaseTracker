@@ -385,31 +385,52 @@ export default function ProjectDetailPage() {
       }
       const bugs = await bugsResponse.json();
 
+      if (bugs.length === 0) {
+        return { successful: 0, total: 0, message: "No bugs found to sync" };
+      }
+
       // Sync each bug that might have GitHub issues
       const syncPromises = bugs.map(async (bug: any) => {
         try {
           const response = await apiRequest("POST", `/api/github/sync/${bug.id}`);
           if (response.ok) {
-            return await response.json();
+            const result = await response.json();
+            return { bug: bug.id, success: true, result };
+          } else {
+            const error = await response.json();
+            console.warn(`Failed to sync bug ${bug.bugId} (ID: ${bug.id}):`, error.message);
+            return { bug: bug.id, success: false, error: error.message };
           }
         } catch (error) {
-          console.warn(`Failed to sync bug ${bug.id}:`, error);
-          return null;
+          console.warn(`Failed to sync bug ${bug.bugId} (ID: ${bug.id}):`, error);
+          return { bug: bug.id, success: false, error: error.message };
         }
       });
 
       const results = await Promise.allSettled(syncPromises);
-      const successful = results.filter(r => r.status === 'fulfilled' && r.value).length;
+      const successful = results.filter(r => r.status === 'fulfilled' && r.value?.success).length;
       const total = bugs.length;
+      const errors = results
+        .filter(r => r.status === 'fulfilled' && !r.value?.success)
+        .map(r => r.value?.error)
+        .filter(Boolean);
 
-      return { successful, total };
+      return { successful, total, errors };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/bugs`] });
-      toast({
-        title: "GitHub Sync Complete",
-        description: `Synchronized ${data.successful} out of ${data.total} bugs with GitHub`,
-      });
+      
+      if (data.total === 0) {
+        toast({
+          title: "No Bugs to Sync",
+          description: data.message || "No bugs found in this project",
+        });
+      } else {
+        toast({
+          title: "GitHub Sync Complete",
+          description: `Synchronized ${data.successful} out of ${data.total} bugs with GitHub${data.errors?.length ? `. ${data.errors.length} errors occurred.` : ''}`,
+        });
+      }
     },
     onError: (error: any) => {
       toast({

@@ -1793,6 +1793,10 @@ class MemStorage implements IStorage {
     };
     return this.githubIssues[index];
   }
+
+  async getAllGitHubConfigs(): Promise<any[]> {
+    return this.githubConfigs;
+  }
 }
 
 // Create and export the storage instance
