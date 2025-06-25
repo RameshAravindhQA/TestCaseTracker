@@ -875,6 +875,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                           console.warn('Could not fetch module data:', error);
                         }
                       }
+                      }
 
                       // Check for test case IDs that already exist in current test cases
                       const existingTestCaseIds = new Set(
