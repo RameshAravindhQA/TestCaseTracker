@@ -224,6 +224,161 @@ ${bug.comments || 'No additional comments.'}
     }
   }
 
+  async syncFromGitHubToSystem(owner: string, repo: string, token: string, projectId: number) {
+    logger.info(`Syncing from GitHub ${owner}/${repo} to system for project ${projectId}`);
+
+    try {
+      const config = {
+        repoOwner: owner,
+        repoName: repo,
+        accessToken: token
+      };
+
+      // Get all GitHub issues
+      const githubIssues = await this.getAllIssues(config);
+      
+      let syncResults = {
+        totalIssues: githubIssues.length,
+        updatedBugs: 0,
+        createdBugs: 0,
+        errors: [] as string[]
+      };
+
+      for (const githubIssue of githubIssues) {
+        try {
+          // Check if we have a bug linked to this GitHub issue
+          const existingGitHubIssue = await storage.getGitHubIssueByGitHubId(githubIssue.id);
+          
+          if (existingGitHubIssue) {
+            // Update existing bug
+            const bug = await storage.getBug(existingGitHubIssue.bugId);
+            if (bug) {
+              // Map GitHub status to TestCaseTracker status
+              let bugStatus = 'Open';
+              if (githubIssue.state === 'closed') {
+                bugStatus = 'Resolved';
+              } else if (githubIssue.state === 'open') {
+                if (githubIssue.labels.includes('in-progress') || githubIssue.labels.includes('in progress')) {
+                  bugStatus = 'In Progress';
+                } else {
+                  bugStatus = 'Open';
+                }
+              }
+
+              // Extract title and description from GitHub issue
+              const title = githubIssue.title.replace(/^\[.*?\]\s*/, ''); // Remove bug ID prefix if exists
+              const description = this.extractDescriptionFromGitHubBody(githubIssue.body);
+
+              // Update bug with GitHub data
+              await storage.updateBug(existingGitHubIssue.bugId, {
+                title: title,
+                description: description,
+                status: bugStatus
+              });
+
+              // Update GitHub issue record
+              await storage.updateGitHubIssue(existingGitHubIssue.id, {
+                status: githubIssue.state
+              });
+
+              syncResults.updatedBugs++;
+              logger.info(`Updated bug ${bug.bugId} from GitHub issue #${githubIssue.number}`);
+            }
+          } else {
+            // Create new bug from GitHub issue if it doesn't exist
+            const title = githubIssue.title.replace(/^\[.*?\]\s*/, '');
+            const description = this.extractDescriptionFromGitHubBody(githubIssue.body);
+            
+            let bugStatus = 'Open';
+            if (githubIssue.state === 'closed') {
+              bugStatus = 'Resolved';
+            } else if (githubIssue.state === 'open') {
+              if (githubIssue.labels.includes('in-progress') || githubIssue.labels.includes('in progress')) {
+                bugStatus = 'In Progress';
+              } else {
+                bugStatus = 'Open';
+              }
+            }
+
+            // Determine severity and priority from labels
+            let severity = 'Medium';
+            let priority = 'Medium';
+            
+            for (const label of githubIssue.labels) {
+              if (label.startsWith('severity:')) {
+                severity = label.split(':')[1].charAt(0).toUpperCase() + label.split(':')[1].slice(1);
+              }
+              if (label.startsWith('priority:')) {
+                priority = label.split(':')[1].charAt(0).toUpperCase() + label.split(':')[1].slice(1);
+              }
+            }
+
+            // Create new bug
+            const newBug = await storage.createBug({
+              title: title,
+              description: description,
+              status: bugStatus,
+              severity: severity,
+              priority: priority,
+              projectId: projectId,
+              reportedById: 1, // Default to admin user
+              environment: 'GitHub Import',
+              stepsToReproduce: '',
+              expectedResult: '',
+              actualResult: '',
+              attachments: []
+            });
+
+            // Create GitHub issue link
+            await storage.createGitHubIssue({
+              bugId: newBug.id,
+              githubIssueNumber: githubIssue.number,
+              githubIssueId: githubIssue.id,
+              githubUrl: githubIssue.url,
+              status: githubIssue.state as 'open' | 'closed'
+            });
+
+            syncResults.createdBugs++;
+            logger.info(`Created new bug ${newBug.bugId} from GitHub issue #${githubIssue.number}`);
+          }
+        } catch (error) {
+          const errorMsg = `Error syncing GitHub issue #${githubIssue.number}: ${error.message}`;
+          syncResults.errors.push(errorMsg);
+          logger.error(errorMsg);
+        }
+      }
+
+      logger.info(`GitHub sync completed: ${syncResults.updatedBugs} updated, ${syncResults.createdBugs} created, ${syncResults.errors.length} errors`);
+      return syncResults;
+    } catch (error) {
+      logger.error(`Failed to sync from GitHub to system:`, error);
+      throw error;
+    }
+  }
+
+  private extractDescriptionFromGitHubBody(body: string): string {
+    if (!body) return '';
+
+    // Try to extract the description section from formatted bug report
+    const descriptionMatch = body.match(/### Description\s*\n(.*?)(?=\n###|\n---|\n\*|$)/s);
+    if (descriptionMatch) {
+      return descriptionMatch[1].trim();
+    }
+
+    // If no formatted description found, return the first paragraph
+    const lines = body.split('\n');
+    const firstParagraph = [];
+    
+    for (const line of lines) {
+      if (line.trim() === '' && firstParagraph.length > 0) break;
+      if (!line.startsWith('#') && !line.startsWith('**') && !line.startsWith('---')) {
+        firstParagraph.push(line.trim());
+      }
+    }
+
+    return firstParagraph.join(' ').trim() || body.substring(0, 200) + '...';
+  }
+
   async syncBugToGitHub(bugId: number): Promise<{ created: boolean; issueNumber?: number; url?: string }> {
     try {
       const bug = await storage.getBug(bugId);

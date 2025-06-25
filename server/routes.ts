@@ -5643,15 +5643,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get GitHub configuration for the project
       const githubConfig = await storage.getGitHubConfig(projectId);
-      if (!githubConfig) {
-        return res.status(404).json({ message: "GitHub configuration not found" });
+      if (!githubConfig || !githubConfig.isActive) {
+        return res.status(404).json({ message: "GitHub configuration not found or inactive" });
       }
+
+      // Import the GitHub service
+      const { githubService } = await import('./github-service');
 
       // Fetch issues from GitHub and sync to system
       const syncResult = await githubService.syncFromGitHubToSystem(
-        githubConfig.owner,
-        githubConfig.repo,
-        githubConfig.token,
+        githubConfig.repoOwner,
+        githubConfig.repoName,
+        githubConfig.accessToken,
         projectId
       );
 
