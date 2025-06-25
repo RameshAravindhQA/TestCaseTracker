@@ -762,28 +762,12 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       // Validate module IDs against available modules
                       // Use the current module ID from props if provided
                       const selectedModuleId = moduleId;
-                      const validModuleIds = new Set<string>(); // Will be populated if we need to fetch modules
+                      const validModules = new Map<string, number>(); // Map moduleId string to database ID
 
                       // Fetch valid module IDs for current project
                       const validateModuleIds = async () => {
                         try {
-                          // If a specific module is provided in props, use it for strict validation
-                          if (selectedModuleId) {
-                            console.log(`Using selected module ID: ${selectedModuleId}`);
-
-                            // Add the module ID from props to valid list
-                            validModuleIds.add(selectedModuleId.toString());
-
-                            // For CSV imports to a specific module, assign the module ID to all rows
-                            parsedData.forEach(row => {
-                              row.moduleId = selectedModuleId.toString();
-                            });
-
-                            console.log(`Assigned module ID ${selectedModuleId} to all ${parsedData.length} test cases`);
-                            return true;
-                          }
-
-                          // Otherwise, fetch modules and validate
+                          // Fetch modules to get the mapping between moduleId and database ID
                           const response = await apiRequest('GET', `/api/projects/${projectId}/modules`);
                           if (!response.ok) {
                             throw new Error(`Failed to fetch modules: ${response.status}`);
@@ -800,19 +784,46 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                               return false;
                             }
 
-                            // Add all valid module IDs to the set
+                            // Build mapping of moduleId to database ID
                             modules.forEach(module => {
-                              validModuleIds.add(module.id.toString());
+                              validModules.set(module.moduleId || `MOD-${module.id}`, module.id);
                             });
 
-                            // If CSV has moduleId column, validate or correct those values
-                            const firstModuleId = modules[0].id.toString();
+                            console.log('Available modules:', modules.map(m => `${m.moduleId} -> DB ID: ${m.id}`));
+
+                            // If a specific module is provided in props, use it for all rows
+                            if (selectedModuleId) {
+                              console.log(`Using selected module database ID: ${selectedModuleId}`);
+                              
+                              // Assign the database ID to all rows
+                              parsedData.forEach(row => {
+                                row.moduleId = selectedModuleId.toString();
+                              });
+
+                              console.log(`Assigned module database ID ${selectedModuleId} to all ${parsedData.length} test cases`);
+                              return true;
+                            }
+
+                            // If CSV has moduleId column, map those values to database IDs
                             let correctedModuleCount = 0;
+                            const firstModuleDbId = modules[0].id.toString();
 
                             parsedData.forEach(row => {
-                              // If moduleId is missing or invalid, use the first module
-                              if (!row.moduleId || !validModuleIds.has(row.moduleId.toString())) {
-                                row.moduleId = firstModuleId;
+                              if (row.moduleId) {
+                                // Try to map the CSV moduleId to database ID
+                                const dbId = validModules.get(row.moduleId);
+                                if (dbId) {
+                                  row.moduleId = dbId.toString();
+                                  console.log(`Mapped CSV moduleId ${row.moduleId} to database ID ${dbId}`);
+                                } else {
+                                  // If no mapping found, use first module
+                                  row.moduleId = firstModuleDbId;
+                                  correctedModuleCount++;
+                                  console.log(`Invalid moduleId ${row.moduleId}, using first module DB ID ${firstModuleDbId}`);
+                                }
+                              } else {
+                                // If moduleId is missing, use the first module
+                                row.moduleId = firstModuleDbId;
                                 correctedModuleCount++;
                               }
                             });
@@ -982,26 +993,8 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                           row.priority = 'Medium'; // Default to Medium for invalid priorities
                         }
 
-                        // Ensure moduleId is valid if using the one from CSV
-                        if (!moduleId && row.moduleId && !validModuleIds.has(row.moduleId)) {
-                          // If we're here the validation earlier would have caught it,
-                          // but this is an extra safety measure
-                          toast({
-                            title: "Invalid module ID corrected",
-                            description: `Row ${index + 1}: Module ID ${row.moduleId} was invalid and has been corrected.`,
-                          });
-
-                          // Take the first valid module ID if available, otherwise mark as invalid
-                          const firstValidModuleId = validModuleIds.size > 0 ? 
-                            Array.from(validModuleIds)[0] : undefined;
-
-                          if (firstValidModuleId) {
-                            row.moduleId = firstValidModuleId;
-                          } else {
-                            // If no valid modules available, we should not get here due to earlier validation
-                            return;
-                          }
-                        }
+                        // At this point, moduleId should already be mapped to database ID
+                        // No additional validation needed since it was handled in validateModuleIds
 
                         // Check if test case ID already exists
                         if (existingTestCaseIds.has(row.testCaseId)) {
