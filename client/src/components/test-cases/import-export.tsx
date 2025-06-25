@@ -850,6 +850,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       console.log(`Import validation passed. Processing ${parsedData.length} test cases...`);
 
                       // Get project and module information for validation
+                      // Get project and module information for validation
                       let projectPrefix = 'DEF';
                       let currentModule = null;
 
@@ -861,8 +862,6 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         }
                       } catch (error) {
                         console.warn('Could not fetch project data:', error);
-                      ```text
-
                       }
 
                       if (moduleId) {
