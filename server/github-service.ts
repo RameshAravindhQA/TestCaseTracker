@@ -185,6 +185,12 @@ ${bug.comments || 'No additional comments.'}
     logger.info(`Syncing GitHub issue #${issueNumber} status with bug ${bugId}`);
 
     try {
+      // First verify the bug exists
+      const bug = await storage.getBug(bugId);
+      if (!bug) {
+        throw new Error(`Bug ${bugId} not found`);
+      }
+
       const githubIssue = await this.getIssue(config, issueNumber);
       
       // Map GitHub status to TestCaseTracker status
@@ -200,10 +206,17 @@ ${bug.comments || 'No additional comments.'}
         }
       }
 
+      // Update the bug status if it's different
+      if (bug.status !== bugStatus) {
+        await storage.updateBug(bugId, { status: bugStatus });
+      }
+
       return {
         githubStatus: githubIssue.state,
         bugStatus: bugStatus,
-        needsUpdate: true
+        newStatus: bug.status !== bugStatus ? bugStatus : null,
+        previousStatus: bug.status,
+        needsUpdate: bug.status !== bugStatus
       };
     } catch (error) {
       logger.error(`Failed to sync issue status for #${issueNumber}:`, error);

@@ -117,16 +117,19 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     
     setSheetData(prev => {
       const currentCell = prev.cells[cellId] || { value: '', type: 'text' as const, style: {} };
+      
+      // Ensure value is properly preserved
+      const newValue = updates.value !== undefined ? updates.value : currentCell.value;
+      
       const newCell = { 
         ...currentCell, 
         ...updates,
+        value: newValue, // Explicitly set value
         lastModified: new Date().toISOString(),
-        id: cellId,
-        // Ensure value persistence
-        value: updates.value !== undefined ? updates.value : currentCell.value
+        id: cellId
       };
       
-      console.log('UpdateCell - Previous cell:', currentCell, 'New cell:', newCell);
+      console.log('UpdateCell - Previous cell:', currentCell, 'New cell:', newCell, 'Value:', newValue);
       
       // Create completely new state object to force re-render and ensure persistence
       const newCells = { ...prev.cells };
@@ -139,7 +142,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         version: (prev.version || 0) + 1 // Add version tracking
       };
       
-      console.log('UpdateCell - New sheet data:', newSheetData);
+      console.log('UpdateCell - New sheet data cells:', Object.keys(newSheetData.cells).length, 'Cell value for', cellId, ':', newSheetData.cells[cellId]?.value);
       
       // Immediately persist to localStorage as backup
       try {
@@ -318,10 +321,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         cellValue = value;
       }
 
-      console.log('Updating cell with:', { value: cellValue, type: cellType, formula });
-      
-      // Update formula bar value immediately to reflect user input
-      setFormulaBarValue(value);
+      console.log('Updating cell with - Raw value:', value, 'Processed value:', cellValue, 'Type:', cellType, 'Formula:', formula);
       
       // Use updateCell function for better persistence
       updateCell(selectedCell.row, selectedCell.col, {
@@ -331,6 +331,13 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         style: getCellData(selectedCell.row, selectedCell.col).style || {},
         timestamp: new Date().toISOString() // Add timestamp for debugging
       });
+      
+      // Keep the formula bar showing the original input for formulas, otherwise show the processed value
+      if (cellType === 'formula') {
+        setFormulaBarValue(value);
+      } else {
+        setFormulaBarValue(String(cellValue));
+      }
     }
   };
 

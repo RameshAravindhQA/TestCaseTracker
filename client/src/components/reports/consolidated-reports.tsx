@@ -323,58 +323,93 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
   });
 
-  // Mutation for updating status with proper error handling
+  // Status update mutation with proper API handling
   const updateStatusMutation = useMutation({
     mutationFn: async ({ itemId, type, status }: { itemId: string, type: 'testcase' | 'bug', status: string }) => {
-      const id = itemId.split('-')[1];
+      const id = parseInt(itemId.split('-')[1]);
       console.log(`Updating ${type} ${id} to status: ${status}`);
+
+      if (!id || isNaN(id)) {
+        throw new Error(`Invalid ID for ${type}: ${itemId}`);
+      }
 
       try {
         let response;
         if (type === 'testcase') {
-          response = await apiRequest('PUT', `/api/test-cases/${id}`, { status });
+          response = await apiRequest('PUT', `/api/test-cases/${id}`, { 
+            status,
+            updatedAt: new Date().toISOString()
+          });
         } else {
-          response = await apiRequest('PUT', `/api/bugs/${id}`, { status });
+          response = await apiRequest('PUT', `/api/bugs/${id}`, { 
+            status,
+            updatedAt: new Date().toISOString()
+          });
         }
-        
+
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`Status update failed for ${type} ${id}:`, errorText);
+          console.error(`Status update failed for ${type} ${id}:`, response.status, errorText);
           throw new Error(`Failed to update ${type}: ${response.status} - ${errorText}`);
         }
-        
+
         const result = await response.json();
         console.log(`Successfully updated ${type} ${id}:`, result);
         return result;
-      } catch (error) {
+      } catch (error: any) {
         console.error(`API call failed for ${type} ${id}:`, error);
-        throw error;
+        throw new Error(`${type} update failed: ${error.message}`);
       }
     },
-    onMutate: async ({ itemId, status }) => {
-      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+    onMutate: async ({ itemId, type, status }) => {
+      console.log(`Optimistic update for ${type} ${itemId} -> ${status}`);
+
+      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
       await queryClient.cancelQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
 
-      // Return a context object with the snapshotted value
-      return { itemId, status };
+      // Snapshot the previous value
+      const previousTestCases = queryClient.getQueryData([`/api/projects/${effectiveProjectId}/test-cases`]);
+      const previousBugs = queryClient.getQueryData([`/api/projects/${effectiveProjectId}/bugs`]);
+
+      // Optimistically update to the new value
+      const id = parseInt(itemId.split('-')[1]);
+
+      if (type === 'testcase' && previousTestCases) {
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], (old: any[]) =>
+          old.map(item => item.id === id ? { ...item, status } : item)
+        );
+      } else if (type === 'bug' && previousBugs) {
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], (old: any[]) =>
+          old.map(item => item.id === id ? { ...item, status } : item)
+        );
+      }
+
+      return { previousTestCases, previousBugs, itemId, type, status };
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       console.log(`Successfully updated ${variables.type} ${variables.itemId} to ${variables.status}`);
-      // Force refetch to get the latest data
+
+      // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+
       toast({
         title: "Status Updated",
-        description: `${variables.type === 'testcase' ? 'Test case' : 'Bug'} status has been updated to ${variables.status}.`,
+        description: `${variables.type === 'testcase' ? 'Test case' : 'Bug'} status updated to ${variables.status}`,
       });
-      setEditingItem(null);
     },
-    onError: (error: any, variables) => {
+    onError: (error: any, variables, context) => {
       console.error(`Failed to update ${variables.type} ${variables.itemId}:`, error);
-      // Revert the optimistic update
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+
+      // Rollback optimistic updates
+      if (context?.previousTestCases) {
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], context.previousTestCases);
+      }
+      if (context?.previousBugs) {
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], context.previousBugs);
+      }
+
       toast({
         title: "Update Failed",
         description: `Failed to update ${variables.type === 'testcase' ? 'test case' : 'bug'} status: ${error.message}`,
@@ -735,7 +770,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
         case 'In Progress': return 'bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
         case 'Resolved': return 'bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
         case 'Closed': return 'bg-gradient-to-r from-purple-600 via-violet-700 to-indigo-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
-        default: return 'bg-gradient-to-r from-slate-600 via-gray-700 to-zinc-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
+        default: return 'bg-gradient-to-r from-slate-600 via-gray-70 to-zinc-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300';
       }
     }
   };
@@ -1420,7 +1455,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
               <SelectItem value="Major">Major</SelectItem>
               <SelectItem value="Medium">Medium</SelectItem>
               <SelectItem value="Low">Low</SelectItem>
-            </SelectContent>
+            </Select```text
           </Select>
         </div>
       </div>
