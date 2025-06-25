@@ -79,27 +79,27 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const queryClient = useQueryClient();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [filterPriority, setFilterPriority] = useState<string>("all");
-  const [filterModule, setFilterModule] = useState<string>("all");
-  const [statusUpdateQueue, setStatusUpdateQueue] = useState<{[key: string]: {id: number, type: 'testcase' | 'bug', status: string}}>({});
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [bulkStatus, setBulkStatus] = useState("");
-  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
+  const [filterPriority, setFilterPriority = useState<string>("all");
+  const [filterModule, setFilterModule = useState<string>("all");
+  const [statusUpdateQueue, setStatusUpdateQueue = useState<{[key: string]: {id: number, type: 'testcase' | 'bug', status: string}}>({});
+  const [isFullScreen, setIsFullScreen = useState(false);
+  const [isMinimized, setIsMinimized = useState(false);
+  const [searchQuery, setSearchQuery = useState("");
+  const [selectedItems, setSelectedItems = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus = useState("");
+  const [viewMode, setViewMode = useState<"table" | "kanban">("table");
   const [, navigate] = useLocation();
-  const [viewTestCaseDialogOpen, setViewTestCaseDialogOpen] = useState(false);
-  const [editTestCaseDialogOpen, setEditTestCaseDialogOpen] = useState(false);
-  const [editBugDialogOpen, setEditBugDialogOpen] = useState(false);
-  const [selectedItemForView, setSelectedItemForView] = useState<any>(null);
-  const [severityFilter, setSeverityFilter] = useState<string>("all");
-  const [editingItem, setEditingItem] = useState<{ id: number; type: 'testcase' | 'bug'; status: string } | null>(null);
-  const [newStatus, setNewStatus] = useState<string>("");
-  const [statusUpdateDialog, setStatusUpdateDialog] = useState(false);
-  const [selectedPriority, setSelectedPriority] = useState<string>('');
-  const [selectedModule, setSelectedModule] = useState<string>('');
-  const [selectedSeverity, setSelectedSeverity] = useState<string>('');
+  const [viewTestCaseDialogOpen, setViewTestCaseDialogOpen = useState(false);
+  const [editTestCaseDialogOpen, setEditTestCaseDialogOpen = useState(false);
+  const [editBugDialogOpen, setEditBugDialogOpen = useState(false);
+  const [selectedItemForView, setSelectedItemForView = useState<any>(null);
+  const [severityFilter, setSeverityFilter = useState<string>("all");
+  const [editingItem, setEditingItem = useState<{ id: number; type: 'testcase' | 'bug'; status: string } | null>(null);
+  const [newStatus, setNewStatus = useState<string>("");
+  const [statusUpdateDialog, setStatusUpdateDialog = useState(false);
+  const [selectedPriority, setSelectedPriority = useState<string>('');
+  const [selectedModule, setSelectedModule = useState<string>('');
+  const [selectedSeverity, setSelectedSeverity = useState<string>('');
 
   const currentProjectId = selectedProjectId || projectId;
 
@@ -353,9 +353,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
           throw new Error(`Failed to update ${type}: ${response.status} - ${errorText}`);
         }
 
-        const result = await response.json();
-        console.log(`Successfully updated ${type} ${id}:`, result);
-        return result;
+        return response.json();
       } catch (error: any) {
         console.error(`API call failed for ${type} ${id}:`, error);
         throw new Error(`${type} update failed: ${error.message}`);
@@ -388,31 +386,26 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       return { previousTestCases, previousBugs, itemId, type, status };
     },
     onSuccess: (data, variables) => {
-      console.log(`Successfully updated ${variables.type} ${variables.itemId} to ${variables.status}`);
-
-      // Invalidate and refetch
+      // Invalidate and refetch queries
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+
+      // Force immediate refetch
+      if (variables.type === 'testcase') {
+        queryClient.refetchQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
+      } else {
+        queryClient.refetchQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+      }
 
       toast({
         title: "Status Updated",
         description: `${variables.type === 'testcase' ? 'Test case' : 'Bug'} status updated to ${variables.status}`,
       });
     },
-    onError: (error: any, variables, context) => {
-      console.error(`Failed to update ${variables.type} ${variables.itemId}:`, error);
-
-      // Rollback optimistic updates
-      if (context?.previousTestCases) {
-        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], context.previousTestCases);
-      }
-      if (context?.previousBugs) {
-        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], context.previousBugs);
-      }
-
+    onError: (error: any) => {
       toast({
         title: "Update Failed",
-        description: `Failed to update ${variables.type === 'testcase' ? 'test case' : 'bug'} status: ${error.message}`,
+        description: error.message || "Failed to update status",
         variant: "destructive",
       });
     },
@@ -1455,7 +1448,9 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
               <SelectItem value="Major">Major</SelectItem>
               <SelectItem value="Medium">Medium</SelectItem>
               <SelectItem value="Low">Low</SelectItem>
-            </Select```text
+            </Select
+Item>
+            </SelectContent>
           </Select>
         </div>
       </div>

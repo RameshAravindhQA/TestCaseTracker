@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject } from "./matrix-fix";
 // Removed automation service import
 import { logger } from "./logger";
+import { emailService } from "./email-service";
 import { 
   insertUserSchema, 
   insertProjectSchema, 
@@ -310,7 +311,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const verificationToken = crypto.randomBytes(32).toString("hex");
       await storage.updateUser(user.id, { verificationToken });
       
-      // In a real app, send verification email here
+      // Send welcome email
+      try {
+        await emailService.sendWelcomeEmail(user.email, user.firstName);
+        logger.info(`Welcome email sent to ${user.email}`);
+      } catch (emailError) {
+        logger.error('Failed to send welcome email:', emailError);
+        // Don't fail registration if email fails
+      }
       
       // Return user without sensitive data
       const { password, ...userWithoutPassword } = user;
@@ -599,7 +607,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tempPasswordUsed: false
       });
       
-      // In a real app, send email with temp password to the user
+      // Send welcome email with temporary password
+      try {
+        await emailService.sendWelcomeEmail(newUser.email, newUser.firstName, tempPassword);
+        logger.info(`Welcome email with temp password sent to ${newUser.email}`);
+      } catch (emailError) {
+        logger.error('Failed to send welcome email:', emailError);
+        // Don't fail user creation if email fails
+      }
       
       // Return user without sensitive data, but include the temporary password
       const { password, ...userResponse } = newUser;
@@ -5640,77 +5655,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingGithubIssue = await storage.getGitHubIssueByBugId(bugId);
       
       if (existingGithubIssue) {
-        // Sync existing issue status
-        const syncResult = await githubService.syncIssueStatus(githubConfig, existingGithubIssue.githubIssueNumber, bugId);
-        
-        if (syncResult.needsUpdate) {
-          // Update bug status in the system
-          const updatedBug = await storage.updateBug(bugId, { 
-            status: syncResult.bugStatus 
-          });
+        try {
+          // Sync existing issue status
+          const syncResult = await githubService.syncIssueStatus(githubConfig, existingGithubIssue.githubIssueNumber, bugId);
+          
+          if (syncResult.needsUpdate) {
+            // Update bug status in the system
+            const updatedBug = await storage.updateBug(bugId, { 
+              status: syncResult.bugStatus 
+            });
 
-          // Update GitHub issue record
-          await storage.updateGitHubIssue(existingGithubIssue.id, {
-            status: syncResult.githubStatus
-          });
+            // Update GitHub issue record
+            await storage.updateGitHubIssue(existingGithubIssue.id, {
+              status: syncResult.githubStatus
+            });
 
-          // Log activity
-          await storage.createActivity({
-            userId: req.session.userId!,
-            action: "synced from GitHub",
-            entityType: "bug",
-            entityId: bugId,
-            details: { 
-              bugId: bug.bugId,
-              title: bug.title,
-              oldStatus: bug.status,
+            // Log activity
+            await storage.createActivity({
+              userId: req.session.userId!,
+              action: "synced from GitHub",
+              entityType: "bug",
+              entityId: bugId,
+              details: { 
+                bugId: bug.bugId,
+                title: bug.title,
+                oldStatus: bug.status,
+                newStatus: syncResult.bugStatus,
+                githubIssueNumber: existingGithubIssue.githubIssueNumber
+              }
+            });
+
+            res.json({
+              message: "Bug status synced successfully",
+              bug: updatedBug,
+              githubStatus: syncResult.githubStatus,
+              previousStatus: bug.status,
               newStatus: syncResult.bugStatus,
-              githubIssueNumber: existingGithubIssue.githubIssueNumber
-            }
-          });
-
+              issueNumber: existingGithubIssue.githubIssueNumber
+            });
+          } else {
+            res.json({
+              message: "Bug status is already in sync",
+              status: bug.status,
+              issueNumber: existingGithubIssue.githubIssueNumber
+            });
+          }
+        } catch (syncError) {
+          console.error("GitHub sync error for existing issue:", syncError);
           res.json({
-            message: "Bug status synced successfully",
-            bug: updatedBug,
-            githubStatus: syncResult.githubStatus,
-            previousStatus: bug.status,
-            newStatus: syncResult.bugStatus,
-            issueNumber: existingGithubIssue.githubIssueNumber
-          });
-        } else {
-          res.json({
-            message: "Bug status is already in sync",
+            message: "GitHub issue exists but sync failed",
             status: bug.status,
-            issueNumber: existingGithubIssue.githubIssueNumber
+            issueNumber: existingGithubIssue.githubIssueNumber,
+            error: syncError instanceof Error ? syncError.message : "Unknown sync error"
           });
         }
       } else {
         // Create new GitHub issue
-        const syncResult = await githubService.syncBugToGitHub(bugId);
-        
-        if (syncResult.created) {
-          // Log activity
-          await storage.createActivity({
-            userId: req.session.userId!,
-            action: "created GitHub issue",
-            entityType: "bug",
-            entityId: bugId,
-            details: { 
-              bugId: bug.bugId,
-              title: bug.title,
-              githubIssueNumber: syncResult.issueNumber,
-              githubUrl: syncResult.url
-            }
-          });
+        try {
+          const syncResult = await githubService.syncBugToGitHub(bugId);
+          
+          if (syncResult.created) {
+            // Log activity
+            await storage.createActivity({
+              userId: req.session.userId!,
+              action: "created GitHub issue",
+              entityType: "bug",
+              entityId: bugId,
+              details: { 
+                bugId: bug.bugId,
+                title: bug.title,
+                githubIssueNumber: syncResult.issueNumber,
+                githubUrl: syncResult.url
+              }
+            });
 
-          res.json({
-            message: "GitHub issue created successfully",
-            created: true,
-            issueNumber: syncResult.issueNumber,
-            url: syncResult.url
+            res.json({
+              message: "GitHub issue created successfully",
+              created: true,
+              issueNumber: syncResult.issueNumber,
+              url: syncResult.url
+            });
+          } else {
+            res.json({
+              message: "No GitHub issue exists for this bug",
+              created: false,
+              bugId: bug.bugId,
+              title: bug.title
+            });
+          }
+        } catch (createError) {
+          console.error("GitHub issue creation error:", createError);
+          res.status(400).json({ 
+            message: "Failed to create GitHub issue",
+            error: createError instanceof Error ? createError.message : "Unknown creation error"
           });
-        } else {
-          res.status(400).json({ message: "Failed to create GitHub issue" });
         }
       }
     } catch (error) {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { TestSheet, CellData, CellValue } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -80,7 +79,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   const [bgColorPickerOpen, setBgColorPickerOpen] = useState(false);
   const [showChartDialog, setShowChartDialog] = useState(false);
   const [borderStyle, setBorderStyle] = useState("1px solid #000000");
-  
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -114,13 +113,13 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   const updateCell = useCallback((row: number, col: number, updates: Partial<CellData>) => {
     const cellId = getCellId(row, col);
     console.log('UpdateCell called - Row:', row, 'Col:', col, 'CellId:', cellId, 'Updates:', updates);
-    
+
     setSheetData(prev => {
       const currentCell = prev.cells[cellId] || { value: '', type: 'text' as const, style: {} };
-      
+
       // Ensure value is properly preserved
       const newValue = updates.value !== undefined ? updates.value : currentCell.value;
-      
+
       const newCell = { 
         ...currentCell, 
         ...updates,
@@ -128,29 +127,29 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         lastModified: new Date().toISOString(),
         id: cellId
       };
-      
+
       console.log('UpdateCell - Previous cell:', currentCell, 'New cell:', newCell, 'Value:', newValue);
-      
+
       // Create completely new state object to force re-render and ensure persistence
       const newCells = { ...prev.cells };
       newCells[cellId] = newCell;
-      
+
       const newSheetData = {
         ...prev,
         cells: newCells,
         lastModified: new Date().toISOString(),
         version: (prev.version || 0) + 1 // Add version tracking
       };
-      
+
       console.log('UpdateCell - New sheet data cells:', Object.keys(newSheetData.cells).length, 'Cell value for', cellId, ':', newSheetData.cells[cellId]?.value);
-      
+
       // Immediately persist to localStorage as backup
       try {
         localStorage.setItem(`sheet_${sheet.id}_backup`, JSON.stringify(newSheetData));
       } catch (error) {
         console.warn('Failed to backup to localStorage:', error);
       }
-      
+
       return newSheetData;
     });
   }, [sheet.id]);
@@ -190,7 +189,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     const autoSaveTimer = setTimeout(() => {
       const hasChanges = JSON.stringify(sheetData.cells) !== JSON.stringify(sheet.data.cells);
       console.log('Auto-save check - Has changes:', hasChanges);
-      
+
       if (hasChanges) {
         console.log('Auto-saving sheet data changes');
         // Create a deep copy to ensure data persistence
@@ -217,7 +216,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   // Handle cell mouse down (start selection)
   const handleCellMouseDown = (row: number, col: number, event: React.MouseEvent) => {
     event.preventDefault();
-    
+
     if (event.shiftKey && selectedCell) {
       // Extend selection
       setSelectedRange({
@@ -233,7 +232,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
       setSelectedRange(null);
       setDragStart({ row, col });
       setIsDragging(true);
-      
+
       const cellData = getCellData(row, col);
       if (cellData.formula) {
         setFormulaBarValue(cellData.formula);
@@ -266,7 +265,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   const handleCellClick = (row: number, col: number) => {
     const cellId = getCellId(row, col);
     setSelectedCell({ row, col, cellId });
-    
+
     const cellData = getCellData(row, col);
     if (cellData.formula) {
       setFormulaBarValue(cellData.formula);
@@ -285,7 +284,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   // Handle formula bar change with enhanced persistence and immediate UI update
   const handleFormulaBarChange = (value: string) => {
     console.log('Formula bar change:', value, 'Selected cell:', selectedCell);
-    
+
     if (selectedCell) {
       let cellValue: any = value;
       let cellType: CellData['type'] = 'text';
@@ -322,7 +321,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
       }
 
       console.log('Updating cell with - Raw value:', value, 'Processed value:', cellValue, 'Type:', cellType, 'Formula:', formula);
-      
+
       // Use updateCell function for better persistence
       updateCell(selectedCell.row, selectedCell.col, {
         value: cellValue,
@@ -331,7 +330,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         style: getCellData(selectedCell.row, selectedCell.col).style || {},
         timestamp: new Date().toISOString() // Add timestamp for debugging
       });
-      
+
       // Keep the formula bar showing the original input for formulas, otherwise show the processed value
       if (cellType === 'formula') {
         setFormulaBarValue(value);
@@ -443,7 +442,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
       // Apply to single cell
       const { row, col } = selectedCell;
       const currentCell = getCellData(row, col);
-      
+
       updateCell(row, col, {
         style: {
           ...currentCell.style,
@@ -465,7 +464,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
             bottom: borderType === "all" || borderType === "bottom" ? borderStyle : currentCell.style?.border?.bottom,
             left: borderType === "all" || borderType === "left" ? borderStyle : currentCell.style?.border?.left,
           };
-          
+
           updateCell(row, col, {
             style: {
               ...currentCell.style,
@@ -483,7 +482,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         bottom: borderStyle,
         left: borderStyle,
       };
-      
+
       updateCell(row, col, {
         style: {
           ...currentCell.style,
@@ -501,15 +500,15 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   // Insert formula for selected range
   const insertFormulaForRange = (functionName: string) => {
     if (!selectedRange) return;
-    
+
     const startCellId = getCellId(selectedRange.startRow, selectedRange.startCol);
     const endCellId = getCellId(selectedRange.endRow, selectedRange.endCol);
     const formula = `=${functionName}(${startCellId}:${endCellId})`;
-    
+
     // Insert in cell below the selection
     const targetRow = selectedRange.endRow + 1;
     const targetCol = selectedRange.startCol;
-    
+
     if (targetRow < sheetData.rows) {
       const targetCellId = getCellId(targetRow, targetCol);
       setSelectedCell({ 
@@ -526,7 +525,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   // Export to CSV
   const exportToCSV = () => {
     const csvData: string[][] = [];
-    
+
     for (let row = 0; row < sheetData.rows; row++) {
       const rowData: string[] = [];
       for (let col = 0; col < sheetData.cols; col++) {
@@ -553,7 +552,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   const insertFunction = (functionName: string) => {
     const currentValue = formulaBarValue;
     let newValue = '';
-    
+
     if (functionName === 'PI' || functionName === 'E') {
       newValue = currentValue + `${functionName}()`;
     } else if (functionName === 'RANDOM') {
@@ -561,7 +560,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     } else {
       newValue = currentValue + `${functionName}()`;
     }
-    
+
     setFormulaBarValue(newValue);
   };
 
@@ -587,9 +586,9 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
             <Save className="h-4 w-4 mr-1" />
             Save
           </Button>
-          
+
           <Separator orientation="vertical" className="h-6" />
-          
+
           <Button size="sm" variant="outline" onClick={exportToCSV}>
             <Download className="h-4 w-4 mr-1" />
             Export CSV
@@ -825,7 +824,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
                   const cellData = getCellData(row, col);
                   const isSelected = selectedCell?.row === row && selectedCell?.col === col;
                   const isInRange = isInSelectedRange(row, col);
-                  
+
                   const cellStyle = {
                     backgroundColor: isSelected ? '#e3f2fd' : isInRange ? '#f3e5f5' : cellData.style?.backgroundColor,
                     color: cellData.style?.color,
@@ -837,7 +836,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
                     borderBottom: cellData.style?.border?.bottom || '1px solid #e0e0e0',
                     borderLeft: cellData.style?.border?.left || '1px solid #e0e0e0',
                   };
-                  
+
                   return (
                     <div
                       key={`${row}-${col}`}
