@@ -192,7 +192,7 @@ ${bug.comments || 'No additional comments.'}
       }
 
       const githubIssue = await this.getIssue(config, issueNumber);
-      
+
       // Map GitHub status to TestCaseTracker status
       let bugStatus = 'Open';
       if (githubIssue.state === 'closed') {
@@ -220,6 +220,31 @@ ${bug.comments || 'No additional comments.'}
       };
     } catch (error) {
       logger.error(`Failed to sync issue status for #${issueNumber}:`, error);
+      throw error;
+    }
+  }
+
+  async syncBugToGitHub(bugId: number): Promise<void> {
+    try {
+      const bug = await storage.getBug(bugId);
+      if (!bug) {
+        console.warn(`Bug with ID ${bugId} not found, skipping sync`);
+        return;
+      }
+
+      const project = await storage.getProject(bug.projectId);
+      if (!project) {
+        console.warn(`Project with ID ${bug.projectId} not found, skipping sync`);
+        return;
+      }
+
+      const config = await storage.getGitHubConfig(project.id);
+      if (!config) {
+        console.warn(`GitHub configuration not found for project ${project.id}, skipping sync`);
+        return;
+      }
+    } catch (error) {
+      console.error(`Error syncing bug ${bugId} to GitHub:`, error);
       throw error;
     }
   }
