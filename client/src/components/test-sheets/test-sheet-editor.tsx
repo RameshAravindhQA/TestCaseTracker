@@ -129,44 +129,60 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     setSheetData(prev => {
       const currentCell = prev.cells[cellId] || { value: '', type: 'text' as const, style: {} };
 
-      // Ensure value is properly preserved and handle all data types
-      let newValue = updates.value !== undefined ? updates.value : currentCell.value;
+      // Process value based on type
+      let processedValue = updates.value;
+      let cellType = updates.type || currentCell.type || 'text';
 
-      // Ensure we preserve the original input for display purposes
-      if (updates.formula) {
-        // For formulas, store both the formula and calculated value
-        newValue = updates.value; // This should be the calculated result
+      if (updates.value !== undefined) {
+        const valueStr = String(updates.value);
+        
+        // Auto-detect type if not specified
+        if (!updates.type) {
+          if (valueStr.startsWith('=')) {
+            cellType = 'formula';
+          } else if (!isNaN(Number(valueStr)) && valueStr.trim() !== '' && valueStr.trim() !== '.') {
+            cellType = 'number';
+            processedValue = Number(valueStr);
+          } else if (valueStr.toLowerCase() === 'true' || valueStr.toLowerCase() === 'false') {
+            cellType = 'boolean';
+            processedValue = valueStr.toLowerCase() === 'true';
+          } else if (valueStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            cellType = 'date';
+          } else {
+            cellType = 'text';
+          }
+        }
       }
 
       const newCell = { 
         ...currentCell, 
         ...updates,
-        value: newValue,
+        value: processedValue !== undefined ? processedValue : currentCell.value,
+        type: cellType,
         lastModified: new Date().toISOString(),
         id: cellId
       };
 
-      console.log('UpdateCell - Previous cell:', currentCell, 'New cell:', newCell, 'Value:', newValue);
+      console.log('UpdateCell - Previous cell:', currentCell, 'New cell:', newCell);
 
-      // Create completely new state object to force re-render
-      const newCells = { ...prev.cells };
-      newCells[cellId] = { ...newCell }; // Ensure deep copy
+      // Create immutable update
+      const newCells = {
+        ...prev.cells,
+        [cellId]: newCell
+      };
 
       const newSheetData = {
         ...prev,
         cells: newCells,
         lastModified: new Date().toISOString(),
-        version: (prev.version || 0) + 1,
-        // Add a timestamp to force re-render
-        _updateTimestamp: Date.now()
+        version: (prev.version || 0) + 1
       };
 
-      console.log('UpdateCell - New sheet data cells:', Object.keys(newSheetData.cells).length, 'Cell value for', cellId, ':', newSheetData.cells[cellId]?.value);
+      console.log('UpdateCell - Updated sheet data for cell', cellId, ':', newSheetData.cells[cellId]);
 
-      // Immediately persist to localStorage as backup
+      // Backup to localStorage
       try {
         localStorage.setItem(`sheet_${sheet.id}_backup`, JSON.stringify(newSheetData));
-        console.log('Backed up to localStorage successfully');
       } catch (error) {
         console.warn('Failed to backup to localStorage:', error);
       }
@@ -179,26 +195,42 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   const saveSheetMutation = useMutation({
     mutationFn: async (data: typeof sheetData) => {
       console.log('Saving sheet data:', data);
-      return apiRequest('PUT', `/api/test-sheets/${sheet.id}`, {
-        ...sheet,
+      const response = await apiRequest('PUT', `/api/test-sheets/${sheet.id}`, {
+        name: sheet.name,
         data,
         metadata: {
           ...sheet.metadata,
-          version: sheet.metadata.version + 1,
+          lastModifiedBy: 1, // Should come from user context
+          version: (sheet.metadata.version || 0) + 1,
         },
       });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (savedSheet) => {
+      console.log('Sheet saved successfully:', savedSheet);
       toast({
         title: "Sheet saved",
         description: "Your changes have been saved successfully.",
       });
+      
+      // Update local sheet data with server response
+      if (savedSheet && savedSheet.data) {
+        setSheetData(savedSheet.data);
+      }
+      
       onSave();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Save sheet error:', error);
       toast({
         title: "Error",
-        description: `Failed to save sheet: ${error}`,
+        description: `Failed to save sheet: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -338,14 +370,19 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   }, []);
 
   const handleFormulaBarBlur = useCallback(() => {
-    if (selectedCell) {
-      const currentValue = formulaBarValue;
+    if (selectedCell && formulaBarValue !== null && formulaBarValue !== undefined) {
+      const currentValue = String(formulaBarValue);
       const row = selectedCell.row;
       const col = selectedCell.col;
 
       let cellValue: any = currentValue;
       let cellType: CellData['type'] = 'text';
       let formula: string | undefined;
+
+      // Skip if value is empty and not intentionally cleared
+      if (currentValue === '' && getCellData(row, col).value !== '') {
+        return;
+      }
 
       // Determine cell type and process value
       if (currentValue.startsWith('=')) {
@@ -377,12 +414,13 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         cellValue = currentValue;
       }
 
+      console.log('Formula bar blur - updating cell:', { row, col, currentValue, cellValue, cellType });
+
       updateCell(row, col, {
         value: cellValue,
         type: cellType,
         formula,
-        style: getCellData(row, col).style || {},
-        timestamp: new Date().toISOString() // Add timestamp for debugging
+        style: getCellData(row, col).style || {}
       });
     }
   }, [formulaBarValue, sheetData.cells, updateCell, selectedCell]);
@@ -401,9 +439,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
 
   // Handle cell input blur (finish editing)
   const handleCellInputBlur = () => {
-    if (formulaBarValue !== '') {
-      handleFormulaBarChange(formulaBarValue);
-    }
+    handleFormulaBarBlur();
     setIsEditing(false);
   };
 
@@ -850,7 +886,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-screen-xl h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[95vw] w-[95vw] h-[85vh] flex flex-col">
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b">
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />

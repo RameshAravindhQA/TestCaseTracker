@@ -692,105 +692,16 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
     console.log(`Updating ${type} ${numericId} to status: ${newStatus}`);
 
-    // Store original data for rollback
-    const originalTestCases = queryClient.getQueryData([`/api/projects/${effectiveProjectId}/test-cases`]);
-    const originalBugs = queryClient.getQueryData([`/api/projects/${effectiveProjectId}/bugs`]);
-
-    // Optimistically update the UI immediately
-    if (type === 'testcase' && Array.isArray(testCases)) {
-      queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], (old: any[]) => {
-        if (!Array.isArray(old)) return old;
-        return old.map(item => 
-          item.id === numericId 
-            ? { ...item, status: newStatus, updatedAt: new Date().toISOString() } 
-            : item
-        );
-      });
-    } else if (type === 'bug' && Array.isArray(bugs)) {
-      queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], (old: any[]) => {
-        if (!Array.isArray(old)) return old;
-        return old.map(item => 
-          item.id === numericId 
-            ? { ...item, status: newStatus, updatedAt: new Date().toISOString() } 
-            : item
-        );
-      });
-    }
-
     try {
-      let response;
-      
-      if (type === 'testcase') {
-        response = await apiRequest("PUT", `/api/test-cases/${numericId}`, { 
-          status: newStatus,
-          updatedAt: new Date().toISOString()
-        });
-      } else if (type === 'bug') {
-        response = await apiRequest("PUT", `/api/bugs/${numericId}`, { 
-          status: newStatus,
-          updatedAt: new Date().toISOString()
-        });
-      } else {
-        throw new Error('Invalid item type');
-      }
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log(`${type} ${numericId} updated successfully:`, result);
-
-      // Confirm the update with server data
-      if (type === 'testcase') {
-        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], (old: any[]) => {
-          if (!Array.isArray(old)) return old;
-          return old.map(item => item.id === numericId ? { ...item, ...result } : item);
-        });
-      } else if (type === 'bug') {
-        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], (old: any[]) => {
-          if (!Array.isArray(old)) return old;
-          return old.map(item => item.id === numericId ? { ...item, ...result } : item);
-        });
-      }
-
-      toast({
-        title: "Status updated",
-        description: `${type === 'testcase' ? 'Test case' : 'Bug'} status updated to ${newStatus}`,
+      // Use the mutation for proper optimistic updates
+      await updateStatusMutation.mutateAsync({
+        itemId: id,
+        type: type as 'testcase' | 'bug',
+        status: newStatus
       });
-
-      // Force a refresh to ensure consistency
-      setTimeout(() => {
-        if (type === 'testcase') {
-          refetchTestCases();
-        } else {
-          refetchBugs();
-        }
-      }, 100);
-
     } catch (error: any) {
       console.error(`Failed to update ${type} ${numericId}:`, error);
-      
-      // Rollback optimistic update on error
-      if (type === 'testcase' && originalTestCases) {
-        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], originalTestCases);
-      } else if (type === 'bug' && originalBugs) {
-        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], originalBugs);
-      }
-
-      toast({
-        title: "Update failed",
-        description: `Failed to update ${type} status: ${error.message}`,
-        variant: "destructive",
-      });
-
-      // Force refresh on error to ensure UI consistency
-      if (type === 'testcase') {
-        refetchTestCases();
-      } else {
-        refetchBugs();
-      }
+      // Error handling is done in the mutation
     }
   };
 
