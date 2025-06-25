@@ -350,7 +350,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
       const templateData = [
         {
           testCaseId: `${projectPrefix}-REG-TC-001 (OPTIONAL - Generated automatically if not provided)`,
-          moduleId: moduleId ? `MOD-${String(moduleId).padStart(3, '0')} (REQUIRED - Current module ID is set automatically)` : "(REQUIRED - Module ID in format MOD-XXX)",
+          moduleId: moduleId ? `1 (REQUIRED - Current module ID is set automatically)` : "(REQUIRED - Module ID should be 1 for the first module)",
           feature: "Login Feature (REQUIRED)",
           testObjective: "Verify user can login with valid credentials (REQUIRED)",
           testSteps: "1. Navigate to login page\n2. Enter valid username\n3. Enter valid password\n4. Click login button (REQUIRED)",
@@ -372,7 +372,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
         },
         {
           testCaseId: `${projectPrefix}-REG-TC-002`,
-          moduleId: moduleId ? moduleId.toString() : "",
+          moduleId: moduleId ? "1" : "",
           feature: "Registration",
           testObjective: "Verify new user registration with valid information",
           testSteps: "1. Navigate to registration page\n2. Fill all required fields\n3. Click register button",
