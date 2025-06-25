@@ -79,6 +79,12 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
   const [bgColorPickerOpen, setBgColorPickerOpen] = useState(false);
   const [showChartDialog, setShowChartDialog] = useState(false);
   const [borderStyle, setBorderStyle] = useState("1px solid #000000");
+  const [dragFillStart, setDragFillStart] = useState<{ row: number; col: number } | null>(null);
+  const [isDragFilling, setIsDragFilling] = useState(false);
+  const [copiedCells, setCopiedCells] = useState<{ [key: string]: CellData } | null>(null);
+  const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+  const [findText, setFindText] = useState("");
+  const [replaceText, setReplaceText] = useState("");
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -270,7 +276,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     setDragStart(null);
   };
 
-  // Handle cell click
+  // Handle cell click - Enable immediate editing
   const handleCellClick = (row: number, col: number) => {
     const cellId = getCellId(row, col);
     setSelectedCell({ row, col, cellId });
@@ -281,7 +287,8 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     } else {
       setFormulaBarValue(String(cellData.value || ''));
     }
-    setIsEditing(false);
+    // Enable immediate editing on click
+    setIsEditing(true);
   };
 
   // Handle cell double click to start editing
@@ -376,12 +383,41 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     }
   };
 
-  // Handle key press in grid
+  // Handle key press in grid with enhanced navigation
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (!selectedCell) return;
 
     const { row, col } = selectedCell;
 
+    // If currently editing, handle editing keys
+    if (isEditing) {
+      switch (event.key) {
+        case 'Enter':
+          setIsEditing(false);
+          if (row < sheetData.rows - 1) handleCellClick(row + 1, col);
+          event.preventDefault();
+          break;
+        case 'Tab':
+          setIsEditing(false);
+          if (col < sheetData.cols - 1) handleCellClick(row, col + 1);
+          else if (row < sheetData.rows - 1) handleCellClick(row + 1, 0);
+          event.preventDefault();
+          break;
+        case 'Escape':
+          setIsEditing(false);
+          const cellData = getCellData(row, col);
+          if (cellData.formula) {
+            setFormulaBarValue(cellData.formula);
+          } else {
+            setFormulaBarValue(String(cellData.value || ''));
+          }
+          event.preventDefault();
+          break;
+      }
+      return;
+    }
+
+    // Navigation when not editing
     switch (event.key) {
       case 'ArrowUp':
         if (row > 0) handleCellClick(row - 1, col);
@@ -400,7 +436,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         event.preventDefault();
         break;
       case 'Enter':
-        if (row < sheetData.rows - 1) handleCellClick(row + 1, col);
+        setIsEditing(true);
         event.preventDefault();
         break;
       case 'Tab':
@@ -419,8 +455,14 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         event.preventDefault();
         break;
       case '=':
-        if (!isEditing) {
-          setFormulaBarValue('=');
+        setFormulaBarValue('=');
+        setIsEditing(true);
+        event.preventDefault();
+        break;
+      default:
+        // Auto-start editing for alphanumeric keys
+        if (event.key.length === 1 && /[a-zA-Z0-9]/.test(event.key)) {
+          setFormulaBarValue(event.key);
           setIsEditing(true);
           event.preventDefault();
         }
@@ -567,6 +609,181 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     }
 
     setFormulaBarValue(newValue);
+  };
+
+  // Auto-fill functionality for drag and drop
+  const handleDragFillStart = (row: number, col: number) => {
+    setDragFillStart({ row, col });
+    setIsDragFilling(true);
+  };
+
+  const handleDragFillEnd = (endRow: number, endCol: number) => {
+    if (!dragFillStart || !isDragFilling) return;
+
+    const startCell = getCellData(dragFillStart.row, dragFillStart.col);
+    const startValue = startCell.value;
+
+    // Auto-fill logic for numbers and sequences
+    if (typeof startValue === 'number') {
+      let currentValue = startValue;
+      for (let r = dragFillStart.row; r <= endRow; r++) {
+        for (let c = dragFillStart.col; c <= endCol; c++) {
+          if (r === dragFillStart.row && c === dragFillStart.col) continue;
+          updateCell(r, c, {
+            value: currentValue + (r - dragFillStart.row) + (c - dragFillStart.col),
+            type: 'number',
+            style: startCell.style || {}
+          });
+        }
+      }
+    } else if (typeof startValue === 'string') {
+      // Check if it's a sequence pattern (e.g., "Item 1", "Item 2")
+      const match = String(startValue).match(/^(.+?)(\d+)(.*)$/);
+      if (match) {
+        const prefix = match[1];
+        const number = parseInt(match[2]);
+        const suffix = match[3];
+        
+        let counter = 0;
+        for (let r = dragFillStart.row; r <= endRow; r++) {
+          for (let c = dragFillStart.col; c <= endCol; c++) {
+            if (r === dragFillStart.row && c === dragFillStart.col) continue;
+            counter++;
+            updateCell(r, c, {
+              value: `${prefix}${number + counter}${suffix}`,
+              type: 'text',
+              style: startCell.style || {}
+            });
+          }
+        }
+      } else {
+        // Just copy the value
+        for (let r = dragFillStart.row; r <= endRow; r++) {
+          for (let c = dragFillStart.col; c <= endCol; c++) {
+            if (r === dragFillStart.row && c === dragFillStart.col) continue;
+            updateCell(r, c, {
+              value: startValue,
+              type: startCell.type,
+              style: startCell.style || {}
+            });
+          }
+        }
+      }
+    }
+
+    setDragFillStart(null);
+    setIsDragFilling(false);
+  };
+
+  // Copy-paste functionality
+  const handleCopy = () => {
+    if (!selectedRange && !selectedCell) return;
+
+    const cellsToCopy: { [key: string]: CellData } = {};
+    
+    if (selectedRange) {
+      for (let row = selectedRange.startRow; row <= selectedRange.endRow; row++) {
+        for (let col = selectedRange.startCol; col <= selectedRange.endCol; col++) {
+          const cellId = getCellId(row, col);
+          cellsToCopy[cellId] = getCellData(row, col);
+        }
+      }
+    } else if (selectedCell) {
+      const cellId = getCellId(selectedCell.row, selectedCell.col);
+      cellsToCopy[cellId] = getCellData(selectedCell.row, selectedCell.col);
+    }
+
+    setCopiedCells(cellsToCopy);
+    
+    toast({
+      title: "Copied",
+      description: `Copied ${Object.keys(cellsToCopy).length} cell(s)`,
+    });
+  };
+
+  const handlePaste = () => {
+    if (!copiedCells || !selectedCell) return;
+
+    const copiedEntries = Object.entries(copiedCells);
+    if (copiedEntries.length === 0) return;
+
+    // Get the first copied cell as reference point
+    const firstCopiedCell = copiedEntries[0];
+    const firstCellId = firstCopiedCell[0];
+    const firstCol = firstCellId.charCodeAt(0) - 65; // A=0, B=1, etc.
+    const firstRow = parseInt(firstCellId.substring(1)) - 1;
+
+    // Calculate offset
+    const rowOffset = selectedCell.row - firstRow;
+    const colOffset = selectedCell.col - firstCol;
+
+    // Paste all copied cells with offset
+    copiedEntries.forEach(([cellId, cellData]) => {
+      const col = cellId.charCodeAt(0) - 65;
+      const row = parseInt(cellId.substring(1)) - 1;
+      
+      const newRow = row + rowOffset;
+      const newCol = col + colOffset;
+
+      if (newRow >= 0 && newRow < sheetData.rows && newCol >= 0 && newCol < sheetData.cols) {
+        updateCell(newRow, newCol, {
+          value: cellData.value,
+          type: cellData.type,
+          formula: cellData.formula,
+          style: cellData.style || {}
+        });
+      }
+    });
+
+    toast({
+      title: "Pasted",
+      description: `Pasted ${copiedEntries.length} cell(s)`,
+    });
+  };
+
+  // Find and replace functionality
+  const handleFindReplace = (replaceAll: boolean = false) => {
+    if (!findText) return;
+
+    let replacedCount = 0;
+    const updatedCells: { row: number; col: number; newValue: any }[] = [];
+
+    for (let row = 0; row < sheetData.rows; row++) {
+      for (let col = 0; col < sheetData.cols; col++) {
+        const cellData = getCellData(row, col);
+        const cellValue = String(cellData.value || '');
+        
+        if (cellValue.includes(findText)) {
+          const newValue = cellValue.replace(
+            replaceAll ? new RegExp(findText, 'g') : findText,
+            replaceText
+          );
+          updatedCells.push({ row, col, newValue });
+          replacedCount++;
+          
+          if (!replaceAll) break;
+        }
+      }
+      if (!replaceAll && replacedCount > 0) break;
+    }
+
+    // Apply all replacements
+    updatedCells.forEach(({ row, col, newValue }) => {
+      const currentCell = getCellData(row, col);
+      updateCell(row, col, {
+        ...currentCell,
+        value: newValue
+      });
+    });
+
+    toast({
+      title: replaceAll ? "Replace All Complete" : "Replace Complete",
+      description: `Replaced ${replacedCount} occurrence(s)`,
+    });
+
+    if (!replaceAll) {
+      setFindReplaceOpen(false);
+    }
   };
 
   const selectedCellData = selectedCell ? getCellData(selectedCell.row, selectedCell.col) : null;
@@ -801,6 +1018,32 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
           ref={gridRef}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onKeyDown={(e) => {
+            // Keyboard shortcuts
+            if (e.ctrlKey || e.metaKey) {
+              switch (e.key) {
+                case 'c':
+                  e.preventDefault();
+                  handleCopy();
+                  break;
+                case 'v':
+                  e.preventDefault();
+                  handlePaste();
+                  break;
+                case 'f':
+                  e.preventDefault();
+                  setFindReplaceOpen(true);
+                  break;
+                case 'h':
+                  e.preventDefault();
+                  setFindReplaceOpen(true);
+                  break;
+              }
+            } else {
+              handleKeyPress(e);
+            }
+          }}
+          tabIndex={0}
         >
           <div className="relative min-w-fit min-h-fit" style={{ userSelect: 'none' }}>
             {/* Column Headers */}
@@ -860,8 +1103,6 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
                           onChange={(e) => {
                             const newValue = e.target.value;
                             setFormulaBarValue(newValue);
-                            // Immediately update the cell for live preview
-                            handleFormulaBarChange(newValue);
                           }}
                           onBlur={handleCellInputBlur}
                           onKeyDown={handleCellInputKeyDown}
@@ -869,9 +1110,21 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
                           autoFocus
                         />
                       ) : (
-                        <span className="truncate w-full" title={String(cellData.value || '')}>
-                          {cellData.formula ? String(cellData.value || '') : String(cellData.value || '')}
-                        </span>
+                        <>
+                          <span className="truncate w-full" title={String(cellData.value || '')}>
+                            {cellData.formula ? String(cellData.value || '') : String(cellData.value || '')}
+                          </span>
+                          {isSelected && (
+                            <div
+                              className="absolute bottom-0 right-0 w-2 h-2 bg-blue-500 cursor-se-resize"
+                              onMouseDown={(e) => {
+                                e.stopPropagation();
+                                handleDragFillStart(row, col);
+                              }}
+                              title="Drag to fill"
+                            />
+                          )}
+                        </>
                       )}
                     </div>
                   );
@@ -893,6 +1146,46 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Find & Replace Dialog */}
+      <Dialog open={findReplaceOpen} onOpenChange={setFindReplaceOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Find & Replace</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="find">Find</Label>
+              <Input
+                id="find"
+                value={findText}
+                onChange={(e) => setFindText(e.target.value)}
+                placeholder="Enter text to find..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="replace">Replace with</Label>
+              <Input
+                id="replace"
+                value={replaceText}
+                onChange={(e) => setReplaceText(e.target.value)}
+                placeholder="Enter replacement text..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFindReplaceOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => handleFindReplace(false)}>
+              Replace
+            </Button>
+            <Button onClick={() => handleFindReplace(true)}>
+              Replace All
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

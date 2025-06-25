@@ -5632,6 +5632,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // GitHub sync from GitHub to system endpoint
+  apiRouter.post("/github/sync-from-github/:projectId", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID is required" });
+      }
+
+      // Get GitHub configuration for the project
+      const githubConfig = await storage.getGitHubConfig(projectId);
+      if (!githubConfig) {
+        return res.status(404).json({ message: "GitHub configuration not found" });
+      }
+
+      // Fetch issues from GitHub and sync to system
+      const syncResult = await githubService.syncFromGitHubToSystem(
+        githubConfig.owner,
+        githubConfig.repo,
+        githubConfig.token,
+        projectId
+      );
+
+      res.json({
+        message: "Successfully synced from GitHub to system",
+        result: syncResult
+      });
+    } catch (error) {
+      console.error("GitHub sync from GitHub error:", error);
+      res.status(500).json({ 
+        message: "Failed to sync from GitHub to system",
+        error: error.message 
+      });
+    }
+  });
+
   // GitHub sync endpoint
   apiRouter.post("/github/sync/:bugId", isAuthenticated, async (req, res) => {
     try {

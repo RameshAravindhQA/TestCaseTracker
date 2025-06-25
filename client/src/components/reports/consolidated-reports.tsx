@@ -1524,35 +1524,42 @@ Item>
                   <TableCell>
                       <Select
                         value={item.status}
-                        onValueChange={(newStatus) => {
+                        onValueChange={async (newStatus) => {
                           console.log('Status change triggered:', { item: item.id, newStatus, currentStatus: item.status });
                           if (newStatus !== item.status) {
-                            updateStatusMutation.mutate({
-                              itemId: item.id,
-                              type: item.type as 'testcase' | 'bug',
-                              status: newStatus
-                            });
+                            try {
+                              await updateStatusMutation.mutateAsync({
+                                itemId: item.id,
+                                type: item.type as 'testcase' | 'bug',
+                                status: newStatus
+                              });
+                              // Force immediate UI update
+                              queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
+                              queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+                            } catch (error) {
+                              console.error('Status update failed:', error);
+                            }
                           }
                         }}
                         disabled={updateStatusMutation.isPending}
                       >
                         <SelectTrigger className={`w-32 border-0 ${getStatusColor(item.status, item.type)}`}>
-                          <SelectValue placeholder={item.status} />
+                          <SelectValue>{item.status}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {item.type === 'testcase' ? (
                             <>
-                              <SelectItem value="Pass" className="bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-emerald-600 focus:via-green-700 focus:to-teal-600">Pass</SelectItem>
-                              <SelectItem value="Fail" className="bg-gradient-to-r from-red-500 via-rose-600 to-pink-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-red-600 focus:via-rose-700 focus:to-pink-600">Fail</SelectItem>
-                              <SelectItem value="Blocked" className="bg-gradient-to-r from-orange-500 via-amber-600 to-yellow-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-orange-600 focus:via-amber-700 focus:to-yellow-600">Blocked</SelectItem>
-                              <SelectItem value="Not Executed" className="bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-slate-600 focus:via-gray-700 focus:to-zinc-600">Not Executed</SelectItem>
+                              <SelectItem value="Pass">Pass</SelectItem>
+                              <SelectItem value="Fail">Fail</SelectItem>
+                              <SelectItem value="Blocked">Blocked</SelectItem>
+                              <SelectItem value="Not Executed">Not Executed</SelectItem>
                             </>
                           ) : (
                             <>
-                              <SelectItem value="Open" className="bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-red-700 focus:via-rose-800 focus:to-pink-700">Open</SelectItem>
-                              <SelectItem value="In Progress" className="bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-blue-700 focus:via-indigo-800 focus:to-purple-700">In Progress</SelectItem>
-                              <SelectItem value="Resolved" className="bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-emerald-700 focus:via-green-800 focus:to-teal-700">Resolved</SelectItem>
-                              <SelectItem value="Closed" className="bg-gradient-to-r from-purple-600 via-violet-700 to-indigo-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 focus:bg-gradient-to-r focus:from-purple-700 focus:via-violet-800 focus:to-indigo-700">Closed</SelectItem>
+                              <SelectItem value="Open">Open</SelectItem>
+                              <SelectItem value="In Progress">In Progress</SelectItem>
+                              <SelectItem value="Resolved">Resolved</SelectItem>
+                              <SelectItem value="Closed">Closed</SelectItem>
                             </>
                           )}
                         </SelectContent>

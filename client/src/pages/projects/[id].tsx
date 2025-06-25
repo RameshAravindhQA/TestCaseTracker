@@ -555,6 +555,15 @@ export default function ProjectDetailPage() {
                 <RefreshCw className={`h-4 w-4 mr-2 ${syncAllMutation.isPending ? 'animate-spin' : ''}`} />
                 {syncAllMutation.isPending ? 'Syncing...' : 'Sync All GitHub Issues'}
               </Button>
+              <Button
+                onClick={handleSyncFromGithub}
+                disabled={syncFromGithubMutation.isPending}
+                variant="outline"
+                size="sm"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncFromGithubMutation.isPending ? 'animate-spin' : ''}`} />
+                {syncFromGithubMutation.isPending ? 'Syncing...' : 'Sync from GitHub to System'}
+              </Button>
 
               {project && (
                 <ProjectExport 
