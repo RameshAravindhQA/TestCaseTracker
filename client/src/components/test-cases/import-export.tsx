@@ -72,12 +72,14 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
           
           if (!response.ok) {
             const errorText = await response.text();
+            console.error(`API Error ${response.status}:`, errorText);
             throw new Error(`HTTP ${response.status}: ${errorText}`);
           }
           
-          return response.json();
+          const result = await response.json();
+          return result;
         } catch (error) {
-          console.error('Failed to import test case:', error);
+          console.error('Failed to import test case:', testCase.testCaseId || 'Unknown ID', error);
           throw error;
         }
       });
@@ -774,7 +776,10 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                           }
 
                           // Otherwise, fetch modules and validate
-                          const response = await apiRequest(`/api/projects/${projectId}/modules`);
+                          const response = await apiRequest('GET', `/api/projects/${projectId}/modules`);
+                          if (!response.ok) {
+                            throw new Error(`Failed to fetch modules: ${response.status}`);
+                          }
                           const modules = await response.json();
 
                           if (Array.isArray(modules)) {
@@ -837,14 +842,28 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       console.log(`Import validation passed. Processing ${parsedData.length} test cases...`);
 
                       // Get project and module information for validation
-                      const project = await apiRequest('GET', `/api/projects/${projectId}`);
-                      const projectData = await project.json();
-                      const projectPrefix = projectData.prefix || 'DEF';
-
+                      let projectPrefix = 'DEF';
                       let currentModule = null;
+
+                      try {
+                        const project = await apiRequest('GET', `/api/projects/${projectId}`);
+                        if (project.ok) {
+                          const projectData = await project.json();
+                          projectPrefix = projectData.prefix || 'DEF';
+                        }
+                      } catch (error) {
+                        console.warn('Could not fetch project data:', error);
+                      }
+
                       if (moduleId) {
-                        const moduleResponse = await apiRequest('GET', `/api/modules/${moduleId}`);
-                        currentModule = await moduleResponse.json();
+                        try {
+                          const moduleResponse = await apiRequest('GET', `/api/modules/${moduleId}`);
+                          if (moduleResponse.ok) {
+                            currentModule = await moduleResponse.json();
+                          }
+                        } catch (error) {
+                          console.warn('Could not fetch module data:', error);
+                        }
                       }
 
                       // Check for test case IDs that already exist in current test cases
@@ -989,6 +1008,8 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
 
                       // Import valid test cases
                       if (newTestCases.length > 0) {
+                        console.log('About to import test cases:', newTestCases.length);
+                        console.log('Sample test case:', newTestCases[0]);
                         toast({
                           title: "Importing test cases",
                           description: `Importing ${newTestCases.length} new test cases...`,
