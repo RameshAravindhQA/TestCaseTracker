@@ -167,7 +167,3 @@ export function ModuleTable({ modules, projectId, onEdit, onDelete, onViewTestCa
     </div>
   );
 }
-```
-
-```
-</replit_final_file>
