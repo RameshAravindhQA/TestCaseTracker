@@ -166,6 +166,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       href: "/traceability-matrix",
       icon: <ListFilter className="h-5 w-5" />,
     },
+    {
+      name: "Notebooks",
+      href: "/notebooks",
+      icon: <FileText className="h-5 w-5" />,
+    },
   ], []);
 
   const adminItems: NavItem[] = useMemo(() => [

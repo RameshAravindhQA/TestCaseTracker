@@ -6620,3 +6620,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   return httpServer;
 }
+// Notebooks API routes
+app.get('/api/notebooks', authenticateToken, async (req, res) => {
+  try {
+    const notebooks = await storage.getNotebooks(req.user.id);
+    res.json(notebooks);
+  } catch (error) {
+    console.error('Error fetching notebooks:', error);
+    res.status(500).json({ error: 'Failed to fetch notebooks' });
+  }
+});
+
+app.post('/api/notebooks', authenticateToken, async (req, res) => {
+  try {
+    const { title, content, color = '#ffffff', isPinned = false, isArchived = false, tags = [] } = req.body;
+    
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    const notebook = await storage.createNotebook({
+      title: title.trim(),
+      content: content || '',
+      color,
+      isPinned,
+      isArchived,
+      tags,
+      userId: req.user.id
+    });
+
+    res.status(201).json(notebook);
+  } catch (error) {
+    console.error('Error creating notebook:', error);
+    res.status(500).json({ error: 'Failed to create notebook' });
+  }
+});
+
+app.get('/api/notebooks/:id', authenticateToken, async (req, res) => {
+  try {
+    const notebook = await storage.getNotebook(parseInt(req.params.id), req.user.id);
+    if (!notebook) {
+      return res.status(404).json({ error: 'Notebook not found' });
+    }
+    res.json(notebook);
+  } catch (error) {
+    console.error('Error fetching notebook:', error);
+    res.status(500).json({ error: 'Failed to fetch notebook' });
+  }
+});
+
+app.put('/api/notebooks/:id', authenticateToken, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const updates = req.body;
+    
+    const notebook = await storage.updateNotebook(id, req.user.id, updates);
+    if (!notebook) {
+      return res.status(404).json({ error: 'Notebook not found' });
+    }
+    
+    res.json(notebook);
+  } catch (error) {
+    console.error('Error updating notebook:', error);
+    res.status(500).json({ error: 'Failed to update notebook' });
+  }
+});
+
+app.delete('/api/notebooks/:id', authenticateToken, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const success = await storage.deleteNotebook(id, req.user.id);
+    
+    if (!success) {
+      return res.status(404).json({ error: 'Notebook not found' });
+    }
+    
+    res.json({ message: 'Notebook deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting notebook:', error);
+    res.status(500).json({ error: 'Failed to delete notebook' });
+  }
+});
+

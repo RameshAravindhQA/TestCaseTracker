@@ -142,3 +142,25 @@ export interface Module {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: 'Admin' | 'Project Manager' | 'Tester' | 'Developer';
+  avatar?: string;
+  createdAt: string;
+}
+
+export interface Notebook {
+  id: number;
+  title: string;
+  content: string;
+  color: string;
+  isPinned: boolean;
+  isArchived: boolean;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  userId: number;
+}

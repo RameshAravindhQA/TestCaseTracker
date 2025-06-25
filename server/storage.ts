@@ -170,6 +170,13 @@ export interface IStorage {
   getGitHubIssueByBugId(bugId: number): Promise<any | undefined>;
   getGitHubIssueByGitHubId(githubId: number): Promise<any | undefined>;
   updateGitHubIssue(id: number, data: any): Promise<any | null>;
+
+    // Notebook operations
+    getNotebooks(userId: number): Promise<Notebook[]>;
+    getNotebook(id: number, userId: number): Promise<Notebook | null>;
+    createNotebook(notebookData: Omit<Notebook, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notebook>;
+    updateNotebook(id: number, userId: number, updates: Partial<Notebook>): Promise<Notebook | null>;
+    deleteNotebook(id: number, userId: number): Promise<boolean>;
 }
 
 /**
@@ -194,6 +201,7 @@ class MemStorage implements IStorage {
   private flowDiagrams: any[] = [];
   private githubConfigs: any[] = [];
   private githubIssues: any[] = [];
+  private notebooksData = { notebooks: [] };
 
   private nextId = 1;
   private moduleCounter = 1;
@@ -1797,6 +1805,66 @@ class MemStorage implements IStorage {
   async getAllGitHubConfigs(): Promise<any[]> {
     return this.githubConfigs;
   }
+
+  // Notebooks CRUD operations
+  async getNotebooks(userId: number): Promise<any[]> {
+    return (this.notebooksData.notebooks || [])
+      .filter(notebook => notebook.userId === userId)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  async getNotebook(id: number): Promise<any | undefined> {
+    return this.notebooksData.notebooks.find(notebook => notebook.id === id);
+  }
+
+  async createNotebook(notebook: any): Promise<any> {
+    const newNotebook = {
+      id: this.getNextId(),
+      ...notebook,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.notebooksData.notebooks.push(newNotebook);
+    return newNotebook;
+  }
+
+  async updateNotebook(id: number, notebookData: any): Promise<any> {
+    const notebookIndex = this.notebooksData.notebooks.findIndex(notebook => notebook.id === id);
+    if (notebookIndex === -1) {
+      throw new Error('Notebook not found');
+    }
+
+    const updatedNotebook = {
+      ...this.notebooksData.notebooks[notebookIndex],
+      ...notebookData,
+      updatedAt: new Date().toISOString(),
+    };
+    this.notebooksData.notebooks[notebookIndex] = updatedNotebook;
+    return updatedNotebook;
+  }
+
+  async deleteNotebook(id: number): Promise<boolean> {
+    const notebookIndex = this.notebooksData.notebooks.findIndex(notebook => notebook.id === id);
+    if (notebookIndex === -1) {
+      return false;
+    }
+
+    this.notebooksData.notebooks.splice(notebookIndex, 1);
+    return true;
+  }
+
+  // Helper functions for JSON file operations
+  private async readData(): Promise<any> {
+        return this.notebooksData;
+  }
+
+  private async writeData(data: any): Promise<void> {
+       this.notebooksData = data;
+  }
+
+  private generateId(collection: any[]): number {
+    return collection.length > 0 ? Math.max(...collection.map(item => item.id)) + 1 : 1;
+  }
 }
 
 // Create and export the storage instance
@@ -1881,4 +1949,16 @@ console.log("✅ In-memory storage initialized successfully");
 
 export async function closeConnection() {
   console.log("In-memory storage - no connection to close");
+}
+
+export interface Notebook {
+    id: number;
+    userId: number;
+    title: string;
+    content: string;
+    createdAt: string;
+    updatedAt: string;
+    isPinned?: boolean;
+    tags?: string[];
+    color?: string;
 }

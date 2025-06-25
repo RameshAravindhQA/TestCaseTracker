@@ -29,6 +29,8 @@ import TestUploadPage from "@/pages/test-upload";
 import TraceabilityMatrixPage from "@/pages/traceability-matrix";
 import FunctionalFlowPage from "@/pages/functional-flow/index";
 import { Loader2 } from "lucide-react";
+import TimesheetsPage from "@/pages/timesheets/index";
+import NotebooksPage from "@/pages/notebooks/index";
 
 // Loading component for Suspense fallback
 const LoadingComponent = () => (
@@ -121,7 +123,12 @@ function Router() {
       <Route path="/test-upload">
         <ProtectedComponent Component={TestUploadPage} />
       </Route>
-
+      <Route path="/timesheets">
+        <ProtectedComponent Component={TimeSheetsPage} />
+      </Route>
+      <Route path="/notebooks">
+        <ProtectedComponent Component={NotebooksPage} />
+      </Route>
       <Route path="/traceability-matrix">
         <ProtectedComponent Component={TraceabilityMatrixPage} />
       </Route>

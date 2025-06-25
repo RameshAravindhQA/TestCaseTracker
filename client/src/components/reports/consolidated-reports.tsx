@@ -1524,24 +1524,13 @@ Item>
                   <TableCell>
                       <Select
                         value={item.status}
-                        onValueChange={async (newStatus) => {
+                        onValueChange={(newStatus) => {
                           console.log('Status change triggered:', { item: item.id, newStatus, currentStatus: item.status });
                           if (newStatus !== item.status) {
-                            try {
-                              await updateStatusMutation.mutateAsync({
-                                itemId: item.id,
-                                type: item.type as 'testcase' | 'bug',
-                                status: newStatus
-                              });
-                              // Force immediate UI update
-                              queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
-                              queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
-                            } catch (error) {
-                              console.error('Status update failed:', error);
-                            }
+                            handleIndividualStatusUpdate(item.id, newStatus);
                           }
                         }}
-                        disabled={updateStatusMutation.isPending}
+                        disabled={updateTestCaseMutation.isPending || updateBugMutation.isPending}
                       >
                         <SelectTrigger className={`w-32 border-0 ${getStatusColor(item.status, item.type)}`}>
                           <SelectValue>{item.status}</SelectValue>
