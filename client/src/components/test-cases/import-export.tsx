@@ -350,7 +350,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
       const templateData = [
         {
           testCaseId: `${projectPrefix}-REG-TC-001 (OPTIONAL - Generated automatically if not provided)`,
-          moduleId: moduleId ? `1 (REQUIRED - Current module ID is set automatically)` : "(REQUIRED - Module ID should be 1 for the first module)",
+          moduleId: moduleId ? "1" : "1",
           feature: "Login Feature (REQUIRED)",
           testObjective: "Verify user can login with valid credentials (REQUIRED)",
           testSteps: "1. Navigate to login page\n2. Enter valid username\n3. Enter valid password\n4. Click login button (REQUIRED)",
@@ -372,7 +372,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
         },
         {
           testCaseId: `${projectPrefix}-REG-TC-002`,
-          moduleId: moduleId ? "1" : "",
+          moduleId: "1",
           feature: "Registration",
           testObjective: "Verify new user registration with valid information",
           testSteps: "1. Navigate to registration page\n2. Fill all required fields\n3. Click register button",
@@ -398,7 +398,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
       let csvText = `# Test Case Import Template for ${projectName || 'Project'}\n`;
       csvText += '# Generated on ' + new Date().toLocaleString() + '\n';
       csvText += '#\n# REQUIRED FIELDS:\n';
-      csvText += '# - moduleId: Must be a valid module ID in the current project\n';
+      csvText += '# - moduleId: Must be a valid module ID (use "1" for the first module)\n';
       csvText += '# - feature: Brief name of the feature being tested\n';
       csvText += '# - testObjective: What the test is trying to verify\n';
       csvText += '# - testSteps: Step-by-step instructions to execute the test\n';
