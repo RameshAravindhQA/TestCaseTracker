@@ -848,9 +848,10 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
 
                       if (moduleId) {
                         try {
-                          const moduleResponse = await apiRequest('GET', `/api/modules/${moduleId}`);
+                          const moduleResponse = await apiRequest('GET', `/api/projects/${projectId}/modules`);
                           if (moduleResponse.ok) {
-                            currentModule = await moduleResponse.json();
+                            const modules = await moduleResponse.json();
+                            currentModule = modules.find(m => m.id === moduleId);
                           }
                         } catch (error) {
                           console.warn('Could not fetch module data:', error);
