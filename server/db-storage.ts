@@ -152,7 +152,7 @@ export class DatabaseStorage implements IStorage {
     // Auto-generate module ID if not provided
     let moduleId = data.moduleId;
     let desiredDbId = null;
-    
+
     if (!moduleId || moduleId.trim() === '') {
       // Get the project to access its details
       const [project] = await db.select().from(projects).where(eq(projects.id, data.projectId));
@@ -204,7 +204,7 @@ export class DatabaseStorage implements IStorage {
         .filter(num => !isNaN(num) && num > 0);
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      
+
       moduleId = `${projectPrefix}-${modulePrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
       desiredDbId = nextNumber; // Set desired database ID to match module number
 
@@ -232,7 +232,7 @@ export class DatabaseStorage implements IStorage {
             createdAt: new Date(),
             updatedAt: new Date(),
           };
-          
+
           // Use raw SQL to insert with specific ID
           const [insertedModule] = await db.execute({
             sql: `INSERT INTO modules (id, module_id, name, description, project_id, status, created_at, updated_at) 
@@ -248,13 +248,13 @@ export class DatabaseStorage implements IStorage {
               moduleData.updatedAt
             ]
           });
-          
+
           // Reset sequence to avoid conflicts
           await db.execute({
             sql: `SELECT setval('modules_id_seq', (SELECT COALESCE(MAX(id), 0) + 1 FROM modules), false)`,
             args: []
           });
-          
+
           module = insertedModule;
         } else {
           // ID exists, fall back to regular insert
@@ -298,7 +298,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     console.log('DB: Created module with moduleId:', module.moduleId, 'and database ID:', module.id);
-    
+
     // Ensure the moduleId is properly set and not overridden by database ID
     if (!module.moduleId || module.moduleId.trim() === '') {
       console.error('ERROR: Module created without proper moduleId!', module);
@@ -1093,5 +1093,56 @@ export class DatabaseStorage implements IStorage {
   async deleteFlowDiagram(id: number): Promise<boolean> {
     // Implement when flow diagrams table is added to schema
     return false;
+  }
+
+  async getTestSuitesByProjectId(projectId: number): Promise<any[]> {
+    // Implement when test suites table is added to schema
+    return [];
+  }
+
+  // GitHub Integration Methods
+  async getGitHubConfig(projectId: number): Promise<any> {
+    try {
+      // For now, return a simple config object
+      // You can extend this to use a proper database table
+      return {
+        projectId,
+        isActive: true,
+        repoOwner: "RameshAravindh",
+        repoName: "TestCaseTracker",
+        accessToken: "your_github_token" // This should be stored securely
+      };
+    } catch (error) {
+      console.error("Error getting GitHub config:", error);
+      return null;
+    }
+  }
+
+  async saveGitHubConfig(projectId: number, config: any): Promise<any> {
+    // For now, just return the config with project ID
+    // You can extend this to save to a proper database table
+    return { ...config, projectId, id: projectId };
+  }
+
+  async getGitHubIssueByBugId(bugId: number): Promise<any> {
+    try {
+      // For now, return null since we don't have a proper table
+      // You can extend this to use a proper database table
+      return null;
+    } catch (error) {
+      console.error("Error getting GitHub issue:", error);
+      return null;
+    }
+  }
+
+  async saveGitHubIssue(issueData: any): Promise<any> {
+    try {
+      // For now, just return the issue data
+      // You can extend this to save to a proper database table
+      return { ...issueData, id: Date.now() };
+    } catch (error) {
+      console.error("Error saving GitHub issue:", error);
+      throw error;
+    }
   }
 }

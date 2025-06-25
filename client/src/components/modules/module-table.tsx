@@ -21,6 +21,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ModuleTableProps {
   modules: Module[];
@@ -28,7 +34,7 @@ interface ModuleTableProps {
   onEdit: (module: Module) => void;
   onDelete: (module: Module) => void;
   onViewTestCases: (module: Module) => void;
-  project?: { prefix: string };
+  project?: { prefix: string; name: string };
 }
 
 export function ModuleTable({ modules, projectId, onEdit, onDelete, onViewTestCases, project }: ModuleTableProps) {
@@ -69,16 +75,43 @@ export function ModuleTable({ modules, projectId, onEdit, onDelete, onViewTestCa
 
               >
                 <TableCell className="font-medium">
-                  <span className="font-bold">
-                    {module.moduleId || `MOD-${String(module.id).padStart(3, '0')}`}
-                  </span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="font-bold cursor-help">
+                          {module.moduleId || `MOD-${String(module.id).padStart(3, '0')}`}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="text-sm">
+                          <div><strong>Module ID:</strong> {module.moduleId || `MOD-${String(module.id).padStart(3, '0')}`}</div>
+                          <div><strong>Module Name:</strong> {module.name}</div>
+                          {project && <div><strong>Project:</strong> {project.prefix} - {project.name}</div>}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
                 <TableCell className="font-medium">
-                  <div 
-                    className="hover:text-primary hover:underline"
-                  >
-                    {module.name}
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div 
+                          className="hover:text-primary hover:underline cursor-help"
+                        >
+                          {module.name}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="text-sm">
+                          <div><strong>Full Module Name:</strong> {module.name}</div>
+                          <div><strong>Module ID:</strong> {module.moduleId || `MOD-${String(module.id).padStart(3, '0')}`}</div>
+                          {project && <div><strong>Project:</strong> {project.prefix} - {project.name}</div>}
+                          {module.description && <div><strong>Description:</strong> {module.description}</div>}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
                 <TableCell className="max-w-xs truncate">
                   {module.description || "-"}

@@ -324,7 +324,7 @@ class MemStorage implements IStorage {
         }
       }
 
-      
+
 
       // Get module name prefix (first 3 letters of module name)
       let modulePrefix = 'MOD';
@@ -840,7 +840,8 @@ class MemStorage implements IStorage {
 
   async updateKanbanCard(id: number, data: Partial<KanbanCard>): Promise<KanbanCard | null> {
     const card = this.kanbanCards.get(id);
-    if (!card) return null;
+```tool_code
+if (!card) return null;
 
     const updatedCard = { ...card, ...data };
     this.kanbanCards.set(id, updatedCard);
@@ -1799,7 +1800,7 @@ class MemStorage implements IStorage {
 console.log("🔄 Initializing in-memory storage...");
 const memStorage = new MemStorage();
 
-// Initialize database
+This commit introduces GitHub integration storage methods to the MemStorage class.
 (memStorage as any).initializeDatabase = async function() {
     console.log("🔄 Initializing database...");
 

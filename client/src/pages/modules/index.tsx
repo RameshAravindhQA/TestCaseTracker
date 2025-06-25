@@ -225,6 +225,7 @@ export default function ModulesPage() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onViewTestCases={handleViewTestCases}
+            project={projects?.find(p => p.id === Number(selectedProjectId))}
           />
         )}
       </div>
