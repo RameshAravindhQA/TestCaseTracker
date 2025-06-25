@@ -345,81 +345,52 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
         console.warn('Could not fetch project prefix, using default:', error);
       }
 
-      // Create template with all required columns and example data
-      // Clearly marking REQUIRED vs OPTIONAL fields in the headers
+      // Create template with specified columns only
       const templateData = [
         {
-          testCaseId: `${projectPrefix}-REG-TC-001 (OPTIONAL - Generated automatically if not provided)`,
-          moduleId: moduleId ? "1" : "1",
-          feature: "Login Feature (REQUIRED)",
-          testObjective: "Verify user can login with valid credentials (REQUIRED)",
-          testSteps: "1. Navigate to login page\n2. Enter valid username\n3. Enter valid password\n4. Click login button (REQUIRED)",
-          expectedResult: "User should be logged in and redirected to dashboard (REQUIRED)",
-          actualResult: "(OPTIONAL - Results after execution)",
-          status: "Not Executed (REQUIRED - Valid values: Not Executed, Pass, Fail, Blocked)",
-          priority: "High (REQUIRED - Valid values: High, Medium, Low)",
-          preConditions: "User account exists (OPTIONAL)",
-          severity: "Medium (OPTIONAL - Valid values: Critical, Major, Minor, Trivial)",
-          tags: "regression,smoke (OPTIONAL - comma separated)",
-          automationStatus: "Not Automated (OPTIONAL - Valid values: Not Automated, Automated, In Progress)",
-          estimatedTime: "30 minutes (OPTIONAL)",
-          actualTime: "(OPTIONAL)",
-          comments: "Example test case - replace with real data (OPTIONAL)",
-          environment: "Production (OPTIONAL)",
-          version: "1.0 (OPTIONAL)",
-          attachments: "(OPTIONAL - Will be ignored in CSV import)",
-          relatedBugs: "(OPTIONAL - Will be processed during import)"
+          testCaseId: `${projectPrefix}-REG-TC-001`,
+          moduleId: moduleId ? moduleId.toString() : "1",
+          feature: "Login Feature",
+          testObjective: "Verify user can login with valid credentials",
+          preConditions: "User account exists",
+          testSteps: "1. Navigate to login page\n2. Enter valid username\n3. Enter valid password\n4. Click login button",
+          expectedResult: "User should be logged in and redirected to dashboard",
+          actualResult: "",
+          status: "Not Executed",
+          priority: "High",
+          comments: "Example test case - replace with real data"
         },
         {
           testCaseId: `${projectPrefix}-REG-TC-002`,
-          moduleId: "1",
+          moduleId: moduleId ? moduleId.toString() : "1",
           feature: "Registration",
           testObjective: "Verify new user registration with valid information",
+          preConditions: "User doesn't have an account",
           testSteps: "1. Navigate to registration page\n2. Fill all required fields\n3. Click register button",
           expectedResult: "User account should be created and user should be logged in",
           actualResult: "",
           status: "Not Executed",
           priority: "Medium",
-          preConditions: "User doesn't have an account",
-          severity: "Major",
-          tags: "regression",
-          automationStatus: "Not Automated",
-          estimatedTime: "45 minutes",
-          actualTime: "",
-          comments: "Example test case - replace with real data",
-          environment: "Development",
-          version: "1.0",
-          attachments: "",
-          relatedBugs: ""
+          comments: "Example test case for registration flow"
         }
       ];
 
-      // Add more information at the top of the CSV file as comments
+      // Add header comments for the CSV file
       let csvText = `# Test Case Import Template for ${projectName || 'Project'}\n`;
       csvText += '# Generated on ' + new Date().toLocaleString() + '\n';
-      csvText += '#\n# REQUIRED FIELDS:\n';
-      csvText += '# - moduleId: Must be a valid module ID (use "1" for the first module)\n';
-      csvText += '# - feature: Brief name of the feature being tested\n';
-      csvText += '# - testObjective: What the test is trying to verify\n';
-      csvText += '# - testSteps: Step-by-step instructions to execute the test\n';
-      csvText += '# - expectedResult: What should happen when the test is passed\n';
-      csvText += '# - status: Must be one of: "Not Executed", "Pass", "Fail", "Blocked"\n';
-      csvText += '# - priority: Must be one of: "High", "Medium", "Low"\n';
-      csvText += '#\n# TEST CASE ID FORMAT:\n';
-      csvText += `# - testCaseId: Must follow format ${projectPrefix}-[MODULE]-TC-### (e.g., ${projectPrefix}-REG-TC-001)\n`;
-      csvText += `# - PROJECT PREFIX: ${projectPrefix} (automatically applied)\n`;
-      csvText += '# - MODULE PREFIX: 3-letter abbreviation of module name (e.g., REG for Registration)\n';
-      csvText += '# - TC-###: Sequential test case number with 3 digits (001, 002, etc.)\n';
-      csvText += '#\n# CRITICAL: Test Case ID pattern MUST match Module ID pattern\n';
-      csvText += '# - Project prefix must match in both IDs\n';
-      csvText += '# - Module prefix must match in both IDs\n';
-      csvText += '# - Example: If moduleId is BEG-REG-MOD-01, then testCaseId should be BEG-REG-TC-001\n';
-      csvText += '# - Pattern: PROJECT-MODULE-TYPE-NUMBER\n';
-      csvText += '#   - PROJECT: Must be the same (e.g., BEG)\n';
-      csvText += '#   - MODULE: Must be the same (e.g., REG)\n';
-      csvText += '#   - TYPE: TC for test cases, MOD for modules\n';
-      csvText += '#   - NUMBER: Sequential identifier\n';
-      csvText += '#\n# The template below contains example data. Please replace with your actual test cases.\n';
+      csvText += '#\n# COLUMNS:\n';
+      csvText += '# - testCaseId: Unique identifier for test case\n';
+      csvText += '# - moduleId: Module ID this test case belongs to\n';
+      csvText += '# - feature: Feature being tested\n';
+      csvText += '# - testObjective: What the test verifies\n';
+      csvText += '# - preConditions: Prerequisites for the test\n';
+      csvText += '# - testSteps: Step-by-step test instructions\n';
+      csvText += '# - expectedResult: Expected outcome\n';
+      csvText += '# - actualResult: Actual result after execution\n';
+      csvText += '# - status: Test status (Not Executed, Pass, Fail, Blocked)\n';
+      csvText += '# - priority: Test priority (High, Medium, Low)\n';
+      csvText += '# - comments: Additional notes\n';
+      csvText += '#\n# Replace the example data below with your actual test cases.\n';
 
       // Generate CSV and append our comments
       const csv = Papa.unparse(templateData);
