@@ -1799,7 +1799,7 @@ class MemStorage implements IStorage {
 console.log("🔄 Initializing in-memory storage...");
 const memStorage = new MemStorage();
 
-This commit introduces GitHub integration storage methods to the MemStorage class.
+// This commit introduces GitHub integration storage methods to the MemStorage class.
 (memStorage as any).initializeDatabase = async function() {
     console.log("🔄 Initializing database...");
 
