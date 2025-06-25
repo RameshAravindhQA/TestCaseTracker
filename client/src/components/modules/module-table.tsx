@@ -69,9 +69,9 @@ export function ModuleTable({ modules, projectId, onEdit, onDelete, onViewTestCa
 
               >
                 <TableCell className="font-medium">
-                  <code className="font-mono text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded border text-gray-700 dark:text-gray-300">
+                  <span className="font-bold">
                     {module.moduleId || `MOD-${String(module.id).padStart(3, '0')}`}
-                  </code>
+                  </span>
                 </TableCell>
                 <TableCell className="font-medium">
                   <div 
