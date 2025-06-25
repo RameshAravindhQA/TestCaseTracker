@@ -419,7 +419,7 @@ export default function ProjectDetailPage() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/bugs`] });
-      
+
       if (data.total === 0) {
         toast({
           title: "No Bugs to Sync",
@@ -443,6 +443,34 @@ export default function ProjectDetailPage() {
 
   const handleSyncAllGithubIssues = () => {
     syncAllMutation.mutate();
+  };
+
+  const syncFromGithubMutation = useMutation({
+    mutationFn: async () => {
+      // Placeholder for actual implementation to sync from GitHub to system
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({ message: "Sync from GitHub to System initiated successfully" });
+        }, 1000);
+      });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Sync from GitHub to System",
+        description: data.message || "Sync from GitHub to System initiated",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sync Failed",
+        description: error.message || "Failed to sync from GitHub to System",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSyncFromGithub = () => {
+    syncFromGithubMutation.mutate();
   };
 
   return (
@@ -519,13 +547,14 @@ export default function ProjectDetailPage() {
                 {githubConfig ? 'Configure GitHub' : 'Setup GitHub'}
               </Button>
               <Button
-                  variant="outline"
-                  onClick={handleSyncAllGithubIssues}
-                  disabled={syncAllMutation.isPending}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${syncAllMutation.isPending ? 'animate-spin' : ''}`} />
-                  {syncAllMutation.isPending ? 'Syncing...' : 'Sync All GitHub Issues'}
-                </Button>
+                onClick={handleSyncAllGithubIssues}
+                disabled={syncAllMutation.isPending}
+                variant="outline"
+                size="sm"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncAllMutation.isPending ? 'animate-spin' : ''}`} />
+                {syncAllMutation.isPending ? 'Syncing...' : 'Sync All GitHub Issues'}
+              </Button>
 
               {project && (
                 <ProjectExport 
