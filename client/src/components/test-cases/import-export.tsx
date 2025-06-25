@@ -734,6 +734,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       // Use the current module ID from props if provided
                       const selectedModuleId = moduleId;
                       const validModules = new Map<string, number>(); // Map moduleId string to database ID
+                      const moduleIdToDbId = new Map<string, number>(); // Map module ID format to database ID
 
                       // Fetch valid module IDs for current project
                       const validateModuleIds = async () => {
@@ -757,7 +758,11 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
 
                             // Build mapping of moduleId to database ID
                             modules.forEach(module => {
-                              validModules.set(module.moduleId || `MOD-${module.id}`, module.id);
+                              // Map module ID format (e.g., "BEG-REG-MOD-01") to database ID
+                              if (module.moduleId) {
+                                moduleIdToDbId.set(module.moduleId, module.id);
+                                validModules.set(module.moduleId, module.id);
+                              }
                               // Also map database ID to itself for backward compatibility
                               validModules.set(module.id.toString(), module.id);
                             });
@@ -779,37 +784,71 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
 
                             // If CSV has moduleId column, handle both database ID and moduleId formats
                             let correctedModuleCount = 0;
-                            const firstModuleDbId = modules[0].id.toString();
+                            let conflictCount = 0;
+                            const conflictDetails = [];
 
-                            parsedData.forEach(row => {
+                            parsedData.forEach((row, index) => {
                               if (row.moduleId) {
                                 // Convert to string for consistent handling
-                                const moduleIdStr = row.moduleId.toString();
+                                const moduleIdStr = row.moduleId.toString().trim();
                                 
-                                // Try to map the CSV moduleId to database ID
-                                const dbId = validModules.get(moduleIdStr);
-                                if (dbId) {
-                                  row.moduleId = dbId.toString();
-                                  console.log(`Mapped CSV moduleId ${moduleIdStr} to database ID ${dbId}`);
+                                // First, try to find by module ID format (e.g., "BEG-REG-MOD-01")
+                                let targetDbId = moduleIdToDbId.get(moduleIdStr);
+                                
+                                if (targetDbId) {
+                                  // Direct match found
+                                  row.moduleId = targetDbId.toString();
+                                  console.log(`Row ${index + 1}: Mapped module ID ${moduleIdStr} to database ID ${targetDbId}`);
                                 } else {
-                                  // Check if it's a numeric value that might be a database ID
+                                  // Check if it's a numeric database ID
                                   const numericId = parseInt(moduleIdStr, 10);
-                                  if (!isNaN(numericId) && modules.find(m => m.id === numericId)) {
-                                    row.moduleId = numericId.toString();
-                                    console.log(`Using numeric moduleId ${numericId} as database ID`);
+                                  if (!isNaN(numericId)) {
+                                    const moduleWithDbId = modules.find(m => m.id === numericId);
+                                    if (moduleWithDbId) {
+                                      // Found module with this database ID
+                                      row.moduleId = numericId.toString();
+                                      console.log(`Row ${index + 1}: Using numeric moduleId ${numericId} as database ID`);
+                                      
+                                      // Check if test case ID pattern matches this module
+                                      if (row.testCaseId && moduleWithDbId.moduleId) {
+                                        const testCaseModulePattern = row.testCaseId.split('-')[1]; // Extract "REG" from "BEG-REG-TC-002"
+                                        const actualModulePattern = moduleWithDbId.moduleId.split('-')[1]; // Extract "REG" from "BEG-REG-MOD-01"
+                                        
+                                        if (testCaseModulePattern !== actualModulePattern) {
+                                          conflictCount++;
+                                          conflictDetails.push(`Row ${index + 1}: Test case ${row.testCaseId} pattern suggests module ${testCaseModulePattern} but assigned to module ${actualModulePattern} (DB ID ${numericId})`);
+                                        }
+                                      }
+                                    } else {
+                                      // Invalid numeric ID, use first available module
+                                      const firstModule = modules[0];
+                                      row.moduleId = firstModule.id.toString();
+                                      correctedModuleCount++;
+                                      console.log(`Row ${index + 1}: Invalid moduleId ${moduleIdStr}, using first module DB ID ${firstModule.id}`);
+                                    }
                                   } else {
-                                    // If no mapping found, use first module
-                                    row.moduleId = firstModuleDbId;
+                                    // Not a valid module ID format or numeric ID, use first available module
+                                    const firstModule = modules[0];
+                                    row.moduleId = firstModule.id.toString();
                                     correctedModuleCount++;
-                                    console.log(`Invalid moduleId ${moduleIdStr}, using first module DB ID ${firstModuleDbId}`);
+                                    console.log(`Row ${index + 1}: Invalid moduleId ${moduleIdStr}, using first module DB ID ${firstModule.id}`);
                                   }
                                 }
                               } else {
                                 // If moduleId is missing, use the first module
-                                row.moduleId = firstModuleDbId;
+                                const firstModule = modules[0];
+                                row.moduleId = firstModule.id.toString();
                                 correctedModuleCount++;
                               }
                             });
+
+                            // Show warnings about conflicts
+                            if (conflictCount > 0) {
+                              toast({
+                                title: "Module ID conflicts detected",
+                                description: `Found ${conflictCount} test cases where the test case ID pattern doesn't match the assigned module. Check: ${conflictDetails.slice(0, 2).join('; ')}${conflictCount > 2 ? ` and ${conflictCount - 2} more` : ''}`,
+                              });
+                            }
 
                             if (correctedModuleCount > 0) {
                               toast({

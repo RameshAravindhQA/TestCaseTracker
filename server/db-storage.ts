@@ -193,7 +193,19 @@ export class DatabaseStorage implements IStorage {
         .filter(num => !isNaN(num) && num > 0);
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
+      
+      // For the first module in a project, try to align with expected pattern
+      // BEG-REG-MOD-01 should ideally have database ID 1
+      let modulePrefix = 'MOD';
+      if (data.name) {
+        // Extract module prefix from name (e.g., "Registration" -> "REG")
+        const cleanModuleName = data.name.replace(/[^a-zA-Z]/g, '');
+        if (cleanModuleName.length >= 3) {
+          modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
+        }
+      }
+      
+      moduleId = `${projectPrefix}-${modulePrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
       desiredDbId = nextNumber; // Set desired database ID to match module number
 
       console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
