@@ -848,8 +848,7 @@ class MemStorage implements IStorage {
   }
 
   async deleteKanbanCard(id: number): Promise<boolean> {
-    return```tool_code
- this.kanbanCards.delete(id);
+    return this.kanbanCards.delete(id);
   }
 
   // Custom marker operations
