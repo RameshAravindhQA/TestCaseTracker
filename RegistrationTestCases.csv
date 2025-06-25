@@ -1,0 +1,54 @@
+
+testCaseId,moduleId,feature,testObjective,preConditions,testSteps,expectedResult,actualResult,status,priority,comments
+BEG-REG-TC-001,4,Email Validation,Verify user account validation process,Valid user account exists,"1. Navigate to login page
+2. Enter valid email address
+3. Enter valid password
+4. Click login button",User should be logged in successfully and redirected to dashboard,Not Executed,Pass,High,
+BEG-REG-TC-002,4,Email Validation,Verify email format validation,User is on registration page,"1. Navigate to registration page
+2. Enter invalid email format
+3. Enter other required fields
+4. Click register button",System should show email format validation error,Not Executed,Pass,High,
+BEG-REG-TC-003,4,Email Validation,Verify duplicate email validation,Email already exists in system,"1. Navigate to registration page
+2. Enter existing email address
+3. Enter other required fields
+4. Click register button",System should show duplicate email error message,Not Executed,Pass,High,
+BEG-REG-TC-004,4,Email Validation,Verify empty email validation,User is on registration page,"1. Navigate to registration page
+2. Leave email field empty
+3. Enter other required fields
+4. Click register button",System should show required field validation error,Not Executed,Pass,High,
+BEG-REG-TC-005,4,Email Validation,Verify email length validation,User is on registration page,"1. Navigate to registration page
+2. Enter very long email address
+3. Enter other required fields
+4. Click register button",System should handle email length appropriately,Not Executed,Pass,High,
+BEG-REG-TC-006,4,Email Validation,Verify special characters in email,User is on registration page,"1. Navigate to registration page
+2. Enter email with special characters
+3. Enter other required fields
+4. Click register button",System should validate email format correctly,Not Executed,Pass,High,
+BEG-REG-TC-007,4,Email Validation,Verify email domain validation,User is on registration page,"1. Navigate to registration page
+2. Enter email with invalid domain
+3. Enter other required fields
+4. Click register button",System should show domain validation error,Not Executed,Pass,High,
+BEG-REG-TC-008,4,Email Validation,Verify case sensitivity in email,User is on registration page,"1. Navigate to registration page
+2. Enter email in different cases
+3. Enter other required fields
+4. Click register button",System should handle email case appropriately,Not Executed,Pass,High,
+BEG-REG-TC-009,4,Email Validation,Verify email with spaces,User is on registration page,"1. Navigate to registration page
+2. Enter email with leading/trailing spaces
+3. Enter other required fields
+4. Click register button",System should trim spaces or show validation error,Not Executed,Pass,High,
+BEG-REG-TC-010,4,Email Validation,Verify email confirmation,User is on registration page,"1. Navigate to registration page
+2. Enter email in email field
+3. Enter different email in confirmation field
+4. Click register button",System should show email mismatch error,Not Executed,Pass,High,
+BEG-REG-TC-011,4,Email Validation,Verify valid email registration,User is on registration page,"1. Navigate to registration page
+2. Enter valid email format
+3. Enter all other required fields correctly
+4. Click register button",User account should be created successfully,Not Executed,Pass,High,
+BEG-REG-TC-012,4,Email Validation,Verify email with numbers,User is on registration page,"1. Navigate to registration page
+2. Enter email with numeric characters
+3. Enter other required fields
+4. Click register button",System should accept valid email with numbers,Not Executed,Pass,High,
+BEG-REG-TC-013,4,Email Validation,Verify email with hyphen,User is on registration page,"1. Navigate to registration page
+2. Enter email with hyphen in domain
+3. Enter other required fields
+4. Click register button",System should accept valid email with hyphen,Not Executed,Pass,High,
