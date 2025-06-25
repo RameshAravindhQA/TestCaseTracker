@@ -690,21 +690,60 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       return;
     }
 
+    console.log(`Updating ${type} ${numericId} to status: ${newStatus}`);
+
+    // Optimistically update the UI first
+    if (type === 'testcase' && Array.isArray(testCases)) {
+      queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], (old: any[]) =>
+        old.map(item => item.id === numericId ? { ...item, status: newStatus, updatedAt: new Date().toISOString() } : item)
+      );
+    } else if (type === 'bug' && Array.isArray(bugs)) {
+      queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], (old: any[]) =>
+        old.map(item => item.id === numericId ? { ...item, status: newStatus, updatedAt: new Date().toISOString() } : item)
+      );
+    }
+
     try {
       if (type === 'testcase') {
-        await updateTestCaseMutation.mutateAsync({ id: numericId, status: newStatus });
-        // Force immediate refetch and cache invalidation
-        await refetchTestCases();
-        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
+        const response = await apiRequest("PUT", `/api/test-cases/${numericId}`, { 
+          status: newStatus,
+          updatedAt: new Date().toISOString()
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log(`Test case ${numericId} updated successfully:`, result);
+
+        // Update the cache with the server response
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], (old: any[]) =>
+          old.map(item => item.id === numericId ? result : item)
+        );
+
         toast({
           title: "Status updated",
           description: `Test case status updated to ${newStatus}`,
         });
       } else if (type === 'bug') {
-        await updateBugMutation.mutateAsync({ id: numericId, status: newStatus });
-        // Force immediate refetch and cache invalidation
-        await refetchBugs();
-        await queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+        const response = await apiRequest("PUT", `/api/bugs/${numericId}`, { 
+          status: newStatus,
+          updatedAt: new Date().toISOString()
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log(`Bug ${numericId} updated successfully:`, result);
+
+        // Update the cache with the server response
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], (old: any[]) =>
+          old.map(item => item.id === numericId ? result : item)
+        );
+
         toast({
           title: "Status updated",
           description: `Bug status updated to ${newStatus}`,
@@ -714,7 +753,19 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       }
     } catch (error: any) {
       console.error(`Failed to update ${type} ${numericId}:`, error);
-      // Error toast is already shown in mutation onError
+      
+      // Revert optimistic update on error
+      if (type === 'testcase') {
+        await refetchTestCases();
+      } else if (type === 'bug') {
+        await refetchBugs();
+      }
+
+      toast({
+        title: "Update failed",
+        description: `Failed to update ${type} status: ${error.message}`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -1525,23 +1576,28 @@ Item>
                       <Select
                         value={item.status}
                         onValueChange={(newStatus) => {
-                          console.log('Status change triggered:', { item: item.id, newStatus, currentStatus: item.status });
-                          if (newStatus !== item.status) {
+                          console.log('Status change triggered:', { 
+                            itemId: item.id, 
+                            newStatus, 
+                            currentStatus: item.status,
+                            type: item.type 
+                          });
+                          if (newStatus && newStatus !== item.status) {
                             handleIndividualStatusUpdate(item.id, newStatus);
                           }
                         }}
                         disabled={updateTestCaseMutation.isPending || updateBugMutation.isPending}
                       >
                         <SelectTrigger className={`w-32 border-0 ${getStatusColor(item.status, item.type)}`}>
-                          <SelectValue>{item.status}</SelectValue>
+                          <SelectValue placeholder={item.status}>{item.status}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {item.type === 'testcase' ? (
                             <>
+                              <SelectItem value="Not Executed">Not Executed</SelectItem>
                               <SelectItem value="Pass">Pass</SelectItem>
                               <SelectItem value="Fail">Fail</SelectItem>
                               <SelectItem value="Blocked">Blocked</SelectItem>
-                              <SelectItem value="Not Executed">Not Executed</SelectItem>
                             </>
                           ) : (
                             <>

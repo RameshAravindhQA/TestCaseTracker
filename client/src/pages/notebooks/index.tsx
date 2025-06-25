@@ -1,21 +1,19 @@
-
-import React, { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Filter, Grid, List, Palette, Pin, Archive, Trash2, Edit3, Save, X, MoreHorizontal } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
+import { Badge } from '../../components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { useToast } from '../../hooks/use-toast';
+import { MainLayout } from '../../components/layout/main-layout';
+import { Plus, Search, Filter, MoreHorizontal, Edit, Trash, Star, Archive, Tag, Pin, Calendar, Clock, StickyNote, BookOpen, FileText, Palette, Eye, EyeOff } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { apiRequest } from '../../lib/queryClient';
 
 interface Notebook {
   id: number;
@@ -27,34 +25,12 @@ interface Notebook {
   tags: string[];
   createdAt: string;
   updatedAt: string;
-  userId: number;
 }
-
-interface NotebookFormData {
-  title: string;
-  content: string;
-  color: string;
-  isPinned: boolean;
-  isArchived: boolean;
-  tags: string[];
-}
-
-const COLORS = [
-  { name: 'Default', value: '#ffffff', class: 'bg-white border-gray-200' },
-  { name: 'Red', value: '#fee2e2', class: 'bg-red-100 border-red-200' },
-  { name: 'Orange', value: '#fed7aa', class: 'bg-orange-100 border-orange-200' },
-  { name: 'Yellow', value: '#fef3c7', class: 'bg-yellow-100 border-yellow-200' },
-  { name: 'Green', value: '#dcfce7', class: 'bg-green-100 border-green-200' },
-  { name: 'Blue', value: '#dbeafe', class: 'bg-blue-100 border-blue-200' },
-  { name: 'Purple', value: '#e9d5ff', class: 'bg-purple-100 border-purple-200' },
-  { name: 'Pink', value: '#fce7f3', class: 'bg-pink-100 border-pink-200' },
-  { name: 'Gray', value: '#f3f4f6', class: 'bg-gray-100 border-gray-200' },
-];
 
 export default function NotebooksPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -64,7 +40,7 @@ export default function NotebooksPage() {
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [showPinnedOnly, setShowPinnedOnly] = useState(false);
-  
+
   const [formData, setFormData] = useState<NotebookFormData>({
     title: "",
     content: "",
@@ -73,7 +49,7 @@ export default function NotebooksPage() {
     isArchived: false,
     tags: [],
   });
-  
+
   const [newTag, setNewTag] = useState("");
 
   // Fetch notebooks
@@ -255,332 +231,348 @@ export default function NotebooksPage() {
     );
   };
 
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  const COLORS = [
+    { name: 'Default', value: '#ffffff', class: 'bg-white border-gray-200' },
+    { name: 'Red', value: '#fee2e2', class: 'bg-red-100 border-red-200' },
+    { name: 'Orange', value: '#fed7aa', class: 'bg-orange-100 border-orange-200' },
+    { name: 'Yellow', value: '#fef3c7', class: 'bg-yellow-100 border-yellow-200' },
+    { name: 'Green', value: '#dcfce7', class: 'bg-green-100 border-green-200' },
+    { name: 'Blue', value: '#dbeafe', class: 'bg-blue-100 border-blue-200' },
+    { name: 'Purple', value: '#e9d5ff', class: 'bg-purple-100 border-purple-200' },
+    { name: 'Pink', value: '#fce7f3', class: 'bg-pink-100 border-pink-200' },
+    { name: 'Gray', value: '#f3f4f6', class: 'bg-gray-100 border-gray-200' },
+  ];
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Notebooks</h1>
-          <p className="text-gray-600">Create and organize your notes with rich formatting</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => {
-              resetForm();
-              setEditingNotebook(null);
-              setShowCreateDialog(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Notebook
-          </Button>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search notebooks by title, content, or tags..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className={showFilters ? "bg-blue-50 border-blue-300" : ""}
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-          >
-            {viewMode === "grid" ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
-          </Button>
-        </div>
-      </div>
-
-      {/* Filters Panel */}
-      {showFilters && (
-        <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <MainLayout>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
             <div>
-              <Label className="text-sm font-medium">Color</Label>
-              <Select value={filterColor} onValueChange={setFilterColor}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Colors</SelectItem>
-                  {COLORS.map(color => (
-                    <SelectItem key={color.value} value={color.value}>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-4 h-4 rounded ${color.class}`}></div>
-                        {color.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
+                <BookOpen className="h-6 w-6" />
+                Notebooks
+              </h1>
+              <p className="text-gray-600 mt-1">Create and organize your notes with rich formatting</p>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="pinned"
-                checked={showPinnedOnly}
-                onCheckedChange={setShowPinnedOnly}
-              />
-              <Label htmlFor="pinned">Pinned only</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="archived"
-                checked={showArchived}
-                onCheckedChange={setShowArchived}
-              />
-              <Label htmlFor="archived">Show archived</Label>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Tags</Label>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {allTags.map(tag => (
-                  <Badge
-                    key={tag}
-                    variant={filterTags.includes(tag) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => {
-                      if (filterTags.includes(tag)) {
-                        setFilterTags(filterTags.filter(t => t !== tag));
-                      } else {
-                        setFilterTags([...filterTags, tag]);
-                      }
-                    }}
-                  >
-                    {tag}
-                  </Badge>
-                ))}
+            <Button onClick={() => setCreateDialogOpen(true)} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New Notebook
+            </Button>
+          </div>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="relative w-full md:w-1/3">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
               </div>
+              <Input
+                placeholder="Search notebooks..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
+              </Button>
             </div>
           </div>
-        </Card>
-      )}
+        </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="text-2xl font-bold text-blue-600">{notebooks.length}</div>
-          <div className="text-sm text-gray-600">Total Notes</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-2xl font-bold text-green-600">{notebooks.filter(n => n.isPinned).length}</div>
-          <div className="text-sm text-gray-600">Pinned</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-2xl font-bold text-orange-600">{notebooks.filter(n => n.isArchived).length}</div>
-          <div className="text-sm text-gray-600">Archived</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-2xl font-bold text-purple-600">{allTags.length}</div>
-          <div className="text-sm text-gray-600">Tags</div>
-        </Card>
-      </div>
+        {/* Filters Panel */}
+        {showFilters && (
+          <div className="px-6 py-4">
+            <Card>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Color</label>
+                    <Select value={filterColor} onValueChange={setFilterColor}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Colors" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Colors</SelectItem>
+                        {COLORS.map((color) => (
+                          <SelectItem key={color.value} value={color.value}>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded ${color.class}`}></div>
+                              {color.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Tags</label>
+                    <div className="flex flex-wrap gap-1">
+                      {allTags.map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant={filterTags.includes(tag) ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() => {
+                            if (filterTags.includes(tag)) {
+                              setFilterTags(filterTags.filter((t) => t !== tag));
+                            } else {
+                              setFilterTags([...filterTags, tag]);
+                            }
+                          }}
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="pinned"
+                        checked={showPinnedOnly}
+                        onCheckedChange={setShowPinnedOnly}
+                      />
+                      <label htmlFor="pinned" className="text-sm font-medium text-gray-700">Pinned only</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="archived"
+                        checked={showArchived}
+                        onCheckedChange={setShowArchived}
+                      />
+                      <label htmlFor="archived" className="text-sm font-medium text-gray-700">Show archived</label>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-      {/* Notebooks Grid/List */}
-      <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
-        <AnimatePresence>
-          {sortedNotebooks.map((notebook, index) => (
-            <motion.div
-              key={notebook.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-            >
-              <Card className={`${getColorClass(notebook.color)} hover:shadow-lg transition-all duration-200 relative group`}>
-                {notebook.isPinned && (
-                  <Pin className="absolute top-2 right-2 h-4 w-4 text-gray-600 fill-current" />
-                )}
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg line-clamp-2">
+        {/* Notebooks Grid */}
+        <div className="px-6 py-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <AnimatePresence>
+            {sortedNotebooks.map((notebook, index) => (
+              <motion.div
+                key={notebook.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.2, delay: index * 0.03 }}
+              >
+                <Card className={`${getColorClass(notebook.color)} hover:shadow-lg transition-shadow duration-200`}>
+                  <CardHeader className="flex items-start justify-between">
+                    <CardTitle className="text-lg font-semibold line-clamp-2">
                       {highlightText(notebook.title, searchQuery)}
                     </CardTitle>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
                           <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Open menu</span>
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" forceMount>
                         <DropdownMenuItem onClick={() => handleEdit(notebook)}>
-                          <Edit3 className="h-4 w-4 mr-2" />
+                          <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleTogglePin(notebook)}>
                           <Pin className="h-4 w-4 mr-2" />
-                          {notebook.isPinned ? 'Unpin' : 'Pin'}
+                          {notebook.isPinned ? "Unpin" : "Pin"}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleArchive(notebook)}>
                           <Archive className="h-4 w-4 mr-2" />
-                          {notebook.isArchived ? 'Unarchive' : 'Archive'}
+                          {notebook.isArchived ? "Unarchive" : "Archive"}
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => handleDelete(notebook)}
-                          className="text-red-600"
+                          className="text-red-600 focus:bg-red-600 focus:text-white"
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
+                          <Trash className="h-4 w-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="text-sm text-gray-700 line-clamp-4 mb-3 whitespace-pre-wrap">
+                  </CardHeader>
+                  <CardContent className="py-2 text-sm text-gray-700 line-clamp-3">
                     {highlightText(notebook.content, searchQuery)}
-                  </div>
-                  {notebook.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {notebook.tags.map(tag => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {highlightText(tag, searchQuery)}
-                        </Badge>
-                      ))}
+                  </CardContent>
+                  <CardContent className="py-2">
+                    {notebook.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {notebook.tags.map((tag) => (
+                          <Badge key={tag} variant="secondary">
+                            {highlightText(tag, searchQuery)}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-500">
+                      Updated {new Date(notebook.updatedAt).toLocaleDateString()}
                     </div>
-                  )}
-                  <div className="text-xs text-gray-500">
-                    {new Date(notebook.updatedAt).toLocaleDateString()}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* Empty State */}
-      {sortedNotebooks.length === 0 && !isLoading && (
-        <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">
-            <Edit3 className="h-12 w-12 mx-auto" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No notebooks found</h3>
-          <p className="text-gray-600 mb-4">
-            {searchQuery || showFilters ? "Try adjusting your search or filters" : "Create your first notebook to get started"}
-          </p>
-          {!searchQuery && !showFilters && (
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Notebook
-            </Button>
-          )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
-      )}
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>{editingNotebook ? 'Edit Notebook' : 'Create New Notebook'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Enter notebook title..."
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="content">Content</Label>
-              <Textarea
-                id="content"
-                value={formData.content}
-                onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                placeholder="Write your notes here..."
-                rows={8}
-              />
-            </div>
-
-            <div>
-              <Label>Color</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {COLORS.map(color => (
-                  <button
-                    key={color.value}
-                    onClick={() => setFormData(prev => ({ ...prev, color: color.value }))}
-                    className={`w-8 h-8 rounded-full border-2 ${color.class} ${
-                      formData.color === color.value ? 'border-gray-800' : 'border-gray-300'
-                    }`}
-                    title={color.name}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <Label>Tags</Label>
-              <div className="flex gap-2 mt-2">
-                <Input
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  placeholder="Add a tag..."
-                  onKeyPress={(e) => e.key === 'Enter' && addTag()}
-                />
-                <Button onClick={addTag} variant="outline">Add</Button>
-              </div>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {formData.tags.map(tag => (
-                  <Badge key={tag} variant="secondary" className="cursor-pointer" onClick={() => removeTag(tag)}>
-                    {tag} <X className="h-3 w-3 ml-1" />
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="pinned"
-                  checked={formData.isPinned}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPinned: !!checked }))}
-                />
-                <Label htmlFor="pinned">Pin this note</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="archived"
-                  checked={formData.isArchived}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isArchived: !!checked }))}
-                />
-                <Label htmlFor="archived">Archive</Label>
-              </div>
-            </div>
+        {/* Empty State */}
+        {sortedNotebooks.length === 0 && !isLoading && (
+          <div className="px-6 py-4 text-center">
+            <StickyNote className="h-10 w-10 mx-auto text-gray-400" />
+            <h3 className="mt-2 text-lg font-semibold text-gray-900">No notebooks found</h3>
+            <p className="mt-1 text-gray-500">
+              {searchQuery || showFilters
+                ? "Try adjusting your search or filters to find what you're looking for."
+                : "Create your first notebook to get started."}
+            </p>
+            {!searchQuery && !showFilters && (
+              <Button onClick={() => setCreateDialogOpen(true)} className="mt-4">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Notebook
+              </Button>
+            )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={createNotebookMutation.isPending || updateNotebookMutation.isPending}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {editingNotebook ? 'Update' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        )}
+
+        {/* Create/Edit Dialog */}
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>{editingNotebook ? "Edit Notebook" : "Create New Notebook"}</DialogTitle>
+              <DialogDescription>
+                {editingNotebook ? "Edit your notebook details." : "Create a new notebook to start writing your notes."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="title" className="text-right text-sm font-medium text-gray-700">
+                  Title
+                </label>
+                <Input
+                  type="text"
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="content" className="text-right text-sm font-medium text-gray-700">
+                  Content
+                </label>
+                <Textarea
+                  id="content"
+                  value={formData.content}
+                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  className="col-span-3"
+                  rows={4}
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="color" className="text-right text-sm font-medium text-gray-700">
+                  Color
+                </label>
+                <div className="col-span-3 flex items-center gap-2">
+                  {COLORS.map((color) => (
+                    <button
+                      key={color.value}
+                      className={`w-8 h-8 rounded-full border-2 ${color.class} ${
+                        formData.color === color.value ? "border-gray-900" : "border-transparent"
+                      } hover:border-gray-500 focus:outline-none`}
+                      onClick={() => setFormData({ ...formData, color: color.value })}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="tags" className="text-right text-sm font-medium text-gray-700">
+                  Tags
+                </label>
+                <div className="col-span-3 flex items-center gap-2">
+                  <Input
+                    type="text"
+                    id="tags"
+                    placeholder="Add a tag..."
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        addTag();
+                        e.preventDefault();
+                      }
+                    }}
+                  />
+                  <Button variant="outline" size="sm" onClick={addTag}>
+                    Add
+                  </Button>
+                </div>
+              </div>
+              {formData.tags.length > 0 && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-700"></label>
+                  <div className="col-span-3 flex flex-wrap gap-2">
+                    {formData.tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="cursor-pointer"
+                        onClick={() => setFormData({ ...formData, tags: formData.tags.filter((t) => t !== tag) })}
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-sm font-medium text-gray-700"></label>
+                <div className="col-span-3 flex items-center gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="pinned"
+                      checked={formData.isPinned}
+                      onCheckedChange={(checked) => setFormData({ ...formData, isPinned: checked })}
+                    />
+                    <label htmlFor="pinned" className="text-sm font-medium text-gray-700">
+                      Pin
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="archived"
+                      checked={formData.isArchived}
+                      onCheckedChange={(checked) => setFormData({ ...formData, isArchived: checked })}
+                    />
+                    <label htmlFor="archived" className="text-sm font-medium text-gray-700">
+                      Archive
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={() => setCreateDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" onClick={handleSubmit}>
+                {editingNotebook ? "Update Notebook" : "Create Notebook"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </MainLayout>
   );
 }
