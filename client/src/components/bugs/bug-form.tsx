@@ -23,6 +23,8 @@ import { EnhancedFileUpload } from "@/components/ui/enhanced-file-upload";
 import { TagInput } from "@/components/test-cases/tag-input";
 import { TagFilter } from "@/components/test-cases/tag-filter";
 import { useEffect, useState } from "react";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Badge } from "@/components/ui/badge";
 
 const bugSchema = z.object({
   bugId: z.string().optional(),
@@ -64,6 +66,111 @@ interface BugFormProps {
   module?: Module;
   modules?: Module[];
   onSuccess?: () => void;
+}
+
+interface TestCaseSelectorProps {
+  value: number | null;
+  onChange: (value: number | null) => void;
+  projectId: number;
+  onTestCaseSelect?: (testCase: TestCase | null) => void;
+}
+
+function TestCaseSelector({ value, onChange, projectId, onTestCaseSelect }: TestCaseSelectorProps) {
+  const { data: testCases } = useQuery<TestCase[]>({
+    queryKey: [`/api/projects/${projectId}/test-cases`],
+  });
+
+  const selectedTestCase = testCases?.find(tc => tc.id === value);
+
+  return (
+    <div className="space-y-2">
+      <Select
+        value={value?.toString() || ""}
+        onValueChange={(val) => {
+          const testCaseId = val === "none" ? null : parseInt(val);
+          onChange(testCaseId);
+          const testCase = testCases?.find(tc => tc.id === testCaseId);
+          onTestCaseSelect?.(testCase || null);
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select a test case to link (optional)" />
+        </SelectTrigger>
+        <SelectContent className="max-h-60">
+          <SelectItem value="none">No test case mapping</SelectItem>
+          {testCases?.map((testCase) => (
+            <SelectItem key={testCase.id} value={testCase.id.toString()}>
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                    {testCase.testCaseId}
+                  </span>
+                  <span className="truncate max-w-[200px]">{testCase.feature}</span>
+                </div>
+                <HoverCard>
+                  <HoverCardTrigger asChild>
+                    <button 
+                      type="button"
+                      className="ml-2 text-blue-500 hover:text-blue-700"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </button>
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-80" side="left">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{testCase.testCaseId}</Badge>
+                        <Badge variant={testCase.status === "Pass" ? "default" : testCase.status === "Fail" ? "destructive" : "secondary"}>
+                          {testCase.status}
+                        </Badge>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm">{testCase.feature}</h4>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{testCase.testObjective}</p>
+                      </div>
+                      {testCase.preConditions && (
+                        <div>
+                          <span className="text-xs font-medium">Pre-conditions:</span>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">{testCase.preConditions}</p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-xs font-medium">Priority:</span>
+                        <Badge variant="outline" className="ml-1 text-xs">{testCase.priority}</Badge>
+                      </div>
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {selectedTestCase && (
+        <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-sm font-medium text-green-700 dark:text-green-300">
+              Linked to: {selectedTestCase.testCaseId}
+            </span>
+          </div>
+          <div className="text-xs text-green-600 dark:text-green-400 space-y-1">
+            <div><strong>Feature:</strong> {selectedTestCase.feature}</div>
+            <div><strong>Objective:</strong> {selectedTestCase.testObjective}</div>
+            <div><strong>Status:</strong> {selectedTestCase.status}</div>
+            <div><strong>Priority:</strong> {selectedTestCase.priority}</div>
+          </div>
+          <p className="text-xs text-green-600 dark:text-green-400 mt-2 italic">
+            Related fields will be auto-populated from this test case.
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }: BugFormProps) {
@@ -292,13 +399,21 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
             name="preConditions"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Pre-Conditions</FormLabel>
+                <div className="flex items-center gap-2">
+                  <FormLabel>Pre-Conditions</FormLabel>
+                  {testCase && (
+                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                      From Test Case
+                    </Badge>
+                  )}
+                </div>
                 <FormControl>
                   <Textarea 
                     placeholder="Prerequisites needed before reproducing the bug" 
                     rows={2}
                     {...field} 
                     value={field.value || ""}
+                    className={testCase ? "border-blue-200 bg-blue-50/50 dark:bg-blue-900/20 dark:border-blue-800" : ""}
                   />
                 </FormControl>
                 <FormMessage />
@@ -311,12 +426,20 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
             name="stepsToReproduce"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Steps to Reproduce</FormLabel>
+                <div className="flex items-center gap-2">
+                  <FormLabel>Steps to Reproduce</FormLabel>
+                  {testCase && (
+                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                      From Test Case
+                    </Badge>
+                  )}
+                </div>
                 <FormControl>
                   <Textarea 
                     placeholder="1. Navigate to login page&#10;2. Enter invalid credentials&#10;3. Click login button" 
                     rows={4}
-                    {...field} 
+                    {...field}
+                    className={testCase ? "border-blue-200 bg-blue-50/50 dark:bg-blue-900/20 dark:border-blue-800" : ""}
                   />
                 </FormControl>
                 <FormMessage />
@@ -329,12 +452,20 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
             name="expectedResult"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Expected Result</FormLabel>
+                <div className="flex items-center gap-2">
+                  <FormLabel>Expected Result</FormLabel>
+                  {testCase && (
+                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                      From Test Case
+                    </Badge>
+                  )}
+                </div>
                 <FormControl>
                   <Textarea 
                     placeholder="What should have happened" 
                     rows={2}
-                    {...field} 
+                    {...field}
+                    className={testCase ? "border-blue-200 bg-blue-50/50 dark:bg-blue-900/20 dark:border-blue-800" : ""}
                   />
                 </FormControl>
                 <FormMessage />
@@ -391,6 +522,87 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
               )}
             />
           )}
+
+          {/* Test Case Mapping Section */}
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <FormLabel className="text-base font-semibold">Test Case Mapping</FormLabel>
+                <div className="group relative">
+                  <button type="button" className="text-gray-400 hover:text-gray-600">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                    Map this bug to an existing test case to auto-fill details
+                  </div>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  form.setValue("testCaseId", null);
+                  form.setValue("moduleId", null);
+                  form.setValue("preConditions", "");
+                  form.setValue("stepsToReproduce", "");
+                  form.setValue("expectedResult", "");
+                }}
+                className="text-xs px-2 py-1 h-auto"
+              >
+                Clear Mapping
+              </Button>
+            </div>
+
+            {testCase ? (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 mb-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                    Mapped to Test Case: {testCase.testCaseId}
+                  </span>
+                </div>
+                <div className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
+                  <div><strong>Feature:</strong> {testCase.feature}</div>
+                  <div><strong>Objective:</strong> {testCase.testObjective}</div>
+                  {testCase.module && <div><strong>Module:</strong> {testCase.module.name}</div>}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  You can link this bug to a test case to automatically populate related fields, or create a standalone bug report.
+                </p>
+                
+                {/* Test Case Selection */}
+                <FormField
+                  control={form.control}
+                  name="testCaseId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm">Link to Test Case (Optional)</FormLabel>
+                      <TestCaseSelector
+                        value={field.value}
+                        onChange={field.onChange}
+                        projectId={projectId}
+                        onTestCaseSelect={(selectedTestCase) => {
+                          if (selectedTestCase) {
+                            form.setValue("moduleId", selectedTestCase.moduleId);
+                            form.setValue("preConditions", selectedTestCase.preConditions || "");
+                            form.setValue("stepsToReproduce", selectedTestCase.testSteps || "");
+                            form.setValue("expectedResult", selectedTestCase.expectedResult || "");
+                          }
+                        }}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+          </div>
 
           <FormField
             control={form.control}
