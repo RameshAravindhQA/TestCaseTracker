@@ -160,7 +160,7 @@ export interface Notebook {
   isPinned: boolean;
   isArchived: boolean;
   tags: string[];
+  userId: number;
   createdAt: string;
   updatedAt: string;
-  userId: number;
 }

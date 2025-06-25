@@ -1592,43 +1592,53 @@ Item>
                     </Badge>
                   </TableCell>
                   <TableCell>
-                      <Select
-                        value={item.status}
-                        onValueChange={(newStatus) => {
-                          console.log('Status change triggered:', { 
-                            itemId: item.id, 
-                            newStatus, 
-                            currentStatus: item.status,
-                            type: item.type 
-                          });
-                          if (newStatus && newStatus !== item.status) {
-                            handleIndividualStatusUpdate(item.id, newStatus);
-                          }
-                        }}
-                        disabled={updateTestCaseMutation.isPending || updateBugMutation.isPending}
-                      >
-                        <SelectTrigger className={`w-32 border-0 ${getStatusColor(item.status, item.type)}`}>
-                          <SelectValue placeholder={item.status}>{item.status}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {item.type === 'testcase' ? (
-                            <>
-                              <SelectItem value="Not Executed">Not Executed</SelectItem>
-                              <SelectItem value="Pass">Pass</SelectItem>
-                              <SelectItem value="Fail">Fail</SelectItem>
-                              <SelectItem value="Blocked">Blocked</SelectItem>
-                            </>
-                          ) : (
-                            <>
-                              <SelectItem value="Open">Open</SelectItem>
-                              <SelectItem value="In Progress">In Progress</SelectItem>
-                              <SelectItem value="Resolved">Resolved</SelectItem>
-                              <SelectItem value="Closed">Closed</SelectItem>
-                            </>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className={`w-32 justify-between ${getStatusColor(item.status, item.type)}`}
+                          disabled={updateTestCaseMutation.isPending || updateBugMutation.isPending}
+                        >
+                          {item.status}
+                          <MoreHorizontal className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {item.type === 'testcase' ? (
+                          <>
+                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Not Executed')}>
+                              Not Executed
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Pass')}>
+                              Pass
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Fail')}>
+                              Fail
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Blocked')}>
+                              Blocked
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <>
+                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Open')}>
+                              Open
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'In Progress')}>
+                              In Progress
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Resolved')}>
+                              Resolved
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Closed')}>
+                              Closed
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Progress value={item.progress} className="w-16 h-2" />
