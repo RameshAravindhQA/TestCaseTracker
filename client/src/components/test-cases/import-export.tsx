@@ -410,9 +410,15 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
       csvText += `# - PROJECT PREFIX: ${projectPrefix} (automatically applied)\n`;
       csvText += '# - MODULE PREFIX: 3-letter abbreviation of module name (e.g., REG for Registration)\n';
       csvText += '# - TC-###: Sequential test case number with 3 digits (001, 002, etc.)\n';
-      csvText += '#\n# IMPORTANT: Test Case ID pattern must match Module ID pattern\n';
-      csvText += '# - If moduleId is BEG-REG-MOD-01, then testCaseId should be BEG-REG-TC-001\n';
-      csvText += '# - The module prefix (REG in this example) must be the same in both IDs\n';
+      csvText += '#\n# CRITICAL: Test Case ID pattern MUST match Module ID pattern\n';
+      csvText += '# - Project prefix must match in both IDs\n';
+      csvText += '# - Module prefix must match in both IDs\n';
+      csvText += '# - Example: If moduleId is BEG-REG-MOD-01, then testCaseId should be BEG-REG-TC-001\n';
+      csvText += '# - Pattern: PROJECT-MODULE-TYPE-NUMBER\n';
+      csvText += '#   - PROJECT: Must be the same (e.g., BEG)\n';
+      csvText += '#   - MODULE: Must be the same (e.g., REG)\n';
+      csvText += '#   - TYPE: TC for test cases, MOD for modules\n';
+      csvText += '#   - NUMBER: Sequential identifier\n';
       csvText += '#\n# The template below contains example data. Please replace with your actual test cases.\n';
 
       // Generate CSV and append our comments
@@ -887,22 +893,43 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         const expectedPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-\\d{3}$`);
                         return expectedPattern.test(testCaseId);
                       };
-                      // Function to validate test case ID matches module ID
-                      const validateIdPatternMatch = (testCaseId: string, moduleId: string): boolean => {
-                        if (!testCaseId || !moduleId) return false;
+                      // Function to validate test case ID matches module ID with project context
+                      const validateIdPatternMatch = (testCaseId: string, moduleId: string, projectPrefix: string): boolean => {
+                        if (!testCaseId || !moduleId || !projectPrefix) return false;
 
+                        // Parse test case ID (expected format: PROJECT-MODULE-TC-###)
                         const testCaseParts = testCaseId.split('-');
+                        // Parse module ID (expected format: PROJECT-MODULE-MOD-##)
                         const moduleParts = moduleId.split('-');
 
-                        // Check if both IDs have enough parts
-                        if (testCaseParts.length < 3 || moduleParts.length < 3) return false;
+                        // Validate basic structure
+                        if (testCaseParts.length < 4 || moduleParts.length < 4) return false;
 
-                        // Extract the module prefixes
+                        // Extract components
+                        const testCaseProjectPrefix = testCaseParts[0];
                         const testCaseModulePrefix = testCaseParts[1];
-                        const moduleIdPrefix = moduleParts[1];
+                        const testCaseType = testCaseParts[2];
 
-                        // The prefixes should be the same for test case ID and module ID
-                        return testCaseModulePrefix === moduleIdPrefix;
+                        const moduleProjectPrefix = moduleParts[0];
+                        const moduleModulePrefix = moduleParts[1];
+                        const moduleType = moduleParts[2];
+
+                        // Validate project prefix matches
+                        if (testCaseProjectPrefix !== projectPrefix || moduleProjectPrefix !== projectPrefix) {
+                          return false;
+                        }
+
+                        // Validate module prefixes match
+                        if (testCaseModulePrefix !== moduleModulePrefix) {
+                          return false;
+                        }
+
+                        // Validate type identifiers
+                        if (testCaseType !== 'TC' || moduleType !== 'MOD') {
+                          return false;
+                        }
+
+                        return true;
                       };
 
                       // Function to get module prefix from module name
@@ -956,8 +983,8 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         }
                          // Validate Test Case ID and Module ID Pattern Match
                         if (row.testCaseId && row.moduleId) {
-                            if (!validateIdPatternMatch(row.testCaseId, row.moduleId)) {
-                                idPatternMismatch.push(row.testCaseId);
+                            if (!validateIdPatternMatch(row.testCaseId, row.moduleId, projectPrefix)) {
+                                idPatternMismatch.push(`${row.testCaseId} (Module: ${row.moduleId})`);
                                 return; // Skip this row
                             }
                         }
@@ -1016,8 +1043,8 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         // Show ID Pattern Mismatch error
                       if (idPatternMismatch.length > 0) {
                         toast({
-                          title: "Test case and Module ID Pattern Mismatch",
-                          description: `${idPatternMismatch.length} Test cases doesn't match Module Id pattern. Please ensure that Module prefix are same. Mismatched Ids: ${idPatternMismatch.slice(0, 3).join(", ")}${idPatternMismatch.length > 3 ? ` and ${idPatternMismatch.length - 3} more` : ''}.`,
+                          title: "Test Case and Module ID Pattern Mismatch",
+                          description: `${idPatternMismatch.length} test case(s) have mismatched patterns with their module IDs. Expected format: ${projectPrefix}-[MODULE]-TC-### for test cases and ${projectPrefix}-[MODULE]-MOD-## for modules. Both must have the same project prefix (${projectPrefix}) and module prefix. Mismatched entries: ${idPatternMismatch.slice(0, 2).join(", ")}${idPatternMismatch.length > 2 ? ` and ${idPatternMismatch.length - 2} more` : ''}.`,
                           variant: "destructive",
                         });
                       }
@@ -1034,7 +1061,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         toast({
                           title: "No test cases to import",
                           description: totalSkipped > 0
-                            ? `All ${totalSkipped} test cases were skipped due to validation errors.`
+                            ? `All ${totalSkipped} test cases were skipped due to validation errors (${duplicateIds.length} duplicates, ${invalidFormatIds.length} invalid formats, ${idPatternMismatch.length} pattern mismatches).`
                             : "All test case IDs already exist in the system.",
                           variant: "destructive",
                         });
