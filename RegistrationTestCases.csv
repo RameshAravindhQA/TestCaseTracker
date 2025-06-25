@@ -1,54 +1,13 @@
-
 testCaseId,moduleId,feature,testObjective,preConditions,testSteps,expectedResult,actualResult,status,priority,comments
-BEG-REG-TC-001,4,Email Validation,Verify user account validation process,Valid user account exists,"1. Navigate to login page
-2. Enter valid email address
-3. Enter valid password
-4. Click login button",User should be logged in successfully and redirected to dashboard,Not Executed,Pass,High,
-BEG-REG-TC-002,4,Email Validation,Verify email format validation,User is on registration page,"1. Navigate to registration page
-2. Enter invalid email format
-3. Enter other required fields
-4. Click register button",System should show email format validation error,Not Executed,Pass,High,
-BEG-REG-TC-003,4,Email Validation,Verify duplicate email validation,Email already exists in system,"1. Navigate to registration page
-2. Enter existing email address
-3. Enter other required fields
-4. Click register button",System should show duplicate email error message,Not Executed,Pass,High,
-BEG-REG-TC-004,4,Email Validation,Verify empty email validation,User is on registration page,"1. Navigate to registration page
-2. Leave email field empty
-3. Enter other required fields
-4. Click register button",System should show required field validation error,Not Executed,Pass,High,
-BEG-REG-TC-005,4,Email Validation,Verify email length validation,User is on registration page,"1. Navigate to registration page
-2. Enter very long email address
-3. Enter other required fields
-4. Click register button",System should handle email length appropriately,Not Executed,Pass,High,
-BEG-REG-TC-006,4,Email Validation,Verify special characters in email,User is on registration page,"1. Navigate to registration page
-2. Enter email with special characters
-3. Enter other required fields
-4. Click register button",System should validate email format correctly,Not Executed,Pass,High,
-BEG-REG-TC-007,4,Email Validation,Verify email domain validation,User is on registration page,"1. Navigate to registration page
-2. Enter email with invalid domain
-3. Enter other required fields
-4. Click register button",System should show domain validation error,Not Executed,Pass,High,
-BEG-REG-TC-008,4,Email Validation,Verify case sensitivity in email,User is on registration page,"1. Navigate to registration page
-2. Enter email in different cases
-3. Enter other required fields
-4. Click register button",System should handle email case appropriately,Not Executed,Pass,High,
-BEG-REG-TC-009,4,Email Validation,Verify email with spaces,User is on registration page,"1. Navigate to registration page
-2. Enter email with leading/trailing spaces
-3. Enter other required fields
-4. Click register button",System should trim spaces or show validation error,Not Executed,Pass,High,
-BEG-REG-TC-010,4,Email Validation,Verify email confirmation,User is on registration page,"1. Navigate to registration page
-2. Enter email in email field
-3. Enter different email in confirmation field
-4. Click register button",System should show email mismatch error,Not Executed,Pass,High,
-BEG-REG-TC-011,4,Email Validation,Verify valid email registration,User is on registration page,"1. Navigate to registration page
-2. Enter valid email format
-3. Enter all other required fields correctly
-4. Click register button",User account should be created successfully,Not Executed,Pass,High,
-BEG-REG-TC-012,4,Email Validation,Verify email with numbers,User is on registration page,"1. Navigate to registration page
-2. Enter email with numeric characters
-3. Enter other required fields
-4. Click register button",System should accept valid email with numbers,Not Executed,Pass,High,
-BEG-REG-TC-013,4,Email Validation,Verify email with hyphen,User is on registration page,"1. Navigate to registration page
-2. Enter email with hyphen in domain
-3. Enter other required fields
-4. Click register button",System should accept valid email with hyphen,Not Executed,Pass,High,
+BEG-REG-TC-002,4,User Registration,Validate mandatory fields on registration form,User lands on registration page,1. Leave all mandatory fields blank. 2. Click Submit,Error messages shown for all mandatory fields,,Not Executed,High,
+BEG-REG-TC-003,4,User Registration,Verify successful registration with valid data,User on registration page with all required info,1. Enter valid details 2. Submit form,User is successfully registered and redirected,,Not Executed,High,
+BEG-REG-TC-004,4,User Registration,Check validation for invalid email format,User on registration page,1. Enter invalid email format 2. Submit,Proper validation message for email,,Not Executed,High,
+BEG-REG-TC-005,4,User Registration,Ensure password strength rules are enforced,User on registration page,1. Enter weak password 2. Submit,Error shown for weak password,,Not Executed,High,
+BEG-REG-TC-006,4,User Registration,Check duplicate email registration attempt,User already registered,1. Try registering with same email,Error message for duplicate email,,Not Executed,High,
+BEG-REG-TC-007,4,User Registration,Verify password and confirm password match,User on registration page,1. Enter mismatching passwords 2. Submit,Error for password mismatch,,Not Executed,High,
+BEG-REG-TC-008,4,User Registration,Validate optional fields left blank,User on registration page,1. Leave optional fields blank 2. Submit,Registration succeeds without optional fields,,Not Executed,High,
+BEG-REG-TC-009,4,User Registration,Check form reset functionality,User on registration page,1. Enter data 2. Click reset,Form fields cleared,,Not Executed,High,
+BEG-REG-TC-010,4,User Registration,Test registration form responsiveness,Access form on mobile browser,1. Open form on mobile device,Form layout adjusts to screen,,Not Executed,High,
+BEG-REG-TC-011,4,User Registration,Verify terms & conditions checkbox validation,User on registration page,1. Leave T&C unchecked 2. Submit,Error shown asking to accept terms,,Not Executed,High,
+BEG-REG-TC-012,4,User Registration,Test registration without internet connection,No internet connection,1. Fill form 2. Submit,Error shown about no internet connectivity,,Not Executed,High,
+BEG-REG-TC-013,4,User Registration,Ensure language localization in registration form,User switches language setting,1. Switch language 2. Open form,Form displays text in selected language,,Not Executed,High,
