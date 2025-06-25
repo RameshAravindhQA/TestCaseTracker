@@ -352,22 +352,59 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     } else {
       setFormulaBarValue(String(cellData.value || ''));
     }
-    // Enable immediate editing on click
-    setIsEditing(true);
+    // Enable immediate editing on single click
+    setTimeout(() => setIsEditing(true), 50); // Small delay to ensure cell selection is complete
   };
 
-  // Handle cell double click to start editing
+  // Handle cell double click for enhanced editing (now redundant but keeping for compatibility)
   const handleCellDoubleClick = (row: number, col: number) => {
-    setSelectedCell({ row, col, cellId: getCellId(row, col) });
+    const cellId = getCellId(row, col);
+    setSelectedCell({ row, col, cellId });
     setIsEditing(true);
   };
 
   // Handle formula bar change with enhanced persistence and immediate UI update
   const handleFormulaBarChange = useCallback((value: string) => {
     setFormulaBarValue(value);
-    // Don't immediately update cellData on every keystroke
-    // This will be handled on blur or cell switch
-  }, []);
+    
+    // Immediately update the cell for real-time persistence
+    if (selectedCell) {
+      const row = selectedCell.row;
+      const col = selectedCell.col;
+      
+      let cellValue: any = value;
+      let cellType: CellData['type'] = 'text';
+      let formula: string | undefined;
+
+      // Determine cell type and process value
+      if (value.startsWith('=')) {
+        cellType = 'formula';
+        formula = value;
+        // Keep original value for display, evaluate on blur
+        cellValue = value;
+      } else if (!isNaN(Number(value)) && value.trim() !== '' && value.trim() !== '.') {
+        cellType = 'number';
+        cellValue = Number(value);
+      } else if (value.toLowerCase() === 'true' || value.toLowerCase() === 'false') {
+        cellType = 'boolean';
+        cellValue = value.toLowerCase() === 'true';
+      } else if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        cellType = 'date';
+        cellValue = value;
+      } else {
+        cellType = 'text';
+        cellValue = value;
+      }
+
+      // Update cell immediately to prevent value loss
+      updateCell(row, col, {
+        value: cellValue,
+        type: cellType,
+        formula,
+        style: getCellData(row, col).style || {}
+      });
+    }
+  }, [selectedCell, updateCell]);
 
   const handleFormulaBarBlur = useCallback(() => {
     if (selectedCell && formulaBarValue !== null && formulaBarValue !== undefined) {

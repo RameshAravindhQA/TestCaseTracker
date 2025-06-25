@@ -693,15 +693,47 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     console.log(`Updating ${type} ${numericId} to status: ${newStatus}`);
 
     try {
-      // Use the mutation for proper optimistic updates
-      await updateStatusMutation.mutateAsync({
-        itemId: id,
-        type: type as 'testcase' | 'bug',
-        status: newStatus
+      // Direct API call for immediate update
+      let response;
+      if (type === 'testcase') {
+        response = await apiRequest('PUT', `/api/test-cases/${numericId}`, { 
+          status: newStatus,
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        response = await apiRequest('PUT', `/api/bugs/${numericId}`, { 
+          status: newStatus,
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to update ${type}: ${response.status}`);
+      }
+
+      // Force immediate data refresh
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+      
+      // Force refetch
+      if (type === 'testcase') {
+        refetchTestCases();
+      } else {
+        refetchBugs();
+      }
+
+      toast({
+        title: "Status Updated",
+        description: `${type === 'testcase' ? 'Test case' : 'Bug'} status updated to ${newStatus}`,
       });
+
     } catch (error: any) {
       console.error(`Failed to update ${type} ${numericId}:`, error);
-      // Error handling is done in the mutation
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update status",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1528,7 +1560,7 @@ Item>
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu key={`${item.id}-${item.status}-${Date.now()}`}>
+                    <DropdownMenu key={`status-dropdown-${item.id}-${item.status}`}>
                       <DropdownMenuTrigger asChild>
                         <Button 
                           variant="outline" 
@@ -1540,30 +1572,46 @@ Item>
                           <MoreHorizontal className="h-3 w-3" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
+                      <DropdownMenuContent align="start" className="min-w-[140px]">
                         {item.type === 'testcase' ? (
                           <>
                             <DropdownMenuItem 
-                              onClick={() => handleIndividualStatusUpdate(item.id, 'Not Executed')}
-                              className={item.status === 'Not Executed' ? 'bg-gray-100' : ''}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleIndividualStatusUpdate(item.id, 'Not Executed');
+                              }}
+                              className={item.status === 'Not Executed' ? 'bg-gray-100 font-semibold' : 'hover:bg-gray-50'}
                             >
                               Not Executed
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => handleIndividualStatusUpdate(item.id, 'Pass')}
-                              className={item.status === 'Pass' ? 'bg-green-100' : ''}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleIndividualStatusUpdate(item.id, 'Pass');
+                              }}
+                              className={item.status === 'Pass' ? 'bg-green-100 font-semibold' : 'hover:bg-green-50'}
                             >
                               Pass
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => handleIndividualStatusUpdate(item.id, 'Fail')}
-                              className={item.status === 'Fail' ? 'bg-red-100' : ''}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleIndividualStatusUpdate(item.id, 'Fail');
+                              }}
+                              className={item.status === 'Fail' ? 'bg-red-100 font-semibold' : 'hover:bg-red-50'}
                             >
                               Fail
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => handleIndividualStatusUpdate(item.id, 'Blocked')}
-                              className={item.status === 'Blocked' ? 'bg-orange-100' : ''}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleIndividualStatusUpdate(item.id, 'Blocked');
+                              }}
+                              className={item.status === 'Blocked' ? 'bg-orange-100 font-semibold' : 'hover:bg-orange-50'}
                             >
                               Blocked
                             </DropdownMenuItem>
@@ -1571,26 +1619,42 @@ Item>
                         ) : (
                           <>
                             <DropdownMenuItem 
-                              onClick={() => handleIndividualStatusUpdate(item.id, 'Open')}
-                              className={item.status === 'Open' ? 'bg-red-100' : ''}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleIndividualStatusUpdate(item.id, 'Open');
+                              }}
+                              className={item.status === 'Open' ? 'bg-red-100 font-semibold' : 'hover:bg-red-50'}
                             >
                               Open
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => handleIndividualStatusUpdate(item.id, 'In Progress')}
-                              className={item.status === 'In Progress' ? 'bg-blue-100' : ''}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleIndividualStatusUpdate(item.id, 'In Progress');
+                              }}
+                              className={item.status === 'In Progress' ? 'bg-blue-100 font-semibold' : 'hover:bg-blue-50'}
                             >
                               In Progress
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => handleIndividualStatusUpdate(item.id, 'Resolved')}
-                              className={item.status === 'Resolved' ? 'bg-green-100' : ''}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleIndividualStatusUpdate(item.id, 'Resolved');
+                              }}
+                              className={item.status === 'Resolved' ? 'bg-green-100 font-semibold' : 'hover:bg-green-50'}
                             >
                               Resolved
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => handleIndividualStatusUpdate(item.id, 'Closed')}
-                              className={item.status === 'Closed' ? 'bg-purple-100' : ''}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleIndividualStatusUpdate(item.id, 'Closed');
+                              }}
+                              className={item.status === 'Closed' ? 'bg-purple-100 font-semibold' : 'hover:bg-purple-50'}
                             >
                               Closed
                             </DropdownMenuItem>
