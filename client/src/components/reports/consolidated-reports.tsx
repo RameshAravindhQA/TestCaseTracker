@@ -676,7 +676,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     setHasUnsavedChanges(true);
   };
 
-  // Handle individual status update (immediate save)
+  // Handle individual status update with robust error handling and immediate persistence
   const handleIndividualStatusUpdate = async (id: string, newStatus: string) => {
     const [type, itemId] = id.split('-');
     const numericId = parseInt(itemId);
@@ -692,73 +692,91 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
     console.log(`Updating ${type} ${numericId} to status: ${newStatus}`);
 
-    // Optimistically update the UI first
+    // Store original data for rollback
+    const originalTestCases = queryClient.getQueryData([`/api/projects/${effectiveProjectId}/test-cases`]);
+    const originalBugs = queryClient.getQueryData([`/api/projects/${effectiveProjectId}/bugs`]);
+
+    // Optimistically update the UI immediately
     if (type === 'testcase' && Array.isArray(testCases)) {
-      queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], (old: any[]) =>
-        old.map(item => item.id === numericId ? { ...item, status: newStatus, updatedAt: new Date().toISOString() } : item)
-      );
+      queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], (old: any[]) => {
+        if (!Array.isArray(old)) return old;
+        return old.map(item => 
+          item.id === numericId 
+            ? { ...item, status: newStatus, updatedAt: new Date().toISOString() } 
+            : item
+        );
+      });
     } else if (type === 'bug' && Array.isArray(bugs)) {
-      queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], (old: any[]) =>
-        old.map(item => item.id === numericId ? { ...item, status: newStatus, updatedAt: new Date().toISOString() } : item)
-      );
+      queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], (old: any[]) => {
+        if (!Array.isArray(old)) return old;
+        return old.map(item => 
+          item.id === numericId 
+            ? { ...item, status: newStatus, updatedAt: new Date().toISOString() } 
+            : item
+        );
+      });
     }
 
     try {
+      let response;
+      
       if (type === 'testcase') {
-        const response = await apiRequest("PUT", `/api/test-cases/${numericId}`, { 
+        response = await apiRequest("PUT", `/api/test-cases/${numericId}`, { 
           status: newStatus,
           updatedAt: new Date().toISOString()
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        console.log(`Test case ${numericId} updated successfully:`, result);
-
-        // Update the cache with the server response
-        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], (old: any[]) =>
-          old.map(item => item.id === numericId ? result : item)
-        );
-
-        toast({
-          title: "Status updated",
-          description: `Test case status updated to ${newStatus}`,
         });
       } else if (type === 'bug') {
-        const response = await apiRequest("PUT", `/api/bugs/${numericId}`, { 
+        response = await apiRequest("PUT", `/api/bugs/${numericId}`, { 
           status: newStatus,
           updatedAt: new Date().toISOString()
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        console.log(`Bug ${numericId} updated successfully:`, result);
-
-        // Update the cache with the server response
-        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], (old: any[]) =>
-          old.map(item => item.id === numericId ? result : item)
-        );
-
-        toast({
-          title: "Status updated",
-          description: `Bug status updated to ${newStatus}`,
         });
       } else {
         throw new Error('Invalid item type');
       }
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log(`${type} ${numericId} updated successfully:`, result);
+
+      // Confirm the update with server data
+      if (type === 'testcase') {
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], (old: any[]) => {
+          if (!Array.isArray(old)) return old;
+          return old.map(item => item.id === numericId ? { ...item, ...result } : item);
+        });
+      } else if (type === 'bug') {
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], (old: any[]) => {
+          if (!Array.isArray(old)) return old;
+          return old.map(item => item.id === numericId ? { ...item, ...result } : item);
+        });
+      }
+
+      toast({
+        title: "Status updated",
+        description: `${type === 'testcase' ? 'Test case' : 'Bug'} status updated to ${newStatus}`,
+      });
+
+      // Force a refresh to ensure consistency
+      setTimeout(() => {
+        if (type === 'testcase') {
+          refetchTestCases();
+        } else {
+          refetchBugs();
+        }
+      }, 100);
+
     } catch (error: any) {
       console.error(`Failed to update ${type} ${numericId}:`, error);
       
-      // Revert optimistic update on error
-      if (type === 'testcase') {
-        await refetchTestCases();
-      } else if (type === 'bug') {
-        await refetchBugs();
+      // Rollback optimistic update on error
+      if (type === 'testcase' && originalTestCases) {
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], originalTestCases);
+      } else if (type === 'bug' && originalBugs) {
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], originalBugs);
       }
 
       toast({
@@ -766,6 +784,13 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
         description: `Failed to update ${type} status: ${error.message}`,
         variant: "destructive",
       });
+
+      // Force refresh on error to ensure UI consistency
+      if (type === 'testcase') {
+        refetchTestCases();
+      } else {
+        refetchBugs();
+      }
     }
   };
 
@@ -1592,7 +1617,7 @@ Item>
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
+                    <DropdownMenu key={`${item.id}-${item.status}-${Date.now()}`}>
                       <DropdownMenuTrigger asChild>
                         <Button 
                           variant="outline" 
@@ -1607,31 +1632,55 @@ Item>
                       <DropdownMenuContent align="start">
                         {item.type === 'testcase' ? (
                           <>
-                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Not Executed')}>
+                            <DropdownMenuItem 
+                              onClick={() => handleIndividualStatusUpdate(item.id, 'Not Executed')}
+                              className={item.status === 'Not Executed' ? 'bg-gray-100' : ''}
+                            >
                               Not Executed
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Pass')}>
+                            <DropdownMenuItem 
+                              onClick={() => handleIndividualStatusUpdate(item.id, 'Pass')}
+                              className={item.status === 'Pass' ? 'bg-green-100' : ''}
+                            >
                               Pass
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Fail')}>
+                            <DropdownMenuItem 
+                              onClick={() => handleIndividualStatusUpdate(item.id, 'Fail')}
+                              className={item.status === 'Fail' ? 'bg-red-100' : ''}
+                            >
                               Fail
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Blocked')}>
+                            <DropdownMenuItem 
+                              onClick={() => handleIndividualStatusUpdate(item.id, 'Blocked')}
+                              className={item.status === 'Blocked' ? 'bg-orange-100' : ''}
+                            >
                               Blocked
                             </DropdownMenuItem>
                           </>
                         ) : (
                           <>
-                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Open')}>
+                            <DropdownMenuItem 
+                              onClick={() => handleIndividualStatusUpdate(item.id, 'Open')}
+                              className={item.status === 'Open' ? 'bg-red-100' : ''}
+                            >
                               Open
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'In Progress')}>
+                            <DropdownMenuItem 
+                              onClick={() => handleIndividualStatusUpdate(item.id, 'In Progress')}
+                              className={item.status === 'In Progress' ? 'bg-blue-100' : ''}
+                            >
                               In Progress
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Resolved')}>
+                            <DropdownMenuItem 
+                              onClick={() => handleIndividualStatusUpdate(item.id, 'Resolved')}
+                              className={item.status === 'Resolved' ? 'bg-green-100' : ''}
+                            >
                               Resolved
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleIndividualStatusUpdate(item.id, 'Closed')}>
+                            <DropdownMenuItem 
+                              onClick={() => handleIndividualStatusUpdate(item.id, 'Closed')}
+                              className={item.status === 'Closed' ? 'bg-purple-100' : ''}
+                            >
                               Closed
                             </DropdownMenuItem>
                           </>

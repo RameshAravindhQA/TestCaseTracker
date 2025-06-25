@@ -1,101 +1,98 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Textarea } from '../../components/ui/textarea';
-import { Badge } from '../../components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
-import { Checkbox } from '../../components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { useToast } from '../../hooks/use-toast';
-import { MainLayout } from '../../components/layout/main-layout';
-import { Plus, Search, Filter, MoreHorizontal, Edit, Trash, Star, Archive, Tag, Pin, Calendar, Clock, StickyNote, BookOpen, FileText, Palette, Eye, EyeOff } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { apiRequest } from '../../lib/queryClient';
-
-interface Notebook {
-  id: number;
-  title: string;
-  content: string;
-  color: string;
-  isPinned: boolean;
-  isArchived: boolean;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-}
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Search, 
+  Plus, 
+  MoreHorizontal, 
+  Edit, 
+  Archive, 
+  Pin, 
+  Trash2,
+  BookOpen,
+  Filter,
+  StickyNote
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { NotebookForm } from "@/components/notebooks/notebook-form";
+import { Notebook } from "@/types";
 
 export default function NotebooksPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [editingNotebook, setEditingNotebook] = useState<Notebook | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [filterColor, setFilterColor] = useState("all");
-  const [filterTags, setFilterTags] = useState<string[]>([]);
-  const [showArchived, setShowArchived] = useState(false);
-  const [showPinnedOnly, setShowPinnedOnly] = useState(false);
-
-  const [formData, setFormData] = useState<NotebookFormData>({
-    title: "",
-    content: "",
-    color: "#ffffff",
-    isPinned: false,
-    isArchived: false,
-    tags: [],
-  });
-
-  const [newTag, setNewTag] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedNotebook, setSelectedNotebook] = useState<Notebook | null>(null);
 
   // Fetch notebooks
-  const { data: notebooks = [], isLoading, refetch } = useQuery<Notebook[]>({
+  const { data: notebooks, isLoading } = useQuery<Notebook[]>({
     queryKey: ["/api/notebooks"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/notebooks");
-      if (!response.ok) throw new Error("Failed to fetch notebooks");
+      if (!response.ok) {
+        throw new Error("Failed to fetch notebooks");
+      }
       return response.json();
-    },
-  });
-
-  // Create notebook mutation
-  const createNotebookMutation = useMutation({
-    mutationFn: async (data: Omit<NotebookFormData, 'id'>) => {
-      const response = await apiRequest("POST", "/api/notebooks", data);
-      if (!response.ok) throw new Error("Failed to create notebook");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
-      toast({ title: "Success", description: "Notebook created successfully" });
-      resetForm();
-      setCreateDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   // Update notebook mutation
   const updateNotebookMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<NotebookFormData> }) => {
-      const response = await apiRequest("PUT", `/api/notebooks/${id}`, data);
-      if (!response.ok) throw new Error("Failed to update notebook");
+    mutationFn: async ({ id, updates }: { id: number; updates: Partial<Notebook> }) => {
+      const response = await apiRequest("PUT", `/api/notebooks/${id}`, updates);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to update notebook: ${errorText}`);
+      }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
-      toast({ title: "Success", description: "Notebook updated successfully" });
-      setEditingNotebook(null);
-      resetForm();
-      setCreateDialogOpen(false);
+      const action = variables.updates.isPinned !== undefined ? 
+        (variables.updates.isPinned ? "pinned" : "unpinned") :
+        variables.updates.isArchived !== undefined ?
+        (variables.updates.isArchived ? "archived" : "unarchived") : "updated";
+
+      toast({
+        title: "Success",
+        description: `Notebook ${action} successfully.`,
+      });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: `Failed to update notebook: ${error.message}`,
+        variant: "destructive",
+      });
     },
   });
 
@@ -103,484 +100,347 @@ export default function NotebooksPage() {
   const deleteNotebookMutation = useMutation({
     mutationFn: async (id: number) => {
       const response = await apiRequest("DELETE", `/api/notebooks/${id}`);
-      if (!response.ok) throw new Error("Failed to delete notebook");
+      if (!response.ok) {
+        throw new Error("Failed to delete notebook");
+      }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
-      toast({ title: "Success", description: "Notebook deleted successfully" });
+      toast({
+        title: "Success",
+        description: "Notebook deleted successfully.",
+      });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: `Failed to delete notebook: ${error.message}`,
+        variant: "destructive",
+      });
     },
   });
 
-  const resetForm = () => {
-    setFormData({
-      title: "",
-      content: "",
-      color: "#ffffff",
-      isPinned: false,
-      isArchived: false,
-      tags: [],
-    });
+  // Filter notebooks
+  const filteredNotebooks = notebooks?.filter(notebook => {
+    const matchesSearch = notebook.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         notebook.content.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesFilter = filterStatus === "all" ||
+                         (filterStatus === "pinned" && notebook.isPinned) ||
+                         (filterStatus === "archived" && notebook.isArchived) ||
+                         (filterStatus === "active" && !notebook.isArchived);
+
+    return matchesSearch && matchesFilter;
+  }) || [];
+
+  const handleNotebookClick = (notebook: Notebook) => {
+    setSelectedNotebook(notebook);
+    setViewDialogOpen(true);
   };
 
-  const handleSubmit = () => {
-    if (!formData.title.trim()) {
-      toast({ title: "Error", description: "Title is required", variant: "destructive" });
-      return;
-    }
-
-    if (editingNotebook) {
-      updateNotebookMutation.mutate({ id: editingNotebook.id, data: formData });
-    } else {
-      createNotebookMutation.mutate(formData);
-    }
+  const handleEditNotebook = (notebook: Notebook) => {
+    setSelectedNotebook(notebook);
+    setEditDialogOpen(true);
   };
 
-  const handleEdit = (notebook: Notebook) => {
-    setEditingNotebook(notebook);
-    setFormData({
-      title: notebook.title,
-      content: notebook.content,
-      color: notebook.color,
-      isPinned: notebook.isPinned,
-      isArchived: notebook.isArchived,
-      tags: notebook.tags,
-    });
-    setShowCreateDialog(true);
-  };
-
-  const handleTogglePin = (notebook: Notebook) => {
+  const handlePinNotebook = (notebook: Notebook) => {
     updateNotebookMutation.mutate({
       id: notebook.id,
-      data: { isPinned: !notebook.isPinned }
+      updates: { isPinned: !notebook.isPinned }
     });
   };
 
-  const handleToggleArchive = (notebook: Notebook) => {
+  const handleArchiveNotebook = (notebook: Notebook) => {
     updateNotebookMutation.mutate({
       id: notebook.id,
-      data: { isArchived: !notebook.isArchived }
+      updates: { isArchived: !notebook.isArchived }
     });
   };
 
-  const handleDelete = (notebook: Notebook) => {
+  const handleDeleteNotebook = (notebook: Notebook) => {
     if (confirm("Are you sure you want to delete this notebook?")) {
       deleteNotebookMutation.mutate(notebook.id);
     }
   };
 
-  const addTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, newTag.trim()]
-      }));
-      setNewTag("");
+  const getStatusBadge = (notebook: Notebook) => {
+    if (notebook.isPinned) {
+      return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pinned</Badge>;
     }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
-    }));
-  };
-
-  const getColorClass = (color: string) => {
-    const colorConfig = COLORS.find(c => c.value === color);
-    return colorConfig?.class || 'bg-white border-gray-200';
-  };
-
-  // Filter notebooks
-  const filteredNotebooks = notebooks.filter(notebook => {
-    if (notebook.isArchived !== showArchived) return false;
-    if (showPinnedOnly && !notebook.isPinned) return false;
-    if (filterColor !== "all" && notebook.color !== filterColor) return false;
-    if (filterTags.length > 0 && !filterTags.some(tag => notebook.tags.includes(tag))) return false;
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        notebook.title.toLowerCase().includes(query) ||
-        notebook.content.toLowerCase().includes(query) ||
-        notebook.tags.some(tag => tag.toLowerCase().includes(query))
-      );
+    if (notebook.isArchived) {
+      return <Badge variant="secondary" className="bg-gray-100 text-gray-800">Archived</Badge>;
     }
-    return true;
-  });
+    return <Badge variant="outline">Active</Badge>;
+  };
 
-  // Get all unique tags
-  const allTags = Array.from(new Set(notebooks.flatMap(n => n.tags)));
-
-  // Sort notebooks (pinned first)
-  const sortedNotebooks = filteredNotebooks.sort((a, b) => {
-    if (a.isPinned && !b.isPinned) return -1;
-    if (!a.isPinned && b.isPinned) return 1;
-    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-  });
-
-  const highlightText = (text: string, query: string) => {
-    if (!query) return text;
-    const regex = new RegExp(`(${query})`, 'gi');
-    const parts = text.split(regex);
-    return parts.map((part, index) => 
-      regex.test(part) ? 
-        <mark key={index} className="bg-yellow-200 px-1 rounded">{part}</mark> : 
-        part
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Notebooks</h1>
+        </div>
+        <div className="text-center">Loading notebooks...</div>
+      </div>
     );
-  };
-
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-
-  const COLORS = [
-    { name: 'Default', value: '#ffffff', class: 'bg-white border-gray-200' },
-    { name: 'Red', value: '#fee2e2', class: 'bg-red-100 border-red-200' },
-    { name: 'Orange', value: '#fed7aa', class: 'bg-orange-100 border-orange-200' },
-    { name: 'Yellow', value: '#fef3c7', class: 'bg-yellow-100 border-yellow-200' },
-    { name: 'Green', value: '#dcfce7', class: 'bg-green-100 border-green-200' },
-    { name: 'Blue', value: '#dbeafe', class: 'bg-blue-100 border-blue-200' },
-    { name: 'Purple', value: '#e9d5ff', class: 'bg-purple-100 border-purple-200' },
-    { name: 'Pink', value: '#fce7f3', class: 'bg-pink-100 border-pink-200' },
-    { name: 'Gray', value: '#f3f4f6', class: 'bg-gray-100 border-gray-200' },
-  ];
+  }
 
   return (
-    <MainLayout>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
-                <BookOpen className="h-6 w-6" />
-                Notebooks
-              </h1>
-              <p className="text-gray-600 mt-1">Create and organize your notes with rich formatting</p>
-            </div>
-            <Button onClick={() => setCreateDialogOpen(true)} className="flex items-center gap-2">
+    <div className="container mx-auto py-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <BookOpen className="h-8 w-8" />
+            Notebooks
+          </h1>
+          <p className="text-gray-600 mt-1">Create and organize your notes with rich formatting</p>
+        </div>
+
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New Notebook
             </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Create New Notebook</DialogTitle>
+              <DialogDescription>
+                Create a new notebook to organize your notes and ideas.
+              </DialogDescription>
+            </DialogHeader>
+            <NotebookForm onSuccess={() => setCreateDialogOpen(false)} />
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-4 items-center">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search notebooks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </div>
 
-        {/* Search and Filters */}
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="relative w-full md:w-1/3">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <Input
-                placeholder="Search notebooks..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-gray-400" />
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Notebooks</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="pinned">Pinned</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+      </div>
 
-        {/* Filters Panel */}
-        {showFilters && (
-          <div className="px-6 py-4">
-            <Card>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Color</label>
-                    <Select value={filterColor} onValueChange={setFilterColor}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Colors" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Colors</SelectItem>
-                        {COLORS.map((color) => (
-                          <SelectItem key={color.value} value={color.value}>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-4 h-4 rounded ${color.class}`}></div>
-                              {color.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Tags</label>
-                    <div className="flex flex-wrap gap-1">
-                      {allTags.map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant={filterTags.includes(tag) ? "default" : "outline"}
-                          className="cursor-pointer"
-                          onClick={() => {
-                            if (filterTags.includes(tag)) {
-                              setFilterTags(filterTags.filter((t) => t !== tag));
-                            } else {
-                              setFilterTags([...filterTags, tag]);
-                            }
-                          }}
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="pinned"
-                        checked={showPinnedOnly}
-                        onCheckedChange={setShowPinnedOnly}
-                      />
-                      <label htmlFor="pinned" className="text-sm font-medium text-gray-700">Pinned only</label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="archived"
-                        checked={showArchived}
-                        onCheckedChange={setShowArchived}
-                      />
-                      <label htmlFor="archived" className="text-sm font-medium text-gray-700">Show archived</label>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Notebooks Grid */}
-        <div className="px-6 py-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          <AnimatePresence>
-            {sortedNotebooks.map((notebook, index) => (
-              <motion.div
-                key={notebook.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.2, delay: index * 0.03 }}
-              >
-                <Card 
-                  className={`${getColorClass(notebook.color)} hover:shadow-lg transition-shadow duration-200 cursor-pointer`}
-                  onClick={() => handleEdit(notebook)}
-                >
-                  <CardHeader className="flex items-start justify-between">
-                    <CardTitle className="text-lg font-semibold line-clamp-2">
-                      {highlightText(notebook.title, searchQuery)}
-                    </CardTitle>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          className="h-8 w-8 p-0 rounded-full"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" forceMount>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(notebook); }}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleTogglePin(notebook); }}>
-                          <Pin className="h-4 w-4 mr-2" />
-                          {notebook.isPinned ? "Unpin" : "Pin"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleArchive(notebook); }}>
-                          <Archive className="h-4 w-4 mr-2" />
-                          {notebook.isArchived ? "Unarchive" : "Archive"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => { e.stopPropagation(); handleDelete(notebook); }}
-                          className="text-red-600 focus:bg-red-600 focus:text-white"
-                        >
-                          <Trash className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </CardHeader>
-                  <CardContent className="py-2 text-sm text-gray-700 line-clamp-3">
-                    {highlightText(notebook.content, searchQuery)}
-                  </CardContent>
-                  <CardContent className="py-2">
-                    {notebook.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {notebook.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary">
-                            {highlightText(tag, searchQuery)}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                    <div className="text-xs text-gray-500">
-                      Updated {new Date(notebook.updatedAt).toLocaleDateString()}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-
-        {/* Empty State */}
-        {sortedNotebooks.length === 0 && !isLoading && (
-          <div className="px-6 py-4 text-center">
-            <StickyNote className="h-10 w-10 mx-auto text-gray-400" />
-            <h3 className="mt-2 text-lg font-semibold text-gray-900">No notebooks found</h3>
-            <p className="mt-1 text-gray-500">
-              {searchQuery || showFilters
-                ? "Try adjusting your search or filters to find what you're looking for."
-                : "Create your first notebook to get started."}
+      {/* Notebooks Grid */}
+      {filteredNotebooks.length === 0 ? (
+        <Card className="text-center py-12">
+          <CardContent>
+            <StickyNote className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+              {searchQuery || filterStatus !== "all" ? "No notebooks found" : "No notebooks yet"}
+            </h3>
+            <p className="text-gray-500 mb-4">
+              {searchQuery || filterStatus !== "all" 
+                ? "Try adjusting your search or filters" 
+                : "Create your first notebook to get started"}
             </p>
-            {!searchQuery && !showFilters && (
-              <Button onClick={() => setCreateDialogOpen(true)} className="mt-4">
+            {!searchQuery && filterStatus === "all" && (
+              <Button onClick={() => setCreateDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Notebook
               </Button>
             )}
-          </div>
-        )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredNotebooks.map((notebook) => (
+            <Card 
+              key={notebook.id} 
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => handleNotebookClick(notebook)}
+            >
+              <CardHeader 
+                className="pb-3"
+                style={{ borderLeft: `4px solid ${notebook.color}` }}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg font-semibold truncate">
+                      {notebook.title}
+                    </CardTitle>
+                    <div className="flex items-center gap-2 mt-2">
+                      {getStatusBadge(notebook)}
+                      {notebook.tags && notebook.tags.length > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          {notebook.tags.length} tag{notebook.tags.length !== 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
 
-        {/* Create/Edit Dialog */}
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>{editingNotebook ? "Edit Notebook" : "Create New Notebook"}</DialogTitle>
-              <DialogDescription>
-                {editingNotebook ? "Edit your notebook details." : "Create a new notebook to start writing your notes."}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="title" className="text-right text-sm font-medium text-gray-700">
-                  Title
-                </label>
-                <Input
-                  type="text"
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="content" className="text-right text-sm font-medium text-gray-700">
-                  Content
-                </label>
-                <Textarea
-                  id="content"
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  className="col-span-3"
-                  rows={4}
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="color" className="text-right text-sm font-medium text-gray-700">
-                  Color
-                </label>
-                <div className="col-span-3 flex items-center gap-2">
-                  {COLORS.map((color) => (
-                    <button
-                      key={color.value}
-                      className={`w-8 h-8 rounded-full border-2 ${color.class} ${
-                        formData.color === color.value ? "border-gray-900" : "border-transparent"
-                      } hover:border-gray-500 focus:outline-none`}
-                      onClick={() => setFormData({ ...formData, color: color.value })}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="tags" className="text-right text-sm font-medium text-gray-700">
-                  Tags
-                </label>
-                <div className="col-span-3 flex items-center gap-2">
-                  <Input
-                    type="text"
-                    id="tags"
-                    placeholder="Add a tag..."
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        addTag();
-                        e.preventDefault();
-                      }
-                    }}
-                  />
-                  <Button variant="outline" size="sm" onClick={addTag}>
-                    Add
-                  </Button>
-                </div>
-              </div>
-              {formData.tags.length > 0 && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-700"></label>
-                  <div className="col-span-3 flex flex-wrap gap-2">
-                    {formData.tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="cursor-pointer"
-                        onClick={() => setFormData({ ...formData, tags: formData.tags.filter((t) => t !== tag) })}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditNotebook(notebook);
+                      }}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        handlePinNotebook(notebook);
+                      }}>
+                        <Pin className="h-4 w-4 mr-2" />
+                        {notebook.isPinned ? "Unpin" : "Pin"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        handleArchiveNotebook(notebook);
+                      }}>
+                        <Archive className="h-4 w-4 mr-2" />
+                        {notebook.isArchived ? "Unarchive" : "Archive"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteNotebook(notebook);
+                        }}
+                        className="text-red-600"
                       >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+
+              <CardContent>
+                <p className="text-sm text-gray-600 line-clamp-3 mb-3">
+                  {notebook.content || "No content"}
+                </p>
+
+                <div className="flex justify-between items-center text-xs text-gray-500">
+                  <span>
+                    Created {new Date(notebook.createdAt).toLocaleDateString()}
+                  </span>
+                  <span>
+                    Updated {new Date(notebook.updatedAt).toLocaleDateString()}
+                  </span>
+                </div>
+
+                {notebook.tags && notebook.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-3">
+                    {notebook.tags.slice(0, 3).map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {notebook.tags.length > 3 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{notebook.tags.length - 3} more
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* View Notebook Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedNotebook?.title}
+              {selectedNotebook && getStatusBadge(selectedNotebook)}
+            </DialogTitle>
+            <DialogDescription>
+              Created on {selectedNotebook && new Date(selectedNotebook.createdAt).toLocaleDateString()}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedNotebook && (
+            <div className="space-y-4">
+              <div className="prose max-w-none">
+                <div className="whitespace-pre-wrap text-sm">
+                  {selectedNotebook.content || "No content"}
+                </div>
+              </div>
+
+              {selectedNotebook.tags && selectedNotebook.tags.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Tags</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedNotebook.tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary">
                         {tag}
                       </Badge>
                     ))}
                   </div>
                 </div>
               )}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium text-gray-700"></label>
-                <div className="col-span-3 flex items-center gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="pinned"
-                      checked={formData.isPinned}
-                      onCheckedChange={(checked) => setFormData({ ...formData, isPinned: checked })}
-                    />
-                    <label htmlFor="pinned" className="text-sm font-medium text-gray-700">
-                      Pin
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="archived"
-                      checked={formData.isArchived}
-                      onCheckedChange={(checked) => setFormData({ ...formData, isArchived: checked })}
-                    />
-                    <label htmlFor="archived" className="text-sm font-medium text-gray-700">
-                      Archive
-                    </label>
-                  </div>
-                </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+                  Close
+                </Button>
+                <Button onClick={() => {
+                  setViewDialogOpen(false);
+                  handleEditNotebook(selectedNotebook);
+                }}>
+                  Edit
+                </Button>
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" onClick={handleSubmit}>
-                {editingNotebook ? "Update Notebook" : "Create Notebook"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </MainLayout>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Notebook Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Notebook</DialogTitle>
+            <DialogDescription>
+              Update your notebook details and content.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedNotebook && (
+            <NotebookForm 
+              notebook={selectedNotebook}
+              onSuccess={() => {
+                setEditDialogOpen(false);
+                setSelectedNotebook(null);
+              }} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
