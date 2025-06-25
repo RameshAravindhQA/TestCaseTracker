@@ -325,7 +325,7 @@ class MemStorage implements IStorage {
       }
 
       // Get module name prefix (first 3 letters of module name)
-      let modulePrefix = 'MOD';
+      let modulePrefix = 'REG';
       if (moduleData.name) {
         const cleanModuleName = moduleData.name.replace(/[^a-zA-Z]/g, '');
         modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
@@ -341,7 +341,7 @@ class MemStorage implements IStorage {
       console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix);
 
       // Find the highest module number for this project with the correct prefix pattern
-      const modulePattern = new RegExp(`^${projectPrefix}-[A-Z]{3}-MOD-(\\d+)$`);
+      const modulePattern = new RegExp(`^${projectPrefix}-${modulePrefix}-MOD-(\\d+)$`);
       const existingNumbers = projectModules
         .map(module => {
           if (!module.moduleId) return 0;
