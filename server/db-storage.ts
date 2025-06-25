@@ -174,16 +174,27 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
+      // Get module name prefix (first 3 letters of module name)
+      let modulePrefix = 'MOD';
+      if (data.name) {
+        const cleanModuleName = data.name.replace(/[^a-zA-Z]/g, '');
+        if (cleanModuleName.length >= 3) {
+          modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
+        } else {
+          modulePrefix = cleanModuleName.toUpperCase().padEnd(3, 'X');
+        }
+      }
+
       // Get existing modules for this specific project only
       const existingModules = await db
         .select()
         .from(modules)
         .where(eq(modules.projectId, data.projectId));
 
-      console.log('DB: Project modules found:', existingModules.length, 'for project:', data.projectId, 'with prefix:', projectPrefix);
+      console.log('DB: Project modules found:', existingModules.length, 'for project:', data.projectId, 'with prefix:', projectPrefix, 'module prefix:', modulePrefix);
 
-      // Find the highest module number for this project with the correct prefix
-      const modulePattern = new RegExp(`^${projectPrefix}-MOD-(\\d+)$`);
+      // Find the highest module number for this project across ALL module types
+      const modulePattern = new RegExp(`^${projectPrefix}-[A-Z]{3}-MOD-(\\d+)$`);
       const existingNumbers = existingModules
         .map(module => {
           if (!module.moduleId) return 0;
@@ -194,21 +205,10 @@ export class DatabaseStorage implements IStorage {
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
       
-      // For the first module in a project, try to align with expected pattern
-      // BEG-REG-MOD-01 should ideally have database ID 1
-      let modulePrefix = 'MOD';
-      if (data.name) {
-        // Extract module prefix from name (e.g., "Registration" -> "REG")
-        const cleanModuleName = data.name.replace(/[^a-zA-Z]/g, '');
-        if (cleanModuleName.length >= 3) {
-          modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
-        }
-      }
-      
       moduleId = `${projectPrefix}-${modulePrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
       desiredDbId = nextNumber; // Set desired database ID to match module number
 
-      console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
+      console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId, 'with prefix:', projectPrefix, 'module prefix:', modulePrefix, 'existing numbers:', existingNumbers);
     } else {
       // If moduleId is provided, extract the number for desired database ID
       const modulePattern = /(\w+)-MOD-(\d+)$/;

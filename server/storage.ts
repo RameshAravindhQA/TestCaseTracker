@@ -324,13 +324,16 @@ class MemStorage implements IStorage {
         }
       }
 
+      
+
       // Get module name prefix (first 3 letters of module name)
-      let modulePrefix = 'REG';
+      let modulePrefix = 'MOD';
       if (moduleData.name) {
         const cleanModuleName = moduleData.name.replace(/[^a-zA-Z]/g, '');
-        modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
-        if (modulePrefix.length < 3) {
-          modulePrefix = modulePrefix.padEnd(3, 'X');
+        if (cleanModuleName.length >= 3) {
+          modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
+        } else {
+          modulePrefix = cleanModuleName.toUpperCase().padEnd(3, 'X');
         }
       }
 
@@ -338,10 +341,10 @@ class MemStorage implements IStorage {
       const projectModules = Array.from(this.modules.values())
         .filter(module => module.projectId === moduleData.projectId);
 
-      console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix);
+      console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix, 'module prefix:', modulePrefix);
 
-      // Find the highest module number for this project with the correct prefix pattern
-      const modulePattern = new RegExp(`^${projectPrefix}-${modulePrefix}-MOD-(\\d+)$`);
+      // Find the highest module number for this project across ALL module types
+      const modulePattern = new RegExp(`^${projectPrefix}-[A-Z]{3}-MOD-(\\d+)$`);
       const existingNumbers = projectModules
         .map(module => {
           if (!module.moduleId) return 0;
