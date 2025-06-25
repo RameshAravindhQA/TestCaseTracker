@@ -69,13 +69,13 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
             moduleId: finalModuleId,
             projectId,
           });
-          
+
           if (!response.ok) {
             const errorText = await response.text();
             console.error(`API Error ${response.status}:`, errorText);
             throw new Error(`HTTP ${response.status}: ${errorText}`);
           }
-          
+
           const result = await response.json();
           return result;
         } catch (error) {
@@ -410,8 +410,10 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
       csvText += `# - PROJECT PREFIX: ${projectPrefix} (automatically applied)\n`;
       csvText += '# - MODULE PREFIX: 3-letter abbreviation of module name (e.g., REG for Registration)\n';
       csvText += '# - TC-###: Sequential test case number with 3 digits (001, 002, etc.)\n';
+      csvText += '#\n# IMPORTANT: Test Case ID pattern must match Module ID pattern\n';
+      csvText += '# - If moduleId is BEG-REG-MOD-01, then testCaseId should be BEG-REG-TC-001\n';
+      csvText += '# - The module prefix (REG in this example) must be the same in both IDs\n';
       csvText += '#\n# The template below contains example data. Please replace with your actual test cases.\n';
-      csvText += '#\n';
 
       // Generate CSV and append our comments
       const csv = Papa.unparse(templateData);
@@ -470,10 +472,10 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ];
-    
+
     const validExtensions = ['.csv', '.xlsx', '.xls'];
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-    
+
     if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
       toast({
         title: "Invalid file type",
@@ -762,7 +764,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                           // If a specific module is provided in props, use it for strict validation
                           if (selectedModuleId) {
                             console.log(`Using selected module ID: ${selectedModuleId}`);
-                            
+
                             // Add the module ID from props to valid list
                             validModuleIds.add(selectedModuleId.toString());
 
@@ -853,6 +855,8 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         }
                       } catch (error) {
                         console.warn('Could not fetch project data:', error);
+                      ```text
+
                       }
 
                       if (moduleId) {
@@ -873,6 +877,7 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       const duplicateIds: string[] = [];
                       const invalidFormatIds: string[] = [];
                       const newTestCases: CSVTestCase[] = [];
+                      const idPatternMismatch: string[] = [];
 
                       // Function to validate test case ID format
                       const validateTestCaseIdFormat = (testCaseId: string, modulePrefix: string): boolean => {
@@ -881,6 +886,23 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                         // Expected format: PROJECT-MODULE-TC-###
                         const expectedPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-\\d{3}$`);
                         return expectedPattern.test(testCaseId);
+                      };
+                      // Function to validate test case ID matches module ID
+                      const validateIdPatternMatch = (testCaseId: string, moduleId: string): boolean => {
+                        if (!testCaseId || !moduleId) return false;
+
+                        const testCaseParts = testCaseId.split('-');
+                        const moduleParts = moduleId.split('-');
+
+                        // Check if both IDs have enough parts
+                        if (testCaseParts.length < 3 || moduleParts.length < 3) return false;
+
+                        // Extract the module prefixes
+                        const testCaseModulePrefix = testCaseParts[1];
+                        const moduleIdPrefix = moduleParts[1];
+
+                        // The prefixes should be the same for test case ID and module ID
+                        return testCaseModulePrefix === moduleIdPrefix;
                       };
 
                       // Function to get module prefix from module name
@@ -932,7 +954,13 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                             return; // Skip this row
                           }
                         }
-
+                         // Validate Test Case ID and Module ID Pattern Match
+                        if (row.testCaseId && row.moduleId) {
+                            if (!validateIdPatternMatch(row.testCaseId, row.moduleId)) {
+                                idPatternMismatch.push(row.testCaseId);
+                                return; // Skip this row
+                            }
+                        }
                         // Sanitize and standardize data
                         // Enforce status values
                         const validStatuses = ['Not Executed', 'Pass', 'Fail', 'Blocked'];
@@ -985,7 +1013,14 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                           variant: "destructive",
                         });
                       }
-
+                        // Show ID Pattern Mismatch error
+                      if (idPatternMismatch.length > 0) {
+                        toast({
+                          title: "Test case and Module ID Pattern Mismatch",
+                          description: `${idPatternMismatch.length} Test cases doesn't match Module Id pattern. Please ensure that Module prefix are same. Mismatched Ids: ${idPatternMismatch.slice(0, 3).join(", ")}${idPatternMismatch.length > 3 ? ` and ${idPatternMismatch.length - 3} more` : ''}.`,
+                          variant: "destructive",
+                        });
+                      }
                       // Warn about duplicate test case IDs
                       if (duplicateIds.length > 0) {
                         toast({
@@ -995,10 +1030,10 @@ export function ImportExport({ projectId, moduleId, testCases, projectName, modu
                       }
 
                       if (newTestCases.length === 0) {
-                        const totalSkipped = duplicateIds.length + invalidFormatIds.length;
+                        const totalSkipped = duplicateIds.length + invalidFormatIds.length + idPatternMismatch.length;
                         toast({
                           title: "No test cases to import",
-                          description: totalSkipped > 0 
+                          description: totalSkipped > 0
                             ? `All ${totalSkipped} test cases were skipped due to validation errors.`
                             : "All test case IDs already exist in the system.",
                           variant: "destructive",
