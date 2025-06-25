@@ -151,6 +151,8 @@ export class DatabaseStorage implements IStorage {
   async createModule(data: any): Promise<any> {
     // Auto-generate module ID if not provided
     let moduleId = data.moduleId;
+    let desiredDbId = null;
+    
     if (!moduleId || moduleId.trim() === '') {
       // Get the project to access its details
       const [project] = await db.select().from(projects).where(eq(projects.id, data.projectId));
@@ -192,19 +194,96 @@ export class DatabaseStorage implements IStorage {
 
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
       moduleId = `${projectPrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
+      desiredDbId = nextNumber; // Set desired database ID to match module number
 
       console.log('DB: Generated module ID:', moduleId, 'for project:', data.projectId, 'with prefix:', projectPrefix, 'existing numbers:', existingNumbers);
+    } else {
+      // If moduleId is provided, extract the number for desired database ID
+      const modulePattern = /(\w+)-MOD-(\d+)$/;
+      const match = moduleId.match(modulePattern);
+      if (match) {
+        desiredDbId = parseInt(match[2], 10);
+      }
     }
 
-    const [module] = await db
-      .insert(modules)
-      .values({
-        ...data,
-        moduleId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .returning();
+    // Create module with specific ID if we want to align database ID with module number
+    let module;
+    if (desiredDbId && desiredDbId > 0) {
+      try {
+        // First check if this ID already exists
+        const existingModule = await db.select().from(modules).where(eq(modules.id, desiredDbId));
+        if (existingModule.length === 0) {
+          // Try to insert with specific ID
+          const moduleData = {
+            ...data,
+            moduleId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          
+          // Use raw SQL to insert with specific ID
+          const [insertedModule] = await db.execute({
+            sql: `INSERT INTO modules (id, module_id, name, description, project_id, status, created_at, updated_at) 
+                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            args: [
+              desiredDbId,
+              moduleData.moduleId,
+              moduleData.name,
+              moduleData.description || null,
+              moduleData.projectId,
+              moduleData.status || 'Active',
+              moduleData.createdAt,
+              moduleData.updatedAt
+            ]
+          });
+          
+          // Reset sequence to avoid conflicts
+          await db.execute({
+            sql: `SELECT setval('modules_id_seq', (SELECT COALESCE(MAX(id), 0) + 1 FROM modules), false)`,
+            args: []
+          });
+          
+          module = insertedModule;
+        } else {
+          // ID exists, fall back to regular insert
+          const [regularModule] = await db
+            .insert(modules)
+            .values({
+              ...data,
+              moduleId,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .returning();
+          module = regularModule;
+        }
+      } catch (error) {
+        console.warn('Failed to insert with specific ID, using auto-increment:', error);
+        // Fall back to regular insert
+        const [regularModule] = await db
+          .insert(modules)
+          .values({
+            ...data,
+            moduleId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .returning();
+        module = regularModule;
+      }
+    } else {
+      // Regular insert without specific ID
+      const [regularModule] = await db
+        .insert(modules)
+        .values({
+          ...data,
+          moduleId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+      module = regularModule;
+    }
 
     console.log('DB: Created module with moduleId:', module.moduleId, 'and database ID:', module.id);
     
