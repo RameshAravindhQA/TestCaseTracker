@@ -117,28 +117,36 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     setSheetData(prev => {
       const currentCell = prev.cells[cellId] || { value: '', type: 'text' as const, style: {} };
 
-      // Ensure value is properly preserved
-      const newValue = updates.value !== undefined ? updates.value : currentCell.value;
+      // Ensure value is properly preserved and handle all data types
+      let newValue = updates.value !== undefined ? updates.value : currentCell.value;
+      
+      // Ensure we preserve the original input for display purposes
+      if (updates.formula) {
+        // For formulas, store both the formula and calculated value
+        newValue = updates.value; // This should be the calculated result
+      }
 
       const newCell = { 
         ...currentCell, 
         ...updates,
-        value: newValue, // Explicitly set value
+        value: newValue,
         lastModified: new Date().toISOString(),
         id: cellId
       };
 
       console.log('UpdateCell - Previous cell:', currentCell, 'New cell:', newCell, 'Value:', newValue);
 
-      // Create completely new state object to force re-render and ensure persistence
+      // Create completely new state object to force re-render
       const newCells = { ...prev.cells };
-      newCells[cellId] = newCell;
+      newCells[cellId] = { ...newCell }; // Ensure deep copy
 
       const newSheetData = {
         ...prev,
         cells: newCells,
         lastModified: new Date().toISOString(),
-        version: (prev.version || 0) + 1 // Add version tracking
+        version: (prev.version || 0) + 1,
+        // Add a timestamp to force re-render
+        _updateTimestamp: Date.now()
       };
 
       console.log('UpdateCell - New sheet data cells:', Object.keys(newSheetData.cells).length, 'Cell value for', cellId, ':', newSheetData.cells[cellId]?.value);
@@ -146,6 +154,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
       // Immediately persist to localStorage as backup
       try {
         localStorage.setItem(`sheet_${sheet.id}_backup`, JSON.stringify(newSheetData));
+        console.log('Backed up to localStorage successfully');
       } catch (error) {
         console.warn('Failed to backup to localStorage:', error);
       }
@@ -331,12 +340,8 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
         timestamp: new Date().toISOString() // Add timestamp for debugging
       });
 
-      // Keep the formula bar showing the original input for formulas, otherwise show the processed value
-      if (cellType === 'formula') {
-        setFormulaBarValue(value);
-      } else {
-        setFormulaBarValue(String(cellValue));
-      }
+      // Update formula bar to show the original input for formulas
+      setFormulaBarValue(value);
     }
   };
 
@@ -852,7 +857,12 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
                       {isEditing && isSelected ? (
                         <Input
                           value={formulaBarValue}
-                          onChange={(e) => handleCellInputChange(e.target.value)}
+                          onChange={(e) => {
+                            const newValue = e.target.value;
+                            setFormulaBarValue(newValue);
+                            // Immediately update the cell for live preview
+                            handleFormulaBarChange(newValue);
+                          }}
                           onBlur={handleCellInputBlur}
                           onKeyDown={handleCellInputKeyDown}
                           className="w-full h-full border-none p-0 text-sm bg-transparent"
@@ -860,7 +870,7 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
                         />
                       ) : (
                         <span className="truncate w-full" title={String(cellData.value || '')}>
-                          {cellData.type === 'formula' ? cellData.value : (cellData.value || '')}
+                          {cellData.formula ? String(cellData.value || '') : String(cellData.value || '')}
                         </span>
                       )}
                     </div>

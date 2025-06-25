@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Download } from "lucide-react";
 
 export default function GitHubIntegrationPage() {
   const { toast } = useToast();

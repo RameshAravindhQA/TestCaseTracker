@@ -353,7 +353,9 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
           throw new Error(`Failed to update ${type}: ${response.status} - ${errorText}`);
         }
 
-        return response.json();
+        const result = await response.json();
+        console.log(`Successfully updated ${type} ${id} to status ${status}:`, result);
+        return result;
       } catch (error: any) {
         console.error(`API call failed for ${type} ${id}:`, error);
         throw new Error(`${type} update failed: ${error.message}`);
@@ -373,33 +375,54 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       // Optimistically update to the new value
       const id = parseInt(itemId.split('-')[1]);
 
-      if (type === 'testcase' && previousTestCases) {
+      if (type === 'testcase' && Array.isArray(previousTestCases)) {
         queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], (old: any[]) =>
-          old.map(item => item.id === id ? { ...item, status } : item)
+          old.map(item => item.id === id ? { ...item, status, updatedAt: new Date().toISOString() } : item)
         );
-      } else if (type === 'bug' && previousBugs) {
+      } else if (type === 'bug' && Array.isArray(previousBugs)) {
         queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], (old: any[]) =>
-          old.map(item => item.id === id ? { ...item, status } : item)
+          old.map(item => item.id === id ? { ...item, status, updatedAt: new Date().toISOString() } : item)
         );
       }
 
       return { previousTestCases, previousBugs, itemId, type, status };
     },
     onSuccess: (data, variables) => {
-      // Invalidate and refetch queries
+      console.log(`Status update successful for ${variables.type} ${variables.itemId}:`, data);
+      
+      // Invalidate and refetch queries to ensure consistency
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
 
-      // Force immediate refetch
-      if (variables.type === 'testcase') {
-        queryClient.refetchQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
-      } else {
-        queryClient.refetchQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
-      }
+      // Force immediate refetch to get the latest data
+      setTimeout(() => {
+        if (variables.type === 'testcase') {
+          refetchTestCases();
+        } else {
+          refetchBugs();
+        }
+      }, 100);
 
       toast({
         title: "Status Updated",
         description: `${variables.type === 'testcase' ? 'Test case' : 'Bug'} status updated to ${variables.status}`,
+      });
+    },
+    onError: (error: any, variables, context) => {
+      console.error(`Status update failed for ${variables.type} ${variables.itemId}:`, error);
+      
+      // Rollback optimistic updates
+      if (context?.previousTestCases) {
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], context.previousTestCases);
+      }
+      if (context?.previousBugs) {
+        queryClient.setQueryData([`/api/projects/${effectiveProjectId}/bugs`], context.previousBugs);
+      }
+
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update status",
+        variant: "destructive",
       });
     },
     onError: (error: any) => {
