@@ -68,10 +68,10 @@ export function ModuleTable({ modules, projectId, onEdit, onDelete, onViewTestCa
                 whileHover={{ scale: 1.005, backgroundColor: "rgba(0,0,0,0.02)" }}
 
               >
-                <TableCell className="font-medium text-muted-foreground">
-                  <span className="font-mono text-sm bg-muted/50 px-2 py-1 rounded border">
+                <TableCell className="font-medium">
+                  <code className="font-mono text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded border text-gray-700 dark:text-gray-300">
                     {module.moduleId || `MOD-${String(module.id).padStart(3, '0')}`}
-                  </span>
+                  </code>
                 </TableCell>
                 <TableCell className="font-medium">
                   <div 
