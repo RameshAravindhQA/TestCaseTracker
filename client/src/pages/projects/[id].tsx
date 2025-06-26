@@ -899,8 +899,7 @@ export default function ProjectDetailPage() {
             module={selectedModuleForTestCase || undefined}
             modules={modules || []}
             onSuccess={() => setTestCaseFormOpen(false)}
-          />
-        </DialogContent>
+                  </DialogContent>
       </Dialog>
 
       {/* Bug Form Dialog */}

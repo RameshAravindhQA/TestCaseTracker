@@ -59,7 +59,7 @@ import { TestCaseForm } from "@/components/test-cases/test-case-form";
 import { BugForm } from "@/components/bugs/bug-form";
 import { TestCaseTags } from "@/components/test-cases/test-case-tags";
 import { Input } from "@/components/ui/input";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { User } from "next-auth/types";
@@ -83,24 +83,25 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const [filterModule, setFilterModule = useState<string>("all");
   const [statusUpdateQueue, setStatusUpdateQueue = useState<{[key: string]: {id: number, type: 'testcase' | 'bug', status: string}}>({});
   const [isFullScreen, setIsFullScreen = useState(false);
-  const [isMinimized, setIsMinimized = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [searchQuery, setSearchQuery = useState("");
-  const [selectedItems, setSelectedItems = useState<string[]>([]);
-  const [bulkStatus, setBulkStatus = useState("");
-  const [viewMode, setViewMode = useState<"table" | "kanban">("table");
-  const [, navigate] = useLocation();
-  const [viewTestCaseDialogOpen, setViewTestCaseDialogOpen = useState(false);
-  const [editTestCaseDialogOpen, setEditTestCaseDialogOpen = useState(false);
-  const [editBugDialogOpen, setEditBugDialogOpen = useState(false);
-  const [selectedItemForView, setSelectedItemForView = useState<any>(null);
-  const [severityFilter, setSeverityFilter = useState<string>("all");
-  const [editingItem, setEditingItem = useState<{ id: number; type: 'testcase' | 'bug'; status: string } | null>(null);
-  const [newStatus, setNewStatus = useState<string>("");
-  const [statusUpdateDialog, setStatusUpdateDialog = useState(false);
-  const [selectedPriority, setSelectedPriority = useState<string>('');
-  const [selectedModule, setSelectedModule = useState<string>('');
-  const [selectedSeverity, setSelectedSeverity = useState<string>('');
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
+  const navigate = useNavigate();
+  const [viewTestCaseDialogOpen, setViewTestCaseDialogOpen] = useState(false);
+  const [editTestCaseDialogOpen, setEditTestCaseDialogOpen] = useState(false);
+  const [editBugDialogOpen, setEditBugDialogOpen] = useState(false);
+  const [selectedItemForView, setSelectedItemForView] = useState<any>(null);
+  const [severityFilter, setSeverityFilter] = useState<string>("all");
+  const [editingItem, setEditingItem] = useState<{ id: number; type: 'testcase' | 'bug'; status: string } | null>(null);
+  const [newStatus, setNewStatus] = useState<string>("");
+  const [statusUpdateDialog, setStatusUpdateDialog] = useState(false);
+  const [selectedPriority, setSelectedPriority] = useState<string>('');
+  const [selectedModule, setSelectedModule] = useState<string>('');
+  const [selectedSeverity, setSelectedSeverity] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   // Force re-render when filters change
   const [filterKey, setFilterKey] = useState(0);
   const [allItems, setAllItems] = useState<any[]>([]);
@@ -837,8 +838,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
     setSelectedItems([]);
     setBulkStatus("");
-  };
-
+  };  
   const getStatusColor = (status: string, type: string) => {
     if (type === 'testcase') {
       switch (status) {

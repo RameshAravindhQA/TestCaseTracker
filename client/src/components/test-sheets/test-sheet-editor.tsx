@@ -138,14 +138,14 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
     return `${getColumnName(col)}${row + 1}`;
   };
 
-  // Formula engine
+  // Enhanced formula engine with Google Sheets-like functions
   const evaluateFormula = useCallback((formula: string, cellId: string): string => {
     try {
       if (!formula.startsWith('=')) return formula;
       
       const expression = formula.substring(1);
       
-      // Handle basic functions
+      // Handle SUM function
       if (expression.startsWith('SUM(')) {
         const range = expression.match(/SUM\(([A-Z]+\d+):([A-Z]+\d+)\)/);
         if (range) {
@@ -155,6 +155,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
         }
       }
       
+      // Handle AVERAGE function
       if (expression.startsWith('AVERAGE(')) {
         const range = expression.match(/AVERAGE\(([A-Z]+\d+):([A-Z]+\d+)\)/);
         if (range) {
@@ -165,6 +166,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
         }
       }
       
+      // Handle COUNT function
       if (expression.startsWith('COUNT(')) {
         const range = expression.match(/COUNT\(([A-Z]+\d+):([A-Z]+\d+)\)/);
         if (range) {
@@ -174,7 +176,56 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
         }
       }
       
-      // Handle basic arithmetic with cell references
+      // Handle MIN function
+      if (expression.startsWith('MIN(')) {
+        const range = expression.match(/MIN\(([A-Z]+\d+):([A-Z]+\d+)\)/);
+        if (range) {
+          const [, start, end] = range;
+          const values = getRangeValues(start, end).map(v => parseFloat(v)).filter(v => !isNaN(v));
+          return values.length > 0 ? Math.min(...values).toString() : '0';
+        }
+      }
+      
+      // Handle MAX function
+      if (expression.startsWith('MAX(')) {
+        const range = expression.match(/MAX\(([A-Z]+\d+):([A-Z]+\d+)\)/);
+        if (range) {
+          const [, start, end] = range;
+          const values = getRangeValues(start, end).map(v => parseFloat(v)).filter(v => !isNaN(v));
+          return values.length > 0 ? Math.max(...values).toString() : '0';
+        }
+      }
+      
+      // Handle ROUND function
+      if (expression.startsWith('ROUND(')) {
+        const match = expression.match(/ROUND\(([^,]+),\s*(\d+)\)/);
+        if (match) {
+          const [, valueExpr, digits] = match;
+          const value = parseFloat(evaluateExpression(valueExpr));
+          return Math.round(value * Math.pow(10, parseInt(digits))) / Math.pow(10, parseInt(digits)).toString();
+        }
+      }
+      
+      // Handle IF function
+      if (expression.startsWith('IF(')) {
+        const match = expression.match(/IF\(([^,]+),\s*([^,]+),\s*([^)]+)\)/);
+        if (match) {
+          const [, condition, trueValue, falseValue] = match;
+          const conditionResult = evaluateExpression(condition);
+          return conditionResult ? evaluateExpression(trueValue) : evaluateExpression(falseValue);
+        }
+      }
+      
+      return evaluateExpression(expression);
+    } catch (error) {
+      return '#ERROR!';
+    }
+  }, [sheetData.cells]);
+
+  // Helper function to evaluate expressions
+  const evaluateExpression = (expression: string): string => {
+    try {
+      // Handle cell references
       let processedExpression = expression;
       const cellReferences = expression.match(/[A-Z]+\d+/g);
       if (cellReferences) {
@@ -184,13 +235,13 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
         });
       }
       
-      // Evaluate the expression safely
+      // Evaluate safely
       const result = Function(`"use strict"; return (${processedExpression})`)();
       return result.toString();
     } catch (error) {
-      return '#ERROR!';
+      throw new Error('Invalid expression');
     }
-  }, [sheetData.cells]);
+  };
 
   const getRangeValues = (start: string, end: string): string[] => {
     const values: string[] = [];
@@ -482,7 +533,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
     },
   });
 
-  // Handle cell click
+  // Handle cell click - now supports single-click editing like Google Sheets
   const handleCellClick = useCallback((cellId: string, event: React.MouseEvent) => {
     if (event.shiftKey && selectedCell) {
       // Select range
@@ -506,14 +557,19 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           : [...prev, cellId]
       );
     } else {
-      // Single select
+      // Single select and immediate edit mode like Google Sheets
       setSelectedCell(cellId);
       setSelectedRange([cellId]);
       setFormulaBar(sheetData.cells[cellId]?.formula || sheetData.cells[cellId]?.value || '');
+      
+      // Enable immediate editing on click
+      setTimeout(() => {
+        setEditingCell(cellId);
+      }, 100);
     }
   }, [selectedCell, sheetData.cells]);
 
-  // Handle cell double click
+  // Handle cell double click for formula editing
   const handleCellDoubleClick = useCallback((cellId: string) => {
     setEditingCell(cellId);
     setFormulaBar(sheetData.cells[cellId]?.formula || sheetData.cells[cellId]?.value || '');
@@ -736,6 +792,42 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
       <Button size="sm" variant="outline" onClick={pasteSelection}>
         <Clipboard className="h-4 w-4" />
       </Button>
+      
+      <Separator orientation="vertical" className="h-6" />
+      
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button size="sm" variant="outline">
+            <Calculator className="h-4 w-4 mr-1" />
+            Functions
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-60">
+          <div className="grid gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setFormulaBar(`=SUM(${selectedCell}:${selectedCell})`)}>
+              SUM - Add numbers
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setFormulaBar(`=AVERAGE(${selectedCell}:${selectedCell})`)}>
+              AVERAGE - Calculate mean
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setFormulaBar(`=COUNT(${selectedCell}:${selectedCell})`)}>
+              COUNT - Count numbers
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setFormulaBar(`=MIN(${selectedCell}:${selectedCell})`)}>
+              MIN - Find minimum
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setFormulaBar(`=MAX(${selectedCell}:${selectedCell})`)}>
+              MAX - Find maximum
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setFormulaBar(`=ROUND(${selectedCell},2)`)}>
+              ROUND - Round number
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setFormulaBar(`=IF(${selectedCell}>0,"Positive","Negative")`)}>
+              IF - Conditional logic
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
       
       <Separator orientation="vertical" className="h-6" />
       

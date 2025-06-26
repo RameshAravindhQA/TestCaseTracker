@@ -55,6 +55,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { CheckCircle, AlertCircle, Clock, Filter, RefreshCw, GitBranch, Network, Link2, Grid3X3 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 // Define the cell value types
 type CellValue = {
@@ -161,6 +164,7 @@ export default function TraceabilityMatrixPage() {
   const [editingMarker, setEditingMarker] = useState<CustomMarker | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+    const navigate = useNavigate();
 
   // Default markers to use if no custom markers exist
   const defaultMarkers: Array<Omit<CustomMarker, 'id' | 'projectId' | 'createdById' | 'createdAt' | 'updatedAt'>> = [
@@ -856,7 +860,7 @@ export default function TraceabilityMatrixPage() {
                         // Also save back to localStorage for redundancy
                         try {
                           const storageKey = `markers_${selectedProjectId}`;
-                          localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));
+                          localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));```text
                         } catch (e) {
                           console.error("MARKER FIX: Failed to update localStorage after IndexedDB recovery:", e);
                         }
@@ -2161,7 +2165,7 @@ export default function TraceabilityMatrixPage() {
             <Download className="h-4 w-4" />
             Export
           </Button>
-          <Button variant="outline" size="sm" className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => navigate('/projects')}>
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
@@ -2643,7 +2647,7 @@ function CellDropdown({
   const saveCellToDatabase = async (newValue: CellValue) => {
     if (!projectId) return;
 
-    // First update the UI
+        // First update the UI
     onChange(newValue);
 
     console.log(`⚠️ DIRECT FIX: Saving cell value directly to database: Row=${rowId}, Col=${colId}, Value=`, newValue);
