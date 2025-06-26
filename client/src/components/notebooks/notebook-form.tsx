@@ -20,18 +20,21 @@ import { HexColorPicker } from "react-colorful";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface NotebookFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   notebook?: {
     id: number;
     title: string;
     content: string;
     color: string;
-    archived: boolean;
+    archived?: boolean;
+    isPinned?: boolean;
+    isArchived?: boolean;
+    createdAt?: string;
+    tags?: string[];
   } | null;
+  onSuccess: () => void;
 }
 
-export default function NotebookForm({ open, onOpenChange, notebook }: NotebookFormProps) {
+function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [color, setColor] = useState("#3b82f6");
@@ -41,22 +44,20 @@ export default function NotebookForm({ open, onOpenChange, notebook }: NotebookF
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Reset form when dialog opens/closes or notebook changes
+  // Reset form when notebook changes
   useEffect(() => {
-    if (open) {
-      if (notebook) {
-        setTitle(notebook.title || "");
-        setContent(notebook.content || "");
-        setColor(notebook.color || "#3b82f6");
-        setArchived(notebook.archived || false);
-      } else {
-        setTitle("");
-        setContent("");
-        setColor("#3b82f6");
-        setArchived(false);
-      }
+    if (notebook) {
+      setTitle(notebook.title || "");
+      setContent(notebook.content || "");
+      setColor(notebook.color || "#3b82f6");
+      setArchived(notebook.isArchived || notebook.archived || false);
+    } else {
+      setTitle("");
+      setContent("");
+      setColor("#3b82f6");
+      setArchived(false);
     }
-  }, [open, notebook]);
+  }, [notebook]);
 
   const createNotebookMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -73,7 +74,7 @@ export default function NotebookForm({ open, onOpenChange, notebook }: NotebookF
         description: "Notebook created successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
-      onOpenChange(false);
+      onSuccess();
     },
     onError: (error: Error) => {
       toast({
@@ -99,7 +100,7 @@ export default function NotebookForm({ open, onOpenChange, notebook }: NotebookF
         description: "Notebook updated successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
-      onOpenChange(false);
+      onSuccess();
     },
     onError: (error: Error) => {
       toast({
@@ -139,17 +140,7 @@ export default function NotebookForm({ open, onOpenChange, notebook }: NotebookF
   const isLoading = createNotebookMutation.isPending || updateNotebookMutation.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>
-              {notebook ? "Edit Notebook" : "Create New Notebook"}
-            </DialogTitle>
-            <DialogDescription>
-              {notebook ? "Update your notebook details and content." : "Create a new notebook to organize your notes."}
-            </DialogDescription>
-          </DialogHeader>
+    <form onSubmit={handleSubmit}>
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -235,21 +226,14 @@ export default function NotebookForm({ open, onOpenChange, notebook }: NotebookF
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : notebook ? "Update" : "Create"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          <div className="flex justify-end gap-2 pt-4">
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "Saving..." : notebook ? "Update" : "Create"}
+        </Button>
+      </div>
+    </form>
   );
 }
+
+export { NotebookForm };
+export default NotebookForm;
