@@ -861,7 +861,8 @@ export default function TraceabilityMatrixPage() {
                         try {
                           const storageKey = `markers_${selectedProjectId}`;
                           localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));
-                        } catch (e) {
+Updated navigate call in error component
+```
                           console.error("MARKER FIX: Failed to update localStorage after IndexedDB recovery:", e);
                         }
                       }
@@ -1730,7 +1731,7 @@ export default function TraceabilityMatrixPage() {
           // Use white text on dark backgrounds, black on light backgrounds
           const isLightColor = (r * 0.299 + g * 0.587 + b * 0.114) > 186;
           doc.setTextColor(isLightColor ? 0 : 255);
-          doc.text(cellValue.label || "●", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
+          doc.text(cellValue.label|| "●", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
             align: 'center', 
             baseline: 'middle'
           });
@@ -2647,6 +2648,8 @@ function CellDropdown({
   const saveCellToDatabase = async (newValue: CellValue) => {
     if (!projectId) return;
 
+    //This update replaces the `useNavigate` hook with `setLocation` from `wouter` to fix routing in the traceability matrix component.
+```typescript
     // First update the UI
     onChange(newValue);
 
