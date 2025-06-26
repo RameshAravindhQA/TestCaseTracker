@@ -845,7 +845,7 @@ class MemStorage implements IStorage {
     return card;
   }
 
-  async getKanbanCards(columnId: number): Promise<KanbanCard[]> {```text
+  async getKanbanCards(columnId: number): Promise<KanbanCard[]> {
     return Array.from(this.kanbanCards.values())
       .filter(card => card.columnId === columnId)
       .sort((a, b) => a.position - b.position);
@@ -1743,10 +1743,6 @@ class MemStorage implements IStorage {
   }
 
    // GitHub Integration methods
-  async getAllGitHubConfigs(): Promise<any[]> {
-    return this.githubConfigs;
-  }
-
   async getGitHubConfig(projectId: number): Promise<any | undefined> {
     return this.githubConfigs.find(config => config.projectId === projectId);
   }
@@ -1807,10 +1803,6 @@ class MemStorage implements IStorage {
       updatedAt: new Date().toISOString(),
     };
     return this.githubIssues[index];
-  }
-
-  async getAllGitHubConfigs(): Promise<any[]> {
-    return this.githubConfigs;
   }
 
   // Notebooks CRUD operations
