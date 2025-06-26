@@ -1,17 +1,21 @@
-
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MessageCircle, Send, Users, Paperclip, Smile } from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { Send, MessageCircle, Users, X, UserPlus, Settings } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface ChatMessage {
   id: number;
@@ -125,7 +129,7 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
             <AvatarFallback>{getInitials(msg.userName)}</AvatarFallback>
           </Avatar>
         )}
-        
+
         <div className={`max-w-[70%] ${isOwnMessage ? 'text-right' : 'text-left'}`}>
           <div className={`rounded-lg p-3 ${
             isOwnMessage 
@@ -166,6 +170,18 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
     setMessage(prev => prev + mention);
   };
 
+  const [showCollaborators, setShowCollaborators] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+
+  // Simulate real-time presence
+  useEffect(() => {
+    if (open) {
+      // In a real implementation, you would use WebSocket for real-time presence
+      const mockOnlineUsers = ['Alice Johnson', 'Bob Smith', 'Carol Davis'];
+      setOnlineUsers(mockOnlineUsers);
+    }
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -183,6 +199,9 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
               <Users className="h-3 w-3 mr-1" />
               {projectUsers.length} members
             </Badge>
+             <Badge variant="secondary" className="ml-2">
+                {onlineUsers.length} online
+              </Badge>
           </DialogTitle>
         </DialogHeader>
 
@@ -200,7 +219,7 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
                 <div ref={messagesEndRef} />
               </div>
             )}
-            
+
             {typingUsers.length > 0 && (
               <div className="text-sm text-muted-foreground italic">
                 {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
@@ -245,6 +264,43 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
             </div>
           </div>
         </div>
+
+         <Dialog open={showCollaborators} onOpenChange={setShowCollaborators}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" title="View Collaborators">
+                  <Users className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Project Collaborators</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="text-sm text-muted-foreground">
+                    Online Now ({onlineUsers.length})
+                  </div>
+                  {onlineUsers.map((user, index) => (
+                    <div key={index} className="flex items-center gap-3 p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>{user.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">{user}</div>
+                        <div className="text-xs text-muted-foreground">Active now</div>
+                      </div>
+                      <Badge variant="outline" className="ml-auto text-xs">
+                        Online
+                      </Badge>
+                    </div>
+                  ))}
+                  <Button variant="outline" className="w-full">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Invite Collaborator
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
       </DialogContent>
     </Dialog>
   );
