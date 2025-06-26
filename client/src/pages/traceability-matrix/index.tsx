@@ -860,7 +860,7 @@ export default function TraceabilityMatrixPage() {
                         try {
                           const storageKey = `markers_${selectedProjectId}`;
                           localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));
-                        }                        } catch (e) {
+                        } catch (e) {
                           console.error("MARKER FIX: Failed to update localStorage after IndexedDB recovery:", e);
                         }
                       }
