@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProjectSelect } from "@/components/ui/project-select";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -45,7 +45,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
@@ -627,14 +626,14 @@ export default function TraceabilityMatrixPage() {
                     });
                   }
                 }
-              } catch (e) {
-                console.error(`Error processing recovery item ${key}:`, e);
               }
-            });
-          }
+            } catch (e) {
+              console.error(`Error processing recovery item ${key}:`, e);
+            }
+          });
         }
-      } catch (e) {
-        console.error("Error checking localStorage recovery list:", e);
+      } catch (error) {
+        console.error("Error checking localStorage recovery list:", error);
       }
     };
 
@@ -1735,8 +1734,7 @@ export default function TraceabilityMatrixPage() {
     });
 
     // Save PDF
-    doc.save(`traceability_matrix_${projectName.replace(/\code
-\s+/g, '_')}.pdf`);
+    doc.save(`traceability_matrix_${projectName.replace(/\s+/g, '_')}.pdf`);
 
     toast({
       title: "Export successful",
@@ -2650,6 +2648,78 @@ function CellDropdown({
     console.log(`⚠️ DIRECT FIX: Saving cell value directly to database: Row=${rowId}, Col=${colId}, Value=`, newValue);
 
     try {
-      // Save to database
+            // Save to database
       const saveResponse = await apiRequest("POST", `/api/projects/${projectId}/matrix/cells`, {
         rowModuleId: parseInt(rowId),
+        colModuleId: parseInt(colId),
+        projectId: parseInt(projectId),
+        value: JSON.stringify(newValue)
+      });
+      console.log("✅ DIRECT FIX: Cell saved successfully:", saveResponse);
+    } catch (error) {
+      console.error("❌ DIRECT FIX: Failed to save cell:", error);
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="w-full h-9 p-0">
+          {value.type === 'checkmark' ? (
+            <CheckCircle className="mx-auto h-5 w-5" style={{ color: value.color }} />
+          ) : value.type === 'x-mark' ? (
+            <AlertCircle className="mx-auto h-5 w-5" style={{ color: value.color }} />
+          ) : value.type === 'custom' ? (
+            <div className="flex items-center justify-center">
+              <span className="mx-auto" style={{ color: value.color }}>{value.label || "●"}</span>
+            </div>
+          ) : (
+            <Clock className="mx-auto h-5 w-5 text-gray-400" />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56">
+        <DropdownMenuLabel>Select Value</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => {
+          const newValue: CellValue = { type: 'checkmark', color: '#10b981', label: 'Yes' };
+          onChange(newValue);
+          saveCellToDatabase(newValue);
+        }}>
+          <Check className="mr-2 h-4 w-4 text-green-500" />
+          Yes
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => {
+          const newValue: CellValue = { type: 'x-mark', color: '#ef4444', label: 'No' };
+           onChange(newValue);
+           saveCellToDatabase(newValue);
+        }}>
+          <X className="mr-2 h-4 w-4 text-red-500" />
+          No
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Custom Markers</DropdownMenuLabel>
+        {customMarkers.map(marker => (
+          <DropdownMenuItem key={marker.markerId} onClick={() => {
+             const newValue: CellValue = { type: 'custom', color: marker.color, label: marker.label };
+             onChange(newValue);
+             saveCellToDatabase(newValue);
+          }}>
+            <div className="flex items-center">
+              <div className="mr-2 w-3 h-3 rounded-full" style={{ backgroundColor: marker.color }} />
+              <span>{marker.label}</span>
+            </div>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => {
+          const newValue: CellValue = { type: 'empty' };
+          onChange(newValue);
+          saveCellToDatabase(newValue);
+        }}>
+          Clear
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
