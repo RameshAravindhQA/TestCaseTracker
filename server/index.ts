@@ -21,7 +21,7 @@ app.use((error: any, req: any, res: any, next: any) => {
   next(error);
 });
 
-app.use(express.static(path.join(__dirname, '../client/dist')));
+app.use(express.static(path.join(import.meta.dirname, '../client/dist')));
 
 app.use((req, res, next) => {
   const start = Date.now();
