@@ -866,7 +866,7 @@ export default function TraceabilityMatrixPage() {
 
                   // Move the error handler inside too
                   getRequest.onerror = (err) => {
-                    console.error("MARKER FIX: Error getting markers from IndexedDB:`, err);
+                    console.error("MARKER FIX: Error getting markers from IndexedDB:", err);
                     db.close();
                   };
                 } else {
