@@ -568,10 +568,6 @@ export default function ProjectDetailPage() {
               <Button onClick={handleAddModule}>
                 Add Module
               </Button>
-              <ProjectChat projectId={projectId} currentUser={currentUser} />
-
-        {/* Floating Team Chat */}
-        <ProjectChat projectId={projectId} currentUser={currentUser} />
               <Button 
                 variant="outline" 
                 onClick={() => setShowGitHubConfig(true)}
@@ -1266,6 +1262,9 @@ export default function ProjectDetailPage() {
         projectId={projectId}
         config={githubConfig}
       />
+      
+      {/* Floating Team Chat */}
+      <ProjectChat projectId={projectId} currentUser={currentUser} />
     </MainLayout>
   );
 }

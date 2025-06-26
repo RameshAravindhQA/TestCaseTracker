@@ -530,7 +530,7 @@ class MemStorage implements IStorage {
       // Find the highest existing bug number
       const existingBugs = Array.from(this.bugs.values())
         .map(bug => bug.bugId)
-        .filter(id => id && id.match(/^BUG-(\d+)$/))
+        .filter(id => id && id.match(/^BUG-(\\d+)$/))
         .map(id => parseInt(id.replace('BUG-', ''), 10))
         .filter(num => !isNaN(num));
 

@@ -189,7 +189,7 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             exit={{ scale: 0 }}
-            className="fixed bottom-6 right-6 z-40"
+            className="fixed bottom-24 right-6 z-40"
           >
             <Button
               onClick={() => setIsOpen(true)}
@@ -217,7 +217,7 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            className={`fixed bottom-6 right-6 z-40 ${
+            className={`fixed bottom-24 right-6 z-40 ${
               isMinimized ? 'w-80' : 'w-96'
             } ${isMinimized ? 'h-16' : 'h-[500px]'} transition-all duration-200`}
           >
