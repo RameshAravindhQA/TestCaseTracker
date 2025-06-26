@@ -146,8 +146,13 @@ export default function GitHubIntegrationPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">GitHub Integration</h1>
-                <p className="text-muted-foreground">
+                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-gray-800 via-gray-900 to-black rounded-xl shadow-lg">
+                    <Github className="h-8 w-8 text-white" />
+                  </div>
+                  GitHub Integration
+                </h1>
+                <p className="text-muted-foreground mt-2">
                   Manage GitHub integrations for your projects to create and sync issues automatically.
                 </p>
               </div>

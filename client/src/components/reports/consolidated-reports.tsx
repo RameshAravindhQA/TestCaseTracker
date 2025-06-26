@@ -100,6 +100,9 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const [selectedPriority, setSelectedPriority = useState<string>('');
   const [selectedModule, setSelectedModule = useState<string>('');
   const [selectedSeverity, setSelectedSeverity = useState<string>('');
+  const [selectedProject, setSelectedProject] = useState<string>("all");
+  // Force re-render when filters change
+  const [filterKey, setFilterKey] = useState(0);
 
   const currentProjectId = selectedProjectId || projectId;
 
@@ -389,7 +392,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
     onSuccess: (data, variables) => {
       console.log(`Status update successful for ${variables.type} ${variables.itemId}:`, data);
-      
+
       // Invalidate and refetch queries to ensure consistency
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
@@ -410,7 +413,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
     onError: (error: any, variables, context) => {
       console.error(`Status update failed for ${variables.type} ${variables.itemId}:`, error);
-      
+
       // Rollback optimistic updates
       if (context?.previousTestCases) {
         queryClient.setQueryData([`/api/projects/${effectiveProjectId}/test-cases`], context.previousTestCases);
@@ -749,14 +752,14 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
 
     } catch (error: any) {
       console.error(`Failed to update ${type} ${numericId}:`, error);
-      
+
       // Revert optimistic update on error
       if (type === 'testcase') {
         refetchTestCases();
       } else {
         refetchBugs();
       }
-      
+
       toast({
         title: "Update Failed",
         description: error.message || "Failed to update status",
@@ -1294,6 +1297,28 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     );
   }
 
+  // Handle filter changes with forced re-render
+  const handleProjectChange = (value: string) => {
+    setSelectedProject(value);
+    setSelectedModule("all"); // Reset module when project changes
+    setFilterKey(prev => prev + 1); // Force re-render
+  };
+
+  const handleModuleChange = (value: string) => {
+    setSelectedModule(value);
+    setFilterKey(prev => prev + 1); // Force re-render
+  };
+
+  const handleStatusChange = (value: string) => {
+    setSelectedStatus(value);
+    setFilterKey(prev => prev + 1); // Force re-render
+  };
+
+  const handlePriorityChange = (value: string) => {
+    setSelectedPriority(value);
+    setFilterKey(prev => prev + 1); // Force re-render
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -1321,7 +1346,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
             />
           </div>
         )}
-        
+
         <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
@@ -1475,7 +1500,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-purple-500/20 to-transparent rounded-bl-full group-hover:from-purple-400/30"></div>
               <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 opacity-70"></div>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Filters */}
@@ -1486,47 +1511,75 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
             onChange={(e) => setSearchQuery(e.target.value)}
             className="md:col-span-2"
           />
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Pass">Pass</SelectItem>
-              <SelectItem value="Fail">Fail</SelectItem>
-              <SelectItem value="Blocked">Blocked</SelectItem>
-              <SelectItem value="Not Executed">Not Executed</SelectItem>
-              <SelectItem value="Open">Open</SelectItem>
-              <SelectItem value="In Progress">In Progress</SelectItem>
-              <SelectItem value="Resolved">Resolved</SelectItem>
-              <SelectItem value="Closed">Closed</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterPriority} onValueChange={setFilterPriority}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priority</SelectItem>
-              <SelectItem value="Critical">Critical</SelectItem>
-              <SelectItem value="High">High</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="Low">Low</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterModule} onValueChange={setFilterModule}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by Module" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Modules</SelectItem>
-              {modules?.map(module => (
-                <SelectItem key={module.id} value={module.name}>
-                  {module.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Select 
+              key={`project-${filterKey}`}
+              value={selectedProject} 
+              onValueChange={handleProjectChange}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All Projects" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Projects</SelectItem>
+                {allProjects?.map((project) => (
+                  <SelectItem key={project.id} value={project.id.toString()}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select 
+              key={`module-${filterKey}`}
+              value={selectedModule} 
+              onValueChange={handleModuleChange}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All Modules" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Modules</SelectItem>
+                {modules?.map((module) => (
+                  <SelectItem key={module.id} value={module.id.toString()}>
+                    {module.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select 
+              key={`status-${filterKey}`}
+              value={selectedStatus} 
+              onValueChange={handleStatusChange}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Pass">Pass</SelectItem>
+                <SelectItem value="Fail">Fail</SelectItem>
+                <SelectItem value="Blocked">Blocked</SelectItem>
+                <SelectItem value="Not Executed">Not Executed</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select 
+              key={`priority-${filterKey}`}
+              value={selectedPriority} 
+              onValueChange={handlePriorityChange}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="All Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priority</SelectItem>
+                <SelectItem value="Critical">Critical</SelectItem>
+                <SelectItem value="High">High</SelectItem>
+                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="Low">Low</SelectItem>
+              </SelectContent>
+            </Select>
           <Select value={severityFilter} onValueChange={setSeverityFilter}>
             <SelectTrigger>
               <SelectValue placeholder="Filter by Severity" />

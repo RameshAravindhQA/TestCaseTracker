@@ -110,13 +110,17 @@ import {
     refetchOnWindowFocus: true,
   });
 <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
-              <LayoutDashboard className="h-8 w-8 text-white" />
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
+                  <LayoutDashboard className="h-8 w-8 text-white" />
+                </div>
+                Dashboard
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">Overview of your testing projects and metrics</p>
             </div>
-            Dashboard
-          </h1>
-          <p className="text-gray-600 mt-2">Overview of your testing projects and metrics</p>
+          </div>
         </div>
 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard

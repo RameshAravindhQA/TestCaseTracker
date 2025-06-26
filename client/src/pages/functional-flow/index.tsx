@@ -141,7 +141,15 @@ export default function FunctionalFlowPage() {
       <div className="container mx-auto p-4">
         <div className="flex flex-col space-y-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Functional Flow Designer</h1>
+            <div>
+              <h1 className="text-3xl font-bold flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-green-500 via-emerald-600 to-teal-500 rounded-xl shadow-lg">
+                  <GitBranch className="h-8 w-8 text-white" />
+                </div>
+                Functional Flow Designer
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">Design and visualize functional workflows and processes</p>
+            </div>
             <div className="flex space-x-2">
               <Button 
                 variant="outline" 

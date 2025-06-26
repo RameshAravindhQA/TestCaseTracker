@@ -1,27 +1,48 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { BugComment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { formatDistance } from "date-fns";
-import { MessageCircle, Edit2, Save, X, Plus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { formatDistanceToNow } from "date-fns";
+import { MessageCircle, Send, Github, ExternalLink, Sync, AlertCircle } from "lucide-react";
+
+interface BugComment {
+  id: number;
+  bugId: number;
+  userId: number;
+  content: string;
+  createdAt: string;
+  updatedAt?: string;
+  user?: {
+    id: number;
+    name: string;
+    email?: string;
+  };
+  githubCommentId?: number;
+  syncedFromGithub?: boolean;
+  syncedToGithub?: boolean;
+  githubUrl?: string;
+}
 
 interface BugCommentsProps {
   bugId: number;
+  githubIssueNumber?: number;
+  projectId?: number;
 }
 
-export function BugComments({ bugId }: BugCommentsProps) {
+export default function BugComments({ bugId, githubIssueNumber, projectId }: BugCommentsProps) {
+  const [newComment, setNewComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [syncToGithub, setSyncToGithub] = useState(true);
+  const [isSyncingFromGithub, setIsSyncingFromGithub] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [newComment, setNewComment] = useState("");
-  const [editingComment, setEditingComment] = useState<number | null>(null);
-  const [editContent, setEditContent] = useState("");
 
   // Fetch comments
   const { data: comments = [], isLoading } = useQuery<BugComment[]>({
@@ -33,210 +54,211 @@ export function BugComments({ bugId }: BugCommentsProps) {
     },
   });
 
-  // Create comment mutation
-  const createCommentMutation = useMutation({
+  // Add comment mutation with GitHub sync
+  const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
-      const response = await apiRequest("POST", `/api/bugs/${bugId}/comments`, {
-        content: content.trim(),
+      const res = await apiRequest("POST", `/api/bugs/${bugId}/comments`, {
+        content,
+        userId: 1, // TODO: Get from auth context
+        syncToGithub: syncToGithub && !!githubIssueNumber,
+        githubIssueNumber,
+        projectId,
       });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to create comment: ${errorText}`);
-      }
-      return response.json();
+      return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/bugs/${bugId}/comments`] });
+    onSuccess: (data) => {
       setNewComment("");
-      toast({
-        title: "Comment added",
-        description: "Your comment has been added successfully.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add comment",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Update comment mutation
-  const updateCommentMutation = useMutation({
-    mutationFn: async ({ commentId, content }: { commentId: number; content: string }) => {
-      const response = await apiRequest("PUT", `/api/bugs/${bugId}/comments/${commentId}`, {
-        content: content.trim(),
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to update comment: ${errorText}`);
-      }
-      return response.json();
-    },
-    onSuccess: () => {
+      setIsSubmitting(false);
       queryClient.invalidateQueries({ queryKey: [`/api/bugs/${bugId}/comments`] });
-      setEditingComment(null);
-      setEditContent("");
-      toast({
-        title: "Comment updated",
-        description: "Your comment has been updated successfully.",
-      });
+
+      if (data.syncedToGithub) {
+        toast({
+          title: "Comment added and synced",
+          description: "Your comment has been added and synced to GitHub.",
+        });
+      } else {
+        toast({
+          title: "Comment added",
+          description: "Your comment has been added successfully.",
+        });
+      }
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
+      setIsSubmitting(false);
       toast({
         title: "Error",
-        description: error.message || "Failed to update comment",
+        description: `Failed to add comment: ${error.message}`,
         variant: "destructive",
       });
     },
   });
 
-  const handleCreateComment = () => {
-    if (!newComment.trim()) return;
-    createCommentMutation.mutate(newComment);
-  };
+  // Sync from GitHub mutation
+  const syncFromGithubMutation = useMutation({
+    mutationFn: async () => {
+      if (!githubIssueNumber || !projectId) {
+        throw new Error("GitHub issue number and project ID required");
+      }
 
-  const handleEditComment = (comment: BugComment) => {
-    setEditingComment(comment.id);
-    setEditContent(comment.content);
-  };
+      const res = await apiRequest("POST", `/api/bugs/${bugId}/sync-comments-from-github`, {
+        githubIssueNumber,
+        projectId,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setIsSyncingFromGithub(false);
+      queryClient.invalidateQueries({ queryKey: [`/api/bugs/${bugId}/comments`] });
+      toast({
+        title: "Comments synced",
+        description: `Synced ${data.syncedCount || 0} comments from GitHub.`,
+      });
+    },
+    onError: (error: Error) => {
+      setIsSyncingFromGithub(false);
+      toast({
+        title: "Sync failed",
+        description: `Failed to sync from GitHub: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
 
-  const handleUpdateComment = (commentId: number) => {
-    if (!editContent.trim()) return;
-    updateCommentMutation.mutate({ commentId, content: editContent });
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    addCommentMutation.mutate(newComment);
   };
-
-  const handleCancelEdit = () => {
-    setEditingComment(null);
-    setEditContent("");
-  };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5" />
-          <h3 className="text-lg font-semibold">Comments</h3>
-        </div>
-        <div className="text-center py-4 text-gray-500">Loading comments...</div>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <MessageCircle className="h-5 w-5 text-blue-600" />
-        <h3 className="text-lg font-semibold">Comments</h3>
-        <Badge variant="secondary">{comments.length}</Badge>
-      </div>
+    <Card className="col-span-2">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            Comments ({comments?.length || 0})
+          </CardTitle>
 
-      {/* Comments List */}
-      <div className="space-y-4">
-        {comments.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-8">
-              <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No comments yet. Be the first to comment!</p>
-            </CardContent>
-          </Card>
+          {githubIssueNumber && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsSyncingFromGithub(true);
+                  syncFromGithubMutation.mutate();
+                }}
+                disabled={isSyncingFromGithub}
+              >
+                <Sync className={`h-4 w-4 mr-1 ${isSyncingFromGithub ? 'animate-spin' : ''}`} />
+                Sync from GitHub
+              </Button>
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Github className="h-3 w-3" />
+                Issue #{githubIssueNumber}
+              </Badge>
+            </div>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-20">
+            <p className="text-gray-500">Loading comments...</p>
+          </div>
         ) : (
-          comments.map((comment) => (
-            <Card key={comment.id} className="relative">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${comment.author?.name || 'User'}`} />
-                      <AvatarFallback>
-                        {comment.author?.name?.substring(0, 2).toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">{comment.author?.name || 'Unknown User'}</div>
-                      <div className="text-sm text-gray-500">
-                        {formatDistance(new Date(comment.createdAt), new Date(), { addSuffix: true })}
-                        {comment.updatedAt && comment.updatedAt !== comment.createdAt && (
-                          <span className="ml-2">(edited)</span>
-                        )}
+          <div className="space-y-4">
+            {comments?.length === 0 ? (
+              <div className="flex items-center justify-center h-20">
+                <p className="text-gray-500">No comments yet.</p>
+              </div>
+            ) : (
+              comments?.map((comment) => (
+                <div key={comment.id} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={comment.user?.email} />
+                        <AvatarFallback>
+                          {comment.user?.name?.charAt(0).toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-sm flex items-center gap-2">
+                          {comment.user?.name || "Unknown User"}
+                          {comment.syncedFromGithub && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Github className="h-3 w-3 mr-1" />
+                              From GitHub
+                            </Badge>
+                          )}
+                          {comment.syncedToGithub && (
+                            <Badge variant="outline" className="text-xs">
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              Synced
+                            </Badge>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                          {comment.githubUrl && (
+                            <a
+                              href={comment.githubUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-2 text-blue-500 hover:text-blue-700"
+                            >
+                              View on GitHub
+                            </a>
+                          )}
+                        </p>
                       </div>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditComment(comment)}
-                    disabled={editingComment === comment.id}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {editingComment === comment.id ? (
-                  <div className="space-y-3">
-                    <Textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      placeholder="Update your comment..."
-                      className="min-h-[100px]"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleUpdateComment(comment.id)}
-                        disabled={updateCommentMutation.isPending || !editContent.trim()}
-                      >
-                        <Save className="h-4 w-4 mr-2" />
-                        {updateCommentMutation.isPending ? "Saving..." : "Save"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCancelEdit}
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Cancel
-                      </Button>
-                    </div>
+                  <div className="ml-11">
+                    <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
                   </div>
-                ) : (
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {comment.content}
+                </div>
+              ))
+            )}
+
+            <div className="space-y-4">
+              <Textarea
+                placeholder="Add a comment..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                rows={3}
+                disabled={isSubmitting}
+              />
+
+              <div className="flex items-center justify-between">
+                {githubIssueNumber && (
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="sync-github"
+                      checked={syncToGithub}
+                      onCheckedChange={setSyncToGithub}
+                      disabled={isSubmitting}
+                    />
+                    <Label htmlFor="sync-github" className="text-sm flex items-center gap-1">
+                      <Github className="h-4 w-4" />
+                      Sync to GitHub
+                    </Label>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
 
-      {/* Add New Comment */}
-      <Card>
-        <CardHeader>
-          <h4 className="font-medium flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add a comment
-          </h4>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Write a comment..."
-            className="min-h-[100px]"
-          />
-          <Button
-            onClick={handleCreateComment}
-            disabled={createCommentMutation.isPending || !newComment.trim()}
-            className="w-full"
-          >
-            <MessageCircle className="h-4 w-4 mr-2" />
-            {createCommentMutation.isPending ? "Adding comment..." : "Add Comment"}
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!newComment.trim() || isSubmitting}
+                  size="sm"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {isSubmitting ? "Adding..." : "Add Comment"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

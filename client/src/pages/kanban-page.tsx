@@ -1642,8 +1642,13 @@ export default function KanbanPage() {
         <header className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Kanban Board</h1>
-              <p className="text-muted-foreground max-w-2xl mt-1">
+              <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-xl shadow-lg">
+                  <LayoutGrid className="h-8 w-8 text-white" />
+                </div>
+                Kanban Board
+              </h1>
+              <p className="text-muted-foreground max-w-2xl mt-2">
                 Visualize your workflow and track progress using this customizable Kanban board
               </p>
             </div>

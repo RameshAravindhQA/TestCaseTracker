@@ -184,7 +184,7 @@ export default function TraceabilityMatrixPage() {
         if (project) {
           setProjectName(project.name);
         }
-        
+
         // When modules load, force refetch of matrix cells to ensure latest data
         queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/matrix/cells`] });
       }
@@ -206,10 +206,10 @@ export default function TraceabilityMatrixPage() {
       if (data && data.length > 0) {
         // EMERGENCY MARKER FIX: Use our centralized function to save markers
         saveMarkersToStorageAndDb(data);
-        
+
         // Update local state immediately to ensure markers are visible in the UI
         setCustomMarkers(data);
-        
+
         console.log("MARKER FIX: Saved fetched markers using centralized function");
       } else if (selectedProjectId) {
         // If no markers exist yet for this project, create default ones
@@ -371,13 +371,13 @@ export default function TraceabilityMatrixPage() {
   useEffect(() => {
     if (modules && modules.length > 0 && selectedProjectId) {
       console.log("📢 PERSISTENCE FIX: Loading matrix cells for project", selectedProjectId);
-      
+
       // First initialize with empty structure
       const initialData: Record<string, CellValue[]> = {};
       modules.forEach(rowModule => {
         initialData[rowModule.id.toString()] = modules.map(_ => ({ type: 'empty' }));
       });
-      
+
       // Then load data from database
       const loadCellsFromDatabase = async () => {
         try {
@@ -385,7 +385,7 @@ export default function TraceabilityMatrixPage() {
           if (response.ok) {
             const cellsData = await response.json();
             console.log(`✅ PERSISTENCE FIX: Loaded ${cellsData.length} matrix cells from database`);
-            
+
             // Update the initial data with values from database
             cellsData.forEach(cell => {
               try {
@@ -400,7 +400,7 @@ export default function TraceabilityMatrixPage() {
                     try {
                       // Try to parse the value from the database
                       value = JSON.parse(cell.value);
-                      
+
                       // Special fix for Yes/No values to ensure they don't disappear
                       if (value.type === 'checkmark') {
                         value = {
@@ -422,7 +422,7 @@ export default function TraceabilityMatrixPage() {
                         value = { type: 'checkmark', color: '#10b981', label: 'Yes' };
                       }
                     }
-                    
+
                     // Update the value at the specific index
                     initialData[rowId][colIndex] = value;
                   }
@@ -431,7 +431,7 @@ export default function TraceabilityMatrixPage() {
                 console.error("Error handling cell value:", e);
               }
             });
-            
+
             // Now set the matrix data with both empty cells and loaded values
             setMatrixData(initialData);
           } else {
@@ -445,14 +445,14 @@ export default function TraceabilityMatrixPage() {
           setMatrixData(initialData);
         }
       };
-      
+
       loadCellsFromDatabase();
     }
   }, [modules, selectedProjectId]);
-  
+
   // Get the current user from local storage as backup
   const [localStorageUser, setLocalStorageUser] = useState<{id: number, name: string} | null>(null);
-  
+
   // Load user from localStorage as a fallback
   useEffect(() => {
     try {
@@ -474,27 +474,27 @@ export default function TraceabilityMatrixPage() {
 
     const recoverMatrixCells = async () => {
       console.log("Starting matrix cell recovery process...");
-      
+
       // Force reload matrix data from API first
       try {
         const response = await apiRequest("GET", `/api/projects/${selectedProjectId}/matrix/cells`);
         console.log(`Loaded ${response?.length || 0} cells from API`);
-        
+
         if (response && Array.isArray(response) && response.length > 0) {
           // Create matrix data structure
           const recoveredData: Record<string, CellValue[]> = {};
-          
+
           // Initialize with empty cells
           modules.forEach(module => {
             recoveredData[module.id.toString()] = modules.map(_ => ({ type: 'empty' }));
           });
-          
+
           // Fill in with data from API
           response.forEach(cell => {
             try {
               const rowModuleId = cell.rowModuleId.toString();
               const colModuleIndex = modules.findIndex(m => m.id === cell.colModuleId);
-              
+
               if (colModuleIndex >= 0 && recoveredData[rowModuleId]) {
                 // Parse the stored value
                 try {
@@ -514,7 +514,7 @@ export default function TraceabilityMatrixPage() {
               console.error("Error processing cell during recovery:", e);
             }
           });
-          
+
           // Update the matrix data
           setMatrixData(recoveredData);
           console.log("Matrix data recovery complete");
@@ -522,53 +522,53 @@ export default function TraceabilityMatrixPage() {
       } catch (error) {
         console.error("Failed to load matrix cells from API during recovery:", error);
       }
-      
+
       // Check for any backed up cells in IndexedDB
       try {
         if (window.indexedDB) {
           const request = window.indexedDB.open("traceabilityMatrixCellsDB", 1);
-          
+
           request.onupgradeneeded = (event) => {
             const db = (event.target as IDBOpenDBRequest).result;
             if (!db.objectStoreNames.contains('cells')) {
               db.createObjectStore('cells', { keyPath: 'id' });
             }
           };
-          
+
           request.onsuccess = (event) => {
             const db = (event.target as IDBOpenDBRequest).result;
             const transaction = db.transaction(['cells'], 'readonly');
             const store = transaction.objectStore('cells');
             const getAllRequest = store.getAll();
-            
+
             getAllRequest.onsuccess = () => {
               const backupCells = getAllRequest.result;
               console.log(`Found ${backupCells.length} backed up cells in IndexedDB`);
-              
+
               if (backupCells.length > 0) {
                 setMatrixData(prevData => {
                   const newData = { ...prevData };
-                  
+
                   backupCells.forEach(cell => {
                     if (cell.projectId === selectedProjectId) {
                       const rowId = cell.rowModuleId;
                       const colModuleId = cell.colModuleId;
                       const colIndex = modules.findIndex(m => m.id === colModuleId);
-                      
+
                       if (colIndex >= 0 && newData[rowId]) {
                         newData[rowId][colIndex] = cell.value;
                         console.log(`Restored cell from IndexedDB: row=${rowId}, col=${colIndex}`);
                       }
                     }
                   });
-                  
+
                   return newData;
                 });
               }
-              
+
               db.close();
             };
-            
+
             getAllRequest.onerror = (error) => {
               console.error("Error loading backup cells from IndexedDB:", error);
               db.close();
@@ -578,13 +578,13 @@ export default function TraceabilityMatrixPage() {
       } catch (e) {
         console.error("Error recovering from IndexedDB:", e);
       }
-      
+
       // Check localStorage recovery list as last resort
       try {
         const recoveryList = JSON.parse(localStorage.getItem('matrix_cell_recovery_list') || '[]');
         if (recoveryList.length > 0) {
           console.log(`Found ${recoveryList.length} cells in recovery list`);
-          
+
           // Process all recovery items
           recoveryList.forEach(key => {
             try {
@@ -593,7 +593,7 @@ export default function TraceabilityMatrixPage() {
                 const rowId = cellBackup.rowModuleId;
                 const colModuleId = cellBackup.colModuleId;
                 const colIndex = modules.findIndex(m => m.id === colModuleId);
-                
+
                 // Update the matrix data with this backup
                 if (colIndex >= 0) {
                   setMatrixData(prevData => {
@@ -604,7 +604,7 @@ export default function TraceabilityMatrixPage() {
                     }
                     return newData;
                   });
-                  
+
                   // Also try to save it to the database
                   if (cellBackup.pendingSave && currentUser) {
                     console.log(`Attempting to save recovered cell to database: ${key}`);
@@ -626,20 +626,19 @@ export default function TraceabilityMatrixPage() {
                     });
                   }
                 }
+              } catch (e) {
+                console.error(`Error processing recovery item ${key}:`, e);
               }
-            } catch (e) {
-              console.error(`Error processing recovery item ${key}:`, e);
-            }
           });
         }
       } catch (e) {
         console.error("Error checking localStorage recovery list:", e);
       }
     };
-    
+
     // Run the recovery process
     recoverMatrixCells();
-    
+
   }, [selectedProjectId, modules]);
 
   // Function to ensure markers are stored in both the database and local storage for backup
@@ -650,7 +649,7 @@ export default function TraceabilityMatrixPage() {
 
     // Update state first - this ensures the UI shows the markers immediately
     setCustomMarkers(markers);
-    
+
     // Also save to localStorage as a fallback for marker restoration
     try {
       localStorage.setItem(`markers_${selectedProjectId}`, JSON.stringify(markers));
@@ -666,7 +665,7 @@ export default function TraceabilityMatrixPage() {
         const existingMarkerResponse = await apiRequest("GET", `/api/projects/${selectedProjectId}/matrix/markers?_t=${Date.now()}`);
         const existingMarkers = existingMarkerResponse || [];
         const existingMarker = existingMarkers.find((m: any) => m.markerId === marker.markerId);
-        
+
         if (existingMarker) {
           // Update existing marker
           await apiRequest("PUT", `/api/projects/${selectedProjectId}/matrix/markers/${existingMarker.id}`, {
@@ -735,11 +734,11 @@ export default function TraceabilityMatrixPage() {
         request.onsuccess = (event) => {
           try {
             const db = (event.target as IDBOpenDBRequest).result;
-            
+
             // Create transaction and store data
             const transaction = db.transaction(['markers'], 'readwrite');
             const store = transaction.objectStore('markers');
-            
+
             const storeRequest = store.put({
               projectId: selectedProjectId,
               markers: markers,
@@ -766,16 +765,16 @@ export default function TraceabilityMatrixPage() {
 
     // Invalidate queries to ensure fresh data
     queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/matrix/markers`] });
-    
+
     // Notify user
     toast({
       title: "Markers Saved",
       description: `Successfully saved ${markers.length} markers to the database.`,
     });
-    
+
     // Indicate we're saving
     setIsAutosaving(true);
-    
+
     // Hide saving indicator after a brief delay
     setTimeout(() => {
       setIsAutosaving(false);
@@ -823,7 +822,7 @@ export default function TraceabilityMatrixPage() {
         try {
           if (window.indexedDB) {
             const request = window.indexedDB.open("traceabilityMatrixMarkersDB", 1);
-            
+
             // Add the missing onupgradeneeded handler to create the store
             request.onupgradeneeded = (event) => {
               const db = (event.target as IDBOpenDBRequest).result;
@@ -841,17 +840,17 @@ export default function TraceabilityMatrixPage() {
                   const transaction = db.transaction(['markers'], 'readonly');
                   const store = transaction.objectStore('markers');
                   const getRequest = store.get(selectedProjectId);
-                  
+
                   // Move the success handler inside the if block to fix the error
                   getRequest.onsuccess = () => {
                     if (getRequest.result) {
                       loadedMarkers = getRequest.result.markers as CustomMarker[];
                       console.log("MARKER FIX: Recovered markers from IndexedDB:", loadedMarkers?.length || 0);
-    
+
                       // Update state and other storages for consistency
                       if (loadedMarkers && loadedMarkers.length > 0) {
                         setCustomMarkers(loadedMarkers);
-    
+
                         // Also save back to localStorage for redundancy
                         try {
                           const storageKey = `markers_${selectedProjectId}`;
@@ -863,11 +862,13 @@ export default function TraceabilityMatrixPage() {
                     }
                     db.close();
                   };
-                  
+
                   // Move the error handler inside too
                   getRequest.onerror = (err) => {
                     console.error("MARKER FIX: Error getting markers from IndexedDB:", err);
                     db.close();
+                  };
+```tool_code
                   };
                 } else {
                   console.log("Markers store doesn't exist yet");
@@ -1107,7 +1108,7 @@ export default function TraceabilityMatrixPage() {
 
       return newData;
     });
-    
+
     // PERSISTENCE FIX: Immediately save to database to ensure data persists between module switches
     if (selectedProjectId && modules) {
       const moduleColId = modules[moduleColIndex]?.id;
@@ -1121,7 +1122,7 @@ export default function TraceabilityMatrixPage() {
           valueToSave.label = 'No';
           valueToSave.color = valueToSave.color || '#ef4444';
         }
-        
+
         // Perform direct database save in background
         (async () => {
           try {
@@ -1130,7 +1131,7 @@ export default function TraceabilityMatrixPage() {
               colModuleId: moduleColId,
               value: valueToSave
             });
-            
+
             await apiRequest("POST", `/api/projects/${selectedProjectId}/matrix/cells`, {
               rowModuleId: parseInt(moduleRowId),
               colModuleId: moduleColId,
@@ -1138,9 +1139,9 @@ export default function TraceabilityMatrixPage() {
               value: JSON.stringify(valueToSave),
               createdById: currentUser?.id || 1 // Use authenticated user ID if available
             });
-            
+
             console.log("✅ PERSISTENCE FIX: Cell successfully saved to database");
-            
+
             // Refresh data in React Query cache for when we switch back to this view
             queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/matrix/cells`] });
           } catch (error) {
@@ -1173,14 +1174,14 @@ export default function TraceabilityMatrixPage() {
             const saveCell = async (attempt = 1, maxAttempts = 3) => {
               try {
                 console.log(`Saving cell (attempt ${attempt}/${maxAttempts}): Row=${moduleRowId}, Col=${moduleColId}`);
-                
+
                 // Create a unique identifier for this cell to track it in logs
                 const cellId = `${moduleRowId}_${moduleColId}`;
-                
+
                 // First try to get the existing cell to see if we need to update or create
                 try {
                   const response = await apiRequest("GET", `/api/projects/${selectedProjectId}/matrix/cells?rowModuleId=${moduleRowId}&colModuleId=${moduleColId}`);
-                  
+
                   if (response && response.length > 0) {
                     // Update existing cell
                     console.log(`Updating existing cell ${cellId}`);
@@ -1191,7 +1192,7 @@ export default function TraceabilityMatrixPage() {
                 } catch (err) {
                   console.log(`Error checking cell existence, will create new: ${err}`);
                 }
-                
+
                 // Now save the cell with retries
                 const result = await apiRequest("POST", `/api/projects/${selectedProjectId}/matrix/cells`, {
                   rowModuleId: parseInt(moduleRowId),
@@ -1200,29 +1201,29 @@ export default function TraceabilityMatrixPage() {
                   value: JSON.stringify(value),
                   createdById: currentUser?.id || 1
                 });
-                
+
                 // Force reload matrix data after successful save
                 queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/matrix/cells`] });
-                
+
                 console.log(`Cell ${cellId} saved successfully`, result);
-                
+
                 // After saving, create a more permanent backup in IndexedDB
                 try {
                   if (window.indexedDB) {
                     const request = window.indexedDB.open("traceabilityMatrixCellsDB", 1);
-                    
+
                     request.onupgradeneeded = (event) => {
                       const db = (event.target as IDBOpenDBRequest).result;
                       if (!db.objectStoreNames.contains('cells')) {
                         db.createObjectStore('cells', { keyPath: 'id' });
                       }
                     };
-                    
+
                     request.onsuccess = (event) => {
                       const db = (event.target as IDBOpenDBRequest).result;
                       const transaction = db.transaction(['cells'], 'readwrite');
                       const store = transaction.objectStore('cells');
-                      
+
                       store.put({
                         id: `${selectedProjectId}_${moduleRowId}_${moduleColId}`,
                         rowModuleId: moduleRowId,
@@ -1231,17 +1232,17 @@ export default function TraceabilityMatrixPage() {
                         value: value,
                         savedAt: new Date().toISOString()
                       });
-                      
+
                       db.close();
                     };
                   }
                 } catch (e) {
                   console.error("Error backing up to IndexedDB:", e);
                 }
-                
+
               } catch (error) {
                 console.error(`Failed to save cell (attempt ${attempt}/${maxAttempts}):`, error);
-                
+
                 // Retry if we haven't exceeded max attempts
                 if (attempt < maxAttempts) {
                   console.log(`Retrying save... (${attempt + 1}/${maxAttempts})`);
@@ -1261,12 +1262,12 @@ export default function TraceabilityMatrixPage() {
                     };
                     const backupKey = `matrix_cell_backup_${selectedProjectId}_${moduleRowId}_${moduleColId}`;
                     localStorage.setItem(backupKey, JSON.stringify(cellBackup));
-                    
+
                     // Add to a recovery list that can be processed on next load
                     const recoveryList = JSON.parse(localStorage.getItem('matrix_cell_recovery_list') || '[]');
                     recoveryList.push(backupKey);
                     localStorage.setItem('matrix_cell_recovery_list', JSON.stringify(recoveryList));
-                    
+
                     console.log("Cell backup saved to localStorage recovery list");
                   } catch (e) {
                     console.error("Ultimate backup to localStorage failed:", e);
@@ -1274,7 +1275,7 @@ export default function TraceabilityMatrixPage() {
                 }
               }
             };
-            
+
             // Start the save process
             await saveCell();
           })();
@@ -1286,7 +1287,7 @@ export default function TraceabilityMatrixPage() {
   // Save all pending changes to the database
   const saveAllChanges = async (): Promise<boolean> => {
     if (pendingSaves.length === 0) return false;
-    
+
     // Use current user ID if available, otherwise use a default ID
     const userId = currentUser?.id || 1;
 
@@ -1747,7 +1748,7 @@ export default function TraceabilityMatrixPage() {
     queryKey: ['/api/user/current'],
     retry: false
   });
-  
+
   // Combined user data from API or localStorage backup
   const currentUser = apiUser || localStorageUser;
 
@@ -1807,27 +1808,27 @@ export default function TraceabilityMatrixPage() {
         createdAt: response.createdAt,
         updatedAt: response.updatedAt
       };
-      
+
       // DB PERSISTENCE FIX: Ensuring markers are properly stored in the database
       console.log("DB PERSISTENCE: Adding new marker to database and state:", newMarkerWithId);
-      
+
       // 1. Update React state for immediate UI feedback
       setCustomMarkers(current => [...current, newMarkerWithId]);
-      
+
       // 2. Use the centralized function to save the complete marker collection to the database
       try {
         // First get the complete list of markers including the new one
         const allMarkers = [...customMarkers, newMarkerWithId];
-        
+
         // Then save them all to the database using our centralized function
         // This ensures all markers are properly stored in the database
         saveMarkersToStorageAndDb(allMarkers);
-        
+
         console.log("DB PERSISTENCE: Saved all markers to database, total:", allMarkers.length);
       } catch (e) {
         console.error("DB PERSISTENCE: Failed to save markers to database:", e);
       }
-      
+
       // 3. Force a direct refresh from the server to ensure everything is in sync
       (async () => {
         try {
@@ -1835,7 +1836,7 @@ export default function TraceabilityMatrixPage() {
           const refreshResponse = await fetch(`/api/projects/${selectedProjectId}/matrix/markers?_t=${Date.now()}`, {
             credentials: 'include'
           });
-          
+
           if (refreshResponse.ok) {
             const freshMarkers = await refreshResponse.json();
             if (freshMarkers && Array.isArray(freshMarkers)) {
@@ -1848,7 +1849,7 @@ export default function TraceabilityMatrixPage() {
           console.error("PERSISTENCE FIX: Failed to refresh markers:", e);
         }
       })();
-      
+
       // 4. Refresh markers in the React Query cache
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/matrix/markers`] });
 
@@ -1912,7 +1913,7 @@ export default function TraceabilityMatrixPage() {
           marker.id === editingMarker.id ? editingMarker : marker
         )
       );
-      
+
       // Save to localStorage as a backup
       try {
         const allMarkers = customMarkers.map(marker => 
@@ -1928,7 +1929,7 @@ export default function TraceabilityMatrixPage() {
 
       try {
         console.log("UPDATE FIX: Making PATCH request to server");
-        
+
         // Use fetch directly for more control and better error handling
         const response = await fetch(`/api/projects/${selectedProjectId}/matrix/markers/${editingMarker.id}`, {
           method: 'PATCH',
@@ -1943,26 +1944,26 @@ export default function TraceabilityMatrixPage() {
           }),
           credentials: 'include'
         });
-        
+
         console.log("UPDATE FIX: Server response status:", response.status);
-        
+
         if (response.ok) {
           const updatedMarker = await response.json();
           console.log("UPDATE FIX: Successfully updated marker:", updatedMarker);
-          
+
           // Close the dialog
           setEditingMarker(null);
-          
+
           toast({
             title: "Marker updated",
             description: `Marker "${editingMarker.label}" has been updated`,
           });
-          
+
           // Refresh markers from server
           refetchMarkers();
         } else if (response.status === 404) {
           console.log("UPDATE FIX: Marker not found (404). Creating a new one instead.");
-          
+
           // Create a new marker with the same properties
           const createResponse = await fetch(`/api/projects/${selectedProjectId}/matrix/markers`, {
             method: 'POST',
@@ -1979,19 +1980,19 @@ export default function TraceabilityMatrixPage() {
             }),
             credentials: 'include'
           });
-          
+
           if (createResponse.ok) {
             const newMarker = await createResponse.json();
             console.log("UPDATE FIX: Successfully recreated missing marker:", newMarker);
-            
+
             // Close the dialog
             setEditingMarker(null);
-            
+
             toast({
               title: "Marker updated",
               description: `Marker "${editingMarker.label}" has been updated`,
             });
-            
+
             // Refresh markers from server
             refetchMarkers();
           } else {
@@ -2025,7 +2026,7 @@ export default function TraceabilityMatrixPage() {
       if (error?.response) {
         console.error("Server response:", error.response);
       }
-      
+
       // Make sure to clear the autosaving state
       setIsAutosaving(false);
     }
@@ -2049,10 +2050,10 @@ export default function TraceabilityMatrixPage() {
     try {
       console.log("DELETE FIX: Deleting marker with ID:", markerId);
       setIsAutosaving(true); // Show the autosaving indicator
-      
+
       // First, update local state immediately for responsive UI
       setCustomMarkers(current => current.filter(marker => marker.id !== markerId));
-      
+
       // Also clean up local storage to prevent resurrection of deleted markers
       try {
         const storageKey = `markers_${selectedProjectId}`;
@@ -2076,18 +2077,18 @@ export default function TraceabilityMatrixPage() {
         },
         credentials: 'include'
       });
-      
+
       console.log("DELETE FIX: Server response status:", deleteResponse.status);
-      
+
       // Accept both 200 (success) and 404 (already deleted) as successful outcomes
       if (!deleteResponse.ok && deleteResponse.status !== 404) {
         const errorText = await deleteResponse.text();
         console.error("DELETE FIX: Server error response:", errorText);
         throw new Error(`Delete request failed with status ${deleteResponse.status}: ${errorText}`);
       }
-      
+
       console.log("DELETE FIX: Delete request successful");
-      
+
       // Force a refresh of markers from the server to ensure our state is in sync
       try {
         const refreshResponse = await apiRequest("GET", `/api/projects/${selectedProjectId}/matrix/markers?_t=${Date.now()}`);
@@ -2106,12 +2107,12 @@ export default function TraceabilityMatrixPage() {
         title: "Marker deleted",
         description: "The marker has been deleted",
       });
-      
+
       setIsAutosaving(false); // Hide the autosaving indicator
     } catch (error) {
       console.error("DELETE FIX: Failed to delete marker:", error);
       setIsAutosaving(false); // Hide the autosaving indicator
-      
+
       toast({
         title: "Error",
         description: "Failed to delete marker. Please try again.",
@@ -2123,6 +2124,7 @@ export default function TraceabilityMatrixPage() {
   return (
     <MainLayout>
       <div className="p-4">
+      {renderHeader()}
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center">
@@ -2590,12 +2592,12 @@ function CellDropdown({
   // Direct save function to ensure persistence
   const saveCellToDatabase = async (newValue: CellValue) => {
     if (!projectId) return;
-    
+
     // First update the UI
     onChange(newValue);
-    
+
     console.log(`⚠️ DIRECT FIX: Saving cell value directly to database: Row=${rowId}, Col=${colId}, Value=`, newValue);
-    
+
     try {
       // Save to database
       const saveResponse = await apiRequest("POST", `/api/projects/${projectId}/matrix/cells`, {
@@ -2605,21 +2607,21 @@ function CellDropdown({
         value: JSON.stringify(newValue),
         createdById: 1 // Default user ID
       });
-      
+
       console.log(`✅ DIRECT FIX: Successfully saved to database:`, saveResponse);
-      
+
       // Create a backup in localStorage
       localStorage.setItem(`matrix_cell_${projectId}_${rowId}_${colId}`, JSON.stringify({
         value: newValue,
         timestamp: new Date().toISOString()
       }));
-      
+
       // Force refresh the data in React Query cache to ensure it's available when switching modules
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/matrix/cells`] });
-      
+
     } catch (error) {
       console.error(`❌ DIRECT FIX: Failed to save cell to database:`, error);
-      
+
       // Fallback to localStorage
       localStorage.setItem(`matrix_cell_${projectId}_${rowId}_${colId}`, JSON.stringify({
         value: newValue,

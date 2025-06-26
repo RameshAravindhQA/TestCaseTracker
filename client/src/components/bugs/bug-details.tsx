@@ -96,7 +96,11 @@ export function BugDetails({ bug, users = [] }: BugDetailsProps) {
     {/* Comments Section */}
     <Card>
       <CardContent className="pt-6">
-        <BugComments bugId={bug.id} />
+        <BugComments 
+                bugId={bug.id} 
+                githubIssueNumber={bug.githubIssueNumber}
+                projectId={bug.projectId}
+              />
       </CardContent>
     </Card>
   );

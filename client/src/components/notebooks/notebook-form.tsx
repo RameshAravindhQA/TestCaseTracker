@@ -1,88 +1,110 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { Notebook } from "@/types";
+import { Checkbox } from "@/components/ui/checkbox";
+import { HexColorPicker } from "react-colorful";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface NotebookFormProps {
-  notebook?: Notebook;
-  onSuccess?: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  notebook?: {
+    id: number;
+    title: string;
+    content: string;
+    color: string;
+    archived: boolean;
+  } | null;
 }
 
-export function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
+export default function NotebookForm({ open, onOpenChange, notebook }: NotebookFormProps) {
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [color, setColor] = useState("#3b82f6");
+  const [archived, setArchived] = useState(false);
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [formData, setFormData] = useState({
-    title: notebook?.title || '',
-    content: notebook?.content || '',
-    color: notebook?.color || '#ffffff',
-    isPinned: notebook?.isPinned || false,
-    isArchived: notebook?.isArchived || false,
-    tags: notebook?.tags || []
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/notebooks", data);
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to create notebook: ${errorText}`);
+  // Reset form when dialog opens/closes or notebook changes
+  useEffect(() => {
+    if (open) {
+      if (notebook) {
+        setTitle(notebook.title || "");
+        setContent(notebook.content || "");
+        setColor(notebook.color || "#3b82f6");
+        setArchived(notebook.archived || false);
+      } else {
+        setTitle("");
+        setContent("");
+        setColor("#3b82f6");
+        setArchived(false);
       }
-      return response.json();
+    }
+  }, [open, notebook]);
+
+  const createNotebookMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/notebooks", data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create notebook");
+      }
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notebooks'] });
       toast({
         title: "Success",
-        description: "Notebook created successfully.",
+        description: "Notebook created successfully",
       });
-      onSuccess?.();
+      queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
+      onOpenChange(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: `Failed to create notebook: ${error.message}`,
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // Update notebook mutation
   const updateNotebookMutation = useMutation({
-    mutationFn: async (data: Partial<Notebook>) => {
-      if (!notebook?.id) throw new Error("No notebook ID provided");
-
-      const response = await apiRequest("PUT", `/api/notebooks/${notebook.id}`, {
-        title: data.title,
-        content: data.content,
-        color: data.color,
-        tags: data.tags,
-        isPinned: data.isPinned,
-        isArchived: data.isArchived
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to update notebook: ${errorText}`);
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PUT", `/api/notebooks/${notebook?.id}`, data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update notebook");
       }
-      return response.json();
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
       toast({
         title: "Success",
-        description: "Notebook updated successfully.",
+        description: "Notebook updated successfully",
       });
-      onSuccess?.();
+      queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
+      onOpenChange(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
-        title: "Error", 
-        description: `Failed to update notebook: ${error.message}`,
+        title: "Error",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -90,99 +112,144 @@ export function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.title.trim()) {
+    
+    if (!title.trim()) {
       toast({
         title: "Error",
-        description: "Title is required.",
+        description: "Title is required",
         variant: "destructive",
       });
       return;
     }
 
-    console.log('Form submitted with data:', formData);
-    const submitData = {
-      title: formData.title.trim(),
-      content: formData.content || '',
-      color: formData.color || '#ffffff',
-      isPinned: formData.isPinned || false,
-      isArchived: formData.isArchived || false,
-      tags: formData.tags || []
+    const notebookData = {
+      title: title.trim(),
+      content: content.trim(),
+      color,
+      archived,
     };
 
     if (notebook) {
-      console.log('Updating notebook with:', submitData);
-      updateNotebookMutation.mutate(submitData);
+      updateNotebookMutation.mutate(notebookData);
     } else {
-      console.log('Creating new notebook with:', submitData);
-      createMutation.mutate(submitData);
+      createNotebookMutation.mutate(notebookData);
     }
   };
 
-  const isLoading = createMutation.isPending || updateNotebookMutation.isPending;
+  const isLoading = createNotebookMutation.isPending || updateNotebookMutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="title">Title</Label>
-        <Input
-          id="title"
-          value={formData.title}
-          onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-          placeholder="Enter notebook title"
-          required
-        />
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>
+              {notebook ? "Edit Notebook" : "Create New Notebook"}
+            </DialogTitle>
+            <DialogDescription>
+              {notebook ? "Update your notebook details and content." : "Create a new notebook to organize your notes."}
+            </DialogDescription>
+          </DialogHeader>
 
-      <div>
-        <Label htmlFor="content">Content</Label>
-        <Textarea
-          id="content"
-          value={formData.content}
-          onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-          placeholder="Enter notebook content"
-          rows={10}
-        />
-      </div>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter notebook title..."
+                disabled={isLoading}
+              />
+            </div>
 
-      <div>
-        <Label htmlFor="color">Color</Label>
-        <Input
-          id="color"
-          type="color"
-          value={formData.color}
-          onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-        />
-      </div>
+            <div className="grid gap-2">
+              <Label htmlFor="content">Content</Label>
+              <Textarea
+                id="content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Enter your notes..."
+                rows={6}
+                disabled={isLoading}
+              />
+            </div>
 
-      <div className="flex gap-4">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={formData.isPinned}
-            onChange={(e) => setFormData(prev => ({ ...prev, isPinned: e.target.checked }))}
-          />
-          Pinned
-        </label>
+            <div className="grid gap-2">
+              <Label>Color</Label>
+              <div className="flex items-center gap-2">
+                <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-16 h-8 p-0 border-2"
+                      style={{ backgroundColor: color }}
+                      disabled={isLoading}
+                    >
+                      <span className="sr-only">Pick a color</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-2" align="start">
+                    <div className="w-48 h-48">
+                      <HexColorPicker 
+                        color={color} 
+                        onChange={setColor}
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Input
+                        value={color}
+                        onChange={(e) => setColor(e.target.value)}
+                        className="h-8 text-xs"
+                        placeholder="#000000"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => setIsColorPickerOpen(false)}
+                      >
+                        Done
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <span className="text-sm text-muted-foreground">{color}</span>
+              </div>
+            </div>
 
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={formData.isArchived}
-            onChange={(e) => setFormData(prev => ({ ...prev, isArchived: e.target.checked }))}
-          />
-          Archived
-        </label>
-      </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="archived"
+                checked={archived}
+                onCheckedChange={(checked) => setArchived(checked as boolean)}
+                disabled={isLoading}
+              />
+              <Label
+                htmlFor="archived"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Archive this notebook
+              </Label>
+            </div>
+          </div>
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Saving..." : notebook ? "Update" : "Create"}
-        </Button>
-        <Button type="button" variant="outline" onClick={onSuccess}>
-          Cancel
-        </Button>
-      </div>
-    </form>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Saving..." : notebook ? "Update" : "Create"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

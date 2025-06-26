@@ -762,9 +762,23 @@ export default function TimeSheetsPage() {
       </Helmet>
 
       <DashboardShell>
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-amber-500 via-orange-600 to-red-500 rounded-xl shadow-lg">
+                  <Clock className="h-8 w-8 text-white" />
+                </div>
+                Time Sheets
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">Manage and track your time entries</p>
+            </div>
+          </div>
+        </div>
+
         <DashboardHeader
-          heading="Time Sheets"
-          text="Manage and track your time entries"
+          heading=""
+          text=""
         >
           <Button
             onClick={() => {

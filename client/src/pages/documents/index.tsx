@@ -1124,10 +1124,13 @@ export default function DocumentsPage() {
         <div className="py-6 px-4 sm:px-6 lg:px-8">
           <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 rounded-xl shadow-lg">
+                  <FolderOpen className="h-8 w-8 text-white" />
+                </div>
                 Document Management
               </h1>
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="text-gray-600 dark:text-gray-400 mt-2">
                 Manage project documents and folders
               </p>
             </div>
