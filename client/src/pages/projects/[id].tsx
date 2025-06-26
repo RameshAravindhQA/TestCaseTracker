@@ -898,8 +898,7 @@ export default function ProjectDetailPage() {
             projectId={projectId}
             module={selectedModuleForTestCase || undefined}
             modules={modules || []}
-            onSuccess={() => setTestCaseFormOpen(false)}```text
-
+            onSuccess={() => setTestCaseFormOpen(false)}
           />
         </DialogContent>
       </Dialog>
