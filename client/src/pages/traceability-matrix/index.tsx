@@ -631,11 +631,10 @@ export default function TraceabilityMatrixPage() {
                     });
                   }
                 }
+              } catch (e) {
+                console.error(`Error processing recovery item ${key}:`, e);
               }
-            } catch (e) {
-              console.error(`Error processing recovery item ${key}:`, e);
-            }
-          });
+            });
         }
       } catch (error) {
         console.error("Error checking localStorage recovery list:", error);
@@ -861,6 +860,7 @@ export default function TraceabilityMatrixPage() {
                         try {
                           const storageKey = `markers_${selectedProjectId}`;
                           localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));```text
+```text
                         } catch (e) {
                           console.error("MARKER FIX: Failed to update localStorage after IndexedDB recovery:", e);
                         }
@@ -2647,7 +2647,8 @@ function CellDropdown({
   const saveCellToDatabase = async (newValue: CellValue) => {
     if (!projectId) return;
 
-        // First update the UI
+        ```text
+    // First update the UI
     onChange(newValue);
 
     console.log(`⚠️ DIRECT FIX: Saving cell value directly to database: Row=${rowId}, Col=${colId}, Value=`, newValue);
