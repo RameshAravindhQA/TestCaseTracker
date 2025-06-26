@@ -859,9 +859,8 @@ export default function TraceabilityMatrixPage() {
                         // Also save back to localStorage for redundancy
                         try {
                           const storageKey = `markers_${selectedProjectId}`;
-                          localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));```text
-```text
-                        } catch (e) {
+                          localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));
+                        }                        } catch (e) {
                           console.error("MARKER FIX: Failed to update localStorage after IndexedDB recovery:", e);
                         }
                       }
@@ -2647,7 +2646,6 @@ function CellDropdown({
   const saveCellToDatabase = async (newValue: CellValue) => {
     if (!projectId) return;
 
-        ```text
     // First update the UI
     onChange(newValue);
 
