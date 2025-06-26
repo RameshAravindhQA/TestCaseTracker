@@ -57,7 +57,7 @@ import {
 import { CheckCircle, AlertCircle, Clock, Filter, RefreshCw, GitBranch, Network, Link2, Grid3X3 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 
 // Define the cell value types
 type CellValue = {
@@ -164,7 +164,7 @@ export default function TraceabilityMatrixPage() {
   const [editingMarker, setEditingMarker] = useState<CustomMarker | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-    const navigate = useNavigate();
+    const [, setLocation] = useLocation();
 
   // Default markers to use if no custom markers exist
   const defaultMarkers: Array<Omit<CustomMarker, 'id' | 'projectId' | 'createdById' | 'createdAt' | 'updatedAt'>> = [
@@ -861,8 +861,7 @@ export default function TraceabilityMatrixPage() {
                         try {
                           const storageKey = `markers_${selectedProjectId}`;
                           localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));
-Updated navigate call in error component
-```
+                        } catch (e) {
                           console.error("MARKER FIX: Failed to update localStorage after IndexedDB recovery:", e);
                         }
                       }
@@ -2166,7 +2165,7 @@ Updated navigate call in error component
             <Download className="h-4 w-4" />
             Export
           </Button>
-          <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => navigate('/projects')}>
+          <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => setLocation('/projects')}>
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
@@ -2648,8 +2647,6 @@ function CellDropdown({
   const saveCellToDatabase = async (newValue: CellValue) => {
     if (!projectId) return;
 
-    //This update replaces the `useNavigate` hook with `setLocation` from `wouter` to fix routing in the traceability matrix component.
-```typescript
     // First update the UI
     onChange(newValue);
 
