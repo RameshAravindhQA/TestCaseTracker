@@ -187,33 +187,33 @@ export interface IStorage {
  * In-memory storage implementation for development and testing
  */
 class MemStorage implements IStorage {
-  // In-memory storage for different entity types
-  private projects: Project[] = [];
-  private users: User[] = [];
-  private modules: Module[] = [];
-  private testCases: TestCase[] = [];
-  private bugs: Bug[] = [];
-  private activities: Activity[] = [];
-  private projectMembers: ProjectMember[] = [];
-  private tags: Tag[] = [];
-  private documents: Document[] = [];
-  private documentFolders: DocumentFolder[] = [];
-  private timeSheets: TimeSheet[] = [];
-  private timeSheetFolders: TimeSheetFolder[] = [];
-  private customers: Customer[] = [];
-  private customerProjects: CustomerProject[] = [];
+  // In-memory storage for different entity types using Maps
+  private projects = new Map<number, Project>();
+  private users = new Map<number, User>();
+  private modules = new Map<number, Module>();
+  private testCases = new Map<number, TestCase>();
+  private bugs = new Map<number, Bug>();
+  private activities = new Map<number, Activity>();
+  private tags = new Map<number, Tag>();
+  private documents = new Map<number, Document>();
+  private documentFolders = new Map<number, DocumentFolder>();
+  private timeSheets = new Map<number, TimeSheet>();
+  private timeSheetFolders = new Map<number, TimeSheetFolder>();
+  private customers = new Map<number, Customer>();
+  private customerProjects = new Map<number, CustomerProject>();
+  private projectMembers = new Map<number, ProjectMember>();
+  private sprints = new Map<number, Sprint>();
+  private kanbanColumns = new Map<number, KanbanColumn>();
+  private kanbanCards = new Map<number, KanbanCard>();
+  private customMarkers = new Map<number, CustomMarker>();
+  private matrixCells = new Map<string, MatrixCell>();
+  private testSheets = new Map<number, TestSheet>();
   private chatMessages = new Map<number, any[]>();
+  private githubConfigs: any[] = [];
+  private githubIssues: any[] = [];
+  private notebooksData = { notebooks: [] as any[] };
 
   private nextId = 1;
-  private moduleCounter = 1;
-  private testCaseCounter = 1;
-  private bugCounter = 1;
-  private projectMembers = new Map<number, any>();
-  private activities = new Map<number, any>();
-  private timeSheets = new Map<number, any>();
-  private timeSheetFolders = new Map<number, any>();
-  private customerProjects = new Map<number, any>();
-  private sprints = new Map<number, any>();
   private testSheetIdCounter = 1;
 
   private getNextId(): number {
@@ -234,7 +234,7 @@ class MemStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const existingIds = Array.from(this.users.values()).map(u => u.id);
+    const existingIds = Array.from(this.users.keys());
     const id = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
     const user: User = {
       id: id,
@@ -268,7 +268,7 @@ class MemStorage implements IStorage {
   }
 
   async createProject(insertProject: InsertProject): Promise<Project> {
-    const existingIds = Array.from(this.projects.values()).map(p => p.id);
+    const existingIds = Array.from(this.projects.keys());
     const id = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
     const project: Project = {
       id: id,
