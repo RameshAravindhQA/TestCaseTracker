@@ -869,8 +869,6 @@ export default function TraceabilityMatrixPage() {
                     console.error("MARKER FIX: Error getting markers from IndexedDB:", err);
                     db.close();
                   };
-                }
-                  };
                 } else {
                   console.log("Markers store doesn't exist yet");
                   // Close the database connection if we're not using it
