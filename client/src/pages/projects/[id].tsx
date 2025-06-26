@@ -20,13 +20,12 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ModuleForm } from "@/components/modules/module-form";
 import { BugForm } from "@/components/bugs/bug-form";
-import { TestCaseTable } from "@/components/test-cases/test-case-table";
-import { BugComments } from "@/components/bugs/bug-comments";
 import { BugTable } from "@/components/bugs/bug-table";
+import { ProjectChat } from "@/components/chat/project-chat";
+import { TestCaseTable } from "@/components/test-cases/test-case-table";
 import { TestCaseForm } from "@/components/test-cases/test-case-form";
 import { ImportExport } from "@/components/test-cases/import-export";
 import { AITestGenerator } from "@/components/test-cases/ai-test-generator";
-import { ProjectChat } from "@/components/chat/project-chat";
 import { GitHubConfigForm } from "@/components/github/github-config-form";
 import { TestCaseTags } from "@/components/test-cases/test-case-tags";
 import { format, formatDistance } from "date-fns";
@@ -748,10 +747,6 @@ export default function ProjectDetailPage() {
                     });
                   }}
                 />
-                <ProjectChat
-                  projectId={projectId}
-                  currentUser={currentUser}
-                />
                 <Button onClick={() => setTestCaseFormOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Test Case
@@ -904,7 +899,7 @@ export default function ProjectDetailPage() {
       </Dialog>
 
       {/* Bug Form Dialog */}
-      <Dialog open={bugFormOpen} onOpenChange={setBugFormOpen}>
+      <Dialog open={bugFormOpen}onOpenChange={setBugFormOpen}>
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>{selectedBug ? "Edit Bug Report" : "Report New Bug"}</DialogTitle>
