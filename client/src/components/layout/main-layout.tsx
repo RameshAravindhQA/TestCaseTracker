@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile as useMobile } from "@/hooks/use-mobile";
 import { AnimatedContainer } from "@/components/ui/animated-container";
 import { motion } from "framer-motion";
+import { GlobalChatbot } from "@/components/chat/global-chatbot"; // Importing the GlobalChatbot component
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -127,6 +128,9 @@ export function MainLayout({ children }: MainLayoutProps) {
       )}>
         {children}
       </main>
+
+      {/* Global Chatbot */}
+      <GlobalChatbot />
     </div>
   );
 }
