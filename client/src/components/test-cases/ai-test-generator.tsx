@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,21 +39,33 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   const [generatedTestCases, setGeneratedTestCases] = useState<GeneratedTestCase[]>([]);
   const [selectedTestCases, setSelectedTestCases] = useState<Set<number>>(new Set());
   const [showResults, setShowResults] = useState(false);
-  
+
   const { toast } = useToast();
 
-  const generateTestCasesMutation = useMutation({
+  const generateTestCases = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest('POST', '/api/ai/generate-test-cases', data);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
       return response.json();
     },
-    onSuccess: (data: GeneratedTestCase[]) => {
-      setGeneratedTestCases(data);
-      setShowResults(true);
-      toast({
-        title: "Test cases generated!",
-        description: `Generated ${data.length} test cases using AI.`,
-      });
+    onSuccess: (data) => {
+      console.log('AI Generation Response:', data);
+      if (data.testCases && Array.isArray(data.testCases) && data.testCases.length > 0) {
+        setGeneratedTestCases(data.testCases);
+        toast({
+          title: "Test Cases Generated",
+          description: data.message || `Generated ${data.testCases.length} test cases successfully`,
+        });
+      } else {
+        toast({
+          title: "No Test Cases Generated",
+          description: "The AI couldn't generate test cases for the given requirements",
+          variant: "destructive",
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -76,8 +87,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
     }
 
     const selectedModule = modules.find(m => m.id === moduleId);
-    
-    generateTestCasesMutation.mutate({
+
+    generateTestCases.mutate({
       requirement,
       projectContext,
       moduleContext: selectedModule?.name,
@@ -118,7 +129,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
     setSelectedTestCases(new Set());
     setRequirement("");
     setProjectContext("");
-    
+
     toast({
       title: "Test cases added!",
       description: `Added ${selectedCases.length} AI-generated test cases.`,
@@ -226,10 +237,10 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
               </Button>
               <Button 
                 onClick={handleGenerate} 
-                disabled={generateTestCasesMutation.isPending}
+                disabled={generateTestCases.isPending}
                 className="gap-2"
               >
-                {generateTestCasesMutation.isPending ? (
+                {generateTestCases.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Sparkles className="h-4 w-4" />
