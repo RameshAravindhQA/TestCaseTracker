@@ -22,7 +22,6 @@ import { ModuleForm } from "@/components/modules/module-form";
 import { TestCaseForm } from "@/components/test-cases/test-case-form";
 import { BugForm } from "@/components/bugs/bug-form";
 import { TestCaseTable } from "@/components/test-cases/test-case-table";
-import { ModuleTable } from "@/components/modules/module-table";
 import { BugTable } from "@/components/bugs/bug-table";
 import { ImportExport } from "@/components/test-cases/import-export";
 import { AITestGenerator } from "@/components/test-cases/ai-test-generator";
