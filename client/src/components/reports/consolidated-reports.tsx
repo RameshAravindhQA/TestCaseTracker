@@ -103,6 +103,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const [selectedProject, setSelectedProject] = useState<string>("all");
   // Force re-render when filters change
   const [filterKey, setFilterKey] = useState(0);
+  const [allItems, setAllItems] = useState<any[]>([]);
 
   const currentProjectId = selectedProjectId || projectId;
 
@@ -234,69 +235,85 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
 
-  // Update test case status mutation
+  // Update item status mutations
   const updateTestCaseMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      try {
-        const res = await apiRequest("PUT", `/api/test-cases/${id}`, { status });
-        if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(`Failed to update test case: ${res.status} - ${errorText}`);
-        }
-        return res.json();
-      } catch (error: any) {
-        console.error('Test case update error:', error);
-        throw new Error(`Failed to update test case: ${error.message}`);
+      const response = await apiRequest("PUT", `/api/test-cases/${id}`, { status });
+      if (!response.ok) {
+        throw new Error("Failed to update test case status");
       }
+      return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
+    onSuccess: (data, variables) => {
+      // Update local state immediately
+      setAllItems(prevItems => 
+        prevItems.map(item => 
+          item.id === variables.id && item.type === 'test-case'
+            ? { ...item, status: variables.status }
+            : item
+        )
+      );
+
+      // Refresh queries
+      queryClient.invalidateQueries({ queryKey: ["/api/test-cases"] });
+
       toast({
-        title: "Status updated",
-        description: "Test case status updated successfully.",
+        title: "Success",
+        description: "Test Case status updated successfully.",
       });
     },
-    onError: (error: any) => {
-      console.error('Test case update error:', error);
+    onError: (error) => {
       toast({
-        title: "Update failed",
-        description: `Failed to update test case: ${error.message}`,
+        title: "Error",
+        description: `Failed to update test case status: ${error}`,
         variant: "destructive",
       });
     },
   });
 
-  // Update bug status mutation
   const updateBugMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      try {
-        const res = await apiRequest("PUT", `/api/bugs/${id}`, { status });
-        if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(`Failed to update bug: ${res.status} - ${errorText}`);
-        }
-        return res.json();
-      } catch (error: any) {
-        console.error('Bug update error:', error);
-        throw new Error(`Failed to update bug: ${error.message}`);
+      const response = await apiRequest("PUT", `/api/bugs/${id}`, { status });
+      if (!response.ok) {
+        throw new Error("Failed to update bug status");
       }
+      return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+    onSuccess: (data, variables) => {
+      // Update local state immediately
+      setAllItems(prevItems => 
+        prevItems.map(item => 
+          item.id === variables.id && item.type === 'bug'
+            ? { ...item, status: variables.status }
+            : item
+        )
+      );
+
+      // Refresh queries
+      queryClient.invalidateQueries({ queryKey: ["/api/bugs"] });
+
       toast({
-        title: "Status updated",
-        description: "Bug status updated successfully.",
+        title: "Success",
+        description: "Bug Report status updated successfully.",
       });
     },
-    onError: (error: any) => {
-      console.error('Bug update error:', error);
+    onError: (error) => {
       toast({
-        title: "Update failed",
-        description: `Failed to update bug: ${error.message}`,
+        title: "Error",
+        description: `Failed to update bug status: ${error}`,
         variant: "destructive",
       });
     },
   });
+
+  // Update item status
+  const updateItemStatus = async (item: any, newStatus: string) => {
+    if (item.type === 'test-case') {
+      updateTestCaseMutation.mutate({ id: item.id, status: newStatus });
+    } else if (item.type === 'bug') {
+      updateBugMutation.mutate({ id: item.id, status: newStatus });
+    }
+  };
 
   // GitHub sync mutation
   const syncWithGithubMutation = useMutation({
@@ -627,6 +644,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     }) : [];
 
     const combined = [...testCaseItems, ...bugItems];
+    setAllItems(combined);
 
     console.log("Combined Data Created:", {
       testCaseItems: testCaseItems.length,

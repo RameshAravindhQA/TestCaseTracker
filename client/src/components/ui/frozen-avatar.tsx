@@ -1,67 +1,61 @@
-"use client"
-
-import * as React from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "./avatar"
-import { User } from "@/types"
-import { useStableAvatar } from "@/hooks/use-stable-avatar"
+import React, { useState, useEffect } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { User } from "@/types";
+import { cn } from "@/lib/utils";
 
 interface FrozenAvatarProps {
-  user: User | null | undefined;
+  user?: User;
   className?: string;
   fallbackClassName?: string;
 }
 
-/**
- * A special avatar component that "freezes" its state on first render
- * and never updates again, even if the user prop changes.
- * This prevents unnecessary re-renders and image flickering.
- */
-export const FrozenAvatar = React.memo(function FrozenAvatarInner({ 
-  user, 
-  className, 
-  fallbackClassName 
-}: FrozenAvatarProps) {
-  // Get stable avatar information that doesn't change
-  const { avatarUrl, userInitials, hasImage } = useStableAvatar(user);
-  
-  // Cache loading state with a ref to avoid re-renders
-  const imageLoadedRef = React.useRef(false);
-  const [imageVisible, setImageVisible] = React.useState(false);
-  
-  // Pre-load the image to avoid flickering - only run once
-  React.useEffect(() => {
-    // If we already started loading, don't do it again
-    if (imageLoadedRef.current) return;
-    
-    if (avatarUrl) {
-      const img = new Image();
-      img.src = avatarUrl;
-      img.onload = () => {
-        imageLoadedRef.current = true;
-        setImageVisible(true);
-      };
+export function FrozenAvatar({ user, className, fallbackClassName }: FrozenAvatarProps) {
+  const [frozenData, setFrozenData] = useState<{
+    initials: string;
+    profilePicture?: string;
+    timestamp: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      const initials = (user.firstName?.charAt(0)?.toUpperCase() || '') + 
+                     (user.lastName?.charAt(0)?.toUpperCase() || '') || 
+                     user.name?.split(' ').map(n => n.charAt(0)).join('').toUpperCase() || 
+                     "U";
+
+      // Always update if profile picture has changed or is new
+      const newProfilePicture = user.profilePicture ? `${user.profilePicture}?t=${Date.now()}` : undefined;
+
+      if (!frozenData || frozenData.profilePicture !== newProfilePicture) {
+        setFrozenData({
+          initials,
+          profilePicture: newProfilePicture,
+          timestamp: Date.now(),
+        });
+      }
     }
-  }, []);  // Empty dependency array - only run once
-  
-  // Memoize the avatar component to prevent re-renders
-  return React.useMemo(() => (
+  }, [user?.profilePicture, user?.firstName, user?.lastName, user?.name]);
+
+  if (!frozenData) {
+    return (
+      <Avatar className={className}>
+        <AvatarFallback className={fallbackClassName}>
+          U
+        </AvatarFallback>
+      </Avatar>
+    );
+  }
+
+  return (
     <Avatar className={className}>
-      {hasImage && avatarUrl && (
-        <AvatarImage 
-          src={avatarUrl}
-          alt={user?.name || "User"}
-          className={imageVisible ? "opacity-100" : "opacity-0"}
-        />
-      )}
-      
-      <AvatarFallback 
-        className={fallbackClassName}
-      >
-        {userInitials}
+      <AvatarImage 
+        src={frozenData.profilePicture} 
+        alt={user?.name || "User Avatar"}
+        key={frozenData.timestamp} // Force re-render when timestamp changes
+      />
+      <AvatarFallback className={fallbackClassName}>
+        {frozenData.initials}
       </AvatarFallback>
     </Avatar>
-  ), [className, fallbackClassName, hasImage, avatarUrl, imageVisible, userInitials]);
-}, () => {
-  // Always return true in the comparison function to prevent updates
-  return true;
-});
+  );
+}

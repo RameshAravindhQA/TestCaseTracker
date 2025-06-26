@@ -68,7 +68,7 @@ export default function BugViewPage() {
             onClick={() => {
               // Try to get the referrer info from sessionStorage
               const referrer = sessionStorage.getItem('bugReferrer');
-              
+
               startTransition(() => {
                 if (referrer && referrer.startsWith('/projects/')) {
                   // If coming from a project page, go back to that project's bugs tab

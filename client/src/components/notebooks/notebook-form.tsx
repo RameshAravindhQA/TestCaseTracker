@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -34,13 +33,21 @@ interface NotebookFormProps {
   onSuccess: () => void;
 }
 
+interface NotebookFormData {
+    title: string;
+    content: string;
+    color: string;
+    tags?: string[];
+    isArchived?: boolean;
+}
+
 function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [color, setColor] = useState("#3b82f6");
   const [archived, setArchived] = useState(false);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
-  
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -85,27 +92,50 @@ function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
     },
   });
 
+  // Update notebook mutation
   const updateNotebookMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("PUT", `/api/notebooks/${notebook?.id}`, data);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to update notebook");
+    mutationFn: async (data: NotebookFormData) => {
+      if (!notebook) throw new Error("No notebook to update");
+
+      const updateData = {
+        title: data.title,
+        content: data.content,
+        color: data.color,
+        tags: data.tags,
+        isArchived: data.isArchived,
+        isPinned: notebook.isPinned, // Preserve existing pinned status
+      };
+
+      console.log("Updating notebook with data:", updateData);
+
+      const response = await apiRequest("PUT", `/api/notebooks/${notebook.id}`, updateData);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Update failed:", errorText);
+        throw new Error(`Failed to update notebook: ${errorText}`);
       }
-      return res.json();
+
+      const result = await response.json();
+      console.log("Update successful:", result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate and refetch notebooks
+      queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
+      queryClient.refetchQueries({ queryKey: ["/api/notebooks"] });
+
       toast({
         title: "Success",
-        description: "Notebook updated successfully",
+        description: "Notebook updated successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
-      onSuccess();
+      onSuccess?.();
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      console.error("Update notebook error:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: `Failed to update notebook: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -113,7 +143,7 @@ function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!title.trim()) {
       toast({
         title: "Error",

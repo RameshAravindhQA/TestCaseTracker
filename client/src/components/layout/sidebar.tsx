@@ -67,6 +67,9 @@ const SidebarComponent = ({ className }: SidebarProps) => {
 
   const { data: user } = useQuery<User>({
     queryKey: ["/api/auth/user"],
+    refetchInterval: 5000, // Refetch every 5 seconds to get updated profile picture
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Always consider data stale to ensure fresh profile picture
   });
 
   const logoutMutation = useMutation({
