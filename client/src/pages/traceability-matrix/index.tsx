@@ -626,11 +626,10 @@ export default function TraceabilityMatrixPage() {
                     });
                   }
                 }
-              try {
-                // Process recovery item logic here
-              } catch (e) {
-                console.error(`Error processing recovery item ${key}:`, e);
               }
+            } catch (e) {
+              console.error(`Error processing recovery item ${key}:`, e);
+            }
           });
         }
       } catch (e) {
@@ -2121,6 +2120,11 @@ export default function TraceabilityMatrixPage() {
         variant: "destructive"
       });
     }
+  };
+
+  // Render header function
+  const renderHeader = () => {
+    return null; // For now, return null to prevent errors
   };
 
   return (
