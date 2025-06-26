@@ -19,9 +19,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ModuleForm } from "@/components/modules/module-form";
-import { TestCaseForm } from "@/components/test-cases/test-case-form";
 import { BugForm } from "@/components/bugs/bug-form";
-import { TestCaseTable } from "@/components/test-cases/test-case-table";
+import { BugComments } from "@/components/bugs/bug-comments";
+import { TestCaseForm } from "@/components/test-cases/test-case-form";
 import { BugTable } from "@/components/bugs/bug-table";
 import { ImportExport } from "@/components/test-cases/import-export";
 import { AITestGenerator } from "@/components/test-cases/ai-test-generator";
@@ -48,11 +48,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { 
-  Edit, Plus, ArrowLeft, Trash, Layers, CheckSquare, Bug as BugIcon, FileText, Loader2, Github, Settings
+  Edit, Plus, ArrowLeft, Trash, Layers, CheckSquare, Bug as BugIcon, FileText, Loader2, Github, Settings, RefreshCw, Sparkles
 } from "lucide-react";
 import { ProjectExport } from "@/components/project/project-export";
 import { GitHubIssueButton } from "@/components/github/github-issue-button";
-import { RefreshCw } from "lucide-react";
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -66,6 +65,7 @@ export default function ProjectDetailPage() {
   // State for dialogs
   const [moduleFormOpen, setModuleFormOpen] = useState(false);
   const [testCaseFormOpen, setTestCaseFormOpen] = useState(false);
+  const [aiGeneratorOpen, setAiGeneratorOpen] = useState(false);
   const [bugFormOpen, setBugFormOpen] = useState(false);
   const [deleteModuleDialogOpen, setDeleteModuleDialogOpen] = useState(false);
   const [deleteTestCaseDialogOpen, setDeleteTestCaseDialogOpen] = useState(false);
@@ -897,7 +897,8 @@ export default function ProjectDetailPage() {
             projectId={projectId}
             module={selectedModuleForTestCase || undefined}
             modules={modules || []}
-            onSuccess={() => setTestCaseFormOpen(false)}
+            ```text
+onSuccess={() => setTestCaseFormOpen(false)}
           />
         </DialogContent>
       </Dialog>
@@ -1240,6 +1241,26 @@ export default function ProjectDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* AI Generator Dialog */}
+      <Dialog open={aiGeneratorOpen} onOpenChange={setAiGeneratorOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              AI Test Generator
+            </DialogTitle>
+          </DialogHeader>
+          <AITestGenerator
+            projectId={projectId}
+            modules={modules || []}
+            onSuccess={() => {
+              setAiGeneratorOpen(false);
+              queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/test-cases`] });
+            }}
+          />
+        </DialogContent>
+      </Dialog>
       <GitHubConfigForm
         open={showGitHubConfig}
         onOpenChange={setShowGitHubConfig}

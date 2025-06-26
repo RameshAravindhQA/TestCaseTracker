@@ -21,7 +21,8 @@ import {
   ThumbsDown,
   MoreHorizontal,
   Eye,
-  EyeOff
+  EyeOff,
+  Save
 } from "lucide-react";
 import { 
   DropdownMenu,

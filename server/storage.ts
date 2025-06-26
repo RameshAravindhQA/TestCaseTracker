@@ -205,6 +205,8 @@ class MemStorage implements IStorage {
   private flowDiagrams: any[] = [];
   private githubConfigs: any[] = [];
   private githubIssues: any[] = [];
+  private bugComments: any[] = [];
+  private chatMessages: any[] = [];
   private notebooksData = { notebooks: [] };
   private chatMessages = new Map<number, any[]>();
 
@@ -1792,7 +1794,7 @@ class MemStorage implements IStorage {
   }
 
   async updateGitHubIssue(id: number, data: any): Promise<any | null> {
-    const index = this.githubIssues.findIndex(issue => issue.id === id);
+    const index =this.githubIssues.findIndex(issue => issue.id === id);
     if (index === -1){
       return null;
     }
