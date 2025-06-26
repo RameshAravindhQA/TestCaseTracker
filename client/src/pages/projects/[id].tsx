@@ -19,13 +19,16 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ModuleForm } from "@/components/modules/module-form";
-import { TestCaseTable } from "@/components/test-cases/test-case-table";
-import { BugTable } from "@/components/bugs/bug-table";
-import { GitHubConfigForm } from "@/components/github/github-config-form";
 import { TestCaseForm } from "@/components/test-cases/test-case-form";
-import { TestCaseTags } from "@/components/test-cases/test-case-tags";
 import { BugForm } from "@/components/bugs/bug-form";
+import { TestCaseTable } from "@/components/test-cases/test-case-table";
+import { ModuleTable } from "@/components/modules/module-table";
+import { BugTable } from "@/components/bugs/bug-table";
 import { ImportExport } from "@/components/test-cases/import-export";
+import { AITestGenerator } from "@/components/test-cases/ai-test-generator";
+import { ProjectChat } from "@/components/chat/project-chat";
+import { GitHubConfigForm } from "@/components/github/github-config-form";
+import { TestCaseTags } from "@/components/test-cases/test-case-tags";
 import { format, formatDistance } from "date-fns";
 import { 
   Dialog,
@@ -473,6 +476,33 @@ export default function ProjectDetailPage() {
     syncFromGithubMutation.mutate();
   };
 
+    const createTestCaseMutation = useMutation({
+    mutationFn: async (testCase: TestCase) => {
+      const res = await apiRequest("POST", `/api/test-cases`, testCase);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Test case created",
+        description: "Test case has been created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/test-cases`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to create test case: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mock current user
+  const currentUser = {
+    id: "user-1",
+    name: "John Doe",
+  };
+
   return (
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
@@ -702,13 +732,31 @@ export default function ProjectDetailPage() {
           <TabsContent value="test-cases">
             <div className="mb-4 flex justify-between items-center">
               <h2 className="text-lg font-medium">All Test Cases</h2>
-              <Button
-                onClick={handleAddTestCase}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Test Case
-              </Button>
+              <div className="flex items-center gap-2">
+                <ImportExport 
+                  projectId={projectId}
+                  modules={modules || []}
+                  testCases={testCases || []}
+                />
+                <AITestGenerator
+                  projectId={projectId}
+                  modules={modules || []}
+                  onTestCasesGenerated={(generatedCases) => {
+                    // Add generated test cases to the project
+                    generatedCases.forEach(testCase => {
+                      createTestCaseMutation.mutate(testCase);
+                    });
+                  }}
+                />
+                <ProjectChat
+                  projectId={projectId}
+                  currentUser={currentUser}
+                />
+                <Button onClick={() => setTestCaseFormOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Test Case
+                </Button>
+              </div>
             </div>
 
             {isTestCasesLoading ? (
@@ -850,7 +898,8 @@ export default function ProjectDetailPage() {
             projectId={projectId}
             module={selectedModuleForTestCase || undefined}
             modules={modules || []}
-            onSuccess={() => setTestCaseFormOpen(false)}
+            onSuccess={() => setTestCaseFormOpen(false)}```text
+
           />
         </DialogContent>
       </Dialog>

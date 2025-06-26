@@ -177,6 +177,10 @@ export interface IStorage {
     createNotebook(notebookData: Omit<Notebook, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notebook>;
     updateNotebook(id: number, userId: number, updates: Partial<Notebook>): Promise<Notebook | null>;
     deleteNotebook(id: number, userId: number): Promise<boolean>;
+
+  // Chat operations
+  createChatMessage(message: any): Promise<any>;
+  getChatMessages(projectId: number, limit?: number): Promise<any[]>;
 }
 
 /**
@@ -202,6 +206,7 @@ class MemStorage implements IStorage {
   private githubConfigs: any[] = [];
   private githubIssues: any[] = [];
   private notebooksData = { notebooks: [] };
+  private chatMessages = new Map<number, any[]>();
 
   private nextId = 1;
   private moduleCounter = 1;
@@ -840,7 +845,7 @@ class MemStorage implements IStorage {
     return card;
   }
 
-  async getKanbanCards(columnId: number): Promise<KanbanCard[]> {
+  async getKanbanCards(columnId: number): Promise<KanbanCard[]> {```text
     return Array.from(this.kanbanCards.values())
       .filter(card => card.columnId === columnId)
       .sort((a, b) => a.position - b.position);
@@ -1792,7 +1797,9 @@ class MemStorage implements IStorage {
 
   async updateGitHubIssue(id: number, data: any): Promise<any | null> {
     const index = this.githubIssues.findIndex(issue => issue.id === id);
-    if (index === -1) return null;
+    if (index === -1){
+      return null;
+    }
 
     this.githubIssues[index] = {
       ...this.githubIssues[index],
@@ -1851,6 +1858,30 @@ class MemStorage implements IStorage {
 
     this.notebooksData.notebooks.splice(notebookIndex, 1);
     return true;
+  }
+
+    async createChatMessage(message: any): Promise<any> {
+    const projectId = message.projectId;
+    if (!this.chatMessages.has(projectId)) {
+      this.chatMessages.set(projectId, []);
+    }
+    const messages = this.chatMessages.get(projectId) || [];
+    const newMessage = {
+      id: this.getNextId(),
+      ...message,
+      timestamp: new Date().toISOString(),
+    };
+    messages.push(newMessage);
+    this.chatMessages.set(projectId, messages);
+    return newMessage;
+  }
+
+  async getChatMessages(projectId: number, limit: number = 50): Promise<any[]> {
+    if (!this.chatMessages.has(projectId)) {
+      return [];
+    }
+    const messages = this.chatMessages.get(projectId) || [];
+    return messages.slice(-limit); // Return the last 'limit' messages
   }
 
   // Helper functions for JSON file operations
