@@ -120,11 +120,13 @@ export default function ConsolidatedReports() {
     mutationFn: async ({ id, type, status }: UpdateStatusRequest) => {
       const endpoint = type === 'testcase' ? `/api/test-cases/${id}` : `/api/bugs/${id}`;
       try {
+        const token = localStorage.getItem('token');
         const response = await fetch(endpoint, {
           method: 'PATCH',
           headers: { 
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ status })
         });
@@ -148,6 +150,9 @@ export default function ConsolidatedReports() {
       }
     },
     onSuccess: (_, variables) => {
+      // Refresh both data sources to get updated status
+      refetchTestCases();
+      refetchBugs();
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProject}/test-cases`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProject}/bugs`] });
       toast({

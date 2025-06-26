@@ -193,10 +193,12 @@ export default function NotebooksPage() {
         <div className="mb-6 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <BookOpen className="h-8 w-8 text-blue-600" />
+              <div className="p-2 bg-gradient-to-br from-emerald-500 via-green-600 to-teal-500 rounded-xl shadow-lg">
+                <BookOpen className="h-8 w-8 text-white" />
+              </div>
               Notebooks
             </h1>
-            <p className="mt-2 text-sm text-gray-600">Create and organize your notes with rich formatting</p>
+            <p className="text-gray-600 mt-2">Create and organize your notes with rich formatting</p>
           </div>
 
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

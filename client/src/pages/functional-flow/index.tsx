@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Download, FileDown, FilePlus, Save } from "lucide-react";
+import { Download, GitBranch, FileDown, FilePlus, Save } from "lucide-react";
 import { FlowDiagram, FlowDiagramData } from "@/../../shared/functional-flow-types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -76,12 +76,12 @@ export default function FunctionalFlowPage() {
 
       const savedFlow = await response.json();
       setCurrentFlowId(savedFlow.id);
-      
+
       toast({
         title: "Success",
         description: "Flow diagram saved successfully",
       });
-      
+
       refetchFlows();
     } catch (error) {
       console.error('Error saving flow diagram:', error);
@@ -110,7 +110,7 @@ export default function FunctionalFlowPage() {
     try {
       // Export logic will be implemented in the FlowDesigner component
       const success = await window.flowDesignerRef?.exportPDF();
-      
+
       if (success) {
         toast({
           title: "Success",

@@ -177,10 +177,13 @@ export default function BugsPage() {
         <div className="py-6 px-4 sm:px-6 lg:px-8 flex-shrink-0">
           <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-red-500 via-rose-600 to-pink-500 rounded-xl shadow-lg">
+                  <BugIcon className="h-8 w-8 text-white" />
+                </div>
                 Bug Reports
               </h1>
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="text-gray-600 mt-2">
                 Track and manage bug reports
               </p>
             </div>

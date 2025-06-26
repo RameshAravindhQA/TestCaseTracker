@@ -53,12 +53,17 @@ export function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
   });
 
   // Update notebook mutation
-  const updateMutation = useMutation({
+  const updateNotebookMutation = useMutation({
     mutationFn: async (data: Partial<Notebook>) => {
-      console.log('Updating notebook with data:', data);
-      const response = await apiRequest("PUT", `/api/notebooks/${notebook?.id}`, {
-        ...data,
-        updatedAt: new Date().toISOString()
+      if (!notebook?.id) throw new Error("No notebook ID provided");
+
+      const response = await apiRequest("PUT", `/api/notebooks/${notebook.id}`, {
+        title: data.title,
+        content: data.content,
+        color: data.color,
+        tags: data.tags,
+        isPinned: data.isPinned,
+        isArchived: data.isArchived
       });
       if (!response.ok) {
         const errorText = await response.text();
@@ -66,23 +71,17 @@ export function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
       }
       return response.json();
     },
-    onSuccess: (updatedNotebook) => {
-      console.log('Notebook updated successfully:', updatedNotebook);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
-      queryClient.setQueryData(["/api/notebooks"], (oldData: Notebook[] | undefined) => {
-        if (!oldData) return [updatedNotebook];
-        return oldData.map(n => n.id === updatedNotebook.id ? updatedNotebook : n);
-      });
       toast({
         title: "Success",
         description: "Notebook updated successfully.",
       });
-      onSuccess();
+      onSuccess?.();
     },
     onError: (error: any) => {
-      console.error('Notebook update error:', error);
       toast({
-        title: "Error",
+        title: "Error", 
         description: `Failed to update notebook: ${error.message}`,
         variant: "destructive",
       });
@@ -113,14 +112,14 @@ export function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
 
     if (notebook) {
       console.log('Updating notebook with:', submitData);
-      updateMutation.mutate(submitData);
+      updateNotebookMutation.mutate(submitData);
     } else {
       console.log('Creating new notebook with:', submitData);
       createMutation.mutate(submitData);
     }
   };
 
-  const isLoading = createMutation.isPending || updateMutation.isPending;
+  const isLoading = createMutation.isPending || updateNotebookMutation.isPending;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">

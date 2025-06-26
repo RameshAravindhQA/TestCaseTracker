@@ -25,7 +25,7 @@ import { Project, Module, TestCase, Bug } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Loader2 } from "lucide-react";
+import { Search, Plus, Loader2, TestTube } from "lucide-react";
 import { 
   Dialog,
   DialogContent,
@@ -196,8 +196,13 @@ export default function TestCasesPage() {
         <div className="py-6 px-4 sm:px-6 lg:px-8 flex-shrink-0">
           <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">Test Cases</h1>
-              <p className="mt-1 text-sm text-gray-600">Manage test cases across all projects</p>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-500 rounded-xl shadow-lg">
+                  <TestTube className="h-8 w-8 text-white" />
+                </div>
+                Test Cases
+              </h1>
+              <p className="text-gray-600 mt-2">Manage test cases across all projects</p>
             </div>
 
           {selectedProjectId && (

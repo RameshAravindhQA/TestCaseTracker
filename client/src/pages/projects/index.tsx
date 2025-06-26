@@ -3,7 +3,7 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { ProjectTable } from "@/components/projects/project-table";
 import { ProjectImport } from "@/components/project/project-import";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Search, Filter, FolderOpen } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Project } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
@@ -36,7 +36,7 @@ export default function ProjectsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [location] = useLocation();
-  
+
   // Check if we should open the form automatically (from dashboard)
   useEffect(() => {
     // Check if the URL has ?new=true query parameter
@@ -46,12 +46,12 @@ export default function ProjectsPage() {
       setFormOpen(true);
     }
   }, [location]);
-  
+
   // Fetch projects
   const { data: projects, isLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
   });
-  
+
   // Delete project mutation
   const deleteProjectMutation = useMutation({
     mutationFn: async (projectId: number) => {
@@ -74,32 +74,37 @@ export default function ProjectsPage() {
       });
     },
   });
-  
+
   // Handler for edit button
   const handleEdit = (project: Project) => {
     setSelectedProject(project);
     setFormOpen(true);
   };
-  
+
   // Handler for delete button
   const handleDelete = (project: Project) => {
     setSelectedProject(project);
     setDeleteDialogOpen(true);
   };
-  
+
   // Confirm delete handler
   const confirmDelete = () => {
     if (selectedProject) {
       deleteProjectMutation.mutate(selectedProject.id);
     }
   };
-  
+
   return (
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
         <div className="mb-6 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-500 rounded-xl shadow-lg">
+              <FolderOpen className="h-8 w-8 text-white" />
+            </div>
+            Projects
+          </h1>
             <p className="mt-1 text-sm text-gray-600">Manage your testing projects</p>
           </div>
           <div className="flex gap-2">
@@ -113,7 +118,7 @@ export default function ProjectsPage() {
             </Button>
           </div>
         </div>
-        
+
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -126,7 +131,7 @@ export default function ProjectsPage() {
           />
         )}
       </div>
-      
+
       {/* Create/Edit Project Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="sm:max-w-[600px]">
@@ -144,7 +149,7 @@ export default function ProjectsPage() {
           />
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

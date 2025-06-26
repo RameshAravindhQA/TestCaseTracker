@@ -225,8 +225,13 @@ export default function TestSheetsPage() {
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Test Sheets</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-500 rounded-xl shadow-lg">
+              <FileSpreadsheet className="h-8 w-8 text-white" />
+            </div>
+            Test Sheets
+          </h1>
+          <p className="text-gray-600 mt-2">
             Create and manage Excel-like test sheets for your projects
           </p>
         </div>
