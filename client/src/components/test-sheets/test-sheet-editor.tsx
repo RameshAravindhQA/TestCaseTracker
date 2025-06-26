@@ -29,7 +29,7 @@ import {
   Filter,
   Search,
   Copy,
-  Paste,
+  Clipboard,
   Undo,
   Redo,
   X
@@ -734,7 +734,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
         <Copy className="h-4 w-4" />
       </Button>
       <Button size="sm" variant="outline" onClick={pasteSelection}>
-        <Paste className="h-4 w-4" />
+        <Clipboard className="h-4 w-4" />
       </Button>
       
       <Separator orientation="vertical" className="h-6" />

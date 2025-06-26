@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProjectSelect } from "@/components/ui/project-select";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -54,6 +54,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { CheckCircle, AlertCircle, Clock, Filter, RefreshCw, GitBranch, Network, Link2, Grid3X3 } from "lucide-react";
 
 // Define the cell value types
 type CellValue = {
@@ -626,11 +627,11 @@ export default function TraceabilityMatrixPage() {
                     });
                   }
                 }
+              } catch (e) {
+                console.error(`Error processing recovery item ${key}:`, e);
               }
-            } catch (e) {
-              console.error(`Error processing recovery item ${key}:`, e);
-            }
-          });
+            });
+          }
         }
       } catch (e) {
         console.error("Error checking localStorage recovery list:", e);
@@ -866,7 +867,7 @@ export default function TraceabilityMatrixPage() {
 
                   // Move the error handler inside too
                   getRequest.onerror = (err) => {
-                    console.error("MARKER FIX: Error getting markers from IndexedDB:", err);
+                    console.error("MARKER FIX: Error getting markers from IndexedDB:`, err);
                     db.close();
                   };
                 } else {
@@ -1734,7 +1735,8 @@ export default function TraceabilityMatrixPage() {
     });
 
     // Save PDF
-    doc.save(`traceability_matrix_${projectName.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`traceability_matrix_${projectName.replace(/\code
+\s+/g, '_')}.pdf`);
 
     toast({
       title: "Export successful",
@@ -2122,7 +2124,52 @@ export default function TraceabilityMatrixPage() {
 
   // Render header function
   const renderHeader = () => {
-    return null; // For now, return null to prevent errors
+    return (
+    <div className="container mx-auto p-6">
+      <div className="flex items-center justify-between px-2 border-b border-gray-200 dark:border-gray-800 pb-4 mb-6">
+        <div className="flex items-center gap-6">
+          <div className="grid gap-1">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg">
+                <Network className="h-6 w-6 text-white" />
+              </div>
+              <h1 className="font-heading text-2xl md:text-3xl">Traceability Matrix</h1>
+            </div>
+            <p className="text-muted-foreground">Track relationships between requirements and test cases</p>
+          </div>
+
+          <nav className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <GitBranch className="h-4 w-4" />
+              Requirements
+            </Button>
+            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <Link2 className="h-4 w-4" />
+              Mapping
+            </Button>
+            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <Grid3X3 className="h-4 w-4" />
+              Matrix View
+            </Button>
+          </nav>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <Filter className="h-4 w-4" />
+            Filter
+          </Button>
+          <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+          <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
   };
 
   return (
@@ -2606,154 +2653,3 @@ function CellDropdown({
       // Save to database
       const saveResponse = await apiRequest("POST", `/api/projects/${projectId}/matrix/cells`, {
         rowModuleId: parseInt(rowId),
-        colModuleId: parseInt(colId),
-        projectId: parseInt(projectId),
-        value: JSON.stringify(newValue),
-        createdById: 1 // Default user ID
-      });
-
-      console.log(`✅ DIRECT FIX: Successfully saved to database:`, saveResponse);
-
-      // Create a backup in localStorage
-      localStorage.setItem(`matrix_cell_${projectId}_${rowId}_${colId}`, JSON.stringify({
-        value: newValue,
-        timestamp: new Date().toISOString()
-      }));
-
-      // Force refresh the data in React Query cache to ensure it's available when switching modules
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/matrix/cells`] });
-
-    } catch (error) {
-      console.error(`❌ DIRECT FIX: Failed to save cell to database:`, error);
-
-      // Fallback to localStorage
-      localStorage.setItem(`matrix_cell_${projectId}_${rowId}_${colId}`, JSON.stringify({
-        value: newValue,
-        timestamp: new Date().toISOString()
-      }));
-    }
-  };
-  // MARKER FIX: Re-enable debugging logs for marker troubleshooting
-  useEffect(() => {
-    console.log("MARKER FIX: CellDropdown received markers:", customMarkers?.length || 0);
-    if (customMarkers && customMarkers.length > 0) {
-      console.log("MARKER FIX: First marker:", customMarkers[0]);
-      console.log("MARKER FIX: Marker IDs:", customMarkers.map(m => m.markerId));
-    }
-  }, [customMarkers]);
-
-  // Helper function to determine if a color is light
-  const isLightColor = (color: string) => {
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return (r * 0.299 + g * 0.587 + b * 0.114) > 186;
-  };
-
-  // Get background color and text based on value type
-  const getBgStyles = () => {
-    if (value.type === 'empty') {
-      return {};
-    }
-
-    if (value.type === 'checkmark') {
-      const color = value.color || '#10b981'; // Default green
-      const textColor = isLightColor(color) ? 'text-gray-900' : 'text-white';
-      return {
-        backgroundColor: color,
-        className: `w-full h-full flex items-center justify-center ${textColor}`
-      };
-    }
-
-    if (value.type === 'x-mark') {
-      const color = value.color || '#ef4444'; // Default red
-      const textColor = isLightColor(color) ? 'text-gray-900' : 'text-white';
-      return {
-        backgroundColor: color,
-        className: `w-full h-full flex items-center justify-center ${textColor}`
-      };
-    }
-
-    // Custom type
-    const color = value.color || '#3b82f6'; // Default blue
-    const textColor = isLightColor(color) ? 'text-gray-900' : 'text-white';
-    return {
-      backgroundColor: color,
-      className: `w-full h-full flex items-center justify-center ${textColor}`
-    };
-  };
-
-  const styles = getBgStyles();
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <div 
-          className={`h-full w-full cursor-pointer ${styles.className || 'hover:bg-gray-50 dark:hover:bg-gray-800/60'}`}
-          style={{ backgroundColor: styles.backgroundColor }}
-        >
-          {value.type === 'empty' ? (
-            <div className="flex items-center justify-center w-full h-full text-gray-400 hover:text-gray-600">
-              <ChevronDown className="h-3 w-3" />
-            </div>
-          ) : value.type === 'checkmark' ? (
-            <div className="flex justify-center">
-              <span className="font-medium">Yes</span>
-            </div>
-          ) : value.type === 'x-mark' ? (
-            <div className="flex justify-center">
-              <span className="font-medium">No</span>
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <span className="font-medium">{value.label || '●'}</span>
-            </div>
-          )}
-        </div>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuItem 
-          onClick={() => saveCellToDatabase({ type: 'empty' })}
-          className="justify-center"
-        >
-          <div className="h-4 w-4 border border-dashed border-gray-400 rounded-full" />
-          <span className="ml-2">Clear</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-
-        {customMarkers && customMarkers.length > 0 ? (
-          customMarkers.map(marker => (
-            <DropdownMenuItem
-              key={marker.markerId}
-              onClick={() => saveCellToDatabase({
-                type: marker.type, 
-                color: marker.color,
-                label: marker.label
-              })}
-              style={{
-                backgroundColor: marker.type !== 'empty' ? `${marker.color}20` : undefined, // Add a light background of the marker color
-              }}
-            >
-            <div className="flex items-center">
-              {/* Always show marker with its label */}
-              <div 
-                className="h-5 w-5 rounded-full flex-shrink-0 mr-2" 
-                style={{ backgroundColor: marker.color }}
-              />
-              <span className="font-medium">{marker.label}</span>
-            </div>
-          </DropdownMenuItem>
-        ))
-        ) : (
-          <DropdownMenuItem disabled>
-            <div className="text-center w-full text-gray-500">
-              No custom markers available
-            </div>
-          </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
