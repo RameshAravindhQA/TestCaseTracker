@@ -999,7 +999,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
 
-// AI Chat endpoint
+// AI Test Case Generation endpoint
+  apiRouter.post("/ai/generate-test-cases", isAuthenticated, async (req, res) => {
+    try {
+      const { requirement, projectContext, moduleContext, testType, priority } = req.body;
+      
+      if (!requirement) {
+        return res.status(400).json({ error: 'Requirement is required' });
+      }
+
+      // Mock AI generation for now (replace with actual OpenAI integration when API key is available)
+      const mockTestCases = [
+        {
+          feature: `Test ${requirement} - Happy Path`,
+          testObjective: `Verify that ${requirement} works correctly under normal conditions`,
+          preConditions: "User is logged in and has appropriate permissions",
+          testSteps: `1. Navigate to the ${requirement} section\n2. Enter valid data\n3. Click submit/save\n4. Verify the action completes successfully`,
+          expectedResult: `${requirement} should complete successfully with appropriate confirmation`,
+          priority: priority || "Medium",
+          testType: testType || "functional",
+          coverage: `Happy path scenario for ${requirement}`
+        },
+        {
+          feature: `Test ${requirement} - Error Handling`,
+          testObjective: `Verify that ${requirement} handles errors gracefully`,
+          preConditions: "User is logged in and has appropriate permissions",
+          testSteps: `1. Navigate to the ${requirement} section\n2. Enter invalid data\n3. Click submit/save\n4. Verify appropriate error message is displayed`,
+          expectedResult: "System should display clear error message and prevent invalid operation",
+          priority: priority || "Medium",
+          testType: testType || "functional",
+          coverage: `Error handling for ${requirement}`
+        },
+        {
+          feature: `Test ${requirement} - Boundary Conditions`,
+          testObjective: `Verify that ${requirement} handles boundary conditions correctly`,
+          preConditions: "User is logged in and has appropriate permissions",
+          testSteps: `1. Navigate to the ${requirement} section\n2. Enter boundary values (min/max)\n3. Click submit/save\n4. Verify system handles boundaries correctly`,
+          expectedResult: "System should handle boundary conditions appropriately",
+          priority: priority || "Low",
+          testType: testType || "functional",
+          coverage: `Boundary testing for ${requirement}`
+        }
+      ];
+
+      res.json({
+        testCases: mockTestCases,
+        message: `Generated ${mockTestCases.length} test cases for: ${requirement}`
+      });
+    } catch (error) {
+      console.error('AI test case generation error:', error);
+      res.status(500).json({ error: 'Failed to generate test cases' });
+    }
+  });
+
+  // AI Chat endpoint
 app.post('/api/chat/ai', authMiddleware, async (req, res) => {
   try {
     const { message, context } = req.body;
@@ -1048,6 +1101,9 @@ app.post('/api/chat/ai', authMiddleware, async (req, res) => {
   // Serve uploaded files (profile pictures and documents)
   app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
 
+
+// Auth middleware for non-API routes
+const authMiddleware = isAuthenticated;
 
 // Project Chat endpoints
 app.get('/api/projects/:projectId/chat', authMiddleware, async (req, res) => {

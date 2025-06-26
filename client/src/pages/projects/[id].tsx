@@ -568,6 +568,14 @@ export default function ProjectDetailPage() {
               <Button onClick={handleAddModule}>
                 Add Module
               </Button>
+              <ProjectChat 
+                projectId={projectId} 
+                currentUser={{
+                  id: 1,
+                  name: "Current User",
+                  email: "user@example.com"
+                }} 
+              />
               <Button 
                 variant="outline" 
                 onClick={() => setShowGitHubConfig(true)}
