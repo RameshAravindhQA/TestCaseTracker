@@ -1218,13 +1218,6 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       <div className="space-y-4 p-4">
         <div className="text-center py-4">
           <p className="text-sm text-gray-600">Loading consolidated reports...</p>
-          <p className="text-xs text-gray-500 mt-1">
-            Project ID: {effectiveProjectId || 'Not available'} | 
-            Projects Loading: {isProjectsLoading ? 'Yes' : 'No'} | 
-            Test Cases Loading: {isTestCasesLoading ? 'Yes' : 'No'} | 
-            Bugs Loading: {isBugsLoading ? 'Yes' : 'No'} |
-            Projects Count: {allProjects?.length || 0}
-          </p>
         </div>
         <Skeleton className="h-12 w-full" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">

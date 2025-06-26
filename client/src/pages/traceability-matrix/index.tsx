@@ -626,6 +626,8 @@ export default function TraceabilityMatrixPage() {
                     });
                   }
                 }
+              try {
+                // Process recovery item logic here
               } catch (e) {
                 console.error(`Error processing recovery item ${key}:`, e);
               }
