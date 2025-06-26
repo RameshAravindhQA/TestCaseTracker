@@ -592,43 +592,44 @@ export default function TraceabilityMatrixPage() {
 
           // Process all recovery items
           recoveryList.forEach(key => {
-            try {
-              const cellBackup = JSON.parse(localStorage.getItem(key) || 'null');
-              if (cellBackup && cellBackup.projectId === selectedProjectId) {
-                const rowId = cellBackup.rowModuleId;
-                const colModuleId = cellBackup.colModuleId;
-                const colIndex = modules.findIndex(m => m.id === colModuleId);
+              try {
+                const cellBackup = JSON.parse(localStorage.getItem(key) || 'null');
+                if (cellBackup && cellBackup.projectId === selectedProjectId) {
+                  const rowId = cellBackup.rowModuleId;
+                  const colModuleId = cellBackup.colModuleId;
+                  const colIndex = modules.findIndex(m => m.id === colModuleId);
 
-                // Update the matrix data with this backup
-                if (colIndex >= 0) {
-                  setMatrixData(prevData => {
-                    const newData = { ...prevData };
-                    if (newData[rowId]) {
-                      newData[rowId][colIndex] = cellBackup.value;
-                      console.log(`Restored cell from localStorage: row=${rowId}, col=${colIndex}`);
-                    }
-                    return newData;
-                  });
-
-                  // Also try to save it to the database
-                  if (cellBackup.pendingSave && currentUser) {
-                    console.log(`Attempting to save recovered cell to database: ${key}`);
-                    apiRequest("POST", `/api/projects/${selectedProjectId}/matrix/cells`, {
-                      rowModuleId: parseInt(rowId),
-                      colModuleId: colModuleId,
-                      projectId: parseInt(selectedProjectId),
-                      value: JSON.stringify(cellBackup.value),
-                      createdById: currentUser?.id || 1
-                    }).then(() => {
-                      console.log(`Successfully saved recovered cell to database: ${key}`);
-                      // Remove from recovery list after successful save
-                      const updatedList = JSON.parse(localStorage.getItem('matrix_cell_recovery_list') || '[]')
-                        .filter(k => k !== key);
-                      localStorage.setItem('matrix_cell_recovery_list', JSON.stringify(updatedList));
-                      localStorage.removeItem(key);
-                    }).catch(e => {
-                      console.error(`Failed to save recovered cell to database: ${key}`, e);
+                  // Update the matrix data with this backup
+                  if (colIndex >= 0) {
+                    setMatrixData(prevData => {
+                      const newData = { ...prevData };
+                      if (newData[rowId]) {
+                        newData[rowId][colIndex] = cellBackup.value;
+                        console.log(`Restored cell from localStorage: row=${rowId}, col=${colIndex}`);
+                      }
+                      return newData;
                     });
+
+                    // Also try to save it to the database
+                    if (cellBackup.pendingSave && currentUser) {
+                      console.log(`Attempting to save recovered cell to database: ${key}`);
+                      apiRequest("POST", `/api/projects/${selectedProjectId}/matrix/cells`, {
+                        rowModuleId: parseInt(rowId),
+                        colModuleId: colModuleId,
+                        projectId: parseInt(selectedProjectId),
+                        value: JSON.stringify(cellBackup.value),
+                        createdById: currentUser?.id || 1
+                      }).then(() => {
+                        console.log(`Successfully saved recovered cell to database: ${key}`);
+                        // Remove from recovery list after successful save
+                        const updatedList = JSON.parse(localStorage.getItem('matrix_cell_recovery_list') || '[]')
+                          .filter(k => k !== key);
+                        localStorage.setItem('matrix_cell_recovery_list', JSON.stringify(updatedList));
+                        localStorage.removeItem(key);
+                      }).catch(e => {
+                        console.error(`Failed to save recovered cell to database: ${key}`, e);
+                      });
+                    }
                   }
                 }
               } catch (e) {
