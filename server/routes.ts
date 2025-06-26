@@ -1053,47 +1053,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Chat endpoint
-app.post('/api/chat/ai', authMiddleware, async (req, res) => {
-  try {
-    const { message, context } = req.body;
-    
-    if (!message) {
-      return res.status(400).json({ error: 'Message is required' });
+  apiRouter.post("/chat/ai", isAuthenticated, async (req, res) => {
+    try {
+      const { message, context } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ error: 'Message is required' });
+      }
+
+      // Simple AI response logic (you can enhance this with actual AI integration)
+      const responses = {
+        'test-management': [
+          "I can help you create test cases, manage bugs, and organize your testing workflow. What specific area would you like assistance with?",
+          "For test case management, I recommend organizing your test cases by modules and using clear naming conventions. Would you like me to help you create a test case?",
+          "Bug reporting should include clear steps to reproduce, expected vs actual results, and severity level. Need help with a specific bug?",
+          "I can help you generate test reports, analyze test coverage, and track project progress. What metrics are you interested in?",
+          "For automation, consider starting with your most repetitive test cases. Would you like guidance on automation strategy?"
+        ]
+      };
+
+      const contextResponses = responses[context as keyof typeof responses] || responses['test-management'];
+      const randomResponse = contextResponses[Math.floor(Math.random() * contextResponses.length)];
+
+      // Add some intelligence based on message content
+      let response = randomResponse;
+      
+      if (message.toLowerCase().includes('test case')) {
+        response = "I can help you create test cases! Test cases should include: 1) Clear test objectives, 2) Preconditions, 3) Test steps, 4) Expected results. Would you like me to guide you through creating a specific test case?";
+      } else if (message.toLowerCase().includes('bug')) {
+        response = "For effective bug reporting, include: 1) Steps to reproduce, 2) Expected behavior, 3) Actual behavior, 4) Environment details, 5) Screenshots if applicable. Need help reporting a specific bug?";
+      } else if (message.toLowerCase().includes('report')) {
+        response = "I can help you generate various reports including test execution reports, bug summary reports, and project progress reports. Which type of report are you looking for?";
+      } else if (message.toLowerCase().includes('automation')) {
+        response = "Test automation is great for repetitive tests! Start by identifying stable test cases, then consider tools like Selenium for web testing. What type of testing are you looking to automate?";
+      }
+
+      res.json({ response });
+    } catch (error) {
+      console.error('AI Chat error:', error);
+      res.status(500).json({ error: 'Failed to process chat message' });
     }
-
-    // Simple AI response logic (you can enhance this with actual AI integration)
-    const responses = {
-      'test-management': [
-        "I can help you create test cases, manage bugs, and organize your testing workflow. What specific area would you like assistance with?",
-        "For test case management, I recommend organizing your test cases by modules and using clear naming conventions. Would you like me to help you create a test case?",
-        "Bug reporting should include clear steps to reproduce, expected vs actual results, and severity level. Need help with a specific bug?",
-        "I can help you generate test reports, analyze test coverage, and track project progress. What metrics are you interested in?",
-        "For automation, consider starting with your most repetitive test cases. Would you like guidance on automation strategy?"
-      ]
-    };
-
-    const contextResponses = responses[context as keyof typeof responses] || responses['test-management'];
-    const randomResponse = contextResponses[Math.floor(Math.random() * contextResponses.length)];
-
-    // Add some intelligence based on message content
-    let response = randomResponse;
-    
-    if (message.toLowerCase().includes('test case')) {
-      response = "I can help you create test cases! Test cases should include: 1) Clear test objectives, 2) Preconditions, 3) Test steps, 4) Expected results. Would you like me to guide you through creating a specific test case?";
-    } else if (message.toLowerCase().includes('bug')) {
-      response = "For effective bug reporting, include: 1) Steps to reproduce, 2) Expected behavior, 3) Actual behavior, 4) Environment details, 5) Screenshots if applicable. Need help reporting a specific bug?";
-    } else if (message.toLowerCase().includes('report')) {
-      response = "I can help you generate various reports including test execution reports, bug summary reports, and project progress reports. Which type of report are you looking for?";
-    } else if (message.toLowerCase().includes('automation')) {
-      response = "Test automation is great for repetitive tests! Start by identifying stable test cases, then consider tools like Selenium for web testing. What type of testing are you looking to automate?";
-    }
-
-    res.json({ response });
-  } catch (error) {
-    console.error('AI Chat error:', error);
-    res.status(500).json({ error: 'Failed to process chat message' });
-  }
-});
+  });
 
     }
   );
@@ -1102,60 +1102,66 @@ app.post('/api/chat/ai', authMiddleware, async (req, res) => {
   app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
 
 
-// Auth middleware for non-API routes
-const authMiddleware = isAuthenticated;
-
 // Project Chat endpoints
-app.get('/api/projects/:projectId/chat', authMiddleware, async (req, res) => {
-  try {
-    const projectId = parseInt(req.params.projectId);
-    const messages = await storage.getChatMessages(projectId);
-    res.json(messages);
-  } catch (error) {
-    console.error('Get chat messages error:', error);
-    res.status(500).json({ error: 'Failed to fetch chat messages' });
-  }
-});
-
-app.post('/api/projects/:projectId/chat', authMiddleware, async (req, res) => {
-  try {
-    const projectId = parseInt(req.params.projectId);
-    const { message } = req.body;
-    const userId = req.user.id;
-
-    if (!message || !message.trim()) {
-      return res.status(400).json({ error: 'Message is required' });
+  apiRouter.get("/projects/:projectId/chat", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const messages = await storage.getChatMessages(projectId);
+      res.json(messages);
+    } catch (error) {
+      console.error('Get chat messages error:', error);
+      res.status(500).json({ error: 'Failed to fetch chat messages' });
     }
+  });
 
-    const chatMessage = await storage.createChatMessage({
-      projectId,
-      userId,
-      message: message.trim(),
-      type: 'text'
-    });
+  apiRouter.post("/projects/:projectId/chat", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const { message } = req.body;
+      const userId = req.session.userId!;
 
-    res.json(chatMessage);
-  } catch (error) {
-    console.error('Send chat message error:', error);
-    res.status(500).json({ error: 'Failed to send message' });
-  }
-});
+      if (!message || !message.trim()) {
+        return res.status(400).json({ error: 'Message is required' });
+      }
 
-app.get('/api/projects/:projectId/users', authMiddleware, async (req, res) => {
-  try {
-    const projectId = parseInt(req.params.projectId);
-    // For now, return mock users - you can enhance this to get actual project members
-    const users = [
-      { id: 1, name: 'Alice Johnson', avatar: null },
-      { id: 2, name: 'Bob Smith', avatar: null },
-      { id: 3, name: 'Carol Davis', avatar: null }
-    ];
-    res.json(users);
-  } catch (error) {
-    console.error('Get project users error:', error);
-    res.status(500).json({ error: 'Failed to fetch project users' });
-  }
-});
+      const chatMessage = await storage.createChatMessage({
+        projectId,
+        userId,
+        message: message.trim(),
+        type: 'text'
+      });
+
+      res.json(chatMessage);
+    } catch (error) {
+      console.error('Send chat message error:', error);
+      res.status(500).json({ error: 'Failed to send message' });
+    }
+  });
+
+  apiRouter.get("/projects/:projectId/users", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const projectMembers = await storage.getProjectMembers(projectId);
+      
+      // Get user details for each member
+      const users = await Promise.all(
+        projectMembers.map(async (member) => {
+          const user = await storage.getUser(member.userId);
+          return {
+            id: user?.id,
+            name: user?.firstName + ' ' + (user?.lastName || ''),
+            avatar: user?.profilePicture,
+            role: member.role
+          };
+        })
+      );
+      
+      res.json(users);
+    } catch (error) {
+      console.error('Get project users error:', error);
+      res.status(500).json({ error: 'Failed to fetch project users' });
+    }
+  });
 
     // Log request for debugging
     console.log(`File access request for: ${req.path}`);

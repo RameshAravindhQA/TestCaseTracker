@@ -187,27 +187,21 @@ export interface IStorage {
  * In-memory storage implementation for development and testing
  */
 class MemStorage implements IStorage {
-  private users = new Map<number, User>();
-  private projects = new Map<number, Project>();
-  private projectMembers = new Map<number, any>();
-  private modules = new Map<number, Module>();
-  private testCases = new Map<number, TestCase>();
-  private bugs = new Map<number, Bug>();
-  private documents = new Map<number, Document>();
-  private documentFolders = new Map<number, DocumentFolder>();
-  private customers = new Map<number, Customer>();
-  private tags = new Map<number, Tag>();
-  private kanbanColumns = new Map<number, KanbanColumn>();
-  private kanbanCards = new Map<number, KanbanCard>();
-  private customMarkers = new Map<number, CustomMarker>();
-  private matrixCells = new Map<number, MatrixCell>();
-  private testSheets = new Map<number, any>();
-  private flowDiagrams: any[] = [];
-  private githubConfigs: any[] = [];
-  private githubIssues: any[] = [];
-  private bugComments: any[] = [];
-  private chatMessages: any[] = [];
-  private notebooksData = { notebooks: [] };
+  // In-memory storage for different entity types
+  private projects: Project[] = [];
+  private users: User[] = [];
+  private modules: Module[] = [];
+  private testCases: TestCase[] = [];
+  private bugs: Bug[] = [];
+  private activities: Activity[] = [];
+  private projectMembers: ProjectMember[] = [];
+  private tags: Tag[] = [];
+  private documents: Document[] = [];
+  private documentFolders: DocumentFolder[] = [];
+  private timeSheets: TimeSheet[] = [];
+  private timeSheetFolders: TimeSheetFolder[] = [];
+  private customers: Customer[] = [];
+  private customerProjects: CustomerProject[] = [];
   private chatMessages = new Map<number, any[]>();
 
   private nextId = 1;

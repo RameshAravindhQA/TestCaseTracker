@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,18 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Send, MessageCircle, Users, X, UserPlus, Settings } from "lucide-react";
+import { Send, MessageCircle, Users, X, UserPlus, Minimize2, Maximize2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ChatMessage {
   id: number;
@@ -36,7 +31,8 @@ interface ProjectChatProps {
 }
 
 export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
@@ -50,7 +46,7 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
       const response = await apiRequest('GET', `/api/projects/${projectId}/chat`);
       return response.json();
     },
-    enabled: open,
+    enabled: isOpen,
     refetchInterval: 3000, // Poll every 3 seconds
   });
 
@@ -61,7 +57,7 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
       const response = await apiRequest('GET', `/api/projects/${projectId}/users`);
       return response.json();
     },
-    enabled: open,
+    enabled: isOpen,
   });
 
   const sendMessageMutation = useMutation({
@@ -90,10 +86,10 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
   };
 
   useEffect(() => {
-    if (open) {
+    if (isOpen) {
       scrollToBottom();
     }
-  }, [messages, open]);
+  }, [messages, isOpen]);
 
   const handleSendMessage = () => {
     if (!message.trim()) return;
@@ -120,8 +116,11 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
     const isMentioned = msg.mentionedUsers?.includes(currentUser?.id);
 
     return (
-      <div
+      <motion.div
         key={msg.id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
         className={`flex gap-3 mb-4 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
       >
         {!isOwnMessage && (
@@ -158,11 +157,11 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
 
         {isOwnMessage && (
           <Avatar className="h-8 w-8">
-            <AvatarImage src={currentUser?.avatar} />
-            <AvatarFallback>{getInitials(currentUser?.name || 'U')}</AvatarFallback>
+            <AvatarImage src={currentUser?.profilePicture} />
+            <AvatarFallback>{getInitials(currentUser?.firstName + ' ' + (currentUser?.lastName || ''))}</AvatarFallback>
           </Avatar>
         )}
-      </div>
+      </motion.div>
     );
   };
 
@@ -171,138 +170,157 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
     setMessage(prev => prev + mention);
   };
 
-  const [showCollaborators, setShowCollaborators] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   // Simulate real-time presence
   useEffect(() => {
-    if (open) {
-      // In a real implementation, you would use WebSocket for real-time presence
-      const mockOnlineUsers = ['Alice Johnson', 'Bob Smith', 'Carol Davis'];
+    if (isOpen) {
+      const mockOnlineUsers = projectUsers.slice(0, 3).map((user: any) => user.name);
       setOnlineUsers(mockOnlineUsers);
     }
-  }, [open]);
+  }, [isOpen, projectUsers]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <MessageCircle className="h-4 w-4" />
-          Team Chat
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" />
-            Project Chat
-            <Badge variant="outline" className="ml-2">
-              <Users className="h-3 w-3 mr-1" />
-              {projectUsers.length} members
-            </Badge>
-             <Badge variant="secondary" className="ml-2">
-                {onlineUsers.length} online
-              </Badge>
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      {/* Floating Chat Button */}
+      <AnimatePresence>
+        {!isOpen && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0 }}
+            className="fixed bottom-6 right-6 z-40"
+          >
+            <Button
+              onClick={() => setIsOpen(true)}
+              className="h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all duration-200"
+              size="lg"
+            >
+              <MessageCircle className="h-6 w-6 text-white" />
+            </Button>
+            {/* Notification badge */}
+            <motion.div
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 rounded-full flex items-center justify-center"
+            >
+              <Users className="h-3 w-3 text-white" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        <div className="flex-1 flex flex-col">
-          {/* Messages */}
-          <ScrollArea className="flex-1 p-4">
-            {messages.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No messages yet. Start the conversation!</p>
-              </div>
-            ) : (
-              <div>
-                {messages.map(renderMessage)}
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-
-            {typingUsers.length > 0 && (
-              <div className="text-sm text-muted-foreground italic">
-                {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
-              </div>
-            )}
-          </ScrollArea>
-
-          {/* Message Input */}
-          <div className="border-t p-4">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  placeholder="Type your message..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  disabled={sendMessageMutation.isPending}
-                />
-              </div>
-              <Button
-                size="sm"
-                onClick={handleSendMessage}
-                disabled={!message.trim() || sendMessageMutation.isPending}
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Quick mention buttons */}
-            <div className="flex gap-1 mt-2 flex-wrap">
-              {projectUsers.slice(0, 5).map((user: any) => (
-                <Button
-                  key={user.id}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-6"
-                  onClick={() => insertMention(user)}
-                >
-                  @{user.name}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-         <Dialog open={showCollaborators} onOpenChange={setShowCollaborators}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" title="View Collaborators">
-                  <Users className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Project Collaborators</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="text-sm text-muted-foreground">
-                    Online Now ({onlineUsers.length})
+      {/* Chat Window */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            className={`fixed bottom-6 right-6 z-40 ${
+              isMinimized ? 'w-80' : 'w-96'
+            } ${isMinimized ? 'h-16' : 'h-[500px]'} transition-all duration-200`}
+          >
+            <Card className="h-full shadow-2xl border-blue-200 dark:border-blue-800">
+              {/* Header */}
+              <CardHeader className="pb-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5" />
+                    <CardTitle className="text-lg">Team Chat</CardTitle>
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                      <Users className="h-3 w-3 mr-1" />
+                      {projectUsers.length} members
+                    </Badge>
                   </div>
-                  {onlineUsers.map((user, index) => (
-                    <div key={index} className="flex items-center gap-3 p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>{user.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{user}</div>
-                        <div className="text-xs text-muted-foreground">Active now</div>
-                      </div>
-                      <Badge variant="outline" className="ml-auto text-xs">
-                        Online
-                      </Badge>
-                    </div>
-                  ))}
-                  <Button variant="outline" className="w-full">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Invite Collaborator
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsMinimized(!isMinimized)}
+                      className="text-white hover:bg-blue-700 h-8 w-8 p-0"
+                    >
+                      {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsOpen(false)}
+                      className="text-white hover:bg-blue-700 h-8 w-8 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </DialogContent>
-            </Dialog>
-      </DialogContent>
-    </Dialog>
+              </CardHeader>
+
+              {/* Chat Content */}
+              {!isMinimized && (
+                <CardContent className="flex flex-col h-full p-0">
+                  {/* Messages */}
+                  <ScrollArea className="flex-1 p-4">
+                    {messages.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-8">
+                        <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No messages yet. Start the conversation!</p>
+                      </div>
+                    ) : (
+                      <div>
+                        {messages.map(renderMessage)}
+                        <div ref={messagesEndRef} />
+                      </div>
+                    )}
+
+                    {typingUsers.length > 0 && (
+                      <div className="text-sm text-muted-foreground italic">
+                        {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
+                      </div>
+                    )}
+                  </ScrollArea>
+
+                  {/* Message Input */}
+                  <div className="border-t p-4">
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Type your message..."
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
+                          onKeyPress={handleKeyPress}
+                          disabled={sendMessageMutation.isPending}
+                        />
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={handleSendMessage}
+                        disabled={!message.trim() || sendMessageMutation.isPending}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Quick mention buttons */}
+                    <div className="flex gap-1 mt-2 flex-wrap">
+                      {projectUsers.slice(0, 5).map((user: any) => (
+                        <Button
+                          key={user.id}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-6"
+                          onClick={() => insertMention(user)}
+                        >
+                          @{user.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
