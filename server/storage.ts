@@ -1849,27 +1849,55 @@ class MemStorage implements IStorage {
   }
 
     async createChatMessage(message: any): Promise<any> {
-    const projectId = message.projectId;
+    const projectId = parseInt(message.projectId);
+    
+    // Validate required fields
+    if (!projectId || !message.userId || !message.message) {
+      throw new Error("Missing required fields: projectId, userId, or message");
+    }
+    
     if (!this.chatMessages.has(projectId)) {
       this.chatMessages.set(projectId, []);
     }
+    
     const messages = this.chatMessages.get(projectId) || [];
     const newMessage = {
       id: this.getNextId(),
-      ...message,
+      projectId: projectId,
+      userId: parseInt(message.userId),
+      userName: String(message.userName || 'Anonymous'),
+      message: String(message.message),
+      type: message.type || 'text',
       timestamp: new Date().toISOString(),
+      mentionedUsers: message.mentionedUsers || [],
+      attachments: message.attachments || [],
     };
+    
     messages.push(newMessage);
     this.chatMessages.set(projectId, messages);
+    
+    console.log(`Chat message created: ${newMessage.id} for project ${projectId}`);
     return newMessage;
   }
 
   async getChatMessages(projectId: number, limit: number = 50): Promise<any[]> {
-    if (!this.chatMessages.has(projectId)) {
+    const parsedProjectId = parseInt(String(projectId));
+    
+    if (isNaN(parsedProjectId)) {
+      console.error(`Invalid project ID for chat messages: ${projectId}`);
       return [];
     }
-    const messages = this.chatMessages.get(projectId) || [];
-    return messages.slice(-limit); // Return the last 'limit' messages
+    
+    if (!this.chatMessages.has(parsedProjectId)) {
+      console.log(`No chat messages found for project ${parsedProjectId}`);
+      return [];
+    }
+    
+    const messages = this.chatMessages.get(parsedProjectId) || [];
+    const result = messages.slice(-limit); // Return the last 'limit' messages
+    
+    console.log(`Retrieved ${result.length} chat messages for project ${parsedProjectId}`);
+    return result;
   }
 
   // Helper functions for JSON file operations

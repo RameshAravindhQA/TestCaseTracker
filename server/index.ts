@@ -1,10 +1,27 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import cors from "cors";
+import path from "path";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cors());
+
+// Add error handling for malformed JSON
+app.use((error: any, req: any, res: any, next: any) => {
+  if (error instanceof SyntaxError && 'body' in error) {
+    console.error('JSON parsing error:', error.message);
+    return res.status(400).json({ 
+      success: false,
+      error: 'Invalid JSON in request body' 
+    });
+  }
+  next(error);
+});
+
+app.use(express.static(path.join(__dirname, '../client/dist')));
 
 app.use((req, res, next) => {
   const start = Date.now();

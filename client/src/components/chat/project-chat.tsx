@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -324,3 +323,112 @@ export function ProjectChat({ projectId, currentUser }: ProjectChatProps) {
     </>
   );
 }
+const sendMessage = async () => {
+    if (!newMessage.trim() || !user || !projectId) return;
+
+    try {
+      const response = await fetch("/api/chat/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectId: parseInt(projectId),
+          userId: user.id,
+          userName: `${user.firstName} ${user.lastName}`,
+          message: newMessage.trim(),
+          type: "text",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Server response:", errorText);
+        throw new Error(`Failed to send message: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Handle new API response format
+      if (result.success && result.data) {
+        setMessages((prev) => [...prev, result.data]);
+        setNewMessage("");
+      } else {
+        throw new Error(result.error || "Unknown error occurred");
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send message",
+        variant: "destructive",
+      });
+    }
+  };
+const sendMessage = async () => {
+    if (!newMessage.trim() || !user || !projectId) return;
+
+    try {
+      const response = await fetch("/api/chat/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectId: parseInt(projectId),
+          userId: user.id,
+          userName: `${user.firstName} ${user.lastName}`,
+          message: newMessage.trim(),
+          type: "text",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Server response:", errorText);
+        throw new Error(`Failed to send message: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Handle new API response format
+      if (result.success && result.data) {
+        setMessages((prev) => [...prev, result.data]);
+        setNewMessage("");
+      } else {
+        throw new Error(result.error || "Unknown error occurred");
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send message",
+        variant: "destructive",
+      });
+    }
+  };
+const fetchMessages = async () => {
+    if (!projectId) return;
+
+    try {
+      const response = await fetch(`/api/chat/messages/${projectId}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Server response:", errorText);
+        throw new Error(`Failed to fetch messages: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Handle new API response format
+      if (result.success && result.data) {
+        setMessages(result.data);
+      } else {
+        console.error("API Error:", result.error);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      setMessages([]);
+    }
+  };
