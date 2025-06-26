@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TestSheetEditor } from "@/components/test-sheets/test-sheet-editor";
+import TestSheetEditor from "@/components/test-sheets/test-sheet-editor";
 import { format } from "date-fns";
 
 export default function TestSheetsPage() {
