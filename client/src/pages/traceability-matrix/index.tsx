@@ -868,7 +868,7 @@ export default function TraceabilityMatrixPage() {
                     console.error("MARKER FIX: Error getting markers from IndexedDB:", err);
                     db.close();
                   };
-```tool_code
+                }
                   };
                 } else {
                   console.log("Markers store doesn't exist yet");
@@ -1655,7 +1655,7 @@ export default function TraceabilityMatrixPage() {
         // Apply cell background based on value type, using the same colors as the UI
         if (cellValue.type === 'checkmark') {
           // Default green or use custom color if specified
-          const color = cellValue.color || '#10b981';
+           const color = value.color || '#10b981';
 
           // Parse hex color to RGB for PDF
           const hex = color.replace('#', '');
@@ -1675,7 +1675,7 @@ export default function TraceabilityMatrixPage() {
           });
         } else if (cellValue.type === 'x-mark') {
           // Default red or use custom color if specified
-          const color = cellValue.color || '#ef4444';
+          const color = value.color || '#ef4444';
 
           // Parse hex color to RGB for PDF
           const hex = color.replace('#', '');
@@ -1695,7 +1695,7 @@ export default function TraceabilityMatrixPage() {
           });
         } else if (cellValue.type === 'custom') {
           // Custom marker with specified color
-          const color = cellValue.color || '#3b82f6';
+          const color = value.color || '#3b82f6';
 
           // Parse hex color to RGB for PDF
           const hex = color.replace('#', '');
