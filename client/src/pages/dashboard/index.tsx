@@ -115,8 +115,11 @@ import {
 <div className="mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-2 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
-                <LayoutDashboard className="h-8 w-8 text-white" />
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl opacity-20"></div>
+                <div className="relative p-3 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
+                  <LayoutDashboard className="h-8 w-8 text-white" />
+                </div>
               </div>
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>

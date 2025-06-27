@@ -157,7 +157,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     {
       name: "Reports",
       href: "/reports",
-      icon: <FileBarChart className="h-5 w-5 text-green-600" />,
+      icon: <FileBarChart className="h-5 w-5" />,
     },
     {
       name: "Test Sheets",
