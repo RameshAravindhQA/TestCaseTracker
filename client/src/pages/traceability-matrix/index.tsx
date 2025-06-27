@@ -860,8 +860,8 @@ export default function TraceabilityMatrixPage() {
                         // Also save back to localStorage for redundancy
                         try {
                           const storageKey = `markers_${selectedProjectId}`;
-                          localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));```text
-                        } catch (e) {
+                          localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));
+                        } catch (e){
                           console.error("MARKER FIX: Failed to update localStorage after IndexedDB recovery:", e);
                         }
                       }
@@ -937,12 +937,12 @@ export default function TraceabilityMatrixPage() {
 
               if (storedValue) {
                 const cellValue = JSON.parse(storedValue) as CellValue;
-                
+
                 // Ensure newMatrixData structure exists (array structure)
                 if (!newMatrixData[rowId]) {
                   newMatrixData[rowId] = modules.map(_ => ({ type: 'empty' }));
                 }
-                
+
                 // Ensure the array has enough elements
                 if (newMatrixData[rowId].length <= colIndex) {
                   // Extend array if needed
@@ -950,7 +950,7 @@ export default function TraceabilityMatrixPage() {
                     newMatrixData[rowId].push({ type: 'empty' });
                   }
                 }
-                
+
                 newMatrixData[rowId][colIndex] = cellValue;
                 localStorageRecoveryCount++;
               }
@@ -1748,6 +1748,7 @@ export default function TraceabilityMatrixPage() {
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
 
           // Use white text on dark backgrounds, black on light backgrounds
+```text
           const isLightColor = (r * 0.299 + g * 0.587 + b * 0.114) > 186;
           doc.setTextColor(isLightColor ? 0 : 255);
           doc.text(cellValue.label || "●", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
