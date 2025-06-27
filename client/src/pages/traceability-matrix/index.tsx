@@ -1730,9 +1730,7 @@ export default function TraceabilityMatrixPage() {
           // Use white text on dark backgrounds, black on light backgrounds
           const isLightColor = (r * 0.299 + g * 0.587 + b * 0.114) > 186;
           doc.setTextColor(isLightColor ? 0 : 255);
-          doc```python
-.```text
-doc.text(cellValue.label|| "●", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
+          doc.text(cellValue.label || "●", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
             align: 'center', 
             baseline: 'middle'
           });
