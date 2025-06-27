@@ -1798,17 +1798,17 @@ class MemStorage implements IStorage {
 
   // Notebooks CRUD operations
   async getNotebooks(userId: number): Promise<any[]> {
-    return (this.notebooksData.notebooks || [])
+    return Array.from(this.notebooks.values())
       .filter(notebook => notebook.userId === userId)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }
 
-  async getNotebook(id: number, userId: number): Promise<Notebook | null> {
+  async getNotebook(id: number): Promise<Notebook | null> {
     const notebook = this.notebooks.get(id);
-        if (!notebook || notebook.userId !== userId) {
-            return null;
-        }
-        return notebook;
+    if (!notebook) {
+        return null;
+    }
+    return notebook;
   }
 
   async createNotebook(notebookData: Omit<Notebook, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notebook> {
@@ -1826,30 +1826,30 @@ class MemStorage implements IStorage {
     return newNotebook;
   }
 
-  async updateNotebook(id: number, userId: number, updates: Partial<Notebook>): Promise<Notebook | null> {
+  async updateNotebook(id: number, updates: Partial<Notebook>): Promise<Notebook | null> {
     const notebook = this.notebooks.get(id);
 
-        if (!notebook || notebook.userId !== userId) {
-            return null; // Not found or unauthorized
-        }
+    if (!notebook) {
+        return null; // Not found
+    }
 
-        const updatedNotebook: Notebook = {
-            ...notebook,
-            ...updates,
-            updatedAt: new Date().toISOString(),
-        };
+    const updatedNotebook: Notebook = {
+        ...notebook,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+    };
 
-        this.notebooks.set(id, updatedNotebook);
-        return updatedNotebook;
+    this.notebooks.set(id, updatedNotebook);
+    return updatedNotebook;
   }
 
-  async deleteNotebook(id: number, userId: number): Promise<boolean> {
+  async deleteNotebook(id: number): Promise<boolean> {
     const notebook = this.notebooks.get(id);
-        if (!notebook || notebook.userId !== userId) {
-            return false; // Not found or unauthorized
-        }
+    if (!notebook) {
+        return false; // Not found
+    }
 
-        return this.notebooks.delete(id);
+    return this.notebooks.delete(id);
   }
 
     async createChatMessage(message: any): Promise<any> {
@@ -2010,6 +2010,7 @@ export interface Notebook {
     createdAt: string;
     updatedAt: string;
     isPinned?: boolean;
+    isArchived?: boolean;
     tags?: string[];
     color?: string;
 }

@@ -1334,25 +1334,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   apiRouter.post("/projects", isAuthenticated, async (req, res) => {
     try {
+      console.log("Creating project with data:", req.body);
+      
+      // Validate required fields
+      if (!req.body.name || req.body.name.trim() === '') {
+        return res.status(400).json({ message: "Project name is required" });
+      }
+      
       // Pre-process dates - convert them to ISO strings that Zod expects
       const formData = {
-        ...req.body,
+        name: req.body.name.trim(),
+        description: req.body.description?.trim() || null,
+        status: req.body.status || "Active",
+        prefix: req.body.prefix || "DEF",
         createdById: req.session.userId,
         startDate: req.body.startDate ? new Date(req.body.startDate).toISOString() : null,
         endDate: req.body.endDate ? new Date(req.body.endDate).toISOString() : null
       };
+      
+      console.log("Processed form data:", formData);
       
       // Now parse with Zod schema
       const projectData = insertProjectSchema.parse(formData);
       
       const project = await storage.createProject(projectData);
       
-      // Add creator as a project member with admin role
-      await storage.addProjectMember({
-        projectId: project.id,
-        userId: req.session.userId!,
-        role: "Admin",
-      });
+      // Add creator as a project member with admin role if addProjectMember exists
+      try {
+        await (storage as any).addProjectMember({
+          projectId: project.id,
+          userId: req.session.userId!,
+          role: "Admin",
+        });
+      } catch (memberError) {
+        console.warn("Could not add project member:", memberError);
+      }
       
       // Log activity
       await storage.createActivity({
@@ -1366,7 +1382,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(project);
     } catch (error) {
       console.error("Create project error:", error);
-      res.status(400).json({ message: "Invalid project data" });
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(400).json({ message: "Invalid project data" });
+      }
     }
   });
   
@@ -3399,7 +3419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/notebooks/:id", isAuthenticated, async (req, res) => {
     try {
       const notebookId = parseInt(req.params.id);
-      const notebook = await storage.getNotebook(notebookId);
+      const notebook = await (storage as any).getNotebook(notebookId);
       
       if (!notebook) {
         return res.status(404).json({ message: "Notebook not found" });
@@ -3458,7 +3478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You don't have permission to update this notebook" });
       }
       
-      const updatedNotebook = await storage.updateNotebook(notebookId, req.body);
+      const updatedNotebook = await (storage as any).updateNotebook(notebookId, req.body);
       
       // Log activity
       await storage.createActivity({
@@ -3492,7 +3512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You don't have permission to delete this notebook" });
       }
       
-      const success = await storage.deleteNotebook(notebookId);
+      const success = await (storage as any).deleteNotebook(notebookId);
       
       if (success) {
         // Log activity

@@ -20,7 +20,7 @@ import { queryClient } from "@/lib/queryClient";
 import { DialogFooter } from "@/components/ui/dialog";
 
 const projectSchema = z.object({
-  name: z.string().min(3, { message: "Project name must be at least 3 characters" }),
+  name: z.string().min(1, { message: "Project name is required" }).max(100, { message: "Project name must be less than 100 characters" }),
   description: z.string().optional(),
   status: z.enum(["Active", "Completed", "On Hold"]),
 });
@@ -46,12 +46,9 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
   });
 
   const createProjectMutation = useMutation({
-    mutationFn: async (data: ProjectFormValues) => {
+    mutationFn: async (data: any) => {
+      console.log('Creating project with data:', data);
       const res = await apiRequest("POST", "/api/projects", data);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to create project');
-      }
       return res.json();
     },
     onSuccess: () => {
@@ -63,10 +60,11 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
       form.reset();
       if (onSuccess) onSuccess();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Project creation error:', error);
       toast({
         title: "Failed to create project",
-        description: `${error}`,
+        description: error.message || "An error occurred while creating the project",
         variant: "destructive",
       });
     },
@@ -96,28 +94,39 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
   });
 
   const onSubmit = (data: ProjectFormValues) => {
-    // Auto-generate prefix from project name (first 3 letters, uppercase)
-    const cleanName = data.name.replace(/[^a-zA-Z]/g, '');
-    let prefix = cleanName.substring(0, 3).toUpperCase();
-    
-    // If we don't have 3 letters, pad with 'X' or use 'DEF' if completely empty
-    if (prefix.length === 0) {
-      prefix = 'DEF';
-    } else if (prefix.length < 3) {
-      prefix = prefix.padEnd(3, 'X');
-    }
-    
-    const formattedData = {
-      ...data,
-      prefix,
-    };
-    
-    console.log('Submitting project with prefix:', prefix, 'for project:', data.name);
-    
-    if (isEditing) {
-      updateProjectMutation.mutate(formattedData as any);
-    } else {
-      createProjectMutation.mutate(formattedData as any);
+    try {
+      // Auto-generate prefix from project name (first 3 letters, uppercase)
+      const cleanName = data.name.replace(/[^a-zA-Z]/g, '');
+      let prefix = cleanName.substring(0, 3).toUpperCase();
+      
+      // If we don't have 3 letters, pad with 'X' or use 'DEF' if completely empty
+      if (prefix.length === 0) {
+        prefix = 'DEF';
+      } else if (prefix.length < 3) {
+        prefix = prefix.padEnd(3, 'X');
+      }
+      
+      const formattedData = {
+        name: data.name.trim(),
+        description: data.description?.trim() || "",
+        status: data.status,
+        prefix,
+      };
+      
+      console.log('Submitting project with prefix:', prefix, 'for project:', data.name);
+      
+      if (isEditing) {
+        updateProjectMutation.mutate(formattedData);
+      } else {
+        createProjectMutation.mutate(formattedData);
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
+      toast({
+        title: "Form Error",
+        description: "Please check your input and try again.",
+        variant: "destructive",
+      });
     }
   };
 
