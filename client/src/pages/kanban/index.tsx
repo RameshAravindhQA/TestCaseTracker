@@ -18,9 +18,9 @@ export default function KanbanPage() {
   return (
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 bg-gradient-to-r from-purple-500 via-indigo-600 to-blue-500 text-white p-4 rounded-lg shadow-lg flex-1 mr-4">
+        <div className="mb-6 flex justify-between items-center">
+          <div className="flex-1">
+            <div className="flex items-center gap-4 bg-gradient-to-r from-purple-500 via-indigo-600 to-blue-500 text-white p-4 rounded-lg shadow-lg">
               <div className="p-2 bg-white bg-opacity-20 rounded-lg">
                 <Trello className="h-8 w-8 text-white" />
               </div>
@@ -29,6 +29,8 @@ export default function KanbanPage() {
                 <p className="text-purple-100 mt-1">Visualize your workflow and track progress using this customizable Kanban board</p>
               </div>
             </div>
+          </div>
+          <div className="flex gap-2 ml-4">
             <Button
               variant="outline"
               className="flex items-center gap-2"
