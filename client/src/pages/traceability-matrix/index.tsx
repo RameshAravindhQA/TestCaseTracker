@@ -975,11 +975,20 @@ export default function TraceabilityMatrixPage() {
       }
 
       // STEP 2: Also fetch from the database to get any server-side changes
-      const fetchLatestData = async () => {
-        try {
-          // Direct API call to get the latest data - use a unique timestamp to avoid caching
-          const timestamp = new Date().getTime();
-          const response = await apiRequest("GET", `/api/projects/${selectedProjectId}/matrix/cells?_t=${timestamp}`);;
+     const fetchLatestData = async () => {
+  try {
+    // Direct API call to get the latest data - use a unique timestamp to avoid caching
+    const timestamp = new Date().getTime();
+    const response = await apiRequest("GET", `/api/projects/${selectedProjectId}/matrix/cells?_t=${timestamp}`);
+
+    if (response && Array.isArray(response)) {
+      console.log("EMERGENCY FIX: Got fresh data with", response.length, "cells from server");
+      // Your logic continues here...
+    }
+  } catch (error) {
+    console.error("EMERGENCY FIX: Error fetching latest data:", error);
+  }
+};
 
           if (response && Array.isArray(response)) {
             console.log("EMERGENCY FIX: Got fresh data with", response.length, "cells from server");
