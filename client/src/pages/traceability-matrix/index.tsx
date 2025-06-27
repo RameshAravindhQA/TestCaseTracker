@@ -924,7 +924,7 @@ export default function TraceabilityMatrixPage() {
           const rowId = rowModule.id.toString();
 
           modules.forEach((colModule, colIndex) => {
-            const storageKey = `matrix_${selectedProjectId}_${rowId}_${colIndex}`;;
+            const storageKey = `matrix_${selectedProjectId}_${rowId}_${colIndex}`;
             const storedValue = localStorage.getItem(storageKey);
 
             if (storedValue) {
