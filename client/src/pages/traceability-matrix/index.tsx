@@ -1731,7 +1731,8 @@ export default function TraceabilityMatrixPage() {
           const isLightColor = (r * 0.299 + g * 0.587 + b * 0.114) > 186;
           doc.setTextColor(isLightColor ? 0 : 255);
           doc```python
-.text(cellValue.label|| "●", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
+.```text
+doc.text(cellValue.label|| "●", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
             align: 'center', 
             baseline: 'middle'
           });
@@ -2642,7 +2643,7 @@ function CellDropdown({
           Yes
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => {
-          const newValue: CellValue = { type: 'x-mark', color: '#ef4444', label: 'No' };
+          const newValue: CellValue = { type: 'x-mark', color'#ef4444', label: 'No' };
            onChange(newValue);
            saveCellToDatabase(newValue);
         }}>

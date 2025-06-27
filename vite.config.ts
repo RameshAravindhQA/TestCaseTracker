@@ -40,7 +40,19 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'lucide-react'],
+    include: ['react', 'react-dom', 'lucide-react', '@tanstack/react-query', 'wouter'],
     exclude: ['@replit/vite-plugin-cartographer']
+  },
+  build: {
+    target: 'esnext',
+    minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['lucide-react', '@radix-ui/react-select', '@radix-ui/react-dialog']
+        }
+      }
+    }
   }
 });
