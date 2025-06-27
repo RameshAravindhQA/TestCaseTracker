@@ -2640,14 +2640,22 @@ function CellDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="w-full h-9 p-0">
+        <Button 
+          variant="ghost" 
+          className="w-full h-9 p-0"
+          style={{
+            backgroundColor: value.type !== 'empty' ? `${value.color}20` : 'transparent',
+            borderColor: value.type !== 'empty' ? value.color : 'transparent',
+            borderWidth: value.type !== 'empty' ? '1px' : '0px'
+          }}
+        >
           {value.type === 'checkmark' ? (
             <CheckCircle className="mx-auto h-5 w-5" style={{ color: value.color }} />
           ) : value.type === 'x-mark' ? (
             <AlertCircle className="mx-auto h-5 w-5" style={{ color: value.color }} />
           ) : value.type === 'custom' ? (
             <div className="flex items-center justify-center">
-              <span className="mx-auto" style={{ color: value.color }}>{value.label || "●"}</span>
+              <span className="mx-auto font-semibold" style={{ color: value.color }}>{value.label || "●"}</span>
             </div>
           ) : (
             <Clock className="mx-auto h-5 w-5 text-gray-400" />

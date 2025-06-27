@@ -158,34 +158,7 @@ export default function GitHubIntegrationPage() {
               </div>
             </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => syncGitHubToSystemMutation.mutate()}
-            disabled={syncGitHubToSystemMutation.isPending}
-            className="flex items-center gap-2"
-          >
-            {syncGitHubToSystemMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            GitHub → System
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => syncSystemToGitHubMutation.mutate()}
-            disabled={syncSystemToGitHubMutation.isPending}
-            className="flex items-center gap-2"
-          >
-            {syncSystemToGitHubMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            System → GitHub
-          </Button>
+          
           <Button onClick={handleCreateNew} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Add Integration

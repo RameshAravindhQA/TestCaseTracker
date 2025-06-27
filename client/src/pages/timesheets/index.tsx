@@ -534,7 +534,7 @@ export default function TimeSheetsPage() {
         console.error('PDF Export: autoTable function not available');
         throw new Error('PDF generation library not fully initialized. Missing autoTable plugin.');
       }
-      
+
       // Add extra validation for the imported plugin
       console.log('PDF Export: autoTable plugin is available and imported')
 
@@ -542,7 +542,7 @@ export default function TimeSheetsPage() {
       console.log('PDF Export: Adding header content');
       doc.setFontSize(16);
       doc.text("Time Sheets Report", 15, 20);
-      
+
       doc.setFontSize(10);
       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 15, 28);
       doc.text(`Total records: ${filteredTimeSheets.length}`, 15, 35);
@@ -550,17 +550,17 @@ export default function TimeSheetsPage() {
       // Create a simpler data structure for the table
       console.log('PDF Export: Preparing table data');
       const tableColumn = ["Project", "Description", "Date", "Time", "Hours", "Status"];
-      
+
       // Create safer row data with fewer columns to avoid width issues
       const tableRows = filteredTimeSheets.map(timesheet => {
         // Safe project name
         const projectName = getProjectName(timesheet.projectId) || "Unknown Project";
-        
+
         // Safe description (shorter for PDF)
         const safeDescription = (timesheet.description || "No description")
           .replace(/[\n\r]+/g, ' ')
           .substring(0, 60);
-        
+
         // Safe date formatting
         let formattedDate = "N/A";
         try {
@@ -573,7 +573,7 @@ export default function TimeSheetsPage() {
         } catch (e) {
           formattedDate = "Invalid Date";
         }
-        
+
         // Safe time formatting
         let timeRange = "N/A";
         try {
@@ -583,11 +583,11 @@ export default function TimeSheetsPage() {
         } catch (e) {
           timeRange = "Invalid Time";
         }
-        
+
         // Hours and status
         const hours = typeof timesheet.hours === 'number' ? String(timesheet.hours) : "0";
         const status = timesheet.status || "Pending";
-        
+
         return [
           projectName,
           safeDescription,
@@ -627,7 +627,7 @@ export default function TimeSheetsPage() {
       console.log('PDF Export: Saving document');
       try {
         doc.save('timesheets_report.pdf');
-        
+
         // Show success notification
         toast({
           title: "Success",
@@ -894,8 +894,7 @@ export default function TimeSheetsPage() {
               <SelectValue placeholder="Filter by customer" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Customers</SelectItem>
-              {customers?.map((customer) => (
+              <SelectItem value="all">All Customers</SelectItem>{customers?.map((customer) => (
                 <SelectItem key={customer.id} value={customer.id.toString()}>
                   {customer.name}
                 </SelectItem>
@@ -1046,10 +1045,10 @@ export default function TimeSheetsPage() {
                             try {
                               const formatTime = (time: string) => {
                                 if (!time) return '';
-                                
+
                                 // Normalize the time string
                                 let cleanTime = time.trim().toUpperCase();
-                                
+
                                 // Extract just the time portion if it has AM/PM
                                 let ampm = '';
                                 if (cleanTime.includes('AM')) {
@@ -1059,7 +1058,7 @@ export default function TimeSheetsPage() {
                                   ampm = 'PM';
                                   cleanTime = cleanTime.replace(/\s*PM$/i, '');
                                 }
-                                
+
                                 // If we don't have AM/PM yet, determine based on hour
                                 if (!ampm) {
                                   try {
@@ -1071,24 +1070,24 @@ export default function TimeSheetsPage() {
                                     ampm = 'AM';
                                   }
                                 }
-                                
+
                                 // Ensure proper formatting with a space before AM/PM
                                 return `${cleanTime} ${ampm}`;
                               };
-                              
+
                               // Get the raw values first for debugging
                               const rawStartTime = timesheet.startTime || "09:00 AM";
                               const rawEndTime = timesheet.endTime || "05:00 PM";
-                              
+
                               // Use the actual values from timesheet or fallback to defaults
                               const startTime = formatTime(rawStartTime);
                               const endTime = formatTime(rawEndTime);
-                              
+
                               console.log('Formatted times:', { 
                                 original: { start: timesheet.startTime, end: timesheet.endTime },
                                 formatted: { start: startTime, end: endTime }
                               });
-                              
+
                               return startTime && endTime ? `${startTime} - ${endTime}` : 'N/A';
                             } catch (e) {
                               console.error("Error formatting time:", e);

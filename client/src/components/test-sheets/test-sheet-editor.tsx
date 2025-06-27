@@ -873,12 +873,65 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
     </div>
   );
 
+  // Handle drag start for cell selection
+  const handleDragStart = useCallback((startCell: string, event: React.MouseEvent) => {
+    if (event.shiftKey) return; // Don't start drag if shift is held
+    
+    setSelectedRange([startCell]);
+    setSelectedCell(startCell);
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const element = document.elementFromPoint(e.clientX, e.clientY);
+      if (element && element.dataset.cellId) {
+        const endCell = element.dataset.cellId;
+        const startCol = getColumnIndex(startCell.replace(/\d+/, ''));
+        const startRow = parseInt(startCell.replace(/[A-Z]+/, '')) - 1;
+        const endCol = getColumnIndex(endCell.replace(/\d+/, ''));
+        const endRow = parseInt(endCell.replace(/[A-Z]+/, '')) - 1;
+
+        const range: string[] = [];
+        for (let row = Math.min(startRow, endRow); row <= Math.max(startRow, endRow); row++) {
+          for (let col = Math.min(startCol, endCol); col <= Math.max(startCol, endCol); col++) {
+            range.push(getCellId(row, col));
+          }
+        }
+        setSelectedRange(range);
+      }
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  // Auto-suggest formulas
+  const getFormulaSuggestions = useCallback((input: string) => {
+    if (!input.startsWith('=')) return [];
+    
+    const formulaStart = input.substring(1).toUpperCase();
+    const suggestions = [
+      'SUM(A1:A10)',
+      'AVERAGE(A1:A10)',
+      'COUNT(A1:A10)',
+      'MIN(A1:A10)',
+      'MAX(A1:A10)',
+      'ROUND(A1,2)',
+      'IF(A1>0,"Positive","Negative")'
+    ].filter(formula => formula.startsWith(formulaStart));
+    
+    return suggestions;
+  }, []);
+
   // Render grid
   const renderGrid = () => (
     <div className="flex-1 overflow-auto" ref={gridRef}>
       <div className="grid" style={{ 
-        gridTemplateColumns: `40px repeat(${sheetData.cols}, 120px)`,
-        gridTemplateRows: `30px repeat(${sheetData.rows}, 30px)`,
+        gridTemplateColumns: `40px repeat(${sheetData.cols}, minmax(120px, 1fr))`,
+        gridTemplateRows: `30px repeat(${sheetData.rows}, auto)`,
       }}>
         {/* Corner cell */}
         <div className="border border-gray-300 bg-gray-100 dark:bg-gray-800"></div>
@@ -937,7 +990,8 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
               return (
                 <div
                   key={cellId}
-                  className={`border border-gray-300 relative ${isSelected ? 'bg-blue-100 dark:bg-blue-900' : 'bg-white dark:bg-gray-950'} hover:bg-gray-50 dark:hover:bg-gray-900`}
+                  data-cell-id={cellId}
+                  className={`border border-gray-300 relative min-h-[30px] ${isSelected ? 'bg-blue-100 dark:bg-blue-900' : 'bg-white dark:bg-gray-950'} hover:bg-gray-50 dark:hover:bg-gray-900 resize-x overflow-hidden`}
                   style={{
                     fontWeight: cell?.style?.fontWeight,
                     fontStyle: cell?.style?.fontStyle,
@@ -949,24 +1003,43 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
                   }}
                   onClick={(e) => handleCellClick(cellId, e)}
                   onDoubleClick={() => handleCellDoubleClick(cellId)}
+                  onMouseDown={(e) => handleDragStart(cellId, e)}
                 >
                   {isEditing ? (
-                    <Input
-                      value={formulaBar}
-                      onChange={(e) => setFormulaBar(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleCellEdit(cellId, formulaBar);
-                        } else if (e.key === 'Escape') {
-                          setEditingCell(null);
-                        }
-                      }}
-                      onBlur={() => handleCellEdit(cellId, formulaBar)}
-                      className="w-full h-full border-none p-1 text-xs"
-                      autoFocus
-                    />
+                    <div className="relative">
+                      <Input
+                        value={formulaBar}
+                        onChange={(e) => setFormulaBar(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleCellEdit(cellId, formulaBar);
+                          } else if (e.key === 'Escape') {
+                            setEditingCell(null);
+                          }
+                        }}
+                        onBlur={() => handleCellEdit(cellId, formulaBar)}
+                        className="w-full h-full border-none p-1 text-xs"
+                        autoFocus
+                      />
+                      {formulaBar.startsWith('=') && getFormulaSuggestions(formulaBar).length > 0 && (
+                        <div className="absolute top-full left-0 bg-white border rounded shadow-lg z-50 min-w-[200px]">
+                          {getFormulaSuggestions(formulaBar).map((suggestion, idx) => (
+                            <div
+                              key={idx}
+                              className="p-2 hover:bg-gray-100 cursor-pointer text-xs"
+                              onClick={() => {
+                                setFormulaBar(`=${suggestion}`);
+                                handleCellEdit(cellId, `=${suggestion}`);
+                              }}
+                            >
+                              {suggestion}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   ) : (
-                    <div className="p-1 text-xs truncate">
+                    <div className="p-1 text-xs break-words whitespace-pre-wrap min-h-[24px]">
                       {cell?.value || ''}
                     </div>
                   )}

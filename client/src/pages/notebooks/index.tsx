@@ -25,6 +25,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -192,32 +193,13 @@ export default function NotebooksPage() {
             <p className="text-gray-600 mt-2">Create and organize your notes with rich formatting</p>
           </div>
 
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              New Notebook
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Create New Notebook</DialogTitle>
-              <DialogDescription>
-                Create a new notebook to organize your notes and ideas.
-              </DialogDescription>
-            </DialogHeader>
-            <NotebookForm onSuccess={() => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
-      // Force immediate refetch
-      refetch();
-      setIsFormOpen(false);
-      toast({
-        title: "Success",
-        description: "Notebook created successfully.",
-      });
-    }} />
-          </DialogContent>
-        </Dialog>
+        <Button 
+          onClick={() => setCreateDialogOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          New Notebook
+        </Button>
       </div>
 
       {/* Filters */}
@@ -422,6 +404,27 @@ export default function NotebooksPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Notebook Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create New Notebook</DialogTitle>
+            <DialogDescription>
+              Create a new notebook to organize your notes and ideas.
+            </DialogDescription>
+          </DialogHeader>
+          <NotebookForm onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
+            refetch();
+            setCreateDialogOpen(false);
+            toast({
+              title: "Success",
+              description: "Notebook created successfully.",
+            });
+          }} />
         </DialogContent>
       </Dialog>
 
