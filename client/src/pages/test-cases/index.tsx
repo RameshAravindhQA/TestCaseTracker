@@ -194,49 +194,51 @@ export default function TestCasesPage() {
     <MainLayout>
       <div className="h-full flex flex-col">
         <div className="py-6 px-4 sm:px-6 lg:px-8 flex-shrink-0">
-          <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-500 rounded-xl shadow-lg">
+          <div className="mb-6 flex justify-between items-center">
+            <div className="flex-1">
+              <div className="flex items-center gap-4 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-500 text-white p-4 rounded-lg shadow-lg">
+                <div className="p-2 bg-white bg-opacity-20 rounded-lg">
                   <TestTube className="h-8 w-8 text-white" />
                 </div>
-                Test Cases
-              </h1>
-              <p className="text-gray-600 mt-2">Manage test cases across all projects</p>
+                <div>
+                  <h1 className="text-2xl font-bold text-white">Test Cases</h1>
+                  <p className="text-cyan-100 mt-1">Manage test cases across all projects</p>
+                </div>
+              </div>
             </div>
 
-          {selectedProjectId && (
-            <div className="flex gap-2">
-              <ImportExport
-                projectId={Number(selectedProjectId)}
-                moduleId={selectedModuleId ? Number(selectedModuleId) : undefined}
-                testCases={filteredTestCases}
-                projectName={projects?.find(p => p.id === Number(selectedProjectId))?.name}
-                moduleName={selectedModuleId && selectedModuleId !== "all" ? 
-                  modules?.find(m => m.id === Number(selectedModuleId))?.name : undefined}
-              />
+            {selectedProjectId && (
+              <div className="flex gap-2 ml-4">
+                <ImportExport
+                  projectId={Number(selectedProjectId)}
+                  moduleId={selectedModuleId ? Number(selectedModuleId) : undefined}
+                  testCases={filteredTestCases}
+                  projectName={projects?.find(p => p.id === Number(selectedProjectId))?.name}
+                  moduleName={selectedModuleId && selectedModuleId !== "all" ? 
+                    modules?.find(m => m.id === Number(selectedModuleId))?.name : undefined}
+                />
 
-              <Button 
-                onClick={() => {
-                  if (!selectedProjectId) {
-                    toast({
-                      title: "No project selected",
-                      description: "Please select a project before creating a test case",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  setSelectedTestCase(null);
-                  setFormOpen(true);
-                }} 
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                New Test Case
-              </Button>
-            </div>
-          )}
-        </div>
+                <Button 
+                  onClick={() => {
+                    if (!selectedProjectId) {
+                      toast({
+                        title: "No project selected",
+                        description: "Please select a project before creating a test case",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    setSelectedTestCase(null);
+                    setFormOpen(true);
+                  }} 
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  New Test Case
+                </Button>
+              </div>
+            )}
+          </div>
 
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
           <div className="md:col-span-2">
