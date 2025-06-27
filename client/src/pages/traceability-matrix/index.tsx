@@ -2641,7 +2641,7 @@ function CellDropdown({
           Yes
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => {
-          const newValue: CellValue = { type: 'x-mark', color'#ef4444', label: 'No' };
+          const newValue: CellValue = { type: 'x-mark', color: '#ef4444', label: 'No' };
            onChange(newValue);
            saveCellToDatabase(newValue);
         }}>
