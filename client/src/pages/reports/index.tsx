@@ -756,101 +756,102 @@ export default function ReportsPage() {
           </div>
         )}
 
-      {/* Chart Data Dialog */}
-      <Dialog open={chartDialogOpen} onOpenChange={setChartDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
-              {chartDialogData?.title}
-            </DialogTitle>
-            <DialogDescription>
-              Detailed view of {chartDialogData?.items.length || 0} items
-            </DialogDescription>
-          </DialogHeader>
+        {/* Chart Data Dialog */}
+        <Dialog open={chartDialogOpen} onOpenChange={setChartDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5" />
+                {chartDialogData?.title}
+              </DialogTitle>
+              <DialogDescription>
+                Detailed view of {chartDialogData?.items.length || 0} items
+              </DialogDescription>
+            </DialogHeader>
 
-          {chartDialogData && (
-            <div className="mt-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {chartDialogData.type === 'testStatus' ? (
-                      <>
-                        <TableHead>Feature</TableHead>
-                        <TableHead>Module</TableHead>
-                        <TableHead>Priority</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created</TableHead>
-                      </>
-                    ) : (
-                      <>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Module</TableHead>
-                        <TableHead>Severity</TableHead>
-                        <TableHead>Priority</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created</TableHead>
-                      </>
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {chartDialogData.items.map((item, index) => (
-                    <TableRow key={index}>
+            {chartDialogData && (
+              <div className="mt-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
                       {chartDialogData.type === 'testStatus' ? (
                         <>
-                          <TableCell>{item.feature || item.title}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {modules?.find(m => m.id === item.moduleId)?.name || 'Unknown'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={item.priority === 'High' ? 'destructive' : 'secondary'}>
-                              {item.priority}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={item.status === 'Pass' ? 'default' : 'destructive'}>
-                              {item.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                          <TableHead>Feature</TableHead>
+                          <TableHead>Module</TableHead>
+                          <TableHead>Priority</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Created</TableHead>
                         </>
                       ) : (
                         <>
-                          <TableCell>{item.title}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {modules?.find(m => m.id === item.moduleId)?.name || 'Unknown'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={item.severity === 'Critical' ? 'destructive' : 'secondary'}>
-                              {item.severity}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={item.priority === 'High' ? 'destructive' : 'secondary'}>
-                              {item.priority}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={item.status === 'Open' ? 'destructive' : 'default'}>
-                              {item.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{new Date(item.dateReported || item.createdAt).toLocaleDateString()}</TableCell>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Module</TableHead>
+                          <TableHead>Severity</TableHead>
+                          <TableHead>Priority</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Created</TableHead>
                         </>
                       )}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+                  </TableHeader>
+                  <TableBody>
+                    {chartDialogData.items.map((item, index) => (
+                      <TableRow key={index}>
+                        {chartDialogData.type === 'testStatus' ? (
+                          <>
+                            <TableCell>{item.feature || item.title}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {modules?.find(m => m.id === item.moduleId)?.name || 'Unknown'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={item.priority === 'High' ? 'destructive' : 'secondary'}>
+                                {item.priority}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={item.status === 'Pass' ? 'default' : 'destructive'}>
+                                {item.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell>{item.title}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {modules?.find(m => m.id === item.moduleId)?.name || 'Unknown'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={item.severity === 'Critical' ? 'destructive' : 'secondary'}>
+                                {item.severity}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={item.priority === 'High' ? 'destructive' : 'secondary'}>
+                                {item.priority}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={item.status === 'Open' ? 'destructive' : 'default'}>
+                                {item.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{new Date(item.dateReported || item.createdAt).toLocaleDateString()}</TableCell>
+                          </>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    </MainLayout>
   );
 }
