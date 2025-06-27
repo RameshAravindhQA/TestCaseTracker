@@ -58,23 +58,14 @@ export default function NotebooksPage() {
   const { data: notebooks, isLoading } = useQuery<Notebook[]>({
     queryKey: ["/api/notebooks"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/notebooks");
-      if (!response.ok) {
-        throw new Error("Failed to fetch notebooks");
-      }
-      return response.json();
+      return await apiRequest("GET", "/api/notebooks");
     },
   });
 
   // Update notebook mutation
   const updateNotebookMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<Notebook> }) => {
-      const response = await apiRequest("PUT", `/api/notebooks/${id}`, updates);
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to update notebook: ${errorText}`);
-      }
-      return response.json();
+      return await apiRequest("PUT", `/api/notebooks/${id}`, updates);
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
@@ -100,11 +91,7 @@ export default function NotebooksPage() {
   // Delete notebook mutation
   const deleteNotebookMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/notebooks/${id}`);
-      if (!response.ok) {
-        throw new Error("Failed to delete notebook");
-      }
-      return response.json();
+      return await apiRequest("DELETE", `/api/notebooks/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });

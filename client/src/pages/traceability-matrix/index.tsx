@@ -2140,35 +2140,6 @@ export default function TraceabilityMatrixPage() {
             </div>
             <p className="text-muted-foreground">Track relationships between requirements and test cases</p>
           </div>
-
-          <nav className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
-              <GitBranch className="h-4 w-4" />
-              Requirements
-            </Button>
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
-              <Link2 className="h-4 w-4" />
-              Mapping
-            </Button>
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
-              <Grid3X3 className="h-4 w-4" />
-              Matrix View
-            </Button>
-          </nav>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
-          <Button variant="outline" size="sm" className="flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={() => setLocation('/projects')}>
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
         </div>
       </div>
     </div>

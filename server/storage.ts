@@ -188,29 +188,24 @@ export interface IStorage {
  */
 class MemStorage implements IStorage {
   // In-memory storage for different entity types using Maps
-  private projects = new Map<number, Project>();
-  private users = new Map<number, User>();
-  private modules = new Map<number, Module>();
-  private testCases = new Map<number, TestCase>();
-  private bugs = new Map<number, Bug>();
-  private activities = new Map<number, Activity>();
-  private tags = new Map<number, Tag>();
-  private documents = new Map<number, Document>();
-  private documentFolders = new Map<number, DocumentFolder>();
-  private timeSheets = new Map<number, TimeSheet>();
-  private timeSheetFolders = new Map<number, TimeSheetFolder>();
-  private customers = new Map<number, Customer>();
-  private customerProjects = new Map<number, CustomerProject>();
-  private projectMembers = new Map<number, ProjectMember>();
-  private sprints = new Map<number, Sprint>();
-  private kanbanColumns = new Map<number, KanbanColumn>();
-  private kanbanCards = new Map<number, KanbanCard>();
-  private customMarkers = new Map<number, CustomMarker>();
-  private matrixCells = new Map<string, MatrixCell>();
-  private testSheets = new Map<number, TestSheet>();
-  private chatMessages = new Map<number, any[]>();
-  private githubConfigs: any[] = [];
-  private githubIssues: any[] = [];
+  private projects = new Map<number, any>();
+  private users = new Map<number, any>();
+  private modules = new Map<number, any>();
+  private testCases = new Map<number, any>();
+  private bugs = new Map<number, any>();
+  private activities = new Map<number, any>();
+  private tags = new Map<number, any>();
+  private chatMessages = new Map<number, any>();
+  private documents = new Map<number, any>();
+  private documentFolders = new Map<number, any>();
+  private testSheets = new Map<number, any>();
+  private customers = new Map<number, any>();
+  private customerProjects = new Map<number, any>();
+  private timeSheets = new Map<number, any>();
+  private timeSheetFolders = new Map<number, any>();
+  private customMarkers = new Map<string, any>();
+  private matrixCells = new Map<string, any>();
+  private notebooks = new Map<number, any>();
   private notebooksData = { notebooks: [] as any[] };
 
   private nextId = 1;
@@ -1808,58 +1803,67 @@ class MemStorage implements IStorage {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }
 
-  async getNotebook(id: number): Promise<any | undefined> {
-    return this.notebooksData.notebooks.find(notebook => notebook.id === id);
+  async getNotebook(id: number, userId: number): Promise<Notebook | null> {
+    const notebook = this.notebooks.get(id);
+        if (!notebook || notebook.userId !== userId) {
+            return null;
+        }
+        return notebook;
   }
 
-  async createNotebook(notebook: any): Promise<any> {
-    const newNotebook = {
-      id: this.getNextId(),
-      ...notebook,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+  async createNotebook(notebookData: Omit<Notebook, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notebook> {
+    const id = this.getNextId();
+    const now = new Date().toISOString();
+
+    const newNotebook: Notebook = {
+      id,
+      ...notebookData,
+      createdAt: now,
+      updatedAt: now,
     };
-    this.notebooksData.notebooks.push(newNotebook);
+
+    this.notebooks.set(id, newNotebook);
     return newNotebook;
   }
 
-  async updateNotebook(id: number, notebookData: any): Promise<any> {
-    const notebookIndex = this.notebooksData.notebooks.findIndex(notebook => notebook.id === id);
-    if (notebookIndex === -1) {
-      throw new Error('Notebook not found');
-    }
+  async updateNotebook(id: number, userId: number, updates: Partial<Notebook>): Promise<Notebook | null> {
+    const notebook = this.notebooks.get(id);
 
-    const updatedNotebook = {
-      ...this.notebooksData.notebooks[notebookIndex],
-      ...notebookData,
-      updatedAt: new Date().toISOString(),
-    };
-    this.notebooksData.notebooks[notebookIndex] = updatedNotebook;
-    return updatedNotebook;
+        if (!notebook || notebook.userId !== userId) {
+            return null; // Not found or unauthorized
+        }
+
+        const updatedNotebook: Notebook = {
+            ...notebook,
+            ...updates,
+            updatedAt: new Date().toISOString(),
+        };
+
+        this.notebooks.set(id, updatedNotebook);
+        return updatedNotebook;
   }
 
-  async deleteNotebook(id: number): Promise<boolean> {
-    const notebookIndex = this.notebooksData.notebooks.findIndex(notebook => notebook.id === id);
-    if (notebookIndex === -1) {
-      return false;
-    }
+  async deleteNotebook(id: number, userId: number): Promise<boolean> {
+    const notebook = this.notebooks.get(id);
+        if (!notebook || notebook.userId !== userId) {
+            return false; // Not found or unauthorized
+        }
 
-    this.notebooksData.notebooks.splice(notebookIndex, 1);
-    return true;
+        return this.notebooks.delete(id);
   }
 
     async createChatMessage(message: any): Promise<any> {
     const projectId = parseInt(message.projectId);
-    
+
     // Validate required fields
     if (!projectId || !message.userId || !message.message) {
       throw new Error("Missing required fields: projectId, userId, or message");
     }
-    
+
     if (!this.chatMessages.has(projectId)) {
       this.chatMessages.set(projectId, []);
     }
-    
+
     const messages = this.chatMessages.get(projectId) || [];
     const newMessage = {
       id: this.getNextId(),
@@ -1872,30 +1876,30 @@ class MemStorage implements IStorage {
       mentionedUsers: message.mentionedUsers || [],
       attachments: message.attachments || [],
     };
-    
+
     messages.push(newMessage);
     this.chatMessages.set(projectId, messages);
-    
+
     console.log(`Chat message created: ${newMessage.id} for project ${projectId}`);
     return newMessage;
   }
 
   async getChatMessages(projectId: number, limit: number = 50): Promise<any[]> {
     const parsedProjectId = parseInt(String(projectId));
-    
+
     if (isNaN(parsedProjectId)) {
       console.error(`Invalid project ID for chat messages: ${projectId}`);
       return [];
     }
-    
+
     if (!this.chatMessages.has(parsedProjectId)) {
       console.log(`No chat messages found for project ${parsedProjectId}`);
       return [];
     }
-    
+
     const messages = this.chatMessages.get(parsedProjectId) || [];
     const result = messages.slice(-limit); // Return the last 'limit' messages
-    
+
     console.log(`Retrieved ${result.length} chat messages for project ${parsedProjectId}`);
     return result;
   }

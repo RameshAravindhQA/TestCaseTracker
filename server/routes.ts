@@ -3385,6 +3385,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notebook routes
+  apiRouter.get("/notebooks", isAuthenticated, async (req, res) => {
+    try {
+      const notebooks = await storage.getNotebooks(req.session.userId!);
+      res.json(notebooks);
+    } catch (error) {
+      console.error("Get notebooks error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/notebooks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const notebookId = parseInt(req.params.id);
+      const notebook = await storage.getNotebook(notebookId);
+      
+      if (!notebook) {
+        return res.status(404).json({ message: "Notebook not found" });
+      }
+      
+      // Users can only access their own notebooks unless they're admin
+      if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You don't have permission to access this notebook" });
+      }
+      
+      res.json(notebook);
+    } catch (error) {
+      console.error("Get notebook error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/notebooks", isAuthenticated, async (req, res) => {
+    try {
+      const notebookData = {
+        ...req.body,
+        userId: req.session.userId,
+      };
+      
+      const notebook = await storage.createNotebook(notebookData);
+      
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "created",
+        entityType: "notebook",
+        entityId: notebook.id,
+        details: {
+          notebookTitle: notebook.title,
+        }
+      });
+      
+      res.status(201).json(notebook);
+    } catch (error) {
+      console.error("Create notebook error:", error);
+      res.status(400).json({ message: "Invalid notebook data" });
+    }
+  });
+
+  apiRouter.put("/notebooks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const notebookId = parseInt(req.params.id);
+      const notebook = await storage.getNotebook(notebookId);
+      
+      if (!notebook) {
+        return res.status(404).json({ message: "Notebook not found" });
+      }
+      
+      // Users can only update their own notebooks unless they're admin
+      if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You don't have permission to update this notebook" });
+      }
+      
+      const updatedNotebook = await storage.updateNotebook(notebookId, req.body);
+      
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "updated",
+        entityType: "notebook",
+        entityId: notebookId,
+        details: {
+          notebookTitle: updatedNotebook?.title || notebook.title,
+        }
+      });
+      
+      res.json(updatedNotebook);
+    } catch (error) {
+      console.error("Update notebook error:", error);
+      res.status(400).json({ message: "Invalid notebook data" });
+    }
+  });
+
+  apiRouter.delete("/notebooks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const notebookId = parseInt(req.params.id);
+      const notebook = await storage.getNotebook(notebookId);
+      
+      if (!notebook) {
+        return res.status(404).json({ message: "Notebook not found" });
+      }
+      
+      // Users can only delete their own notebooks unless they're admin
+      if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You don't have permission to delete this notebook" });
+      }
+      
+      const success = await storage.deleteNotebook(notebookId);
+      
+      if (success) {
+        // Log activity
+        await storage.createActivity({
+          userId: req.session.userId!,
+          action: "deleted",
+          entityType: "notebook",
+          entityId: notebookId,
+          details: {
+            notebookTitle: notebook.title,
+          }
+        });
+      }
+      
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete notebook error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Prefix all API routes with /api
   // Customer routes
   apiRouter.get("/customers", isAuthenticated, async (req, res) => {

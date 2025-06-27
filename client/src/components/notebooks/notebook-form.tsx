@@ -66,27 +66,23 @@ function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
     }
   }, [notebook]);
 
+  // Create notebook mutation
   const createNotebookMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/notebooks", data);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to create notebook");
-      }
-      return res.json();
+    mutationFn: async (data: NotebookFormData) => {
+      return await apiRequest("POST", "/api/notebooks", data);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
       toast({
         title: "Success",
-        description: "Notebook created successfully",
+        description: "Notebook created successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
-      onSuccess();
+      onSuccess?.();
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message,
+        description: `Failed to create notebook: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -95,36 +91,11 @@ function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
   // Update notebook mutation
   const updateNotebookMutation = useMutation({
     mutationFn: async (data: NotebookFormData) => {
-      if (!notebook) throw new Error("No notebook to update");
-
-      const updateData = {
-        title: data.title,
-        content: data.content,
-        color: data.color,
-        tags: data.tags,
-        isArchived: data.isArchived,
-        isPinned: notebook.isPinned, // Preserve existing pinned status
-      };
-
-      console.log("Updating notebook with data:", updateData);
-
-      const response = await apiRequest("PUT", `/api/notebooks/${notebook.id}`, updateData);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Update failed:", errorText);
-        throw new Error(`Failed to update notebook: ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log("Update successful:", result);
-      return result;
+      if (!notebook?.id) throw new Error("No notebook ID provided");
+      return await apiRequest("PUT", `/api/notebooks/${notebook.id}`, data);
     },
-    onSuccess: (data) => {
-      // Invalidate and refetch notebooks
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
-      queryClient.refetchQueries({ queryKey: ["/api/notebooks"] });
-
       toast({
         title: "Success",
         description: "Notebook updated successfully.",
@@ -132,7 +103,6 @@ function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
       onSuccess?.();
     },
     onError: (error: any) => {
-      console.error("Update notebook error:", error);
       toast({
         title: "Error",
         description: `Failed to update notebook: ${error.message}`,
