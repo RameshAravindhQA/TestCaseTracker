@@ -860,7 +860,7 @@ export default function TraceabilityMatrixPage() {
                         // Also save back to localStorage for redundancy
                         try {
                           const storageKey = `markers_${selectedProjectId}`;
-                          localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));
+                          localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));```text
                         } catch (e) {
                           console.error("MARKER FIX: Failed to update localStorage after IndexedDB recovery:", e);
                         }
@@ -2416,3 +2416,231 @@ export default function TraceabilityMatrixPage() {
           </div>
         )}
         </div>
+
+      {/* Add new marker dialog */}
+      <Dialog open={isAddingMarker} onOpenChange={setIsAddingMarker}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Marker</DialogTitle>
+            <DialogDescription>
+              Create a new custom marker to use in the traceability matrix.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="label" className="text-right text-sm font-medium">
+                Label
+              </label>
+              <Input
+                type="text"
+                id="label"
+                value={newMarker.label}
+                onChange={(e) => setNewMarker({...newMarker, label: e.target.value})}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="color" className="text-right text-sm font-medium">
+                Color
+              </label>
+              <div className="col-span-3 flex items-center">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <Palette className="h-4 w-4" />
+                      <span className="sr-only">Pick Color</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 outline-none" align="start">
+                    <HexColorPicker 
+                      color={newMarker.color} 
+                      onChange={(color) => setNewMarker({...newMarker, color})} 
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  type="text"
+                  id="color"
+                  value={newMarker.color}
+                  onChange={(e) => setNewMarker({...newMarker, color: e.target.value})}
+                  className="ml-2 w-32"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setIsAddingMarker(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={addCustomMarker}>
+              Add Marker
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit marker dialog */}
+      <Dialog open={editingMarker !== null} onOpenChange={() => setEditingMarker(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Marker</DialogTitle>
+            <DialogDescription>
+              Edit the details of an existing marker.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="label" className="text-right text-sm font-medium">
+                Label
+              </label>
+              <Input
+                type="text"
+                id="label"
+                value={editingMarker?.label || ''}
+                onChange={(e) => setEditingMarker(editingMarker => editingMarker ? {...editingMarker, label: e.target.value} : null)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="color" className="text-right text-sm font-medium">
+                Color
+              </label>
+              <div className="col-span-3 flex items-center">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <Palette className="h-4 w-4" />
+                      <span className="sr-only">Pick Color</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 outline-none" align="start">
+                    <HexColorPicker 
+                      color={editingMarker?.color || '#3b82f6'}
+                      onChange={(color) => setEditingMarker(editingMarker => editingMarker ? {...editingMarker, color} : null)} 
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  type="text"
+                  id="color"
+                  value={editingMarker?.color || ''}
+                  onChange={(e) => setEditingMarker(editingMarker => editingMarker ? {...editingMarker, color: e.target.value} : null)}
+                  className="ml-2 w-32"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setEditingMarker(null)}>
+              Cancel
+            </Button>
+            {editingMarker && (
+              <Button type="button" variant="destructive" className="mr-2" onClick={() => {
+                if (editingMarker?.id) {
+                  deleteCustomMarker(editingMarker.id);
+                }
+                setEditingMarker(null);
+              }}>
+                Delete
+              </Button>
+            )}
+            <Button type="button" onClick={updateCustomMarker}>
+              Update Marker
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </MainLayout>
+  );
+}
+
+// CellDropdown component
+interface CellDropdownProps {
+  value: CellValue;
+  onChange: (value: CellValue) => void;
+  customMarkers: CustomMarker[];
+  rowId: string;
+  colId: string;
+  projectId: string;
+}
+
+const CellDropdown: React.FC<CellDropdownProps> = ({ value, onChange, customMarkers, rowId, colId, projectId }) => {
+  const [open, setOpen] = useState(false);
+
+  const handleSelect = (newValue: CellValue) => {
+    onChange(newValue);
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-24 justify-center text-sm"
+        >
+          {value.type === 'checkmark' && (
+            <div className="flex items-center gap-1">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              {value.label || "Yes"}
+            </div>
+          )}
+          {value.type === 'x-mark' && (
+            <div className="flex items-center gap-1">
+              <AlertCircle className="w-4 h-4 text-red-500" />
+              {value.label || "No"}
+            </div>
+          )}
+          {value.type === 'custom' && (
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: value.color }} />
+              {value.label || "Custom"}
+            </div>
+          )}
+          {value.type === 'empty' && (
+            <span>Empty</span>
+          )}
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-40 p-0">
+        <DropdownMenuContent className="w-40">
+          <DropdownMenuItem onSelect={() => handleSelect({ type: 'checkmark', label: 'Yes', color: '#10b981' })}>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              Yes
+            </div>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => handleSelect({ type: 'x-mark', label: 'No', color: '#ef4444' })}>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-500" />
+              No
+            </div>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Custom Markers</DropdownMenuLabel>
+          {customMarkers.map((marker) => (
+            <DropdownMenuItem key={marker.markerId} onSelect={() => handleSelect({ type: 'custom', label: marker.label, color: marker.color })}>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: marker.color }} />
+                {marker.label}
+              </div>
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => handleSelect({ type: 'empty' })}>
+            Clear
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </PopoverContent>
+    </Popover>
+  );
+};
