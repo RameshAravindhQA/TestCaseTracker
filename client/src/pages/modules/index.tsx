@@ -14,7 +14,7 @@ import { Project, Module } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Loader2 } from "lucide-react";
+import { Search, Plus, Loader2, FolderOpen } from "lucide-react";
 import { 
   Dialog,
   DialogContent,
@@ -139,9 +139,14 @@ export default function ModulesPage() {
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
         <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Modules</h1>
-            <p className="mt-1 text-sm text-gray-600">Manage test modules across all projects</p>
+          <div className="flex items-center gap-4">
+            <div className="p-2 bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-500 rounded-xl shadow-lg">
+              <FolderOpen className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Modules</h1>
+              <p className="text-muted-foreground mt-1">Manage test modules across all projects</p>
+            </div>
           </div>
           <Button 
             onClick={() => {

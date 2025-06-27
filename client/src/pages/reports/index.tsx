@@ -389,15 +389,13 @@ export default function ReportsPage() {
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
         <div className="mb-6 flex justify-between items-center">
-          <div className="flex-1">
-            <div className="flex items-center gap-4 bg-gradient-to-r from-green-500 via-emerald-600 to-teal-500 text-white p-4 rounded-lg shadow-lg">
-              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                <FileBarChart className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">Reports</h1>
-                <p className="text-green-100 mt-1">Generate and export project reports</p>
-              </div>
+          <div className="flex items-center gap-4">
+            <div className="p-2 bg-gradient-to-br from-green-500 via-emerald-600 to-teal-500 rounded-xl shadow-lg">
+              <FileBarChart className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
+              <p className="text-muted-foreground mt-1">Generate and export project reports</p>
             </div>
           </div>
 

@@ -97,16 +97,14 @@ export default function ProjectsPage() {
   return (
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
-        <div className="mb-6 flex justify-between items-start">
-          <div className="flex-1">
-            <div className="flex items-center gap-4 bg-gradient-to-r from-red-500 via-pink-600 to-purple-500 text-white p-4 rounded-lg shadow-lg">
-              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                <FolderOpen className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">Projects</h1>
-                <p className="text-red-100 mt-1">Manage your testing projects</p>
-              </div>
+        <div className="mb-6 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="p-2 bg-gradient-to-br from-red-500 via-pink-600 to-purple-500 rounded-xl shadow-lg">
+              <FolderOpen className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+              <p className="text-muted-foreground mt-1">Manage your testing projects</p>
             </div>
           </div>
           <div className="flex gap-2">
