@@ -2415,7 +2415,7 @@ export default function TraceabilityMatrixPage() {
             </p>
           </div>
         )}
-      </div>
+        </div>
 
       {/* Add new marker dialog */}
       <Dialog open={isAddingMarker} onOpenChange={setIsAddingMarker}>
