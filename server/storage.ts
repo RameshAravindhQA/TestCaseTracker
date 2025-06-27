@@ -1916,6 +1916,16 @@ class MemStorage implements IStorage {
   private generateId(collection: any[]): number {
     return collection.length > 0 ? Math.max(...collection.map(item => item.id)) + 1 : 1;
   }
+
+  // Comment methods
+  async getBugComment(commentId: number) {
+    return undefined;
+  }
+
+  async updateComment(commentId: number, updates: any) {
+    return undefined;
+  }
+
 }
 
 // Create and export the storage instance

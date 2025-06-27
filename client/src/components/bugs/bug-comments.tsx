@@ -67,11 +67,12 @@ interface CommentReaction {
 
 interface BugCommentsProps {
   bugId: number;
+  projectId: number;
   githubIssueNumber?: string;
   githubRepoUrl?: string;
 }
 
-export function BugComments({ bugId, githubIssueNumber, githubRepoUrl }: BugCommentsProps) {
+export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl }: BugCommentsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -98,14 +99,14 @@ export function BugComments({ bugId, githubIssueNumber, githubRepoUrl }: BugComm
 
   // Fetch GitHub comments if integrated
   const { data: githubComments } = useQuery({
-    queryKey: [`/api/github/issues/${githubIssueNumber}/comments`],
+    queryKey: [`/api/github/issues/${githubIssueNumber}/comments`, projectId],
     queryFn: async () => {
       if (!githubIssueNumber || !githubRepoUrl) return [];
-      const response = await apiRequest("GET", `/api/github/issues/${githubIssueNumber}/comments`);
+      const response = await apiRequest("GET", `/api/github/issues/${githubIssueNumber}/comments?projectId=${projectId}`);
       if (!response.ok) return [];
       return response.json();
     },
-    enabled: !!githubIssueNumber && !!githubRepoUrl,
+    enabled: !!githubIssueNumber && !!githubRepoUrl && !!projectId,
     refetchInterval: 60000, // Refetch GitHub comments every minute
   });
 
@@ -246,6 +247,7 @@ export function BugComments({ bugId, githubIssueNumber, githubRepoUrl }: BugComm
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/bugs/${bugId}/comments`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/github/issues/${githubIssueNumber}/comments`] });
       setSelectedCommentForSync(null);
       
       toast({

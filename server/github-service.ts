@@ -121,6 +121,41 @@ export class GitHubService {
     }));
   }
 
+  async getIssueComments(config: GitHubConfig, issueNumber: number) {
+    logger.info(`Fetching comments for GitHub issue #${issueNumber}`);
+
+    const response = await this.makeGitHubRequest(config, `/issues/${issueNumber}/comments`);
+
+    return response.map((comment: any) => ({
+      id: comment.id,
+      body: comment.body,
+      user: {
+        login: comment.user.login,
+        avatar_url: comment.user.avatar_url
+      },
+      created_at: comment.created_at,
+      updated_at: comment.updated_at,
+      html_url: comment.html_url
+    }));
+  }
+
+  async createComment(config: GitHubConfig, issueNumber: number, commentData: { body: string }) {
+    logger.info(`Creating comment on GitHub issue #${issueNumber}`);
+
+    const response = await this.makeGitHubRequest(
+      config, 
+      `/issues/${issueNumber}/comments`, 
+      'POST', 
+      commentData
+    );
+
+    return {
+      id: response.id,
+      html_url: response.html_url,
+      body: response.body
+    };
+  }
+
   formatBugAsGitHubIssue(bug: any): GitHubIssuePayload {
     const severity = bug.severity || 'Medium';
     const priority = bug.priority || 'Medium';

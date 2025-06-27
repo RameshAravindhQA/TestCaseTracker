@@ -98,8 +98,9 @@ export function BugDetails({ bug, users = [] }: BugDetailsProps) {
       <CardContent className="pt-6">
         <BugComments 
                 bugId={bug.id} 
-                githubIssueNumber={bug.githubIssueNumber}
                 projectId={bug.projectId}
+                githubIssueNumber={bug.githubIssueNumber}
+                githubRepoUrl={githubConfig?.repoUrl}
               />
       </CardContent>
     </Card>
