@@ -111,14 +111,14 @@ import {
   });
 <div className="mb-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
-                  <LayoutDashboard className="h-8 w-8 text-white" />
-                </div>
-                Dashboard
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">Overview of your testing projects and metrics</p>
+            <div className="flex items-center gap-4 bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-500 text-white p-4 rounded-lg shadow-lg">
+              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
+                <LayoutDashboard className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+                <p className="text-blue-100 mt-1">Overview of your testing projects and metrics</p>
+              </div>
             </div>
           </div>
         </div>
