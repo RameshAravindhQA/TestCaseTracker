@@ -1,3 +1,4 @@
+typescript
 import {
   User,
   Project,
@@ -181,6 +182,10 @@ export interface IStorage {
   // Chat operations
   createChatMessage(message: any): Promise<any>;
   getChatMessages(projectId: number, limit?: number): Promise<any[]>;
+
+    // Comment operations
+  getBugComment(commentId: number): Promise<any>;
+  updateComment(commentId: number, updates: any): Promise<any>;
 }
 
 /**
@@ -207,6 +212,12 @@ class MemStorage implements IStorage {
   private matrixCells = new Map<string, any>();
   private notebooks = new Map<number, any>();
   private notebooksData = { notebooks: [] as any[] };
+  private githubConfigs: any[] = [];
+  private githubIssues: any[] = [];
+  private projectMembers = new Map<number, any>();
+  private sprints = new Map<number, any>();
+  private kanbanColumns = new Map<number, any>();
+  private kanbanCards = new Map<number, any>();
 
   private nextId = 1;
   private testSheetIdCounter = 1;
@@ -1926,6 +1937,50 @@ class MemStorage implements IStorage {
     return undefined;
   }
 
+   async getCustomMarkersByProject(projectId: number): Promise<any[]> {
+    return Array.from(this.customMarkers.values()).filter(marker => marker.projectId === projectId);
+  }
+
+  async createCustomMarker(data: Omit<CustomMarker, 'id'>): Promise<CustomMarker> {
+    const id = this.nextId++;
+
+    const marker: CustomMarker = {
+      ...data,
+      id
+    };
+
+    this.customMarkers.set(id, marker);
+    return marker;
+  }
+
+  async updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null> {
+    const marker = this.customMarkers.get(id);
+    if (!marker) return null;
+
+    const updatedMarker = { ...marker, ...data };
+    this.customMarkers.set(id, updatedMarker);
+    return updatedMarker;
+  }
+
+  async deleteCustomMarker(id: number): Promise<boolean> {
+    return this.customMarkers.delete(id);
+  }
+
+  async getMatrixCellsByProject(projectId: number): Promise<any[]> {
+    return Array.from(this.matrixCells.values()).filter(cell => cell.projectId === projectId);
+  }
+
+  async createMatrixCell(data: Omit<MatrixCell, 'id'>): Promise<MatrixCell> {
+    const id = this.nextId++;
+
+    const cell: MatrixCell = {
+      ...data,
+      id
+    };
+
+    this.matrixCells.set(id, cell);
+    return cell;
+  }
 }
 
 // Create and export the storage instance

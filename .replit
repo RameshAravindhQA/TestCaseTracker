@@ -6,7 +6,7 @@ channel = "stable-24_05"
 packages = ["lsof"]
 
 [workflows]
-runButton = "Fast Start"
+runButton = "Start Application"
 
 [[workflows.workflow]]
 name = "Start TestCaseTracker"
@@ -37,6 +37,23 @@ args = "pkill -f \"node.*5000\" || true"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
+
+[[workflows.workflow]]
+name = "Start Application"
+author = 41980973
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pkill -f \"node.*5000\" || true"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd server && npm run dev"
 
 [deployment]
 run = ["sh", "-c", "npm run dev"]
