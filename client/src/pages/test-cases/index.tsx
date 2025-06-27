@@ -202,7 +202,6 @@ export default function TestCasesPage() {
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight">Test Cases</h1>
-                  <p className="text-lg font-medium text-blue-600 mt-1">Test Case Management System</p>
                   <p className="text-muted-foreground mt-1">Manage test cases across all projects</p>
                 </div>
               </div>

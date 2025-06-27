@@ -815,33 +815,12 @@ export default function ConsolidatedReports() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="relative">
-                        <Select 
-                          value={currentStatus} 
-                          onValueChange={(value) => handleStatusChange(item, value)}
-                        >
-                          <SelectTrigger className={`w-32 border-0 ${getStatusColor(currentStatus, item.type)}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {item.type === 'Test Case' ? (
-                              <>
-                                <SelectItem value="Not Executed" className="bg-gradient-to-r from-slate-500 via-gray-600 to-zinc-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Not Executed</SelectItem>
-                                <SelectItem value="Pass" className="bg-gradient-to-r from-emerald-500 via-green-600 to-teal-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Pass</SelectItem>
-                                <SelectItem value="Fail" className="bg-gradient-to-r from-red-500 via-rose-600 to-pink-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Fail</SelectItem>
-                                <SelectItem value="Blocked" className="bg-gradient-to-r from-orange-500 via-amber-600 to-yellow-500 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Blocked</SelectItem>
-                              </>
-                            ) : (
-                              <>
-                                <SelectItem value="Open" className="bg-gradient-to-r from-red-600 via-rose-700 to-pink-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Open</SelectItem>
-                                <SelectItem value="In Progress" className="bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">In Progress</SelectItem>
-                                <SelectItem value="Resolved" className="bg-gradient-to-r from-emerald-600 via-green-700 to-teal-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Resolved</SelectItem>
-                                <SelectItem value="Closed" className="bg-gradient-to-r from-purple-600 via-violet-700 to-indigo-600 text-white border-0 font-semibold shadow-lg hover:shadow-xl transition-all duration-300">Closed</SelectItem>
-                              </>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Input
+                        value={currentStatus}
+                        onChange={(e) => handleStatusChange(item, e.target.value)}
+                        className={`w-32 text-center font-semibold ${getStatusColor(currentStatus, item.type)}`}
+                        placeholder="Enter status"
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

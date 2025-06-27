@@ -940,13 +940,13 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
         gridTemplateRows: `30px repeat(${sheetData.rows}, auto)`,
       }}>
         {/* Corner cell */}
-        <div className="border border-gray-300 bg-gray-100 dark:bg-gray-800"></div>
+        <div className=" bg-gray-100 dark:bg-gray-800"></div>
 
         {/* Column headers */}
         {Array.from({ length: sheetData.cols }, (_, i) => (
           <div
             key={`col-${i}`}
-            className="border border-gray-300 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-medium cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700"
+            className=" bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-medium cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700"
             onClick={() => {
               // Select entire column
               const columnCells = Array.from({ length: sheetData.rows }, (_, row) => getCellId(row, i));
@@ -976,7 +976,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           <React.Fragment key={`row-${row}`}>
             {/* Row header */}
             <div
-              className="border border-gray-300 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-medium cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700"
+              className=" bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-medium cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700"
               onClick={() => {
                 // Select entire row
                 const rowCells = Array.from({ length: sheetData.cols }, (_, col) => getCellId(row, col));
@@ -997,7 +997,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
                 <div
                   key={cellId}
                   data-cell-id={cellId}
-                  className={`border border-gray-300 relative min-h-[30px] ${isSelected ? 'bg-blue-100 dark:bg-blue-900' : 'bg-white dark:bg-gray-950'} hover:bg-gray-50 dark:hover:bg-gray-900 resize-x overflow-hidden`}
+                  className={` relative min-h-[30px] ${isSelected ? 'bg-blue-100 dark:bg-blue-900' : 'bg-white dark:bg-gray-950'} hover:bg-gray-50 dark:hover:bg-gray-900 resize-x overflow-hidden`}
                   style={{
                     fontWeight: cell?.style?.fontWeight,
                     fontStyle: cell?.style?.fontStyle,

@@ -858,6 +858,7 @@ export default function TraceabilityMatrixPage() {
                         setCustomMarkers(loadedMarkers);
 
                         // Also save back to localStorage for redundancy
+                        ```python
                         try {
                           const storageKey = `markers_${selectedProjectId}`;
                           localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));
@@ -1728,7 +1729,7 @@ export default function TraceabilityMatrixPage() {
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
 
           // Use white text on dark backgrounds, black on light backgrounds
-          const isLightColor = (r * 0.299 + g * 0.587 + b * 0.114) > 186;
+          const isLightColor = (r * 0.299 + g * 0.587 + b * 0.114) >186;
           doc.setTextColor(isLightColor ? 0 : 255);
           doc.text(cellValue.label || "●", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
             align: 'center', 
@@ -2172,137 +2173,142 @@ export default function TraceabilityMatrixPage() {
             </p>
           </div>
 
-          <div className="mt-4 sm:mt-0 space-x-2 flex">
-            {/* Save changes button - only enabled when there are unsaved changes */}
-            <Button
-              variant={hasUnsavedChanges ? "default" : "outline"}
-              className="flex items-center gap-2"
-              onClick={async () => {
-                setIsAutosaving(true);
-                try {
-                  // EMERGENCY FIX: Display a clear message to the user
-                  toast({
-                    title: "Saving your changes",
-                    description: "Please wait while we save all your cell values to the database...",
-                  });
-
-                  // EMERGENCY FIX: First, ensure everything is saved to localStorage as backup
-                  if (modules && selectedProjectId) {
-                    pendingSaves.forEach(save => {
-                      try {
-                        const storageKey = `matrix_${save.projectId}_${save.rowId}_${save.colIndex}`;
-                        localStorage.setItem(storageKey, JSON.stringify(save.value));
-                      } catch (e) {
-                        console.error("EMERGENCY FIX: Failed to save to localStorage:", e);
-                      }
-                    });
-                  }
-
-                  // Normal save process
-                  const saveResult = await saveAllChanges();
-
-                  // EMERGENCY FIX: Force a database refresh after saving
-                  if (saveResult && selectedProjectId) {
-                    try {
-                      await apiRequest("GET", `/api/projects/${selectedProjectId}/matrix/cells?_force=true&_t=${Date.now()}`);
-                      console.log("EMERGENCY FIX: Forced refresh after save");
-                    } catch (e) {
-                      console.error("EMERGENCY FIX: Refresh after save failed:", e);
-                    }
-                  }
-
-                  // EMERGENCY FIX: Clear notification
-                  toast({
-                    title: "Save complete",
-                    description: "All your changes have been saved to the database and backed up locally.",
-                  });
-                } catch (error) {
-                  console.error("Save failed:", error);
-                  toast({
-                    title: "Save error",
-                    description: "We had trouble saving some changes. Your data has been backed up locally.",
-                    variant: "destructive"
-                  });
-                } finally {
-                  // Keep autosave indicator visible briefly
-                  setTimeout(() => {
-                    setIsAutosaving(false);
-                  }, 1000);
-                }
-              }}
-              disabled={!hasUnsavedChanges || !selectedProjectId || isAutosaving}
-            >
-              {isAutosaving ? (
-                <span className="animate-spin mr-2">⟳</span>
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              {isAutosaving ? 'Saving...' : 
-                (pendingSaves.length > 0 ? `Save Changes (${pendingSaves.length})` : 'Save Changes')}
-            </Button>
-
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={exportToExcel}
-              disabled={!selectedProjectId || modules?.length === 0}
-            >
-              <FileText className="h-4 w-4" />
-              Excel
-            </Button>
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={exportToPDF}
-              disabled={!selectedProjectId || modules?.length === 0}
-            >
-              <FileType className="h-4 w-4" />
-              PDF
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2"
-                  disabled={!selectedProjectId}
-                >
-                  <Settings className="h-4 w-4" />
-                  <span className="sr-only sm:not-sr-only">Settings</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Matrix Settings</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setIsAddingMarker(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add New Marker
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>Existing Markers</DropdownMenuLabel>
-                {customMarkers.map(marker => (
-                  <DropdownMenuItem 
-                    key={marker.markerId}
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setEditingMarker(marker);
-                    }}
+          
+<div className="mb-4 flex items-center justify-between">
+            <div className="flex space-x-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    disabled={!selectedProjectId}
                   >
-                    <div className="flex items-center w-full justify-between">
-                      <div className="flex items-center">
-                        <div 
-                          className="w-3 h-3 rounded-full mr-2" 
-                          style={{backgroundColor: marker.color}}
-                        />
-                        {marker.label}
-                      </div>
-                      <Edit className="h-3 w-3 opacity-50" />
-                    </div>
+                    <Settings className="h-4 w-4" />
+                    <span className="sr-only sm:not-sr-only">Settings</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuLabel>Matrix Settings</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setIsAddingMarker(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add New Marker
                   </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Existing Markers</DropdownMenuLabel>
+                  {customMarkers.map(marker => (
+                    <DropdownMenuItem 
+                      key={marker.markerId}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setEditingMarker(marker);
+                      }}
+                    >
+                      <div className="flex items-center w-full justify-between">
+                        <div className="flex items-center">
+                          <div 
+                            className="w-3 h-3 rounded-full mr-2" 
+                            style={{backgroundColor: marker.color}}
+                          />
+                          {marker.label}
+                        </div>
+                        <Edit className="h-3 w-3 opacity-50" />
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="flex space-x-2">
+              {/* Save changes button - only enabled when there are unsaved changes */}
+              <Button
+                variant={hasUnsavedChanges ? "default" : "outline"}
+                className="flex items-center gap-2"
+                onClick={async () => {
+                  setIsAutosaving(true);
+                  try {
+                    // EMERGENCY FIX: Display a clear message to the user
+                    toast({
+                      title: "Saving your changes",
+                      description: "Please wait while we save all your cell values to the database...",
+                    });
+
+                    // EMERGENCY FIX: First, ensure everything is saved to localStorage as backup
+                    if (modules && selectedProjectId) {
+                      pendingSaves.forEach(save => {
+                        try {
+                          const storageKey = `matrix_${save.projectId}_${save.rowId}_${save.colIndex}`;
+                          localStorage.setItem(storageKey, JSON.stringify(save.value));
+                        } catch (e) {
+                          console.error("EMERGENCY FIX: Failed to save to localStorage:", e);
+                        }
+                      });
+                    }
+
+                    // Normal save process
+                    const saveResult = await saveAllChanges();
+
+                    // EMERGENCY FIX: Force a database refresh after saving
+                    if (saveResult && selectedProjectId) {
+                      try {
+                        await apiRequest("GET", `/api/projects/${selectedProjectId}/matrix/cells?_force=true&_t=${Date.now()}`);
+                        console.log("EMERGENCY FIX: Forced refresh after save");
+                      } catch (e) {
+                        console.error("EMERGENCY FIX: Refresh after save failed:", e);
+                      }
+                    }
+
+                    // EMERGENCY FIX: Clear notification
+                    toast({
+                      title: "Save complete",
+                      description: "All your changes have been saved to the database and backed up locally.",
+                    });
+                  } catch (error) {
+                    console.error("Save failed:", error);
+                    toast({
+                      title: "Save error",
+                      description: "We had trouble saving some changes. Your data has been backed up locally.",
+                      variant: "destructive"
+                    });
+                  } finally {
+                    // Keep autosave indicator visible briefly
+                    setTimeout(() => {
+                      setIsAutosaving(false);
+                    }, 1000);
+                  }
+                }}
+                disabled={!hasUnsavedChanges || !selectedProjectId || isAutosaving}
+              >
+                {isAutosaving ? (
+                  <span className="animate-spin mr-2">⟳</span>
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {isAutosaving ? 'Saving...' : 
+                  (pendingSaves.length > 0 ? `Save Changes (${pendingSaves.length})` : 'Save Changes')}
+              </Button>
+
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={exportToExcel}
+                disabled={!selectedProjectId || modules?.length === 0}
+              >
+                <FileText className="h-4 w-4" />
+                Excel
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={exportToPDF}
+                disabled={!selectedProjectId || modules?.length === 0}
+              >
+                <FileType className="h-4 w-4" />
+                PDF
+              </Button>
+            </div>
           </div>
-        </div>
 
         <div className="mb-4 w-[250px]">
           <ProjectSelect
@@ -2637,7 +2643,7 @@ function CellDropdown({
           onChange(newValue);
           saveCellToDatabase(newValue);
         }}>
-          <Check className="mr-2 h-4 w-4 text-green-500" />
+          <Check className="mr-2 h-4w-4 text-green-500" />
           Yes
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => {
