@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { formatDistanceToNow } from "date-fns";
 
 interface ChatMessage {
   id: string;

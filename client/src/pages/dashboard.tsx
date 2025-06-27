@@ -19,6 +19,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 import { AnimatedCard } from "@/components/ui/animated-card";
 import { AnimatedContainer } from "@/components/ui/animated-container";
 import { AnimatedButton } from "@/components/ui/animated-button";
+import { useAuth } from "@/hooks/use-auth"; // Import useAuth hook
 
 // Interface for formatting activity data
 interface FormattedActivity extends Activity {
@@ -29,6 +30,20 @@ interface FormattedActivity extends Activity {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const [isProjectsError, setIsProjectsError] = useState(false);
+  const [projectsError, setProjectsError] = useState<Error | null>(null);
+  const [showNotificationDialog, setShowNotificationDialog] = useState(false);
+
+  // Show notification dialog on first load
+  useEffect(() => {
+    const hasShownNotification = sessionStorage.getItem('dashboard-notification-shown');
+    if (!hasShownNotification && user) {
+      setShowNotificationDialog(true);
+      sessionStorage.setItem('dashboard-notification-shown', 'true');
+    }
+  }, [user]);
+
   // Real-time status tracking
   const [realTimeStats, setRealTimeStats] = useState<DashboardStats | null>(null);
   const [lastUpdated, setLastUpdated] = useState(new Date());

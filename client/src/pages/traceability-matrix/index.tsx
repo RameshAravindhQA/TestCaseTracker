@@ -860,7 +860,7 @@ export default function TraceabilityMatrixPage() {
                         // Also save back to localStorage for redundancy
                         try {
                           const storageKey = `markers_${selectedProjectId}`;
-                          localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));
+                          localStorage.setItem(storageKey,`JSON.stringify(loadedMarkers));
                         } catch (e) {
                           console.error("MARKER FIX: Failed to update localStorage after IndexedDB recovery:", e);
                         }
@@ -1730,7 +1730,8 @@ export default function TraceabilityMatrixPage() {
           // Use white text on dark backgrounds, black on light backgrounds
           const isLightColor = (r * 0.299 + g * 0.587 + b * 0.114) > 186;
           doc.setTextColor(isLightColor ? 0 : 255);
-          doc.text(cellValue.label|| "●", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
+          doc```python
+.text(cellValue.label|| "●", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
             align: 'center', 
             baseline: 'middle'
           });
@@ -2146,6 +2147,8 @@ export default function TraceabilityMatrixPage() {
   );
   };
 
+  const selectedProject = projects?.find(p => p.id.toString() === selectedProjectId);
+
   return (
     <MainLayout>
       <div className="p-4">
@@ -2349,17 +2352,13 @@ export default function TraceabilityMatrixPage() {
             <Table className="border-collapse w-full">
               <TableHeader className="bg-gray-50 dark:bg-gray-800">
                 <TableRow>
-                  <TableHead className="w-24 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-2 sticky left-0 z-20 font-bold text-gray-700 dark:text-gray-300">
-                    Module ID
-                  </TableHead>
-                  <TableHead className="w-48 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-2 sticky left-24 z-20 font-bold text-gray-700 dark:text-gray-300">
-                    Module Name
-                  </TableHead>
+                  <TableHead className="text-center border-0 w-16">Module ID</TableHead>
+                  <TableHead className="text-left border-0 w-48">Module Name</TableHead>
                   {/* Column Headers - module names */}
                   {modules?.map((module) => (
                     <TableHead 
                       key={module.id} 
-                      className="border border-gray-200 dark:border-gray-700 p-2 min-w-[100px] text-center font-bold text-gray-700 dark:text-gray-300"
+                      className="text-center border-0 min-w-24 text-xs"
                     >
                       {module.name}
                     </TableHead>
@@ -2369,16 +2368,16 @@ export default function TraceabilityMatrixPage() {
               <TableBody>
                 {moduleData.map((rowModule) => (
                   <TableRow key={rowModule.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-2 text-center sticky left-0 z-10 bg-white dark:bg-gray-900">
-                      {rowModule.id}
-                    </TableCell>
-                    <TableCell className="border border-gray-200 dark:border-gray-700 p-2 sticky left-24 z-10 bg-white dark:bg-gray-900">
-                      {rowModule.name}
-                    </TableCell>
+                    <TableCell className="font-medium text-center border-0">
+                          {selectedProject?.name ? `${selectedProject.name.substring(0, 3).toUpperCase()}-MOD-${String(rowModule.id).padStart(2, '0')}` : `MOD-${String(rowModule.id).padStart(2, '0')}`}
+                        </TableCell>
+                    <TableCell className="font-medium border-0">
+                          {rowModule.name}
+                        </TableCell>
                     {modules?.map((colModule, colIndex) => (
                       <TableCell 
                         key={colModule.id} 
-                        className="border border-gray-200 dark:border-gray-700 p-0 text-center h-9"
+                        className="text-center border-0 p-1"
                       >
                         <CellDropdown
                           value={matrixData[rowModule.id]?.[colIndex] || { type: 'empty' }}
