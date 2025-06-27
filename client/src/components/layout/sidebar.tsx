@@ -157,10 +157,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     {
       name: "Reports",
       href: "/reports",
-      icon: <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-md opacity-20"></div>
-        <FileBarChart className="h-5 w-5 text-green-600 relative z-10" />
-      </div>,
+      icon: <FileBarChart className="h-5 w-5 text-green-600" />,
     },
     {
       name: "Test Sheets",

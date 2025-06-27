@@ -8,7 +8,10 @@ import {
   TestTube,
   FolderOpen,
   Plus,
-  LayoutDashboard
+  LayoutDashboard,
+  Folder,
+  FileText,
+  BarChart3
 } from "lucide-react";
 // Generate real-time data based only on actual test cases and bugs
   const generateRealTimeData = () => {
