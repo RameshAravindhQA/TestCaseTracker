@@ -2629,7 +2629,8 @@ function CellDropdown({
           ) : (
             <Clock className="mx-auto h-5 w-5 text-gray-400" />
           )}
-        </Button      </DropdownMenuTrigger>
+        </Button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56">
         <DropdownMenuLabel>Select Value</DropdownMenuLabel>
         <DropdownMenuSeparator />
