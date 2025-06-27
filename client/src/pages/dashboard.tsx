@@ -84,7 +84,7 @@ export default function Dashboard() {
     data: projects, 
     isLoading: isProjectsLoading, 
     isError: isProjectsErrorQuery,
-    error: projectsError
+    error: projectsErrorQuery
   } = useQuery<Project[]>({
     queryKey: ["/api/projects?limit=5"], // Specify limit in URL
     staleTime: 2 * 60 * 1000, // 2 minutes
