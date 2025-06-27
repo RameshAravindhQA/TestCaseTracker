@@ -113,11 +113,27 @@ export default function NotebooksPage() {
     },
   });
 
-  // Filter notebooks - ensure notebooks is an array
+  // Filter notebooks with advanced search - ensure notebooks is an array
   const notebooksArray = Array.isArray(notebooks) ? notebooks : [];
   const filteredNotebooks = notebooksArray.filter(notebook => {
-    const matchesSearch = notebook.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         notebook.content.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!searchQuery) {
+      const matchesFilter = filterStatus === "all" ||
+                           (filterStatus === "pinned" && notebook.isPinned) ||
+                           (filterStatus === "archived" && notebook.isArchived) ||
+                           (filterStatus === "active" && !notebook.isArchived);
+      return matchesFilter;
+    }
+
+    const searchWords = searchQuery.toLowerCase().split(' ').filter(word => word.length > 0);
+    const titleText = notebook.title.toLowerCase();
+    const contentText = notebook.content.toLowerCase();
+    const tagsText = notebook.tags ? notebook.tags.join(' ').toLowerCase() : '';
+    
+    const matchesSearch = searchWords.every(word => 
+      titleText.includes(word) || 
+      contentText.includes(word) || 
+      tagsText.includes(word)
+    );
 
     const matchesFilter = filterStatus === "all" ||
                          (filterStatus === "pinned" && notebook.isPinned) ||
@@ -126,6 +142,21 @@ export default function NotebooksPage() {
 
     return matchesSearch && matchesFilter;
   });
+
+  // Function to highlight search terms
+  const highlightText = (text: string, search: string) => {
+    if (!search) return text;
+    
+    const searchWords = search.toLowerCase().split(' ').filter(word => word.length > 0);
+    let highlightedText = text;
+    
+    searchWords.forEach(word => {
+      const regex = new RegExp(`(${word})`, 'gi');
+      highlightedText = highlightedText.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
+    });
+    
+    return highlightedText;
+  };
 
   const handleNotebookClick = (notebook: Notebook) => {
     setSelectedNotebook(notebook);
@@ -324,9 +355,12 @@ export default function NotebooksPage() {
               </CardHeader>
 
               <CardContent>
-                <p className="text-sm text-gray-600 line-clamp-3 mb-3">
-                  {notebook.content || "No content"}
-                </p>
+                <div 
+                  className="text-sm text-gray-600 line-clamp-3 mb-3"
+                  dangerouslySetInnerHTML={{
+                    __html: highlightText(notebook.content || "No content", searchQuery)
+                  }}
+                />
 
                 <div className="flex justify-between items-center text-xs text-gray-500">
                   <span>

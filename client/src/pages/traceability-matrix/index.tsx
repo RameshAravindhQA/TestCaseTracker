@@ -2330,47 +2330,16 @@ export default function TraceabilityMatrixPage() {
 
         {/* Project Name - Editable */}
         {selectedProjectId && (
-          <div className="mb-6">
-            {isEditingName ? (
-              <div className="flex items-center">
-                <Input
-                  className="max-w-md"
-                  value={projectName}
-                  onChange={e => setProjectName(e.target.value)}
-                  autoFocus
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-2"
-                  onClick={saveProjectName}
-                >
-                  <Save className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-2"
-                  onClick={cancelEditProjectName}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+<div className="mb-6 ml-8">
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-500 rounded-xl shadow-lg">
+                <Network className="h-8 w-8 text-white" />
               </div>
-            ) : (
-              <div className="flex items-center">
-                <h2 className="text-lg font-medium text-gray-700 dark:text-gray-300">
-                  {projectName}
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-2"
-                  onClick={() => setIsEditingName(true)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
+              <div>
+                <span className="block">Traceability Matrix</span>
+                <span className="text-lg font-medium text-muted-foreground block">Track relationships between requirements and test cases</span>
               </div>
-            )}
+            </h1>
           </div>
         )}
 
@@ -2660,8 +2629,7 @@ function CellDropdown({
           ) : (
             <Clock className="mx-auto h-5 w-5 text-gray-400" />
           )}
-        </Button>
-      </DropdownMenuTrigger>
+        </Button      </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56">
         <DropdownMenuLabel>Select Value</DropdownMenuLabel>
         <DropdownMenuSeparator />

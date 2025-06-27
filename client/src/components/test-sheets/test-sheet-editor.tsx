@@ -114,6 +114,12 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCriteria, setFilterCriteria] = useState<Record<string, string>>({});
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartCell, setDragStartCell] = useState<string | null>(null);
+  const [showFormulaSuggestions, setShowFormulaSuggestions] = useState(false);
+  const [formulaSuggestions, setFormulaSuggestions] = useState<string[]>([]);
+  const [columnWidths, setColumnWidths] = useState<Record<number, number>>({});
+  const [resizingColumn, setResizingColumn] = useState<number | null>(null);
 
   // Column helpers
   const getColumnName = (index: number): string => {
@@ -876,10 +882,10 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
   // Handle drag start for cell selection
   const handleDragStart = useCallback((startCell: string, event: React.MouseEvent) => {
     if (event.shiftKey) return; // Don't start drag if shift is held
-    
+
     setSelectedRange([startCell]);
     setSelectedCell(startCell);
-    
+
     const handleMouseMove = (e: MouseEvent) => {
       const element = document.elementFromPoint(e.clientX, e.clientY);
       if (element && element.dataset.cellId) {
@@ -911,7 +917,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
   // Auto-suggest formulas
   const getFormulaSuggestions = useCallback((input: string) => {
     if (!input.startsWith('=')) return [];
-    
+
     const formulaStart = input.substring(1).toUpperCase();
     const suggestions = [
       'SUM(A1:A10)',
@@ -922,7 +928,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
       'ROUND(A1,2)',
       'IF(A1>0,"Positive","Negative")'
     ].filter(formula => formula.startsWith(formulaStart));
-    
+
     return suggestions;
   }, []);
 

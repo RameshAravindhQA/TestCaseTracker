@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -75,7 +74,7 @@ interface BugCommentsProps {
 export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl }: BugCommentsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [newComment, setNewComment] = useState("");
   const [editingComment, setEditingComment] = useState<number | null>(null);
   const [editContent, setEditContent] = useState("");
@@ -126,11 +125,11 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
         githubIssueNumber: data.syncToGithub ? githubIssueNumber : undefined,
         githubRepoUrl: data.syncToGithub ? githubRepoUrl : undefined,
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to create comment");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -138,7 +137,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
       setNewComment("");
       setReplyContent("");
       setReplyingTo(null);
-      
+
       toast({
         title: "Comment added",
         description: "Your comment has been added successfully.",
@@ -159,18 +158,18 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
       const response = await apiRequest("PUT", `/api/bugs/${bugId}/comments/${data.id}`, {
         content: data.content,
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to update comment");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/bugs/${bugId}/comments`] });
       setEditingComment(null);
       setEditContent("");
-      
+
       toast({
         title: "Comment updated",
         description: "Your comment has been updated successfully.",
@@ -189,16 +188,16 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
   const deleteCommentMutation = useMutation({
     mutationFn: async (commentId: number) => {
       const response = await apiRequest("DELETE", `/api/bugs/${bugId}/comments/${commentId}`);
-      
+
       if (!response.ok) {
         throw new Error("Failed to delete comment");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/bugs/${bugId}/comments`] });
-      
+
       toast({
         title: "Comment deleted",
         description: "The comment has been deleted successfully.",
@@ -219,11 +218,11 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
       const response = await apiRequest("POST", `/api/bugs/${bugId}/comments/${data.commentId}/reactions`, {
         type: data.type,
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to add reaction");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -238,18 +237,18 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
         githubIssueNumber,
         githubRepoUrl,
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to sync to GitHub");
       }
-      
+
       return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/bugs/${bugId}/comments`] });
       queryClient.invalidateQueries({ queryKey: [`/api/github/issues/${githubIssueNumber}/comments`] });
       setSelectedCommentForSync(null);
-      
+
       toast({
         title: "Synced to GitHub",
         description: "Comment has been synced to GitHub successfully.",
@@ -267,7 +266,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
   // Handle comment submission
   const handleSubmitComment = (syncToGithub: boolean = false) => {
     if (!newComment.trim()) return;
-    
+
     createCommentMutation.mutate({
       content: newComment,
       syncToGithub,
@@ -277,7 +276,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
   // Handle reply submission
   const handleSubmitReply = (parentId: number, syncToGithub: boolean = false) => {
     if (!replyContent.trim()) return;
-    
+
     createCommentMutation.mutate({
       content: replyContent,
       parentId,
@@ -288,7 +287,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
   // Handle edit submission
   const handleSubmitEdit = () => {
     if (!editContent.trim() || !editingComment) return;
-    
+
     updateCommentMutation.mutate({
       id: editingComment,
       content: editContent,
@@ -326,7 +325,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
             {reactionEmojis[type as keyof typeof reactionEmojis]} {count}
           </Button>
         ))}
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
@@ -366,7 +365,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
                     {comment.author.name.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
-                
+
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm">{comment.author.name}</span>
@@ -395,7 +394,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
                   </span>
                 </div>
               </div>
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
@@ -435,7 +434,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
               </DropdownMenu>
             </div>
           </CardHeader>
-          
+
           <CardContent className="pt-0">
             {isEditing ? (
               <div className="space-y-2">
@@ -468,7 +467,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
                 {renderReactions(comment)}
               </>
             )}
-            
+
             {isReplying && (
               <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
                 <Textarea
@@ -507,7 +506,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
             )}
           </CardContent>
         </Card>
-        
+
         {/* Render replies */}
         {replies.map(reply => renderComment(reply, level + 1))}
       </div>
@@ -540,7 +539,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
           <MessageSquare className="h-5 w-5" />
           Comments ({filteredComments.length})
         </h3>
-        
+
         <div className="flex items-center gap-2">
           <Button
             size="sm"
@@ -550,7 +549,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
             {showPrivateComments ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
             {showPrivateComments ? 'Hide' : 'Show'} Private
           </Button>
-          
+
           {githubIssueNumber && githubRepoUrl && (
             <a
               href={`${githubRepoUrl}/issues/${githubIssueNumber}`}
@@ -625,7 +624,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
               <Send className="h-4 w-4 mr-2" />
               Comment
             </Button>
-            
+
             {githubIssueNumber && (
               <Button 
                 variant="outline"
@@ -636,7 +635,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
                 Comment & Sync
               </Button>
             )}
-            
+
             <Button 
               variant="outline"
               onClick={() => createCommentMutation.mutate({ 
@@ -682,7 +681,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
                 #{githubIssueNumber}
               </a>
             </p>
-            
+
             {selectedCommentForSync && (
               <Card>
                 <CardContent className="p-3">
@@ -692,7 +691,7 @@ export function BugComments({ bugId, projectId, githubIssueNumber, githubRepoUrl
                 </CardContent>
               </Card>
             )}
-            
+
             <div className="flex gap-2">
               <Button 
                 onClick={() => selectedCommentForSync && syncToGithubMutation.mutate(selectedCommentForSync.id)}

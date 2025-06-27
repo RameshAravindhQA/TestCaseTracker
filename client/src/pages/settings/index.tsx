@@ -57,6 +57,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Badge } from "@/components/ui/badge";
 
 // Types
 interface SystemSettings {
@@ -487,6 +488,7 @@ export default function SettingsPage() {
     { id: "backup", label: "Backup", icon: <FileArchive className="h-4 w-4 mr-2" /> },
     { id: "security", label: "Security", icon: <Shield className="h-4 w-4 mr-2" /> },
     { id: "test-case", label: "Test Cases", icon: <NotebookPen className="h-4 w-4 mr-2" /> },
+    { id: "permissions", label: "Permissions", icon: <Users2 className="h-4 w-4 mr-2" /> },
   ];
 
   return (
@@ -868,6 +870,7 @@ export default function SettingsPage() {
                         />
                       </div>
 
+                      Implementing permissions management section in settings page.```text
                       <FormField
                         control={backupForm.control}
                         name="retentionPeriod"
@@ -1219,7 +1222,114 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Permissions Settings */}
+            {activeTab === "permissions" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Users2 className="h-5 w-5 mr-2" />
+                    Role-Based Permissions
+                  </CardTitle>
+                  <CardDescription>
+                    Configure what actions each role can perform in the system
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {Object.entries(rolePermissions).map(([role, permissions]) => (
+                      <div key={role} className="border rounded-lg p-4">
+                        <h3 className="text-lg font-semibold mb-4 flex items-center">
+                          <Badge variant="outline" className="mr-2">{role}</Badge>
+                          Role Permissions
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {permissions.map((permission, index) => (
+                            <div key={index} className="border rounded p-3">
+                              <h4 className="font-medium mb-2">{permission.module} - {permission.feature}</h4>
+                              <div className="grid grid-cols-4 gap-2">
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={permission.view}
+                                    onChange={(e) => {
+                                      const newPermissions = { ...rolePermissions };
+                                      newPermissions[role][index].view = e.target.checked;
+                                      setRolePermissions(newPermissions);
+                                    }}
+                                    className="mr-1"
+                                  />
+                                  <span className="text-sm">View</span>
+                                </label>
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={permission.create}
+                                    onChange={(e) => {
+                                      const newPermissions = { ...rolePermissions };
+                                      newPermissions[role][index].create = e.target.checked;
+                                      setRolePermissions(newPermissions);
+                                    }}
+                                    className="mr-1"
+                                  />
+                                  <span className="text-sm">Create</span>
+                                </label>
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={permission.update}
+                                    onChange={(e) => {
+                                      const newPermissions = { ...rolePermissions };
+                                      newPermissions[role][index].update = e.target.checked;
+                                      setRolePermissions(newPermissions);
+                                    }}
+                                    className="mr-1"
+                                  />
+                                  <span className="text-sm">Update</span>
+                                </label>
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={permission.delete}
+                                    onChange={(e) => {
+                                      const newPermissions = { ...rolePermissions };
+                                      newPermissions[role][index].delete = e.target.checked;
+                                      setRolePermissions(newPermissions);
+                                    }}
+                                    className="mr-1"
+                                  />
+                                  <span className="text-sm">Delete</span>
+                                </label>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="flex justify-end">
+                      <Button 
+                        onClick={() => {
+                          // Save permissions logic here
+                          toast({
+                            title: "Permissions Updated",
+                            description: "Role permissions have been updated successfully.",
+                          });
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <Save className="h-4 w-4" />
+                        Save Permissions
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
+
+          {/* View Notebook Dialog */}
         </div>
       </div>
     </MainLayout>

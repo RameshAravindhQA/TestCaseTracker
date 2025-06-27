@@ -87,24 +87,24 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const [searchQuery, setSearchQuery = useState("");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState("");
-  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
+  const [viewMode, setViewMode = useState<"table" | "kanban">("table");
   const navigate = useNavigate();
-  const [viewTestCaseDialogOpen, setViewTestCaseDialogOpen] = useState(false);
-  const [editTestCaseDialogOpen, setEditTestCaseDialogOpen] = useState(false);
-  const [editBugDialogOpen, setEditBugDialogOpen] = useState(false);
-  const [selectedItemForView, setSelectedItemForView] = useState<any>(null);
-  const [severityFilter, setSeverityFilter] = useState<string>("all");
-  const [editingItem, setEditingItem] = useState<{ id: number; type: 'testcase' | 'bug'; status: string } | null>(null);
+  const [viewTestCaseDialogOpen, setViewTestCaseDialogOpen = useState(false);
+  const [editTestCaseDialogOpen, setEditTestCaseDialogOpen = useState(false);
+  const [editBugDialogOpen, setEditBugDialogOpen = useState(false);
+  const [selectedItemForView, setSelectedItemForView = useState<any>(null);
+  const [severityFilter, setSeverityFilter = useState<string>("all");
+  const [editingItem, setEditingItem = useState<{ id: number; type: 'testcase' | 'bug'; status: string } | null>(null);
   const [newStatus, setNewStatus] = useState<string>("");
-  const [statusUpdateDialog, setStatusUpdateDialog] = useState(false);
-  const [selectedPriority, setSelectedPriority] = useState<string>('');
-  const [selectedModule, setSelectedModule] = useState<string>('');
+  const [statusUpdateDialog, setStatusUpdateDialog = useState(false);
+  const [selectedPriority, setSelectedPriority = useState<string>('');
+  const [selectedModule, setSelectedModule = useState<string>('');
   const [selectedSeverity, setSelectedSeverity] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   // Force re-render when filters change
-  const [filterKey, setFilterKey] = useState(0);
-  const [allItems, setAllItems] = useState<any[]>([]);
+  const [filterKey, setFilterKey = useState(0);
+  const [allItems, setAllItems = useState<any[]>([]);
 
   const currentProjectId = selectedProjectId || projectId;
 
@@ -651,6 +651,65 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
       [id]: { id: parseInt(itemId), type: type as 'testcase' | 'bug', status: newStatus }
     }));
     setHasUnsavedChanges(true);
+  };
+
+  const handleStatusChange = async (itemId: string, newStatus: string) => {
+    console.log("Status change requested:", { itemId, newStatus });
+
+    const item = allItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    try {
+      // Update the item in the backend
+      const endpoint = item.type === 'testcase' 
+        ? `/api/test-cases/${item.originalData.id}`
+        : `/api/bugs/${item.originalData.id}`;
+
+      await apiRequest("PATCH", endpoint, { status: newStatus });
+
+      // Update local state
+      setAllItems(prevItems => 
+        prevItems.map(item => 
+          item.id === itemId 
+            ? { ...item, status: newStatus, progress: getProgressFromStatus(newStatus, item.type) }
+            : item
+        )
+      );
+
+      toast({
+        title: "Status Updated",
+        description: `${item.type === 'testcase' ? 'Test case' : 'Bug'} status updated to ${newStatus}`,
+      });
+
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/bugs`] });
+    } catch (error) {
+      console.error("Failed to update status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getProgressFromStatus = (status: string, type: 'testcase' | 'bug'): number => {
+    if (type === 'testcase') {
+      switch (status) {
+        case 'Pass': return 100;
+        case 'Fail': return 0;
+        case 'Blocked': return 25;
+        default: return 50;
+      }
+    } else {
+      switch (status) {
+        case 'Closed':
+        case 'Resolved': return 100;
+        case 'In Progress': return 50;
+        default: return 0;
+      }
+    }
   };
 
   // Handle individual status update with robust error handling and immediate persistence
