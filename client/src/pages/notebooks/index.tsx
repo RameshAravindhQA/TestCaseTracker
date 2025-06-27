@@ -109,8 +109,9 @@ export default function NotebooksPage() {
     },
   });
 
-  // Filter notebooks
-  const filteredNotebooks = notebooks?.filter(notebook => {
+  // Filter notebooks - ensure notebooks is an array
+  const notebooksArray = Array.isArray(notebooks) ? notebooks : [];
+  const filteredNotebooks = notebooksArray.filter(notebook => {
     const matchesSearch = notebook.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          notebook.content.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -120,7 +121,7 @@ export default function NotebooksPage() {
                          (filterStatus === "active" && !notebook.isArchived);
 
     return matchesSearch && matchesFilter;
-  }) || [];
+  });
 
   const handleNotebookClick = (notebook: Notebook) => {
     setSelectedNotebook(notebook);
