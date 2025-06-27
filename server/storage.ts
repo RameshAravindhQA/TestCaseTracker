@@ -1,4 +1,4 @@
-typescript
+
 import {
   User,
   Project,
@@ -162,7 +162,7 @@ export interface IStorage {
   updateTestSheet(id: number, sheetData: Partial<TestSheet>): Promise<TestSheet | undefined>;
   deleteTestSheet(id: number): Promise<boolean>;
 
-   // GitHub Integration methods
+  // GitHub Integration methods
   getGitHubConfig(projectId: number): Promise<any | undefined>;
   createGitHubConfig(data: any): Promise<any>;
   updateGitHubConfig(id: number, data: any): Promise<any | null>;
@@ -172,18 +172,18 @@ export interface IStorage {
   getGitHubIssueByGitHubId(githubId: number): Promise<any | undefined>;
   updateGitHubIssue(id: number, data: any): Promise<any | null>;
 
-    // Notebook operations
-    getNotebooks(userId: number): Promise<Notebook[]>;
-    getNotebook(id: number, userId: number): Promise<Notebook | null>;
-    createNotebook(notebookData: Omit<Notebook, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notebook>;
-    updateNotebook(id: number, userId: number, updates: Partial<Notebook>): Promise<Notebook | null>;
-    deleteNotebook(id: number, userId: number): Promise<boolean>;
+  // Notebook operations
+  getNotebooks(userId: number): Promise<Notebook[]>;
+  getNotebook(id: number, userId: number): Promise<Notebook | null>;
+  createNotebook(notebookData: Omit<Notebook, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notebook>;
+  updateNotebook(id: number, userId: number, updates: Partial<Notebook>): Promise<Notebook | null>;
+  deleteNotebook(id: number, userId: number): Promise<boolean>;
 
   // Chat operations
   createChatMessage(message: any): Promise<any>;
   getChatMessages(projectId: number, limit?: number): Promise<any[]>;
 
-    // Comment operations
+  // Comment operations
   getBugComment(commentId: number): Promise<any>;
   updateComment(commentId: number, updates: any): Promise<any>;
 }
@@ -338,8 +338,6 @@ class MemStorage implements IStorage {
           projectPrefix = cleanProjectName.toUpperCase().padEnd(3, 'X');
         }
       }
-
-
 
       // Get module name prefix (first 3 letters of module name)
       let modulePrefix = 'MOD';
@@ -1980,6 +1978,30 @@ class MemStorage implements IStorage {
 
     this.matrixCells.set(id, cell);
     return cell;
+  }
+
+  async getTagsByProject(projectId: number): Promise<Tag[]> {
+    return Array.from(this.tags.values()).filter(tag => tag.projectId === projectId);
+  }
+
+  async getKanbanColumnsByProject(projectId: number): Promise<KanbanColumn[]> {
+    return Array.from(this.kanbanColumns.values())
+      .filter(col => col.projectId === projectId)
+      .sort((a, b) => a.position - b.position);
+  }
+
+  async getKanbanCardsByColumn(columnId: number): Promise<KanbanCard[]> {
+    return Array.from(this.kanbanCards.values())
+      .filter(card => card.columnId === columnId)
+      .sort((a, b) => a.position - b.position);
+  }
+
+  async getDocumentsByProject(projectId: number): Promise<Document[]> {
+    return Array.from(this.documents.values()).filter(doc => doc.projectId === projectId);
+  }
+
+  async getDocumentFoldersByProject(projectId: number): Promise<DocumentFolder[]> {
+    return Array.from(this.documentFolders.values()).filter(folder => folder.projectId === projectId);
   }
 }
 
