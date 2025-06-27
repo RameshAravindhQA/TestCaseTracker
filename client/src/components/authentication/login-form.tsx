@@ -49,10 +49,10 @@ export function LoginForm() {
         title: "Login successful",
         description: "You have been logged in to your account",
       });
-      
+
       // Invalidate the user data query to refetch with new credentials
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
+
       // Force redirect with hard page reload
       console.log("Login successful, redirecting to dashboard...");
       localStorage.setItem('isAuthenticated', 'true');
@@ -62,7 +62,7 @@ export function LoginForm() {
     },
     onError: (error: any) => {
       console.error("Login error:", error);
-      
+
       // Check for 404 status code or message that indicates user not found
       if (error.status === 404 || 
           (error.message && (
@@ -95,7 +95,7 @@ export function LoginForm() {
       setIsOAuthLoading(provider);
       const response = await fetch(`/api/auth/${provider}/url`);
       const data = await response.json();
-      
+
       if (data.authUrl) {
         window.location.href = data.authUrl;
       } else {
@@ -184,7 +184,7 @@ export function LoginForm() {
             </Button>
           </form>
         </Form>
-        
+
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -196,7 +196,7 @@ export function LoginForm() {
               </span>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4 mt-4">
             <Button
               variant="outline"
@@ -227,7 +227,7 @@ export function LoginForm() {
               )}
               Google
             </Button>
-            
+
             <Button
               variant="outline"
               onClick={() => handleOAuthLogin('github')}

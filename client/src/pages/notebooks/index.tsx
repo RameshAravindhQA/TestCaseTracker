@@ -25,7 +25,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -55,11 +54,15 @@ export default function NotebooksPage() {
   const [selectedNotebook, setSelectedNotebook] = useState<Notebook | null>(null);
 
   // Fetch notebooks
-  const { data: notebooks, isLoading } = useQuery<Notebook[]>({
+  const { data: notebooks, isLoading, refetch } = useQuery<Notebook[]>({
     queryKey: ["/api/notebooks"],
     queryFn: async () => {
-      return await apiRequest("GET", "/api/notebooks");
+      const response = await apiRequest("GET", "/api/notebooks");
+      if (!response.ok) throw new Error("Failed to fetch notebooks");
+      return response.json();
     },
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchOnWindowFocus: true,
   });
 
   // Update notebook mutation
@@ -203,7 +206,16 @@ export default function NotebooksPage() {
                 Create a new notebook to organize your notes and ideas.
               </DialogDescription>
             </DialogHeader>
-            <NotebookForm onSuccess={() => setCreateDialogOpen(false)} />
+            <NotebookForm onSuccess={() => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
+      // Force immediate refetch
+      refetch();
+      setIsFormOpen(false);
+      toast({
+        title: "Success",
+        description: "Notebook created successfully.",
+      });
+    }} />
           </DialogContent>
         </Dialog>
       </div>

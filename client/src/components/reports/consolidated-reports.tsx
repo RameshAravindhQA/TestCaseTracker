@@ -236,85 +236,40 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
 
-  // Update item status mutations
-  const updateTestCaseMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      const response = await apiRequest("PUT", `/api/test-cases/${id}`, { status });
-      if (!response.ok) {
-        throw new Error("Failed to update test case status");
-      }
+  const updateItemStatus = useMutation({
+    mutationFn: async ({ item, newStatus }: { item: any; newStatus: string }) => {
+      const endpoint = item.type === 'test-case' 
+        ? `/api/test-cases/${item.id}`
+        : `/api/bugs/${item.id}`;
+
+      const response = await apiRequest("PUT", endpoint, { status: newStatus });
+      if (!response.ok) throw new Error("Failed to update status");
       return response.json();
     },
-    onSuccess: (data, variables) => {
-      // Update local state immediately
-      setAllItems(prevItems => 
-        prevItems.map(item => 
-          item.id === variables.id && item.type === 'test-case'
-            ? { ...item, status: variables.status }
-            : item
-        )
-      );
+    onSuccess: () => {
+      // Invalidate all related queries to ensure real-time updates
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProject}/test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProject}/bugs`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
 
-      // Refresh queries
-      queryClient.invalidateQueries({ queryKey: ["/api/test-cases"] });
+      // Refetch data immediately
+      refetchTestCases();
+      refetchBugs();
 
       toast({
-        title: "Success",
-        description: "Test Case status updated successfully.",
+        title: "Status Updated",
+        description: "Item status has been updated successfully.",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: `Failed to update test case status: ${error}`,
+        title: "Update Failed",
+        description: `Failed to update status: ${error.message}`,
         variant: "destructive",
       });
     },
   });
-
-  const updateBugMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      const response = await apiRequest("PUT", `/api/bugs/${id}`, { status });
-      if (!response.ok) {
-        throw new Error("Failed to update bug status");
-      }
-      return response.json();
-    },
-    onSuccess: (data, variables) => {
-      // Update local state immediately
-      setAllItems(prevItems => 
-        prevItems.map(item => 
-          item.id === variables.id && item.type === 'bug'
-            ? { ...item, status: variables.status }
-            : item
-        )
-      );
-
-      // Refresh queries
-      queryClient.invalidateQueries({ queryKey: ["/api/bugs"] });
-
-      toast({
-        title: "Success",
-        description: "Bug Report status updated successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: `Failed to update bug status: ${error}`,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Update item status
-  const updateItemStatus = async (item: any, newStatus: string) => {
-    if (item.type === 'test-case') {
-      updateTestCaseMutation.mutate({ id: item.id, status: newStatus });
-    } else if (item.type === 'bug') {
-      updateBugMutation.mutate({ id: item.id, status: newStatus });
-    }
-  };
 
   // GitHub sync mutation
   const syncWithGithubMutation = useMutation({
@@ -1513,9 +1468,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
                 <SelectItem value="Blocked">Blocked</SelectItem>
                 <SelectItem value="Not Executed">Not Executed</SelectItem>
               </SelectContent>
-            </Select>
-
-            <Select 
+            </Select>            <Select 
               key={`priority-${filterKey}`}
               value={selectedPriority} 
               onValueChange={handlePriorityChange}

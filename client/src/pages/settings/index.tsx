@@ -190,16 +190,84 @@ type BackupSettingsFormValues = z.infer<typeof backupSettingsSchema>;
 type SecuritySettingsFormValues = z.infer<typeof securitySettingsSchema>;
 type TestCaseSettingsFormValues = z.infer<typeof testCaseSettingsSchema>;
 
+interface FeaturePermission {
+  module: string;
+  feature: string;
+  view: boolean;
+  create: boolean;
+  update: boolean;
+  delete: boolean;
+}
+
+interface RolePermissions {
+  [key: string]: FeaturePermission[];
+}
+
+const defaultPermissions: RolePermissions = {
+  Admin: [
+    { module: "Projects", feature: "Project Management", view: true, create: true, update: true, delete: true },
+    { module: "Projects", feature: "Project Members", view: true, create: true, update: true, delete: true },
+    { module: "Test Cases", feature: "Test Case Management", view: true, create: true, update: true, delete: true },
+    { module: "Test Cases", feature: "Test Execution", view: true, create: true, update: true, delete: true },
+    { module: "Bug Reports", feature: "Bug Management", view: true, create: true, update: true, delete: true },
+    { module: "Bug Reports", feature: "Bug Assignment", view: true, create: true, update: true, delete: true },
+    { module: "Reports", feature: "Generate Reports", view: true, create: true, update: true, delete: true },
+    { module: "Reports", feature: "Export Data", view: true, create: true, update: true, delete: true },
+    { module: "Users", feature: "User Management", view: true, create: true, update: true, delete: true },
+    { module: "Settings", feature: "System Configuration", view: true, create: true, update: true, delete: true },
+    { module: "GitHub", feature: "GitHub Integration", view: true, create: true, update: true, delete: true },
+    { module: "Automation", feature: "Test Automation", view: true, create: true, update: true, delete: true },
+    { module: "Documents", feature: "Document Management", view: true, create: true, update: true, delete: true },
+    { module: "Timesheets", feature: "Time Tracking", view: true, create: true, update: true, delete: true },
+    { module: "Notebooks", feature: "Note Management", view: true, create: true, update: true, delete: true },
+  ],
+  Tester: [
+    { module: "Projects", feature: "Project Management", view: true, create: false, update: false, delete: false },
+    { module: "Projects", feature: "Project Members", view: true, create: false, update: false, delete: false },
+    { module: "Test Cases", feature: "Test Case Management", view: true, create: true, update: true, delete: false },
+    { module: "Test Cases", feature: "Test Execution", view: true, create: true, update: true, delete: false },
+    { module: "Bug Reports", feature: "Bug Management", view: true, create: true, update: true, delete: false },
+    { module: "Bug Reports", feature: "Bug Assignment", view: true, create: false, update: false, delete: false },
+    { module: "Reports", feature: "Generate Reports", view: true, create: true, update: false, delete: false },
+    { module: "Reports", feature: "Export Data", view: true, create: false, update: false, delete: false },
+    { module: "Users", feature: "User Management", view: false, create: false, update: false, delete: false },
+    { module: "Settings", feature: "System Configuration", view: false, create: false, update: false, delete: false },
+    { module: "GitHub", feature: "GitHub Integration", view: true, create: false, update: false, delete: false },
+    { module: "Automation", feature: "Test Automation", view: true, create: true, update: true, delete: false },
+    { module: "Documents", feature: "Document Management", view: true, create: true, update: true, delete: false },
+    { module: "Timesheets", feature: "Time Tracking", view: true, create: true, update: true, delete: false },
+    { module: "Notebooks", feature: "Note Management", view: true, create: true, update: true, delete: true },
+  ],
+  Developer: [
+    { module: "Projects", feature: "Project Management", view: true, create: false, update: true, delete: false },
+    { module: "Projects", feature: "Project Members", view: true, create: false, update: false, delete: false },
+    { module: "Test Cases", feature: "Test Case Management", view: true, create: false, update: true, delete: false },
+    { module: "Test Cases", feature: "Test Execution", view: true, create: false, update: true, delete: false },
+    { module: "Bug Reports", feature: "Bug Management", view: true, create: false, update: true, delete: false },
+    { module: "Bug Reports", feature: "Bug Assignment", view: true, create: false, update: true, delete: false },
+    { module: "Reports", feature: "Generate Reports", view: true, create: false, update: false, delete: false },
+    { module: "Reports", feature: "Export Data", view: true, create: false, update: false, delete: false },
+    { module: "Users", feature: "User Management", view: false, create: false, update: false, delete: false },
+    { module: "Settings", feature: "System Configuration", view: false, create: false, update: false, delete: false },
+    { module: "GitHub", feature: "GitHub Integration", view: true, create: true, update: true, delete: false },
+    { module: "Automation", feature: "Test Automation", view: true, create: true, update: true, delete: false },
+    { module: "Documents", feature: "Document Management", view: true, create: true, update: true, delete: false },
+    { module: "Timesheets", feature: "Time Tracking", view: true, create: true, update: true, delete: false },
+    { module: "Notebooks", feature: "Note Management", view: true, create: true, update: true, delete: true },
+  ],
+};
+
 export default function SettingsPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("general");
-  
+  const [rolePermissions, setRolePermissions] = useState<RolePermissions>(defaultPermissions);
+
   // Fetch settings
   const { data: settings, isLoading } = useQuery<SystemSettings>({
     queryKey: ["/api/settings"],
     initialData: defaultSettings, // Use default settings if API call fails
   });
-  
+
   // General settings form
   const generalForm = useForm<GeneralSettingsFormValues>({
     resolver: zodResolver(generalSettingsSchema),
@@ -210,7 +278,7 @@ export default function SettingsPage() {
       secondaryColor: settings?.secondaryColor || "#10b981",
     },
   });
-  
+
   // Email settings form
   const emailForm = useForm<EmailSettingsFormValues>({
     resolver: zodResolver(emailSettingsSchema),
@@ -223,7 +291,7 @@ export default function SettingsPage() {
       enableEmailNotifications: settings?.emailSettings.enableEmailNotifications || false,
     },
   });
-  
+
   // Backup settings form
   const backupForm = useForm<BackupSettingsFormValues>({
     resolver: zodResolver(backupSettingsSchema),
@@ -234,7 +302,7 @@ export default function SettingsPage() {
       retentionPeriod: settings?.backupSettings.retentionPeriod || 30,
     },
   });
-  
+
   // Security settings form
   const securityForm = useForm<SecuritySettingsFormValues>({
     resolver: zodResolver(securitySettingsSchema),
@@ -251,7 +319,7 @@ export default function SettingsPage() {
       allowedIpAddresses: settings?.securitySettings.allowedIpAddresses || [],
     },
   });
-  
+
   // Test case settings form
   const testCaseForm = useForm<TestCaseSettingsFormValues>({
     resolver: zodResolver(testCaseSettingsSchema),
@@ -262,7 +330,7 @@ export default function SettingsPage() {
       enableVersioning: settings?.testCaseSettings.enableVersioning || true,
     },
   });
-  
+
   // Save settings mutation
   const saveSettingsMutation = useMutation({
     mutationFn: async (data: Partial<SystemSettings>) => {
@@ -284,7 +352,7 @@ export default function SettingsPage() {
       });
     },
   });
-  
+
   // Save general settings
   const handleSaveGeneralSettings = (data: GeneralSettingsFormValues) => {
     saveSettingsMutation.mutate({
@@ -294,35 +362,35 @@ export default function SettingsPage() {
       secondaryColor: data.secondaryColor,
     });
   };
-  
+
   // Save email settings
   const handleSaveEmailSettings = (data: EmailSettingsFormValues) => {
     saveSettingsMutation.mutate({
       emailSettings: data,
     });
   };
-  
+
   // Save backup settings
   const handleSaveBackupSettings = (data: BackupSettingsFormValues) => {
     saveSettingsMutation.mutate({
       backupSettings: data,
     });
   };
-  
+
   // Save security settings
   const handleSaveSecuritySettings = (data: SecuritySettingsFormValues) => {
     saveSettingsMutation.mutate({
       securitySettings: data,
     });
   };
-  
+
   // Save test case settings
   const handleSaveTestCaseSettings = (data: TestCaseSettingsFormValues) => {
     saveSettingsMutation.mutate({
       testCaseSettings: data,
     });
   };
-  
+
   // Test email configuration
   const testEmailMutation = useMutation({
     mutationFn: async () => {
@@ -343,7 +411,7 @@ export default function SettingsPage() {
       });
     },
   });
-  
+
   // Create manual backup
   const createBackupMutation = useMutation({
     mutationFn: async () => {
@@ -364,7 +432,7 @@ export default function SettingsPage() {
       });
     },
   });
-  
+
   // Update form values when settings are loaded
   useEffect(() => {
     if (settings && !isLoading) {
@@ -374,7 +442,7 @@ export default function SettingsPage() {
         primaryColor: settings.primaryColor,
         secondaryColor: settings.secondaryColor,
       });
-      
+
       emailForm.reset({
         smtpServer: settings.emailSettings.smtpServer,
         smtpPort: settings.emailSettings.smtpPort,
@@ -383,14 +451,14 @@ export default function SettingsPage() {
         senderEmail: settings.emailSettings.senderEmail,
         enableEmailNotifications: settings.emailSettings.enableEmailNotifications,
       });
-      
+
       backupForm.reset({
         enableAutomaticBackups: settings.backupSettings.enableAutomaticBackups,
         backupFrequency: settings.backupSettings.backupFrequency,
         backupLocation: settings.backupSettings.backupLocation,
-        retentionPeriod: settings.backupSettings.retentionPeriod,
+        retentionPeriod: settings.retentionPeriod,
       });
-      
+
       securityForm.reset({
         passwordPolicy: {
           minLength: settings.securitySettings.passwordPolicy.minLength,
@@ -403,7 +471,7 @@ export default function SettingsPage() {
         enableTwoFactor: settings.securitySettings.enableTwoFactor,
         allowedIpAddresses: settings.securitySettings.allowedIpAddresses,
       });
-      
+
       testCaseForm.reset({
         defaultStatusOptions: settings.testCaseSettings.defaultStatusOptions,
         defaultPriorityOptions: settings.testCaseSettings.defaultPriorityOptions,
@@ -412,7 +480,7 @@ export default function SettingsPage() {
       });
     }
   }, [settings, isLoading]);
-  
+
   const tabs = [
     { id: "general", label: "General", icon: <Globe className="h-4 w-4 mr-2" /> },
     { id: "email", label: "Email", icon: <Mail className="h-4 w-4 mr-2" /> },
@@ -420,7 +488,7 @@ export default function SettingsPage() {
     { id: "security", label: "Security", icon: <Shield className="h-4 w-4 mr-2" /> },
     { id: "test-case", label: "Test Cases", icon: <NotebookPen className="h-4 w-4 mr-2" /> },
   ];
-  
+
   return (
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
@@ -428,7 +496,7 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-semibold text-gray-900">System Settings</h1>
           <p className="mt-1 text-sm text-gray-600">Configure application settings and preferences</p>
         </div>
-        
+
         <div className="flex flex-col md:flex-row gap-6">
           <Card className="md:w-64 flex-shrink-0">
             <CardContent className="p-4">
@@ -447,7 +515,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           <div className="flex-1">
             {/* General Settings */}
             {activeTab === "general" && (
@@ -480,7 +548,7 @@ export default function SettingsPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={generalForm.control}
                         name="companyLogo"
@@ -497,7 +565,7 @@ export default function SettingsPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={generalForm.control}
@@ -518,7 +586,7 @@ export default function SettingsPage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={generalForm.control}
                           name="secondaryColor"
@@ -539,7 +607,7 @@ export default function SettingsPage() {
                           )}
                         />
                       </div>
-                      
+
                       <div className="flex justify-end">
                         <Button 
                           type="submit" 
@@ -559,7 +627,7 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
-            
+
             {/* Email Settings */}
             {activeTab === "email" && (
               <Card>
@@ -595,7 +663,7 @@ export default function SettingsPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={emailForm.control}
@@ -610,7 +678,7 @@ export default function SettingsPage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={emailForm.control}
                           name="smtpPort"
@@ -625,7 +693,7 @@ export default function SettingsPage() {
                           )}
                         />
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={emailForm.control}
@@ -640,7 +708,7 @@ export default function SettingsPage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={emailForm.control}
                           name="smtpPassword"
@@ -655,7 +723,7 @@ export default function SettingsPage() {
                           )}
                         />
                       </div>
-                      
+
                       <FormField
                         control={emailForm.control}
                         name="senderEmail"
@@ -672,7 +740,7 @@ export default function SettingsPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <div className="flex justify-between">
                         <Button 
                           type="button" 
@@ -688,7 +756,7 @@ export default function SettingsPage() {
                           )}
                           Test Configuration
                         </Button>
-                        
+
                         <Button 
                           type="submit" 
                           className="flex items-center gap-2"
@@ -707,7 +775,7 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
-            
+
             {/* Backup Settings */}
             {activeTab === "backup" && (
               <Card>
@@ -743,7 +811,7 @@ export default function SettingsPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={backupForm.control}
@@ -771,7 +839,7 @@ export default function SettingsPage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={backupForm.control}
                           name="backupLocation"
@@ -799,7 +867,7 @@ export default function SettingsPage() {
                           )}
                         />
                       </div>
-                      
+
                       <FormField
                         control={backupForm.control}
                         name="retentionPeriod"
@@ -816,7 +884,7 @@ export default function SettingsPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <div className="flex justify-between">
                         <Button 
                           type="button" 
@@ -832,7 +900,7 @@ export default function SettingsPage() {
                           )}
                           Create Manual Backup
                         </Button>
-                        
+
                         <Button 
                           type="submit" 
                           className="flex items-center gap-2"
@@ -851,7 +919,7 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
-            
+
             {/* Security Settings */}
             {activeTab === "security" && (
               <Card>
@@ -883,7 +951,7 @@ export default function SettingsPage() {
                               </FormItem>
                             )}
                           />
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                               control={securityForm.control}
@@ -900,7 +968,7 @@ export default function SettingsPage() {
                                 </FormItem>
                               )}
                             />
-                            
+
                             <FormField
                               control={securityForm.control}
                               name="passwordPolicy.requireLowercase"
@@ -916,7 +984,7 @@ export default function SettingsPage() {
                                 </FormItem>
                               )}
                             />
-                            
+
                             <FormField
                               control={securityForm.control}
                               name="passwordPolicy.requireNumbers"
@@ -932,7 +1000,7 @@ export default function SettingsPage() {
                                 </FormItem>
                               )}
                             />
-                            
+
                             <FormField
                               control={securityForm.control}
                               name="passwordPolicy.requireSpecialChars"
@@ -951,9 +1019,9 @@ export default function SettingsPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <Separator />
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={securityForm.control}
@@ -971,7 +1039,7 @@ export default function SettingsPage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={securityForm.control}
                           name="enableTwoFactor"
@@ -996,7 +1064,7 @@ export default function SettingsPage() {
                           )}
                         />
                       </div>
-                      
+
                       <div className="flex justify-end">
                         <Button 
                           type="submit" 
@@ -1016,7 +1084,7 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
-            
+
             {/* Test Case Settings */}
             {activeTab === "test-case" && (
               <Card>
@@ -1055,7 +1123,7 @@ export default function SettingsPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={testCaseForm.control}
                         name="defaultPriorityOptions"
@@ -1079,7 +1147,7 @@ export default function SettingsPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={testCaseForm.control}
@@ -1106,7 +1174,7 @@ export default function SettingsPage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={testCaseForm.control}
                           name="enableVersioning"
@@ -1131,7 +1199,7 @@ export default function SettingsPage() {
                           )}
                         />
                       </div>
-                      
+
                       <div className="flex justify-end">
                         <Button 
                           type="submit" 

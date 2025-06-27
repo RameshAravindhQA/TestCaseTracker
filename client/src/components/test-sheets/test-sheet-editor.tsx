@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -95,7 +94,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const gridRef = useRef<HTMLDivElement>(null);
-  
+
   // State management
   const [sheetData, setSheetData] = useState<SheetData>({
     cells: sheet.data?.cells || {},
@@ -104,7 +103,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
     sheets: sheet.data?.sheets || [{ id: 'sheet1', name: 'Sheet1' }],
     activeSheet: 0,
   });
-  
+
   const [selectedCell, setSelectedCell] = useState<string>('A1');
   const [selectedRange, setSelectedRange] = useState<string[]>([]);
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -142,9 +141,9 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
   const evaluateFormula = useCallback((formula: string, cellId: string): string => {
     try {
       if (!formula.startsWith('=')) return formula;
-      
+
       const expression = formula.substring(1);
-      
+
       // Handle SUM function
       if (expression.startsWith('SUM(')) {
         const range = expression.match(/SUM\(([A-Z]+\d+):([A-Z]+\d+)\)/);
@@ -154,7 +153,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           return values.reduce((sum, val) => sum + (parseFloat(val) || 0), 0).toString();
         }
       }
-      
+
       // Handle AVERAGE function
       if (expression.startsWith('AVERAGE(')) {
         const range = expression.match(/AVERAGE\(([A-Z]+\d+):([A-Z]+\d+)\)/);
@@ -165,7 +164,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           return (sum / values.length).toString();
         }
       }
-      
+
       // Handle COUNT function
       if (expression.startsWith('COUNT(')) {
         const range = expression.match(/COUNT\(([A-Z]+\d+):([A-Z]+\d+)\)/);
@@ -175,7 +174,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           return values.filter(val => !isNaN(parseFloat(val))).length.toString();
         }
       }
-      
+
       // Handle MIN function
       if (expression.startsWith('MIN(')) {
         const range = expression.match(/MIN\(([A-Z]+\d+):([A-Z]+\d+)\)/);
@@ -185,7 +184,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           return values.length > 0 ? Math.min(...values).toString() : '0';
         }
       }
-      
+
       // Handle MAX function
       if (expression.startsWith('MAX(')) {
         const range = expression.match(/MAX\(([A-Z]+\d+):([A-Z]+\d+)\)/);
@@ -195,7 +194,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           return values.length > 0 ? Math.max(...values).toString() : '0';
         }
       }
-      
+
       // Handle ROUND function
       if (expression.startsWith('ROUND(')) {
         const match = expression.match(/ROUND\(([^,]+),\s*(\d+)\)/);
@@ -205,7 +204,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           return Math.round(value * Math.pow(10, parseInt(digits))) / Math.pow(10, parseInt(digits)).toString();
         }
       }
-      
+
       // Handle IF function
       if (expression.startsWith('IF(')) {
         const match = expression.match(/IF\(([^,]+),\s*([^,]+),\s*([^)]+)\)/);
@@ -215,7 +214,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           return conditionResult ? evaluateExpression(trueValue) : evaluateExpression(falseValue);
         }
       }
-      
+
       return evaluateExpression(expression);
     } catch (error) {
       return '#ERROR!';
@@ -234,7 +233,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           processedExpression = processedExpression.replace(new RegExp(ref, 'g'), cellValue);
         });
       }
-      
+
       // Evaluate safely
       const result = Function(`"use strict"; return (${processedExpression})`)();
       return result.toString();
@@ -249,7 +248,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
     const startRow = parseInt(start.replace(/[A-Z]+/, '')) - 1;
     const endCol = getColumnIndex(end.replace(/\d+/, ''));
     const endRow = parseInt(end.replace(/[A-Z]+/, '')) - 1;
-    
+
     for (let row = startRow; row <= endRow; row++) {
       for (let col = startCol; col <= endCol; col++) {
         const cellId = getCellId(row, col);
@@ -273,11 +272,11 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           }
         }
       };
-      
+
       // Add to history
       setHistory(prevHistory => [...prevHistory.slice(0, historyIndex + 1), prev]);
       setHistoryIndex(prev => prev + 1);
-      
+
       return newData;
     });
   }, [historyIndex]);
@@ -300,13 +299,13 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
 
   const mergeCells = useCallback((range: string[]) => {
     if (range.length < 2) return;
-    
+
     const firstCell = range[0];
     const mergedValue = range.map(cellId => sheetData.cells[cellId]?.value || '').join(' ');
-    
+
     setSheetData(prev => {
       const newCells = { ...prev.cells };
-      
+
       // Set the merged value in the first cell
       newCells[firstCell] = {
         ...newCells[firstCell],
@@ -316,12 +315,12 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           merged: range,
         }
       };
-      
+
       // Clear other cells in the range
       range.slice(1).forEach(cellId => {
         delete newCells[cellId];
       });
-      
+
       return { ...prev, cells: newCells };
     });
   }, [sheetData.cells]);
@@ -337,7 +336,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
   const deleteRow = useCallback((rowIndex: number) => {
     setSheetData(prev => {
       const newCells = { ...prev.cells };
-      
+
       // Remove cells in the deleted row
       Object.keys(newCells).forEach(cellId => {
         const row = parseInt(cellId.replace(/[A-Z]+/, '')) - 1;
@@ -351,7 +350,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           delete newCells[cellId];
         }
       });
-      
+
       return {
         ...prev,
         cells: newCells,
@@ -363,7 +362,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
   const deleteColumn = useCallback((colIndex: number) => {
     setSheetData(prev => {
       const newCells = { ...prev.cells };
-      
+
       // Remove cells in the deleted column
       Object.keys(newCells).forEach(cellId => {
         const col = getColumnIndex(cellId.replace(/\d+/, ''));
@@ -377,7 +376,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           delete newCells[cellId];
         }
       });
-      
+
       return {
         ...prev,
         cells: newCells,
@@ -389,7 +388,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
   // Sort and filter
   const sortColumn = useCallback((colIndex: number, ascending: boolean = true) => {
     const columnCells: Array<{ cellId: string; value: string; rowIndex: number }> = [];
-    
+
     for (let row = 0; row < sheetData.rows; row++) {
       const cellId = getCellId(row, colIndex);
       const cell = sheetData.cells[cellId];
@@ -397,11 +396,11 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
         columnCells.push({ cellId, value: cell.value, rowIndex: row });
       }
     }
-    
+
     columnCells.sort((a, b) => {
       const aVal = isNaN(parseFloat(a.value)) ? a.value : parseFloat(a.value);
       const bVal = isNaN(parseFloat(b.value)) ? b.value : parseFloat(b.value);
-      
+
       if (typeof aVal === 'number' && typeof bVal === 'number') {
         return ascending ? aVal - bVal : bVal - aVal;
       } else {
@@ -410,16 +409,16 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           bVal.toString().localeCompare(aVal.toString());
       }
     });
-    
+
     // Rearrange all rows based on the sort
     setSheetData(prev => {
       const newCells = { ...prev.cells };
       const rowMapping: Record<number, number> = {};
-      
+
       columnCells.forEach((cell, index) => {
         rowMapping[cell.rowIndex] = index;
       });
-      
+
       // Create new cell mapping
       const rearrangedCells: Record<string, CellData> = {};
       Object.keys(newCells).forEach(cellId => {
@@ -431,7 +430,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           rearrangedCells[newCellId] = newCells[cellId];
         }
       });
-      
+
       return { ...prev, cells: rearrangedCells };
     });
   }, [sheetData]);
@@ -445,7 +444,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
       }
     });
     setClipboard(copiedCells);
-    
+
     toast({
       title: "Copied",
       description: `Copied ${Object.keys(copiedCells).length} cells`,
@@ -454,30 +453,30 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
 
   const pasteSelection = useCallback(() => {
     if (Object.keys(clipboard).length === 0) return;
-    
+
     const startCell = selectedCell;
     const startCol = getColumnIndex(startCell.replace(/\d+/, ''));
     const startRow = parseInt(startCell.replace(/[A-Z]+/, '')) - 1;
-    
+
     setSheetData(prev => {
       const newCells = { ...prev.cells };
-      
+
       Object.keys(clipboard).forEach(originalCellId => {
         const originalCol = getColumnIndex(originalCellId.replace(/\d+/, ''));
         const originalRow = parseInt(originalCellId.replace(/[A-Z]+/, '')) - 1;
-        
+
         const newCol = startCol + (originalCol - getColumnIndex(Object.keys(clipboard)[0].replace(/\d+/, '')));
         const newRow = startRow + (originalRow - (parseInt(Object.keys(clipboard)[0].replace(/[A-Z]+/, '')) - 1));
-        
+
         if (newCol >= 0 && newCol < prev.cols && newRow >= 0 && newRow < prev.rows) {
           const newCellId = getCellId(newRow, newCol);
           newCells[newCellId] = { ...clipboard[originalCellId] };
         }
       });
-      
+
       return { ...prev, cells: newCells };
     });
-    
+
     toast({
       title: "Pasted",
       description: `Pasted ${Object.keys(clipboard).length} cells`,
@@ -510,11 +509,11 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           version: sheet.metadata.version + 1,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to save sheet");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -541,7 +540,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
       const startRow = parseInt(selectedCell.replace(/[A-Z]+/, '')) - 1;
       const endCol = getColumnIndex(cellId.replace(/\d+/, ''));
       const endRow = parseInt(cellId.replace(/[A-Z]+/, '')) - 1;
-      
+
       const range: string[] = [];
       for (let row = Math.min(startRow, endRow); row <= Math.max(startRow, endRow); row++) {
         for (let col = Math.min(startCol, endCol); col <= Math.max(startCol, endCol); col++) {
@@ -561,7 +560,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
       setSelectedCell(cellId);
       setSelectedRange([cellId]);
       setFormulaBar(sheetData.cells[cellId]?.formula || sheetData.cells[cellId]?.value || '');
-      
+
       // Enable immediate editing on click
       setTimeout(() => {
         setEditingCell(cellId);
@@ -590,7 +589,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!open) return;
-      
+
       if (event.ctrlKey || event.metaKey) {
         switch (event.key) {
           case 'c':
@@ -615,18 +614,18 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
             break;
         }
       }
-      
+
       if (editingCell) return;
-      
+
       // Navigation keys
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
         event.preventDefault();
         const currentCol = getColumnIndex(selectedCell.replace(/\d+/, ''));
         const currentRow = parseInt(selectedCell.replace(/[A-Z]+/, '')) - 1;
-        
+
         let newCol = currentCol;
         let newRow = currentRow;
-        
+
         switch (event.key) {
           case 'ArrowUp':
             newRow = Math.max(0, currentRow - 1);
@@ -641,26 +640,26 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
             newCol = Math.min(sheetData.cols - 1, currentCol + 1);
             break;
         }
-        
+
         const newCellId = getCellId(newRow, newCol);
         setSelectedCell(newCellId);
         setSelectedRange([newCellId]);
         setFormulaBar(sheetData.cells[newCellId]?.formula || sheetData.cells[newCellId]?.value || '');
       }
-      
+
       // Delete key
       if (event.key === 'Delete') {
         selectedRange.forEach(cellId => {
           updateCell(cellId, '');
         });
       }
-      
+
       // Enter key
       if (event.key === 'Enter') {
         setEditingCell(selectedCell);
       }
     };
-    
+
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, selectedCell, selectedRange, editingCell, sheetData, copySelection, pasteSelection, undo, redo, saveSheetMutation, updateCell]);
@@ -668,7 +667,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
   // Export functions
   const exportToCSV = useCallback(() => {
     const csvContent = [];
-    
+
     for (let row = 0; row < sheetData.rows; row++) {
       const rowData = [];
       for (let col = 0; col < sheetData.cols; col++) {
@@ -678,7 +677,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
       }
       csvContent.push(rowData.join(','));
     }
-    
+
     const blob = new Blob([csvContent.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -703,18 +702,18 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
         <Save className="h-4 w-4 mr-1" />
         Save
       </Button>
-      
+
       <Separator orientation="vertical" className="h-6" />
-      
+
       <Button size="sm" variant="outline" onClick={undo} disabled={historyIndex <= 0}>
         <Undo className="h-4 w-4" />
       </Button>
       <Button size="sm" variant="outline" onClick={redo} disabled={historyIndex >= history.length - 1}>
         <Redo className="h-4 w-4" />
       </Button>
-      
+
       <Separator orientation="vertical" className="h-6" />
-      
+
       <Button size="sm" variant="outline" onClick={() => formatCell(selectedCell, { fontWeight: 'bold' })}>
         <Bold className="h-4 w-4" />
       </Button>
@@ -724,9 +723,9 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
       <Button size="sm" variant="outline" onClick={() => formatCell(selectedCell, { textDecoration: 'underline' })}>
         <Underline className="h-4 w-4" />
       </Button>
-      
+
       <Separator orientation="vertical" className="h-6" />
-      
+
       <Button size="sm" variant="outline" onClick={() => formatCell(selectedCell, { textAlign: 'left' })}>
         <AlignLeft className="h-4 w-4" />
       </Button>
@@ -736,9 +735,9 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
       <Button size="sm" variant="outline" onClick={() => formatCell(selectedCell, { textAlign: 'right' })}>
         <AlignRight className="h-4 w-4" />
       </Button>
-      
+
       <Separator orientation="vertical" className="h-6" />
-      
+
       <Popover>
         <PopoverTrigger asChild>
           <Button size="sm" variant="outline">
@@ -767,14 +766,14 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           </div>
         </PopoverContent>
       </Popover>
-      
+
       <Button size="sm" variant="outline" onClick={() => mergeCells(selectedRange)}>
         <Merge className="h-4 w-4 mr-1" />
         Merge
       </Button>
-      
+
       <Separator orientation="vertical" className="h-6" />
-      
+
       <Button size="sm" variant="outline" onClick={addRow}>
         <Plus className="h-4 w-4 mr-1" />
         Row
@@ -783,18 +782,18 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
         <Plus className="h-4 w-4 mr-1" />
         Column
       </Button>
-      
+
       <Separator orientation="vertical" className="h-6" />
-      
+
       <Button size="sm" variant="outline" onClick={copySelection}>
         <Copy className="h-4 w-4" />
       </Button>
       <Button size="sm" variant="outline" onClick={pasteSelection}>
         <Clipboard className="h-4 w-4" />
       </Button>
-      
+
       <Separator orientation="vertical" className="h-6" />
-      
+
       <Popover>
         <PopoverTrigger asChild>
           <Button size="sm" variant="outline">
@@ -828,16 +827,16 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
           </div>
         </PopoverContent>
       </Popover>
-      
+
       <Separator orientation="vertical" className="h-6" />
-      
+
       <Button size="sm" variant="outline" onClick={exportToCSV}>
         <Download className="h-4 w-4 mr-1" />
         CSV
       </Button>
-      
+
       <div className="flex-1" />
-      
+
       <div className="flex items-center gap-2">
         <Input
           placeholder="Search..."
@@ -883,7 +882,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
       }}>
         {/* Corner cell */}
         <div className="border border-gray-300 bg-gray-100 dark:bg-gray-800"></div>
-        
+
         {/* Column headers */}
         {Array.from({ length: sheetData.cols }, (_, i) => (
           <div
@@ -912,7 +911,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
             </div>
           </div>
         ))}
-        
+
         {/* Row headers and cells */}
         {Array.from({ length: sheetData.rows }, (_, row) => (
           <React.Fragment key={`row-${row}`}>
@@ -927,14 +926,14 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
             >
               {row + 1}
             </div>
-            
+
             {/* Cells */}
             {Array.from({ length: sheetData.cols }, (_, col) => {
               const cellId = getCellId(row, col);
               const cell = sheetData.cells[cellId];
               const isSelected = selectedRange.includes(cellId);
               const isEditing = editingCell === cellId;
-              
+
               return (
                 <div
                   key={cellId}
@@ -971,7 +970,7 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
                       {cell?.value || ''}
                     </div>
                   )}
-                  
+
                   {isSelected && !isEditing && (
                     <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-blue-500 cursor-crosshair"></div>
                   )}
@@ -995,11 +994,11 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
             </Button>
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="flex flex-col h-[85vh]">
           {renderToolbar()}
           {renderFormulaBar()}
-          
+
           {/* Sheet tabs */}
           <div className="flex items-center gap-2 p-2 border-b bg-gray-50 dark:bg-gray-900">
             {sheetData.sheets.map((sheetTab, index) => (
@@ -1026,9 +1025,9 @@ const TestSheetEditor: React.FC<TestSheetEditorProps> = ({
               <Plus className="h-4 w-4" />
             </Button>
           </div>
-          
+
           {renderGrid()}
-          
+
           {/* Status bar */}
           <div className="flex items-center justify-between p-2 border-t bg-gray-50 dark:bg-gray-900 text-sm">
             <div className="flex items-center gap-4">

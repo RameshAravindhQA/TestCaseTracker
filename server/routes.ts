@@ -1052,6 +1052,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bug Comments API endpoints
+  apiRouter.get("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const comments = await storage.getBugComments(bugId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Get bug comments error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const { content, parentId, isPrivate, syncToGithub } = req.body;
+      
+      const comment = await storage.createBugComment({
+        bugId,
+        content,
+        authorId: req.session.userId!,
+        parentId,
+        isPrivate: isPrivate || false
+      });
+
+      // If sync to GitHub is requested and we have GitHub integration
+      if (syncToGithub && req.body.githubIssueNumber) {
+        // GitHub sync logic here
+      }
+
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Create bug comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.put("/bugs/:bugId/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const { content } = req.body;
+      
+      const comment = await storage.updateBugComment(commentId, { content });
+      res.json(comment);
+    } catch (error) {
+      console.error("Update bug comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/bugs/:bugId/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      await storage.deleteBugComment(commentId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete bug comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/bugs/:bugId/comments/:commentId/reactions", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const { type } = req.body;
+      
+      const reaction = await storage.addCommentReaction({
+        commentId,
+        userId: req.session.userId!,
+        type
+      });
+      
+      res.json(reaction);
+    } catch (error) {
+      console.error("Add comment reaction error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // AI Chat endpoint
   apiRouter.post("/chat/ai", isAuthenticated, async (req, res) => {
     try {

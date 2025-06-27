@@ -204,16 +204,12 @@ const SidebarComponent = ({ className }: SidebarProps) => {
         className
       )}
     >
+      
       <div className="flex items-center h-16 px-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <img 
-          src="/images/navadhiti-logo-tree.jpg" 
-          alt="NavaDhiti Logo" 
-          className="h-10 w-auto"
-        />
-        <div className="ml-2">
-          <span className="text-lg font-semibold text-gray-900 dark:text-white">NavaDhiti</span>
-          <span className="block text-xs text-gray-600 dark:text-gray-400">Test Case Management System</span>
-        </div>
+        <Link to="/dashboard" className="flex items-center gap-2 font-semibold">
+            <img src="/images/navadhiti-logo-tree.jpg" alt="NavaDhiti" className="h-8 w-8 rounded" />
+            <span className="">NavaDhiti</span>
+          </Link>
       </div>
 
       <div className="flex items-center p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
