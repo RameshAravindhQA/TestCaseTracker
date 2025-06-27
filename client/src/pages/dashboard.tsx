@@ -83,7 +83,7 @@ export default function Dashboard() {
   const { 
     data: projects, 
     isLoading: isProjectsLoading, 
-    isError: isProjectsError,
+    isError: isProjectsErrorQuery,
     error: projectsError
   } = useQuery<Project[]>({
     queryKey: ["/api/projects?limit=5"], // Specify limit in URL
@@ -294,7 +294,7 @@ export default function Dashboard() {
   const recentProjects = projects ? projects.slice(0, 4) : [];
 
   // Check for errors in API calls
-  const hasErrors = isStatsError || isProjectsError || isActivitiesError;
+  const hasErrors = isStatsError || isProjectsErrorQuery || isActivitiesError;
 
   // Allow partial loading - don't block the entire dashboard if one API is slow
   // Only show loading state if ALL data is still loading
