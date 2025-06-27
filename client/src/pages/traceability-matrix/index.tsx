@@ -858,7 +858,6 @@ export default function TraceabilityMatrixPage() {
                         setCustomMarkers(loadedMarkers);
 
                         // Also save back to localStorage for redundancy
-                        ```python
                         try {
                           const storageKey = `markers_${selectedProjectId}`;
                           localStorage.setItem(storageKey, JSON.stringify(loadedMarkers));
