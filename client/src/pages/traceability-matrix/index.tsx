@@ -917,6 +917,12 @@ export default function TraceabilityMatrixPage() {
       try {
         console.log("EMERGENCY FIX: Attempting to recover from localStorage");
 
+        // Add safety check for selectedProjectId
+        if (!selectedProjectId) {
+          console.warn("EMERGENCY FIX: selectedProjectId is not available, skipping localStorage recovery");
+          return;
+        }
+
         // Loop through all modules to check if we have stored values
         let localStorageRecoveryCount = 0;
 
@@ -924,23 +930,45 @@ export default function TraceabilityMatrixPage() {
           const rowId = rowModule.id.toString();
 
           modules.forEach((colModule, colIndex) => {
-            const storageKey = `matrix_${selectedProjectId}_${rowId}_${colIndex}`;
-            const storedValue = localStorage.getItem(storageKey);
+            try {
+              // More robust string building with validation
+              const storageKey = "matrix_" + selectedProjectId + "_" + rowId + "_" + colIndex;
+              const storedValue = localStorage.getItem(storageKey);
 
-            if (storedValue) {
-              try {
+              if (storedValue) {
                 const cellValue = JSON.parse(storedValue) as CellValue;
+                
+                // Ensure newMatrixData structure exists (array structure)
+                if (!newMatrixData[rowId]) {
+                  newMatrixData[rowId] = modules.map(_ => ({ type: 'empty' }));
+                }
+                
+                // Ensure the array has enough elements
+                if (newMatrixData[rowId].length <= colIndex) {
+                  // Extend array if needed
+                  while (newMatrixData[rowId].length <= colIndex) {
+                    newMatrixData[rowId].push({ type: 'empty' });
+                  }
+                }
+                
                 newMatrixData[rowId][colIndex] = cellValue;
                 localStorageRecoveryCount++;
-              } catch (e) {
-                console.error("EMERGENCY FIX: Failed to parse localStorage value:", e);
+              }
+            } catch (parseError) {
+              console.error("EMERGENCY FIX: Failed to parse localStorage value for key matrix_" + selectedProjectId + "_" + rowId + "_" + colIndex + ":", parseError);
+              // Optionally clear the corrupted value
+              try {
+                const corruptedKey = "matrix_" + selectedProjectId + "_" + rowId + "_" + colIndex;
+                localStorage.removeItem(corruptedKey);
+              } catch (removeError) {
+                console.error("EMERGENCY FIX: Failed to remove corrupted localStorage item:", removeError);
               }
             }
           });
         });
 
         if (localStorageRecoveryCount > 0) {
-          console.log(`EMERGENCY FIX: Recovered ${localStorageRecoveryCount} cells from localStorage`);
+          console.log("EMERGENCY FIX: Recovered " + localStorageRecoveryCount + " cells from localStorage");
         }
       } catch (error) {
         console.error("EMERGENCY FIX: Error recovering from localStorage:", error);
