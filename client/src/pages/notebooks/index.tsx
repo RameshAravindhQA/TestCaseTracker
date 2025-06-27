@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -7,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { 
   Search, 
   Plus, 
@@ -17,7 +19,9 @@ import {
   Trash2,
   BookOpen,
   Filter,
-  StickyNote
+  StickyNote,
+  Grid,
+  List
 } from "lucide-react";
 import {
   Dialog,
@@ -49,10 +53,10 @@ export default function NotebooksPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [selectedNotebook, setSelectedNotebook] = useState<Notebook | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [selectedNotebook, setSelectedNotebook] = useState<Notebook | null>(null);
 
   // Fetch notebooks
   const { data: notebooks, isLoading, refetch } = useQuery<Notebook[]>({
@@ -62,7 +66,7 @@ export default function NotebooksPage() {
       if (!response.ok) throw new Error("Failed to fetch notebooks");
       return response.json();
     },
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchInterval: 5000,
     refetchOnWindowFocus: true,
   });
 
@@ -113,7 +117,7 @@ export default function NotebooksPage() {
     },
   });
 
-  // Filter notebooks with advanced search - ensure notebooks is an array
+  // Filter notebooks with advanced search
   const notebooksArray = Array.isArray(notebooks) ? notebooks : [];
   const filteredNotebooks = notebooksArray.filter(notebook => {
     if (!searchQuery) {
@@ -143,24 +147,8 @@ export default function NotebooksPage() {
     return matchesSearch && matchesFilter;
   });
 
-  // Function to highlight search terms
-  const highlightText = (text: string, search: string) => {
-    if (!search) return text;
-    
-    const searchWords = search.toLowerCase().split(' ').filter(word => word.length > 0);
-    let highlightedText = text;
-    
-    searchWords.forEach(word => {
-      const regex = new RegExp(`(${word})`, 'gi');
-      highlightedText = highlightedText.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
-    });
-    
-    return highlightedText;
-  };
-
-  const handleNotebookClick = (notebook: Notebook) => {
+  const handleNotebookSelect = (notebook: Notebook) => {
     setSelectedNotebook(notebook);
-    setViewDialogOpen(true);
   };
 
   const handleEditNotebook = (notebook: Notebook) => {
@@ -224,264 +212,403 @@ export default function NotebooksPage() {
             <p className="text-gray-600 mt-2">Create and organize your notes with rich formatting</p>
           </div>
 
-        <Button 
-          onClick={() => setCreateDialogOpen(true)}
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          New Notebook
-        </Button>
-      </div>
+          <Button 
+            onClick={() => setCreateDialogOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            New Notebook
+          </Button>
+        </div>
 
-      {/* Filters */}
-      <div className="flex gap-4 items-center">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search notebooks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+        {/* Filters and View Toggle */}
+        <div className="flex gap-4 items-center mb-6">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search notebooks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-gray-400" />
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Notebooks</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="pinned">Pinned</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-1 border rounded-md p-1">
+            <Button
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("grid")}
+            >
+              <Grid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-gray-400" />
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Notebooks</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="pinned">Pinned</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Notebooks Grid */}
-      {filteredNotebooks.length === 0 ? (
-        <Card className="text-center py-12">
-          <CardContent>
-            <StickyNote className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">
-              {searchQuery || filterStatus !== "all" ? "No notebooks found" : "No notebooks yet"}
-            </h3>
-            <p className="text-gray-500 mb-4">
-              {searchQuery || filterStatus !== "all" 
-                ? "Try adjusting your search or filters" 
-                : "Create your first notebook to get started"}
-            </p>
-            {!searchQuery && filterStatus === "all" && (
-              <Button onClick={() => setCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Notebook
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredNotebooks.map((notebook) => (
-            <Card 
-              key={notebook.id} 
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => handleNotebookClick(notebook)}
-            >
-              <CardHeader 
-                className="pb-3"
-                style={{ borderLeft: `4px solid ${notebook.color}` }}
+        {/* Content */}
+        {filteredNotebooks.length === 0 ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <StickyNote className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                {searchQuery || filterStatus !== "all" ? "No notebooks found" : "No notebooks yet"}
+              </h3>
+              <p className="text-gray-500 mb-4">
+                {searchQuery || filterStatus !== "all" 
+                  ? "Try adjusting your search or filters" 
+                  : "Create your first notebook to get started"}
+              </p>
+              {!searchQuery && filterStatus === "all" && (
+                <Button onClick={() => setCreateDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Notebook
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredNotebooks.map((notebook) => (
+              <Card 
+                key={notebook.id} 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => handleNotebookSelect(notebook)}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg font-semibold truncate">
-                      {notebook.title}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-2">
-                      {getStatusBadge(notebook)}
-                      {notebook.tags && notebook.tags.length > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          {notebook.tags.length} tag{notebook.tags.length !== 1 ? 's' : ''}
+                <CardHeader 
+                  className="pb-3"
+                  style={{ borderLeft: `4px solid ${notebook.color}` }}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg font-semibold truncate">
+                        {notebook.title}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-2">
+                        {getStatusBadge(notebook)}
+                        {notebook.tags && notebook.tags.length > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            {notebook.tags.length} tag{notebook.tags.length !== 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditNotebook(notebook);
+                        }}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          handlePinNotebook(notebook);
+                        }}>
+                          <Pin className="h-4 w-4 mr-2" />
+                          {notebook.isPinned ? "Unpin" : "Pin"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          handleArchiveNotebook(notebook);
+                        }}>
+                          <Archive className="h-4 w-4 mr-2" />
+                          {notebook.isArchived ? "Unarchive" : "Archive"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteNotebook(notebook);
+                          }}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+
+                <CardContent>
+                  <div className="text-sm text-gray-600 line-clamp-3 mb-3">
+                    {notebook.content || "No content"}
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs text-gray-500">
+                    <span>
+                      Created {new Date(notebook.createdAt).toLocaleDateString()}
+                    </span>
+                    <span>
+                      Updated {new Date(notebook.updatedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  {notebook.tags && notebook.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-3">
+                      {notebook.tags.slice(0, 3).map((tag, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                      {notebook.tags.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{notebook.tags.length - 3} more
                         </Badge>
                       )}
                     </div>
-                  </div>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditNotebook(notebook);
-                      }}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        handlePinNotebook(notebook);
-                      }}>
-                        <Pin className="h-4 w-4 mr-2" />
-                        {notebook.isPinned ? "Unpin" : "Pin"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        handleArchiveNotebook(notebook);
-                      }}>
-                        <Archive className="h-4 w-4 mr-2" />
-                        {notebook.isArchived ? "Unarchive" : "Archive"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteNotebook(notebook);
-                        }}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                <div 
-                  className="text-sm text-gray-600 line-clamp-3 mb-3"
-                  dangerouslySetInnerHTML={{
-                    __html: highlightText(notebook.content || "No content", searchQuery)
-                  }}
-                />
-
-                <div className="flex justify-between items-center text-xs text-gray-500">
-                  <span>
-                    Created {new Date(notebook.createdAt).toLocaleDateString()}
-                  </span>
-                  <span>
-                    Updated {new Date(notebook.updatedAt).toLocaleDateString()}
-                  </span>
-                </div>
-
-                {notebook.tags && notebook.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-3">
-                    {notebook.tags.slice(0, 3).map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                    {notebook.tags.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{notebook.tags.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* View Notebook Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {selectedNotebook?.title}
-              {selectedNotebook && getStatusBadge(selectedNotebook)}
-            </DialogTitle>
-            <DialogDescription>
-              Created on {selectedNotebook && new Date(selectedNotebook.createdAt).toLocaleDateString()}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedNotebook && (
-            <div className="space-y-4">
-              <div className="prose max-w-none">
-                <div className="whitespace-pre-wrap text-sm">
-                  {selectedNotebook.content || "No content"}
-                </div>
-              </div>
-
-              {selectedNotebook.tags && selectedNotebook.tags.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Tags</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedNotebook.tags.map((tag, index) => (
-                      <Badge key={index} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
-                  Close
-                </Button>
-                <Button onClick={() => {
-                  setViewDialogOpen(false);
-                  handleEditNotebook(selectedNotebook);
-                }}>
-                  Edit
-                </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Notebook List */}
+            <div className="lg:col-span-1 space-y-2">
+              <h3 className="font-semibold text-lg mb-4">Notebooks ({filteredNotebooks.length})</h3>
+              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                {filteredNotebooks.map((notebook) => (
+                  <Card
+                    key={notebook.id}
+                    className={`cursor-pointer transition-all hover:shadow-md ${
+                      selectedNotebook?.id === notebook.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                    }`}
+                    onClick={() => handleNotebookSelect(notebook)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: notebook.color }}
+                            />
+                            <h4 className="font-medium truncate">{notebook.title}</h4>
+                          </div>
+                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                            {notebook.content || "No content"}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            {getStatusBadge(notebook)}
+                            {notebook.tags && notebook.tags.length > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                {notebook.tags.length} tags
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditNotebook(notebook);
+                            }}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              handlePinNotebook(notebook);
+                            }}>
+                              <Pin className="h-4 w-4 mr-2" />
+                              {notebook.isPinned ? "Unpin" : "Pin"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              handleArchiveNotebook(notebook);
+                            }}>
+                              <Archive className="h-4 w-4 mr-2" />
+                              {notebook.isArchived ? "Unarchive" : "Archive"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteNotebook(notebook);
+                              }}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
-      {/* Create Notebook Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Create New Notebook</DialogTitle>
-            <DialogDescription>
-              Create a new notebook to organize your notes and ideas.
-            </DialogDescription>
-          </DialogHeader>
-          <NotebookForm onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
-            refetch();
-            setCreateDialogOpen(false);
-            toast({
-              title: "Success",
-              description: "Notebook created successfully.",
-            });
-          }} />
-        </DialogContent>
-      </Dialog>
+            {/* Notebook Preview */}
+            <div className="lg:col-span-2">
+              {selectedNotebook ? (
+                <Card className="h-full">
+                  <CardHeader style={{ borderLeft: `4px solid ${selectedNotebook.color}` }}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-2xl">{selectedNotebook.title}</CardTitle>
+                        <CardDescription>
+                          Created on {new Date(selectedNotebook.createdAt).toLocaleDateString()} • 
+                          Updated on {new Date(selectedNotebook.updatedAt).toLocaleDateString()}
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(selectedNotebook)}
+                        <Button onClick={() => handleEditNotebook(selectedNotebook)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="prose max-w-none mb-6">
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                        {selectedNotebook.content || "No content"}
+                      </div>
+                    </div>
 
-      {/* Edit Notebook Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Notebook</DialogTitle>
-            <DialogDescription>
-              Update your notebook details and content.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedNotebook && (
-            <NotebookForm 
-              notebook={selectedNotebook}
-              onSuccess={() => {
-                setEditDialogOpen(false);
-                setSelectedNotebook(null);
-              }} 
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+                    {selectedNotebook.tags && selectedNotebook.tags.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium mb-2">Tags</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedNotebook.tags.map((tag, index) => (
+                            <Badge key={index} variant="secondary">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedNotebook.checklistItems && selectedNotebook.checklistItems.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium mb-2">Checklist</h4>
+                        <div className="space-y-1">
+                          {selectedNotebook.checklistItems.map((item: any, index: number) => (
+                            <div key={index} className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={item.completed}
+                                readOnly
+                                className="rounded"
+                              />
+                              <span className={item.completed ? 'line-through text-gray-500' : ''}>
+                                {item.text}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedNotebook.attachments && selectedNotebook.attachments.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium mb-2">Attachments</h4>
+                        <div className="space-y-2">
+                          {selectedNotebook.attachments.map((attachment: any, index: number) => (
+                            <div key={index} className="flex items-center gap-2 text-sm p-2 border rounded">
+                              <span>{attachment.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="h-full flex items-center justify-center">
+                  <CardContent className="text-center">
+                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                      Select a notebook to view
+                    </h3>
+                    <p className="text-gray-500">
+                      Choose a notebook from the list to see its full content
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Create Notebook Dialog */}
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Create New Notebook</DialogTitle>
+              <DialogDescription>
+                Create a new notebook to organize your notes and ideas.
+              </DialogDescription>
+            </DialogHeader>
+            <NotebookForm onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/notebooks"] });
+              refetch();
+              setCreateDialogOpen(false);
+              toast({
+                title: "Success",
+                description: "Notebook created successfully.",
+              });
+            }} />
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Notebook Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Edit Notebook</DialogTitle>
+              <DialogDescription>
+                Update your notebook details and content.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedNotebook && (
+              <NotebookForm 
+                notebook={selectedNotebook}
+                onSuccess={() => {
+                  setEditDialogOpen(false);
+                  setSelectedNotebook(null);
+                }} 
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );

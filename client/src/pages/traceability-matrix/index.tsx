@@ -2566,7 +2566,6 @@ export default function TraceabilityMatrixPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
     </MainLayout>
   );
 }

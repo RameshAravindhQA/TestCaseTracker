@@ -332,8 +332,8 @@ function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
         <div className="grid gap-2">
           <Label>Tags</Label>
           <div className="flex flex-wrap gap-2 mb-2">
-            {tags.map(tag => (
-              <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+            {tags.map((tag, index) => (
+              <Badge key={index} variant="secondary" className="flex items-center gap-1">
                 <Tag className="h-3 w-3" />
                 {tag}
                 <X 
