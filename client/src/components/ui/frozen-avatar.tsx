@@ -16,25 +16,27 @@ export function FrozenAvatar({ user, className, fallbackClassName }: FrozenAvata
     timestamp: number;
   } | null>(null);
 
+  // Use useMemo to prevent unnecessary recalculations
+  const stableUserData = React.useMemo(() => {
+    if (!user) return null;
+    return {
+      initials: (user.firstName?.charAt(0)?.toUpperCase() || '') + 
+               (user.lastName?.charAt(0)?.toUpperCase() || '') || 
+               user.name?.split(' ').map(n => n.charAt(0)).join('').toUpperCase() || 
+               "U",
+      profilePicture: user.profilePicture
+    };
+  }, [user?.firstName, user?.lastName, user?.name, user?.profilePicture]);
+
   useEffect(() => {
-    if (user) {
-      const initials = (user.firstName?.charAt(0)?.toUpperCase() || '') + 
-                     (user.lastName?.charAt(0)?.toUpperCase() || '') || 
-                     user.name?.split(' ').map(n => n.charAt(0)).join('').toUpperCase() || 
-                     "U";
-
-      // Always update if profile picture has changed or is new
-      const newProfilePicture = user.profilePicture ? `${user.profilePicture}?t=${Date.now()}` : undefined;
-
-      if (!frozenData || frozenData.profilePicture !== newProfilePicture) {
-        setFrozenData({
-          initials,
-          profilePicture: newProfilePicture,
-          timestamp: Date.now(),
-        });
-      }
+    if (stableUserData && (!frozenData || frozenData.profilePicture !== stableUserData.profilePicture)) {
+      setFrozenData({
+        initials: stableUserData.initials,
+        profilePicture: stableUserData.profilePicture ? `${stableUserData.profilePicture}?t=${Date.now()}` : undefined,
+        timestamp: Date.now(),
+      });
     }
-  }, [user?.profilePicture, user?.firstName, user?.lastName, user?.name]);
+  }, [stableUserData, frozenData]);
 
   if (!frozenData) {
     return (

@@ -67,9 +67,9 @@ const SidebarComponent = ({ className }: SidebarProps) => {
 
   const { data: user } = useQuery<User>({
     queryKey: ["/api/auth/user"],
-    refetchInterval: 5000, // Refetch every 5 seconds to get updated profile picture
-    refetchOnWindowFocus: true,
-    staleTime: 0, // Always consider data stale to ensure fresh profile picture
+    refetchInterval: 30000, // Reduce frequency to 30 seconds
+    refetchOnWindowFocus: false, // Disable refetch on window focus to prevent avatar flicker
+    staleTime: 60000, // 1 minute stale time
   });
 
   const logoutMutation = useMutation({
@@ -157,7 +157,10 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     {
       name: "Reports",
       href: "/reports",
-      icon: <FileBarChart className="h-5 w-5" />,
+      icon: <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-md opacity-20"></div>
+        <FileBarChart className="h-5 w-5 text-green-600 relative z-10" />
+      </div>,
     },
     {
       name: "Test Sheets",

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { Project, TestCase, Bug, Module } from "@/types";
-import { Download, FileType, Loader2, LayoutGrid, FileBarChart, FileText, BarChart3, TrendingUp, Activity } from "lucide-react";
+import { Download, FileType, Loader2, LayoutGrid, FileBarChart, FileText, BarChart3, TrendingUp, Activity, Eye } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Area, AreaChart } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -30,6 +30,9 @@ import Papa from "papaparse";
 import { BugReportSummary } from "@/components/reports/bug-report-summary";
 import { useLocation } from "wouter";
 import { EnhancedBugSummary } from "@/components/reports/enhanced-bug-summary";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 export default function ReportsPage() {
   const [, setLocation] = useLocation();
@@ -40,6 +43,14 @@ export default function ReportsPage() {
   const [bugSeverityData, setBugSeverityData] = useState<any[]>([]);
   const [bugStatusData, setBugStatusData] = useState<any[]>([]);
   const [testPriorityData, setTestPriorityData] = useState<any[]>([]);
+
+  // Dialog states for chart data
+  const [chartDialogOpen, setChartDialogOpen] = useState(false);
+  const [chartDialogData, setChartDialogData] = useState<{
+    title: string;
+    type: 'testStatus' | 'bugSeverity' | 'bugStatus';
+    items: any[];
+  } | null>(null);
 
   // Fetch projects
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
@@ -188,7 +199,56 @@ export default function ReportsPage() {
       setBugSeverityData([]);
       setBugStatusData([]);
     }
-  }, [testCases, bugs]);
+  }, [testCases, bugs, selectedModuleId]);
+
+  // Chart click handlers
+  const handleTestStatusClick = (data: any) => {
+    if (!testCases) return;
+
+    const filteredTestCases = testCases.filter(tc => 
+      tc.status === data.name && 
+      (selectedModuleId === "all" || tc.moduleId === parseInt(selectedModuleId))
+    );
+
+    setChartDialogData({
+      title: `Test Cases - ${data.name}`,
+      type: 'testStatus',
+      items: filteredTestCases
+    });
+    setChartDialogOpen(true);
+  };
+
+  const handleBugSeverityClick = (data: any) => {
+    if (!bugs) return;
+
+    const filteredBugs = bugs.filter(bug => 
+      bug.severity === data.name && 
+      (selectedModuleId === "all" || bug.moduleId === parseInt(selectedModuleId))
+    );
+
+    setChartDialogData({
+      title: `Bugs - ${data.name} Severity`,
+      type: 'bugSeverity',
+      items: filteredBugs
+    });
+    setChartDialogOpen(true);
+  };
+
+  const handleBugStatusClick = (data: any) => {
+    if (!bugs) return;
+
+    const filteredBugs = bugs.filter(bug => 
+      bug.status === data.name && 
+      (selectedModuleId === "all" || bug.moduleId === parseInt(selectedModuleId))
+    );
+
+    setChartDialogData({
+      title: `Bugs - ${data.name}`,
+      type: 'bugStatus',
+      items: filteredBugs
+    });
+    setChartDialogOpen(true);
+  };
 
   // Export as CSV
   const exportToCSV = () => {
@@ -530,6 +590,8 @@ export default function ReportsPage() {
                             outerRadius={80}
                             fill="#8884d8"
                             dataKey="value"
+                            onClick={handleTestStatusClick}
+                            style={{ cursor: 'pointer' }}
                           >
                             {testStatusData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.color} />
@@ -619,6 +681,8 @@ export default function ReportsPage() {
                             outerRadius={80}
                             fill="#8884d8"
                             dataKey="value"
+                            onClick={handleBugSeverityClick}
+                            style={{ cursor: 'pointer' }}
                           >
                             {bugSeverityData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.color} />
@@ -652,6 +716,8 @@ export default function ReportsPage() {
                             outerRadius={80}
                             fill="#8884d8"
                             dataKey="value"
+                            onClick={handleBugStatusClick}
+                            style={{ cursor: 'pointer' }}
                           >
                             {bugStatusData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.color} />
@@ -689,7 +755,102 @@ export default function ReportsPage() {
             </div>
           </div>
         )}
-      </div>
-    </MainLayout>
+
+      {/* Chart Data Dialog */}
+      <Dialog open={chartDialogOpen} onOpenChange={setChartDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              {chartDialogData?.title}
+            </DialogTitle>
+            <DialogDescription>
+              Detailed view of {chartDialogData?.items.length || 0} items
+            </DialogDescription>
+          </DialogHeader>
+
+          {chartDialogData && (
+            <div className="mt-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {chartDialogData.type === 'testStatus' ? (
+                      <>
+                        <TableHead>Feature</TableHead>
+                        <TableHead>Module</TableHead>
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                      </>
+                    ) : (
+                      <>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Module</TableHead>
+                        <TableHead>Severity</TableHead>
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                      </>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {chartDialogData.items.map((item, index) => (
+                    <TableRow key={index}>
+                      {chartDialogData.type === 'testStatus' ? (
+                        <>
+                          <TableCell>{item.feature || item.title}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {modules?.find(m => m.id === item.moduleId)?.name || 'Unknown'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={item.priority === 'High' ? 'destructive' : 'secondary'}>
+                              {item.priority}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={item.status === 'Pass' ? 'default' : 'destructive'}>
+                              {item.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                        </>
+                      ) : (
+                        <>
+                          <TableCell>{item.title}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {modules?.find(m => m.id === item.moduleId)?.name || 'Unknown'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={item.severity === 'Critical' ? 'destructive' : 'secondary'}>
+                              {item.severity}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={item.priority === 'High' ? 'destructive' : 'secondary'}>
+                              {item.priority}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={item.status === 'Open' ? 'destructive' : 'default'}>
+                              {item.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(item.dateReported || item.createdAt).toLocaleDateString()}</TableCell>
+                        </>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

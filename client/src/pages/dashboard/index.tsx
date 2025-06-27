@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 // Generate real-time data based only on actual test cases and bugs
   const generateRealTimeData = () => {
-    // Return empty data if no actual test cases or bugs exist
-    if (!testCases || testCases.length === 0 || !bugs || bugs.length === 0) {
+    // Return empty data if no actual test cases exist, bugs can be optional
+    if (!testCases || testCases.length === 0) {
       return { testExecutionData: [], bugTrendData: [] };
     }
 
@@ -47,10 +47,10 @@ import {
     });
 
     const bugTrendData = last7Days.map((date, index) => {
-      const dayBugs = bugs.filter(bug => {
+      const dayBugs = bugs ? bugs.filter(bug => {
         const bugDate = new Date(bug.dateReported);
         return bugDate.toDateString() === date.toDateString();
-      });
+      }) : [];
 
       const critical = dayBugs.filter(bug => bug.severity === 'Critical').length;
       const major = dayBugs.filter(bug => bug.severity === 'Major').length;
@@ -113,7 +113,7 @@ import {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
+                <div className="p-3 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
                   <LayoutDashboard className="h-8 w-8 text-white" />
                 </div>
                 Dashboard

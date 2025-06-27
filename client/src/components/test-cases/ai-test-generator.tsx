@@ -44,33 +44,62 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
   const generateTestCases = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/ai/generate-test-cases', data);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      console.log('Sending AI request with data:', data);
+      try {
+        const response = await apiRequest('POST', '/api/ai/generate-test-cases', data);
+        console.log('AI API Response status:', response.status);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('AI API Error response:', errorText);
+          
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { error: errorText || 'Unknown error' };
+          }
+          
+          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log('AI API Success response:', result);
+        return result;
+      } catch (error) {
+        console.error('AI Generation request failed:', error);
+        throw error;
       }
-      return response.json();
     },
     onSuccess: (data) => {
       console.log('AI Generation Response:', data);
+      setShowResults(true);
+      
       if (data.testCases && Array.isArray(data.testCases) && data.testCases.length > 0) {
         setGeneratedTestCases(data.testCases);
         toast({
           title: "Test Cases Generated",
           description: data.message || `Generated ${data.testCases.length} test cases successfully`,
         });
+      } else if (data.error) {
+        toast({
+          title: "Generation Failed",
+          description: data.error || "The AI couldn't generate test cases",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "No Test Cases Generated",
-          description: "The AI couldn't generate test cases for the given requirements",
+          description: "The AI couldn't generate test cases for the given requirements. Try providing more detailed requirements.",
           variant: "destructive",
         });
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('AI Generation error:', error);
       toast({
         title: "Generation failed",
-        description: `Failed to generate test cases: ${error}`,
+        description: `Failed to generate test cases: ${error.message || error}. Please check your requirements and try again.`,
         variant: "destructive",
       });
     },
