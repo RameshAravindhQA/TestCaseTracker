@@ -13,19 +13,19 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Check, 
-  ChevronDown, 
-  Download, 
-  Edit, 
-  FileText, 
-  FileType, 
-  Palette, 
-  Plus, 
-  Save, 
-  Settings, 
-  Trash, 
-  X
+import {
+  Check,
+  ChevronDown,
+  Download,
+  Edit,
+  FileText,
+  FileType,
+  Palette,
+  Plus,
+  Save,
+  Settings,
+  Trash,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -54,14 +54,24 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CheckCircle, AlertCircle, Clock, Filter, RefreshCw, GitBranch, Network, Link2, Grid3X3 } from "lucide-react";
+import {
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  Filter,
+  RefreshCw,
+  GitBranch,
+  Network,
+  Link2,
+  Grid3X3,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 
 // Define the cell value types
 type CellValue = {
-  type: 'checkmark' | 'x-mark' | 'custom' | 'empty';
+  type: "checkmark" | "x-mark" | "custom" | "empty";
   color?: string;
   label?: string;
 };
@@ -72,7 +82,7 @@ type CustomMarker = {
   markerId: string;
   label: string;
   color: string;
-  type: 'checkmark' | 'x-mark' | 'custom';
+  type: "checkmark" | "x-mark" | "custom";
   projectId: number;
   createdById: number;
   createdAt: string;
@@ -89,22 +99,34 @@ export default function TraceabilityMatrixPage() {
 
   // Track unsaved changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [pendingSaves, setPendingSaves] = useState<{
-    rowId: string; 
-    colIndex: number; 
-    value: CellValue;
-    projectId: string; // Keep track of which project this change belongs to
-  }[]>([]);
+  const [pendingSaves, setPendingSaves] = useState<
+    {
+      rowId: string;
+      colIndex: number;
+      value: CellValue;
+      projectId: string; // Keep track of which project this change belongs to
+    }[]
+  >([]);
 
   // Autosave timer reference
   const autosaveTimerRef = useRef<number | null>(null);
   // Track if autosave is in progress
   const [isAutosaving, setIsAutosaving] = useState(false);
 
-  const [newMarker, setNewMarker] = useState<Omit<CustomMarker, 'id' | 'markerId' | 'projectId' | 'createdById' | 'createdAt' | 'updatedAt'>>({
-    label: '',
-    color: '#3b82f6',
-    type: 'custom'
+  const [newMarker, setNewMarker] = useState<
+    Omit<
+      CustomMarker,
+      | "id"
+      | "markerId"
+      | "projectId"
+      | "createdById"
+      | "createdAt"
+      | "updatedAt"
+    >
+  >({
+    label: "",
+    color: "#3b82f6",
+    type: "custom",
   });
   const [isAddingMarker, setIsAddingMarker] = useState(false);
   const [editingMarker, setEditingMarker] = useState<CustomMarker | null>(null);
@@ -113,12 +135,15 @@ export default function TraceabilityMatrixPage() {
   const [, setLocation] = useLocation();
 
   // Get the current user from local storage as backup
-  const [localStorageUser, setLocalStorageUser] = useState<{id: number, name: string} | null>(null);
+  const [localStorageUser, setLocalStorageUser] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
 
   // Load user from localStorage as a fallback
   useEffect(() => {
     try {
-      const userStr = localStorage.getItem('currentUser');
+      const userStr = localStorage.getItem("currentUser");
       if (userStr) {
         const user = JSON.parse(userStr);
         setLocalStorageUser(user);
@@ -130,18 +155,38 @@ export default function TraceabilityMatrixPage() {
 
   // Fetch current user from API
   const { data: apiUser } = useQuery({
-    queryKey: ['/api/user/current'],
-    retry: false
+    queryKey: ["/api/user/current"],
+    retry: false,
   });
 
   // Combined user data from API or localStorage backup
   const currentUser = apiUser || localStorageUser;
 
   // Default markers to use if no custom markers exist
-  const defaultMarkers: Array<Omit<CustomMarker, 'id' | 'projectId' | 'createdById' | 'createdAt' | 'updatedAt'>> = [
-    { markerId: 'green-check', label: 'Completed', color: '#10b981', type: 'checkmark' },
-    { markerId: 'red-x', label: 'Not Implemented', color: '#ef4444', type: 'x-mark' },
-    { markerId: 'yellow-custom', label: 'In Progress', color: '#f59e0b', type: 'custom' }
+  const defaultMarkers: Array<
+    Omit<
+      CustomMarker,
+      "id" | "projectId" | "createdById" | "createdAt" | "updatedAt"
+    >
+  > = [
+    {
+      markerId: "green-check",
+      label: "Completed",
+      color: "#10b981",
+      type: "checkmark",
+    },
+    {
+      markerId: "red-x",
+      label: "Not Implemented",
+      color: "#ef4444",
+      type: "x-mark",
+    },
+    {
+      markerId: "yellow-custom",
+      label: "In Progress",
+      color: "#f59e0b",
+      type: "custom",
+    },
   ];
 
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
@@ -157,75 +202,102 @@ export default function TraceabilityMatrixPage() {
   });
 
   // Function to ensure markers are stored in both the database and local storage for backup
-  const saveMarkersToStorageAndDb = useCallback(async (markers: CustomMarker[]) => {
-    if (!selectedProjectId) return;
+  const saveMarkersToStorageAndDb = useCallback(
+    async (markers: CustomMarker[]) => {
+      if (!selectedProjectId) return;
 
-    console.log("MARKER FIX: Saving markers to database and storage:", markers.length);
+      console.log(
+        "MARKER FIX: Saving markers to database and storage:",
+        markers.length,
+      );
 
-    // Update state first - this ensures the UI shows the markers immediately
-    setCustomMarkers(markers);
+      // Update state first - this ensures the UI shows the markers immediately
+      setCustomMarkers(markers);
 
-    // Also save to localStorage as a fallback for marker restoration
-    try {
-      localStorage.setItem(`markers_${selectedProjectId}`, JSON.stringify(markers));
-      console.log("MARKER FIX: Saved markers to localStorage");
-    } catch (e) {
-      console.error("MARKER FIX: Failed to save markers to localStorage:", e);
-    }
-
-    // Save each marker to the database through API - with enhanced error handling
-    for (const marker of markers) {
+      // Also save to localStorage as a fallback for marker restoration
       try {
-        // Check if marker already exists on server (by markerId)
-        const existingMarkerResponse = await apiRequest("GET", `/api/projects/${selectedProjectId}/matrix/markers?_t=${Date.now()}`);
-        const existingMarkers = existingMarkerResponse || [];
-        const existingMarker = existingMarkers.find((m: any) => m.markerId === marker.markerId);
-
-        if (existingMarker) {
-          // Update existing marker
-          await apiRequest("PUT", `/api/projects/${selectedProjectId}/matrix/markers/${existingMarker.id}`, {
-            markerId: marker.markerId,
-            label: marker.label,
-            color: marker.color,
-            type: marker.type,
-            projectId: parseInt(selectedProjectId)
-          });
-          console.log(`Updated existing marker ${marker.label} in database`);
-        } else {
-          // Create new marker
-          await apiRequest("POST", `/api/projects/${selectedProjectId}/matrix/markers`, {
-            markerId: marker.markerId, 
-            label: marker.label,
-            color: marker.color,
-            type: marker.type,
-            projectId: parseInt(selectedProjectId),
-            createdById: currentUser?.id || 1
-          });
-          console.log(`Created new marker ${marker.label} in database`);
-        }
-      } catch (error) {
-        console.error(`Failed to save marker ${marker.label} to database:`, error);
-        // Continue with the next marker even if this one fails
+        localStorage.setItem(
+          `markers_${selectedProjectId}`,
+          JSON.stringify(markers),
+        );
+        console.log("MARKER FIX: Saved markers to localStorage");
+      } catch (e) {
+        console.error("MARKER FIX: Failed to save markers to localStorage:", e);
       }
-    }
 
-    // Invalidate queries to ensure fresh data
-    queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/matrix/markers`] });
+      // Save each marker to the database through API - with enhanced error handling
+      for (const marker of markers) {
+        try {
+          // Check if marker already exists on server (by markerId)
+          const existingMarkerResponse = await apiRequest(
+            "GET",
+            `/api/projects/${selectedProjectId}/matrix/markers?_t=${Date.now()}`,
+          );
+          const existingMarkers = existingMarkerResponse || [];
+          const existingMarker = existingMarkers.find(
+            (m: any) => m.markerId === marker.markerId,
+          );
 
-    // Notify user
-    toast({
-      title: "Markers Saved",
-      description: `Successfully saved ${markers.length} markers to the database.`,
-    });
+          if (existingMarker) {
+            // Update existing marker
+            await apiRequest(
+              "PUT",
+              `/api/projects/${selectedProjectId}/matrix/markers/${existingMarker.id}`,
+              {
+                markerId: marker.markerId,
+                label: marker.label,
+                color: marker.color,
+                type: marker.type,
+                projectId: parseInt(selectedProjectId),
+              },
+            );
+            console.log(`Updated existing marker ${marker.label} in database`);
+          } else {
+            // Create new marker
+            await apiRequest(
+              "POST",
+              `/api/projects/${selectedProjectId}/matrix/markers`,
+              {
+                markerId: marker.markerId,
+                label: marker.label,
+                color: marker.color,
+                type: marker.type,
+                projectId: parseInt(selectedProjectId),
+                createdById: currentUser?.id || 1,
+              },
+            );
+            console.log(`Created new marker ${marker.label} in database`);
+          }
+        } catch (error) {
+          console.error(
+            `Failed to save marker ${marker.label} to database:`,
+            error,
+          );
+          // Continue with the next marker even if this one fails
+        }
+      }
 
-    // Indicate we're saving
-    setIsAutosaving(true);
+      // Invalidate queries to ensure fresh data
+      queryClient.invalidateQueries({
+        queryKey: [`/api/projects/${selectedProjectId}/matrix/markers`],
+      });
 
-    // Hide saving indicator after a brief delay
-    setTimeout(() => {
-      setIsAutosaving(false);
-    }, 1000);
-  }, [selectedProjectId, toast, queryClient, currentUser]);
+      // Notify user
+      toast({
+        title: "Markers Saved",
+        description: `Successfully saved ${markers.length} markers to the database.`,
+      });
+
+      // Indicate we're saving
+      setIsAutosaving(true);
+
+      // Hide saving indicator after a brief delay
+      setTimeout(() => {
+        setIsAutosaving(false);
+      }, 1000);
+    },
+    [selectedProjectId, toast, queryClient, currentUser],
+  );
 
   // Create default markers for a new project
   const createDefaultMarkers = async () => {
@@ -244,14 +316,18 @@ export default function TraceabilityMatrixPage() {
       // Create default markers one by one
       for (const marker of defaultMarkers) {
         console.log("Creating marker:", marker);
-        const response = await apiRequest("POST", `/api/projects/${selectedProjectId}/matrix/markers`, {
-          markerId: marker.markerId,
-          label: marker.label,
-          color: marker.color,
-          type: marker.type,
-          projectId: parseInt(selectedProjectId),
-          createdById: userId
-        });
+        const response = await apiRequest(
+          "POST",
+          `/api/projects/${selectedProjectId}/matrix/markers`,
+          {
+            markerId: marker.markerId,
+            label: marker.label,
+            color: marker.color,
+            type: marker.type,
+            projectId: parseInt(selectedProjectId),
+            createdById: userId,
+          },
+        );
 
         // Add the new marker to our temporary array
         tempMarkers.push({
@@ -263,33 +339,42 @@ export default function TraceabilityMatrixPage() {
           projectId: parseInt(selectedProjectId),
           createdById: response.createdById,
           createdAt: response.createdAt,
-          updatedAt: response.updatedAt
+          updatedAt: response.updatedAt,
         });
       }
 
       // MARKER FIX: Use our centralized function to save markers
-      console.log("MARKER FIX: Setting default markers using centralized function:", tempMarkers.length);
+      console.log(
+        "MARKER FIX: Setting default markers using centralized function:",
+        tempMarkers.length,
+      );
       saveMarkersToStorageAndDb(tempMarkers);
 
       // Refetch markers after creating defaults
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/matrix/markers`] });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/projects/${selectedProjectId}/matrix/markers`],
+      });
 
       toast({
         title: "Default markers created",
-        description: "Initial markers have been set up for this project"
+        description: "Initial markers have been set up for this project",
       });
     } catch (error) {
       console.error("Failed to create default markers:", error);
       toast({
         title: "Error",
         description: "Failed to create default markers",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   // Fetch custom markers when project is selected
-  const { data: projectMarkers, isLoading: isMarkersLoading, refetch: refetchMarkers } = useQuery<CustomMarker[]>({
+  const {
+    data: projectMarkers,
+    isLoading: isMarkersLoading,
+    refetch: refetchMarkers,
+  } = useQuery<CustomMarker[]>({
     queryKey: [`/api/projects/${selectedProjectId}/matrix/markers`],
     enabled: !!selectedProjectId,
     staleTime: 0, // Force refetch every time to ensure we have the latest data
@@ -307,7 +392,9 @@ export default function TraceabilityMatrixPage() {
         // Update local state immediately to ensure markers are visible in the UI
         setCustomMarkers(data);
 
-        console.log("MARKER FIX: Saved fetched markers using centralized function");
+        console.log(
+          "MARKER FIX: Saved fetched markers using centralized function",
+        );
       } else if (selectedProjectId) {
         // If no markers exist yet for this project, create default ones
         console.log("MARKER FIX: No markers found, creating defaults");
@@ -324,17 +411,27 @@ export default function TraceabilityMatrixPage() {
 
         if (savedMarkers) {
           const markers = JSON.parse(savedMarkers) as CustomMarker[];
-          console.log("MARKER FIX: Recovered markers from localStorage:", markers.length);
+          console.log(
+            "MARKER FIX: Recovered markers from localStorage:",
+            markers.length,
+          );
           setCustomMarkers(markers);
         }
       } catch (e) {
-        console.error("MARKER FIX: Failed to recover markers from localStorage:", e);
+        console.error(
+          "MARKER FIX: Failed to recover markers from localStorage:",
+          e,
+        );
       }
-    }
+    },
   });
 
   // Fetch matrix cells when project is selected
-  const { data: matrixCells, isLoading: isCellsLoading, refetch: refetchMatrixCells } = useQuery<any[]>({
+  const {
+    data: matrixCells,
+    isLoading: isCellsLoading,
+    refetch: refetchMatrixCells,
+  } = useQuery<any[]>({
     queryKey: [`/api/projects/${selectedProjectId}/matrix/cells`],
     enabled: !!selectedProjectId && !!modules,
     staleTime: 0, // Force refetch every time to ensure we have the latest data
@@ -351,24 +448,28 @@ export default function TraceabilityMatrixPage() {
       const newMatrixData: Record<string, CellValue[]> = {};
 
       // Initialize empty data structure for all modules (even if no data)
-      modules.forEach(module => {
-        newMatrixData[module.id.toString()] = modules.map(_ => ({ type: 'empty' }));
+      modules.forEach((module) => {
+        newMatrixData[module.id.toString()] = modules.map((_) => ({
+          type: "empty",
+        }));
       });
 
       // Fill in with data from API
       if (data && data.length > 0) {
-        data.forEach(cell => {
+        data.forEach((cell) => {
           try {
             console.log("Processing cell:", cell);
             const rowModuleId = cell.rowModuleId.toString();
-            const colModuleIndex = modules.findIndex(m => m.id === cell.colModuleId);
+            const colModuleIndex = modules.findIndex(
+              (m) => m.id === cell.colModuleId,
+            );
 
             if (colModuleIndex >= 0 && newMatrixData[rowModuleId]) {
               // Parse the stored value
               try {
                 // Handle both string and object formats of value (depends on server implementation)
                 let cellValue: CellValue;
-                if (typeof cell.value === 'string') {
+                if (typeof cell.value === "string") {
                   cellValue = JSON.parse(cell.value);
                   console.log("Parsed cell value from string:", cellValue);
                 } else {
@@ -379,10 +480,12 @@ export default function TraceabilityMatrixPage() {
               } catch (e) {
                 console.error("Error parsing cell value:", e, cell.value);
                 // Keep it as empty if we can't parse it
-                newMatrixData[rowModuleId][colModuleIndex] = { type: 'empty' };
+                newMatrixData[rowModuleId][colModuleIndex] = { type: "empty" };
               }
             } else {
-              console.warn(`Could not place cell in matrix - row: ${rowModuleId}, col index: ${colModuleIndex}, exists: ${!!newMatrixData[rowModuleId]}`);
+              console.warn(
+                `Could not place cell in matrix - row: ${rowModuleId}, col index: ${colModuleIndex}, exists: ${!!newMatrixData[rowModuleId]}`,
+              );
             }
           } catch (e) {
             console.error("Error processing cell data:", e, cell);
@@ -398,23 +501,27 @@ export default function TraceabilityMatrixPage() {
       toast({
         title: "Error loading matrix data",
         description: "Failed to load matrix data. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Update cell value in local state first AND immediately save to DB
-  const updateCellValue = (moduleRowId: string, moduleColIndex: number, value: CellValue) => {
+  const updateCellValue = (
+    moduleRowId: string,
+    moduleColIndex: number,
+    value: CellValue,
+  ) => {
     // Update local state immediately
-    setMatrixData(prevData => {
+    setMatrixData((prevData) => {
       const newData = { ...prevData };
       const rowData = [...(newData[moduleRowId] || [])];
 
       // Add label to checkmark/x-mark values if not provided
-      if (value.type === 'checkmark' && !value.label) {
-        value = { ...value, label: 'Yes', color: value.color || '#10b981' };
-      } else if (value.type === 'x-mark' && !value.label) {
-        value = { ...value, label: 'No', color: value.color || '#ef4444' };
+      if (value.type === "checkmark" && !value.label) {
+        value = { ...value, label: "Yes", color: value.color || "#10b981" };
+      } else if (value.type === "x-mark" && !value.label) {
+        value = { ...value, label: "No", color: value.color || "#ef4444" };
       }
 
       rowData[moduleColIndex] = value;
@@ -438,37 +545,51 @@ export default function TraceabilityMatrixPage() {
       if (moduleColId) {
         // Make sure value has proper attributes for Yes/No values
         let valueToSave = { ...value };
-        if (valueToSave.type === 'checkmark' && !valueToSave.label) {
-          valueToSave.label = 'Yes';
-          valueToSave.color = valueToSave.color || '#10b981';
-        } else if (valueToSave.type === 'x-mark' && !valueToSave.label) {
-          valueToSave.label = 'No';
-          valueToSave.color = valueToSave.color || '#ef4444';
+        if (valueToSave.type === "checkmark" && !valueToSave.label) {
+          valueToSave.label = "Yes";
+          valueToSave.color = valueToSave.color || "#10b981";
+        } else if (valueToSave.type === "x-mark" && !valueToSave.label) {
+          valueToSave.label = "No";
+          valueToSave.color = valueToSave.color || "#ef4444";
         }
 
         // Perform direct database save in background
         (async () => {
           try {
-            console.log("🔄 PERSISTENCE FIX: Saving cell directly to database:", {
-              rowModuleId: parseInt(moduleRowId),
-              colModuleId: moduleColId,
-              value: valueToSave
-            });
+            console.log(
+              "🔄 PERSISTENCE FIX: Saving cell directly to database:",
+              {
+                rowModuleId: parseInt(moduleRowId),
+                colModuleId: moduleColId,
+                value: valueToSave,
+              },
+            );
 
-            await apiRequest("POST", `/api/projects/${selectedProjectId}/matrix/cells`, {
-              rowModuleId: parseInt(moduleRowId),
-              colModuleId: moduleColId,
-              projectId: parseInt(selectedProjectId),
-              value: JSON.stringify(valueToSave),
-              createdById: currentUser?.id || 1 // Use authenticated user ID if available
-            });
+            await apiRequest(
+              "POST",
+              `/api/projects/${selectedProjectId}/matrix/cells`,
+              {
+                rowModuleId: parseInt(moduleRowId),
+                colModuleId: moduleColId,
+                projectId: parseInt(selectedProjectId),
+                value: JSON.stringify(valueToSave),
+                createdById: currentUser?.id || 1, // Use authenticated user ID if available
+              },
+            );
 
-            console.log("✅ PERSISTENCE FIX: Cell successfully saved to database");
+            console.log(
+              "✅ PERSISTENCE FIX: Cell successfully saved to database",
+            );
 
             // Refresh data in React Query cache for when we switch back to this view
-            queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/matrix/cells`] });
+            queryClient.invalidateQueries({
+              queryKey: [`/api/projects/${selectedProjectId}/matrix/cells`],
+            });
           } catch (error) {
-            console.error("❌ PERSISTENCE FIX: Failed to save cell to database:", error);
+            console.error(
+              "❌ PERSISTENCE FIX: Failed to save cell to database:",
+              error,
+            );
           }
         })();
       }
@@ -477,12 +598,15 @@ export default function TraceabilityMatrixPage() {
     // Only track if we have a project selected
     if (selectedProjectId) {
       // Track this change
-      setPendingSaves(prev => [...prev, {
-        rowId: moduleRowId, 
-        colIndex: moduleColIndex, 
-        value,
-        projectId: selectedProjectId
-      }]);
+      setPendingSaves((prev) => [
+        ...prev,
+        {
+          rowId: moduleRowId,
+          colIndex: moduleColIndex,
+          value,
+          projectId: selectedProjectId,
+        },
+      ]);
       setHasUnsavedChanges(true);
     }
   };
@@ -506,7 +630,7 @@ export default function TraceabilityMatrixPage() {
     const changesByProject: Record<string, typeof pendingSaves> = {};
 
     // Group changes by project
-    pendingSaves.forEach(change => {
+    pendingSaves.forEach((change) => {
       if (!changesByProject[change.projectId]) {
         changesByProject[change.projectId] = [];
       }
@@ -515,10 +639,12 @@ export default function TraceabilityMatrixPage() {
 
     // Process changes for each project
     for (const [projectId, changes] of Object.entries(changesByProject)) {
-      console.log(`Processing ${changes.length} changes for project ${projectId}`);
+      console.log(
+        `Processing ${changes.length} changes for project ${projectId}`,
+      );
 
       // Process all changes for this project
-      for (const {rowId, colIndex, value} of changes) {
+      for (const { rowId, colIndex, value } of changes) {
         try {
           // Fetch the modules for this project specifically if needed
           let moduleColId;
@@ -528,32 +654,47 @@ export default function TraceabilityMatrixPage() {
           } else {
             // Otherwise, we need to fetch the modules for the other project
             try {
-              const projectModulesResponse = await apiRequest("GET", `/api/projects/${projectId}/modules`);
+              const projectModulesResponse = await apiRequest(
+                "GET",
+                `/api/projects/${projectId}/modules`,
+              );
               if (projectModulesResponse && projectModulesResponse.length > 0) {
                 moduleColId = projectModulesResponse[colIndex]?.id;
               }
             } catch (moduleError) {
-              console.error(`Failed to fetch modules for project ${projectId}:`, moduleError);
+              console.error(
+                `Failed to fetch modules for project ${projectId}:`,
+                moduleError,
+              );
             }
           }
 
           if (!moduleColId) {
-            console.error(`Could not find module at index ${colIndex} for project ${projectId}`);
+            console.error(
+              `Could not find module at index ${colIndex} for project ${projectId}`,
+            );
             errorCount++;
             continue;
           }
 
           console.log(`Saving cell for project ${projectId}:`, {
-            rowId, colIndex, moduleColId, value: JSON.stringify(value)
+            rowId,
+            colIndex,
+            moduleColId,
+            value: JSON.stringify(value),
           });
 
-          const response = await apiRequest("POST", `/api/projects/${projectId}/matrix/cells`, {
-            rowModuleId: parseInt(rowId),
-            colModuleId: moduleColId,
-            projectId: parseInt(projectId),
-            value: JSON.stringify(value),
-            createdById: userId
-          });
+          const response = await apiRequest(
+            "POST",
+            `/api/projects/${projectId}/matrix/cells`,
+            {
+              rowModuleId: parseInt(rowId),
+              colModuleId: moduleColId,
+              projectId: parseInt(projectId),
+              value: JSON.stringify(value),
+              createdById: userId,
+            },
+          );
 
           console.log("Save cell response:", response);
           successCount++;
@@ -564,7 +705,9 @@ export default function TraceabilityMatrixPage() {
       }
 
       // Refresh data for this project to ensure consistency
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/matrix/cells`] });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/projects/${projectId}/matrix/cells`],
+      });
     }
 
     // Clear pending changes
@@ -581,7 +724,7 @@ export default function TraceabilityMatrixPage() {
       toast({
         title: "Partial save",
         description: `Saved ${successCount} changes. ${errorCount} changes failed to save.`,
-        variant: "destructive"
+        variant: "destructive",
       });
       return errorCount === 0;
     }
@@ -595,7 +738,7 @@ export default function TraceabilityMatrixPage() {
       toast({
         title: "Cannot export",
         description: "No data available to export",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -604,34 +747,37 @@ export default function TraceabilityMatrixPage() {
 
     // Create header row with module names
     csvContent += "Module ID,Module Name,";
-    csvContent += modules.map(m => m.name).join(",");
+    csvContent += modules.map((m) => m.name).join(",");
     csvContent += "\n";
 
     // Add data rows
-    const moduleData = modules?.map(m => ({
-      id: m.id.toString(),
-      name: m.name
-    })) || [];
+    const moduleData =
+      modules?.map((m) => ({
+        id: m.id.toString(),
+        name: m.name,
+      })) || [];
 
-    moduleData.forEach(module => {
+    moduleData.forEach((module) => {
       csvContent += `${module.id},${module.name},`;
 
       // Add cell values for each column
       const rowData = matrixData[module.id] || [];
-      csvContent += modules.map((_, index) => {
-        const cellValue = rowData[index] || { type: 'empty' };
-        // Use clear text values for Excel export that are easily understood
-        switch (cellValue.type) {
-          case 'checkmark':
-            return "Yes"; // Clear text for Excel export
-          case 'x-mark':
-            return "No"; // Clear text for Excel export
-          case 'custom':
-            return cellValue.label || "Custom"; // Use label or default text
-          default:
-            return "";
-        }
-      }).join(",");
+      csvContent += modules
+        .map((_, index) => {
+          const cellValue = rowData[index] || { type: "empty" };
+          // Use clear text values for Excel export that are easily understood
+          switch (cellValue.type) {
+            case "checkmark":
+              return "Yes"; // Clear text for Excel export
+            case "x-mark":
+              return "No"; // Clear text for Excel export
+            case "custom":
+              return cellValue.label || "Custom"; // Use label or default text
+            default:
+              return "";
+          }
+        })
+        .join(",");
 
       csvContent += "\n";
     });
@@ -640,7 +786,10 @@ export default function TraceabilityMatrixPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `traceability_matrix_${projectName.replace(/\s+/g, '_')}.csv`);
+    link.setAttribute(
+      "download",
+      `traceability_matrix_${projectName.replace(/\s+/g, "_")}.csv`,
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -657,15 +806,16 @@ export default function TraceabilityMatrixPage() {
       toast({
         title: "Cannot export",
         description: "No data available to export",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
-    const moduleData = modules?.map(m => ({
-      id: m.id.toString(),
-      name: m.name
-    })) || [];
+    const moduleData =
+      modules?.map((m) => ({
+        id: m.id.toString(),
+        name: m.name,
+      })) || [];
 
     // Create PDF document
     const doc = new jsPDF();
@@ -677,9 +827,9 @@ export default function TraceabilityMatrixPage() {
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
 
     // Prepare table data
-    const headers = ['Module ID', 'Module Name', ...modules.map(m => m.name)];
+    const headers = ["Module ID", "Module Name", ...modules.map((m) => m.name)];
 
-    const rows = moduleData.map(module => {
+    const rows = moduleData.map((module) => {
       const rowData = matrixData[module.id] || [];
 
       // Create row with module ID and name first
@@ -688,18 +838,18 @@ export default function TraceabilityMatrixPage() {
         module.name,
         // Add cell values for each column
         ...modules.map((_, index) => {
-          const cellValue = rowData[index] || { type: 'empty' };
+          const cellValue = rowData[index] || { type: "empty" };
           switch (cellValue.type) {
-            case 'checkmark':
+            case "checkmark":
               return "Yes";
-            case 'x-mark':
+            case "x-mark":
               return "No";
-            case 'custom':
+            case "custom":
               return cellValue.label || "●";
             default:
               return "";
           }
-        })
+        }),
       ];
 
       return row;
@@ -728,75 +878,110 @@ export default function TraceabilityMatrixPage() {
         const rowModuleId = moduleData[rowIndex]?.id;
         if (!rowModuleId) return;
 
-        const cellValue = matrixData[rowModuleId]?.[colIndex] || { type: 'empty' };
+        const cellValue = matrixData[rowModuleId]?.[colIndex] || {
+          type: "empty",
+        };
 
         // Apply cell background based on value type, using the same colors as the UI
-        if (cellValue.type === 'checkmark') {
+        if (cellValue.type === "checkmark") {
           // Default green or use custom color if specified
-          const color = cellValue.color || '#10b981';
+          const color = cellValue.color || "#10b981";
 
           // Parse hex color to RGB for PDF
-          const hex = color.replace('#', '');
+          const hex = color.replace("#", "");
           const r = parseInt(hex.substring(0, 2), 16);
           const g = parseInt(hex.substring(2, 4), 16);
           const b = parseInt(hex.substring(4, 6), 16);
 
           doc.setFillColor(r, g, b);
-          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+          doc.rect(
+            data.cell.x,
+            data.cell.y,
+            data.cell.width,
+            data.cell.height,
+            "F",
+          );
 
           // Use white text on dark backgrounds, black on light backgrounds
-          const isLightColor = (r * 0.299 + g * 0.587 + b * 0.114) > 186;
+          const isLightColor = r * 0.299 + g * 0.587 + b * 0.114 > 186;
           doc.setTextColor(isLightColor ? 0 : 255);
-          doc.text(cellValue.label || "Yes", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
-            align: 'center', 
-            baseline: 'middle'
-          });
-        } else if (cellValue.type === 'x-mark') {
+          doc.text(
+            cellValue.label || "Yes",
+            data.cell.x + data.cell.width / 2,
+            data.cell.y + data.cell.height / 2,
+            {
+              align: "center",
+              baseline: "middle",
+            },
+          );
+        } else if (cellValue.type === "x-mark") {
           // Default red or use custom color if specified
-          const color = cellValue.color || '#ef4444';
+          const color = cellValue.color || "#ef4444";
 
           // Parse hex color to RGB for PDF
-          const hex = color.replace('#', '');
+          const hex = color.replace("#", "");
           const r = parseInt(hex.substring(0, 2), 16);
           const g = parseInt(hex.substring(2, 4), 16);
           const b = parseInt(hex.substring(4, 6), 16);
 
           doc.setFillColor(r, g, b);
-          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+          doc.rect(
+            data.cell.x,
+            data.cell.y,
+            data.cell.width,
+            data.cell.height,
+            "F",
+          );
 
           // Use white text on dark backgrounds, black on light backgrounds
-          const isLightColor = (r * 0.299 + g * 0.587 + b * 0.114) > 186;
+          const isLightColor = r * 0.299 + g * 0.587 + b * 0.114 > 186;
           doc.setTextColor(isLightColor ? 0 : 255);
-          doc.text(cellValue.label || "No", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
-            align: 'center', 
-            baseline: 'middle'
-          });
-        } else if (cellValue.type === 'custom') {
+          doc.text(
+            cellValue.label || "No",
+            data.cell.x + data.cell.width / 2,
+            data.cell.y + data.cell.height / 2,
+            {
+              align: "center",
+              baseline: "middle",
+            },
+          );
+        } else if (cellValue.type === "custom") {
           // Custom marker with specified color
-          const color = cellValue.color || '#3b82f6';
+          const color = cellValue.color || "#3b82f6";
 
           // Parse hex color to RGB for PDF
-          const hex = color.replace('#', '');
+          const hex = color.replace("#", "");
           const r = parseInt(hex.substring(0, 2), 16);
           const g = parseInt(hex.substring(2, 4), 16);
           const b = parseInt(hex.substring(4, 6), 16);
 
           doc.setFillColor(r, g, b);
-          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+          doc.rect(
+            data.cell.x,
+            data.cell.y,
+            data.cell.width,
+            data.cell.height,
+            "F",
+          );
 
           // Use white text on dark backgrounds, black on light backgrounds
-          const isLightColor = (r * 0.299 + g * 0.587 + b * 0.114) > 186;
+          const isLightColor = r * 0.299 + g * 0.587 + b * 0.114 > 186;
           doc.setTextColor(isLightColor ? 0 : 255);
-          doc.text(cellValue.label || "●", data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, { 
-            align: 'center', 
-            baseline: 'middle'
-          });
+          doc.text(
+            cellValue.label || "●",
+            data.cell.x + data.cell.width / 2,
+            data.cell.y + data.cell.height / 2,
+            {
+              align: "center",
+              baseline: "middle",
+            },
+          );
         }
-      }
+      },
     });
 
     // Save PDF
-    doc.save(`traceability_matrix_${projectName.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`traceability_matrix_${projectName.replace(/\s+/g, "_")}.pdf`);
 
     toast({
       title: "Export successful",
@@ -810,7 +995,7 @@ export default function TraceabilityMatrixPage() {
       toast({
         title: "Invalid marker",
         description: "Please provide a label for the marker",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -820,7 +1005,7 @@ export default function TraceabilityMatrixPage() {
       toast({
         title: "Authentication required",
         description: "You must be logged in to create markers",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -831,20 +1016,24 @@ export default function TraceabilityMatrixPage() {
 
       console.log("Creating marker with user ID:", currentUser.id);
 
-      const response = await apiRequest("POST", `/api/projects/${selectedProjectId}/matrix/markers`, {
-        markerId,
-        label: newMarker.label,
-        color: newMarker.color,
-        type: newMarker.type,
-        projectId: parseInt(selectedProjectId),
-        createdById: currentUser.id
-      });
+      const response = await apiRequest(
+        "POST",
+        `/api/projects/${selectedProjectId}/matrix/markers`,
+        {
+          markerId,
+          label: newMarker.label,
+          color: newMarker.color,
+          type: newMarker.type,
+          projectId: parseInt(selectedProjectId),
+          createdById: currentUser.id,
+        },
+      );
 
       // Reset form
       setNewMarker({
-        label: '',
-        color: '#3b82f6',
-        type: 'custom'
+        label: "",
+        color: "#3b82f6",
+        type: "custom",
       });
       setIsAddingMarker(false);
 
@@ -858,14 +1047,16 @@ export default function TraceabilityMatrixPage() {
         projectId: parseInt(selectedProjectId),
         createdById: response.createdById,
         createdAt: response.createdAt,
-        updatedAt: response.updatedAt
+        updatedAt: response.updatedAt,
       };
 
       // Update React state for immediate UI feedback
-      setCustomMarkers(current => [...current, newMarkerWithId]);
+      setCustomMarkers((current) => [...current, newMarkerWithId]);
 
       // Refresh markers in the React Query cache
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/matrix/markers`] });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/projects/${selectedProjectId}/matrix/markers`],
+      });
 
       toast({
         title: "Marker added",
@@ -876,7 +1067,7 @@ export default function TraceabilityMatrixPage() {
       toast({
         title: "Error",
         description: "Failed to create new marker",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -891,17 +1082,17 @@ export default function TraceabilityMatrixPage() {
       toast({
         title: "Authentication required",
         description: "You must be logged in to update markers",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     // Validate the marker data to prevent empty markers
-    if (!editingMarker.label || editingMarker.label.trim() === '') {
+    if (!editingMarker.label || editingMarker.label.trim() === "") {
       toast({
         title: "Invalid marker",
         description: "Marker label cannot be empty",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -911,18 +1102,22 @@ export default function TraceabilityMatrixPage() {
       setIsAutosaving(true);
 
       // First, update local state for immediate UI feedback
-      setCustomMarkers(current => 
-        current.map(marker => 
-          marker.id === editingMarker.id ? editingMarker : marker
-        )
+      setCustomMarkers((current) =>
+        current.map((marker) =>
+          marker.id === editingMarker.id ? editingMarker : marker,
+        ),
       );
 
-      await apiRequest("PATCH", `/api/projects/${selectedProjectId}/matrix/markers/${editingMarker.id}`, {
-        label: editingMarker.label,
-        color: editingMarker.color,
-        type: editingMarker.type,
-        markerId: editingMarker.markerId
-      });
+      await apiRequest(
+        "PATCH",
+        `/api/projects/${selectedProjectId}/matrix/markers/${editingMarker.id}`,
+        {
+          label: editingMarker.label,
+          color: editingMarker.color,
+          type: editingMarker.type,
+          markerId: editingMarker.markerId,
+        },
+      );
 
       // Close the dialog
       setEditingMarker(null);
@@ -943,7 +1138,7 @@ export default function TraceabilityMatrixPage() {
       toast({
         title: "Error",
         description: "Failed to update marker",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -958,7 +1153,7 @@ export default function TraceabilityMatrixPage() {
       toast({
         title: "Authentication required",
         description: "You must be logged in to delete markers",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -967,12 +1162,19 @@ export default function TraceabilityMatrixPage() {
       setIsAutosaving(true);
 
       // First, update local state immediately for responsive UI
-      setCustomMarkers(current => current.filter(marker => marker.id !== markerId));
+      setCustomMarkers((current) =>
+        current.filter((marker) => marker.id !== markerId),
+      );
 
-      await apiRequest("DELETE", `/api/projects/${selectedProjectId}/matrix/markers/${markerId}`);
+      await apiRequest(
+        "DELETE",
+        `/api/projects/${selectedProjectId}/matrix/markers/${markerId}`,
+      );
 
       // Refresh markers in the React Query cache
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/matrix/markers`] });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/projects/${selectedProjectId}/matrix/markers`],
+      });
 
       toast({
         title: "Marker deleted",
@@ -987,7 +1189,7 @@ export default function TraceabilityMatrixPage() {
       toast({
         title: "Error",
         description: "Failed to delete marker. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -1003,9 +1205,13 @@ export default function TraceabilityMatrixPage() {
                 <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg">
                   <Network className="h-6 w-6 text-white" />
                 </div>
-                <h1 className="font-heading text-2xl md:text-3xl">Traceability Matrix</h1>
+                <h1 className="font-heading text-2xl md:text-3xl">
+                  Traceability Matrix
+                </h1>
               </div>
-              <p className="text-muted-foreground">Track relationships between requirements and test cases</p>
+              <p className="text-muted-foreground">
+                Track relationships between requirements and test cases
+              </p>
             </div>
           </div>
         </div>
@@ -1013,26 +1219,30 @@ export default function TraceabilityMatrixPage() {
     );
   };
 
-  const selectedProject = projects?.find(p => p.id.toString() === selectedProjectId);
-  const moduleData = modules?.map(m => ({
-    id: m.id.toString(),
-    name: m.name
-  })) || [];
+  const selectedProject = projects?.find(
+    (p) => p.id.toString() === selectedProjectId,
+  );
+  const moduleData =
+    modules?.map((m) => ({
+      id: m.id.toString(),
+      name: m.name,
+    })) || [];
 
   // Set up beforeunload event listener to warn user about unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
-        const message = "You have unsaved changes. If you leave now, these changes will be lost.";
+        const message =
+          "You have unsaved changes. If you leave now, these changes will be lost.";
         e.returnValue = message;
         return message;
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [hasUnsavedChanges]);
 
@@ -1076,10 +1286,13 @@ export default function TraceabilityMatrixPage() {
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Traceability Matrix</h1>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Traceability Matrix
+              </h1>
               {hasUnsavedChanges && (
                 <div className="ml-3 px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                  {pendingSaves.length} unsaved {pendingSaves.length === 1 ? 'change' : 'changes'}
+                  {pendingSaves.length} unsaved{" "}
+                  {pendingSaves.length === 1 ? "change" : "changes"}
                 </div>
               )}
               {isAutosaving && (
@@ -1115,8 +1328,8 @@ export default function TraceabilityMatrixPage() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>Existing Markers</DropdownMenuLabel>
-                  {customMarkers.map(marker => (
-                    <DropdownMenuItem 
+                  {customMarkers.map((marker) => (
+                    <DropdownMenuItem
                       key={marker.markerId}
                       onSelect={(e) => {
                         e.preventDefault();
@@ -1125,9 +1338,9 @@ export default function TraceabilityMatrixPage() {
                     >
                       <div className="flex items-center w-full justify-between">
                         <div className="flex items-center">
-                          <div 
-                            className="w-3 h-3 rounded-full mr-2" 
-                            style={{backgroundColor: marker.color}}
+                          <div
+                            className="w-3 h-3 rounded-full mr-2"
+                            style={{ backgroundColor: marker.color }}
                           />
                           {marker.label}
                         </div>
@@ -1155,15 +1368,20 @@ export default function TraceabilityMatrixPage() {
                     }, 1000);
                   }
                 }}
-                disabled={!hasUnsavedChanges || !selectedProjectId || isAutosaving}
+                disabled={
+                  !hasUnsavedChanges || !selectedProjectId || isAutosaving
+                }
               >
                 {isAutosaving ? (
                   <span className="animate-spin mr-2">⟳</span>
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
-                {isAutosaving ? 'Saving...' : 
-                  (pendingSaves.length > 0 ? `Save Changes (${pendingSaves.length})` : 'Save Changes')}
+                {isAutosaving
+                  ? "Saving..."
+                  : pendingSaves.length > 0
+                    ? `Save Changes (${pendingSaves.length})`
+                    : "Save Changes"}
               </Button>
 
               <Button
@@ -1195,9 +1413,13 @@ export default function TraceabilityMatrixPage() {
             selectedProjectId={selectedProjectId}
             onChange={(value) => {
               // Check for unsaved changes before switching projects
-              if (hasUnsavedChanges && selectedProjectId && value !== selectedProjectId) {
+              if (
+                hasUnsavedChanges &&
+                selectedProjectId &&
+                value !== selectedProjectId
+              ) {
                 const shouldSwitch = window.confirm(
-                  `You have ${pendingSaves.length} unsaved changes. If you switch projects now, these changes will be lost. Do you want to continue?`
+                  `You have ${pendingSaves.length} unsaved changes. If you switch projects now, these changes will be lost. Do you want to continue?`,
                 );
 
                 if (!shouldSwitch) {
@@ -1220,12 +1442,16 @@ export default function TraceabilityMatrixPage() {
             <Table className="border-collapse w-full">
               <TableHeader className="bg-gray-50 dark:bg-gray-800">
                 <TableRow>
-                  <TableHead className="text-center border-0 w-16">Module ID</TableHead>
-                  <TableHead className="text-left border-0 w-48">Module Name</TableHead>
+                  <TableHead className="text-center border-0 w-16">
+                    Module ID
+                  </TableHead>
+                  <TableHead className="text-left border-0 w-48">
+                    Module Name
+                  </TableHead>
                   {/* Column Headers - module names */}
                   {modules?.map((module) => (
-                    <TableHead 
-                      key={module.id} 
+                    <TableHead
+                      key={module.id}
                       className="text-center border-0 min-w-24 text-xs"
                     >
                       {module.name}
@@ -1235,21 +1461,32 @@ export default function TraceabilityMatrixPage() {
               </TableHeader>
               <TableBody>
                 {moduleData.map((rowModule) => (
-                  <TableRow key={rowModule.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                  <TableRow
+                    key={rowModule.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                  >
                     <TableCell className="font-medium text-center border-0">
-                      {selectedProject?.name ? `${selectedProject.name.substring(0, 3).toUpperCase()}-MOD-${String(rowModule.id).padStart(2, '0')}` : `MOD-${String(rowModule.id).padStart(2, '0')}`}
+                      {selectedProject?.name
+                        ? `${selectedProject.name.substring(0, 3).toUpperCase()}-MOD-${String(rowModule.id).padStart(2, "0")}`
+                        : `MOD-${String(rowModule.id).padStart(2, "0")}`}
                     </TableCell>
                     <TableCell className="font-medium border-0">
                       {rowModule.name}
                     </TableCell>
                     {modules?.map((colModule, colIndex) => (
-                      <TableCell 
-                        key={colModule.id} 
+                      <TableCell
+                        key={colModule.id}
                         className="text-center border-0 p-1"
                       >
                         <CellDropdown
-                          value={matrixData[rowModule.id]?.[colIndex] || { type: 'empty' }}
-                          onChange={(value) => updateCellValue(rowModule.id, colIndex, value)}
+                          value={
+                            matrixData[rowModule.id]?.[colIndex] || {
+                              type: "empty",
+                            }
+                          }
+                          onChange={(value) =>
+                            updateCellValue(rowModule.id, colIndex, value)
+                          }
                           customMarkers={customMarkers || []}
                           rowId={rowModule.id}
                           colId={colModule.id.toString()}
@@ -1299,7 +1536,9 @@ export default function TraceabilityMatrixPage() {
                 type="text"
                 id="label"
                 value={newMarker.label}
-                onChange={(e) => setNewMarker({...newMarker, label: e.target.value})}
+                onChange={(e) =>
+                  setNewMarker({ ...newMarker, label: e.target.value })
+                }
                 className="col-span-3"
               />
             </div>
@@ -1318,10 +1557,15 @@ export default function TraceabilityMatrixPage() {
                       <span className="sr-only">Pick Color</span>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 outline-none" align="start">
-                    <HexColorPicker 
-                      color={newMarker.color} 
-                      onChange={(color) => setNewMarker({...newMarker, color})} 
+                  <PopoverContent
+                    className="w-auto p-0 outline-none"
+                    align="start"
+                  >
+                    <HexColorPicker
+                      color={newMarker.color}
+                      onChange={(color) =>
+                        setNewMarker({ ...newMarker, color })
+                      }
                     />
                   </PopoverContent>
                 </Popover>
@@ -1329,14 +1573,20 @@ export default function TraceabilityMatrixPage() {
                   type="text"
                   id="color"
                   value={newMarker.color}
-                  onChange={(e) => setNewMarker({...newMarker, color: e.target.value})}
+                  onChange={(e) =>
+                    setNewMarker({ ...newMarker, color: e.target.value })
+                  }
                   className="ml-2 w-32"
                 />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setIsAddingMarker(false)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsAddingMarker(false)}
+            >
               Cancel
             </Button>
             <Button type="button" onClick={addCustomMarker}>
@@ -1347,7 +1597,10 @@ export default function TraceabilityMatrixPage() {
       </Dialog>
 
       {/* Edit marker dialog */}
-      <Dialog open={editingMarker !== null} onOpenChange={() => setEditingMarker(null)}>
+      <Dialog
+        open={editingMarker !== null}
+        onOpenChange={() => setEditingMarker(null)}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Edit Marker</DialogTitle>
@@ -1363,8 +1616,14 @@ export default function TraceabilityMatrixPage() {
               <Input
                 type="text"
                 id="label"
-                value={editingMarker?.label || ''}
-                onChange={(e) => setEditingMarker(editingMarker => editingMarker ? {...editingMarker, label: e.target.value} : null)}
+                value={editingMarker?.label || ""}
+                onChange={(e) =>
+                  setEditingMarker((editingMarker) =>
+                    editingMarker
+                      ? { ...editingMarker, label: e.target.value }
+                      : null,
+                  )
+                }
                 className="col-span-3"
               />
             </div>
@@ -1383,34 +1642,56 @@ export default function TraceabilityMatrixPage() {
                       <span className="sr-only">Pick Color</span>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 outline-none" align="start">
-                    <HexColorPicker 
-                      color={editingMarker?.color || '#3b82f6'}
-                      onChange={(color) => setEditingMarker(editingMarker => editingMarker ? {...editingMarker, color} : null)} 
+                  <PopoverContent
+                    className="w-auto p-0 outline-none"
+                    align="start"
+                  >
+                    <HexColorPicker
+                      color={editingMarker?.color || "#3b82f6"}
+                      onChange={(color) =>
+                        setEditingMarker((editingMarker) =>
+                          editingMarker ? { ...editingMarker, color } : null,
+                        )
+                      }
                     />
                   </PopoverContent>
                 </Popover>
                 <Input
                   type="text"
                   id="color"
-                  value={editingMarker?.color || ''}
-                  onChange={(e) => setEditingMarker(editingMarker => editingMarker ? {...editingMarker, color: e.target.value} : null)}
+                  value={editingMarker?.color || ""}
+                  onChange={(e) =>
+                    setEditingMarker((editingMarker) =>
+                      editingMarker
+                        ? { ...editingMarker, color: e.target.value }
+                        : null,
+                    )
+                  }
                   className="ml-2 w-32"
                 />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setEditingMarker(null)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setEditingMarker(null)}
+            >
               Cancel
             </Button>
             {editingMarker && (
-              <Button type="button" variant="destructive" className="mr-2" onClick={() => {
-                if (editingMarker?.id) {
-                  deleteCustomMarker(editingMarker.id);
-                }
-                setEditingMarker(null);
-              }}>
+              <Button
+                type="button"
+                variant="destructive"
+                className="mr-2"
+                onClick={() => {
+                  if (editingMarker?.id) {
+                    deleteCustomMarker(editingMarker.id);
+                  }
+                  setEditingMarker(null);
+                }}
+              >
                 Delete
               </Button>
             )}
@@ -1434,7 +1715,14 @@ interface CellDropdownProps {
   projectId: string;
 }
 
-const CellDropdown: React.FC<CellDropdownProps> = ({ value, onChange, customMarkers, rowId, colId, projectId }) => {
+const CellDropdown: React.FC<CellDropdownProps> = ({
+  value,
+  onChange,
+  customMarkers,
+  rowId,
+  colId,
+  projectId,
+}) => {
   const [open, setOpen] = useState(false);
 
   const handleSelect = (newValue: CellValue) => {
@@ -1451,39 +1739,52 @@ const CellDropdown: React.FC<CellDropdownProps> = ({ value, onChange, customMark
           aria-expanded={open}
           className="w-24 justify-center text-sm"
         >
-          {value.type === 'checkmark' && (
+          {value.type === "checkmark" && (
             <div className="flex items-center gap-1">
               <CheckCircle className="w-4 h-4 text-green-500" />
               {value.label || "Yes"}
             </div>
           )}
-          {value.type === 'x-mark' && (
+          {value.type === "x-mark" && (
             <div className="flex items-center gap-1">
               <AlertCircle className="w-4 h-4 text-red-500" />
               {value.label || "No"}
             </div>
           )}
-          {value.type === 'custom' && (
+          {value.type === "custom" && (
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: value.color }} />
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: value.color }}
+              />
               {value.label || "Custom"}
             </div>
           )}
-          {value.type === 'empty' && (
-            <span>Empty</span>
-          )}
+          {value.type === "empty" && <span>Empty</span>}
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-40 p-0">
         <DropdownMenuContent className="w-40">
-          <DropdownMenuItem onSelect={() => handleSelect({ type: 'checkmark', label: 'Yes', color: '#10b981' })}>
+          <DropdownMenuItem
+            onSelect={() =>
+              handleSelect({
+                type: "checkmark",
+                label: "Yes",
+                color: "#10b981",
+              })
+            }
+          >
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-500" />
               Yes
             </div>
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => handleSelect({ type: 'x-mark', label: 'No', color: '#ef4444' })}>
+          <DropdownMenuItem
+            onSelect={() =>
+              handleSelect({ type: "x-mark", label: "No", color: "#ef4444" })
+            }
+          >
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-500" />
               No
@@ -1492,15 +1793,27 @@ const CellDropdown: React.FC<CellDropdownProps> = ({ value, onChange, customMark
           <DropdownMenuSeparator />
           <DropdownMenuLabel>Custom Markers</DropdownMenuLabel>
           {customMarkers.map((marker) => (
-            <DropdownMenuItem key={marker.markerId} onSelect={() => handleSelect({ type: 'custom', label: marker.label, color: marker.color })}>
+            <DropdownMenuItem
+              key={marker.markerId}
+              onSelect={() =>
+                handleSelect({
+                  type: "custom",
+                  label: marker.label,
+                  color: marker.color,
+                })
+              }
+            >
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: marker.color }} />
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: marker.color }}
+                />
                 {marker.label}
               </div>
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => handleSelect({ type: 'empty' })}>
+          <DropdownMenuItem onSelect={() => handleSelect({ type: "empty" })}>
             Clear
           </DropdownMenuItem>
         </DropdownMenuContent>
