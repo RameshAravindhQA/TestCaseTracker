@@ -2,27 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Remove any debug or error borders */
-.no-debug-border, 
-main, 
-[role="main"],
-.main-layout {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/* Remove any debug borders that might be applied */
-* {
-  border-color: transparent !important;
-}
-
-/* Reset borders for main content areas */
-main, .main-content, [data-main-content] {
-  border: none !important;
-  outline: none !important;
-}
-
 @layer utilities {
   .custom-scrollbar {
     scrollbar-width: thin;
