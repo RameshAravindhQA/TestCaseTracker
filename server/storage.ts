@@ -2253,7 +2253,6 @@ class MemStorage implements IStorage {
     return message;
   }
 }
-}
 
 // Create and export the storage instance
 console.log("🔄 Initializing in-memory storage...");
