@@ -1221,7 +1221,6 @@ export default function SettingsPage() {
 
             {/* Permissions Settings */}
             {activeTab === "permissions" && (
-
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -1233,20 +1232,12 @@ export default function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Role permissions are managed at the system level. Contact your administrator to modify user roles and permissions.
-                    </p>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="font-medium mb-2">Available Roles:</h4>
-                      <ul className="space-y-1 text-sm">
-                        <li>• <strong>Admin</strong> - Full system access</li>
-                        <li>• <strong>Manager</strong> - Project management and team oversight</li>
-                        <li>• <strong>Tester</strong> - Test case creation and execution</li>
-                        <li>• <strong>Viewer</strong> - Read-only access to projects</li>
-                      </ul>
-                    </div>
-                  </div>
+                  <RolePermissions 
+                    rolePermissions={rolePermissions}
+                    setRolePermissions={setRolePermissions}
+                    selectedRole={selectedRole}
+                    setSelectedRole={setSelectedRole}
+                  />
                 </CardContent>
               </Card>
             )}

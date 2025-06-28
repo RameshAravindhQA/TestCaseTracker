@@ -67,7 +67,10 @@ export function MarkerManagement() {
   const createMarkerMutation = useMutation({
     mutationFn: async (markerData: { label: string; color: string; projectId: number }) => {
       const response = await apiRequest("POST", "/api/custom-markers", markerData);
-      if (!response.ok) throw new Error("Failed to create marker");
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Failed to create marker: ${errorData}`);
+      }
       return response.json();
     },
     onSuccess: () => {

@@ -232,20 +232,25 @@ import {
       </div>
 </div>
 
-      {/* Welcome Dialog - only show if user is properly authenticated */}
-    </DashboardLayout>
+      {/* Welcome Dialog */}
+      {isWelcomeOpen && (
+        <DashboardWelcomeDialog
+          isOpen={isWelcomeOpen}
+          onClose={handleWelcomeClose}
+          userName={user?.firstName || "User"}
+        />
+      )}
+
+      {/* Onboarding Tutorial */}
+      {isOnboardingOpen && (
+        <OnboardingTutorial
+          isOpen={isOnboardingOpen}
+          onClose={() => setIsOnboardingOpen(false)}
+          onComplete={handleOnboardingComplete}
+        />
+      )}
+    </MainLayout>
   );
-}
-
-export default function Dashboard() {
-  const { user } = useAuth();
-
-  // Also fetch user data directly to ensure it's available for the welcome dialog
-  const { data: userData } = useQuery({
-    queryKey: ["/api/auth/user"],
-    retry: false,
-    throwOnError: false,
-  });
 }
 import { DashboardWelcomeDialog } from "@/components/ui/dashboard-welcome-dialog";
 import { OnboardingTutorial } from "@/components/onboarding/onboarding-tutorial";

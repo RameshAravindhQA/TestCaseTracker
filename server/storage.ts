@@ -222,6 +222,7 @@ class MemStorage implements IStorage {
   private sprints = new Map<number, any>();
   private kanbanColumns = new Map<number, any>();
   private kanbanCards = new Map<number, any>();
+  private customMarkers = new Map<number, any>();
 
   private nextId = 1;
   private testSheetIdCounter = 1;
@@ -2537,6 +2538,54 @@ card => card.columnId === id);
       await this.saveData();
       return cell;
     }
+  }
+
+  async createCustomMarker(markerData: any): Promise<any> {
+    const id = this.nextId++;
+    const marker = {
+      id: id.toString(),
+      ...markerData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Store in a custom markers map
+    if (!this.customMarkers) {
+      this.customMarkers = new Map();
+    }
+    this.customMarkers.set(id, marker);
+    return marker;
+  }
+
+  async updateCustomMarker(id: number, updateData: any): Promise<any> {
+    if (!this.customMarkers) {
+      this.customMarkers = new Map();
+    }
+    
+    const marker = this.customMarkers.get(id);
+    if (!marker) return null;
+    
+    const updatedMarker = {
+      ...marker,
+      ...updateData,
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.customMarkers.set(id, updatedMarker);
+    return updatedMarker;
+  }
+
+  async deleteCustomMarker(id: string): Promise<boolean> {
+    if (!this.customMarkers) return false;
+    return this.customMarkers.delete(parseInt(id));
+  }
+
+  async getCustomMarkersByProject(projectId: number): Promise<any[]> {
+    if (!this.customMarkers) return [];
+    
+    return Array.from(this.customMarkers.values()).filter(
+      marker => marker.projectId === projectId
+    );
   }
 }
 
