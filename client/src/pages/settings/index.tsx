@@ -1327,8 +1327,6 @@ export default function SettingsPage() {
               </Card>
             )}
           </div>
-
-          {/* View Notebook Dialog */}
         </div>
       </div>
     </MainLayout>
