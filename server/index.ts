@@ -65,11 +65,13 @@ async function startServer() {
 
     const httpServer = await registerRoutes(app);
 
-    // Initialize WebSocket server
-    const chatWS = new ChatWebSocketServer(httpServer);
-
-    // Store WebSocket server reference globally for access in routes
-    (global as any).chatWebSocket = chatWS;
+    // Initialize WebSocket server only in production or when not using Vite dev server
+    let chatWS: ChatWebSocketServer | null = null;
+    if (app.get("env") !== "development") {
+      chatWS = new ChatWebSocketServer(httpServer);
+      // Store WebSocket server reference globally for access in routes
+      (global as any).chatWebSocket = chatWS;
+    }
 
     // Initialize database
     await initializeDatabase();
@@ -87,6 +89,10 @@ async function startServer() {
     // doesn't interfere with the other routes
     if (app.get("env") === "development") {
       await setupVite(app, httpServer);
+      
+      // Initialize WebSocket server after Vite setup to avoid conflicts
+      chatWS = new ChatWebSocketServer(httpServer);
+      (global as any).chatWebSocket = chatWS;
     } else {
       serveStatic(app);
     }

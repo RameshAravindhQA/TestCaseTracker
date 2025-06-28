@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -136,13 +135,13 @@ const Messenger = () => {
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionRetries, setConnectionRetries] = useState(0);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -151,10 +150,11 @@ const Messenger = () => {
     if (!user) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}`;
-    
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/ws/chat`;
+
     console.log('Connecting to WebSocket:', wsUrl);
-    
+
     try {
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -163,7 +163,7 @@ const Messenger = () => {
         console.log('WebSocket connected');
         setIsConnected(true);
         setConnectionRetries(0);
-        
+
         // Authenticate
         ws.send(JSON.stringify({
           type: 'authenticate',
@@ -186,12 +186,12 @@ const Messenger = () => {
       ws.onclose = (event) => {
         console.log('WebSocket disconnected:', event.code, event.reason);
         setIsConnected(false);
-        
+
         // Attempt to reconnect if not a clean close
         if (!event.wasClean && connectionRetries < 5) {
           const delay = Math.min(1000 * Math.pow(2, connectionRetries), 30000);
           console.log(`Reconnecting in ${delay}ms...`);
-          
+
           reconnectTimeoutRef.current = setTimeout(() => {
             setConnectionRetries(prev => prev + 1);
             connectWebSocket();
@@ -229,14 +229,14 @@ const Messenger = () => {
         if (message.message) {
           // Update conversations list
           queryClient.invalidateQueries({ queryKey: ['/api/chat/conversations'] });
-          
+
           // Update messages if viewing this conversation
           if (message.message.conversationId === selectedConversation) {
             queryClient.invalidateQueries({ 
               queryKey: [`/api/chat/conversations/${selectedConversation}/messages`] 
             });
           }
-          
+
           // Clear typing indicator for this user
           if (message.message.conversationId) {
             setTypingUsers(prev => ({
@@ -283,7 +283,7 @@ const Messenger = () => {
             return newSet;
           });
         }
-        
+
         if (data?.presence) {
           setOnlineUsers(new Set(data.presence.filter((p: any) => p.isOnline).map((p: any) => p.userId)));
         }
@@ -380,7 +380,7 @@ const Messenger = () => {
   useEffect(() => {
     if (selectedConversation) {
       joinConversation(selectedConversation);
-      
+
       return () => {
         leaveConversation(selectedConversation);
       };
@@ -438,12 +438,12 @@ const Messenger = () => {
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: { message: string; replyToId?: number; attachments?: string[] }) => {
       if (!selectedConversation) throw new Error("No conversation selected");
-      
+
       const response = await apiRequest("POST", `/api/chat/messages`, {
         ...messageData,
         conversationId: selectedConversation
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to send message');
@@ -526,12 +526,12 @@ const Messenger = () => {
     if (!selectedConversation) return;
 
     startTyping(selectedConversation);
-    
+
     // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    
+
     // Stop typing after 3 seconds of inactivity
     typingTimeoutRef.current = setTimeout(() => {
       stopTyping(selectedConversation);
@@ -663,7 +663,7 @@ const Messenger = () => {
               </DropdownMenu>
             </div>
           </div>
-          
+
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -715,7 +715,7 @@ const Messenger = () => {
                           <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
                         )}
                       </div>
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-1">
@@ -797,7 +797,7 @@ const Messenger = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" title="Voice Call">
                   <Phone className="h-4 w-4" />
@@ -869,7 +869,7 @@ const Messenger = () => {
                             {formatMessageTime(message.createdAt)}
                           </div>
                         )}
-                        
+
                         <div className="flex items-start gap-3 group hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded-lg transition-colors">
                           <div className="w-8">
                             {showAvatar && (
@@ -881,7 +881,7 @@ const Messenger = () => {
                               </Avatar>
                             )}
                           </div>
-                          
+
                           <div className="flex-1 min-w-0">
                             {showAvatar && (
                               <div className="flex items-center gap-2 mb-1">
@@ -908,7 +908,7 @@ const Messenger = () => {
                             <div className="relative group/message">
                               <div className="text-sm bg-gray-100 dark:bg-gray-700 rounded-lg p-3 relative max-w-[70%] break-words">
                                 {message.message}
-                                
+
                                 {/* Message status */}
                                 <div className="flex items-center justify-end gap-1 mt-1">
                                   <CheckCheck className="h-3 w-3 text-blue-500" />
@@ -1045,7 +1045,7 @@ const Messenger = () => {
                     <Smile className="h-4 w-4" />
                   </Button>
                 </div>
-                
+
                 <div className="flex-1 relative">
                   <Textarea
                     ref={messageInputRef}
@@ -1068,7 +1068,7 @@ const Messenger = () => {
                     </Button>
                   </div>
                 </div>
-                
+
                 <Button 
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim() || sendMessageMutation.isPending || !isConnected}
@@ -1108,7 +1108,7 @@ const Messenger = () => {
               Set up a new conversation to collaborate with your team.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Type</label>
@@ -1139,7 +1139,7 @@ const Messenger = () => {
                 </Button>
               </div>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium">Name</label>
               <Input
@@ -1149,7 +1149,7 @@ const Messenger = () => {
                 className="mt-1"
               />
             </div>
-            
+
             <div>
               <label className="text-sm font-medium">Description (Optional)</label>
               <Textarea
@@ -1160,7 +1160,7 @@ const Messenger = () => {
                 rows={2}
               />
             </div>
-            
+
             <div>
               <label className="text-sm font-medium">Members</label>
               <div className="mt-1 max-h-40 overflow-y-auto border rounded p-2">
@@ -1190,7 +1190,7 @@ const Messenger = () => {
               </div>
             </div>
           </div>
-          
+
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 

@@ -27,7 +27,10 @@ export class ChatWebSocketServer {
   private typingIndicators = new Map<number, Map<number, TypingIndicator>>(); // conversationId -> userId -> TypingIndicator
 
   constructor(server: any) {
-    this.wss = new WebSocketServer({ server });
+    this.wss = new WebSocketServer({ 
+      server,
+      path: '/ws/chat' // Use specific path to avoid conflicts with Vite's WebSocket
+    });
     this.setupWebSocket();
     this.startCleanupInterval();
   }
