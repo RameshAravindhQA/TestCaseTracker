@@ -146,12 +146,28 @@ export function Messenger() {
   }, [messages]);
 
   const handleSendMessage = () => {
-    if (!messageInput.trim() || !selectedChat) return;
+    if (!messageInput.trim() || !selectedChat) {
+      toast({
+        title: "Error",
+        description: "Please enter a message",
+        variant: "destructive",
+      });
+      return;
+    }
 
     sendMessageMutation.mutate({
       content: messageInput,
       chatId: selectedChat.id,
       replyTo: replyingTo?.id,
+    }, {
+      onError: (error) => {
+        console.error("Send message error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
+      }
     });
   };
 
@@ -173,6 +189,7 @@ export function Messenger() {
   };
 
   const getInitials = (name: string) => {
+    if (!name || typeof name !== 'string') return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
@@ -320,28 +337,42 @@ export function Messenger() {
             <div className="p-4 border-b flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar>
-                  <AvatarImage src={selectedChat.participants[0]?.avatar} />
+                  <AvatarImage src={selectedChat.participants?.[0]?.avatar} />
                   <AvatarFallback>
                     {selectedChat.type === 'group' ? <Hash className="h-4 w-4" /> : 
-                     getInitials(selectedChat.participants[0]?.name || '')}
+                     getInitials(selectedChat.participants?.[0]?.name || selectedChat.name || 'Unknown')}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <h3 className="font-medium">
-                    {selectedChat.name || selectedChat.participants[0]?.name}
+                    {selectedChat.name || selectedChat.participants?.[0]?.name || 'Unknown Chat'}
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     {selectedChat.type === 'group' 
-                      ? `${selectedChat.participants.length} members`
-                      : selectedChat.participants[0]?.status}
+                      ? `${selectedChat.participants?.length || 0} members`
+                      : selectedChat.participants?.[0]?.status || 'offline'}
                   </p>
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => toast({
+                    title: "Voice Call",
+                    description: "Voice calling feature coming soon!",
+                  })}
+                >
                   <Phone className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => toast({
+                    title: "Video Call",
+                    description: "Video calling feature coming soon!",
+                  })}
+                >
                   <Video className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="sm">

@@ -7,12 +7,6 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { 
   Form, 
@@ -262,6 +256,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("general");
   const [rolePermissions, setRolePermissions] = useState<RolePermissions>(defaultPermissions);
+    const [selectedRole, setSelectedRole] = useState(Object.keys(defaultPermissions)[0]); // Initialize with the first role
 
   // Fetch settings
   const { data: settings, isLoading } = useQuery<SystemSettings>({
@@ -870,8 +865,7 @@ export default function SettingsPage() {
                       />
 
                       <FormField
-                        control={backupForm.control}
-                        name="retentionPeriod"
+                        control={backupForm.control                        name="retentionPeriod"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Retention Period (Days)</FormLabel>
@@ -1236,7 +1230,34 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    {Object.entries(rolePermissions).map(([role, permissions]) => (
+                    {/* Role Selection Dropdown */}
+                    <FormField
+                      control={testCaseForm.control} // Use any form control since this isn't part of a specific form
+                      name="role" // Dummy name
+                      render={() => (
+                        <FormItem>
+                          <FormLabel>Select Role</FormLabel>
+                          <Select onValueChange={setSelectedRole} defaultValue={selectedRole}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a role" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {Object.keys(defaultPermissions).map((role) => (
+                                <SelectItem key={role} value={role}>{role}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Choose the role to configure permissions for.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {Object.entries(rolePermissions).filter(([role, _]) => role === selectedRole).map(([role, permissions]) => (
                       <div key={role} className="border rounded-lg p-4">
                         <h3 className="text-lg font-semibold mb-4 flex items-center">
                           <Badge variant="outline" className="mr-2">{role}</Badge>

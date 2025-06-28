@@ -71,21 +71,32 @@ export default function TraceabilityMatrixPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch projects
-  const { data: projects } = useQuery<Project[]>({
+  const { data: projects, isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/projects');
+      const response = await apiRequest("GET", "/api/projects");
+      if (!response.ok) throw new Error("Failed to fetch projects");
       return response.json();
     },
   });
 
-  // Fetch modules for selected project
-  const { data: modules } = useQuery<Module[]>({
-    queryKey: [`/api/modules`, selectedProjectId],
+  const { data: modules } = useQuery({
+    queryKey: ["/api/modules", selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) return [];
-      const response = await apiRequest('GET', `/api/modules?projectId=${selectedProjectId}`);
+      const response = await apiRequest("GET", `/api/modules?projectId=${selectedProjectId}`);
+      if (!response.ok) throw new Error("Failed to fetch modules");
+      return response.json();
+    },
+    enabled: !!selectedProjectId,
+  });
+
+  const { data: testCases } = useQuery({
+    queryKey: ["/api/test-cases", selectedProjectId],
+    queryFn: async () => {
+      if (!selectedProjectId) return [];
+      const response = await apiRequest("GET", `/api/test-cases?projectId=${selectedProjectId}`);
+      if (!response.ok) throw new Error("Failed to fetch test cases");
       return response.json();
     },
     enabled: !!selectedProjectId,
@@ -346,7 +357,6 @@ export default function TraceabilityMatrixPage() {
           </Card>
         )}
 
-        {/* Traceability Matrix Grid */}
         {isLoading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -375,6 +385,89 @@ export default function TraceabilityMatrixPage() {
             </CardContent>
           </Card>
         ) : null}
+
+        {selectedProjectId ? (
+            modules && modules.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-300">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border border-gray-300 p-3 text-left font-medium">Module</th>
+                      <th className="border border-gray-300 p-3 text-left font-medium">Test Cases</th>
+                      <th className="border border-gray-300 p-3 text-left font-medium">Status</th>
+                      <th className="border border-gray-300 p-3 text-left font-medium">Coverage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {modules.map((module: any) => {
+                      const moduleTestCases = testCases?.filter((tc: any) => tc.moduleId === module.id) || [];
+                      const passedTests = moduleTestCases.filter((tc: any) => tc.status === 'Pass').length;
+                      const coverage = moduleTestCases.length > 0 ? Math.round((passedTests / moduleTestCases.length) * 100) : 0;
+
+                      return (
+                        <tr key={module.id} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 p-3">
+                            <div className="font-medium">{module.name}</div>
+                            <div className="text-sm text-gray-500">{module.description}</div>
+                          </td>
+                          <td className="border border-gray-300 p-3">
+                            <div className="space-y-1">
+                              {moduleTestCases.slice(0, 3).map((tc: any) => (
+                                <div key={tc.id} className="text-sm">
+                                  <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                                    tc.status === 'Pass' ? 'bg-green-500' :
+                                    tc.status === 'Fail' ? 'bg-red-500' :
+                                    tc.status === 'Blocked' ? 'bg-yellow-500' : 'bg-gray-400'
+                                  }`}></span>
+                                  {tc.feature}
+                                </div>
+                              ))}
+                              {moduleTestCases.length > 3 && (
+                                <div className="text-xs text-gray-500">
+                                  +{moduleTestCases.length - 3} more tests
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 p-3">
+                            <Badge variant={module.status === 'Active' ? 'default' : 'secondary'}>
+                              {module.status}
+                            </Badge>
+                          </td>
+                          <td className="border border-gray-300 p-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className={`h-2 rounded-full ${coverage >= 70 ? 'bg-green-500' : coverage >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                  style={{ width: `${coverage}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-sm font-medium">{coverage}%</span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {passedTests}/{moduleTestCases.length} tests passed
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No modules found for this project</p>
+                <p className="text-sm mt-2">Create modules and test cases to see the traceability matrix.</p>
+              </div>
+            )
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No data available</p>
+              <p className="text-sm">Please select a project to view the traceability matrix.</p>
+            </div>
+          )}
 
         {/* Coverage Summary */}
         {selectedProjectId && !isLoading && requirements.length > 0 && (

@@ -1,11 +1,11 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Users, Settings } from "lucide-react";
 
@@ -122,7 +122,7 @@ export function RolePermissions() {
                 <h3 className="text-lg font-semibold mb-4">
                   Configure permissions for: {selectedRoleData.name}
                 </h3>
-                
+
                 <div className="space-y-6">
                   {Object.entries(permissionsByCategory).map(([category, categoryPermissions]) => (
                     <Card key={category}>

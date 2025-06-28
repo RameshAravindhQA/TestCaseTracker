@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -34,7 +33,8 @@ import {
   Camera,
   Paperclip,
   Tag,
-  Search
+  Search,
+  Palette
 } from "lucide-react";
 
 interface NotebookFormProps {
@@ -94,14 +94,28 @@ function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
   const [color, setColor] = useState("#3b82f6");
   const [archived, setArchived] = useState(false);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<any[]>([]);
   const [newTag, setNewTag] = useState("");
+  const [newTagColor, setNewTagColor] = useState("#3B82F6");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [newChecklistItem, setNewChecklistItem] = useState("");
   const [audioNotes, setAudioNotes] = useState<AudioNote[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+
+  const tagColors = [
+    "#3B82F6", // Blue
+    "#EF4444", // Red
+    "#10B981", // Green
+    "#F59E0B", // Yellow
+    "#8B5CF6", // Purple
+    "#EC4899", // Pink
+    "#06B6D4", // Cyan
+    "#84CC16", // Lime
+    "#F97316", // Orange
+    "#6B7280", // Gray
+  ];
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -225,9 +239,10 @@ function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
   };
 
   const addTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags(prev => [...prev, newTag.trim()]);
+    if (newTag.trim() && !tags.some(tag => tag.name === newTag.trim())) {
+      setTags([...tags, { name: newTag.trim(), color: newTagColor }]);
       setNewTag("");
+      setNewTagColor("#3B82F6");
     }
   };
 
@@ -333,9 +348,14 @@ function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
           <Label>Tags</Label>
           <div className="flex flex-wrap gap-2 mb-2">
             {tags.map((tag, index) => (
-              <Badge key={index} variant="secondary" className="flex items-center gap-1">
+              <Badge 
+                key={index} 
+                variant="secondary" 
+                className="flex items-center gap-1"
+                style={{ backgroundColor: typeof tag === 'object' ? tag.color + '20' : undefined, borderColor: typeof tag === 'object' ? tag.color : undefined }}
+              >
                 <Tag className="h-3 w-3" />
-                {tag}
+                {typeof tag === 'object' ? tag.name : tag}
                 <X 
                   className="h-3 w-3 cursor-pointer hover:text-red-500" 
                   onClick={() => removeTag(tag)}
@@ -351,6 +371,38 @@ function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
               disabled={isLoading}
             />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="px-3">
+                  <div 
+                    className="w-4 h-4 rounded-full border"
+                    style={{ backgroundColor: newTagColor }}
+                  />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48">
+                <div className="space-y-2">
+                  <Label>Tag Color</Label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {tagColors.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        className={`w-8 h-8 rounded-full border-2 ${newTagColor === color ? 'border-black' : 'border-gray-300'}`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => setNewTagColor(color)}
+                      />
+                    ))}
+                  </div>
+                  <Input
+                    type="color"
+                    value={newTagColor}
+                    onChange={(e) => setNewTagColor(e.target.value)}
+                    className="w-full h-8"
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
             <Button type="button" variant="outline" onClick={addTag} disabled={!newTag.trim()}>
               <Plus className="h-4 w-4" />
             </Button>

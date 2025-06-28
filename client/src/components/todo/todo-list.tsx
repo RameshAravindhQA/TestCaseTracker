@@ -107,13 +107,29 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
   });
 
   const handleCreateTodo = () => {
-    if (newTodo.trim()) {
-      createTodoMutation.mutate({
-        title: newTodo.trim(),
-        completed: false,
-        priority: 'medium'
+    if (!newTodo.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a todo item.",
+        variant: "destructive",
       });
+      return;
     }
+
+    createTodoMutation.mutate({
+      title: newTodo.trim(),
+      completed: false,
+      priority: 'medium'
+    }, {
+      onError: (error) => {
+        console.error("Todo creation error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create todo. Please try again.",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const handleToggleComplete = (todo: TodoItem) => {
@@ -228,8 +244,13 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
               onClick={handleCreateTodo}
               size="sm"
               disabled={!newTodo.trim() || createTodoMutation.isPending}
+              className="shrink-0"
             >
-              <Plus className="h-4 w-4" />
+              {createTodoMutation.isPending ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
             </Button>
           </div>
 
