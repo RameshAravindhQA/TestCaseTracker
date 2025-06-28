@@ -1863,7 +1863,7 @@ Adding todos Map to the MemStorage class to store todo items.```text
     return this.notebooks.delete(id);
   }
 
-    async createChatMessage(message: any): Promise<any> {
+  async createChatMessage(message: any): Promise<any> {
     const projectId = parseInt(message.projectId);
 
     // Validate required fields
@@ -1976,6 +1976,7 @@ Adding todos Map to the MemStorage class to store todo items.```text
 
     return this.todos.delete(id);
   }
+}
 
   async getCustomMarkersByProject(projectId: number): Promise<any[]> {
     return Array.from(this.customMarkers.values()).filter(marker => marker.projectId === projectId);
