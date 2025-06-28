@@ -480,8 +480,23 @@ export default function NotebooksPage() {
                 <Card className="h-full">
                   <CardHeader style={{ borderLeft: `4px solid ${selectedNotebook.color}` }}>
                     <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-2xl">{selectedNotebook.title}</CardTitle>
+                      <div className="flex-1">
+                        <Input
+                          value={selectedNotebook.title}
+                          onChange={(e) => {
+                            setSelectedNotebook(prev => prev ? {...prev, title: e.target.value} : null);
+                          }}
+                          onBlur={() => {
+                            if (selectedNotebook) {
+                              updateNotebookMutation.mutate({
+                                id: selectedNotebook.id,
+                                updates: { title: selectedNotebook.title }
+                              });
+                            }
+                          }}
+                          className="text-2xl font-bold border-none p-0 focus:ring-0 bg-transparent"
+                          placeholder="Notebook title..."
+                        />
                         <CardDescription>
                           Created on {new Date(selectedNotebook.createdAt).toLocaleDateString()} • 
                           Updated on {new Date(selectedNotebook.updatedAt).toLocaleDateString()}
@@ -491,16 +506,29 @@ export default function NotebooksPage() {
                         {getStatusBadge(selectedNotebook)}
                         <Button onClick={() => handleEditNotebook(selectedNotebook)}>
                           <Edit className="h-4 w-4 mr-2" />
-                          Edit
+                          Edit Dialog
                         </Button>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="p-6">
                     <div className="prose max-w-none mb-6">
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {selectedNotebook.content || "No content"}
-                      </div>
+                      <textarea
+                        value={selectedNotebook.content || ""}
+                        onChange={(e) => {
+                          setSelectedNotebook(prev => prev ? {...prev, content: e.target.value} : null);
+                        }}
+                        onBlur={() => {
+                          if (selectedNotebook) {
+                            updateNotebookMutation.mutate({
+                              id: selectedNotebook.id,
+                              updates: { content: selectedNotebook.content }
+                            });
+                          }
+                        }}
+                        className="w-full min-h-[400px] text-sm leading-relaxed resize-none border-none focus:ring-0 bg-transparent"
+                        placeholder="Start writing your notes..."
+                      />
                     </div>
 
                     {selectedNotebook.tags && selectedNotebook.tags.length > 0 && (

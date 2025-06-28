@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProjectSelect } from "@/components/ui/project-select";
@@ -31,6 +32,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { jsPDF } from "jspdf";
+import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 
 interface TraceabilityCell {
   id: string;
@@ -63,6 +67,7 @@ export default function TraceabilityMatrixPage() {
   const [matrixCells, setMatrixCells] = useState<Record<string, TraceabilityCell>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [editingCell, setEditingCell] = useState<string | null>(null);
+  const matrixRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -87,39 +92,58 @@ export default function TraceabilityMatrixPage() {
     enabled: !!selectedProjectId,
   });
 
+  // Fetch test cases for selected project
+  const { data: projectTestCases } = useQuery({
+    queryKey: [`/api/projects/${selectedProjectId}/test-cases`],
+    queryFn: async () => {
+      if (!selectedProjectId) return [];
+      const response = await apiRequest('GET', `/api/projects/${selectedProjectId}/test-cases`);
+      return response.json();
+    },
+    enabled: !!selectedProjectId,
+  });
+
+  // Fetch bugs for selected project (treating as requirements)
+  const { data: projectBugs } = useQuery({
+    queryKey: [`/api/projects/${selectedProjectId}/bugs`],
+    queryFn: async () => {
+      if (!selectedProjectId) return [];
+      const response = await apiRequest('GET', `/api/projects/${selectedProjectId}/bugs`);
+      return response.json();
+    },
+    enabled: !!selectedProjectId,
+  });
+
   // Load requirements and test cases when project changes
   useEffect(() => {
-    if (selectedProjectId) {
-      loadMatrixData();
-    }
-  }, [selectedProjectId]);
+    if (selectedProjectId && projectTestCases && projectBugs) {
+      setIsLoading(true);
+      
+      // Convert test cases to requirements format
+      const reqs: Requirement[] = projectBugs?.map((bug: any) => ({
+        id: `REQ-${bug.id}`,
+        title: bug.title || `Requirement ${bug.id}`,
+        description: bug.description || '',
+        priority: bug.priority?.toLowerCase() || 'medium',
+        moduleId: bug.moduleId || 'default'
+      })) || [];
 
-  const loadMatrixData = async () => {
-    if (!selectedProjectId) return;
+      // Convert project test cases
+      const tcs: TestCase[] = projectTestCases?.map((tc: any) => ({
+        id: `TC-${tc.id}`,
+        title: tc.feature || tc.scenario || `Test Case ${tc.id}`,
+        description: tc.description || '',
+        status: 'active',
+        moduleId: tc.moduleId || 'default'
+      })) || [];
 
-    setIsLoading(true);
-    try {
-      // Load requirements (mock data for now)
-      const mockRequirements: Requirement[] = [
-        { id: 'REQ-001', title: 'User Authentication', description: 'Users must be able to log in', priority: 'high', moduleId: 'auth' },
-        { id: 'REQ-002', title: 'Data Validation', description: 'All inputs must be validated', priority: 'medium', moduleId: 'validation' },
-        { id: 'REQ-003', title: 'Error Handling', description: 'System must handle errors gracefully', priority: 'high', moduleId: 'core' },
-      ];
-
-      // Load test cases (mock data for now)
-      const mockTestCases: TestCase[] = [
-        { id: 'TC-001', title: 'Login with valid credentials', description: 'Test successful login', status: 'active', moduleId: 'auth' },
-        { id: 'TC-002', title: 'Login with invalid credentials', description: 'Test failed login', status: 'active', moduleId: 'auth' },
-        { id: 'TC-003', title: 'Input validation test', description: 'Test input validation', status: 'active', moduleId: 'validation' },
-      ];
-
-      setRequirements(mockRequirements);
-      setTestCases(mockTestCases);
+      setRequirements(reqs);
+      setTestCases(tcs);
 
       // Initialize matrix cells
       const cells: Record<string, TraceabilityCell> = {};
-      mockRequirements.forEach(req => {
-        mockTestCases.forEach(tc => {
+      reqs.forEach(req => {
+        tcs.forEach(tc => {
           const cellId = `${req.id}-${tc.id}`;
           cells[cellId] = {
             id: cellId,
@@ -131,16 +155,9 @@ export default function TraceabilityMatrixPage() {
       });
 
       setMatrixCells(cells);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load traceability matrix data",
-        variant: "destructive",
-      });
-    } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedProjectId, projectTestCases, projectBugs]);
 
   const updateCellStatus = (cellId: string, status: TraceabilityCell['status']) => {
     setMatrixCells(prev => ({
@@ -165,8 +182,7 @@ export default function TraceabilityMatrixPage() {
     }
   };
 
-  const exportMatrix = () => {
-    // Create CSV export
+  const exportToCSV = () => {
     const headers = ['Requirement ID', 'Requirement Title', ...testCases.map(tc => tc.id)];
     const rows = [headers];
 
@@ -188,6 +204,93 @@ export default function TraceabilityMatrixPage() {
     a.download = 'traceability-matrix.csv';
     a.click();
     URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export successful",
+      description: "Traceability matrix exported to CSV",
+    });
+  };
+
+  const exportToPDF = async () => {
+    if (!matrixRef.current) return;
+
+    try {
+      const canvas = await html2canvas(matrixRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const doc = new jsPDF('l', 'mm', 'a4');
+      
+      // Add title
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text('Traceability Matrix Report', 14, 20);
+
+      // Add project info
+      const project = projects?.find(p => p.id === selectedProjectId);
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Project: ${project?.name || 'Unknown'}`, 14, 30);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 36);
+
+      // Add coverage summary
+      const totalCells = Object.values(matrixCells).length;
+      const coveredCells = Object.values(matrixCells).filter(cell => cell.status === 'covered').length;
+      const coveragePercent = totalCells > 0 ? Math.round((coveredCells / totalCells) * 100) : 0;
+
+      doc.text(`Coverage: ${coveragePercent}% (${coveredCells}/${totalCells} cells covered)`, 14, 42);
+
+      // Add matrix image
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 270;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      doc.addImage(imgData, 'PNG', 14, 50, imgWidth, imgHeight);
+
+      // Add detailed table on next page if needed
+      if (requirements.length > 0 && testCases.length > 0) {
+        doc.addPage();
+        
+        const tableData = requirements.map(req => {
+          const row = [req.id, req.title.substring(0, 30)];
+          testCases.forEach(tc => {
+            const cellId = `${req.id}-${tc.id}`;
+            const cell = matrixCells[cellId];
+            row.push(cell?.status === 'covered' ? 'C' : cell?.status === 'partial' ? 'P' : 'N');
+          });
+          return row;
+        });
+
+        const tableHeaders = ['Req ID', 'Title', ...testCases.map(tc => tc.id.substring(0, 8))];
+
+        autoTable(doc, {
+          head: [tableHeaders],
+          body: tableData,
+          startY: 20,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [59, 130, 246] },
+          columnStyles: {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 40 }
+          }
+        });
+      }
+
+      doc.save(`traceability-matrix-${Date.now()}.pdf`);
+
+      toast({
+        title: "Export successful",
+        description: "Traceability matrix exported to PDF with graphics",
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Failed to export PDF",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -206,9 +309,13 @@ export default function TraceabilityMatrixPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Button onClick={exportMatrix} variant="outline">
+            <Button onClick={exportToCSV} variant="outline" disabled={!selectedProjectId}>
               <Download className="h-4 w-4 mr-2" />
-              Export Matrix
+              Export CSV
+            </Button>
+            <Button onClick={exportToPDF} variant="outline" disabled={!selectedProjectId}>
+              <Download className="h-4 w-4 mr-2" />
+              Export PDF
             </Button>
             <ProjectSelect
               selectedProjectId={selectedProjectId}
@@ -238,12 +345,12 @@ export default function TraceabilityMatrixPage() {
               <FileText className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No data available</h3>
               <p className="mt-1 text-sm text-gray-500">
-                Loading requirements and test cases for the selected project...
+                No requirements or test cases found for this project. Create some test cases and bugs to see the matrix.
               </p>
             </CardContent>
           </Card>
         ) : (
-          <Card>
+          <Card ref={matrixRef}>
             <CardHeader>
               <CardTitle>Requirements vs Test Cases Matrix</CardTitle>
             </CardHeader>
@@ -315,8 +422,8 @@ export default function TraceabilityMatrixPage() {
         )}
 
         {/* Coverage Summary */}
-        {selectedProjectId && !isLoading && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {selectedProjectId && !isLoading && requirements.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Total Requirements</CardTitle>
@@ -341,8 +448,18 @@ export default function TraceabilityMatrixPage() {
                 <div className="text-2xl font-bold">
                   {Math.round(
                     (Object.values(matrixCells).filter(cell => cell.status === 'covered').length / 
-                     Object.values(matrixCells).length) * 100
+                     Math.max(Object.values(matrixCells).length, 1)) * 100
                   )}%
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Partial Coverage</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {Object.values(matrixCells).filter(cell => cell.status === 'partial').length}
                 </div>
               </CardContent>
             </Card>

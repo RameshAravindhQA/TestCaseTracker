@@ -7139,6 +7139,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Todo routes
+  apiRouter.get('/todos', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const todos = await storage.getUserTodos(userId);
+      res.json(todos);
+    } catch (error) {
+      console.error('Error fetching todos:', error);
+      res.status(500).json({ error: 'Failed to fetch todos' });
+    }
+  });
+
+  apiRouter.post('/todos', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const todoData = { ...req.body, userId };
+      const todo = await storage.createTodo(todoData);
+      res.status(201).json(todo);
+    } catch (error) {
+      console.error('Error creating todo:', error);
+      res.status(500).json({ error: 'Failed to create todo' });
+    }
+  });
+
+  apiRouter.put('/todos/:id', isAuthenticated, async (req, res) => {
+    try {
+      const todoId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const updated = await storage.updateTodo(todoId, userId, req.body);
+      
+      if (!updated) {
+        return res.status(404).json({ error: 'Todo not found' });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating todo:', error);
+      res.status(500).json({ error: 'Failed to update todo' });
+    }
+  });
+
+  apiRouter.delete('/todos/:id', isAuthenticated, async (req, res) => {
+    try {
+      const todoId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const deleted = await storage.deleteTodo(todoId, userId);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: 'Todo not found' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting todo:', error);
+      res.status(500).json({ error: 'Failed to delete todo' });
+    }
+  });
+
   // Messenger routes
   apiRouter.get('/chats', isAuthenticated, async (req, res) => {
     try {

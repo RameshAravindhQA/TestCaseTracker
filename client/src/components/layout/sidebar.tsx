@@ -135,6 +135,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       icon: <BugPlay className="h-5 w-5" />,
     },
     {
+      name: "Messenger",
+      href: "/messenger",
+      icon: <Terminal className="h-5 w-5" />,
+    },
+    {
       name: "GitHub Integration",
       href: "/github",
       icon: <Github className="h-5 w-5" />,

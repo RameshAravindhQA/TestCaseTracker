@@ -1,4 +1,3 @@
-
 import {
   User,
   Project,
@@ -204,6 +203,7 @@ class MemStorage implements IStorage {
   private documents = new Map<number, any>();
   private documentFolders = new Map<number, any>();
   private testSheets = new Map<number, any>();
+  private todos = new Map<number, any>();
   private customers = new Map<number, any>();
   private customerProjects = new Map<number, any>();
   private timeSheets = new Map<number, any>();
@@ -845,7 +845,7 @@ class MemStorage implements IStorage {
     return card;
   }
 
-  async getKanbanCards(columnId: number): Promise<KanbanCard[]> {
+  async getKanbanCards(columnId: number): Promise<KanbanCard[]): Promise<KanbanCard[]> {
     return Array.from(this.kanbanCards.values())
       .filter(card => card.columnId === columnId)
       .sort((a, b) => a.position - b.position);

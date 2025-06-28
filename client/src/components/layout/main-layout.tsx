@@ -10,6 +10,7 @@ import { useIsMobile as useMobile } from "@/hooks/use-mobile";
 import { AnimatedContainer } from "@/components/ui/animated-container";
 import { motion } from "framer-motion";
 import { GlobalChatbot } from "@/components/chat/global-chatbot"; // Importing the GlobalChatbot component
+import { TodoToggleButton } from "@/components/todo/todo-toggle-button";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -127,6 +128,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         isMobile ? "pt-20" : "ml-60" // Adjusted for the new 60px sidebar width
       )}>
         {children}
+        <TodoToggleButton />
       </main>
 
       {/* Global Chatbot */}

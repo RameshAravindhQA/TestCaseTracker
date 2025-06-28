@@ -470,19 +470,20 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
   });
 
-   // Update test case status mutation
-  const updateTestCaseStatusMutation = useMutation({
+   // Update test case mutation
+  const updateTestCaseMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      return apiRequest('PUT', `/api/test-cases/${id}`, { status });
+      const response = await apiRequest('PUT', `/api/test-cases/${id}`, { status });
+      if (!response.ok) throw new Error('Failed to update test case');
+      return response.json();
     },
     onSuccess: () => {
       toast({
         title: "Status updated",
         description: "Test case status updated successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/test-cases`, selectedProjectId] });
-      setStatusUpdateDialog(false);
-      setEditingItem(null);
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/test-cases`] });
+      refetchTestCases();
     },
     onError: (error) => {
       toast({
@@ -493,19 +494,20 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
   });
 
-  // Update bug status mutation
-  const updateBugStatusMutation = useMutation({
+  // Update bug mutation
+  const updateBugMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      return apiRequest('PUT', `/api/bugs/${id}`, { status });
+      const response = await apiRequest('PUT', `/api/bugs/${id}`, { status });
+      if (!response.ok) throw new Error('Failed to update bug');
+      return response.json();
     },
     onSuccess: () => {
       toast({
         title: "Status updated",
         description: "Bug status updated successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/bugs`, selectedProjectId] });
-      setStatusUpdateDialog(false);
-      setEditingItem(null);
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${effectiveProjectId}/bugs`] });
+      refetchBugs();
     },
     onError: (error) => {
       toast({
