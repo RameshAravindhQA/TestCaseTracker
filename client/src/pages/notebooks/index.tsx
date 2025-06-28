@@ -54,6 +54,8 @@ export default function NotebooksPage() {
   const [selectedNotebook, setSelectedNotebook] = useState<Notebook | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [originalNotebook, setOriginalNotebook] = useState<Notebook | null>(null);
 
   // Fetch notebooks
   const { data: notebooks, isLoading, refetch } = useQuery<Notebook[]>({
@@ -155,6 +157,8 @@ export default function NotebooksPage() {
 
   const handleNotebookSelect = (notebook: Notebook) => {
     setSelectedNotebook(notebook);
+    setOriginalNotebook(notebook);
+    setHasUnsavedChanges(false);
   };
 
   const handleEditNotebook = (notebook: Notebook) => {
@@ -498,15 +502,9 @@ export default function NotebooksPage() {
                         <Input
                           value={selectedNotebook.title}
                           onChange={(e) => {
-                            setSelectedNotebook(prev => prev ? {...prev, title: e.target.value} : null);
-                          }}
-                          onBlur={() => {
-                            if (selectedNotebook) {
-                              updateNotebookMutation.mutate({
-                                id: selectedNotebook.id,
-                                updates: { title: selectedNotebook.title }
-                              });
-                            }
+                            const newTitle = e.target.value;
+                            setSelectedNotebook(prev => prev ? {...prev, title: newTitle} : null);
+                            setHasUnsavedChanges(originalNotebook?.title !== newTitle || originalNotebook?.content !== selectedNotebook.content);
                           }}
                           className="text-2xl font-bold border-none p-0 focus:ring-0 bg-transparent"
                           placeholder="Notebook title..."
@@ -518,7 +516,40 @@ export default function NotebooksPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {getStatusBadge(selectedNotebook)}
-                        <Button onClick={() => handleEditNotebook(selectedNotebook)}>
+                        <Button 
+                          onClick={() => {
+                            if (selectedNotebook) {
+                              updateNotebookMutation.mutate({
+                                id: selectedNotebook.id,
+                                updates: {
+                                  title: selectedNotebook.title,
+                                  content: selectedNotebook.content
+                                }
+                              }, {
+                                onSuccess: () => {
+                                  setOriginalNotebook(selectedNotebook);
+                                  setHasUnsavedChanges(false);
+                                }
+                              });
+                            }
+                          }}
+                          disabled={updateNotebookMutation.isPending || !hasUnsavedChanges}
+                          variant="default"
+                          className={`${hasUnsavedChanges ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400'} transition-colors`}
+                        >
+                          {updateNotebookMutation.isPending ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              Updating...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Update
+                            </>
+                          )}
+                        </Button>
+                        <Button onClick={() => handleEditNotebook(selectedNotebook)} variant="outline">
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Dialog
                         </Button>
@@ -530,19 +561,21 @@ export default function NotebooksPage() {
                       <textarea
                         value={selectedNotebook.content || ""}
                         onChange={(e) => {
-                          setSelectedNotebook(prev => prev ? {...prev, content: e.target.value} : null);
-                        }}
-                        onBlur={() => {
-                          if (selectedNotebook) {
-                            updateNotebookMutation.mutate({
-                              id: selectedNotebook.id,
-                              updates: { content: selectedNotebook.content }
-                            });
-                          }
+                          const newContent = e.target.value;
+                          setSelectedNotebook(prev => prev ? {...prev, content: newContent} : null);
+                          setHasUnsavedChanges(originalNotebook?.title !== selectedNotebook.title || originalNotebook?.content !== newContent);
                         }}
                         className="w-full min-h-[400px] text-sm leading-relaxed resize-none border-none focus:ring-0 bg-transparent"
                         placeholder="Start writing your notes..."
-                      />
+                      /></textarea_str>
+                      {hasUnsavedChanges && (
+                        <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded-md border border-amber-200 mt-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                            You have unsaved changes. Click the Update button to save.
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {selectedNotebook.tags && selectedNotebook.tags.length > 0 && (
