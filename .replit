@@ -53,7 +53,7 @@ args = "npm install"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd server && npm run dev"
+args = "npm run dev"
 
 [deployment]
 run = ["sh", "-c", "npm run dev"]
