@@ -567,7 +567,7 @@ export default function NotebooksPage() {
                         }}
                         className="w-full min-h-[400px] text-sm leading-relaxed resize-none border-none focus:ring-0 bg-transparent"
                         placeholder="Start writing your notes..."
-                      /></textarea>
+                      />
                       {hasUnsavedChanges && (
                         <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded-md border border-amber-200 mt-2">
                           <div className="flex items-center gap-2">
