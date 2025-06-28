@@ -62,7 +62,7 @@ interface TestCase {
 export default function TraceabilityMatrixPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [requirements, setRequirements] = useState<Requirement[]>([]);
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
+  const testCases = apiTestCases || [];
   const [matrixCells, setMatrixCells] = useState<Record<string, TraceabilityCell>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -148,12 +148,11 @@ export default function TraceabilityMatrixPage() {
       })) || [];
 
       setRequirements(reqs);
-      setTestCases(tcs);
 
       // Initialize matrix cells
       const cells: Record<string, TraceabilityCell> = {};
       reqs.forEach(req => {
-        tcs.forEach(tc => {
+        testCases.forEach(tc => {
           const cellId = `${req.id}-${tc.id}`;
           cells[cellId] = {
             id: cellId,
@@ -167,7 +166,7 @@ export default function TraceabilityMatrixPage() {
       setMatrixCells(cells);
       setIsLoading(false);
     }
-  }, [selectedProjectId, projectTestCases, projectBugs]);
+  }, [selectedProjectId, projectTestCases, projectBugs, testCases]);
 
   const updateCellStatus = (cellId: string, status: TraceabilityCell['status']) => {
     setMatrixCells(prev => ({
@@ -379,7 +378,6 @@ export default function TraceabilityMatrixPage() {
                   <p>Requirements: {requirements.length}</p>
                   <p>Test Cases: {testCases.length}</p>
                   <p>Bugs: {projectBugs?.length || 0}</p>
-                  <p>Test Cases: {projectTestCases?.length || 0}</p>
                 </div>
               )}
             </CardContent>
