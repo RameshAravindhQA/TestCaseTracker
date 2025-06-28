@@ -343,28 +343,6 @@ export default function TraceabilityMatrixPage() {
           </div>
         </div>
 
-        {/* Module Information */}
-        {selectedProjectId && modules && modules.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Project Modules</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {modules.map(module => (
-                  <div key={module.id} className="p-3 border rounded-lg">
-                    <h4 className="font-medium">{module.name}</h4>
-                    <p className="text-sm text-muted-foreground">{module.description}</p>
-                    <Badge variant="outline" className="mt-2">
-                      {module.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {!selectedProjectId ? (
           <Card>
             <CardContent className="pt-6 text-center">
