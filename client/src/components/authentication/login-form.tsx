@@ -59,25 +59,25 @@ export function LoginForm() {
       // Store authentication status in localStorage for persistence across page reloads
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('userEmail', data.email);
-      localStorage.setItem('userName', data.name || data.email);
+      localStorage.setItem('userName', data.firstName || data.name || data.email);
       localStorage.setItem('userId', data.id?.toString() || '');
       localStorage.setItem('loginTime', new Date().toISOString());
 
       // Extract user's first name for personalization
-      const firstName = data.name ? data.name.split(' ')[0] : data.email.split('@')[0];
+      const firstName = data.firstName || (data.name ? data.name.split(' ')[0] : data.email.split('@')[0]);
       console.log("Setting user name for motivation dialog:", firstName);
       setLoggedInUserName(firstName);
 
+      // Invalidate queries to refresh user data
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
       // Show motivation dialog immediately after successful login
       console.log("Opening motivation dialog...");
       
-
-      // Navigate to dashboard after showing welcome dialog or immediately if no user data
-      if (!data.user || !data.user.firstName) {
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 100);
-      }
+      // Navigate to dashboard after a short delay to ensure session is established
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 500);
     },
     onError: (error: any) => {
       console.error("Login error:", error);

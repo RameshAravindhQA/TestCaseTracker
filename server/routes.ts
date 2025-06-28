@@ -360,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.userName = user.firstName; // Use firstName since name might not exist
       req.session.userEmail = user.email;
       
-      // Save session explicitly
+      // Save session explicitly and ensure it's properly committed
       req.session.save((saveErr) => {
         if (saveErr) {
           console.error("Session save error:", saveErr);
@@ -370,8 +370,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Login successful - Session set and saved:", {
           sessionId: req.sessionID,
           userId: req.session.userId,
+          userRole: req.session.userRole,
+          userName: req.session.userName,
           userEmail: req.session.userEmail
         });
+        
+        // Verify session data is set
+        if (!req.session.userId) {
+          console.error("Session userId not set after save");
+          return res.status(500).json({ message: "Session initialization failed" });
+        }
         
         // Return user without sensitive data
         const { password: _, ...userWithoutPassword } = user;
@@ -398,12 +406,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("GET /api/auth/user - Session data:", {
         sessionId: req.sessionID,
         userId: req.session?.userId,
-        hasSession: !!req.session
+        userRole: req.session?.userRole,
+        userEmail: req.session?.userEmail,
+        hasSession: !!req.session,
+        sessionKeys: req.session ? Object.keys(req.session) : []
       });
       
+      // Check if session exists
+      if (!req.session) {
+        console.log("No session found");
+        return res.status(401).json({ message: "No session found" });
+      }
+      
       // Check if user is logged in
-      if (!req.session || !req.session.userId) {
-        console.log("No session or userId found");
+      if (!req.session.userId) {
+        console.log("No userId in session");
         return res.status(401).json({ message: "Not authenticated" });
       }
       
@@ -411,6 +428,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(req.session.userId);
       if (!user) {
         console.log(`User not found for ID: ${req.session.userId}`);
+        // Clear invalid session
+        req.session.destroy((err) => {
+          if (err) console.error("Error destroying session:", err);
+        });
         return res.status(404).json({ message: "User not found" });
       }
       
