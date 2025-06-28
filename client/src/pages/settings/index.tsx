@@ -858,7 +858,8 @@ export default function SettingsPage() {
                                   <SelectItem value="gcs">Google Cloud Storage</SelectItem>
                                   <SelectItem value="azure">Azure Blob Storage</SelectItem>
                                 </SelectContent>
-                              </FormMessage />
+                              </Select>
+                              <FormMessage />
                             </FormItem>
                           )}
                         />
