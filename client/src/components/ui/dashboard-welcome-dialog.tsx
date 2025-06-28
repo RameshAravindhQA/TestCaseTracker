@@ -8,35 +8,55 @@ import { useAuth } from "@/hooks/use-auth";
 
 export function DashboardWelcomeDialog() {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasCheckedWelcome, setHasCheckedWelcome] = useState(false);
   const { user, isLoading } = useAuth();
 
   useEffect(() => {
+    // Prevent multiple checks
+    if (hasCheckedWelcome) return;
+
+    // Wait for auth to complete
+    if (isLoading) return;
+
+    // Only proceed if user is authenticated
+    if (!user) {
+      setHasCheckedWelcome(true);
+      return;
+    }
+
     // Check if dialog has been shown before
     const hasSeenWelcome = localStorage.getItem('hasSeenDashboardWelcome');
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
     
-    console.log("DashboardWelcomeDialog - Auth state:", { 
-      isLoading, 
-      user: !!user, 
+    console.log("DashboardWelcomeDialog - Checking welcome state:", { 
       hasSeenWelcome, 
-      isAuthenticated 
+      user: !!user,
+      hasCheckedWelcome
     });
     
     // Show dialog if user is authenticated and hasn't seen it before
-    if (!hasSeenWelcome && isAuthenticated && (!isLoading || user)) {
+    if (!hasSeenWelcome) {
       console.log("DashboardWelcomeDialog - Showing welcome dialog");
-      // Add a delay to ensure dashboard is fully loaded
+      // Add a small delay to ensure dashboard is fully rendered
       const timer = setTimeout(() => {
         setIsOpen(true);
-      }, 1000);
+      }, 500);
+      
+      setHasCheckedWelcome(true);
       return () => clearTimeout(timer);
+    } else {
+      setHasCheckedWelcome(true);
     }
-  }, [user, isLoading]);
+  }, [user, isLoading, hasCheckedWelcome]);
 
   const handleClose = () => {
     setIsOpen(false);
     localStorage.setItem('hasSeenDashboardWelcome', 'true');
   };
+
+  // Don't render anything if still loading or no user
+  if (isLoading || !user) {
+    return null;
+  }
 
   const currentTime = new Date();
   const hour = currentTime.getHours();
@@ -48,12 +68,7 @@ export function DashboardWelcomeDialog() {
   const userFirstName = user?.firstName || "there";
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      // Only allow closing, not reopening via external state changes
-      if (!open) {
-        setIsOpen(false);
-      }
-    }}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader className="relative">
           <Button
