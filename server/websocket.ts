@@ -1,4 +1,3 @@
-
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'http';
 import { storage } from './storage';
@@ -305,7 +304,7 @@ export class ChatWebSocketServer {
 
   private async handleGetPresence(ws: WebSocket, data: any) {
     const { userIds } = data;
-    
+
     if (!Array.isArray(userIds)) {
       this.sendError(ws, 'Invalid user IDs');
       return;
@@ -334,10 +333,10 @@ export class ChatWebSocketServer {
     for (const [conversationId, userIds] of this.conversations.entries()) {
       if (userIds.has(user.userId)) {
         userIds.delete(user.userId);
-        
+
         // Clear typing indicator
         this.clearTypingIndicator(user.userId, conversationId);
-        
+
         // Notify other users
         this.broadcastToConversation(conversationId, {
           type: 'user_left',
@@ -397,7 +396,7 @@ export class ChatWebSocketServer {
 
     for (const userId of userIds) {
       if (excludeUserId && userId === excludeUserId) continue;
-      
+
       const user = this.connectedUsers.get(userId);
       if (user && user.ws.readyState === WebSocket.OPEN) {
         this.send(user.ws, message);
@@ -437,7 +436,7 @@ export class ChatWebSocketServer {
   private startCleanupInterval() {
     setInterval(() => {
       const now = new Date();
-      
+
       // Clean up old typing indicators (older than 30 seconds)
       for (const [conversationId, typingMap] of this.typingIndicators.entries()) {
         for (const [userId, indicator] of typingMap.entries()) {
