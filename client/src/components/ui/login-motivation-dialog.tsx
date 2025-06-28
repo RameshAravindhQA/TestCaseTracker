@@ -282,7 +282,10 @@ export function LoginMotivationDialog({
     }
   }, [loginTime]);
 
-  const formatLoginTime = (date: Date) => {
+  const formatLoginTime = (date: Date | null | undefined) => {
+    if (!date) {
+      return 'Unknown time';
+    }
     return date.toLocaleString('en-US', {
       weekday: 'long',
       year: 'numeric',
