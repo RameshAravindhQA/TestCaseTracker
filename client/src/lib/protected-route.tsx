@@ -9,6 +9,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [location, navigate] = useLocation();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   // Check if already logged in via API
   const { data: user, isLoading, error } = useQuery({
@@ -18,45 +19,23 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   });
 
   useEffect(() => {
-    if (isLoading) return;
+    // Don't run authentication check if already checked or still loading
+    if (hasCheckedAuth || isLoading) return;
 
     const isLocallyAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    const isAuthenticated = user || isLocallyAuthenticated;
 
-    // If we have a user from API, we're authenticated
-    if (user) {
-      console.log("User authenticated via API:", user.firstName || user.email);
-      setIsCheckingAuth(false);
-      return;
-    }
-
-    // If API returned an error but we have local auth, try to stay authenticated
-    if (error && isLocallyAuthenticated) {
-      console.log("API auth failed but localStorage indicates authentication");
-      // Clear localStorage and redirect to login
-      localStorage.removeItem('isAuthenticated');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userName');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('loginTime');
-      
-      if (location !== "/login") {
-        console.log("Clearing invalid session, redirecting to login");
-        navigate("/login");
-      }
-      setIsCheckingAuth(false);
-      return;
-    }
-
-    // If not authenticated and not on login page, redirect
-    if (!user && !isLocallyAuthenticated && location !== "/login") {
+    // Only redirect if we're not on login page and not authenticated
+    if (!isAuthenticated && location !== "/login") {
       console.log("Not authenticated, redirecting to login");
       navigate("/login");
-      setIsCheckingAuth(false);
-      return;
+    } else if (isAuthenticated) {
+      console.log("User authenticated:", user?.firstName || "User");
     }
 
+    setHasCheckedAuth(true);
     setIsCheckingAuth(false);
-  }, [user, isLoading, error, location, navigate]);
+  }, [user, isLoading, location, navigate, hasCheckedAuth]);
 
   if (isCheckingAuth || isLoading) {
     return <div className="flex items-center justify-center min-h-screen">

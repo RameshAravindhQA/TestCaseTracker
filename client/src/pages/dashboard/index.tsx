@@ -233,7 +233,6 @@ import {
 </div>
 
       {/* Welcome Dialog - only show if user is properly authenticated */}
-      {user && user.firstName && <DashboardWelcomeDialog user={user} />}
     </DashboardLayout>
   );
 }
