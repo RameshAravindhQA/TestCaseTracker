@@ -20,6 +20,18 @@ import { AnimatedCard } from "@/components/ui/animated-card";
 import { AnimatedContainer } from "@/components/ui/animated-container";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { useAuth } from "@/hooks/use-auth"; // Import useAuth hook
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 
 // Interface for formatting activity data
 interface FormattedActivity extends Activity {
@@ -29,12 +41,40 @@ interface FormattedActivity extends Activity {
   timeAgo: string;
 }
 
+function LoginMotivationDialog({ open, onOpenChange, userFirstName, loginTime }: { open: boolean, onOpenChange: (open: boolean) => void, userFirstName: string, loginTime: Date }) {
+  const timeSinceLogin = formatDistance(loginTime, new Date(), { addSuffix: true });
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Welcome back, {userFirstName}!</AlertDialogTitle>
+          <AlertDialogDescription>
+            We're glad to see you're still motivated after {timeSinceLogin}. Keep up the great work!
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogAction onClick={() => onOpenChange(false)}>Got it!</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [isProjectsError, setIsProjectsError] = useState(false);
   const [projectsError, setProjectsError] = useState<Error | null>(null);
   const [showNotificationDialog, setShowNotificationDialog] = useState(false);
+  const [showMotivationDialog, setShowMotivationDialog] = useState(false);
 
+
+  // Show motivation dialog after login
+  useEffect(() => {
+    if (user) {
+      setShowMotivationDialog(true);
+    }
+  }, [user]);
   // Show notification dialog on first load
   useEffect(() => {
     const hasShownNotification = sessionStorage.getItem('dashboard-notification-shown');
@@ -647,6 +687,14 @@ export default function Dashboard() {
           </section>
         </div>
       </div>
+
+      {/* Motivation Dialog */}
+      <LoginMotivationDialog
+        open={showMotivationDialog}
+        onOpenChange={setShowMotivationDialog}
+        userFirstName={user?.name ? user.name.split(' ')[0] : user?.email?.split('@')[0] || "User"}
+        loginTime={new Date()}
+      />
     </MainLayout>
   );
 }

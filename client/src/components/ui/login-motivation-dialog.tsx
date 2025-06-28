@@ -39,7 +39,6 @@ interface MotivationDialogProps {
   onOpenChange: (open: boolean) => void;
   userFirstName?: string;
   loginTime?: Date;
-  onNavigateToDashboard?: () => void;
 }
 
 interface DailyUpdate {
@@ -212,8 +211,7 @@ export function LoginMotivationDialog({
   open, 
   onOpenChange, 
   userFirstName = "Tester", 
-  loginTime = new Date(),
-  onNavigateToDashboard
+  loginTime = new Date()
 }: MotivationDialogProps) {
   const [currentQuote, setCurrentQuote] = useState<MotivationalQuote>(motivationalQuotes[0]);
   const [dailyUpdates, setDailyUpdates] = useState<DailyUpdate[]>([]);
@@ -472,22 +470,16 @@ export function LoginMotivationDialog({
           </div>
           <div className="flex gap-3">
             <Button variant="outline" size="sm" onClick={() => {
-              console.log('View Later clicked');
+              console.log('View Later clicked - closing dialog');
               onOpenChange(false);
-              if (onNavigateToDashboard) {
-                onNavigateToDashboard();
-              }
             }}>
               View Later
             </Button>
             <Button 
               size="sm" 
               onClick={() => {
-                console.log('Lets Start Testing clicked');
+                console.log('Lets Start Testing clicked - closing dialog');
                 onOpenChange(false);
-                if (onNavigateToDashboard) {
-                  onNavigateToDashboard();
-                }
               }}
               className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
             >
