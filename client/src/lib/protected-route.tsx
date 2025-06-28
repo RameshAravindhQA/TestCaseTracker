@@ -7,9 +7,9 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [hasRedirected, setHasRedirected] = useState(false);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   // Check if already logged in via API
   const { data: user, isLoading, error } = useQuery({
@@ -19,25 +19,31 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   });
 
   useEffect(() => {
-    if (hasRedirected) return;
+    // Prevent multiple auth checks
+    if (hasCheckedAuth) return;
 
     const isLocallyAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
     if (!isLoading) {
-      if (!user && !isLocallyAuthenticated && window.location.pathname !== "/login") {
+      // Check if user is authenticated (either via API or localStorage)
+      const isAuthenticated = user || isLocallyAuthenticated;
+
+      if (!isAuthenticated && location !== "/login") {
         console.log("Not authenticated, redirecting to login");
-        setHasRedirected(true);
         navigate("/login");
+        setHasCheckedAuth(true);
+        setIsCheckingAuth(false);
         return;
       }
 
-      if (user || isLocallyAuthenticated) {
+      if (isAuthenticated) {
         console.log("User authenticated:", user?.firstName || "User");
       }
 
+      setHasCheckedAuth(true);
       setIsCheckingAuth(false);
     }
-  }, [user, isLoading, navigate, hasRedirected]);
+  }, [user, isLoading, location, navigate, hasCheckedAuth]);
 
   if (isCheckingAuth || isLoading) {
     return <div>Loading...</div>;

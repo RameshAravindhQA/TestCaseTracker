@@ -70,7 +70,14 @@ export function LoginForm() {
 
       // Show motivation dialog immediately after successful login
       console.log("Opening motivation dialog...");
-      navigate("/dashboard");
+      
+
+      // Navigate to dashboard after showing welcome dialog or immediately if no user data
+      if (!data.user || !data.user.firstName) {
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 100);
+      }
     },
     onError: (error: any) => {
       console.error("Login error:", error);
