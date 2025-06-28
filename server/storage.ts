@@ -836,9 +836,7 @@ class MemStorage implements IStorage {
 
   async deleteKanbanColumn(id: number): Promise<boolean> {
     // Also delete all cards in this column
-    const```python
- cardsInColumn = Array.from(this.kanbanCards.values()).filter(
-card => card.columnId === id);
+    const cardsInColumn = Array.from(this.kanbanCards.values()).filter(card => card.columnId === id);
     cardsInColumn.forEach(card => this.kanbanCards.delete(card.id));
 
     return this.kanbanColumns.delete(id);
@@ -2387,12 +2385,12 @@ card => card.columnId === id);
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    
+
     this.conversations.set(id, conversation);
-    
+
     // Initialize members
     this.conversationMembers.set(id, new Set(conversationData.participants || []));
-    
+
     return conversation;
   }
 
@@ -2409,7 +2407,7 @@ card => card.columnId === id);
       ...updates,
       updatedAt: new Date().toISOString()
     };
-    
+
     this.conversations.set(id, updated);
     return updated;
   }
@@ -2417,18 +2415,18 @@ card => card.columnId === id);
   async deleteConversation(id: number): Promise<boolean> {
     const deleted = this.conversations.delete(id);
     this.conversationMembers.delete(id);
-    
+
     // Delete all messages in conversation
     const messages = Array.from(this.chatMessages.values()).filter(msg => msg.conversationId === id);
     messages.forEach(msg => this.chatMessages.delete(msg.id));
-    
+
     return deleted;
   }
 
   async addConversationMember(conversationId: number, userId: number): Promise<boolean> {
     const members = this.conversationMembers.get(conversationId);
     if (!members) return false;
-    
+
     members.add(userId);
     return true;
   }
@@ -2436,14 +2434,14 @@ card => card.columnId === id);
   async removeConversationMember(conversationId: number, userId: number): Promise<boolean> {
     const members = this.conversationMembers.get(conversationId);
     if (!members) return false;
-    
+
     return members.delete(userId);
   }
 
   async getConversationMembers(conversationId: number): Promise<any[]> {
     const memberIds = this.conversationMembers.get(conversationId);
     if (!memberIds) return [];
-    
+
     const members = [];
     for (const userId of memberIds) {
       const user = this.users.get(userId);
@@ -2459,7 +2457,7 @@ card => card.columnId === id);
         });
       }
     }
-    
+
     return members;
   }
 
@@ -2474,9 +2472,9 @@ card => card.columnId === id);
       reactions: [],
       replyCount: 0
     };
-    
+
     this.chatMessages.set(id, message);
-    
+
     // Update conversation's last message
     const conversation = this.conversations.get(messageData.conversationId);
     if (conversation) {
@@ -2484,13 +2482,13 @@ card => card.columnId === id);
       conversation.lastMessageAt = message.createdAt;
       conversation.updatedAt = message.createdAt;
     }
-    
+
     // If this is a reply, update thread
     if (messageData.replyToId) {
       const parentMessage = this.chatMessages.get(messageData.replyToId);
       if (parentMessage) {
         parentMessage.replyCount = (parentMessage.replyCount || 0) + 1;
-        
+
         // Add to thread
         if (!this.messageThreads.has(messageData.replyToId)) {
           this.messageThreads.set(messageData.replyToId, []);
@@ -2498,7 +2496,7 @@ card => card.columnId === id);
         this.messageThreads.get(messageData.replyToId)!.push(id);
       }
     }
-    
+
     return message;
   }
 
@@ -2529,10 +2527,10 @@ card => card.columnId === id);
     return {
       ...message,
       user: this.users.get(message.userId) ? {
-        id: message.userId,
-        firstName: this.users.get(message.userId)!.firstName,
-        lastName: this.users.get(message.userId)!.lastName,
-        profilePicture: this.users.get(message.userId)!.profilePicture
+        id: msg.userId,
+        firstName: this.users.get(msg.userId)!.firstName,
+        lastName: this.users.get(msg.userId)!.lastName,
+        profilePicture: this.users.get(msg.userId)!.profilePicture
       } : null,
       reactions: this.messageReactions.get(id) || [],
       thread: this.messageThreads.get(id) || []
@@ -2549,7 +2547,7 @@ card => card.columnId === id);
       updatedAt: new Date().toISOString(),
       isEdited: true
     };
-    
+
     this.chatMessages.set(id, updated);
     return updated;
   }
@@ -2560,17 +2558,17 @@ card => card.columnId === id);
 
     // Delete message
     this.chatMessages.delete(id);
-    
+
     // Clean up reactions and threads
     this.messageReactions.delete(id);
     this.messageThreads.delete(id);
-    
+
     // Update reply counts for parent messages
     if (message.replyToId) {
       const parentMessage = this.chatMessages.get(message.replyToId);
       if (parentMessage) {
         parentMessage.replyCount = Math.max(0, (parentMessage.replyCount || 1) - 1);
-        
+
         // Remove from thread
         const thread = this.messageThreads.get(message.replyToId);
         if (thread) {
@@ -2581,7 +2579,7 @@ card => card.columnId === id);
         }
       }
     }
-    
+
     return true;
   }
 
@@ -2592,10 +2590,10 @@ card => card.columnId === id);
     if (!this.messageReactions.has(messageId)) {
       this.messageReactions.set(messageId, []);
     }
-    
+
     const reactions = this.messageReactions.get(messageId)!;
     const existingReaction = reactions.find(r => r.userId === userId && r.emoji === emoji);
-    
+
     if (existingReaction) {
       // Remove reaction
       const index = reactions.indexOf(existingReaction);
@@ -2610,7 +2608,7 @@ card => card.columnId === id);
         createdAt: new Date().toISOString()
       });
     }
-    
+
     return reactions;
   }
 
@@ -2644,7 +2642,7 @@ card => card.columnId === id);
   async markConversationAsRead(conversationId: number, userId: number): Promise<void> {
     const messages = Array.from(this.chatMessages.values())
       .filter(msg => msg.conversationId === conversationId);
-    
+
     for (const message of messages) {
       await this.markMessageAsRead(message.id, userId);
     }
@@ -2653,7 +2651,7 @@ card => card.columnId === id);
   async getUnreadCountForUser(conversationId: number, userId: number): Promise<number> {
     const messages = Array.from(this.chatMessages.values())
       .filter(msg => msg.conversationId === conversationId && msg.userId !== userId);
-    
+
     let unreadCount = 0;
     for (const message of messages) {
       const readUsers = this.messageReadStatus.get(`${message.id}`);
@@ -2661,7 +2659,7 @@ card => card.columnId === id);
         unreadCount++;
       }
     }
-    
+
     return unreadCount;
   }
 
@@ -2669,21 +2667,21 @@ card => card.columnId === id);
     const messages = Array.from(this.chatMessages.values())
       .filter(msg => msg.conversationId === conversationId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
+
     return messages[0] || null;
   }
 
   async searchMessages(query: string, conversationId?: number, userId?: number): Promise<any[]> {
     let messages = Array.from(this.chatMessages.values());
-    
+
     if (conversationId) {
       messages = messages.filter(msg => msg.conversationId === conversationId);
     }
-    
+
     if (userId) {
       messages = messages.filter(msg => msg.userId === userId);
     }
-    
+
     const queryLower = query.toLowerCase();
     const searchResults = messages.filter(msg => 
       msg.message.toLowerCase().includes(queryLower)
@@ -2702,13 +2700,13 @@ card => card.columnId === id);
 
   async getUserConversations(userId: number): Promise<any[]> {
     const userConversations = [];
-    
+
     for (const conversation of this.conversations.values()) {
       const members = this.conversationMembers.get(conversation.id);
       if (members && members.has(userId)) {
         const lastMessage = this.getLastMessageForConversation(conversation.id);
         const unreadCount = await this.getUnreadCountForUser(conversation.id, userId);
-        
+
         userConversations.push({
           ...conversation,
           lastMessage,
@@ -2717,7 +2715,7 @@ card => card.columnId === id);
         });
       }
     }
-    
+
     // Sort by last activity
     return userConversations.sort((a, b) => {
       const aTime = a.lastMessage?.createdAt || a.createdAt;
