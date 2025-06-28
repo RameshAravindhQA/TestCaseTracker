@@ -865,7 +865,7 @@ export default function SettingsPage() {
                                 </SelectContent>
                               </Select>
                               <FormMessage />
-                            </Form<FormItem>
+                            </FormItem>
                         )}
                       />
 
