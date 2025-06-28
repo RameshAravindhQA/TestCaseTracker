@@ -49,7 +49,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
   const queryClient = useQueryClient();
 
   // Fetch todos
-  const { data: todos, isLoading } = useQuery<TodoItem[]>({
+  const { data: todos, isLoading, refetch } = useQuery<TodoItem[]>({
     queryKey: ["todos"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/todos");
@@ -57,13 +57,15 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
       return response.json();
     },
     enabled: isVisible,
+    refetchOnWindowFocus: true,
   });
 
   // Create todo mutation
   const createTodoMutation = useMutation({
     mutationFn: async (newTodo: { title: string; description?: string }) => {
       const response = await apiRequest("POST", "/api/todos", {
-        ...newTodo,
+        title: newTodo.title,
+        description: newTodo.description || "",
         completed: false,
         priority: 'medium'
       });
@@ -75,6 +77,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
+      refetch();
       setNewTodo("");
       toast({
         title: "Todo created",
@@ -124,8 +127,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
 
     createTodoMutation.mutate({
       title: newTodo.trim(),
-      completed: false,
-      priority: 'medium'
+      description: ""
     }, {
       onError: (error) => {
         console.error("Todo creation error:", error);

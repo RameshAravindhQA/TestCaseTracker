@@ -1,484 +1,396 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { 
-  MessageSquare, 
-  Send, 
-  Phone, 
-  Video, 
-  MoreVertical, 
-  Search, 
-  Plus,
-  Smile,
-  Paperclip,
-  Hash,
-  Users,
-  Star,
-  Reply,
-  Forward,
-  Trash2,
-  Edit,
-  Pin
-} from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
-import { formatDistanceToNow } from 'date-fns';
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Send, Phone, Video, Users, Settings, MoreVertical, Edit, Reply, Tag } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface ChatMessage {
+  id: number;
+  userId: number;
+  message: string;
+  type: string;
+  createdAt: string;
+  updatedAt?: string;
+  isEdited?: boolean;
+  replyToId?: number;
+  tags?: string[];
+  user?: {
+    id: number;
+    firstName: string;
+    lastName?: string;
+    profilePicture?: string;
+  };
+}
 
 interface User {
   id: number;
   name: string;
-  email: string;
   avatar?: string;
-  status: 'online' | 'offline' | 'away';
-  lastSeen?: string;
-}
-
-interface Message {
-  id: number;
-  content: string;
-  senderId: number;
-  receiverId?: number;
-  chatId: number;
-  type: 'text' | 'image' | 'file';
-  replyTo?: number;
-  reactions: { emoji: string; userId: number; count: number }[];
-  isPinned: boolean;
-  isEdited: boolean;
-  createdAt: string;
-  updatedAt?: string;
-}
-
-interface Chat {
-  id: number;
-  name?: string;
-  type: 'direct' | 'group' | 'space';
-  participants: User[];
-  lastMessage?: Message;
-  unreadCount: number;
-  isArchived: boolean;
-  description?: string;
-  createdAt: string;
-}
-
-interface Thread {
-  id: number;
-  parentMessageId: number;
-  messages: Message[];
-  participantCount: number;
+  role: string;
 }
 
 export function Messenger() {
-  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const [messageInput, setMessageInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeThread, setActiveThread] = useState<Thread | null>(null);
-  const [showUserPanel, setShowUserPanel] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
+  const [newMessage, setNewMessage] = useState("");
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  // Fetch users
+  // Mock conversations - in a real app, these would come from an API
+  const conversations = [
+    {
+      id: 1,
+      name: "General Discussion",
+      lastMessage: "Hello everyone! Welcome to the team.",
+      timestamp: "about 1 hour ago",
+      unreadCount: 0,
+      participants: 5
+    }
+  ];
+
+  // Fetch messages for selected conversation
+  const { data: messages = [], isLoading: messagesLoading, refetch: refetchMessages } = useQuery<ChatMessage[]>({
+    queryKey: ["chatMessages", selectedConversation],
+    queryFn: async () => {
+      if (!selectedConversation) return [];
+      const response = await apiRequest("GET", `/api/projects/${selectedConversation}/chat`);
+      if (!response.ok) throw new Error("Failed to fetch messages");
+      return response.json();
+    },
+    enabled: !!selectedConversation,
+    refetchInterval: 3000, // Refetch every 3 seconds for real-time updates
+  });
+
+  // Fetch users for the conversation
   const { data: users = [] } = useQuery<User[]>({
-    queryKey: ['/api/users'],
+    queryKey: ["conversationUsers", selectedConversation],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/users');
+      if (!selectedConversation) return [];
+      const response = await apiRequest("GET", `/api/projects/${selectedConversation}/users`);
+      if (!response.ok) throw new Error("Failed to fetch users");
       return response.json();
     },
-  });
-
-  // Fetch chats
-  const { data: chats = [] } = useQuery<Chat[]>({
-    queryKey: ['/api/chats'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/chats');
-      return response.json();
-    },
-  });
-
-  // Fetch messages for selected chat
-  const { data: messages = [] } = useQuery<Message[]>({
-    queryKey: ['/api/messages', selectedChat?.id],
-    queryFn: async () => {
-      if (!selectedChat) return [];
-      const response = await apiRequest('GET', `/api/chats/${selectedChat.id}/messages`);
-      return response.json();
-    },
-    enabled: !!selectedChat,
+    enabled: !!selectedConversation,
   });
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async (messageData: { content: string; chatId: number; replyTo?: number }) => {
-      const response = await apiRequest('POST', '/api/messages', messageData);
+    mutationFn: async (messageData: { message: string; replyToId?: number }) => {
+      if (!selectedConversation) throw new Error("No conversation selected");
+      const response = await apiRequest("POST", `/api/projects/${selectedConversation}/chat`, messageData);
+      if (!response.ok) throw new Error("Failed to send message");
       return response.json();
     },
     onSuccess: () => {
-      setMessageInput('');
+      refetchMessages();
+      setNewMessage("");
       setReplyingTo(null);
-      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
+      toast({
+        title: "Message sent",
+        description: "Your message has been sent successfully.",
+      });
     },
-  });
-
-  // Create chat mutation
-  const createChatMutation = useMutation({
-    mutationFn: async (chatData: { name?: string; type: string; participantIds: number[] }) => {
-      const response = await apiRequest('POST', '/api/chats', chatData);
-      return response.json();
-    },
-    onSuccess: (newChat) => {
-      setSelectedChat(newChat);
-      queryClient.invalidateQueries({ queryKey: ['/api/chats'] });
-    },
-  });
-
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const handleSendMessage = () => {
-    if (!messageInput.trim() || !selectedChat) {
+    onError: (error) => {
       toast({
         title: "Error",
-        description: "Please enter a message",
+        description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
-      return;
-    }
+    },
+  });
+
+  // Edit message mutation
+  const editMessageMutation = useMutation({
+    mutationFn: async ({ messageId, message }: { messageId: number; message: string }) => {
+      const response = await apiRequest("PUT", `/api/chat/messages/${messageId}`, { message });
+      if (!response.ok) throw new Error("Failed to edit message");
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchMessages();
+      setEditingMessageId(null);
+      setEditingText("");
+      toast({
+        title: "Message updated",
+        description: "Your message has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to edit message. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendMessage = () => {
+    if (!newMessage.trim() || !selectedConversation) return;
 
     sendMessageMutation.mutate({
-      content: messageInput,
-      chatId: selectedChat.id,
-      replyTo: replyingTo?.id,
-    }, {
-      onError: (error) => {
-        console.error("Send message error:", error);
-        toast({
-          title: "Error",
-          description: "Failed to send message. Please try again.",
-          variant: "destructive",
-        });
-      }
+      message: newMessage.trim(),
+      replyToId: replyingTo?.id
     });
   };
 
-  const handleCreateDirectChat = (user: User) => {
-    createChatMutation.mutate({
-      type: 'direct',
-      participantIds: [user.id],
-    });
+  const handleEditMessage = (messageId: number, newText: string) => {
+    if (!newText.trim()) return;
+    editMessageMutation.mutate({ messageId, message: newText.trim() });
   };
 
-  const handleCreateGroupChat = () => {
-    // Implementation for group chat creation
-    const selectedUserIds = [1, 2]; // This should come from a selection UI
-    createChatMutation.mutate({
-      name: 'New Group',
-      type: 'group',
-      participantIds: selectedUserIds,
-    });
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
-  const getInitials = (name: string) => {
-    if (!name || typeof name !== 'string') return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const startEditing = (message: ChatMessage) => {
+    setEditingMessageId(message.id);
+    setEditingText(message.message);
   };
 
-  const filteredChats = chats.filter(chat =>
-    chat.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    chat.participants.some(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const startReply = (message: ChatMessage) => {
+    setReplyingTo(message);
+  };
 
-  const filteredUsers = users.filter(user =>
-    (user.name && user.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (user.email && user.email.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const cancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  // Auto-select first conversation
+  useEffect(() => {
+    if (conversations.length > 0 && !selectedConversation) {
+      setSelectedConversation(conversations[0].id);
+    }
+  }, [conversations, selectedConversation]);
+
+  const selectedConv = conversations.find(c => c.id === selectedConversation);
+
+  const getRepliedMessage = (replyToId: number) => {
+    return messages.find(m => m.id === replyToId);
+  };
 
   return (
-    <div className="h-screen flex">
-      {/* Sidebar */}
-      <div className="w-80 border-r bg-background flex flex-col">
-        {/* Header */}
+    <div className="flex h-[600px] border rounded-lg overflow-hidden">
+      {/* Conversations List */}
+      <div className="w-80 border-r bg-gray-50 dark:bg-gray-900">
         <div className="p-4 border-b">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Messenger
-            </h2>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCreateGroupChat}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowUserPanel(!showUserPanel)}
-              >
-                <Users className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search conversations or people..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+          <h2 className="font-semibold text-lg">Conversations</h2>
         </div>
-
-        {/* Content */}
-        <div className="flex-1 flex">
-          {/* Chats List */}
-          <div className={`${showUserPanel ? 'w-1/2' : 'w-full'} border-r`}>
-            <ScrollArea className="h-full">
-              <div className="p-2">
-                <h3 className="text-sm font-medium text-muted-foreground mb-2 px-2">Conversations</h3>
-                {filteredChats.map((chat) => (
-                  <div
-                    key={chat.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-accent ${
-                      selectedChat?.id === chat.id ? 'bg-accent' : ''
-                    }`}
-                    onClick={() => setSelectedChat(chat)}
-                  >
-                    <Avatar>
-                      <AvatarImage src={chat.participants[0]?.avatar} />
-                      <AvatarFallback>
-                        {chat.type === 'group' ? <Hash className="h-4 w-4" /> : 
-                         getInitials(chat.participants[0]?.name || '')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium truncate">
-                          {chat.name || chat.participants[0]?.name}
-                        </p>
-                        {chat.lastMessage && (
-                          <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(chat.lastMessage.createdAt), { addSuffix: true })}
-                          </span>
-                        )}
-                      </div>
-                      {chat.lastMessage && (
-                        <p className="text-sm text-muted-foreground truncate">
-                          {chat.lastMessage.content}
-                        </p>
-                      )}
-                    </div>
-                    {chat.unreadCount > 0 && (
-                      <Badge variant="destructive" className="ml-2">
-                        {chat.unreadCount}
-                      </Badge>
-                    )}
-                  </div>
-                ))}
+        <div className="p-2">
+          {conversations.map((conversation) => (
+            <div
+              key={conversation.id}
+              className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors ${
+                selectedConversation === conversation.id
+                  ? "bg-blue-100 dark:bg-blue-900"
+                  : "hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+              onClick={() => setSelectedConversation(conversation.id)}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium text-sm">{conversation.name}</span>
+                {conversation.unreadCount > 0 && (
+                  <Badge variant="destructive" className="text-xs">
+                    {conversation.unreadCount}
+                  </Badge>
+                )}
               </div>
-            </ScrollArea>
-          </div>
-
-          {/* Users Panel */}
-          {showUserPanel && (
-            <div className="w-1/2">
-              <ScrollArea className="h-full">
-                <div className="p-2">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2 px-2">People</h3>
-                  {filteredUsers.map((user) => (
-                    <div
-                      key={user.id}
-                      className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-accent"
-                      onClick={() => handleCreateDirectChat(user)}
-                    >
-                      <div className="relative">
-                        <Avatar>
-                          <AvatarImage src={user.avatar} />
-                          <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                        </Avatar>
-                        <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${
-                          user.status === 'online' ? 'bg-green-500' :
-                          user.status === 'away' ? 'bg-yellow-500' : 'bg-gray-400'
-                        }`} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{user.name || 'Unknown User'}</p>
-                        <p className="text-sm text-gray-500">{user.email || 'No email'}</p>
-                      </div>
-                    </div>
-                  ))}
+              <div className="text-xs text-gray-500 truncate">{conversation.lastMessage}</div>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-xs text-gray-400">{conversation.timestamp}</span>
+                <div className="flex items-center text-xs text-gray-400">
+                  <Users className="h-3 w-3 mr-1" />
+                  {conversation.participants}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
-          )}
+          ))}
         </div>
       </div>
 
-      {/* Main Chat Area */}
+      {/* Chat Area */}
       <div className="flex-1 flex flex-col">
-        {selectedChat ? (
+        {selectedConv ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={selectedChat.participants?.[0]?.avatar} />
-                  <AvatarFallback>
-                    {selectedChat.type === 'group' ? <Hash className="h-4 w-4" /> : 
-                     getInitials(selectedChat.participants?.[0]?.name || selectedChat.name || 'Unknown')}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-medium">
-                    {selectedChat.name || selectedChat.participants?.[0]?.name || 'Unknown Chat'}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedChat.type === 'group' 
-                      ? `${selectedChat.participants?.length || 0} members`
-                      : selectedChat.participants?.[0]?.status || 'offline'}
-                  </p>
+            <div className="p-4 border-b bg-white dark:bg-gray-800 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold">{selectedConv.name}</h3>
+                <div className="text-sm text-gray-500">
+                  {users.length} members
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => toast({
-                    title: "Voice Call",
-                    description: "Voice calling feature coming soon!",
-                  })}
-                >
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" title="Voice Call">
                   <Phone className="h-4 w-4" />
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => toast({
-                    title: "Video Call",
-                    description: "Video calling feature coming soon!",
-                  })}
-                >
+                <Button variant="ghost" size="sm" title="Video Call">
                   <Video className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="h-4 w-4" />
+                <Button variant="ghost" size="sm" title="Settings">
+                  <Settings className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {messages.map((message) => (
-                  <div key={message.id} className="flex gap-3">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={users.find(u => u.id === message.senderId)?.avatar} />
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messagesLoading ? (
+                <div className="text-center text-gray-500">Loading messages...</div>
+              ) : messages.length > 0 ? (
+                messages.map((message) => (
+                  <div key={message.id} className="flex items-start gap-3 group">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={message.user?.profilePicture} />
                       <AvatarFallback>
-                        {getInitials(users.find(u => u.id === message.senderId)?.name || '')}
+                        {message.user?.firstName?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium">
-                          {users.find(u => u.id === message.senderId)?.name}
+                        <span className="font-medium text-sm">
+                          {message.user?.firstName} {message.user?.lastName}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
+                        <span className="text-xs text-gray-500">
+                          {new Date(message.createdAt).toLocaleString()}
                         </span>
-                        {message.isPinned && <Pin className="h-3 w-3 text-yellow-500" />}
-                        {message.isEdited && <span className="text-xs text-muted-foreground">(edited)</span>}
+                        {message.isEdited && (
+                          <Badge variant="secondary" className="text-xs">edited</Badge>
+                        )}
                       </div>
-                      {message.replyTo && (
-                        <div className="bg-muted p-2 rounded mb-2 text-sm">
-                          Replying to: {messages.find(m => m.id === message.replyTo)?.content}
+
+                      {/* Reply indicator */}
+                      {message.replyToId && (
+                        <div className="text-xs text-gray-500 mb-2 pl-2 border-l-2 border-gray-300">
+                          Replying to: {getRepliedMessage(message.replyToId)?.message.substring(0, 50)}...
                         </div>
                       )}
-                      <div className="bg-muted p-3 rounded-lg">
-                        <p className="text-sm">{message.content}</p>
-                      </div>
-                      {message.reactions.length > 0 && (
+
+                      {editingMessageId === message.id ? (
+                        <div className="flex gap-2">
+                          <Input
+                            value={editingText}
+                            onChange={(e) => setEditingText(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                handleEditMessage(message.id, editingText);
+                              } else if (e.key === 'Escape') {
+                                setEditingMessageId(null);
+                                setEditingText("");
+                              }
+                            }}
+                            className="flex-1 text-sm"
+                            autoFocus
+                          />
+                          <Button size="sm" onClick={() => handleEditMessage(message.id, editingText)}>
+                            Save
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => {
+                              setEditingMessageId(null);
+                              setEditingText("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="text-sm bg-gray-100 dark:bg-gray-700 rounded-lg p-3 relative">
+                          {message.message}
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                  <MoreVertical className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                <DropdownMenuItem onClick={() => startReply(message)}>
+                                  <Reply className="h-4 w-4 mr-2" />
+                                  Reply
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => startEditing(message)}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Tag className="h-4 w-4 mr-2" />
+                                  Tag
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tags */}
+                      {message.tags && message.tags.length > 0 && (
                         <div className="flex gap-1 mt-2">
-                          {message.reactions.map((reaction, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {reaction.emoji} {reaction.count}
+                          {message.tags.map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {tag}
                             </Badge>
                           ))}
                         </div>
                       )}
-                      <div className="flex gap-2 mt-2 opacity-0 hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="sm" onClick={() => setReplyingTo(message)}>
-                          <Reply className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Smile className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Forward className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-3 w-3" />
-                        </Button>
-                      </div>
                     </div>
                   </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-
-            {/* Reply Banner */}
-            {replyingTo && (
-              <div className="px-4 py-2 bg-muted border-b flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Reply className="h-4 w-4" />
-                  <span className="text-sm">
-                    Replying to {users.find(u => u.id === replyingTo.senderId)?.name}
-                  </span>
+                ))
+              ) : (
+                <div className="text-center text-gray-500">
+                  No messages yet. Start the conversation!
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setReplyingTo(null)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Reply indicator */}
+            {replyingTo && (
+              <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-t">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Replying to {replyingTo.user?.firstName}: {replyingTo.message.substring(0, 50)}...
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={cancelReply}>
+                    ✕
+                  </Button>
+                </div>
               </div>
             )}
 
             {/* Message Input */}
-            <div className="p-4 border-t">
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm">
-                  <Paperclip className="h-4 w-4" />
-                </Button>
+            <div className="p-4 border-t bg-white dark:bg-gray-800">
+              <div className="flex gap-2">
                 <Input
                   placeholder="Type a message..."
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
                   className="flex-1"
                 />
-                <Button variant="ghost" size="sm">
-                  <Smile className="h-4 w-4" />
-                </Button>
-                <Button
+                <Button 
                   onClick={handleSendMessage}
-                  disabled={!messageInput.trim() || sendMessageMutation.isPending}
+                  disabled={!newMessage.trim() || sendMessageMutation.isPending}
                 >
                   <Send className="h-4 w-4" />
                 </Button>
@@ -486,17 +398,11 @@ export function Messenger() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium">Select a conversation</h3>
-              <p className="text-muted-foreground">Choose a conversation to start messaging</p>
-            </div>
+          <div className="flex-1 flex items-center justify-center text-gray-500">
+            Select a conversation to start messaging
           </div>
         )}
       </div>
     </div>
   );
 }
-
-export default Messenger;

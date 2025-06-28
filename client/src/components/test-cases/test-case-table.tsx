@@ -30,6 +30,7 @@ import { TestCaseTags } from "./test-case-tags";
 import { TagFilter } from "./tag-filter";
 import { X, Filter } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "@/components/ui/input";
 
 interface TestCaseTableProps {
   testCases: TestCase[];
@@ -90,6 +91,7 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25); // Default to 25 rows per page
+  const [testCasesData, setTestCasesData] = useState(testCases);
 
   // Get all unique tags across test cases
   const allTags = useMemo(() => {
@@ -209,6 +211,14 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
     console.log("Start recording for test case:", testCase);
     //Add your recording logic here.  This might involve calling onStartRecording if it's available,
     // or using a different recording mechanism.  This is a placeholder.
+  };
+
+  const handleUpdateTestCase = (id: number, updates: Partial<TestCase>) => {
+    setTestCasesData((prevTestCases) =>
+      prevTestCases.map((testCase) =>
+        testCase.id === id ? { ...testCase, ...updates } : testCase
+      )
+    );
   };
 
 
@@ -410,15 +420,13 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
                       />
                     </TableCell>
                     <TableCell>
-                      <StatusDropdown
-                        currentStatus={testCase.status}
-                        statusOptions={["Draft", "Active", "Passed", "Failed", "Blocked", "Pending"]}
-                        onStatusChange={(newStatus) => {
-                          // Handle status update here
-                          const updatedTestCase = { ...testCase, status: newStatus };
-                          // You can add mutation here to update the backend
-                          console.log('Updating test case status:', testCase.id, 'to', newStatus);
+                      <Input
+                        value={testCase.status}
+                        onChange={(e) => {
+                          handleUpdateTestCase(testCase.id, { status: e.target.value });
                         }}
+                        className="w-24"
+                        placeholder="Status"
                       />
                     </TableCell>
                     <TableCell>

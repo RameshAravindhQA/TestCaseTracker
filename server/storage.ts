@@ -181,6 +181,7 @@ export interface IStorage {
   // Chat operations
   createChatMessage(message: any): Promise<any>;
   getChatMessages(projectId: number, limit?: number): Promise<any[]>;
+  updateChatMessage(messageId: number, userId: number, updates: any): Promise<any | null>;
 
   // Comment operations
   getBugComment(commentId: number): Promise<any>;
@@ -1884,6 +1885,7 @@ class MemStorage implements IStorage {
       timestamp: new Date().toISOString(),
       mentionedUsers: message.mentionedUsers || [],
       attachments: message.attachments || [],
+      isEdited: false,
     };
 
     messages.push(newMessage);
@@ -1891,6 +1893,19 @@ class MemStorage implements IStorage {
 
     console.log(`Chat message created: ${newMessage.id} for project ${projectId}`);
     return newMessage;
+  }
+
+  async updateChatMessage(messageId: number, userId: number, updates: any): Promise<any | null> {
+    const message = this.chatMessages.get(messageId);
+    if (!message || message.userId !== userId) return null;
+
+    const updatedMessage = { 
+      ...message, 
+      ...updates, 
+      updatedAt: new Date().toISOString() 
+    };
+    this.chatMessages.set(messageId, updatedMessage);
+    return updatedMessage;
   }
 
   async getChatMessages(projectId: number, limit: number = 50): Promise<any[]> {

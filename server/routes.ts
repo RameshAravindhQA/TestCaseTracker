@@ -1217,7 +1217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/projects/:projectId/chat", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
-      const { message } = req.body;
+      const { message, replyToId } = req.body;
       const userId = req.session.userId!;
 
       if (!message || !message.trim()) {
@@ -1228,13 +1228,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectId,
         userId,
         message: message.trim(),
-        type: 'text'
+        type: 'text',
+        replyToId: replyToId || null
       });
 
       res.json(chatMessage);
     } catch (error) {
       console.error('Send chat message error:', error);
       res.status(500).json({ error: 'Failed to send message' });
+    }
+  });
+
+  // Edit chat message
+  apiRouter.put("/chat/messages/:messageId", isAuthenticated, async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.messageId);
+      const { message } = req.body;
+      const userId = req.session.userId!;
+
+      if (!message || !message.trim()) {
+        return res.status(400).json({ error: 'Message is required' });
+      }
+
+      const updatedMessage = await storage.updateChatMessage(messageId, userId, {
+        message: message.trim(),
+        isEdited: true,
+        updatedAt: new Date()
+      });
+
+      if (!updatedMessage) {
+        return res.status(404).json({ error: 'Message not found or access denied' });
+      }
+
+      res.json(updatedMessage);
+    } catch (error) {
+      console.error('Edit chat message error:', error);
+      res.status(500).json({ error: 'Failed to edit message' });
     }
   });
 
@@ -3630,6 +3659,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success });
     } catch (error) {
       console.error("Delete notebook error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Todo routes
+  apiRouter.get("/todos", isAuthenticated, async (req, res) => {
+    try {
+      const todos = await storage.getTodosByUserId(req.session.userId!);
+      res.json(todos);
+    } catch (error) {
+      console.error("Get todos error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/todos/:id", isAuthenticated, async (req, res) => {
+    try {
+      const todoId = parseInt(req.params.id);
+      const todo = await storage.getTodo(todoId);
+      
+      if (!todo) {
+        return res.status(404).json({ message: "Todo not found" });
+      }
+      
+      // Users can only access their own todos
+      if (todo.userId !== req.session.userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(todo);
+    } catch (error) {
+      console.error("Get todo error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/todos", isAuthenticated, async (req, res) => {
+    try {
+      const { title, description, priority } = req.body;
+      
+      if (!title || !title.trim()) {
+        return res.status(400).json({ message: "Title is required" });
+      }
+      
+      const todoData = {
+        title: title.trim(),
+        description: description || "",
+        priority: priority || "medium",
+        completed: false,
+        userId: req.session.userId!
+      };
+      
+      const todo = await storage.createTodo(todoData);
+      res.status(201).json(todo);
+    } catch (error) {
+      console.error("Create todo error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.put("/todos/:id", isAuthenticated, async (req, res) => {
+    try {
+      const todoId = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const updatedTodo = await storage.updateTodo(todoId, req.session.userId!, updates);
+      
+      if (!updatedTodo) {
+        return res.status(404).json({ message: "Todo not found or access denied" });
+      }
+      
+      res.json(updatedTodo);
+    } catch (error) {
+      console.error("Update todo error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/todos/:id", isAuthenticated, async (req, res) => {
+    try {
+      const todoId = parseInt(req.params.id);
+      
+      const success = await storage.deleteTodo(todoId, req.session.userId!);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Todo not found or access denied" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete todo error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
