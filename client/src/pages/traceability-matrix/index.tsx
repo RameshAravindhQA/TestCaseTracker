@@ -85,6 +85,14 @@ export default function TraceabilityMatrixPage() {
   });
   const matrixRef = useRef<HTMLDivElement>(null);
 
+  // Initialize with first project if available
+  useEffect(() => {
+    if (!selectedProjectId && projects && projects.length > 0) {
+      console.log('Auto-selecting first project:', projects[0].id);
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects, selectedProjectId]);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -198,6 +206,11 @@ export default function TraceabilityMatrixPage() {
 
   // Load data when project changes
   useEffect(() => {
+    console.log('Project selection changed:', selectedProjectId);
+    console.log('Project modules:', projectModules);
+    console.log('Project markers:', projectMarkers);
+    console.log('Project cells:', projectCells);
+    
     if (selectedProjectId) {
       setModules(projectModules || []);
       setCustomMarkers(projectMarkers || []);
@@ -435,12 +448,18 @@ export default function TraceabilityMatrixPage() {
           </div>
         </div>
 
-        {!selectedProjectId ? (
+        {!selectedProjectId || !projects || projects.length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center">
               <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Project Selected</h3>
-              <p className="text-gray-500">Please select a project to view the traceability matrix.</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {!projects || projects.length === 0 ? 'No Projects Available' : 'No Project Selected'}
+              </h3>
+              <p className="text-gray-500">
+                {!projects || projects.length === 0 
+                  ? 'Please create a project first to use the traceability matrix.'
+                  : 'Please select a project to view the traceability matrix.'}
+              </p>
             </CardContent>
           </Card>
         ) : (
