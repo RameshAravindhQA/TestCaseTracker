@@ -6,8 +6,12 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, MessageCircle, Users, Settings } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { Send, MessageCircle, Users, Settings, Plus, Search, UserPlus, Hash, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 
 interface Message {
   id: number;
@@ -22,20 +26,38 @@ interface Chat {
   id: number;
   name: string;
   type: 'direct' | 'group';
-  participants: number;
+  participants: number[];
   lastMessage?: string;
   lastActivity?: string;
   unreadCount?: number;
+  description?: string;
+}
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  avatar?: string;
+  isOnline: boolean;
+  lastSeen?: string;
 }
 
 export default function Messenger() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'chats' | 'users'>('chats');
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [groupDescription, setGroupDescription] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -43,6 +65,7 @@ export default function Messenger() {
     if (user) {
       connectWebSocket();
       loadChats();
+      loadUsers();
     }
     return () => {
       if (wsRef.current) {
@@ -57,14 +80,12 @@ export default function Messenger() {
 
   const connectWebSocket = () => {
     try {
-      // Ensure WebSocket connection uses correct path
       const ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/chat`);
       
       ws.onopen = () => {
         console.log('WebSocket connected');
         setIsConnected(true);
         
-        // Authenticate with the WebSocket server
         ws.send(JSON.stringify({
           type: 'authenticate',
           data: {
@@ -86,7 +107,6 @@ export default function Messenger() {
       ws.onclose = () => {
         console.log('WebSocket disconnected');
         setIsConnected(false);
-        // Attempt to reconnect after 3 seconds
         setTimeout(connectWebSocket, 3000);
       };
 
@@ -105,6 +125,7 @@ export default function Messenger() {
     switch (data.type) {
       case 'authenticated':
         console.log('WebSocket authenticated');
+        updateUserPresence(data.onlineUsers || []);
         break;
       case 'new_message':
         if (data.message) {
@@ -125,10 +146,42 @@ export default function Messenger() {
           setTypingUsers(prev => prev.filter(name => name !== data.userName));
         }
         break;
+      case 'presence_update':
+        if (Array.isArray(data.presence)) {
+          updateUserPresence(data.presence);
+        } else {
+          updateSingleUserPresence(data.userId, data.isOnline);
+        }
+        break;
+      case 'user_registered':
+        // Handle new user registration notification
+        toast({
+          title: "New User Joined!",
+          description: `${data.userName} has joined the platform`,
+        });
+        loadUsers(); // Refresh user list
+        break;
       case 'error':
         console.error('WebSocket error:', data.error);
         break;
     }
+  };
+
+  const updateUserPresence = (presenceData: any[]) => {
+    setUsers(prev => prev.map(user => {
+      const presence = presenceData.find(p => p.userId === user.id);
+      return {
+        ...user,
+        isOnline: presence?.isOnline || false,
+        lastSeen: presence?.lastSeen || user.lastSeen
+      };
+    }));
+  };
+
+  const updateSingleUserPresence = (userId: number, isOnline: boolean) => {
+    setUsers(prev => prev.map(user => 
+      user.id === userId ? { ...user, isOnline } : user
+    ));
   };
 
   const loadChats = async () => {
@@ -137,13 +190,21 @@ export default function Messenger() {
       if (response.ok) {
         const chatsData = await response.json();
         setChats(chatsData);
-        if (chatsData.length > 0 && !selectedChat) {
-          setSelectedChat(chatsData[0]);
-          loadMessages(chatsData[0].id);
-        }
       }
     } catch (error) {
       console.error('Error loading chats:', error);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const response = await fetch('/api/users');
+      if (response.ok) {
+        const usersData = await response.json();
+        setUsers(usersData.filter((u: User) => u.id !== user?.id));
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
     }
   };
 
@@ -154,7 +215,6 @@ export default function Messenger() {
         const messagesData = await response.json();
         setMessages(messagesData);
         
-        // Join conversation via WebSocket
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({
             type: 'join_conversation',
@@ -164,6 +224,80 @@ export default function Messenger() {
       }
     } catch (error) {
       console.error('Error loading messages:', error);
+    }
+  };
+
+  const startDirectChat = async (targetUser: User) => {
+    try {
+      const response = await fetch('/api/chats/direct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: targetUser.id })
+      });
+
+      if (response.ok) {
+        const chat = await response.json();
+        setChats(prev => {
+          const existing = prev.find(c => c.id === chat.id);
+          if (existing) return prev;
+          return [...prev, chat];
+        });
+        setSelectedChat(chat);
+        loadMessages(chat.id);
+        setActiveTab('chats');
+      }
+    } catch (error) {
+      console.error('Error starting direct chat:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start conversation",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const createGroupChat = async () => {
+    if (!groupName.trim() || selectedUsers.length === 0) {
+      toast({
+        title: "Invalid Input",
+        description: "Group name and at least one participant are required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/chats/group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: groupName.trim(),
+          description: groupDescription.trim(),
+          participants: selectedUsers
+        })
+      });
+
+      if (response.ok) {
+        const chat = await response.json();
+        setChats(prev => [...prev, chat]);
+        setSelectedChat(chat);
+        loadMessages(chat.id);
+        setShowCreateGroup(false);
+        setGroupName('');
+        setGroupDescription('');
+        setSelectedUsers([]);
+        toast({
+          title: "Success",
+          description: "Group created successfully"
+        });
+      }
+    } catch (error) {
+      console.error('Error creating group:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create group",
+        variant: "destructive"
+      });
     }
   };
 
@@ -201,6 +335,15 @@ export default function Messenger() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const filteredChats = chats.filter(chat => 
+    chat.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (!user) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -217,66 +360,198 @@ export default function Messenger() {
 
   return (
     <div className="flex h-full bg-gray-50">
-      {/* Chat List Sidebar */}
+      {/* Sidebar */}
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+        {/* Header */}
         <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
             <div className="flex items-center space-x-2">
               <Badge variant={isConnected ? "default" : "destructive"}>
                 {isConnected ? "Online" : "Offline"}
               </Badge>
+              <Dialog open={showCreateGroup} onOpenChange={setShowCreateGroup}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create Group Chat</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="Group name"
+                      value={groupName}
+                      onChange={(e) => setGroupName(e.target.value)}
+                    />
+                    <Textarea
+                      placeholder="Group description (optional)"
+                      value={groupDescription}
+                      onChange={(e) => setGroupDescription(e.target.value)}
+                    />
+                    <div>
+                      <p className="text-sm font-medium mb-2">Select Members:</p>
+                      <ScrollArea className="h-40">
+                        {users.map(user => (
+                          <div key={user.id} className="flex items-center space-x-2 p-2">
+                            <Checkbox
+                              checked={selectedUsers.includes(user.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedUsers(prev => [...prev, user.id]);
+                                } else {
+                                  setSelectedUsers(prev => prev.filter(id => id !== user.id));
+                                }
+                              }}
+                            />
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-xs">
+                                {getInitials(user.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">{user.name}</span>
+                          </div>
+                        ))}
+                      </ScrollArea>
+                    </div>
+                    <Button onClick={createGroupChat} className="w-full">
+                      Create Group
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Button variant="ghost" size="sm">
                 <Settings className="h-4 w-4" />
               </Button>
             </div>
           </div>
+
+          {/* Tabs */}
+          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('chats')}
+              className={`flex-1 py-1 px-3 text-sm rounded-md transition-colors ${
+                activeTab === 'chats' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <MessageCircle className="h-4 w-4 inline mr-1" />
+              Chats
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`flex-1 py-1 px-3 text-sm rounded-md transition-colors ${
+                activeTab === 'users' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Users className="h-4 w-4 inline mr-1" />
+              People
+            </button>
+          </div>
+
+          {/* Search */}
+          <div className="relative mt-3">
+            <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder={activeTab === 'chats' ? 'Search conversations...' : 'Search people...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </div>
 
+        {/* Content */}
         <ScrollArea className="flex-1">
           <div className="p-2">
-            {chats.length === 0 ? (
-              <div className="text-center py-8">
-                <MessageCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No chats available</p>
-              </div>
-            ) : (
-              chats.map((chat) => (
-                <div
-                  key={chat.id}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    selectedChat?.id === chat.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'
-                  }`}
-                  onClick={() => {
-                    setSelectedChat(chat);
-                    loadMessages(chat.id);
-                  }}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-blue-100 text-blue-600">
-                        {chat.type === 'group' ? <Users className="h-5 w-5" /> : getInitials(chat.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-medium text-gray-900 truncate">{chat.name}</h3>
-                        {chat.unreadCount && chat.unreadCount > 0 && (
-                          <Badge variant="destructive" className="text-xs">
-                            {chat.unreadCount}
-                          </Badge>
+            {activeTab === 'chats' ? (
+              filteredChats.length === 0 ? (
+                <div className="text-center py-8">
+                  <MessageCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">
+                    {searchQuery ? 'No chats found' : 'No chats yet'}
+                  </p>
+                </div>
+              ) : (
+                filteredChats.map((chat) => (
+                  <div
+                    key={chat.id}
+                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                      selectedChat?.id === chat.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'
+                    }`}
+                    onClick={() => {
+                      setSelectedChat(chat);
+                      loadMessages(chat.id);
+                    }}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-blue-100 text-blue-600">
+                          {chat.type === 'group' ? <Hash className="h-5 w-5" /> : getInitials(chat.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-medium text-gray-900 truncate flex items-center">
+                            {chat.name}
+                            {chat.type === 'group' && <Users className="h-3 w-3 ml-1 text-gray-400" />}
+                          </h3>
+                          {chat.unreadCount && chat.unreadCount > 0 && (
+                            <Badge variant="destructive" className="text-xs">
+                              {chat.unreadCount}
+                            </Badge>
+                          )}
+                        </div>
+                        {chat.lastMessage && (
+                          <p className="text-xs text-gray-500 truncate">{chat.lastMessage}</p>
+                        )}
+                        {chat.type === 'group' && (
+                          <p className="text-xs text-gray-400">{chat.participants.length} members</p>
                         )}
                       </div>
-                      {chat.lastMessage && (
-                        <p className="text-xs text-gray-500 truncate">{chat.lastMessage}</p>
-                      )}
-                      {chat.type === 'group' && (
-                        <p className="text-xs text-gray-400">{chat.participants} participants</p>
-                      )}
                     </div>
                   </div>
+                ))
+              )
+            ) : (
+              filteredUsers.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">
+                    {searchQuery ? 'No users found' : 'No users available'}
+                  </p>
                 </div>
-              ))
+              ) : (
+                filteredUsers.map((chatUser) => (
+                  <div
+                    key={chatUser.id}
+                    className="p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => startDirectChat(chatUser)}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="relative">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-gray-100 text-gray-600">
+                            {getInitials(chatUser.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
+                          chatUser.isOnline ? 'bg-green-500' : 'bg-gray-400'
+                        }`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium text-gray-900 truncate">{chatUser.name}</h3>
+                        <p className="text-xs text-gray-500 truncate">{chatUser.email}</p>
+                        <p className="text-xs text-gray-400">
+                          {chatUser.isOnline ? 'Online' : `Last seen ${chatUser.lastSeen ? new Date(chatUser.lastSeen).toLocaleDateString() : 'unknown'}`}
+                        </p>
+                      </div>
+                      <UserPlus className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </div>
+                ))
+              )
             )}
           </div>
         </ScrollArea>
@@ -291,11 +566,17 @@ export default function Messenger() {
               <div className="flex items-center space-x-3">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-blue-100 text-blue-600">
-                    {selectedChat.type === 'group' ? <Users className="h-4 w-4" /> : getInitials(selectedChat.name)}
+                    {selectedChat.type === 'group' ? <Hash className="h-4 w-4" /> : getInitials(selectedChat.name)}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900">{selectedChat.name}</h3>
+                  <h3 className="text-sm font-medium text-gray-900 flex items-center">
+                    {selectedChat.name}
+                    {selectedChat.type === 'group' && <Users className="h-3 w-3 ml-1 text-gray-400" />}
+                  </h3>
+                  {selectedChat.type === 'group' && selectedChat.description && (
+                    <p className="text-xs text-gray-500">{selectedChat.description}</p>
+                  )}
                   {typingUsers.length > 0 && (
                     <p className="text-xs text-gray-500">
                       {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...

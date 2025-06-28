@@ -2398,6 +2398,63 @@ class MemStorage implements IStorage {
     return this.conversations.get(id) || null;
   }
 
+  async getAllUsers(): Promise<any[]> {
+    return Array.from(this.users.values()).map(user => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      lastLoginAt: user.lastLoginAt,
+      createdAt: user.createdAt
+    }));
+  }
+
+  async getDirectConversation(userId1: number, userId2: number): Promise<any | null> {
+    for (const conv of this.conversations.values()) {
+      if (conv.type === 'direct' && 
+          conv.participants.includes(userId1) && 
+          conv.participants.includes(userId2)) {
+        return conv;
+      }
+    }
+    return null;
+  }
+
+  async addParticipantToConversation(conversationId: number, userId: number): Promise<boolean> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation || conversation.type !== 'group') {
+      return false;
+    }
+
+    if (!this.conversationMembers.has(conversationId)) {
+      this.conversationMembers.set(conversationId, new Set());
+    }
+
+    this.conversationMembers.get(conversationId)!.add(userId);
+    conversation.participants = Array.from(this.conversationMembers.get(conversationId)!);
+    conversation.updatedAt = new Date().toISOString();
+
+    return true;
+  }
+
+  async removeParticipantFromConversation(conversationId: number, userId: number): Promise<boolean> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation || conversation.type !== 'group') {
+      return false;
+    }
+
+    const members = this.conversationMembers.get(conversationId);
+    if (!members) {
+      return false;
+    }
+
+    members.delete(userId);
+    conversation.participants = Array.from(members);
+    conversation.updatedAt = new Date().toISOString();
+
+    return true;
+  }
+
   async updateConversation(id: number, updates: any): Promise<any | null> {
     const conversation = this.conversations.get(id);
     if (!conversation) return null;

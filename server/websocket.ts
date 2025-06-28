@@ -459,4 +459,22 @@ export class ChatWebSocketServer {
       lastSeen: user?.lastSeen
     };
   }
+
+  public notifyUserRegistration(userName: string, userId: number) {
+    // Broadcast new user registration to all connected users
+    const message = {
+      type: 'user_registered',
+      userId,
+      userName,
+      timestamp: new Date().toISOString()
+    };
+
+    for (const user of this.connectedUsers.values()) {
+      if (user.ws.readyState === WebSocket.OPEN) {
+        this.send(user.ws, message);
+      }
+    }
+
+    logger.info(`Notified all users about new registration: ${userName} (${userId})`);
+  }
 }
