@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { Mail, Lock, Github } from "lucide-react";
 import { useState } from "react";
-import { LoginMotivationDialog } from "@/components/ui/login-motivation-dialog";
+
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -28,8 +28,7 @@ export function LoginForm() {
   const { toast } = useToast();
   const [isOAuthLoading, setIsOAuthLoading] = useState<string | null>(null);
   // No longer need to manage password visibility state as it's handled by the PasswordInput component
-  const [showMotivationDialog, setShowMotivationDialog] = useState(false);
-  const [loggedInUserName, setLoggedInUserName] = useState("");
+  
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -63,19 +62,8 @@ export function LoginForm() {
       localStorage.setItem('userId', data.id?.toString() || '');
       localStorage.setItem('loginTime', new Date().toISOString());
 
-      // Extract user's first name for personalization
-      const firstName = data.name ? data.name.split(' ')[0] : data.email.split('@')[0];
-      console.log("Setting user name for motivation dialog:", firstName);
-      setLoggedInUserName(firstName);
-
-      // Show motivation dialog immediately after successful login
-      console.log("Opening motivation dialog...");
-      setShowMotivationDialog(true);
-      
-      // Navigate to dashboard after a short delay to ensure dialog opens first
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 100);
+      // Navigate to dashboard immediately - dialog will show there
+      navigate("/dashboard");
     },
     onError: (error: any) => {
       console.error("Login error:", error);
@@ -273,12 +261,7 @@ export function LoginForm() {
           <Link href="/register" className="text-primary hover:underline">Register</Link>
         </div>
       </CardFooter>
-      <LoginMotivationDialog
-        open={showMotivationDialog}
-        onOpenChange={setShowMotivationDialog}
-        userFirstName={loggedInUserName}
-        loginTime={new Date()}
-      />
+      
     </Card>
   );
 }

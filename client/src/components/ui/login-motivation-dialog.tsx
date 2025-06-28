@@ -224,6 +224,12 @@ export function LoginMotivationDialog({
     console.log('LoginMotivationDialog mounted/updated:', { open, userFirstName, loginTime });
   }, [open, userFirstName, loginTime]);
 
+  // Handle manual close only - no automatic closing
+  const handleClose = (shouldClose: boolean) => {
+    console.log('Manual close triggered:', shouldClose);
+    onOpenChange(shouldClose);
+  };
+
   useEffect(() => {
     // Set random quote
     const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
@@ -333,7 +339,7 @@ export function LoginMotivationDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between text-2xl">
@@ -345,7 +351,7 @@ export function LoginMotivationDialog({
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleClose(false)}
               className="h-6 w-6 p-0"
             >
               ✕
@@ -471,7 +477,7 @@ export function LoginMotivationDialog({
           <div className="flex gap-3">
             <Button variant="outline" size="sm" onClick={() => {
               console.log('View Later clicked - closing dialog');
-              onOpenChange(false);
+              handleClose(false);
             }}>
               View Later
             </Button>
@@ -479,7 +485,7 @@ export function LoginMotivationDialog({
               size="sm" 
               onClick={() => {
                 console.log('Lets Start Testing clicked - closing dialog');
-                onOpenChange(false);
+                handleClose(false);
               }}
               className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
             >

@@ -72,7 +72,14 @@ export default function Dashboard() {
   // Show motivation dialog after login
   useEffect(() => {
     if (user) {
-      setShowMotivationDialog(true);
+      // Check if this is a fresh login (within last 10 seconds)
+      const loginTime = localStorage.getItem('loginTime');
+      if (loginTime) {
+        const timeSinceLogin = Date.now() - new Date(loginTime).getTime();
+        if (timeSinceLogin < 10000) { // 10 seconds
+          setShowMotivationDialog(true);
+        }
+      }
     }
   }, [user]);
   // Show notification dialog on first load
