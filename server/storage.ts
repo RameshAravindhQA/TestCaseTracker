@@ -2131,7 +2131,6 @@ class MemStorage implements IStorage {
   async deleteTestSheet(id: number): Promise<boolean> {
     return this.testSheets.delete(id);
   }
-}
 
   async getTodo(id: number): Promise<any | undefined> {
     return this.todos.get(id);
@@ -2166,67 +2165,6 @@ class MemStorage implements IStorage {
     if (!todo || todo.userId !== userId) return false;
 
     return this.todos.delete(id);
-  }
-
-  async getCustomMarkersByProject(projectId: number): Promise<any[]> {
-    return Array.from(this.customMarkers.values()).filter(marker => marker.projectId === projectId);
-  }
-
-  async createCustomMarker(data: Omit<CustomMarker, 'id'>): Promise<CustomMarker> {
-    const id = this.nextId++;
-
-    const marker: CustomMarker = {
-      ...data,
-      id
-    };
-
-    this.customMarkers.set(id, marker);
-    return marker;
-  }
-
-  async updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null> {
-    const marker = this.customMarkers.get(id);
-    if (!marker) return null;
-
-    const updatedMarker = { ...marker, ...data };
-    this.customMarkers.set(id, updatedMarker);
-    return updatedMarker;
-  }
-
-  async deleteCustomMarker(id: number): Promise<boolean> {
-    return this.customMarkers.delete(id);
-  }
-
-  async getMatrixCellsByProject(projectId: number): Promise<any[]> {
-    return Array.from(this.matrixCells.values()).filter(cell => cell.projectId === projectId);
-  }
-
-  async createMatrixCell(data: Omit<MatrixCell, 'id'>): Promise<MatrixCell> {
-    const id = this.nextId++;
-
-    const cell: MatrixCell = {
-      ...data,
-      id
-    };
-
-    this.matrixCells.set(id, cell);
-    return cell;
-  }
-
-  async getTagsByProject(projectId: number): Promise<Tag[]> {
-    return Array.from(this.tags.values()).filter(tag => tag.projectId === projectId);
-  }
-
-  async getKanbanColumnsByProject(projectId: number): Promise<KanbanColumn[]> {
-    return Array.from(this.kanbanColumns.values())
-      .filter(col => col.projectId === projectId)
-      .sort((a, b) => a.position - b.position);
-  }
-
-  async getKanbanCardsByColumn(columnId: number): Promise<KanbanCard[]> {
-    return Array.from(this.kanbanCards.values())
-      .filter(card => card.columnId === columnId)
-      .sort((a, b) => a.position - b.position);
   }
 
   async getDocumentsByProject(projectId: number): Promise<Document[]> {
