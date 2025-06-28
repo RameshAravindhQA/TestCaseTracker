@@ -23,7 +23,16 @@ import {
   Calendar,
   ToggleLeft,
   List,
-  Calculator
+  Calculator,
+  Bold,
+  Italic,
+  Underline,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Search,
+  Undo,
+  Redo
 } from "lucide-react";
 import {
   DropdownMenu,

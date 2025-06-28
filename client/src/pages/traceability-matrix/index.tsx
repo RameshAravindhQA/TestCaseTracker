@@ -357,78 +357,21 @@ export default function TraceabilityMatrixPage() {
               <FileText className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No data available</h3>
               <p className="mt-1 text-sm text-gray-500">
-                No requirements or test cases found for this project. Create some test cases and bugs to see the matrix.
+                {selectedProjectId 
+                  ? "No requirements or test cases found for this project. Create some test cases and bugs to see the matrix."
+                  : "Please select a project to view the traceability matrix."
+                }
               </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card ref={matrixRef}>
-            <CardHeader>
-              <CardTitle>Requirements vs Test Cases Matrix</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[200px]">Requirements</TableHead>
-                      {testCases.map(testCase => (
-                        <TableHead key={testCase.id} className="min-w-[120px] text-center">
-                          <div className="flex flex-col gap-1">
-                            <span className="font-medium">{testCase.id}</span>
-                            <span className="text-xs text-muted-foreground truncate" title={testCase.title}>
-                              {testCase.title}
-                            </span>
-                          </div>
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {requirements.map(requirement => (
-                      <TableRow key={requirement.id}>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            <span className="font-medium">{requirement.id}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {requirement.title}
-                            </span>
-                            <Badge 
-                              variant={requirement.priority === 'high' ? 'destructive' : 
-                                     requirement.priority === 'medium' ? 'default' : 'secondary'}
-                              className="w-fit"
-                            >
-                              {requirement.priority}
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        {testCases.map(testCase => {
-                          const cellId = `${requirement.id}-${testCase.id}`;
-                          const cell = matrixCells[cellId];
-
-                          return (
-                            <TableCell key={cellId} className="text-center">
-                              <div className="flex justify-center">
-                                <button
-                                  onClick={() => {
-                                    const statuses: TraceabilityCell['status'][] = ['not_covered', 'partial', 'covered'];
-                                    const currentIndex = statuses.indexOf(cell?.status || 'not_covered');
-                                    const nextStatus = statuses[(currentIndex + 1) % statuses.length];
-                                    updateCellStatus(cellId, nextStatus);
-                                  }}
-                                  className="cursor-pointer"
-                                >
-                                  {getCellStatusBadge(cell?.status || 'not_covered')}
-                                </button>
-                              </div>
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              {selectedProjectId && (
+                <div className="mt-4 text-xs text-gray-400 bg-gray-50 p-3 rounded-lg">
+                  <p>Debug Info:</p>
+                  <p>Project ID: {selectedProjectId}</p>
+                  <p>Requirements: {requirements.length}</p>
+                  <p>Test Cases: {testCases.length}</p>
+                  <p>Bugs: {projectBugs?.length || 0}</p>
+                  <p>Test Cases: {projectTestCases?.length || 0}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

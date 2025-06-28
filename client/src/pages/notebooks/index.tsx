@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { MainLayout } from "@/components/layout/main-layout";
 import { NotebookForm } from "@/components/notebooks/notebook-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, BookOpen, Calendar, Tag, Trash2, Edit, Search, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";

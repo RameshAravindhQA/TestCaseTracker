@@ -51,7 +51,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
 
   // Fetch todos
   const { data: todos, isLoading } = useQuery<TodoItem[]>({
-    queryKey: ["/api/todos"],
+    queryKey: ["todos"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/todos");
       if (!response.ok) throw new Error("Failed to fetch todos");
@@ -68,7 +68,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/todos"] });
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
       setNewTodo("");
       toast({
         title: "Todo created",
@@ -85,7 +85,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/todos"] });
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
       setEditingId(null);
       setEditingText("");
     },
@@ -98,7 +98,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
       if (!response.ok) throw new Error("Failed to delete todo");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/todos"] });
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
       toast({
         title: "Todo deleted",
         description: "Your todo has been removed.",
