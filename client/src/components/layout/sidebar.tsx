@@ -179,6 +179,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       href: "/notebooks",
       icon: <FileText className="h-5 w-5" />,
     },
+    {
+      name: "Todo List",
+      href: "/todos",
+      icon: <CheckSquare className="h-5 w-5" />,
+    },
   ], []);
 
   const adminItems: NavItem[] = useMemo(() => [

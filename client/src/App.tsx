@@ -134,6 +134,12 @@ function Router() {
       <Route path="/notebooks">
         <ProtectedComponent Component={NotebooksPage} />
       </Route>
+      <Route path="/messenger">
+        <ProtectedLazyComponent Component={lazy(() => import("./pages/messenger/index"))} />
+      </Route>
+      <Route path="/todos">
+        <ProtectedLazyComponent Component={lazy(() => import("./pages/todos/index"))} />
+      </Route>
       <Route path="/traceability-matrix">
         <ProtectedComponent Component={TraceabilityMatrixPage} />
       </Route>

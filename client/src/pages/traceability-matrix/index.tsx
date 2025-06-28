@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProjectSelect } from "@/components/ui/project-select";
@@ -118,7 +117,7 @@ export default function TraceabilityMatrixPage() {
   useEffect(() => {
     if (selectedProjectId && projectTestCases && projectBugs) {
       setIsLoading(true);
-      
+
       // Convert test cases to requirements format
       const reqs: Requirement[] = projectBugs?.map((bug: any) => ({
         id: `REQ-${bug.id}`,
@@ -222,7 +221,7 @@ export default function TraceabilityMatrixPage() {
       });
 
       const doc = new jsPDF('l', 'mm', 'a4');
-      
+
       // Add title
       doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
@@ -246,13 +245,13 @@ export default function TraceabilityMatrixPage() {
       const imgData = canvas.toDataURL('image/png');
       const imgWidth = 270;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
+
       doc.addImage(imgData, 'PNG', 14, 50, imgWidth, imgHeight);
 
       // Add detailed table on next page if needed
       if (requirements.length > 0 && testCases.length > 0) {
         doc.addPage();
-        
+
         const tableData = requirements.map(req => {
           const row = [req.id, req.title.substring(0, 30)];
           testCases.forEach(tc => {
@@ -325,21 +324,34 @@ export default function TraceabilityMatrixPage() {
           </div>
         </div>
 
-        {!selectedProjectId ? (
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No project selected</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Please select a project to view the traceability matrix.
-              </p>
+        {/* Module Information */}
+        {modules && modules.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Project Modules</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {modules.map(module => (
+                  <div key={module.id} className="p-3 border rounded-lg">
+                    <h4 className="font-medium">{module.name}</h4>
+                    <p className="text-sm text-muted-foreground">{module.description}</p>
+                    <Badge variant="outline" className="mt-2">
+                      {module.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
-        ) : isLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-          </div>
-        ) : requirements.length === 0 || testCases.length === 0 ? (
+        )}
+
+        {/* Traceability Matrix Grid */}
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              </div>
+            ) : requirements.length === 0 || testCases.length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center">
               <FileText className="mx-auto h-12 w-12 text-gray-400" />

@@ -61,6 +61,29 @@ function getContrastColor(hexColor: string): string {
   return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
+interface StatusDropdownProps {
+  currentStatus: string;
+  statusOptions: string[];
+  onStatusChange: (status: string) => void;
+}
+
+const StatusDropdown: React.FC<StatusDropdownProps> = ({ currentStatus, statusOptions, onStatusChange }) => {
+  return (
+    <Select value={currentStatus} onValueChange={onStatusChange}>
+      <SelectTrigger className="w-[180px]">
+        <SelectValue placeholder={currentStatus} />
+      </SelectTrigger>
+      <SelectContent>
+        {statusOptions.map((status) => (
+          <SelectItem key={status} value={status}>
+            {status}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
+
 export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug, onDeleteMultiple }: TestCaseTableProps) {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
@@ -387,17 +410,16 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
                       />
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={
-                        testCase.status === "Pass" 
-                          ? "border-green-200 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-white dark:border-green-700" 
-                          : testCase.status === "Fail" 
-                          ? "border-red-200 bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-white dark:border-red-700" 
-                          : testCase.status === "Blocked"
-                          ? "border-orange-200 bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-white dark:border-orange-700"
-                          : "border-gray-200 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                      }>
-                        {testCase.status}
-                      </Badge>
+                      <StatusDropdown
+                        currentStatus={testCase.status}
+                        statusOptions={["Draft", "Active", "Passed", "Failed", "Blocked", "Pending"]}
+                        onStatusChange={(newStatus) => {
+                          // Handle status update here
+                          const updatedTestCase = { ...testCase, status: newStatus };
+                          // You can add mutation here to update the backend
+                          console.log('Updating test case status:', testCase.id, 'to', newStatus);
+                        }}
+                      />
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={

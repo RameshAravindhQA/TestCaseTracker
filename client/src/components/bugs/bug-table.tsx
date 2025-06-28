@@ -26,12 +26,37 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { GitHubIssueButton } from "@/components/github/github-issue-button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface BugTableProps {
   bugs: Bug[];
   onEdit: (bug: Bug) => void;
   onDelete: (bug: Bug) => void;
   onView: (bug: Bug) => void;
+}
+
+interface StatusDropdownProps {
+  currentStatus: string;
+  statusOptions: string[];
+  onStatusChange: (status: string) => void;
+}
+
+function StatusDropdown({ currentStatus, statusOptions, onStatusChange }: StatusDropdownProps) {
+  return (
+    <Select onValueChange={onStatusChange} defaultValue={currentStatus}>
+      <SelectTrigger className="w-[180px]">
+        <SelectValue placeholder={currentStatus} />
+      </SelectTrigger>
+      <SelectContent>
+        {statusOptions.map((status) => (
+          <SelectItem key={status} value={status}>
+            {status}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }
 
 export function BugTable({ bugs, onEdit, onDelete, onView }: BugTableProps) {
@@ -263,22 +288,16 @@ ${bug.comments || 'No comments provided.'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge 
-                        variant="outline" 
-                        className={
-                          bug.status === "Open" 
-                            ? "border-red-200 bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-white dark:border-red-700" 
-                            : bug.status === "In Progress" 
-                            ? "border-blue-200 bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-white dark:border-blue-700" 
-                            : bug.status === "Resolved"
-                            ? "border-green-200 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-white dark:border-green-700"
-                            : bug.status === "Closed"
-                            ? "border-purple-200 bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-white dark:border-purple-700"
-                            : "border-gray-200 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                        }
-                      >
-                        {bug.status}
-                      </Badge>
+                      <StatusDropdown
+                        currentStatus={bug.status}
+                        statusOptions={["Open", "In Progress", "Resolved", "Closed", "Rejected"]}
+                        onStatusChange={(newStatus) => {
+                          // Handle status update here
+                          const updatedBug = { ...bug, status: newStatus };
+                          // You can add mutation here to update the backend
+                          console.log('Updating bug status:', bug.id, 'to', newStatus);
+                        }}
+                      />
                     </TableCell>
                     <TableCell>
                       {(() => {
