@@ -14,18 +14,19 @@ export function DashboardWelcomeDialog({ user }: DashboardWelcomeDialogProps) {
 
   useEffect(() => {
     // Only show if user exists and dialog hasn't been shown today
-    if (user && user.firstName) {
+    if (user && (user.firstName || user.name)) {
       const today = new Date().toDateString();
       const lastShown = localStorage.getItem('welcomeDialogLastShown');
+      const userName = user.firstName || user.name || 'User';
       
-      console.log("Welcome dialog check:", { user: user.firstName, today, lastShown });
+      console.log("Welcome dialog check:", { user: userName, today, lastShown });
       
       if (lastShown !== today) {
         // Show after a delay to ensure dashboard is fully loaded
         const timer = setTimeout(() => {
-          console.log("Showing welcome dialog for:", user.firstName);
+          console.log("Showing welcome dialog for:", userName);
           setIsOpen(true);
-        }, 1500); // Reduced delay
+        }, 2000);
 
         return () => clearTimeout(timer);
       }
@@ -38,8 +39,8 @@ export function DashboardWelcomeDialog({ user }: DashboardWelcomeDialogProps) {
     localStorage.setItem('welcomeDialogLastShown', today);
   };
 
-  if (!user || !user.firstName) {
-    console.log("Welcome dialog: No user or firstName", user);
+  if (!user || (!user.firstName && !user.name)) {
+    console.log("Welcome dialog: No user or name", user);
     return null;
   }
 
@@ -49,7 +50,7 @@ export function DashboardWelcomeDialog({ user }: DashboardWelcomeDialogProps) {
   if (hour < 12) greeting = "Good Morning";
   else if (hour < 17) greeting = "Good Afternoon";
 
-  const userFirstName = user.firstName;
+  const userFirstName = user.firstName || user.name || 'User';
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>

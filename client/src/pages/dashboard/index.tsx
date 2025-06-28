@@ -237,3 +237,13 @@ import {
     </DashboardLayout>
   );
 }
+
+export default function Dashboard() {
+  const { user } = useAuth();
+
+  // Also fetch user data directly to ensure it's available for the welcome dialog
+  const { data: userData } = useQuery({
+    queryKey: ["/api/auth/user"],
+    retry: false,
+    throwOnError: false,
+  });
