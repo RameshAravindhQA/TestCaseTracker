@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/select";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Notebook } from "@/types";
+import { AttachmentViewer } from "@/components/notebooks/attachment-viewer";
 
 export default function NotebooksPage() {
   const { toast } = useToast();
@@ -591,7 +592,7 @@ export default function NotebooksPage() {
                         <div className="space-y-2">
                           {selectedNotebook.attachments.map((attachment: any, index: number) => (
                             <div key={index} className="flex items-center gap-2 text-sm p-2 border rounded">
-                              <span>{attachment.name}</span>
+                              <AttachmentViewer attachment={attachment} />
                             </div>
                           ))}
                         </div>
