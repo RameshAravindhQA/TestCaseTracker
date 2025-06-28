@@ -247,6 +247,8 @@ export default function Dashboard() {
     throwOnError: false,
   });
 }
+import { DashboardWelcomeDialog } from "@/components/ui/dashboard-welcome-dialog";
+import { OnboardingTutorial } from "@/components/onboarding/onboarding-tutorial";
 export function DashboardPage() {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);

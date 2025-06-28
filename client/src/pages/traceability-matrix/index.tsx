@@ -483,125 +483,46 @@ export default function TraceabilityMatrixPage() {
               </CardContent>
             </Card>
 
-            {/* Markers Management */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Custom Markers</CardTitle>
-                  <Dialog open={isMarkerDialogOpen} onOpenChange={setIsMarkerDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button onClick={() => setEditingMarker(null)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Marker
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>
-                          {editingMarker ? 'Edit Marker' : 'Create New Marker'}
-                        </DialogTitle>
-                        <DialogDescription>
-                          Create a custom marker with a label and color for the traceability matrix.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="label" className="text-right">
-                            Label
-                          </Label>
-                          <Input
-                            id="label"
-                            value={newMarker.label}
-                            onChange={(e) => setNewMarker(prev => ({ ...prev, label: e.target.value }))}
-                            className="col-span-3"
-                            placeholder="Enter marker label"
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="color" className="text-right">
-                            Color
-                          </Label>
-                          <div className="col-span-3 flex items-center gap-2">
-                            <input
-                              type="color"
-                              id="color"
-                              value={newMarker.color}
-                              onChange={(e) => setNewMarker(prev => ({ ...prev, color: e.target.value }))}
-                              className="w-12 h-10 rounded border border-gray-300"
-                            />
-                            <Input
-                              value={newMarker.color}
-                              onChange={(e) => setNewMarker(prev => ({ ...prev, color: e.target.value }))}
-                              placeholder="#4F46E5"
-                              className="flex-1"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button 
-                          onClick={editingMarker ? handleUpdateMarker : handleCreateMarker}
-                          disabled={createMarkerMutation.isPending || updateMarkerMutation.isPending}
-                        >
-                          {editingMarker ? 'Update' : 'Create'} Marker
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {customMarkers.map((marker) => (
-                    <div
-                      key={marker.id}
-                      className={`flex items-center gap-2 p-2 rounded-lg border-2 cursor-pointer transition-all ${
-                        selectedMarkerId === marker.markerId
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      onClick={() => setSelectedMarkerId(
-                        selectedMarkerId === marker.markerId ? null : marker.markerId
-                      )}
-                    >
+            {/* Selected Marker Display */}
+            {customMarkers.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Available Markers</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Select a marker and click on matrix cells to assign it. Manage markers in Settings.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {customMarkers.map((marker) => (
                       <div
-                        className="w-4 h-4 rounded-full border border-gray-300"
-                        style={{ backgroundColor: marker.color }}
-                      />
-                      <span className="text-sm font-medium">{marker.label}</span>
-                      <div className="flex items-center gap-1 ml-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditMarker(marker);
-                          }}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteMarker(marker.id);
-                          }}
-                        >
-                          <Trash className="h-3 w-3" />
-                        </Button>
+                        key={marker.id}
+                        className={`flex items-center gap-2 p-2 rounded-lg border-2 cursor-pointer transition-all ${
+                          selectedMarkerId === marker.markerId
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => setSelectedMarkerId(
+                          selectedMarkerId === marker.markerId ? null : marker.markerId
+                        )}
+                      >
+                        <div
+                          className="w-4 h-4 rounded-full border border-gray-300"
+                          style={{ backgroundColor: marker.color }}
+                        />
+                        <span className="text-sm font-medium">{marker.label}</span>
                       </div>
-                    </div>
-                  ))}
-                </div>
-                {selectedMarkerId && (
-                  <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
-                    <strong>Selected:</strong> {customMarkers.find(m => m.markerId === selectedMarkerId)?.label} - 
-                    Click on matrix cells to assign this marker
+                    ))}
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  {selectedMarkerId && (
+                    <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                      <strong>Selected:</strong> {customMarkers.find(m => m.markerId === selectedMarkerId)?.label} - 
+                      Click on matrix cells to assign this marker
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Module Traceability Matrix */}
             {modules.length > 0 ? (
@@ -653,8 +574,10 @@ export default function TraceabilityMatrixPage() {
                               </div>
                             </TableCell>
                             {modules.map(colModule => {
-                              const cellContent = getCellContent(rowModule.id, colModule.id);
+                              const key = `${rowModule.id}-${colModule.id}`;
+                              const cell = matrixCells[key];
                               const isDisabled = rowModule.id === colModule.id;
+                              const matrixCell = matrixCells[key];
 
                               return (
                                 <TableCell key={colModule.id} className="text-center p-3 border-r border-gray-200">
@@ -675,15 +598,40 @@ export default function TraceabilityMatrixPage() {
                                           : 'Select a marker first'
                                     }
                                   >
-                                    {isDisabled ? (
-                                      <X className="h-4 w-4 text-gray-400" />
-                                    ) : (
-                                      cellContent || (
-                                        selectedMarkerId && (
-                                          <div className="w-2 h-2 bg-blue-400 rounded-full opacity-40"></div>
-                                        )
-                                      )
-                                    )}
+                                    {isDisabled
+                                      ? <X className="h-4 w-4 text-gray-400" />
+                                      : matrixCell?.value
+                                        ? (() => {
+                                            const marker = customMarkers.find(m => m.markerId === matrixCell.value);
+                                            const backgroundColor = marker?.color || '#ccc';
+                                            // Calculate text color based on background brightness
+                                            const getTextColor = (bgColor: string) => {
+                                              const hex = bgColor.replace('#', '');
+                                              const r = parseInt(hex.substr(0, 2), 16);
+                                              const g = parseInt(hex.substr(2, 2), 16);
+                                              const b = parseInt(hex.substr(4, 2), 16);
+                                              const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                                              return brightness > 128 ? '#000000' : '#ffffff';
+                                            };
+
+                                            return (
+                                              <div 
+                                                className="px-2 py-1 rounded text-xs font-medium text-center break-words"
+                                                style={{ 
+                                                  backgroundColor,
+                                                  color: getTextColor(backgroundColor),
+                                                  minHeight: '32px',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center'
+                                                }}
+                                              >
+                                                {marker?.label || 'Unknown'}
+                                              </div>
+                                            );
+                                          })()
+                                        : null
+                                    }
                                   </div>
                                   {!isDisabled && (
                                     <div className="text-xs text-gray-400 mt-1">

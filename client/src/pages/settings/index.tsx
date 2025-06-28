@@ -52,6 +52,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
+import { RolePermissions } from "@/components/settings/role-permissions";
+import { MarkerManagement } from "@/components/settings/marker-management";
 
 // Types
 interface SystemSettings {
@@ -857,8 +859,7 @@ export default function SettingsPage() {
                                   <SelectItem value="s3">Amazon S3</SelectItem>
                                   <SelectItem value="gcs">Google Cloud Storage</SelectItem>
                                   <SelectItem value="azure">Azure Blob Storage</SelectItem>
-                                </SelectContent>
-                              </Select>
+                                </SelectContent</Select>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -1219,7 +1220,7 @@ export default function SettingsPage() {
 
             {/* Permissions Settings */}
             {activeTab === "permissions" && (
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -1248,6 +1249,18 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
+{/* Marker Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Marker Management</CardTitle>
+              <CardDescription>
+                Create and manage custom markers for traceability matrices
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MarkerManagement />
+            </CardContent>
+          </Card>
           </div>
         </div>
       </div>

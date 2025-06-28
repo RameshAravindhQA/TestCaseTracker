@@ -6183,7 +6183,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Custom Markers CRUD
   apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
     try {
-      const { markerId, label, color, type, projectId, createdById } = req.body;
+      const { label, color, projectId } = req.body;
+      
+      if (!label || !color || !projectId) {
+        return res.status(400).json({ message: "Label, color, and projectId are required" });
+      }
       
       // Check if user has access to this project
       const project = await storage.getProject(projectId);
@@ -6200,32 +6204,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Check if storage method exists
-      if (typeof storage.createCustomMarker === 'function') {
-        const marker = await storage.createCustomMarker({
-          markerId,
-          label,
-          color,
-          type,
-          projectId,
-          createdById: req.session.userId || createdById
-        });
-        res.json(marker);
-      } else {
-        // Return a mock response if method doesn't exist
-        const mockMarker = {
-          id: `marker-${Date.now()}`,
-          markerId,
-          label,
-          color,
-          type,
-          projectId,
-          createdById: req.session.userId || createdById,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        res.json(mockMarker);
-      }
+      const markerData = {
+        markerId: `marker-${Date.now()}`,
+        label,
+        color,
+        type: 'custom',
+        projectId: parseInt(projectId),
+        createdById: req.session.userId
+      };
+      
+      const marker = await storage.createCustomMarker(markerData);
+      res.status(201).json(marker);
     } catch (error) {
       console.error("Create custom marker error:", error);
       res.status(500).json({ message: "Failed to create custom marker" });
