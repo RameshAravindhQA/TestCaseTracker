@@ -26,7 +26,8 @@ import {
   Settings, 
   Trash, 
   X,
-  Tag
+  Tag,
+  Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -416,6 +417,62 @@ export default function TraceabilityMatrixPage() {
 
   const currentProject = projects?.find(p => p.id === selectedProjectId);
 
+  // Save matrix mutation
+  const saveMatrixMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/traceability-matrix/save", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: selectedProjectId,
+          matrixData: Object.entries(matrixCells).map(([key, cell]) => {
+            const [rowModuleId, colModuleId] = key.split('-').map(Number);
+            return {
+              rowModuleId,
+              colModuleId,
+              markerId: cell.value,
+            };
+          }),
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || 'Failed to save matrix');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Matrix Saved",
+        description: "Traceability matrix has been saved successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/cells"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Save Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveMatrix = () => {
+    if (!selectedProjectId) {
+      toast({
+        title: "No Project Selected",
+        description: "Please select a project before saving the matrix",
+        variant: "destructive",
+      });
+      return;
+    }
+    saveMatrixMutation.mutate();
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto p-6 space-y-6">
@@ -478,6 +535,19 @@ export default function TraceabilityMatrixPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+            <Button 
+                variant="default" 
+                size="sm"
+                onClick={handleSaveMatrix}
+                disabled={saveMatrixMutation.isPending}
+              >
+                {saveMatrixMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Save Matrix
+              </Button>
             <Button onClick={exportToCSV} variant="outline" disabled={!selectedProjectId || modules.length === 0}>
               <Download className="h-4 w-4 mr-2" />
               Export CSV
