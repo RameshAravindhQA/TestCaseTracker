@@ -1,5 +1,4 @@
 
-
 import { ReactNode, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -12,6 +11,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [, navigate] = useLocation();
   const redirectedRef = useRef(false);
+  const hasCheckedAuthRef = useRef(false);
 
   // Check localStorage for initial auth state
   const isLocallyAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
@@ -26,13 +26,14 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   });
 
   useEffect(() => {
-    // Prevent multiple redirections
-    if (redirectedRef.current) return;
+    // Prevent multiple redirections and multiple checks
+    if (redirectedRef.current || hasCheckedAuthRef.current) return;
 
     // If not authenticated locally, redirect immediately
     if (!isLocallyAuthenticated) {
       console.log("Not authenticated according to localStorage, redirecting to login");
       redirectedRef.current = true;
+      hasCheckedAuthRef.current = true;
       navigate("/login");
       return;
     }
@@ -42,12 +43,19 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       console.log("User not authenticated by server, redirecting to login");
       localStorage.removeItem('isAuthenticated');
       redirectedRef.current = true;
+      hasCheckedAuthRef.current = true;
       navigate("/login");
+      return;
     }
-  }, [isLocallyAuthenticated, isLoading, isError, user]);
+
+    // Mark as checked if we have a successful authentication
+    if (!isLoading && user && isLocallyAuthenticated) {
+      hasCheckedAuthRef.current = true;
+    }
+  }, [isLocallyAuthenticated, isLoading, isError, user, navigate]);
 
   // Show loading state while checking authentication
-  if (!redirectedRef.current && (isLoading || !isLocallyAuthenticated)) {
+  if (!hasCheckedAuthRef.current && (isLoading || !isLocallyAuthenticated)) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -67,4 +75,3 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   // If authenticated and no redirect, render children
   return <>{children}</>;
 }
-
