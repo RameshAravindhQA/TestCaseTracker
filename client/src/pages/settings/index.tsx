@@ -864,8 +864,6 @@ export default function SettingsPage() {
                         )}
                       />
 
-                      </FormField>
-
                       <FormField
                         control={backupForm.control}
                         name="retentionPeriod"
