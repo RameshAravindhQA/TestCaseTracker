@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -79,46 +78,61 @@ export default function Messenger() {
   }, [messages]);
 
   const connectWebSocket = () => {
-    try {
-      const ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/chat`);
-      
-      ws.onopen = () => {
-        console.log('WebSocket connected');
-        setIsConnected(true);
-        
-        ws.send(JSON.stringify({
-          type: 'authenticate',
-          data: {
-            userId: user?.id,
-            userName: user?.name
+    // Ensure WebSocket connection uses correct path with retry logic
+    let ws: WebSocket;
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    function createWebSocketConnection() {
+      try {
+        ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/chat`);
+
+        ws.onopen = () => {
+          console.log('WebSocket connected successfully');
+          setIsConnected(true);
+          retryCount = 0;
+
+          ws.send(JSON.stringify({
+            type: 'authenticate',
+            data: {
+              userId: user?.id,
+              userName: user?.name
+            }
+          }));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleWebSocketMessage(data);
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
           }
-        }));
-      };
+        };
 
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          handleWebSocketMessage(data);
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
+        ws.onerror = (error) => {
+          console.log('WebSocket connection error:', error);
+          setIsConnected(false);
+        };
 
-      ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        setIsConnected(false);
-        setTimeout(connectWebSocket, 3000);
-      };
+        ws.onclose = () => {
+          setIsConnected(false);
+          if (retryCount < maxRetries) {
+            retryCount++;
+            console.log(`WebSocket connection closed, retrying... (${retryCount}/${maxRetries})`);
+            setTimeout(createWebSocketConnection, 2000 * retryCount);
+          } else {
+            console.log('Max WebSocket connection retries reached.');
+          }
+        };
 
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setIsConnected(false);
-      };
-
-      wsRef.current = ws;
-    } catch (error) {
-      console.error('Failed to connect WebSocket:', error);
+        wsRef.current = ws;
+      } catch (error) {
+        console.error('Failed to create WebSocket connection:', error);
+      }
     }
+
+    createWebSocketConnection();
   };
 
   const handleWebSocketMessage = (data: any) => {
@@ -214,7 +228,7 @@ export default function Messenger() {
       if (response.ok) {
         const messagesData = await response.json();
         setMessages(messagesData);
-        
+
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({
             type: 'join_conversation',

@@ -65,8 +65,21 @@ async function startServer() {
 
     const httpServer = await registerRoutes(app);
 
-    // Initialize database
-    await initializeDatabase();
+    // Initialize database with retry logic
+    let dbInitialized = false;
+    let retries = 3;
+    while (!dbInitialized && retries > 0) {
+      try {
+        await initializeDatabase();
+        dbInitialized = true;
+        console.log("✅ Database initialized successfully");
+      } catch (error) {
+        console.log(`❌ Database initialization failed, retries left: ${retries - 1}`);
+        retries--;
+        if (retries === 0) throw error;
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;

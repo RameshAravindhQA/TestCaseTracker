@@ -8,16 +8,16 @@ interface PasswordInputProps extends Omit<InputProps, "type"> {
   showToggle?: boolean;
 }
 
-export function PasswordInput({
-  className,
-  showToggle = true,
-  ...props
-}: PasswordInputProps) {
+export const PasswordInput = React.forwardRef<
+  React.ElementRef<typeof Input>,
+  PasswordInputProps
+>(({ className, showToggle = true, ...props }, ref) => {
   const [showPassword, setShowPassword] = React.useState(false);
 
   return (
     <div className="relative">
       <Input
+        ref={ref}
         type={showPassword ? "text" : "password"}
         className={cn(showToggle && "pr-10", className)}
         {...props}
@@ -40,7 +40,8 @@ export function PasswordInput({
             {showPassword ? "Hide password" : "Show password"}
           </span>
         </Button>
-      )}
     </div>
   );
-}
+});
+
+PasswordInput.displayName = "PasswordInput";
