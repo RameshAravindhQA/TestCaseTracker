@@ -1976,7 +1976,6 @@ Adding todos Map to the MemStorage class to store todo items.```text
 
     return this.todos.delete(id);
   }
-}
 
   async getCustomMarkersByProject(projectId: number): Promise<any[]> {
     return Array.from(this.customMarkers.values()).filter(marker => marker.projectId === projectId);
