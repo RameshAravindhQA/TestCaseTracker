@@ -1,62 +1,34 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Clock, Lightbulb, TrendingUp, X } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
 
-export function DashboardWelcomeDialog() {
+interface DashboardWelcomeDialogProps {
+  user: any;
+}
+
+export function DashboardWelcomeDialog({ user }: DashboardWelcomeDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [hasCheckedWelcome, setHasCheckedWelcome] = useState(false);
-  const { user, isLoading } = useAuth();
 
   useEffect(() => {
-    // Prevent multiple checks
-    if (hasCheckedWelcome) return;
-
-    // Wait for auth to complete
-    if (isLoading) return;
-
-    // Only proceed if user is authenticated
-    if (!user) {
-      setHasCheckedWelcome(true);
-      return;
-    }
-
-    // Check if dialog has been shown before
-    const hasSeenWelcome = localStorage.getItem('hasSeenDashboardWelcome');
-    
-    console.log("DashboardWelcomeDialog - Checking welcome state:", { 
-      hasSeenWelcome, 
-      user: !!user,
-      hasCheckedWelcome
-    });
-    
-    // Show dialog if user is authenticated and hasn't seen it before
-    if (!hasSeenWelcome) {
-      console.log("DashboardWelcomeDialog - Showing welcome dialog");
-      // Add a small delay to ensure dashboard is fully rendered
+    // Only show if user exists and dialog hasn't been shown
+    if (user && !localStorage.getItem('hasSeenDashboardWelcome')) {
+      // Show after a brief delay to ensure dashboard is rendered
       const timer = setTimeout(() => {
         setIsOpen(true);
-      }, 500);
-      
-      setHasCheckedWelcome(true);
+      }, 1000);
+
       return () => clearTimeout(timer);
-    } else {
-      setHasCheckedWelcome(true);
     }
-  }, [user, isLoading, hasCheckedWelcome]);
+  }, [user]);
 
   const handleClose = () => {
     setIsOpen(false);
     localStorage.setItem('hasSeenDashboardWelcome', 'true');
   };
 
-  // Don't render anything if still loading or no user
-  if (isLoading || !user) {
-    return null;
-  }
+  if (!user) return null;
 
   const currentTime = new Date();
   const hour = currentTime.getHours();
@@ -64,7 +36,6 @@ export function DashboardWelcomeDialog() {
   if (hour < 12) greeting = "Good Morning";
   else if (hour < 17) greeting = "Good Afternoon";
 
-  // Get user's first name safely
   const userFirstName = user?.firstName || "there";
 
   return (
@@ -91,7 +62,7 @@ export function DashboardWelcomeDialog() {
               month: 'long', 
               day: 'numeric' 
             })} at {currentTime.toLocaleTimeString()}
-            <Badge variant="secondary" className="ml-2">Session Just Started</Badge>
+            <Badge variant="secondary" className="ml-2">Session Active</Badge>
           </div>
         </DialogHeader>
 
@@ -105,45 +76,44 @@ export function DashboardWelcomeDialog() {
             <p className="text-sm italic text-muted-foreground">
               "The only way to do great work is to love what you do."
             </p>
-            <p className="text-xs text-muted-foreground mt-1">— Steve Jobs, motivation</p>
+            <p className="text-xs text-muted-foreground mt-1">— Steve Jobs</p>
           </div>
 
           {/* Latest Updates */}
           <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="h-4 w-4 text-green-600" />
-              <h3 className="font-medium">Latest in Software Testing</h3>
-              <Badge variant="outline" className="text-xs">Just Updated</Badge>
+              <h3 className="font-medium">Testing Industry Updates</h3>
+              <Badge variant="outline" className="text-xs">Fresh Insights</Badge>
             </div>
-            
+
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                 <div>
                   <h4 className="text-sm font-medium">AI-Powered Test Generation</h4>
                   <p className="text-xs text-muted-foreground">
-                    New advances in AI capabilities for automated test case generation, reducing manual effort by 70%.
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">Source: Microsoft Dev Blog</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
-                <div>
-                  <h4 className="text-sm font-medium">Shift-Left Testing Revolution</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Quality study shows 65% cost reduction when defects are caught during development vs production.
+                    Revolutionary advances in AI for automated test case creation, improving efficiency by 70%.
                   </p>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
-                <div className="w-2 h-2 bg-red-600 rounded-full mt-2"></div>
+                <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                 <div>
-                  <h4 className="text-sm font-medium">Security Testing Integration</h4>
+                  <h4 className="text-sm font-medium">Shift-Left Testing Adoption</h4>
                   <p className="text-xs text-muted-foreground">
-                    New frameworks emerging for continuous security testing in CI/CD pipelines.
+                    Early testing practices showing 65% cost reduction in defect resolution.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
+                <div>
+                  <h4 className="text-sm font-medium">Continuous Testing Evolution</h4>
+                  <p className="text-xs text-muted-foreground">
+                    New frameworks for seamless CI/CD integration and real-time quality gates.
                   </p>
                 </div>
               </div>
@@ -159,9 +129,9 @@ export function DashboardWelcomeDialog() {
 
           <div className="flex justify-between items-center">
             <Button variant="outline" onClick={handleClose}>
-              View Later
+              Maybe Later
             </Button>
-            <Button onClick={handleClose} className="bg-gradient-to-r from-blue-500 to-purple-600">
+            <Button onClick={handleClose} className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
               Let's Start Testing! ✨
             </Button>
           </div>

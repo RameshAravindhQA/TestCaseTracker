@@ -232,8 +232,8 @@ import {
       </div>
 </div>
 
-      {/* Welcome Dialog - show after initial auth check */}
-      <DashboardWelcomeDialog />
+      {/* Welcome Dialog - pass user directly */}
+      <DashboardWelcomeDialog user={user} />
     </DashboardLayout>
   );
 }
