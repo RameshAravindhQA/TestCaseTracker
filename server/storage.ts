@@ -831,7 +831,7 @@ class MemStorage implements IStorage {
 
   async deleteKanbanColumn(id: number): Promise<boolean> {
     // Also delete all cards in this column
-    const cardsInColumn = Array.from(this.kanbanCards.values()).filter(```tool_code
+    const cardsInColumn = Array.from(this.kanbanCards.values()).filter(
 card => card.columnId === id);
     cardsInColumn.forEach(card => this.kanbanCards.delete(card.id));
 
@@ -866,6 +866,10 @@ card => card.columnId === id);
   }
 
   async deleteKanbanCard(id: number): Promise<boolean> {
+    // Also delete all cards in this column
+    const cardsInColumn = Array.from(this.kanbanCards.values()).filter(card => card.columnId === id);
+    cardsInColumn.forEach(card => this.kanbanCards.delete(card.id));
+
     return this.kanbanCards.delete(id);
   }
 
@@ -1242,7 +1246,7 @@ card => card.columnId === id);
       .filter(project => project.createdById === userId);
 
     console.log(`Storage: getProjectsByUserId(${userId}) returning ${createdProjects.length} projects created by user`);
-    
+
     return createdProjects;
   }
 
@@ -2534,3 +2538,6 @@ card => card.columnId === id);
       return cell;
     }
   }
+}
+
+export { MemStorage };
