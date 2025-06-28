@@ -28,6 +28,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { GitHubIssueButton } from "@/components/github/github-issue-button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 interface BugTableProps {
   bugs: Bug[];
@@ -288,7 +289,7 @@ ${bug.comments || 'No comments provided.'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <StatusDropdown
+                      {/*<StatusDropdown
                         currentStatus={bug.status}
                         statusOptions={["Open", "In Progress", "Resolved", "Closed", "Rejected"]}
                         onStatusChange={(newStatus) => {
@@ -297,6 +298,16 @@ ${bug.comments || 'No comments provided.'}
                           // You can add mutation here to update the backend
                           console.log('Updating bug status:', bug.id, 'to', newStatus);
                         }}
+                      />*/}
+                      <Input
+                        value={bug.status}
+                        onChange={(e) => {
+                            const newStatus = e.target.value;
+                            const updatedBug = { ...bug, status: newStatus };
+                            console.log('Updating bug status:', bug.id, 'to', newStatus);
+                        }}
+                        className="w-full"
+                        placeholder="Enter status"
                       />
                     </TableCell>
                     <TableCell>

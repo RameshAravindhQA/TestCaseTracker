@@ -246,8 +246,13 @@ function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
     }
   };
 
-  const removeTag = (tagToRemove: string) => {
-    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+  const removeTag = (tagToRemove: any) => {
+    setTags(prev => prev.filter(tag => {
+      if (typeof tag === 'string') {
+        return tag !== tagToRemove;
+      }
+      return tag.name !== (typeof tagToRemove === 'string' ? tagToRemove : tagToRemove.name);
+    }));
   };
 
   const addChecklistItem = () => {
@@ -358,7 +363,7 @@ function NotebookForm({ notebook, onSuccess }: NotebookFormProps) {
                 {typeof tag === 'object' ? tag.name : tag}
                 <X 
                   className="h-3 w-3 cursor-pointer hover:text-red-500" 
-                  onClick={() => removeTag(tag)}
+                  onClick={() => removeTag(typeof tag === 'object' ? tag.name : tag)}
                 />
               </Badge>
             ))}

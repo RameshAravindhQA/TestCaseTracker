@@ -179,9 +179,15 @@ const Messenger = () => {
       try {
         const response = await apiRequest("POST", `/api/projects/${selectedConversation}/chat`, messageData);
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Send message error:", errorText);
-          throw new Error(`Failed to send message: ${response.status} ${response.statusText}`);
+          // Try to get error message from response
+          let errorMessage = `Server error: ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch {
+            errorMessage = await response.text() || errorMessage;
+          }
+          throw new Error(errorMessage);
         }
         return response.json();
       } catch (error) {
