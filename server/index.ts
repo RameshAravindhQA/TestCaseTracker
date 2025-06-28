@@ -3,88 +3,121 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 import path from "path";
+import { createServer } from "http";
+import { logger } from "./logger";
+import { initializeDatabase } from "./matrix-fix";
+import { ChatWebSocketServer } from "./websocket";
 
-const app = express();
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(cors());
+const PORT = process.env.PORT || 5000;
 
-// Add error handling for malformed JSON
-app.use((error: any, req: any, res: any, next: any) => {
-  if (error instanceof SyntaxError && 'body' in error) {
-    console.error('JSON parsing error:', error.message);
-    return res.status(400).json({ 
-      success: false,
-      error: 'Invalid JSON in request body' 
+async function startServer() {
+  try {
+    const app = express();
+
+    // Basic middleware
+    app.use(express.json({ limit: '50mb' }));
+    app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+    app.use(cors());
+
+    // Add error handling for malformed JSON
+    app.use((error: any, req: any, res: any, next: any) => {
+      if (error instanceof SyntaxError && 'body' in error) {
+        console.error('JSON parsing error:', error.message);
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid JSON in request body'
+        });
+      }
+      next(error);
     });
-  }
-  next(error);
-});
 
-app.use(express.static(path.join(import.meta.dirname, '../client/dist')));
+    app.use(express.static(path.join(import.meta.dirname, '../client/dist')));
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+    app.use((req, res, next) => {
+      const start = Date.now();
+      const path = req.path;
+      let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+      const originalResJson = res.json;
+      res.json = function (bodyJson, ...args) {
+        capturedJsonResponse = bodyJson;
+        return originalResJson.apply(res, [bodyJson, ...args]);
+      };
 
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
+      res.on("finish", () => {
+        const duration = Date.now() - start;
+        if (path.startsWith("/api")) {
+          let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+          if (capturedJsonResponse) {
+            logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+          }
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
+          if (logLine.length > 80) {
+            logLine = logLine.slice(0, 79) + "…";
+          }
 
-      log(logLine);
+          log(logLine);
+        }
+      });
+
+      next();
+    });
+
+    const httpServer = await registerRoutes(app);
+
+    // Initialize WebSocket server
+    const chatWS = new ChatWebSocketServer(httpServer);
+
+    // Store WebSocket server reference globally for access in routes
+    (global as any).chatWebSocket = chatWS;
+
+    // Initialize database
+    await initializeDatabase();
+
+    httpServer.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
+      console.log(`WebSocket server initialized for real-time chat`);
+      logger.info(`Server started on port ${PORT} with WebSocket support`);
+    });
+
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+
+      res.status(status).json({ message });
+      throw err;
+    });
+
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
+    if (app.get("env") === "development") {
+      await setupVite(app, httpServer);
+    } else {
+      serveStatic(app);
     }
-  });
 
-  next();
-});
+    // ALWAYS serve the app on a port that isn't in use
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
+    const port = 5000;
+    httpServer.listen(
+      {
+        port,
+        host: "0.0.0.0",
+        reusePort: true,
+      },
+      () => {
+        log(`serving on port ${port}`);
+      },
+    );
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    logger.error("Server startup failed:", error);
+    process.exit(1);
+  }
+}
 
 (async () => {
-  const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
-  // ALWAYS serve the app on a port that isn't in use
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  await startServer();
 })();

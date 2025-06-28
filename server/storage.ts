@@ -2358,39 +2358,372 @@ card => card.columnId === id);
     return Array.from(this.documentFolders.values()).filter(folder => folder.projectId === projectId);
   }
 
-  // Messenger methods
+  // Enhanced Chat and Messaging methods
+  private conversations = new Map<number, any>();
+  private chatMessages = new Map<number, any>();
+  private messageReactions = new Map<number, any[]>();
+  private messageThreads = new Map<number, number[]>();
+  private conversationMembers = new Map<number, Set<number>>();
+  private messageReadStatus = new Map<string, Set<number>>(); // messageId-userId -> Set<userId>
+
   async getChatsByUser(userId: number): Promise<any[]> {
-    // Mock implementation - replace with actual database logic
-    return [
-      {
-        id: 1,
-        name: 'General Discussion',
-        type: 'group',
-        participants: Array.from(this.users.values()).slice(0, 3),
-        lastMessage: {
-          id: 1,
-          content: 'Hello everyone!',
-          senderId: 1,
-          createdAt: new Date().toISOString()
-        },
-        unreadCount: 2,
-        isArchived: false,
-        createdAt: new Date().toISOString()
-      }
-    ];
+    const userConversations = Array.from(this.conversations.values()).filter(conv => 
+      conv.type === 'direct' && conv.participants.includes(userId) ||
+      conv.type === 'group' && this.conversationMembers.get(conv.id)?.has(userId)
+    );
+
+    return userConversations.map(conv => ({
+      ...conv,
+      lastMessage: this.getLastMessageForConversation(conv.id),
+      unreadCount: this.getUnreadCountForUser(conv.id, userId)
+    }));
   }
 
-  async createChat(chatData: any): Promise<any> {
+  async createConversation(conversationData: any): Promise<any> {
     const id = this.getNextId();
-    const chat = {
+    const conversation = {
       id,
-      ...chatData,
+      ...conversationData,
       createdAt: new Date().toISOString(),
-      unreadCount: 0,
-      isArchived: false
+      updatedAt: new Date().toISOString()
     };
-    // Store in actual storage system
-    return chat;
+    
+    this.conversations.set(id, conversation);
+    
+    // Initialize members
+    this.conversationMembers.set(id, new Set(conversationData.participants || []));
+    
+    return conversation;
+  }
+
+  async getConversation(id: number): Promise<any | null> {
+    return this.conversations.get(id) || null;
+  }
+
+  async updateConversation(id: number, updates: any): Promise<any | null> {
+    const conversation = this.conversations.get(id);
+    if (!conversation) return null;
+
+    const updated = {
+      ...conversation,
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.conversations.set(id, updated);
+    return updated;
+  }
+
+  async deleteConversation(id: number): Promise<boolean> {
+    const deleted = this.conversations.delete(id);
+    this.conversationMembers.delete(id);
+    
+    // Delete all messages in conversation
+    const messages = Array.from(this.chatMessages.values()).filter(msg => msg.conversationId === id);
+    messages.forEach(msg => this.chatMessages.delete(msg.id));
+    
+    return deleted;
+  }
+
+  async addConversationMember(conversationId: number, userId: number): Promise<boolean> {
+    const members = this.conversationMembers.get(conversationId);
+    if (!members) return false;
+    
+    members.add(userId);
+    return true;
+  }
+
+  async removeConversationMember(conversationId: number, userId: number): Promise<boolean> {
+    const members = this.conversationMembers.get(conversationId);
+    if (!members) return false;
+    
+    return members.delete(userId);
+  }
+
+  async getConversationMembers(conversationId: number): Promise<any[]> {
+    const memberIds = this.conversationMembers.get(conversationId);
+    if (!memberIds) return [];
+    
+    const members = [];
+    for (const userId of memberIds) {
+      const user = this.users.get(userId);
+      if (user) {
+        members.push({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          profilePicture: user.profilePicture,
+          role: user.role,
+          isOnline: false // Will be updated by WebSocket server
+        });
+      }
+    }
+    
+    return members;
+  }
+
+  async createChatMessage(messageData: any): Promise<any> {
+    const id = this.getNextId();
+    const message = {
+      id,
+      ...messageData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isEdited: false,
+      reactions: [],
+      replyCount: 0
+    };
+    
+    this.chatMessages.set(id, message);
+    
+    // Update conversation's last message
+    const conversation = this.conversations.get(messageData.conversationId);
+    if (conversation) {
+      conversation.lastMessage = message;
+      conversation.lastMessageAt = message.createdAt;
+      conversation.updatedAt = message.createdAt;
+    }
+    
+    // If this is a reply, update thread
+    if (messageData.replyToId) {
+      const parentMessage = this.chatMessages.get(messageData.replyToId);
+      if (parentMessage) {
+        parentMessage.replyCount = (parentMessage.replyCount || 0) + 1;
+        
+        // Add to thread
+        if (!this.messageThreads.has(messageData.replyToId)) {
+          this.messageThreads.set(messageData.replyToId, []);
+        }
+        this.messageThreads.get(messageData.replyToId)!.push(id);
+      }
+    }
+    
+    return message;
+  }
+
+  async getChatMessages(conversationId: number, limit: number = 50, offset: number = 0): Promise<any[]> {
+    const messages = Array.from(this.chatMessages.values())
+      .filter(msg => msg.conversationId === conversationId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      .slice(offset, offset + limit);
+
+    // Enrich messages with user data
+    return messages.map(msg => ({
+      ...msg,
+      user: this.users.get(msg.userId) ? {
+        id: msg.userId,
+        firstName: this.users.get(msg.userId)!.firstName,
+        lastName: this.users.get(msg.userId)!.lastName,
+        profilePicture: this.users.get(msg.userId)!.profilePicture
+      } : null,
+      reactions: this.messageReactions.get(msg.id) || [],
+      thread: this.messageThreads.get(msg.id) || []
+    }));
+  }
+
+  async getChatMessage(id: number): Promise<any | null> {
+    const message = this.chatMessages.get(id);
+    if (!message) return null;
+
+    return {
+      ...message,
+      user: this.users.get(message.userId) ? {
+        id: message.userId,
+        firstName: this.users.get(message.userId)!.firstName,
+        lastName: this.users.get(message.userId)!.lastName,
+        profilePicture: this.users.get(message.userId)!.profilePicture
+      } : null,
+      reactions: this.messageReactions.get(id) || [],
+      thread: this.messageThreads.get(id) || []
+    };
+  }
+
+  async updateChatMessage(id: number, userId: number, updates: any): Promise<any | null> {
+    const message = this.chatMessages.get(id);
+    if (!message || message.userId !== userId) return null;
+
+    const updated = {
+      ...message,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+      isEdited: true
+    };
+    
+    this.chatMessages.set(id, updated);
+    return updated;
+  }
+
+  async deleteChatMessage(id: number, userId: number): Promise<boolean> {
+    const message = this.chatMessages.get(id);
+    if (!message || message.userId !== userId) return false;
+
+    // Delete message
+    this.chatMessages.delete(id);
+    
+    // Clean up reactions and threads
+    this.messageReactions.delete(id);
+    this.messageThreads.delete(id);
+    
+    // Update reply counts for parent messages
+    if (message.replyToId) {
+      const parentMessage = this.chatMessages.get(message.replyToId);
+      if (parentMessage) {
+        parentMessage.replyCount = Math.max(0, (parentMessage.replyCount || 1) - 1);
+        
+        // Remove from thread
+        const thread = this.messageThreads.get(message.replyToId);
+        if (thread) {
+          const index = thread.indexOf(id);
+          if (index > -1) {
+            thread.splice(index, 1);
+          }
+        }
+      }
+    }
+    
+    return true;
+  }
+
+  async addMessageReaction(messageId: number, userId: number, emoji: string): Promise<any | null> {
+    const message = this.chatMessages.get(messageId);
+    if (!message) return null;
+
+    if (!this.messageReactions.has(messageId)) {
+      this.messageReactions.set(messageId, []);
+    }
+    
+    const reactions = this.messageReactions.get(messageId)!;
+    const existingReaction = reactions.find(r => r.userId === userId && r.emoji === emoji);
+    
+    if (existingReaction) {
+      // Remove reaction
+      const index = reactions.indexOf(existingReaction);
+      reactions.splice(index, 1);
+    } else {
+      // Add reaction
+      reactions.push({
+        id: this.getNextId(),
+        messageId,
+        userId,
+        emoji,
+        createdAt: new Date().toISOString()
+      });
+    }
+    
+    return reactions;
+  }
+
+  async getMessageThread(parentMessageId: number): Promise<any[]> {
+    const threadIds = this.messageThreads.get(parentMessageId) || [];
+    const threadMessages = threadIds
+      .map(id => this.chatMessages.get(id))
+      .filter(msg => msg)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    return threadMessages.map(msg => ({
+      ...msg,
+      user: this.users.get(msg.userId) ? {
+        id: msg.userId,
+        firstName: this.users.get(msg.userId)!.firstName,
+        lastName: this.users.get(msg.userId)!.lastName,
+        profilePicture: this.users.get(msg.userId)!.profilePicture
+      } : null,
+      reactions: this.messageReactions.get(msg.id) || []
+    }));
+  }
+
+  async markMessageAsRead(messageId: number, userId: number): Promise<void> {
+    const key = `${messageId}`;
+    if (!this.messageReadStatus.has(key)) {
+      this.messageReadStatus.set(key, new Set());
+    }
+    this.messageReadStatus.get(key)!.add(userId);
+  }
+
+  async markConversationAsRead(conversationId: number, userId: number): Promise<void> {
+    const messages = Array.from(this.chatMessages.values())
+      .filter(msg => msg.conversationId === conversationId);
+    
+    for (const message of messages) {
+      await this.markMessageAsRead(message.id, userId);
+    }
+  }
+
+  async getUnreadCountForUser(conversationId: number, userId: number): Promise<number> {
+    const messages = Array.from(this.chatMessages.values())
+      .filter(msg => msg.conversationId === conversationId && msg.userId !== userId);
+    
+    let unreadCount = 0;
+    for (const message of messages) {
+      const readUsers = this.messageReadStatus.get(`${message.id}`);
+      if (!readUsers || !readUsers.has(userId)) {
+        unreadCount++;
+      }
+    }
+    
+    return unreadCount;
+  }
+
+  private getLastMessageForConversation(conversationId: number): any | null {
+    const messages = Array.from(this.chatMessages.values())
+      .filter(msg => msg.conversationId === conversationId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    return messages[0] || null;
+  }
+
+  async searchMessages(query: string, conversationId?: number, userId?: number): Promise<any[]> {
+    let messages = Array.from(this.chatMessages.values());
+    
+    if (conversationId) {
+      messages = messages.filter(msg => msg.conversationId === conversationId);
+    }
+    
+    if (userId) {
+      messages = messages.filter(msg => msg.userId === userId);
+    }
+    
+    const queryLower = query.toLowerCase();
+    const searchResults = messages.filter(msg => 
+      msg.message.toLowerCase().includes(queryLower)
+    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return searchResults.map(msg => ({
+      ...msg,
+      user: this.users.get(msg.userId) ? {
+        id: msg.userId,
+        firstName: this.users.get(msg.userId)!.firstName,
+        lastName: this.users.get(msg.userId)!.lastName,
+        profilePicture: this.users.get(msg.userId)!.profilePicture
+      } : null
+    }));
+  }
+
+  async getUserConversations(userId: number): Promise<any[]> {
+    const userConversations = [];
+    
+    for (const conversation of this.conversations.values()) {
+      const members = this.conversationMembers.get(conversation.id);
+      if (members && members.has(userId)) {
+        const lastMessage = this.getLastMessageForConversation(conversation.id);
+        const unreadCount = await this.getUnreadCountForUser(conversation.id, userId);
+        
+        userConversations.push({
+          ...conversation,
+          lastMessage,
+          unreadCount,
+          memberCount: members.size
+        });
+      }
+    }
+    
+    // Sort by last activity
+    return userConversations.sort((a, b) => {
+      const aTime = a.lastMessage?.createdAt || a.createdAt;
+      const bTime = b.lastMessage?.createdAt || b.createdAt;
+      return new Date(bTime).getTime() - new Date(aTime).getTime();
+    });
   }
 
   async getMessagesByChat(chatId: number): Promise<any[]> {
