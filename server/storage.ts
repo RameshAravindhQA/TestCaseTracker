@@ -150,9 +150,11 @@ export interface IStorage {
   getMatrixCells(): Promise<MatrixCell[]>;
   getMatrixCellsByProject(projectId: number): Promise<MatrixCell[]>;
   getMatrixCell(id: number): Promise<MatrixCell | undefined>;
+  getMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<MatrixCell | undefined>;
   createMatrixCell(cell: InsertMatrixCell): Promise<MatrixCell>;
   updateMatrixCell(id: number, cellData: Partial<MatrixCell>): Promise<MatrixCell | undefined>;
   deleteMatrixCell(id: number): Promise<boolean>;
+  deleteMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<boolean>;
 
   // Test Sheet operations
   getTestSheets(projectId?: number): Promise<TestSheet[]>;
@@ -1603,6 +1605,86 @@ class MemStorage implements IStorage {
   async deleteMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<boolean> {
     const key = `${rowModuleId}-${colModuleId}-${projectId}`;
     return this.matrixCells.delete(key);
+  }
+
+  // Custom marker operations with proper ID handling
+  async createCustomMarker(data: any): Promise<CustomMarker> {
+    const id = this.getNextId();
+
+    const marker: CustomMarker = {
+      ...data,
+      id: id.toString(), // Convert to string for consistency
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    this.customMarkers.set(id.toString(), marker);
+    return marker;
+  }
+
+  async getCustomMarkers(): Promise<CustomMarker[]> {
+    return Array.from(this.customMarkers.values());
+  }
+
+  async getCustomMarkersByProject(projectId: number): Promise<CustomMarker[]> {
+    return Array.from(this.customMarkers.values()).filter(marker => marker.projectId === projectId);
+  }
+
+  async updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null> {
+    const marker = this.customMarkers.get(id.toString());
+    if (!marker) return null;
+
+    const updatedMarker = { 
+      ...marker, 
+      ...data, 
+      updatedAt: new Date().toISOString() 
+    };
+    this.customMarkers.set(id.toString(), updatedMarker);
+    return updatedMarker;
+  }
+
+  async deleteCustomMarker(id: number): Promise<boolean> {
+    return this.customMarkers.delete(id.toString());
+  }
+
+  // Matrix cell operations with proper storage
+  async createMatrixCell(data: any): Promise<MatrixCell> {
+    const id = this.getNextId();
+    const key = `${data.rowModuleId}-${data.colModuleId}-${data.projectId}`;
+
+    const cell: MatrixCell = {
+      ...data,
+      id: id.toString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    this.matrixCells.set(key, cell);
+    return cell;
+  }
+
+  async getMatrixCells(): Promise<MatrixCell[]> {
+    return Array.from(this.matrixCells.values());
+  }
+
+  async getMatrixCellsByProject(projectId: number): Promise<MatrixCell[]> {
+    return Array.from(this.matrixCells.values()).filter(cell => cell.projectId === projectId);
+  }
+
+  async updateMatrixCell(id: number, data: Partial<MatrixCell>): Promise<MatrixCell | null> {
+    // Find cell by ID across all keys
+    for (const [key, cell] of this.matrixCells.entries()) {
+      if (cell.id === id.toString()) {
+        const updatedCell = { 
+          ...cell, 
+          ...data, 
+          updatedAt: new Date().toISOString() 
+        };
+        this.matrixCells.set(key, updatedCell);
+        return updatedCell;
+      }
+    }
+    return null;
   }
 
   // Additional missing methods for traceability

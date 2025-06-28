@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProjectSelect } from "@/components/ui/project-select";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Project, Module } from "@/types";
 import {
   Table,
@@ -35,38 +35,54 @@ import { useToast } from "@/hooks/use-toast";
 import { jsPDF } from "jspdf";
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
-interface TraceabilityCell {
+interface CustomMarker {
   id: string;
-  requirementId: string;
-  testCaseId: string;
-  status: 'covered' | 'partial' | 'not_covered';
-  notes?: string;
+  markerId: string;
+  label: string;
+  color: string;
+  type: string;
+  projectId: number;
+  createdById: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-interface Requirement {
+interface MatrixCell {
   id: string;
-  title: string;
-  description: string;
-  priority: 'high' | 'medium' | 'low';
-  moduleId: string;
-}
-
-interface TestCase {
-  id: string;
-  title: string;
-  description: string;
-  status: 'draft' | 'active' | 'deprecated';
-  moduleId: string;
+  rowModuleId: number;
+  colModuleId: number;
+  projectId: number;
+  value: string;
+  createdById: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function TraceabilityMatrixPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  const [requirements, setRequirements] = useState<Requirement[]>([]);
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
-  const [matrixCells, setMatrixCells] = useState<Record<string, TraceabilityCell>>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [customMarkers, setCustomMarkers] = useState<CustomMarker[]>([]);
+  const [matrixCells, setMatrixCells] = useState<Record<string, MatrixCell>>({});
+  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
+  const [isMarkerDialogOpen, setIsMarkerDialogOpen] = useState(false);
+  const [editingMarker, setEditingMarker] = useState<CustomMarker | null>(null);
+  const [newMarker, setNewMarker] = useState({
+    label: '',
+    color: '#4F46E5',
+    type: 'custom'
+  });
   const matrixRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
@@ -83,7 +99,7 @@ export default function TraceabilityMatrixPage() {
   });
 
   // Fetch modules for selected project
-  const { data: modules } = useQuery({
+  const { data: projectModules } = useQuery({
     queryKey: ["/api/projects", selectedProjectId, "modules"],
     queryFn: async () => {
       if (!selectedProjectId) return [];
@@ -94,138 +110,239 @@ export default function TraceabilityMatrixPage() {
     enabled: !!selectedProjectId,
   });
 
-  // Fetch test cases for selected project
-  const { data: projectTestCases } = useQuery({
-    queryKey: ["/api/projects", selectedProjectId, "test-cases"],
+  // Fetch custom markers for selected project
+  const { data: projectMarkers } = useQuery({
+    queryKey: ["/api/projects", selectedProjectId, "matrix/markers"],
     queryFn: async () => {
       if (!selectedProjectId) return [];
-      const response = await apiRequest("GET", `/api/projects/${selectedProjectId}/test-cases`);
-      if (!response.ok) throw new Error("Failed to fetch test cases");
+      const response = await apiRequest("GET", `/api/projects/${selectedProjectId}/matrix/markers`);
+      if (!response.ok) return [];
       return response.json();
     },
     enabled: !!selectedProjectId,
   });
 
-  // Fetch bugs for selected project (treating as requirements)
-  const { data: projectBugs } = useQuery({
-    queryKey: ["/api/projects", selectedProjectId, "bugs"],
+  // Fetch matrix cells for selected project
+  const { data: projectCells } = useQuery({
+    queryKey: ["/api/projects", selectedProjectId, "matrix/cells"],
     queryFn: async () => {
       if (!selectedProjectId) return [];
-      const response = await apiRequest('GET', `/api/projects/${selectedProjectId}/bugs`);
-      if (!response.ok) throw new Error("Failed to fetch bugs");
+      const response = await apiRequest("GET", `/api/projects/${selectedProjectId}/matrix/cells`);
+      if (!response.ok) return [];
       return response.json();
     },
     enabled: !!selectedProjectId,
   });
 
-  // Load requirements and test cases when project changes
+  // Mutations for CRUD operations
+  const createMarkerMutation = useMutation({
+    mutationFn: async (markerData: any) => {
+      const response = await apiRequest("POST", "/api/custom-markers", markerData);
+      if (!response.ok) throw new Error("Failed to create marker");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/markers"] });
+      toast({ title: "Marker created successfully" });
+      setIsMarkerDialogOpen(false);
+      resetMarkerForm();
+    },
+    onError: () => {
+      toast({ title: "Failed to create marker", variant: "destructive" });
+    }
+  });
+
+  const updateMarkerMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest("PUT", `/api/custom-markers/${id}`, data);
+      if (!response.ok) throw new Error("Failed to update marker");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/markers"] });
+      toast({ title: "Marker updated successfully" });
+      setIsMarkerDialogOpen(false);
+      setEditingMarker(null);
+      resetMarkerForm();
+    },
+    onError: () => {
+      toast({ title: "Failed to update marker", variant: "destructive" });
+    }
+  });
+
+  const deleteMarkerMutation = useMutation({
+    mutationFn: async (markerId: string) => {
+      const response = await apiRequest("DELETE", `/api/custom-markers/${markerId}`);
+      if (!response.ok) throw new Error("Failed to delete marker");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/markers"] });
+      toast({ title: "Marker deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete marker", variant: "destructive" });
+    }
+  });
+
+  const updateCellMutation = useMutation({
+    mutationFn: async (cellData: any) => {
+      const response = await apiRequest("POST", "/api/matrix-cells", cellData);
+      if (!response.ok) throw new Error("Failed to update cell");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/cells"] });
+    }
+  });
+
+  // Load data when project changes
   useEffect(() => {
     if (selectedProjectId) {
-      setIsLoading(true);
-
-      // Convert bugs to requirements format
-      const reqs: Requirement[] = projectBugs?.map((bug: any) => ({
-        id: `REQ-${bug.id}`,
-        title: bug.title || `Requirement ${bug.id}`,
-        description: bug.description || bug.stepsToReproduce || '',
-        priority: bug.priority?.toLowerCase() || 'medium',
-        moduleId: bug.moduleId || 'default'
-      })) || [];
-
-      // Convert test cases
-      const tcs: TestCase[] = projectTestCases?.map((tc: any) => ({
-        id: `TC-${tc.id}`,
-        title: tc.feature || tc.scenario || `Test Case ${tc.id}`,
-        description: tc.description || tc.testObjective || '',
-        status: 'active',
-        moduleId: tc.moduleId || 'default'
-      })) || [];
-
-      setRequirements(reqs);
-      setTestCases(tcs);
-
-      // Initialize matrix cells
-      const cells: Record<string, TraceabilityCell> = {};
-      reqs.forEach(req => {
-        tcs.forEach(tc => {
-          const cellId = `${req.id}-${tc.id}`;
-          cells[cellId] = {
-            id: cellId,
-            requirementId: req.id,
-            testCaseId: tc.id,
-            status: 'not_covered',
-          };
-        });
+      setModules(projectModules || []);
+      setCustomMarkers(projectMarkers || []);
+      
+      // Convert cells array to object for easier lookup
+      const cellsObj: Record<string, MatrixCell> = {};
+      (projectCells || []).forEach((cell: MatrixCell) => {
+        const key = `${cell.rowModuleId}-${cell.colModuleId}`;
+        cellsObj[key] = cell;
       });
-
-      setMatrixCells(cells);
-      setIsLoading(false);
+      setMatrixCells(cellsObj);
     } else {
-      // Clear data when no project is selected
-      setRequirements([]);
-      setTestCases([]);
+      setModules([]);
+      setCustomMarkers([]);
       setMatrixCells({});
-      setIsLoading(false);
     }
-  }, [selectedProjectId, projectTestCases, projectBugs]);
+  }, [selectedProjectId, projectModules, projectMarkers, projectCells]);
 
-  const updateCellStatus = (cellId: string, status: TraceabilityCell['status']) => {
+  const resetMarkerForm = () => {
+    setNewMarker({
+      label: '',
+      color: '#4F46E5',
+      type: 'custom'
+    });
+  };
+
+  const handleCreateMarker = () => {
+    if (!selectedProjectId || !newMarker.label.trim()) {
+      toast({ title: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+
+    const markerId = `MARKER-${Date.now()}`;
+    const markerData = {
+      markerId,
+      label: newMarker.label,
+      color: newMarker.color,
+      type: newMarker.type,
+      projectId: selectedProjectId,
+      createdById: 1 // Replace with actual user ID
+    };
+
+    createMarkerMutation.mutate(markerData);
+  };
+
+  const handleUpdateMarker = () => {
+    if (!editingMarker || !newMarker.label.trim()) {
+      toast({ title: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+
+    updateMarkerMutation.mutate({
+      id: editingMarker.id,
+      data: {
+        label: newMarker.label,
+        color: newMarker.color,
+        type: newMarker.type
+      }
+    });
+  };
+
+  const handleEditMarker = (marker: CustomMarker) => {
+    setEditingMarker(marker);
+    setNewMarker({
+      label: marker.label,
+      color: marker.color,
+      type: marker.type
+    });
+    setIsMarkerDialogOpen(true);
+  };
+
+  const handleDeleteMarker = (markerId: string) => {
+    if (window.confirm("Are you sure you want to delete this marker?")) {
+      deleteMarkerMutation.mutate(markerId);
+    }
+  };
+
+  const handleCellClick = (rowModuleId: number, colModuleId: number) => {
+    if (!selectedMarkerId || !selectedProjectId) {
+      toast({ title: "Please select a marker first", variant: "destructive" });
+      return;
+    }
+
+    const cellData = {
+      rowModuleId,
+      colModuleId,
+      projectId: selectedProjectId,
+      value: selectedMarkerId,
+      createdById: 1 // Replace with actual user ID
+    };
+
+    updateCellMutation.mutate(cellData);
+
+    // Update local state immediately for better UX
+    const key = `${rowModuleId}-${colModuleId}`;
     setMatrixCells(prev => ({
       ...prev,
-      [cellId]: {
-        ...prev[cellId],
-        status,
+      [key]: {
+        ...prev[key],
+        id: prev[key]?.id || `cell-${Date.now()}`,
+        rowModuleId,
+        colModuleId,
+        projectId: selectedProjectId,
+        value: selectedMarkerId,
+        createdById: 1,
+        createdAt: prev[key]?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }
     }));
   };
 
-  const getCellStatusBadge = (status: TraceabilityCell['status']) => {
-    switch (status) {
-      case 'covered':
-        return <Badge className="bg-green-100 text-green-800 cursor-pointer">✓</Badge>;
-      case 'partial':
-        return <Badge className="bg-yellow-100 text-yellow-800 cursor-pointer">~</Badge>;
-      case 'not_covered':
-        return <Badge className="bg-red-100 text-red-800 cursor-pointer">✗</Badge>;
-      default:
-        return <Badge variant="secondary" className="cursor-pointer">?</Badge>;
-    }
-  };
+  const getCellContent = (rowModuleId: number, colModuleId: number) => {
+    const key = `${rowModuleId}-${colModuleId}`;
+    const cell = matrixCells[key];
+    
+    if (!cell || !cell.value) return null;
+    
+    const marker = customMarkers.find(m => m.markerId === cell.value);
+    if (!marker) return null;
 
-  const cycleCellStatus = (cellId: string) => {
-    const cell = matrixCells[cellId];
-    if (!cell) return;
-
-    let newStatus: TraceabilityCell['status'];
-    switch (cell.status) {
-      case 'not_covered':
-        newStatus = 'covered';
-        break;
-      case 'covered':
-        newStatus = 'partial';
-        break;
-      case 'partial':
-        newStatus = 'not_covered';
-        break;
-      default:
-        newStatus = 'not_covered';
-    }
-
-    updateCellStatus(cellId, newStatus);
+    return (
+      <div
+        className="w-6 h-6 rounded-full border-2 border-white shadow-sm cursor-pointer"
+        style={{ backgroundColor: marker.color }}
+        title={marker.label}
+      />
+    );
   };
 
   const exportToCSV = () => {
-    const headers = ['Requirement ID', 'Requirement Title', ...testCases.map(tc => tc.id)];
+    const headers = ['Row Module', 'Column Module', 'Marker'];
     const rows = [headers];
 
-    requirements.forEach(req => {
-      const row = [req.id, req.title];
-      testCases.forEach(tc => {
-        const cellId = `${req.id}-${tc.id}`;
-        const cell = matrixCells[cellId];
-        row.push(cell?.status || 'not_covered');
+    modules.forEach(rowModule => {
+      modules.forEach(colModule => {
+        const key = `${rowModule.id}-${colModule.id}`;
+        const cell = matrixCells[key];
+        const marker = cell ? customMarkers.find(m => m.markerId === cell.value) : null;
+        
+        rows.push([
+          rowModule.name,
+          colModule.name,
+          marker ? marker.label : 'No marker'
+        ]);
       });
-      rows.push(row);
     });
 
     const csvContent = rows.map(row => row.join(',')).join('\n');
@@ -254,34 +371,22 @@ export default function TraceabilityMatrixPage() {
       });
 
       const doc = new jsPDF('l', 'mm', 'a4');
-
-      // Add title
       doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
-      doc.text('Traceability Matrix Report', 14, 20);
+      doc.text('Module Traceability Matrix', 14, 20);
 
-      // Add project info
       const project = projects?.find(p => p.id === selectedProjectId);
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       doc.text(`Project: ${project?.name || 'Unknown'}`, 14, 30);
       doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 36);
 
-      // Add coverage summary
-      const totalCells = Object.values(matrixCells).length;
-      const coveredCells = Object.values(matrixCells).filter(cell => cell.status === 'covered').length;
-      const coveragePercent = totalCells > 0 ? Math.round((coveredCells / totalCells) * 100) : 0;
-
-      doc.text(`Coverage: ${coveragePercent}% (${coveredCells}/${totalCells} cells covered)`, 14, 42);
-
-      // Add matrix image
       const imgData = canvas.toDataURL('image/png');
       const imgWidth = 270;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
       doc.addImage(imgData, 'PNG', 14, 50, imgWidth, imgHeight);
-
-      doc.save(`traceability-matrix-${Date.now()}.pdf`);
+      doc.save(`module-traceability-matrix-${Date.now()}.pdf`);
 
       toast({
         title: "Export successful",
@@ -296,7 +401,6 @@ export default function TraceabilityMatrixPage() {
     }
   };
 
-  // Get current project details
   const currentProject = projects?.find(p => p.id === selectedProjectId);
 
   return (
@@ -308,18 +412,18 @@ export default function TraceabilityMatrixPage() {
               <FileText className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Traceability Matrix</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Module Traceability Matrix</h1>
               <p className="text-muted-foreground">
-                Map requirements to test cases to ensure complete coverage
+                Map module relationships using custom markers with colors
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Button onClick={exportToCSV} variant="outline" disabled={!selectedProjectId || requirements.length === 0}>
+            <Button onClick={exportToCSV} variant="outline" disabled={!selectedProjectId || modules.length === 0}>
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
-            <Button onClick={exportToPDF} variant="outline" disabled={!selectedProjectId || requirements.length === 0}>
+            <Button onClick={exportToPDF} variant="outline" disabled={!selectedProjectId || modules.length === 0}>
               <Download className="h-4 w-4 mr-2" />
               Export PDF
             </Button>
@@ -339,10 +443,6 @@ export default function TraceabilityMatrixPage() {
               <p className="text-gray-500">Please select a project to view the traceability matrix.</p>
             </CardContent>
           </Card>
-        ) : isLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-          </div>
         ) : (
           <>
             {/* Project Information */}
@@ -351,15 +451,12 @@ export default function TraceabilityMatrixPage() {
                 <CardTitle>Project: {currentProject?.name || 'Unknown Project'}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-4 gap-4 text-sm">
+                <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
-                    <span className="font-medium">Requirements:</span> {requirements.length}
+                    <span className="font-medium">Modules:</span> {modules.length}
                   </div>
                   <div>
-                    <span className="font-medium">Test Cases:</span> {testCases.length}
-                  </div>
-                  <div>
-                    <span className="font-medium">Modules:</span> {modules?.length || 0}
+                    <span className="font-medium">Custom Markers:</span> {customMarkers.length}
                   </div>
                   <div>
                     <span className="font-medium">Matrix Cells:</span> {Object.keys(matrixCells).length}
@@ -368,58 +465,133 @@ export default function TraceabilityMatrixPage() {
               </CardContent>
             </Card>
 
-            {/* Coverage Summary */}
-            {requirements.length > 0 && testCases.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Total Requirements</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{requirements.length}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Total Test Cases</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{testCases.length}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Coverage Percentage</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {Math.round(
-                        (Object.values(matrixCells).filter(cell => cell.status === 'covered').length / 
-                         Math.max(Object.values(matrixCells).length, 1)) * 100
-                      )}%
+            {/* Markers Management */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Custom Markers</CardTitle>
+                  <Dialog open={isMarkerDialogOpen} onOpenChange={setIsMarkerDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button onClick={() => setEditingMarker(null)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Marker
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>
+                          {editingMarker ? 'Edit Marker' : 'Create New Marker'}
+                        </DialogTitle>
+                        <DialogDescription>
+                          Create a custom marker with a label and color for the traceability matrix.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="label" className="text-right">
+                            Label
+                          </Label>
+                          <Input
+                            id="label"
+                            value={newMarker.label}
+                            onChange={(e) => setNewMarker(prev => ({ ...prev, label: e.target.value }))}
+                            className="col-span-3"
+                            placeholder="Enter marker label"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="color" className="text-right">
+                            Color
+                          </Label>
+                          <div className="col-span-3 flex items-center gap-2">
+                            <input
+                              type="color"
+                              id="color"
+                              value={newMarker.color}
+                              onChange={(e) => setNewMarker(prev => ({ ...prev, color: e.target.value }))}
+                              className="w-12 h-10 rounded border border-gray-300"
+                            />
+                            <Input
+                              value={newMarker.color}
+                              onChange={(e) => setNewMarker(prev => ({ ...prev, color: e.target.value }))}
+                              placeholder="#4F46E5"
+                              className="flex-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button 
+                          onClick={editingMarker ? handleUpdateMarker : handleCreateMarker}
+                          disabled={createMarkerMutation.isPending || updateMarkerMutation.isPending}
+                        >
+                          {editingMarker ? 'Update' : 'Create'} Marker
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {customMarkers.map((marker) => (
+                    <div
+                      key={marker.id}
+                      className={`flex items-center gap-2 p-2 rounded-lg border-2 cursor-pointer transition-all ${
+                        selectedMarkerId === marker.markerId
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => setSelectedMarkerId(
+                        selectedMarkerId === marker.markerId ? null : marker.markerId
+                      )}
+                    >
+                      <div
+                        className="w-4 h-4 rounded-full border border-gray-300"
+                        style={{ backgroundColor: marker.color }}
+                      />
+                      <span className="text-sm font-medium">{marker.label}</span>
+                      <div className="flex items-center gap-1 ml-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditMarker(marker);
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteMarker(marker.id);
+                          }}
+                        >
+                          <Trash className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Partial Coverage</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {Object.values(matrixCells).filter(cell => cell.status === 'partial').length}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+                  ))}
+                </div>
+                {selectedMarkerId && (
+                  <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                    <strong>Selected:</strong> {customMarkers.find(m => m.markerId === selectedMarkerId)?.label} - 
+                    Click on matrix cells to assign this marker
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-            {/* Traceability Matrix Table */}
-            {requirements.length > 0 && testCases.length > 0 ? (
+            {/* Module Traceability Matrix */}
+            {modules.length > 0 ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Requirements vs Test Cases Matrix</CardTitle>
+                  <CardTitle>Module-to-Module Traceability Matrix</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Click on cells to cycle through coverage states: ✗ (not covered) → ✓ (covered) → ~ (partial)
+                    Select a marker above, then click on matrix cells to assign relationships between modules
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -427,35 +599,55 @@ export default function TraceabilityMatrixPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-[200px] sticky left-0 bg-white z-10">Requirements</TableHead>
-                          {testCases.map(tc => (
-                            <TableHead key={tc.id} className="text-center min-w-[80px]">
-                              <div className="truncate" title={tc.title}>
-                                {tc.id}
+                          <TableHead className="w-[200px] sticky left-0 bg-white z-10 border-r">
+                            Row Modules ↓ / Col Modules →
+                          </TableHead>
+                          {modules.map(module => (
+                            <TableHead key={module.id} className="text-center min-w-[100px]">
+                              <div className="truncate" title={module.name}>
+                                {module.name}
                               </div>
                             </TableHead>
                           ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {requirements.map(req => (
-                          <TableRow key={req.id}>
+                        {modules.map(rowModule => (
+                          <TableRow key={rowModule.id}>
                             <TableCell className="sticky left-0 bg-white z-10 border-r">
-                              <div className="font-medium">{req.id}</div>
-                              <div className="text-sm text-muted-foreground truncate" title={req.title}>
-                                {req.title}
+                              <div className="font-medium">{rowModule.name}</div>
+                              <div className="text-sm text-muted-foreground truncate" title={rowModule.description || ''}>
+                                {rowModule.description || 'No description'}
                               </div>
                             </TableCell>
-                            {testCases.map(tc => {
-                              const cellId = `${req.id}-${tc.id}`;
-                              const cell = matrixCells[cellId];
+                            {modules.map(colModule => {
+                              const cellContent = getCellContent(rowModule.id, colModule.id);
+                              const isDisabled = rowModule.id === colModule.id;
+                              
                               return (
-                                <TableCell key={cellId} className="text-center">
+                                <TableCell key={colModule.id} className="text-center">
                                   <div
-                                    onClick={() => cycleCellStatus(cellId)}
-                                    className="flex justify-center"
+                                    className={`flex justify-center items-center h-8 w-8 mx-auto rounded border-2 border-dashed ${
+                                      isDisabled 
+                                        ? 'bg-gray-100 border-gray-200 cursor-not-allowed'
+                                        : selectedMarkerId
+                                          ? 'border-blue-300 hover:border-blue-500 cursor-pointer hover:bg-blue-50'
+                                          : 'border-gray-300 cursor-default'
+                                    }`}
+                                    onClick={() => !isDisabled && handleCellClick(rowModule.id, colModule.id)}
+                                    title={
+                                      isDisabled 
+                                        ? 'Cannot assign marker to same module'
+                                        : selectedMarkerId 
+                                          ? `Click to assign ${customMarkers.find(m => m.markerId === selectedMarkerId)?.label}`
+                                          : 'Select a marker first'
+                                    }
                                   >
-                                    {getCellStatusBadge(cell?.status || 'not_covered')}
+                                    {isDisabled ? (
+                                      <X className="h-3 w-3 text-gray-400" />
+                                    ) : (
+                                      cellContent
+                                    )}
                                   </div>
                                 </TableCell>
                               );
@@ -471,86 +663,10 @@ export default function TraceabilityMatrixPage() {
               <Card>
                 <CardContent className="pt-6 text-center">
                   <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No data available</h3>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No modules available</h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    {requirements.length === 0 && testCases.length === 0 
-                      ? "No requirements or test cases found for this project."
-                      : requirements.length === 0 
-                        ? "No requirements (bugs) found for this project."
-                        : "No test cases found for this project."
-                    }
+                    No modules found for this project. Please add modules first to create a traceability matrix.
                   </p>
-                  <div className="mt-4 text-xs text-gray-400 bg-gray-50 p-3 rounded-lg">
-                    <p>Debug Info:</p>
-                    <p>Project ID: {selectedProjectId}</p>
-                    <p>Modules: {modules?.length || 0}</p>
-                    <p>Requirements (Bugs): {requirements.length}</p>
-                    <p>Test Cases: {testCases.length}</p>
-                    <p>Project Bugs Data: {projectBugs?.length || 0}</p>
-                    <p>Project Test Cases Data: {projectTestCases?.length || 0}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Module Coverage Table */}
-            {modules && modules.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Module Test Coverage</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Module</TableHead>
-                          <TableHead>Test Cases</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Coverage</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {modules.map((module: any) => {
-                          const moduleTestCases = testCases?.filter((tc: any) => tc.moduleId === module.id) || [];
-                          const passedTests = moduleTestCases.filter((tc: any) => tc.status === 'active').length;
-                          const coverage = moduleTestCases.length > 0 ? Math.round((passedTests / moduleTestCases.length) * 100) : 0;
-
-                          return (
-                            <TableRow key={module.id}>
-                              <TableCell>
-                                <div className="font-medium">{module.name}</div>
-                                <div className="text-sm text-gray-500">{module.description || 'No description'}</div>
-                              </TableCell>
-                              <TableCell>
-                                {moduleTestCases.length === 0 ? (
-                                  <div className="text-sm text-gray-500">No test cases</div>
-                                ) : (
-                                  <div>{moduleTestCases.length} test cases</div>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={module.status === 'Active' ? 'default' : 'secondary'}>
-                                  {module.status || 'Unknown'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div 
-                                      className={`h-2 rounded-full ${coverage >= 70 ? 'bg-green-500' : coverage >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                                      style={{ width: `${coverage}%` }}
-                                    ></div>
-                                  </div>
-                                  <span className="text-sm font-medium">{coverage}%</span>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
                 </CardContent>
               </Card>
             )}

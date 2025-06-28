@@ -5838,6 +5838,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Custom Markers CRUD
+  apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
+    try {
+      const markerData = {
+        ...req.body,
+        createdById: req.session.userId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      const marker = await storage.createCustomMarker(markerData);
+      res.status(201).json(marker);
+    } catch (error) {
+      console.error("Create custom marker error:", error);
+      res.status(500).json({ message: "Failed to create marker" });
+    }
+  });
+
+  apiRouter.put("/custom-markers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = {
+        ...req.body,
+        updatedAt: new Date()
+      };
+      
+      const marker = await storage.updateCustomMarker(id, updateData);
+      
+      if (!marker) {
+        return res.status(404).json({ message: "Marker not found" });
+      }
+      
+      res.json(marker);
+    } catch (error) {
+      console.error("Update custom marker error:", error);
+      res.status(500).json({ message: "Failed to update marker" });
+    }
+  });
+
+  apiRouter.delete("/custom-markers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteCustomMarker(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Marker not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete custom marker error:", error);
+      res.status(500).json({ message: "Failed to delete marker" });
+    }
+  });
+
+  // Matrix Cells CRUD
+  apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
+    try {
+      const cellData = {
+        ...req.body,
+        createdById: req.session.userId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      // Check if cell already exists, if so update it
+      const existingCell = await storage.getMatrixCell(
+        cellData.rowModuleId, 
+        cellData.colModuleId, 
+        cellData.projectId
+      );
+      
+      let cell;
+      if (existingCell) {
+        cell = await storage.updateMatrixCell(existingCell.id, cellData);
+      } else {
+        cell = await storage.createMatrixCell(cellData);
+      }
+      
+      res.status(201).json(cell);
+    } catch (error) {
+      console.error("Create/Update matrix cell error:", error);
+      res.status(500).json({ message: "Failed to update matrix cell" });
+    }
+  });
+
+  apiRouter.delete("/matrix-cells/:rowModuleId/:colModuleId/:projectId", isAuthenticated, async (req, res) => {
+    try {
+      const rowModuleId = parseInt(req.params.rowModuleId);
+      const colModuleId = parseInt(req.params.colModuleId);
+      const projectId = parseInt(req.params.projectId);
+      
+      const deleted = await storage.deleteMatrixCell(rowModuleId, colModuleId, projectId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Matrix cell not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete matrix cell error:", error);
+      res.status(500).json({ message: "Failed to delete matrix cell" });
+    }
+  });
+
   apiRouter.post("/projects/:projectId/matrix/markers", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
