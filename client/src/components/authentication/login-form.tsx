@@ -270,15 +270,10 @@ export function LoginForm() {
       </CardFooter>
       <LoginMotivationDialog
         open={showMotivationDialog}
-        onOpenChange={(open) => {
-          setShowMotivationDialog(open);
-          if (!open) {
-            // Navigate to dashboard after dialog closes
-            setTimeout(() => navigate("/dashboard"), 100);
-          }
-        }}
+        onOpenChange={setShowMotivationDialog}
         userFirstName={loggedInUserName}
         loginTime={new Date()}
+        onNavigateToDashboard={() => navigate("/dashboard")}
       />
     </Card>
   );
