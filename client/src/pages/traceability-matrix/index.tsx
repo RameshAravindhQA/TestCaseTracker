@@ -80,10 +80,10 @@ export default function TraceabilityMatrixPage() {
   });
 
   const { data: modules } = useQuery({
-    queryKey: ["/api/modules", selectedProjectId],
+    queryKey: ["/api/projects", selectedProjectId, "modules"],
     queryFn: async () => {
       if (!selectedProjectId) return [];
-      const response = await apiRequest("GET", `/api/modules?projectId=${selectedProjectId}`);
+      const response = await apiRequest("GET", `/api/projects/${selectedProjectId}/modules`);
       if (!response.ok) throw new Error("Failed to fetch modules");
       return response.json();
     },
@@ -91,10 +91,10 @@ export default function TraceabilityMatrixPage() {
   });
 
   const { data: apiTestCases } = useQuery({
-    queryKey: ["/api/test-cases", selectedProjectId],
+    queryKey: ["/api/projects", selectedProjectId, "test-cases"],
     queryFn: async () => {
       if (!selectedProjectId) return [];
-      const response = await apiRequest("GET", `/api/test-cases?projectId=${selectedProjectId}`);
+      const response = await apiRequest("GET", `/api/projects/${selectedProjectId}/test-cases`);
       if (!response.ok) throw new Error("Failed to fetch test cases");
       return response.json();
     },
@@ -114,10 +114,11 @@ export default function TraceabilityMatrixPage() {
 
   // Fetch bugs for selected project (treating as requirements)
   const { data: projectBugs } = useQuery({
-    queryKey: [`/api/projects/${selectedProjectId}/bugs`],
+    queryKey: ["/api/projects", selectedProjectId, "bugs"],
     queryFn: async () => {
       if (!selectedProjectId) return [];
       const response = await apiRequest('GET', `/api/projects/${selectedProjectId}/bugs`);
+      if (!response.ok) throw new Error("Failed to fetch bugs");
       return response.json();
     },
     enabled: !!selectedProjectId,
@@ -128,23 +129,24 @@ export default function TraceabilityMatrixPage() {
 
   // Load requirements and test cases when project changes
   useEffect(() => {
-    if (selectedProjectId && projectTestCases && projectBugs) {
+    if (selectedProjectId && (projectTestCases || apiTestCases) && projectBugs) {
       setIsLoading(true);
 
-      // Convert test cases to requirements format
+      // Convert bugs to requirements format
       const reqs: Requirement[] = projectBugs?.map((bug: any) => ({
         id: `REQ-${bug.id}`,
         title: bug.title || `Requirement ${bug.id}`,
-        description: bug.description || '',
+        description: bug.description || bug.stepsToReproduce || '',
         priority: bug.priority?.toLowerCase() || 'medium',
         moduleId: bug.moduleId || 'default'
       })) || [];
 
-      // Convert project test cases
-      const tcs: TestCase[] = projectTestCases?.map((tc: any) => ({
+      // Use either projectTestCases or apiTestCases, whichever is available
+      const testCaseData = projectTestCases || apiTestCases || [];
+      const tcs: TestCase[] = testCaseData?.map((tc: any) => ({
         id: `TC-${tc.id}`,
         title: tc.feature || tc.scenario || `Test Case ${tc.id}`,
-        description: tc.description || '',
+        description: tc.description || tc.testObjective || '',
         status: 'active',
         moduleId: tc.moduleId || 'default'
       })) || [];
@@ -166,6 +168,11 @@ export default function TraceabilityMatrixPage() {
       });
 
       setMatrixCells(cells);
+      setIsLoading(false);
+    } else if (selectedProjectId) {
+      // Clear data when project is selected but no data is available yet
+      setRequirements([]);
+      setMatrixCells({});
       setIsLoading(false);
     }
   }, [selectedProjectId, projectTestCases, projectBugs, apiTestCases]);
@@ -337,7 +344,7 @@ export default function TraceabilityMatrixPage() {
         </div>
 
         {/* Module Information */}
-        {modules && modules.length > 0 && (
+        {selectedProjectId && modules && modules.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Project Modules</CardTitle>
@@ -358,34 +365,6 @@ export default function TraceabilityMatrixPage() {
           </Card>
         )}
 
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-          </div>
-        ) : requirements.length === 0 || testCases.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No data available</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {selectedProjectId 
-                  ? "No requirements or test cases found for this project. Create some test cases and bugs to see the matrix."
-                  : "Please select a project to view the traceability matrix."
-                }
-              </p>
-              {selectedProjectId && (
-                <div className="mt-4 text-xs text-gray-400 bg-gray-50 p-3 rounded-lg">
-                  <p>Debug Info:</p>
-                  <p>Project ID: {selectedProjectId}</p>
-                  <p>Requirements: {requirements.length}</p>
-                  <p>Test Cases: {testCases.length}</p>
-                  <p>Bugs: {projectBugs?.length || 0}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ) : null}
-
         {!selectedProjectId ? (
           <Card>
             <CardContent className="pt-6 text-center">
@@ -398,23 +377,29 @@ export default function TraceabilityMatrixPage() {
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           </div>
-        ) : !modules || modules.length === 0 ? (
+        ) : requirements.length === 0 || testCases.length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center">
-              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Modules Found</h3>
-              <p className="text-gray-500">
-                This project doesn't have any modules yet. Create modules and test cases to see the traceability matrix.
+              <FileText className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No data available</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                No requirements or test cases found for this project. Create some test cases and bugs to see the matrix.
               </p>
               <div className="mt-4 text-xs text-gray-400 bg-gray-50 p-3 rounded-lg">
                 <p>Debug Info:</p>
                 <p>Project ID: {selectedProjectId}</p>
                 <p>Modules: {modules?.length || 0}</p>
-                <p>Test Cases: {testCases?.length || 0}</p>
+                <p>Requirements (Bugs): {requirements.length}</p>
+                <p>Test Cases: {testCases.length}</p>
+                <p>API Test Cases: {apiTestCases?.length || 0}</p>
+                <p>Project Test Cases: {projectTestCases?.length || 0}</p>
+                <p>Project Bugs: {projectBugs?.length || 0}</p>
               </div>
             </CardContent>
           </Card>
-        ) : (
+        ) : null}
+
+        {selectedProjectId && modules && modules.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-gray-300">
               <thead>
