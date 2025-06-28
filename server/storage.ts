@@ -1937,7 +1937,47 @@ Adding todos Map to the MemStorage class to store todo items.```text
     return undefined;
   }
 
-   async getCustomMarkersByProject(projectId: number): Promise<any[]> {
+  // Todo operations
+  async getTodos(userId: number): Promise<any[]> {
+    return Array.from(this.todos.values()).filter(todo => todo.userId === userId);
+  }
+
+  async getTodo(id: number): Promise<any | undefined> {
+    return this.todos.get(id);
+  }
+
+  async createTodo(todoData: any): Promise<any> {
+    const id = this.getNextId();
+    const now = new Date().toISOString();
+
+    const newTodo = {
+      id,
+      ...todoData,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.todos.set(id, newTodo);
+    return newTodo;
+  }
+
+  async updateTodo(id: number, userId: number, updates: any): Promise<any | null> {
+    const todo = this.todos.get(id);
+    if (!todo || todo.userId !== userId) return null;
+
+    const updatedTodo = { ...todo, ...updates, updatedAt: new Date().toISOString() };
+    this.todos.set(id, updatedTodo);
+    return updatedTodo;
+  }
+
+  async deleteTodo(id: number, userId: number): Promise<boolean> {
+    const todo = this.todos.get(id);
+    if (!todo || todo.userId !== userId) return false;
+
+    return this.todos.delete(id);
+  }
+
+  async getCustomMarkersByProject(projectId: number): Promise<any[]> {
     return Array.from(this.customMarkers.values()).filter(marker => marker.projectId === projectId);
   }
 
