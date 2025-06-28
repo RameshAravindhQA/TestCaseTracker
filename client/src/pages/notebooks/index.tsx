@@ -381,8 +381,16 @@ export default function NotebooksPage() {
                   {notebook.tags && notebook.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-3">
                       {notebook.tags.slice(0, 3).map((tag, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {tag}
+                        <Badge 
+                          key={index} 
+                          variant="secondary" 
+                          className="text-xs"
+                          style={{
+                            backgroundColor: typeof tag === 'object' && tag.color ? tag.color + '20' : undefined,
+                            borderColor: typeof tag === 'object' && tag.color ? tag.color : undefined
+                          }}
+                        >
+                          {typeof tag === 'object' ? tag.name : tag}
                         </Badge>
                       ))}
                       {notebook.tags.length > 3 && (
@@ -541,8 +549,15 @@ export default function NotebooksPage() {
                         <h4 className="text-sm font-medium mb-2">Tags</h4>
                         <div className="flex flex-wrap gap-2">
                           {selectedNotebook.tags.map((tag, index) => (
-                            <Badge key={index} variant="secondary">
-                              {tag}
+                            <Badge 
+                              key={index} 
+                              variant="secondary"
+                              style={{
+                                backgroundColor: typeof tag === 'object' && tag.color ? tag.color + '20' : undefined,
+                                borderColor: typeof tag === 'object' && tag.color ? tag.color : undefined
+                              }}
+                            >
+                              {typeof tag === 'object' ? tag.name : tag}
                             </Badge>
                           ))}
                         </div>
