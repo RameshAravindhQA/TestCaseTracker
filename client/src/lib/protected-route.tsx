@@ -28,8 +28,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   useEffect(() => {
     const checkAuthentication = async () => {
-      // If localStorage says we're not authenticated, redirect immediately
-      if (!isLocallyAuthenticated) {
+      // If localStorage says we're not authenticated, redirect immediately (but check current location)
+      if (!isLocallyAuthenticated && window.location.pathname !== "/login") {
         console.log("Not authenticated according to localStorage, redirecting to login");
         navigate("/login");
         setIsCheckingAuth(false);

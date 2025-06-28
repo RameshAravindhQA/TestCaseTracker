@@ -20,7 +20,7 @@ export default function Login() {
     
     if ((!isLoading && user) || isAuthenticatedInLocalStorage) {
       console.log("User already authenticated, redirecting to dashboard");
-      window.location.href = window.location.origin + "/dashboard";
+      navigate("/dashboard");
     }
   }, [user, isLoading, navigate]);
   

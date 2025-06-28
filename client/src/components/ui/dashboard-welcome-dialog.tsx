@@ -9,13 +9,15 @@ export function DashboardWelcomeDialog() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    // Check if dialog has been shown before
+    // Check if dialog has been shown before and if user is authenticated
     const hasSeenWelcome = localStorage.getItem('hasSeenDashboardWelcome');
-    if (!hasSeenWelcome) {
-      // Add a small delay to ensure component is fully mounted
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    
+    if (!hasSeenWelcome && isAuthenticated) {
+      // Add a longer delay to ensure dashboard is fully loaded
       const timer = setTimeout(() => {
         setIsOpen(true);
-      }, 500);
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, []);
