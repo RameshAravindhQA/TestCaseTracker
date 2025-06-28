@@ -104,28 +104,134 @@ const getColumnLabel = (index: number): string => {
 const parseFormula = (formula: string, cells: Record<string, CellData>): number => {
   if (!formula.startsWith('=')) return parseFloat(formula) || 0;
 
-  const expression = formula.slice(1);
+  let expression = formula.slice(1);
+
+  // Replace cell references with actual values
+  expression = expression.replace(/[A-Z]+\d+/g, (cellRef) => {
+    const cell = cells[cellRef];
+    return cell ? (parseFloat(cell.value) || 0).toString() : '0';
+  });
 
   // Handle SUM function
-  if (expression.toUpperCase().startsWith('SUM(')) {
-    const range = expression.slice(4, -1);
-    const [start, end] = range.split(':');
-    // Simple range calculation for demo
-    return 0; // Implement proper range calculation
+  if (expression.toUpperCase().includes('SUM(')) {
+    expression = expression.replace(/SUM\(([^)]+)\)/gi, (match, range) => {
+      if (range.includes(':')) {
+        const [start, end] = range.split(':');
+        return calculateRangeSum(start, end, cells).toString();
+      }
+      return '0';
+    });
   }
 
   // Handle AVERAGE function
-  if (expression.toUpperCase().startsWith('AVERAGE(')) {
-    const range = expression.slice(8, -1);
-    return 0; // Implement proper average calculation
+  if (expression.toUpperCase().includes('AVERAGE(')) {
+    expression = expression.replace(/AVERAGE\(([^)]+)\)/gi, (match, range) => {
+      if (range.includes(':')) {
+        const [start, end] = range.split(':');
+        return calculateRangeAverage(start, end, cells).toString();
+      }
+      return '0';
+    });
   }
 
-  // Handle simple arithmetic
-  try {
-    return eval(expression.replace(/[A-Z]+\d+/g, '0')); // Replace cell refs with 0 for demo
-  } catch {
-    return 0;
+  // Handle COUNT function
+  if (expression.toUpperCase().includes('COUNT(')) {
+    expression = expression.replace(/COUNT\(([^)]+)\)/gi, (match, range) => {
+      if (range.includes(':')) {
+        const [start, end] = range.split(':');
+        return calculateRangeCount(start, end, cells).toString();
+      }
+      return '0';
+    });
   }
+
+  // Handle MIN function
+  if (expression.toUpperCase().includes('MIN(')) {
+    expression = expression.replace(/MIN\(([^)]+)\)/gi, (match, range) => {
+      if (range.includes(':')) {
+        const [start, end] = range.split(':');
+        return calculateRangeMin(start, end, cells).toString();
+      }
+      return '0';
+    });
+  }
+
+  // Handle MAX function
+  if (expression.toUpperCase().includes('MAX(')) {
+    expression = expression.replace(/MAX\(([^)]+)\)/gi, (match, range) => {
+      if (range.includes(':')) {
+        const [start, end] = range.split(':');
+        return calculateRangeMax(start, end, cells).toString();
+      }
+      return '0';
+    });
+  }
+
+  // Handle simple arithmetic operations
+  try {
+    // Use Function constructor instead of eval for safety
+    return new Function('return ' + expression)();
+  } catch {
+    throw new Error('Invalid formula');
+  }
+};
+
+const calculateRangeSum = (start: string, end: string, cells: Record<string, CellData>): number => {
+  const range = getCellRange(start, end);
+  return range.reduce((sum, cellKey) => {
+    const cell = cells[cellKey];
+    return sum + (cell ? (parseFloat(cell.value) || 0) : 0);
+  }, 0);
+};
+
+const calculateRangeAverage = (start: string, end: string, cells: Record<string, CellData>): number => {
+  const range = getCellRange(start, end);
+  const sum = calculateRangeSum(start, end, cells);
+  return range.length > 0 ? sum / range.length : 0;
+};
+
+const calculateRangeCount = (start: string, end: string, cells: Record<string, CellData>): number => {
+  const range = getCellRange(start, end);
+  return range.filter(cellKey => {
+    const cell = cells[cellKey];
+    return cell && cell.value !== '';
+  }).length;
+};
+
+const calculateRangeMin = (start: string, end: string, cells: Record<string, CellData>): number => {
+  const range = getCellRange(start, end);
+  const values = range.map(cellKey => {
+    const cell = cells[cellKey];
+    return cell ? (parseFloat(cell.value) || 0) : 0;
+  }).filter(val => !isNaN(val));
+  return values.length > 0 ? Math.min(...values) : 0;
+};
+
+const calculateRangeMax = (start: string, end: string, cells: Record<string, CellData>): number => {
+  const range = getCellRange(start, end);
+  const values = range.map(cellKey => {
+    const cell = cells[cellKey];
+    return cell ? (parseFloat(cell.value) || 0) : 0;
+  }).filter(val => !isNaN(val));
+  return values.length > 0 ? Math.max(...values) : 0;
+};
+
+const getCellRange = (start: string, end: string): string[] => {
+  const startCol = start.match(/[A-Z]+/)?.[0] || 'A';
+  const startRow = parseInt(start.match(/\d+/)?.[0] || '1');
+  const endCol = end.match(/[A-Z]+/)?.[0] || 'A';
+  const endRow = parseInt(end.match(/\d+/)?.[0] || '1');
+  
+  const startColIndex = COLUMN_LABELS.indexOf(startCol);
+  const endColIndex = COLUMN_LABELS.indexOf(endCol);
+  
+  const range: string[] = [];
+  for (let row = startRow; row <= endRow; row++) {
+    for (let col = startColIndex; col <= endColIndex; col++) {
+      range.push(`${COLUMN_LABELS[col]}${row}`);
+    }
+  }
+  return range;
 };
 
 const formatCellValue = (value: string, format?: CellData['format']): string => {
@@ -217,19 +323,27 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
   const updateCell = useCallback((row: number, col: number, updates: Partial<CellData>) => {
     const cellKey = getCellKey(row, col);
     setCells(prev => {
-      const newCells = {
-        ...prev,
-        [cellKey]: {
-          ...prev[cellKey],
-          ...updates
-        }
-      };
-
-      // Add to history
+      // Add to history before making changes
       setHistory(h => [...h.slice(0, historyIndex + 1), prev]);
       setHistoryIndex(i => i + 1);
 
-      return newCells;
+      const currentCell = prev[cellKey] || { value: '', format: {} };
+      const newCell = { ...currentCell, ...updates };
+      
+      // If it's a formula, calculate the result
+      if (newCell.formula && newCell.formula.startsWith('=')) {
+        try {
+          const result = parseFormula(newCell.formula, prev);
+          newCell.value = result.toString();
+        } catch (error) {
+          newCell.value = '#ERROR';
+        }
+      }
+
+      return {
+        ...prev,
+        [cellKey]: newCell
+      };
     });
   }, [historyIndex]);
 
@@ -237,10 +351,17 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
     setFormulaBarValue(value);
     if (selectedCell) {
       const isFormula = value.startsWith('=');
-      updateCell(selectedCell.row, selectedCell.col, {
-        value: isFormula ? parseFormula(value, cells).toString() : value,
-        formula: isFormula ? value : undefined
-      });
+      if (isFormula) {
+        updateCell(selectedCell.row, selectedCell.col, {
+          formula: value,
+          value: value // Will be calculated in updateCell
+        });
+      } else {
+        updateCell(selectedCell.row, selectedCell.col, {
+          value: value,
+          formula: undefined
+        });
+      }
     }
   };
 
@@ -618,9 +739,28 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
                           <input
                             ref={inputRef}
                             className="w-full h-full bg-transparent border-none outline-none"
-                            onBlur={() => setEditingCell(null)}
+                            defaultValue={cellData?.formula || cellData?.value || ''}
+                            onBlur={(e) => {
+                              const value = e.target.value;
+                              const isFormula = value.startsWith('=');
+                              updateCell(row, col, {
+                                value: isFormula ? value : value,
+                                formula: isFormula ? value : undefined
+                              });
+                              setEditingCell(null);
+                              setFormulaBarValue(value);
+                            }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
+                                const value = (e.target as HTMLInputElement).value;
+                                const isFormula = value.startsWith('=');
+                                updateCell(row, col, {
+                                  value: isFormula ? value : value,
+                                  formula: isFormula ? value : undefined
+                                });
+                                setEditingCell(null);
+                                setFormulaBarValue(value);
+                              } else if (e.key === 'Escape') {
                                 setEditingCell(null);
                               }
                             }}

@@ -77,12 +77,12 @@ export function RolePermissions({
     if (!updatedPermissions[selectedRole]) {
       updatedPermissions[selectedRole] = [...systemFeatures];
     }
-    
+
     updatedPermissions[selectedRole][featureIndex] = {
       ...updatedPermissions[selectedRole][featureIndex],
       [action]: checked
     };
-    
+
     setRolePermissions(updatedPermissions);
   };
 
@@ -178,7 +178,7 @@ export function RolePermissions({
                             <div className="text-center">Update</div>
                             <div className="text-center">Delete</div>
                           </div>
-                          
+
                           {features.map((feature) => (
                             <div key={feature.index} className="grid grid-cols-5 gap-4 items-center py-2 border-b last:border-b-0">
                               <div className="font-medium">{feature.feature}</div>

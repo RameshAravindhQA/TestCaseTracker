@@ -280,10 +280,29 @@ export function DashboardPage() {
     }
 
     // Show onboarding for new users who haven't completed it
-    if (user && !hasCompletedOnboarding && (!projects || projects.length === 0)) {
-      setTimeout(() => setIsOnboardingOpen(true), 1000);
+    if (user && !hasCompletedOnboarding) {
+      // Delay to ensure proper loading
+      const timer = setTimeout(() => {
+        setIsOnboardingOpen(true);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
     }
-  }, [user, projects]);
+  }, [user]);
+
+  // Separate effect for projects-based onboarding trigger
+  useEffect(() => {
+    const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
+    
+    // If user has no projects and hasn't completed onboarding, show it
+    if (user && !hasCompletedOnboarding && projects && projects.length === 0 && !isProjectsLoading) {
+      const timer = setTimeout(() => {
+        setIsOnboardingOpen(true);
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user, projects, isProjectsLoading]);
 
 const handleWelcomeClose = () => {
     setIsWelcomeOpen(false);

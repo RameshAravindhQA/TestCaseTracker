@@ -25,7 +25,8 @@ import {
   Save, 
   Settings, 
   Trash, 
-  X
+  X,
+  Tag
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -431,6 +432,52 @@ export default function TraceabilityMatrixPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+              <Dialog open={isMarkerDialogOpen} onOpenChange={setIsMarkerDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Manage Markers
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingMarker ? 'Edit Marker' : 'Create Marker'}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="label" className="text-right">
+                        Label
+                      </Label>
+                      <Input
+                        id="label"
+                        value={newMarker.label}
+                        onChange={(e) => setNewMarker(prev => ({ ...prev, label: e.target.value }))}
+                        className="col-span-3"
+                        placeholder="Marker Label"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="color" className="text-right">
+                        Color
+                      </Label>
+                      <Input
+                        type="color"
+                        id="color"
+                        value={newMarker.color}
+                        onChange={(e) => setNewMarker(prev => ({ ...prev, color: e.target.value }))}
+                        className="col-span-3"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={editingMarker ? handleUpdateMarker : handleCreateMarker}>
+                      {editingMarker ? 'Update Marker' : 'Create Marker'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             <Button onClick={exportToCSV} variant="outline" disabled={!selectedProjectId || modules.length === 0}>
               <Download className="h-4 w-4 mr-2" />
               Export CSV

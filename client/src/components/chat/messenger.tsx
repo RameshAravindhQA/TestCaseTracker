@@ -151,9 +151,18 @@ const Messenger = () => {
     queryKey: ["chatMessages", selectedConversation],
     queryFn: async () => {
       if (!selectedConversation) return [];
-      const response = await apiRequest("GET", `/api/projects/${selectedConversation}/chat`);
-      if (!response.ok) throw new Error("Failed to fetch messages");
-      return response.json();
+      try {
+        const response = await apiRequest("GET", `/api/chat/conversations/${selectedConversation}/messages`);
+        if (!response.ok) {
+          // Return empty array if conversation doesn't exist yet
+          if (response.status === 404) return [];
+          throw new Error("Failed to fetch messages");
+        }
+        return response.json();
+      } catch (error) {
+        console.warn("Failed to fetch messages:", error);
+        return [];
+      }
     },
     enabled: !!selectedConversation,
     refetchInterval: 3000,
@@ -164,9 +173,14 @@ const Messenger = () => {
     queryKey: ["conversationUsers", selectedConversation],
     queryFn: async () => {
       if (!selectedConversation) return [];
-      const response = await apiRequest("GET", `/api/projects/${selectedConversation}/users`);
-      if (!response.ok) throw new Error("Failed to fetch users");
-      return response.json();
+      try {
+        const response = await apiRequest("GET", `/api/users`);
+        if (!response.ok) throw new Error("Failed to fetch users");
+        return response.json();
+      } catch (error) {
+        console.warn("Failed to fetch users:", error);
+        return [];
+      }
     },
     enabled: !!selectedConversation,
   });
@@ -177,15 +191,30 @@ const Messenger = () => {
       if (!selectedConversation) throw new Error("No conversation selected");
       
       try {
-        const response = await apiRequest("POST", `/api/projects/${selectedConversation}/chat`, messageData);
+        // Use general chat endpoint instead of project-specific
+        const response = await apiRequest("POST", `/api/chat/messages`, {
+          ...messageData,
+          conversationId: selectedConversation
+        });
+        
         if (!response.ok) {
-          // Try to get error message from response
+          // Handle different response types
           let errorMessage = `Server error: ${response.status}`;
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch {
-            errorMessage = await response.text() || errorMessage;
+          const contentType = response.headers.get('content-type');
+          
+          if (contentType && contentType.includes('application/json')) {
+            try {
+              const errorData = await response.json();
+              errorMessage = errorData.message || errorMessage;
+            } catch {
+              errorMessage = "Failed to parse error response";
+            }
+          } else {
+            try {
+              errorMessage = await response.text() || errorMessage;
+            } catch {
+              errorMessage = "Network error occurred";
+            }
           }
           throw new Error(errorMessage);
         }
