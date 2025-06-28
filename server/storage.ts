@@ -1792,14 +1792,12 @@ class MemStorage implements IStorage {
   }
 
   async updateGitHubIssue(id: number, data: any): Promise<any | null> {
-    const index =this.githubIssues.findIndex(issue => issue.id === id);
-    if (index === -1){
+    const index = this.githubIssues.findIndex(issue => issue.id === id);
+    if (index === -1) {
       return null;
     }
 
     this.githubIssues[index] = {
-Adding todos Map to the MemStorage class to store todo items.```text
-
       ...this.githubIssues[index],
       ...data,
       updatedAt: new Date().toISOString(),
@@ -1941,6 +1939,199 @@ Adding todos Map to the MemStorage class to store todo items.```text
   async getTodos(userId: number): Promise<any[]> {
     return Array.from(this.todos.values()).filter(todo => todo.userId === userId);
   }
+
+  async getTagsByProject(projectId: number): Promise<Tag[]> {
+    return Array.from(this.tags.values()).filter(tag => tag.projectId === projectId);
+  }
+
+  async getTag(id: number): Promise<Tag | undefined> {
+    return this.tags.get(id);
+  }
+
+  async createTag(tag: InsertTag): Promise<Tag> {
+    const newTag = {
+      id: this.getNextId(),
+      ...tag,
+    };
+    this.tags.set(newTag.id, newTag);
+    return newTag;
+  }
+
+  async updateTag(id: number, tagData: Partial<Tag>): Promise<Tag | undefined> {
+    const tag = this.tags.get(id);
+    if (!tag) return undefined;
+
+    const updatedTag = { ...tag, ...tagData };
+    this.tags.set(id, updatedTag);
+    return updatedTag;
+  }
+
+  async deleteTag(id: number): Promise<boolean> {
+    return this.tags.delete(id);
+  }
+
+  async getKanbanColumnsByProject(projectId: number): Promise<KanbanColumn[]> {
+    return Array.from(this.kanbanColumns.values())
+      .filter(col => col.projectId === projectId)
+      .sort((a, b) => a.position - b.position);
+  }
+
+  async getKanbanColumn(id: number): Promise<KanbanColumn | undefined> {
+    return this.kanbanColumns.get(id);
+  }
+
+  async createKanbanColumn(column: InsertKanbanColumn): Promise<KanbanColumn> {
+    const newColumn = {
+      id: this.getNextId(),
+      ...column,
+    };
+    this.kanbanColumns.set(newColumn.id, newColumn);
+    return newColumn;
+  }
+
+  async updateKanbanColumn(id: number, columnData: Partial<KanbanColumn>): Promise<KanbanColumn | undefined> {
+    const column = this.kanbanColumns.get(id);
+    if (!column) return undefined;
+
+    const updatedColumn = { ...column, ...columnData };
+    this.kanbanColumns.set(id, updatedColumn);
+    return updatedColumn;
+  }
+
+  async deleteKanbanColumn(id: number): Promise<boolean> {
+    const cardsInColumn = Array.from(this.kanbanCards.values()).filter(card => card.columnId === id);
+    cardsInColumn.forEach(card => this.kanbanCards.delete(card.id));
+    return this.kanbanColumns.delete(id);
+  }
+
+  async getKanbanCardsByColumn(columnId: number): Promise<KanbanCard[]> {
+    return Array.from(this.kanbanCards.values())
+      .filter(card => card.columnId === columnId)
+      .sort((a, b) => a.position - b.position);
+  }
+
+  async getKanbanCard(id: number): Promise<KanbanCard | undefined> {
+    return this.kanbanCards.get(id);
+  }
+
+  async createKanbanCard(card: InsertKanbanCard): Promise<KanbanCard> {
+    const newCard = {
+      id: this.getNextId(),
+      ...card,
+    };
+    this.kanbanCards.set(newCard.id, newCard);
+    return newCard;
+  }
+
+  async updateKanbanCard(id: number, cardData: Partial<KanbanCard>): Promise<KanbanCard | undefined> {
+    const card = this.kanbanCards.get(id);
+    if (!card) return undefined;
+
+    const updatedCard = { ...card, ...cardData };
+    this.kanbanCards.set(id, updatedCard);
+    return updatedCard;
+  }
+
+  async deleteKanbanCard(id: number): Promise<boolean> {
+    return this.kanbanCards.delete(id);
+  }
+
+  async getCustomMarkersByProject(projectId: number): Promise<CustomMarker[]> {
+    return Array.from(this.customMarkers.values()).filter(marker => marker.projectId === projectId);
+  }
+
+  async getCustomMarker(id: number): Promise<CustomMarker | undefined> {
+    return this.customMarkers.get(id);
+  }
+
+  async createCustomMarker(marker: InsertCustomMarker): Promise<CustomMarker> {
+    const newMarker = {
+      id: this.getNextId(),
+      ...marker,
+    };
+    this.customMarkers.set(newMarker.id, newMarker);
+    return newMarker;
+  }
+
+  async updateCustomMarker(id: number, markerData: Partial<CustomMarker>): Promise<CustomMarker | undefined> {
+    const marker = this.customMarkers.get(id);
+    if (!marker) return undefined;
+
+    const updatedMarker = { ...marker, ...markerData };
+    this.customMarkers.set(id, updatedMarker);
+    return updatedMarker;
+  }
+
+  async deleteCustomMarker(id: number): Promise<boolean> {
+    return this.customMarkers.delete(id);
+  }
+
+  async getMatrixCellsByProject(projectId: number): Promise<MatrixCell[]> {
+    return Array.from(this.matrixCells.values()).filter(cell => cell.projectId === projectId);
+  }
+
+  async getMatrixCell(id: number): Promise<MatrixCell | undefined> {
+    return this.matrixCells.get(id);
+  }
+
+  async createMatrixCell(cell: InsertMatrixCell): Promise<MatrixCell> {
+    const newCell = {
+      id: this.getNextId(),
+      ...cell,
+    };
+    this.matrixCells.set(newCell.id, newCell);
+    return newCell;
+  }
+
+  async updateMatrixCell(id: number, cellData: Partial<MatrixCell>): Promise<MatrixCell | undefined> {
+    const cell = this.matrixCells.get(id);
+    if (!cell) return undefined;
+
+    const updatedCell = { ...cell, ...cellData };
+    this.matrixCells.set(id, updatedCell);
+    return updatedCell;
+  }
+
+  async deleteMatrixCell(id: number): Promise<boolean> {
+    return this.matrixCells.delete(id);
+  }
+
+  async getTestSheets(projectId?: number): Promise<TestSheet[]> {
+    let results = Array.from(this.testSheets.values());
+    if (projectId) {
+      results = results.filter(sheet => sheet.projectId === projectId);
+    }
+    return results;
+  }
+
+  async getTestSheet(id: number): Promise<TestSheet | undefined> {
+    return this.testSheets.get(id);
+  }
+
+  async createTestSheet(sheet: InsertTestSheet): Promise<TestSheet> {
+    const newSheet = {
+      id: this.getNextId(),
+      ...sheet,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.testSheets.set(newSheet.id, newSheet);
+    return newSheet;
+  }
+
+  async updateTestSheet(id: number, sheetData: Partial<TestSheet>): Promise<TestSheet | undefined> {
+    const sheet = this.testSheets.get(id);
+    if (!sheet) return undefined;
+
+    const updatedSheet = { ...sheet, ...sheetData, updatedAt: new Date() };
+    this.testSheets.set(id, updatedSheet);
+    return updatedSheet;
+  }
+
+  async deleteTestSheet(id: number): Promise<boolean> {
+    return this.testSheets.delete(id);
+  }
+}
 
   async getTodo(id: number): Promise<any | undefined> {
     return this.todos.get(id);
