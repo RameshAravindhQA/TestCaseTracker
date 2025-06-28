@@ -845,7 +845,7 @@ class MemStorage implements IStorage {
     return card;
   }
 
-  async getKanbanCards(columnId: number): Promise<KanbanCard[]): Promise<KanbanCard[]> {
+  async getKanbanCards(columnId: number): Promise<KanbanCard[]> {
     return Array.from(this.kanbanCards.values())
       .filter(card => card.columnId === columnId)
       .sort((a, b) => a.position - b.position);
