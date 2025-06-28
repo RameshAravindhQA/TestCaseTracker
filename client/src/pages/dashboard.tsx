@@ -69,22 +69,37 @@ export default function Dashboard() {
   const [showMotivationDialog, setShowMotivationDialog] = useState(false);
 
 
-  // Show motivation dialog after login
+  // Show motivation dialog on login - prioritize this over simple welcome
   useEffect(() => {
     if (user) {
-      // Check if this is a fresh login (within last 30 seconds)
-      const loginTime = localStorage.getItem('loginTime');
-      const hasShownMotivation = sessionStorage.getItem('motivation-shown');
-      
-      if (loginTime && !hasShownMotivation) {
-        const timeSinceLogin = Date.now() - new Date(loginTime).getTime();
-        if (timeSinceLogin < 30000) { // 30 seconds
-          setShowMotivationDialog(true);
-          sessionStorage.setItem('motivation-shown', 'true');
+      const hasShownToday = localStorage.getItem(`motivation-shown-${new Date().toDateString()}`);
+      const lastLoginTime = localStorage.getItem('lastLoginTime');
+      const currentTime = new Date().getTime();
+
+      let shouldShow = false;
+
+      // Show if hasn't been shown today
+      if (!hasShownToday) {
+        shouldShow = true;
+      } else if (lastLoginTime) {
+        // Or if more than 4 hours since last login
+        const timeDiff = currentTime - parseInt(lastLoginTime);
+        const hoursDiff = timeDiff / (1000 * 60 * 60);
+        if (hoursDiff > 4) {
+          shouldShow = true;
         }
       }
+
+      if (shouldShow) {
+        console.log('Showing motivation dialog for user:', user.username);
+        setShowMotivationDialog(true);
+        localStorage.setItem(`motivation-shown-${new Date().toDateString()}`, 'true');
+      }
+
+      localStorage.setItem('lastLoginTime', currentTime.toString());
     }
   }, [user]);
+
   // Show notification dialog on first load
   useEffect(() => {
     const hasShownNotification = sessionStorage.getItem('dashboard-notification-shown');
@@ -651,6 +666,7 @@ export default function Dashboard() {
                   <XAxis dataKey="day" />
                   <YAxis />
                   <RechartsTooltip />
+                  ```text
                   <Line 
                     type="monotone" 
                     dataKey="discovered" 
@@ -698,12 +714,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Motivation Dialog */}
-      <LoginMotivationDialog
+      {/* Login Motivation Dialog with Testing Updates */}
+      <LoginMotivationDialog 
         open={showMotivationDialog}
         onOpenChange={setShowMotivationDialog}
-        userFirstName={user?.name ? user.name.split(' ')[0] : user?.email?.split('@')[0] || "User"}
-        loginTime={new Date()}
+        userFirstName={user?.username || "Tester"}
+        loginTime={loginTime}
       />
     </MainLayout>
   );
