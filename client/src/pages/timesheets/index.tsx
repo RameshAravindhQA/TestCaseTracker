@@ -776,27 +776,25 @@ export default function TimeSheetsPage() {
           </div>
         </div>
 
-        <DashboardHeader
-          heading=""
-          text=""
-        >
-          <Button
-            onClick={() => {
-              if (selectedFolderId === null) {
-                toast({
-                  title: "Select a folder",
-                  description: "Please select a folder before creating a time sheet",
-                  variant: "destructive"
-                });
-              } else {
-                setIsCreateDialogOpen(true);
-              }
-            }}
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Time Sheet
-          </Button>
+        <div className="flex items-center justify-between mb-6">
+          <div></div>
           <div className="flex items-center gap-2">
+            <Button
+              onClick={() => {
+                if (selectedFolderId === null) {
+                  toast({
+                    title: "Select a folder",
+                    description: "Please select a folder before creating a time sheet",
+                    variant: "destructive"
+                  });
+                } else {
+                  setIsCreateDialogOpen(true);
+                }
+              }}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Time Sheet
+            </Button>
             <Button variant="outline" onClick={exportToPDF}>
               <FileText className="mr-2 h-4 w-4" />
               Export PDF
@@ -806,7 +804,7 @@ export default function TimeSheetsPage() {
               Export CSV
             </Button>
           </div>
-        </DashboardHeader>
+        </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
