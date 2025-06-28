@@ -1980,6 +1980,7 @@ Adding todos Map to the MemStorage class to store todo items.```text
   async getCustomMarkersByProject(projectId: number): Promise<any[]> {
     return Array.from(this.customMarkers.values()).filter(marker => marker.projectId === projectId);
   }
+}
 
   async createCustomMarker(data: Omit<CustomMarker, 'id'>): Promise<CustomMarker> {
     const id = this.nextId++;
