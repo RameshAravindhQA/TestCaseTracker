@@ -211,7 +211,7 @@ export function LoginMotivationDialog({
   open, 
   onOpenChange, 
   userFirstName = "Tester", 
-  loginTime = new Date()
+  loginTime = new Date() 
 }: MotivationDialogProps) {
   const [currentQuote, setCurrentQuote] = useState<MotivationalQuote>(motivationalQuotes[0]);
   const [dailyUpdates, setDailyUpdates] = useState<DailyUpdate[]>([]);
@@ -336,20 +336,10 @@ export function LoginMotivationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between text-2xl">
-            <div className="flex items-center gap-3">
-              {timeIcon}
-              {greeting}, {userFirstName}!
-              <Heart className="h-6 w-6 text-red-500 animate-pulse" />
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => onOpenChange(false)}
-              className="h-6 w-6 p-0"
-            >
-              ✕
-            </Button>
+          <DialogTitle className="flex items-center gap-3 text-2xl">
+            {timeIcon}
+            {greeting}, {userFirstName}!
+            <Heart className="h-6 w-6 text-red-500 animate-pulse" />
           </DialogTitle>
           <DialogDescription className="flex items-center gap-2 text-base">
             <Clock className="h-4 w-4" />
@@ -470,7 +460,7 @@ export function LoginMotivationDialog({
           </div>
           <div className="flex gap-3">
             <Button variant="outline" size="sm" onClick={() => {
-              console.log('View Later clicked - closing dialog');
+              console.log('View Later clicked');
               onOpenChange(false);
             }}>
               View Later
@@ -478,7 +468,7 @@ export function LoginMotivationDialog({
             <Button 
               size="sm" 
               onClick={() => {
-                console.log('Lets Start Testing clicked - closing dialog');
+                console.log('Lets Start Testing clicked');
                 onOpenChange(false);
               }}
               className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"

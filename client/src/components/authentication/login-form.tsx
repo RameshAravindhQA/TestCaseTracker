@@ -71,11 +71,6 @@ export function LoginForm() {
       // Show motivation dialog immediately after successful login
       console.log("Opening motivation dialog...");
       setShowMotivationDialog(true);
-      
-      // Navigate to dashboard after a short delay to ensure dialog opens first
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 100);
     },
     onError: (error: any) => {
       console.error("Login error:", error);
@@ -275,7 +270,13 @@ export function LoginForm() {
       </CardFooter>
       <LoginMotivationDialog
         open={showMotivationDialog}
-        onOpenChange={setShowMotivationDialog}
+        onOpenChange={(open) => {
+          setShowMotivationDialog(open);
+          if (!open) {
+            // Navigate to dashboard after dialog closes
+            setTimeout(() => navigate("/dashboard"), 100);
+          }
+        }}
         userFirstName={loggedInUserName}
         loginTime={new Date()}
       />
