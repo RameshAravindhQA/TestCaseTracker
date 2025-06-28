@@ -11,16 +11,24 @@ export function DashboardWelcomeDialog() {
   const { user, isLoading } = useAuth();
 
   useEffect(() => {
-    // Check if dialog has been shown before and if user is authenticated
+    // Check if dialog has been shown before
     const hasSeenWelcome = localStorage.getItem('hasSeenDashboardWelcome');
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
     
-    // Wait for auth to load and check if user exists
-    if (!isLoading && user && !hasSeenWelcome) {
-      console.log("DashboardWelcomeDialog - User found, showing dialog:", user);
+    console.log("DashboardWelcomeDialog - Auth state:", { 
+      isLoading, 
+      user: !!user, 
+      hasSeenWelcome, 
+      isAuthenticated 
+    });
+    
+    // Show dialog if user is authenticated and hasn't seen it before
+    if (!hasSeenWelcome && isAuthenticated && (!isLoading || user)) {
+      console.log("DashboardWelcomeDialog - Showing welcome dialog");
       // Add a delay to ensure dashboard is fully loaded
       const timer = setTimeout(() => {
         setIsOpen(true);
-      }, 2000);
+      }, 1000);
       return () => clearTimeout(timer);
     }
   }, [user, isLoading]);

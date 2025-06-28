@@ -232,7 +232,7 @@ import {
       </div>
 </div>
 
-      {/* Welcome Dialog */}
+      {/* Welcome Dialog - show after initial auth check */}
       <DashboardWelcomeDialog />
     </DashboardLayout>
   );
