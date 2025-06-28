@@ -2540,4 +2540,7 @@ card => card.columnId === id);
   }
 }
 
+// Create and export the storage instance
+export const storage = new MemStorage();
+
 export { MemStorage };
