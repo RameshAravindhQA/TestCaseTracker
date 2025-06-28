@@ -951,14 +951,14 @@ export default function TimeSheetsPage() {
               // If month is the only active filter, reset to current month
               if (!currentProject && !currentCustomer && !selectedFolderId) {
                 const now = new Date();
-                setCurrentMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+                setCurrentMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
               } else {
                 // Otherwise clear all filters
                 setCurrentProject(null);
                 setCurrentCustomer(null);
                 setSelectedFolderId(null);
                 const now = new Date();
-                setCurrentMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+                setCurrentMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
               }
               // Reset pagination to first page
               setCurrentPage(1);
