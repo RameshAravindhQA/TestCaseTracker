@@ -69,37 +69,12 @@ export default function Dashboard() {
   const [showMotivationDialog, setShowMotivationDialog] = useState(false);
 
 
-  // Show motivation dialog on login - prioritize this over simple welcome
+  // Show motivation dialog after login
   useEffect(() => {
     if (user) {
-      const hasShownToday = localStorage.getItem(`motivation-shown-${new Date().toDateString()}`);
-      const lastLoginTime = localStorage.getItem('lastLoginTime');
-      const currentTime = new Date().getTime();
-
-      let shouldShow = false;
-
-      // Show if hasn't been shown today
-      if (!hasShownToday) {
-        shouldShow = true;
-      } else if (lastLoginTime) {
-        // Or if more than 4 hours since last login
-        const timeDiff = currentTime - parseInt(lastLoginTime);
-        const hoursDiff = timeDiff / (1000 * 60 * 60);
-        if (hoursDiff > 4) {
-          shouldShow = true;
-        }
-      }
-
-      if (shouldShow) {
-        console.log('Showing motivation dialog for user:', user.username);
-        setShowMotivationDialog(true);
-        localStorage.setItem(`motivation-shown-${new Date().toDateString()}`, 'true');
-      }
-
-      localStorage.setItem('lastLoginTime', currentTime.toString());
+      setShowMotivationDialog(true);
     }
   }, [user]);
-
   // Show notification dialog on first load
   useEffect(() => {
     const hasShownNotification = sessionStorage.getItem('dashboard-notification-shown');
@@ -666,7 +641,6 @@ export default function Dashboard() {
                   <XAxis dataKey="day" />
                   <YAxis />
                   <RechartsTooltip />
-                  ```text
                   <Line 
                     type="monotone" 
                     dataKey="discovered" 
@@ -714,12 +688,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Login Motivation Dialog with Testing Updates */}
-      <LoginMotivationDialog 
+      {/* Motivation Dialog */}
+      <LoginMotivationDialog
         open={showMotivationDialog}
         onOpenChange={setShowMotivationDialog}
-        userFirstName={user?.username || "Tester"}
-        loginTime={loginTime}
+        userFirstName={user?.name ? user.name.split(' ')[0] : user?.email?.split('@')[0] || "User"}
+        loginTime={new Date()}
       />
     </MainLayout>
   );
