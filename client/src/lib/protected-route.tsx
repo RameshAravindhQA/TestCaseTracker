@@ -1,5 +1,5 @@
 
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCurrentUser } from "@/lib/auth";
@@ -11,7 +11,6 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [, navigate] = useLocation();
   const hasNavigatedRef = useRef(false);
-  const [authCheckComplete, setAuthCheckComplete] = useState(false);
 
   // Check localStorage for initial auth state
   const isLocallyAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
@@ -22,12 +21,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     queryFn: fetchCurrentUser,
     refetchOnWindowFocus: false,
     retry: 1,
-    enabled: isLocallyAuthenticated && !hasNavigatedRef.current,
+    enabled: isLocallyAuthenticated,
   });
 
   useEffect(() => {
     // Prevent multiple executions
-    if (hasNavigatedRef.current || authCheckComplete) return;
+    if (hasNavigatedRef.current) return;
 
     // If not authenticated locally, redirect immediately
     if (!isLocallyAuthenticated) {
@@ -41,7 +40,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     if (isLoading) return;
 
     // If query is complete and user is not authenticated
-    if (isLocallyAuthenticated && (isError || !user)) {
+    if (isError || !user) {
       console.log("User not authenticated by server, redirecting to login");
       localStorage.removeItem('isAuthenticated');
       localStorage.removeItem('userEmail');
@@ -52,15 +51,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       navigate("/login");
       return;
     }
-
-    // If we reach here, authentication is successful
-    if (user && isLocallyAuthenticated) {
-      setAuthCheckComplete(true);
-    }
-  }, [isLocallyAuthenticated, isLoading, isError, user, navigate, authCheckComplete]);
+  }, [isLocallyAuthenticated, isLoading, isError, user]); // Removed navigate and authCheckComplete from dependencies
 
   // Show loading state while checking authentication
-  if (!authCheckComplete && !hasNavigatedRef.current) {
+  if (!isLocallyAuthenticated || hasNavigatedRef.current) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -68,8 +62,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // If we've navigated away, show loading
-  if (hasNavigatedRef.current) {
+  // Show loading while fetching user data
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -77,6 +71,15 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // If authenticated and auth check is complete, render children
-  return <>{children}</>;
+  // If we have a user and are locally authenticated, render children
+  if (user && isLocallyAuthenticated) {
+    return <>{children}</>;
+  }
+
+  // Default loading state
+  return (
+    <div className="flex justify-center items-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+    </div>
+  );
 }
