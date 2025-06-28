@@ -232,8 +232,8 @@ import {
       </div>
 </div>
 
-      {/* Welcome Dialog - only show when dashboard is fully loaded */}
-      {!isProjectsLoading && <DashboardWelcomeDialog />}
+      {/* Welcome Dialog */}
+      <DashboardWelcomeDialog />
     </DashboardLayout>
   );
 }

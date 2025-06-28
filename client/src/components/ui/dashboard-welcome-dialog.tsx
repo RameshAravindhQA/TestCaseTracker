@@ -4,23 +4,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Clock, Lightbulb, TrendingUp, X } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 export function DashboardWelcomeDialog() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
     // Check if dialog has been shown before and if user is authenticated
     const hasSeenWelcome = localStorage.getItem('hasSeenDashboardWelcome');
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
     
-    if (!hasSeenWelcome && isAuthenticated) {
-      // Add a longer delay to ensure dashboard is fully loaded
+    // Wait for auth to load and check if user exists
+    if (!isLoading && user && !hasSeenWelcome) {
+      console.log("DashboardWelcomeDialog - User found, showing dialog:", user);
+      // Add a delay to ensure dashboard is fully loaded
       const timer = setTimeout(() => {
         setIsOpen(true);
-      }, 1500);
+      }, 2000);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [user, isLoading]);
 
   const handleClose = () => {
     setIsOpen(false);
@@ -32,6 +35,9 @@ export function DashboardWelcomeDialog() {
   let greeting = "Good Evening";
   if (hour < 12) greeting = "Good Morning";
   else if (hour < 17) greeting = "Good Afternoon";
+
+  // Get user's first name safely
+  const userFirstName = user?.firstName || "there";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -52,7 +58,7 @@ export function DashboardWelcomeDialog() {
           </Button>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Heart className="h-5 w-5 text-red-500" />
-            {greeting}, Welcome to TestCaseTracker!
+            {greeting}, {userFirstName}! Welcome to TestCaseTracker!
           </DialogTitle>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
