@@ -194,11 +194,16 @@ export default function TraceabilityMatrixPage() {
     <MainLayout>
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Traceability Matrix</h1>
-            <p className="text-muted-foreground">
-              Map requirements to test cases to ensure complete coverage
-            </p>
+          <div className="flex items-center gap-4">
+            <div className="p-2 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
+              <FileText className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Traceability Matrix</h1>
+              <p className="text-muted-foreground">
+                Map requirements to test cases to ensure complete coverage
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <Button onClick={exportMatrix} variant="outline">
@@ -227,6 +232,16 @@ export default function TraceabilityMatrixPage() {
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           </div>
+        ) : requirements.length === 0 || testCases.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <FileText className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No data available</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Loading requirements and test cases for the selected project...
+              </p>
+            </CardContent>
+          </Card>
         ) : (
           <Card>
             <CardHeader>

@@ -2003,6 +2003,84 @@ class MemStorage implements IStorage {
   async getDocumentFoldersByProject(projectId: number): Promise<DocumentFolder[]> {
     return Array.from(this.documentFolders.values()).filter(folder => folder.projectId === projectId);
   }
+
+  // Messenger methods
+  async getChatsByUser(userId: number): Promise<any[]> {
+    // Mock implementation - replace with actual database logic
+    return [
+      {
+        id: 1,
+        name: 'General Discussion',
+        type: 'group',
+        participants: Array.from(this.users.values()).slice(0, 3),
+        lastMessage: {
+          id: 1,
+          content: 'Hello everyone!',
+          senderId: 1,
+          createdAt: new Date().toISOString()
+        },
+        unreadCount: 2,
+        isArchived: false,
+        createdAt: new Date().toISOString()
+      }
+    ];
+  }
+
+  async createChat(chatData: any): Promise<any> {
+    const id = this.getNextId('chat');
+    const chat = {
+      id,
+      ...chatData,
+      createdAt: new Date().toISOString(),
+      unreadCount: 0,
+      isArchived: false
+    };
+    // Store in actual storage system
+    return chat;
+  }
+
+  async getMessagesByChat(chatId: number): Promise<any[]> {
+    // Mock implementation
+    return [
+      {
+        id: 1,
+        content: 'Hello everyone! Welcome to the team.',
+        senderId: 1,
+        chatId,
+        type: 'text',
+        reactions: [],
+        isPinned: false,
+        isEdited: false,
+        createdAt: new Date(Date.now() - 3600000).toISOString()
+      },
+      {
+        id: 2,
+        content: 'Thanks for the warm welcome!',
+        senderId: 2,
+        chatId,
+        type: 'text',
+        reactions: [{ emoji: '👍', userId: 1, count: 1 }],
+        isPinned: false,
+        isEdited: false,
+        createdAt: new Date().toISOString()
+      }
+    ];
+  }
+
+  async createMessage(messageData: any): Promise<any> {
+    const id = this.getNextId('message');
+    const message = {
+      id,
+      ...messageData,
+      type: 'text',
+      reactions: [],
+      isPinned: false,
+      isEdited: false,
+      createdAt: new Date().toISOString()
+    };
+    // Store in actual storage system
+    return message;
+  }
 }
 
 // Create and export the storage instance

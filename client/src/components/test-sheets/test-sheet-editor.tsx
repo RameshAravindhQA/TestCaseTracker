@@ -31,7 +31,7 @@ interface CellData {
 
 const COLUMNS = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
 
-export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheetEditorProps) {
+function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheetEditorProps) {
   const [cells, setCells] = useState<Record<string, CellData>>(sheet.data.cells || {});
   const [selectedCell, setSelectedCell] = useState<string>('A1');
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -339,3 +339,6 @@ export function TestSheetEditor({ sheet, open, onOpenChange, onSave }: TestSheet
     </Dialog>
   );
 }
+
+export default TestSheetEditor;
+export { TestSheetEditor };

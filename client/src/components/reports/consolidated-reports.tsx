@@ -69,14 +69,44 @@ import Papa from 'csv-parse';
 import { cn } from "@/lib/utils";
 
 interface ConsolidatedReportsProps {
-  selectedProjectId?: number;
-  projectId?: number;
-  onClose?: () => void;
+  selectedProjectId: number | null;
+}
+
+interface StatusUpdateData {
+  id: number;
+  type: 'testcase' | 'bug';
+  status: string;
 }
 
 export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: ConsolidatedReportsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Status update mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, type, status }: StatusUpdateData) => {
+      const endpoint = type === 'testcase' ? `/api/test-cases/${id}` : `/api/bugs/${id}`;
+      const response = await apiRequest('PUT', endpoint, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Status updated",
+        description: "Item status has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/bugs`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update status: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Fetch all data
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority = useState<string>("all");
@@ -93,7 +123,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const [editTestCaseDialogOpen, setEditTestCaseDialogOpen = useState(false);
   const [editBugDialogOpen, setEditBugDialogOpen = useState(false);
   const [selectedItemForView, setSelectedItemForView = useState<any>(null);
-  const [severityFilter, setSeverityFilter = useState<string>("all");
+  const [severityFilter, setSeverityFilter] = useState<string>("all");
   const [editingItem, setEditingItem = useState<{ id: number; type: 'testcase' | 'bug'; status: string } | null>(null);
   const [newStatus, setNewStatus] = useState<string>("");
   const [statusUpdateDialog, setStatusUpdateDialog = useState(false);
@@ -105,6 +135,11 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   // Force re-render when filters change
   const [filterKey, setFilterKey = useState(0);
   const [allItems, setAllItems = useState<any[]>([]);
+
+  // Dropdown options
+  const statusOptions = ['all', 'Not Executed', 'Pass', 'Fail', 'Open', 'In Progress', 'Resolved', 'Closed'];
+  const priorityOptions = ['all', 'Low', 'Medium', 'High', 'Critical'];
+  const severityOptions = ['all', 'Minor', 'Major', 'Critical', 'Blocker'];
 
   const currentProjectId = selectedProjectId || projectId;
 
@@ -300,7 +335,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   });
 
   // Status update mutation with proper API handling
-  const updateStatusMutation = useMutation({
+  const updateStatusMutationUpdated = useMutation({
     mutationFn: async ({ itemId, type, status }: { itemId: string, type: 'testcase' | 'bug', status: string }) => {
       const id = parseInt(itemId.split('-')[1]);
       console.log(`Updating ${type} ${id} to status: ${status}`);
@@ -1284,6 +1319,16 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     setFilterKey(prev => prev + 1); // Force re-render
   };
 
+    // Dropdown options
+    const statusOptions = ['all', 'Not Executed', 'Pass', 'Fail', 'Open', 'In Progress', 'Resolved', 'Closed'];
+    const priorityOptions = ['all', 'Low', 'Medium', 'High', 'Critical'];
+    const severityOptions = ['all', 'Minor', 'Major', 'Critical', 'Blocker'];
+  
+
+  const handleStatusUpdateFromDropdown = (id: number, type: 'testcase' | 'bug', newStatus: string) => {
+    updateStatusMutation.mutate({ id, type, status: newStatus });
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -1444,9 +1489,9 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-red-500/20 to-transparent rounded-bl-full group-hover:from-red-400/30"></div>
               <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 opacity-70"></div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="group relative overflow-hidden bg-gradient-to-br from-purple-900 via-violet-900 to-indigo-900 p-6 rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:scale-105 border border-purple-700">
+          <div className="group relative overflow-hidden bg-gradient-to-br from-purple-900via-violet-900 to-indigo-900 p-6 rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:scale-105 border border-purple-700">
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent group-hover:from-white/10"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative z-10">

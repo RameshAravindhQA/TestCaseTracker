@@ -204,7 +204,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
         className
       )}
     >
-      
+
       <div className="flex items-center h-16 px-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         <Link to="/dashboard" className="flex items-center gap-2 font-semibold">
             <img src="/images/navadhiti-logo-tree.jpg" alt="NavaDhiti" className="h-8 w-8 rounded" />
