@@ -74,12 +74,6 @@ async function startServer() {
     // Initialize database
     await initializeDatabase();
 
-    httpServer.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://0.0.0.0:${PORT}`);
-      console.log(`WebSocket server initialized for real-time chat`);
-      logger.info(`Server started on port ${PORT} with WebSocket support`);
-    });
-
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
@@ -97,20 +91,13 @@ async function startServer() {
       serveStatic(app);
     }
 
-    // ALWAYS serve the app on a port that isn't in use
-    // this serves both the API and the client.
-    // It is the only port that is not firewalled.
-    const port = 5000;
-    httpServer.listen(
-      {
-        port,
-        host: "0.0.0.0",
-        reusePort: true,
-      },
-      () => {
-        log(`serving on port ${port}`);
-      },
-    );
+    // Start the server on the specified port
+    httpServer.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
+      console.log(`WebSocket server initialized for real-time chat`);
+      logger.info(`Server started on port ${PORT} with WebSocket support`);
+      log(`serving on port ${PORT}`);
+    });
   } catch (error) {
     console.error("Failed to start server:", error);
     logger.error("Server startup failed:", error);
