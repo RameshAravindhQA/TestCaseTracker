@@ -219,6 +219,11 @@ export function LoginMotivationDialog({
   const [timeIcon, setTimeIcon] = useState(<Sun className="h-5 w-5" />);
   const [sessionDuration, setSessionDuration] = useState("0 minutes");
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('LoginMotivationDialog mounted/updated:', { open, userFirstName, loginTime });
+  }, [open, userFirstName, loginTime]);
+
   useEffect(() => {
     // Set random quote
     const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
@@ -454,12 +459,18 @@ export function LoginMotivationDialog({
             "Testing is not just about finding bugs, it's about building confidence in software quality."
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" size="sm" onClick={() => {
+              console.log('View Later clicked');
+              onOpenChange(false);
+            }}>
               View Later
             </Button>
             <Button 
               size="sm" 
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                console.log('Lets Start Testing clicked');
+                onOpenChange(false);
+              }}
               className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
             >
               Let's Start Testing! 🚀

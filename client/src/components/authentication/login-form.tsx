@@ -65,12 +65,12 @@ export function LoginForm() {
 
       // Extract user's first name for personalization
       const firstName = data.name ? data.name.split(' ')[0] : data.email.split('@')[0];
+      console.log("Setting user name for motivation dialog:", firstName);
       setLoggedInUserName(firstName);
 
       // Show motivation dialog immediately after successful login
-      setTimeout(() => {
-        setShowMotivationDialog(true);
-      }, 500);
+      console.log("Opening motivation dialog...");
+      setShowMotivationDialog(true);
     },
     onError: (error: any) => {
       console.error("Login error:", error);
@@ -270,7 +270,13 @@ export function LoginForm() {
       </CardFooter>
       <LoginMotivationDialog
         open={showMotivationDialog}
-        onOpenChange={setShowMotivationDialog}
+        onOpenChange={(open) => {
+          setShowMotivationDialog(open);
+          if (!open) {
+            // Navigate to dashboard after dialog closes
+            setTimeout(() => navigate("/dashboard"), 100);
+          }
+        }}
         userFirstName={loggedInUserName}
         loginTime={new Date()}
       />
