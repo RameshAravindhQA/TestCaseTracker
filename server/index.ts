@@ -76,6 +76,13 @@ async function startServer() {
       throw err;
     });
 
+    // Initialize WebSocket server for chat first to claim the path
+    const chatWS = new ChatWebSocketServer(httpServer);
+    (global as any).chatWebSocket = chatWS;
+
+    // Add small delay before setting up Vite to ensure WebSocket is properly initialized
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     // importantly only setup vite in development and after
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
@@ -84,11 +91,6 @@ async function startServer() {
     } else {
       serveStatic(app);
     }
-
-    // Initialize WebSocket server for chat after Vite setup to avoid port conflicts
-    // Use a different path to avoid interfering with Vite's WebSocket
-    const chatWS = new ChatWebSocketServer(httpServer);
-    (global as any).chatWebSocket = chatWS;
 
     // Start the server on the specified port
     httpServer.listen(PORT, "0.0.0.0", () => {

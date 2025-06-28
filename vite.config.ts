@@ -36,7 +36,8 @@ export default defineConfig({
   },
   server: {
     hmr: {
-      overlay: false
+      overlay: false,
+      port: 24678 // Use different port for HMR WebSocket
     }
   },
   optimizeDeps: {
