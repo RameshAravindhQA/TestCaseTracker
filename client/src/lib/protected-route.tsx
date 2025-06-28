@@ -1,3 +1,4 @@
+
 import { ReactNode, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -9,52 +10,43 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [, navigate] = useLocation();
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [hasRedirected, setHasRedirected] = useState(false);
 
-  // First check localStorage for a quicker response
+  // Check localStorage for initial auth state
   const isLocallyAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   
-  // Then verify with the server
+  // Only query if localStorage indicates authentication
   const { data: user, isLoading, isError } = useQuery({
     queryKey: ['/api/auth/user'],
     queryFn: fetchCurrentUser,
-    // Don't refetch on window focus for auth checks
     refetchOnWindowFocus: false,
-    // Reduce retries for auth check
     retry: 1,
-    // Only run this query if localStorage indicates we might be authenticated
-    enabled: isLocallyAuthenticated, 
+    enabled: isLocallyAuthenticated && !hasRedirected,
   });
 
   useEffect(() => {
-    const checkAuthentication = async () => {
-      // If localStorage says we're not authenticated, redirect immediately
-      if (!isLocallyAuthenticated) {
-        console.log("Not authenticated according to localStorage, redirecting to login");
-        navigate("/login");
-        setIsCheckingAuth(false);
-        return;
-      }
+    // Prevent multiple redirections
+    if (hasRedirected) return;
 
-      // Wait for the query to complete
-      if (!isLoading) {
-        if (isError || !user) {
-          console.log("User not authenticated, redirecting to login");
-          // Clear localStorage auth flag since server says we're not authenticated
-          localStorage.removeItem('isAuthenticated');
-          navigate("/login");
-        } else {
-          console.log("User authenticated, allowing access");
-        }
-        setIsCheckingAuth(false);
-      }
-    };
+    // If not authenticated locally, redirect immediately
+    if (!isLocallyAuthenticated) {
+      console.log("Not authenticated according to localStorage, redirecting to login");
+      setHasRedirected(true);
+      navigate("/login");
+      return;
+    }
 
-    checkAuthentication();
-  }, [isLoading, isError, user, navigate, isLocallyAuthenticated]);
+    // If query is complete and user is not authenticated
+    if (!isLoading && isLocallyAuthenticated && (isError || !user)) {
+      console.log("User not authenticated by server, redirecting to login");
+      localStorage.removeItem('isAuthenticated');
+      setHasRedirected(true);
+      navigate("/login");
+    }
+  }, [isLocallyAuthenticated, isLoading, isError, user, navigate, hasRedirected]);
 
   // Show loading state while checking authentication
-  if (isCheckingAuth) {
+  if (!hasRedirected && (isLoading || !isLocallyAuthenticated)) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -62,6 +54,15 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // If authenticated, render children
+  // If we've redirected, don't render anything
+  if (hasRedirected) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // If authenticated and no redirect, render children
   return <>{children}</>;
 }
