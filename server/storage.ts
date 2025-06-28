@@ -1245,13 +1245,21 @@ class MemStorage implements IStorage {
 
   // Project operations for user access
   async getProjectsByUserId(userId: number): Promise<Project[]> {
-    // Only return projects created by this specific user
+    // Get projects created by this user
     const createdProjects = Array.from(this.projects.values())
       .filter(project => project.createdById === userId);
 
-    console.log(`Storage: getProjectsByUserId(${userId}) returning ${createdProjects.length} projects created by user`);
+    // Get projects where user is a member
+    const memberProjects = Array.from(this.projectMembers.values())
+      .filter(member => member.userId === userId)
+      .map(member => this.projects.get(member.projectId))
+      .filter(project => project && project.createdById !== userId); // Avoid duplicates
 
-    return createdProjects;
+    const allAccessibleProjects = [...createdProjects, ...memberProjects];
+
+    console.log(`Storage: getProjectsByUserId(${userId}) returning ${allAccessibleProjects.length} projects (${createdProjects.length} created, ${memberProjects.length} as member)`);
+
+    return allAccessibleProjects;
   }
 
   // Module operations
@@ -2779,6 +2787,34 @@ class MemStorage implements IStorage {
       const bTime = b.lastMessage?.createdAt || b.createdAt;
       return new Date(bTime).getTime() - new Date(aTime).getTime();
     });
+  }
+
+  async getDirectConversation(userId1: number, userId2: number): Promise<any | null> {
+    for (const conv of this.conversations.values()) {
+      if (conv.type === 'direct' && 
+          conv.participants.includes(userId1) && 
+          conv.participants.includes(userId2)) {
+        return conv;
+      }
+    }
+    return null;
+  }
+
+  async createConversation(conversationData: any): Promise<any> {
+    const id = this.getNextId();
+    const conversation = {
+      id,
+      ...conversationData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    this.conversations.set(id, conversation);
+
+    // Initialize members
+    this.conversationMembers.set(id, new Set(conversationData.participants || []));
+
+    return conversation;
   }
 
   async getMessagesByChat(chatId: number): Promise<any[]> {

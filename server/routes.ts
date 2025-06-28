@@ -603,6 +603,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Server error" });
     }
   });
+
+  // Public users endpoint for messenger (limited data)
+  apiRouter.get("/users/public", isAuthenticated, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      
+      // Return minimal user info for messenger functionality
+      const publicUsers = users
+        .filter(user => user.id !== req.session.userId) // Exclude current user
+        .map(user => ({
+          id: user.id,
+          name: `${user.firstName} ${user.lastName || ''}`.trim(),
+          email: user.email,
+          avatar: user.profilePicture,
+          isOnline: false, // Will be updated by WebSocket
+          lastSeen: user.lastLoginAt || user.createdAt
+        }));
+      
+      res.json(publicUsers);
+    } catch (error) {
+      console.error("Get public users error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
   
   apiRouter.post("/users", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
     try {
@@ -1208,7 +1232,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
 
 
-// Project Chat endpoints
+// Comprehensive Chat API for Messenger
+  apiRouter.get("/chats", isAuthenticated, async (req, res) => {
+    try {
+      // Get user's conversations/chats
+      const userChats = await storage.getUserConversations(req.session.userId!);
+      res.json(userChats);
+    } catch (error) {
+      console.error('Get chats error:', error);
+      res.status(500).json({ error: 'Failed to fetch chats' });
+    }
+  });
+
+  apiRouter.get("/chats/:chatId/messages", isAuthenticated, async (req, res) => {
+    try {
+      const chatId = parseInt(req.params.chatId);
+      const messages = await storage.getMessagesByChat(chatId);
+      res.json(messages);
+    } catch (error) {
+      console.error('Get chat messages error:', error);
+      res.status(500).json({ error: 'Failed to fetch chat messages' });
+    }
+  });
+
+  apiRouter.post("/chats/direct", isAuthenticated, async (req, res) => {
+    try {
+      const { targetUserId } = req.body;
+      
+      // Check if direct conversation already exists
+      let conversation = await storage.getDirectConversation(req.session.userId!, targetUserId);
+      
+      if (!conversation) {
+        // Create new direct conversation
+        const targetUser = await storage.getUser(targetUserId);
+        if (!targetUser) {
+          return res.status(404).json({ error: 'Target user not found' });
+        }
+        
+        conversation = await storage.createConversation({
+          type: 'direct',
+          name: `${targetUser.firstName} ${targetUser.lastName || ''}`.trim(),
+          participants: [req.session.userId!, targetUserId]
+        });
+      }
+      
+      res.json(conversation);
+    } catch (error) {
+      console.error('Create direct chat error:', error);
+      res.status(500).json({ error: 'Failed to create direct chat' });
+    }
+  });
+
+  apiRouter.post("/chats/group", isAuthenticated, async (req, res) => {
+    try {
+      const { name, description, participants } = req.body;
+      
+      const conversation = await storage.createConversation({
+        type: 'group',
+        name,
+        description,
+        participants: [req.session.userId!, ...participants]
+      });
+      
+      res.json(conversation);
+    } catch (error) {
+      console.error('Create group chat error:', error);
+      res.status(500).json({ error: 'Failed to create group chat' });
+    }
+  });
+
+  // Project Chat endpoints
   apiRouter.get("/projects/:projectId/chat", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
@@ -1426,14 +1519,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Projects routes
   apiRouter.get("/projects", isAuthenticated, async (req, res) => {
     try {
-      // Admin can see all projects, others see only their projects
+      // CRITICAL: Ensure proper data isolation
       let projects;
       if (req.session.userRole === "Admin") {
+        // Admins can see all projects
         projects = await storage.getProjects();
       } else {
+        // Non-admins can only see projects they created or are members of
         projects = await storage.getProjectsByUserId(req.session.userId!);
       }
       
+      console.log(`[SECURITY] User ${req.session.userId} (${req.session.userRole}) accessing ${projects.length} projects`);
       res.json(projects);
     } catch (error) {
       console.error("Get projects error:", error);
@@ -1608,6 +1704,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Project collaborator management
+  apiRouter.post("/projects/:id/collaborators", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const { email, role = "Member" } = req.body;
+      
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Check if user has admin access to this project
+      if (req.session.userRole !== "Admin" && project.createdById !== req.session.userId) {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const userMembership = projectMembers.find(member => member.userId === req.session.userId);
+        
+        if (!userMembership || userMembership.role !== "Admin") {
+          return res.status(403).json({ message: "You don't have permission to add collaborators" });
+        }
+      }
+      
+      // Find user by email
+      const collaboratorUser = await storage.getUserByEmail(email);
+      if (!collaboratorUser) {
+        return res.status(404).json({ message: "User not found with this email" });
+      }
+      
+      // Check if user is already a member
+      const existingMembers = await storage.getProjectMembers(projectId);
+      const existingMember = existingMembers.find(member => member.userId === collaboratorUser.id);
+      
+      if (existingMember) {
+        return res.status(400).json({ message: "User is already a collaborator on this project" });
+      }
+      
+      // Add user as project member
+      const newMember = await storage.addProjectMember({
+        projectId,
+        userId: collaboratorUser.id,
+        role,
+      });
+      
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "added collaborator",
+        entityType: "project",
+        entityId: projectId,
+        details: {
+          projectName: project.name,
+          collaboratorEmail: email,
+          collaboratorRole: role
+        }
+      });
+      
+      res.status(201).json({
+        member: newMember,
+        user: {
+          id: collaboratorUser.id,
+          name: `${collaboratorUser.firstName} ${collaboratorUser.lastName || ''}`.trim(),
+          email: collaboratorUser.email
+        }
+      });
+    } catch (error) {
+      console.error("Add collaborator error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/projects/:id/collaborators", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const project = await storage.getProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Check if user has access to this project
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+        
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+      
+      const members = await storage.getProjectMembers(projectId);
+      const collaborators = [];
+      
+      for (const member of members) {
+        const user = await storage.getUser(member.userId);
+        if (user) {
+          collaborators.push({
+            id: member.id,
+            userId: user.id,
+            name: `${user.firstName} ${user.lastName || ''}`.trim(),
+            email: user.email,
+            role: member.role,
+            addedAt: member.createdAt || new Date()
+          });
+        }
+      }
+      
+      res.json(collaborators);
+    } catch (error) {
+      console.error("Get collaborators error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Project members routes
   apiRouter.get("/projects/:id/members", isAuthenticated, async (req, res) => {
     try {

@@ -212,13 +212,26 @@ export default function Messenger() {
 
   const loadUsers = async () => {
     try {
-      const response = await fetch('/api/users');
+      const response = await fetch('/api/users/public');
       if (response.ok) {
         const usersData = await response.json();
-        setUsers(usersData.filter((u: User) => u.id !== user?.id));
+        setUsers(usersData);
+        console.log('Loaded users for messenger:', usersData.length);
+      } else {
+        console.error('Failed to load users:', response.status);
+        toast({
+          title: "Error",
+          description: "Failed to load users for messaging",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error loading users:', error);
+      toast({
+        title: "Error", 
+        description: "Failed to connect to user service",
+        variant: "destructive"
+      });
     }
   };
 
@@ -366,6 +379,21 @@ export default function Messenger() {
             <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Authentication Required</h3>
             <p className="text-gray-600">Please log in to access the messenger.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show loading state while initial data is being fetched
+  if (users.length === 0 && chats.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Card className="w-96">
+          <CardContent className="p-6 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Messenger</h3>
+            <p className="text-gray-600">Setting up your conversations...</p>
           </CardContent>
         </Card>
       </div>
