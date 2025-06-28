@@ -3663,6 +3663,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // TodoList routes
+  apiRouter.get("/todo-lists", isAuthenticated, async (req, res) => {
+    try {
+      const todoLists = await storage.getTodoLists(req.session.userId!);
+      res.json(todoLists);
+    } catch (error) {
+      console.error("Get todo lists error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/todo-lists/:id", isAuthenticated, async (req, res) => {
+    try {
+      const listId = parseInt(req.params.id);
+      const todoList = await storage.getTodoList(listId);
+      
+      if (!todoList) {
+        return res.status(404).json({ message: "Todo list not found" });
+      }
+      
+      // Users can only access their own todo lists
+      if (todoList.userId !== req.session.userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(todoList);
+    } catch (error) {
+      console.error("Get todo list error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/todo-lists", isAuthenticated, async (req, res) => {
+    try {
+      const { name, description, color } = req.body;
+      
+      if (!name || !name.trim()) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+      
+      const todoListData = {
+        name: name.trim(),
+        description: description || "",
+        color: color || "#3b82f6",
+        userId: req.session.userId!
+      };
+      
+      const todoList = await storage.createTodoList(todoListData);
+      res.status(201).json(todoList);
+    } catch (error) {
+      console.error("Create todo list error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.put("/todo-lists/:id", isAuthenticated, async (req, res) => {
+    try {
+      const listId = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const updatedTodoList = await storage.updateTodoList(listId, req.session.userId!, updates);
+      
+      if (!updatedTodoList) {
+        return res.status(404).json({ message: "Todo list not found or access denied" });
+      }
+      
+      res.json(updatedTodoList);
+    } catch (error) {
+      console.error("Update todo list error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/todo-lists/:id", isAuthenticated, async (req, res) => {
+    try {
+      const listId = parseInt(req.params.id);
+      
+      const success = await storage.deleteTodoList(listId, req.session.userId!);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Todo list not found or access denied" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete todo list error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/todo-lists/:id/todos", isAuthenticated, async (req, res) => {
+    try {
+      const listId = parseInt(req.params.id);
+      const todoList = await storage.getTodoList(listId);
+      
+      if (!todoList || todoList.userId !== req.session.userId) {
+        return res.status(404).json({ message: "Todo list not found or access denied" });
+      }
+      
+      const todos = await storage.getTodosByListId(listId);
+      res.json(todos);
+    } catch (error) {
+      console.error("Get todos by list error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Todo routes
   apiRouter.get("/todos", isAuthenticated, async (req, res) => {
     try {
@@ -3697,10 +3804,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/todos", isAuthenticated, async (req, res) => {
     try {
-      const { title, description, priority } = req.body;
+      const { title, description, priority, todoListId } = req.body;
       
       if (!title || !title.trim()) {
         return res.status(400).json({ message: "Title is required" });
+      }
+      
+      // Verify todoList exists and belongs to user if provided
+      if (todoListId) {
+        const todoList = await storage.getTodoList(todoListId);
+        if (!todoList || todoList.userId !== req.session.userId) {
+          return res.status(400).json({ message: "Invalid todo list" });
+        }
       }
       
       const todoData = {
@@ -3708,7 +3823,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: description || "",
         priority: priority || "medium",
         completed: false,
-        userId: req.session.userId!
+        userId: req.session.userId!,
+        todoListId: todoListId || null
       };
       
       const todo = await storage.createTodo(todoData);

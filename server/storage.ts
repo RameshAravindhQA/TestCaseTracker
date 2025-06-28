@@ -205,6 +205,7 @@ class MemStorage implements IStorage {
   private documentFolders = new Map<number, any>();
   private testSheets = new Map<number, any>();
   private todos = new Map<number, any>();
+  private todoLists = new Map<number, any>();
   private customers = new Map<number, any>();
   private customerProjects = new Map<number, any>();
   private timeSheets = new Map<number, any>();
@@ -1735,6 +1736,8 @@ class MemStorage implements IStorage {
     this.timeSheetFolders.clear();
     this.customerProjects.clear();
     this.sprints.clear();
+    this.todos.clear();
+    this.todoLists.clear();
     this.nextId = 1;
     this.testSheetIdCounter = 1;
     this.testSheets.clear(); // Clear test sheets during reset
@@ -1950,9 +1953,57 @@ class MemStorage implements IStorage {
     return undefined;
   }
 
+  // TodoList operations
+  async getTodoLists(userId: number): Promise<any[]> {
+    return Array.from(this.todoLists.values()).filter(list => list.userId === userId);
+  }
+
+  async getTodoList(id: number): Promise<any | undefined> {
+    return this.todoLists.get(id);
+  }
+
+  async createTodoList(listData: any): Promise<any> {
+    const id = this.getNextId();
+    const now = new Date().toISOString();
+
+    const newTodoList = {
+      id,
+      ...listData,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.todoLists.set(id, newTodoList);
+    return newTodoList;
+  }
+
+  async updateTodoList(id: number, userId: number, updates: any): Promise<any | null> {
+    const todoList = this.todoLists.get(id);
+    if (!todoList || todoList.userId !== userId) return null;
+
+    const updatedTodoList = { ...todoList, ...updates, updatedAt: new Date().toISOString() };
+    this.todoLists.set(id, updatedTodoList);
+    return updatedTodoList;
+  }
+
+  async deleteTodoList(id: number, userId: number): Promise<boolean> {
+    const todoList = this.todoLists.get(id);
+    if (!todoList || todoList.userId !== userId) return false;
+
+    // Delete all todos in this list
+    const todosInList = Array.from(this.todos.values()).filter(todo => todo.todoListId === id);
+    todosInList.forEach(todo => this.todos.delete(todo.id));
+
+    return this.todoLists.delete(id);
+  }
+
   // Todo operations
   async getTodosByUserId(userId: number): Promise<any[]> {
     return Array.from(this.todos.values()).filter(todo => todo.userId === userId);
+  }
+
+  async getTodosByListId(listId: number): Promise<any[]> {
+    return Array.from(this.todos.values()).filter(todo => todo.todoListId === listId);
   }
 
   async getTagsByProject(projectId: number): Promise<Tag[]> {
