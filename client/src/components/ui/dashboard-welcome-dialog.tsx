@@ -18,11 +18,14 @@ export function DashboardWelcomeDialog({ user }: DashboardWelcomeDialogProps) {
       const today = new Date().toDateString();
       const lastShown = localStorage.getItem('welcomeDialogLastShown');
       
+      console.log("Welcome dialog check:", { user: user.firstName, today, lastShown });
+      
       if (lastShown !== today) {
         // Show after a delay to ensure dashboard is fully loaded
         const timer = setTimeout(() => {
+          console.log("Showing welcome dialog for:", user.firstName);
           setIsOpen(true);
-        }, 2000);
+        }, 1500); // Reduced delay
 
         return () => clearTimeout(timer);
       }
@@ -35,7 +38,10 @@ export function DashboardWelcomeDialog({ user }: DashboardWelcomeDialogProps) {
     localStorage.setItem('welcomeDialogLastShown', today);
   };
 
-  if (!user || !user.firstName) return null;
+  if (!user || !user.firstName) {
+    console.log("Welcome dialog: No user or firstName", user);
+    return null;
+  }
 
   const currentTime = new Date();
   const hour = currentTime.getHours();

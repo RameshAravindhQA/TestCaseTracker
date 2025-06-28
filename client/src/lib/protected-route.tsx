@@ -1,3 +1,4 @@
+
 import { ReactNode, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -10,6 +11,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [, navigate] = useLocation();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   // First check localStorage for a quicker response
   const isLocallyAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
@@ -27,10 +29,14 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   });
 
   useEffect(() => {
+    // Prevent multiple redirects
+    if (hasRedirected) return;
+
     const checkAuthentication = async () => {
       // If localStorage says we're not authenticated and we're not already on login page
       if (!isLocallyAuthenticated && window.location.pathname !== "/login") {
         console.log("Not authenticated according to localStorage, redirecting to login");
+        setHasRedirected(true);
         navigate("/login");
         setIsCheckingAuth(false);
         return;
@@ -42,14 +48,20 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           console.log("User not authenticated, redirecting to login");
           // Clear localStorage auth flag since server says we're not authenticated
           localStorage.removeItem('isAuthenticated');
-          navigate("/login");
+          if (!hasRedirected) {
+            setHasRedirected(true);
+            navigate("/login");
+          }
+        } else {
+          // User is authenticated, ensure localStorage is set
+          localStorage.setItem('isAuthenticated', 'true');
         }
         setIsCheckingAuth(false);
       }
     };
 
     checkAuthentication();
-  }, [isLoading, isError, user, navigate, isLocallyAuthenticated]);
+  }, [isLoading, isError, user, navigate, isLocallyAuthenticated, hasRedirected]);
 
   // Show loading state while checking authentication
   if (isCheckingAuth) {
