@@ -70,7 +70,7 @@ export function LoginForm() {
 
       // Show motivation dialog immediately after successful login
       console.log("Opening motivation dialog...");
-      setShowMotivationDialog(true);
+      navigate("/dashboard");
     },
     onError: (error: any) => {
       console.error("Login error:", error);
@@ -268,18 +268,6 @@ export function LoginForm() {
           <Link href="/register" className="text-primary hover:underline">Register</Link>
         </div>
       </CardFooter>
-      <LoginMotivationDialog
-        open={showMotivationDialog}
-        onOpenChange={(open) => {
-          setShowMotivationDialog(open);
-          if (!open) {
-            // Navigate to dashboard after dialog closes
-            setTimeout(() => navigate("/dashboard"), 100);
-          }
-        }}
-        userFirstName={loggedInUserName}
-        loginTime={new Date()}
-      />
     </Card>
   );
 }

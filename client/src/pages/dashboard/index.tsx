@@ -230,3 +230,10 @@ import {
           </CardContent>
         </Card>
       </div>
+</div>
+
+      {/* Welcome Dialog */}
+      <DashboardWelcomeDialog />
+    </DashboardLayout>
+  );
+}
