@@ -56,12 +56,21 @@ export function LoginForm() {
       // Invalidate the user data query to refetch with new credentials
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
-      // Force redirect with hard page reload
-      console.log("Login successful, redirecting to dashboard...");
+      // Store authentication status in localStorage for persistence across page reloads
       localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('lastLoginTime', new Date().toString());
-      // Use absolute URL to ensure proper redirection
-      window.location.href = window.location.origin + "/dashboard";
+      localStorage.setItem('userEmail', data.email);
+      localStorage.setItem('userName', data.name || data.email);
+      localStorage.setItem('userId', data.id?.toString() || '');
+      localStorage.setItem('loginTime', new Date().toISOString());
+
+      // Extract user's first name for personalization
+      const firstName = data.name ? data.name.split(' ')[0] : data.email.split('@')[0];
+      setLoggedInUserName(firstName);
+
+      // Show motivation dialog immediately after successful login
+      setTimeout(() => {
+        setShowMotivationDialog(true);
+      }, 500);
     },
     onError: (error: any) => {
       console.error("Login error:", error);
@@ -259,6 +268,12 @@ export function LoginForm() {
           <Link href="/register" className="text-primary hover:underline">Register</Link>
         </div>
       </CardFooter>
+      <LoginMotivationDialog
+        open={showMotivationDialog}
+        onOpenChange={setShowMotivationDialog}
+        userFirstName={loggedInUserName}
+        loginTime={new Date()}
+      />
     </Card>
   );
 }
