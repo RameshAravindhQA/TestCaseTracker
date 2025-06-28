@@ -385,20 +385,8 @@ export default function Messenger() {
     );
   }
 
-  // Show loading state while initial data is being fetched
-  if (users.length === 0 && chats.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Card className="w-96">
-          <CardContent className="p-6 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Messenger</h3>
-            <p className="text-gray-600">Setting up your conversations...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Show loading state only while initial API calls are in progress
+  // We'll rely on the individual loading states within the component instead
 
   return (
     <div className="flex h-full bg-gray-50">

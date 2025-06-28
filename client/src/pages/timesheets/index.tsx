@@ -894,7 +894,8 @@ export default function TimeSheetsPage() {
               <SelectValue placeholder="Filter by customer" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Customers</SelectItem>{customers?.map((customer) => (
+              <SelectItem value="all">All Customers</SelectItem>{customers?.map((customer)```python
+ => (
                 <SelectItem key={customer.id} value={customer.id.toString()}>
                   {customer.name}
                 </SelectItem>
