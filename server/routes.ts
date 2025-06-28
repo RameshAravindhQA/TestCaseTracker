@@ -7139,6 +7139,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Messenger routes
+  apiRouter.get('/chats', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const chats = await storage.getChatsByUser(userId);
+      res.json(chats);
+    } catch (error) {
+      console.error('Error fetching chats:', error);
+      res.status(500).json({ error: 'Failed to fetch chats' });
+    }
+  });
+
+  apiRouter.post('/chats', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const chatData = { ...req.body, createdById: userId };
+      const chat = await storage.createChat(chatData);
+      res.status(201).json(chat);
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      res.status(500).json({ error: 'Failed to create chat' });
+    }
+  });
+
+  apiRouter.get('/chats/:id/messages', isAuthenticated, async (req, res) => {
+    try {
+      const chatId = parseInt(req.params.id);
+      const messages = await storage.getMessagesByChat(chatId);
+      res.json(messages);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  });
+
+  apiRouter.post('/messages', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const messageData = { ...req.body, senderId: userId };
+      const message = await storage.createMessage(messageData);
+      res.status(201).json(message);
+    } catch (error) {
+      console.error('Error creating message:', error);
+      res.status(500).json({ error: 'Failed to create message' });
+    }
+  });
+
   // Register the main API router
   app.use("/api", apiRouter);
   
@@ -7149,49 +7196,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   return httpServer;
 }
-// Messenger routes
-app.get('/api/chats', authMiddleware, async (req, res) => {
-  try {
-    const userId = parseInt(req.headers['x-user-id'] as string);
-    const chats = await storage.getChatsByUser(userId);
-    res.json(chats);
-  } catch (error) {
-    console.error('Error fetching chats:', error);
-    res.status(500).json({ error: 'Failed to fetch chats' });
-  }
-});
-
-app.post('/api/chats', authMiddleware, async (req, res) => {
-  try {
-    const userId = parseInt(req.headers['x-user-id'] as string);
-    const chatData = { ...req.body, createdById: userId };
-    const chat = await storage.createChat(chatData);
-    res.status(201).json(chat);
-  } catch (error) {
-    console.error('Error creating chat:', error);
-    res.status(500).json({ error: 'Failed to create chat' });
-  }
-});
-
-app.get('/api/chats/:id/messages', authMiddleware, async (req, res) => {
-  try {
-    const chatId = parseInt(req.params.id);
-    const messages = await storage.getMessagesByChat(chatId);
-    res.json(messages);
-  } catch (error) {
-    console.error('Error fetching messages:', error);
-    res.status(500).json({ error: 'Failed to fetch messages' });
-  }
-});
-
-app.post('/api/messages', authMiddleware, async (req, res) => {
-  try {
-    const userId = parseInt(req.headers['x-user-id'] as string);
-    const messageData = { ...req.body, senderId: userId };
-    const message = await storage.createMessage(messageData);
-    res.status(201).json(message);
-  } catch (error) {
-    console.error('Error creating message:', error);
-    res.status(500).json({ error: 'Failed to create message' });
-  }
-});
