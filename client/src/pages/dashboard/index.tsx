@@ -246,3 +246,44 @@ export default function Dashboard() {
     retry: false,
     throwOnError: false,
   });
+}
+export function DashboardPage() {
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const { user } = useAuth();
+  const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/projects");
+      if (!response.ok) throw new Error("Failed to fetch projects");
+      return response.json();
+    },
+    staleTime: 0, // Always fresh data
+    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchOnWindowFocus: true,
+  });
+
+// Show welcome dialog and onboarding for new users
+  useEffect(() => {
+    const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
+    const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
+
+    if (!hasSeenWelcome && user) {
+      setIsWelcomeOpen(true);
+    }
+
+    // Show onboarding for new users who haven't completed it
+    if (user && !hasCompletedOnboarding && (!projects || projects.length === 0)) {
+      setTimeout(() => setIsOnboardingOpen(true), 1000);
+    }
+  }, [user, projects]);
+
+const handleWelcomeClose = () => {
+    setIsWelcomeOpen(false);
+    localStorage.setItem('hasSeenWelcome', 'true');
+  };
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('hasCompletedOnboarding', 'true');
+    setIsOnboardingOpen(false);
+  };

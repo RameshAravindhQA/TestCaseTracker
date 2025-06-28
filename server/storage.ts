@@ -542,7 +542,7 @@ class MemStorage implements IStorage {
         .map(id => parseInt(id.replace('BUG-', ''), 10))
         .filter(num => !isNaN(num));
 
-      const nextNumber = existingBugs.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+      const nextNumber = existingBugs.length > 0 ? Math.max(...existingBugs) + 1 : 1;
       bugId = `BUG-${String(nextNumber).padStart(3, '0')}`;
     }
 
@@ -946,6 +946,11 @@ card => card.columnId === id);
     return Array.from(this.projectMembers.values()).filter(member => member.projectId === projectId);
   }
 
+  // Get project memberships for a specific user
+  async getUserProjectMemberships(userId: number): Promise<any[]> {
+    return Array.from(this.projectMembers.values()).filter(member => member.userId === userId);
+  }
+
   async removeProjectMember(projectId: number, userId: number): Promise<boolean> {
     const member = Array.from(this.projectMembers.values())
       .find(m => m.projectId === projectId && m.userId === userId);
@@ -1232,23 +1237,13 @@ card => card.columnId === id);
 
   // Project operations for user access
   async getProjectsByUserId(userId: number): Promise<Project[]> {
-    // Return projects where user is a member or creator
-    const userProjects = Array.from(this.projectMembers.values())
-      .filter(member => member.userId === userId)
-      .map(member => this.projects.get(member.projectId))
-      .filter(project => project !== undefined);
-
-    // Also include projects created by the user
+    // Only return projects created by this specific user
     const createdProjects = Array.from(this.projects.values())
       .filter(project => project.createdById === userId);
 
-    // Combine and remove duplicates
-    const allProjects = [...userProjects, ...createdProjects];
-    const uniqueProjects = allProjects.filter((project, index, self) => 
-      index === self.findIndex(p => p.id === project.id)
-    );
-
-    return uniqueProjects;
+    console.log(`Storage: getProjectsByUserId(${userId}) returning ${createdProjects.length} projects created by user`);
+    
+    return createdProjects;
   }
 
   // Module operations
