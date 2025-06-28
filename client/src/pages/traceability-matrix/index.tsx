@@ -347,11 +347,11 @@ export default function TraceabilityMatrixPage() {
         )}
 
         {/* Traceability Matrix Grid */}
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-              </div>
-            ) : requirements.length === 0 || testCases.length === 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          </div>
+        ) : requirements.length === 0 || testCases.length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center">
               <FileText className="mx-auto h-12 w-12 text-gray-400" />
@@ -374,7 +374,7 @@ export default function TraceabilityMatrixPage() {
               )}
             </CardContent>
           </Card>
-        )}
+        ) : null}
 
         {/* Coverage Summary */}
         {selectedProjectId && !isLoading && requirements.length > 0 && (
