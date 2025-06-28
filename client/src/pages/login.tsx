@@ -13,14 +13,12 @@ export default function Login() {
     throwOnError: false,
   });
   
-  // Check localStorage for auth status and redirect to dashboard if authenticated
+  // Check if already logged in and redirect to dashboard
   useEffect(() => {
-    // Check both API response and localStorage for authentication status
-    const isAuthenticatedInLocalStorage = localStorage.getItem('isAuthenticated') === 'true';
-    
-    if ((!isLoading && user) || isAuthenticatedInLocalStorage) {
+    // Only redirect if we have confirmed user data from API (not just localStorage)
+    if (!isLoading && user) {
       console.log("User already authenticated, redirecting to dashboard");
-      window.location.href = window.location.origin + "/dashboard";
+      navigate("/dashboard");
     }
   }, [user, isLoading, navigate]);
   

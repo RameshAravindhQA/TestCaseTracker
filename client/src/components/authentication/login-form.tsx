@@ -28,7 +28,7 @@ export function LoginForm() {
   const { toast } = useToast();
   const [isOAuthLoading, setIsOAuthLoading] = useState<string | null>(null);
   // No longer need to manage password visibility state as it's handled by the PasswordInput component
-  
+
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -62,7 +62,7 @@ export function LoginForm() {
       localStorage.setItem('userId', data.id?.toString() || '');
       localStorage.setItem('loginTime', new Date().toISOString());
 
-      // Navigate to dashboard immediately - dialog will show there
+      // Navigate to dashboard immediately
       navigate("/dashboard");
     },
     onError: (error: any) => {
@@ -261,7 +261,7 @@ export function LoginForm() {
           <Link href="/register" className="text-primary hover:underline">Register</Link>
         </div>
       </CardFooter>
-      
+
     </Card>
   );
 }
