@@ -89,7 +89,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
   const { data: todos, isLoading: isLoadingTodos, refetch } = useQuery<TodoItem[]>({
     queryKey: ["todos", selectedListId],
     queryFn: async () => {
-      if (selectedListId) {
+      if (selectedListId && selectedListId !== null) {
         const response = await apiRequest("GET", `/api/todo-lists/${selectedListId}/todos`);
         if (!response.ok) throw new Error("Failed to fetch todos");
         return response.json();
@@ -374,14 +374,14 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-2">
               <Select 
-                value={selectedListId?.toString() || ""} 
-                onValueChange={(value) => setSelectedListId(value ? parseInt(value) : null)}
+                value={selectedListId?.toString() || "all"} 
+                onValueChange={(value) => setSelectedListId(value === "all" ? null : parseInt(value))}
               >
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Select a list..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Todos</SelectItem>
+                  <SelectItem value="all">All Todos</SelectItem>
                   {todoLists?.map((list) => (
                     <SelectItem key={list.id} value={list.id.toString()}>
                       <div className="flex items-center gap-2">
