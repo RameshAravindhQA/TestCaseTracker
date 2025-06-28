@@ -91,7 +91,7 @@ export default function TraceabilityMatrixPage() {
     enabled: !!selectedProjectId,
   });
 
-  const { data: testCases } = useQuery({
+  const { data: apiTestCases } = useQuery({
     queryKey: ["/api/test-cases", selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) return [];
