@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -62,9 +61,16 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
 
   // Create todo mutation
   const createTodoMutation = useMutation({
-    mutationFn: async (todo: Partial<TodoItem>) => {
-      const response = await apiRequest("POST", "/api/todos", todo);
-      if (!response.ok) throw new Error("Failed to create todo");
+    mutationFn: async (newTodo: { title: string; description?: string }) => {
+      const response = await apiRequest("POST", "/api/todos", {
+        ...newTodo,
+        completed: false,
+        priority: 'medium'
+      });
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Failed to create todo: ${errorData}`);
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -272,7 +278,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
                     onCheckedChange={() => handleToggleComplete(todo)}
                     className="h-4 w-4"
                   />
-                  
+
                   {editingId === todo.id ? (
                     <Input
                       value={editingText}
@@ -307,7 +313,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
                     >
                       {todo.priority}
                     </Badge>
-                    
+
                     <Button
                       variant="ghost"
                       size="sm"

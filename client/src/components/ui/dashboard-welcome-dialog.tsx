@@ -12,7 +12,11 @@ export function DashboardWelcomeDialog() {
     // Check if dialog has been shown before
     const hasSeenWelcome = localStorage.getItem('hasSeenDashboardWelcome');
     if (!hasSeenWelcome) {
-      setIsOpen(true);
+      // Add a small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        setIsOpen(true);
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -28,7 +32,12 @@ export function DashboardWelcomeDialog() {
   else if (hour < 17) greeting = "Good Afternoon";
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      // Only allow closing, not reopening via external state changes
+      if (!open) {
+        setIsOpen(false);
+      }
+    }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader className="relative">
           <Button

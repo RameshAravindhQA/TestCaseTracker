@@ -62,7 +62,6 @@ interface TestCase {
 export default function TraceabilityMatrixPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [requirements, setRequirements] = useState<Requirement[]>([]);
-  const testCases = apiTestCases || [];
   const [matrixCells, setMatrixCells] = useState<Record<string, TraceabilityCell>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -124,6 +123,9 @@ export default function TraceabilityMatrixPage() {
     enabled: !!selectedProjectId,
   });
 
+  // Computed testCases from apiTestCases
+  const testCases = apiTestCases || [];
+
   // Load requirements and test cases when project changes
   useEffect(() => {
     if (selectedProjectId && projectTestCases && projectBugs) {
@@ -152,7 +154,7 @@ export default function TraceabilityMatrixPage() {
       // Initialize matrix cells
       const cells: Record<string, TraceabilityCell> = {};
       reqs.forEach(req => {
-        testCases.forEach(tc => {
+        tcs.forEach(tc => {
           const cellId = `${req.id}-${tc.id}`;
           cells[cellId] = {
             id: cellId,
@@ -166,7 +168,7 @@ export default function TraceabilityMatrixPage() {
       setMatrixCells(cells);
       setIsLoading(false);
     }
-  }, [selectedProjectId, projectTestCases, projectBugs, testCases]);
+  }, [selectedProjectId, projectTestCases, projectBugs, apiTestCases]);
 
   const updateCellStatus = (cellId: string, status: TraceabilityCell['status']) => {
     setMatrixCells(prev => ({

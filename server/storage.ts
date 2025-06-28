@@ -1798,6 +1798,8 @@ class MemStorage implements IStorage {
     }
 
     this.githubIssues[index] = {
+Adding todos Map to the MemStorage class to store todo items.```text
+
       ...this.githubIssues[index],
       ...data,
       updatedAt: new Date().toISOString(),
