@@ -1951,7 +1951,7 @@ class MemStorage implements IStorage {
   }
 
   // Todo operations
-  async getTodos(userId: number): Promise<any[]> {
+  async getTodosByUserId(userId: number): Promise<any[]> {
     return Array.from(this.todos.values()).filter(todo => todo.userId === userId);
   }
 

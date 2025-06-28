@@ -75,15 +75,24 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
       }
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      refetch();
+    onSuccess: async () => {
+      // Invalidate and refetch the todos query
+      await queryClient.invalidateQueries({ queryKey: ["todos"] });
+      await refetch();
       setNewTodo("");
       toast({
         title: "Todo created",
         description: "Your todo has been added successfully.",
       });
     },
+    onError: (error) => {
+      console.error("Todo creation error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create todo. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
   // Update todo mutation
@@ -93,8 +102,9 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
       if (!response.ok) throw new Error("Failed to update todo");
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["todos"] });
+      await refetch();
       setEditingId(null);
       setEditingText("");
     },
@@ -106,8 +116,9 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
       const response = await apiRequest("DELETE", `/api/todos/${id}`);
       if (!response.ok) throw new Error("Failed to delete todo");
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["todos"] });
+      await refetch();
       toast({
         title: "Todo deleted",
         description: "Your todo has been removed.",
