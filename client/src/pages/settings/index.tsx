@@ -864,8 +864,11 @@ export default function SettingsPage() {
                         )}
                       />
 
+                      </FormField>
+
                       <FormField
-                        control={backupForm.control                        name="retentionPeriod"
+                        control={backupForm.control}
+                        name="retentionPeriod"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Retention Period (Days)</FormLabel>
@@ -909,7 +912,6 @@ export default function SettingsPage() {
                           Save Settings
                         </Button>
                       </div>
-                        </div>
                     </form>
                   </Form>
                 </CardContent>
