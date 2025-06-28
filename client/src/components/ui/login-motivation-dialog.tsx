@@ -245,22 +245,27 @@ export function LoginMotivationDialog({
     setDailyUpdates(weightedUpdates.slice(0, Math.floor(Math.random() * 3) + 4));
 
     // Set greeting based on time
-    const hour = loginTime.getHours();
-    if (hour < 6) {
-      setGreeting("Good Early Morning");
-      setTimeIcon(<Moon className="h-5 w-5 text-indigo-500" />);
-    } else if (hour < 12) {
-      setGreeting("Good Morning");
-      setTimeIcon(<Sunrise className="h-5 w-5 text-orange-500" />);
-    } else if (hour < 17) {
-      setGreeting("Good Afternoon");
+    if (!loginTime) {
+      setGreeting("Welcome");
       setTimeIcon(<Sun className="h-5 w-5 text-yellow-500" />);
-    } else if (hour < 20) {
-      setGreeting("Good Evening");
-      setTimeIcon(<Sun className="h-5 w-5 text-orange-400" />);
     } else {
-      setGreeting("Good Night");
-      setTimeIcon(<Moon className="h-5 w-5 text-blue-500" />);
+      const hour = loginTime.getHours();
+      if (hour < 6) {
+        setGreeting("Good Early Morning");
+        setTimeIcon(<Moon className="h-5 w-5 text-indigo-500" />);
+      } else if (hour < 12) {
+        setGreeting("Good Morning");
+        setTimeIcon(<Sunrise className="h-5 w-5 text-orange-500" />);
+      } else if (hour < 17) {
+        setGreeting("Good Afternoon");
+        setTimeIcon(<Sun className="h-5 w-5 text-yellow-500" />);
+      } else if (hour < 20) {
+        setGreeting("Good Evening");
+        setTimeIcon(<Sun className="h-5 w-5 text-orange-400" />);
+      } else {
+        setGreeting("Good Night");
+        setTimeIcon(<Moon className="h-5 w-5 text-blue-500" />);
+      }
     }
 
     // Calculate session info
@@ -315,6 +320,10 @@ export function LoginMotivationDialog({
   };
 
   const getSessionWish = () => {
+    if (!loginTime) {
+      return "Have a productive testing session! 🚀";
+    }
+    
     const hour = loginTime.getHours();
     const wishes = [
       "Have a productive testing session!",
@@ -389,7 +398,7 @@ export function LoginMotivationDialog({
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center gap-2 justify-center">
                       <Calendar className="h-4 w-4 text-gray-500" />
-                      <span>Session started: {loginTime.toLocaleTimeString()}</span>
+                      <span>Session started: {loginTime ? loginTime.toLocaleTimeString() : 'Unknown'}</span>
                     </div>
                     <div className="flex items-center gap-2 justify-center">
                       <Users className="h-4 w-4 text-gray-500" />
