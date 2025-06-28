@@ -915,6 +915,7 @@ export default function SettingsPage() {
                           Save Settings
                         </Button>
                       </div>
+                        </div>
                     </form>
                   </Form>
                 </CardContent>
