@@ -1980,7 +1980,6 @@ Adding todos Map to the MemStorage class to store todo items.```text
   async getCustomMarkersByProject(projectId: number): Promise<any[]> {
     return Array.from(this.customMarkers.values()).filter(marker => marker.projectId === projectId);
   }
-}
 
   async createCustomMarker(data: Omit<CustomMarker, 'id'>): Promise<CustomMarker> {
     const id = this.nextId++;
@@ -2070,7 +2069,7 @@ Adding todos Map to the MemStorage class to store todo items.```text
   }
 
   async createChat(chatData: any): Promise<any> {
-    const id = this.getNextId('chat');
+    const id = this.getNextId();
     const chat = {
       id,
       ...chatData,
@@ -2111,7 +2110,7 @@ Adding todos Map to the MemStorage class to store todo items.```text
   }
 
   async createMessage(messageData: any): Promise<any> {
-    const id = this.getNextId('message');
+    const id = this.getNextId();
     const message = {
       id,
       ...messageData,
