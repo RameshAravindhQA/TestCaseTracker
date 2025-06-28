@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProjectSelect } from "@/components/ui/project-select";
@@ -210,11 +209,11 @@ export default function TraceabilityMatrixPage() {
     console.log('Project modules:', projectModules);
     console.log('Project markers:', projectMarkers);
     console.log('Project cells:', projectCells);
-    
+
     if (selectedProjectId) {
       setModules(projectModules || []);
       setCustomMarkers(projectMarkers || []);
-      
+
       // Convert cells array to object for easier lookup
       const cellsObj: Record<string, MatrixCell> = {};
       (projectCells || []).forEach((cell: MatrixCell) => {
@@ -325,9 +324,9 @@ export default function TraceabilityMatrixPage() {
   const getCellContent = (rowModuleId: number, colModuleId: number) => {
     const key = `${rowModuleId}-${colModuleId}`;
     const cell = matrixCells[key];
-    
+
     if (!cell || !cell.value) return null;
-    
+
     const marker = customMarkers.find(m => m.markerId === cell.value);
     if (!marker) return null;
 
@@ -349,7 +348,7 @@ export default function TraceabilityMatrixPage() {
         const key = `${rowModule.id}-${colModule.id}`;
         const cell = matrixCells[key];
         const marker = cell ? customMarkers.find(m => m.markerId === cell.value) : null;
-        
+
         rows.push([
           rowModule.name,
           colModule.name,
@@ -614,45 +613,59 @@ export default function TraceabilityMatrixPage() {
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <div ref={matrixRef} className="overflow-x-auto">
+                  <div className="overflow-x-auto border rounded-lg">
                     <Table>
                       <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[200px] sticky left-0 bg-white z-10 border-r">
-                            Row Modules ↓ / Col Modules →
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="w-[200px] sticky left-0 bg-gray-50 z-10 border-r-2 border-gray-200 font-semibold">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              Row Modules ↓ / Col Modules →
+                            </div>
                           </TableHead>
                           {modules.map(module => (
-                            <TableHead key={module.id} className="text-center min-w-[100px]">
-                              <div className="truncate" title={module.name}>
+                            <TableHead key={module.id} className="text-center min-w-[120px] bg-gray-50 border-r border-gray-200">
+                              <div className="font-medium truncate" title={module.name}>
                                 {module.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Col {module.id}
                               </div>
                             </TableHead>
                           ))}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {modules.map(rowModule => (
-                          <TableRow key={rowModule.id}>
-                            <TableCell className="sticky left-0 bg-white z-10 border-r">
-                              <div className="font-medium">{rowModule.name}</div>
-                              <div className="text-sm text-muted-foreground truncate" title={rowModule.description || ''}>
-                                {rowModule.description || 'No description'}
+                        {modules.map((rowModule, rowIndex) => (
+                          <TableRow key={rowModule.id} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
+                            <TableCell className="sticky left-0 bg-inherit z-10 border-r-2 border-gray-200 p-4">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <div>
+                                  <div className="font-medium text-sm">{rowModule.name}</div>
+                                  <div className="text-xs text-muted-foreground">Row {rowModule.id}</div>
+                                  {rowModule.description && (
+                                    <div className="text-xs text-muted-foreground truncate max-w-[150px]" title={rowModule.description}>
+                                      {rowModule.description}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </TableCell>
                             {modules.map(colModule => {
                               const cellContent = getCellContent(rowModule.id, colModule.id);
                               const isDisabled = rowModule.id === colModule.id;
-                              
+
                               return (
-                                <TableCell key={colModule.id} className="text-center">
+                                <TableCell key={colModule.id} className="text-center p-3 border-r border-gray-200">
                                   <div
-                                    className={`flex justify-center items-center h-8 w-8 mx-auto rounded border-2 border-dashed ${
+                                    className={`flex justify-center items-center h-10 w-10 mx-auto rounded-lg border-2 ${
                                       isDisabled 
-                                        ? 'bg-gray-100 border-gray-200 cursor-not-allowed'
+                                        ? 'bg-gray-100 border-gray-300 cursor-not-allowed'
                                         : selectedMarkerId
-                                          ? 'border-blue-300 hover:border-blue-500 cursor-pointer hover:bg-blue-50'
-                                          : 'border-gray-300 cursor-default'
-                                    }`}
+                                          ? 'border-blue-400 hover:border-blue-600 cursor-pointer hover:bg-blue-50 border-dashed'
+                                          : 'border-gray-300 cursor-default border-dashed'
+                                    } transition-all duration-200`}
                                     onClick={() => !isDisabled && handleCellClick(rowModule.id, colModule.id)}
                                     title={
                                       isDisabled 
@@ -663,11 +676,20 @@ export default function TraceabilityMatrixPage() {
                                     }
                                   >
                                     {isDisabled ? (
-                                      <X className="h-3 w-3 text-gray-400" />
+                                      <X className="h-4 w-4 text-gray-400" />
                                     ) : (
-                                      cellContent
+                                      cellContent || (
+                                        selectedMarkerId && (
+                                          <div className="w-2 h-2 bg-blue-400 rounded-full opacity-40"></div>
+                                        )
+                                      )
                                     )}
                                   </div>
+                                  {!isDisabled && (
+                                    <div className="text-xs text-gray-400 mt-1">
+                                      {rowModule.id}-{colModule.id}
+                                    </div>
+                                  )}
                                 </TableCell>
                               );
                             })}

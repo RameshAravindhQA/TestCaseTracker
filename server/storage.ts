@@ -542,7 +542,7 @@ class MemStorage implements IStorage {
         .map(id => parseInt(id.replace('BUG-', ''), 10))
         .filter(num => !isNaN(num));
 
-      const nextNumber = existingBugs.length > 0 ? Math.max(...existingBugs) + 1 : 1;
+      const nextNumber = existingBugs.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
       bugId = `BUG-${String(nextNumber).padStart(3, '0')}`;
     }
 
@@ -831,7 +831,8 @@ class MemStorage implements IStorage {
 
   async deleteKanbanColumn(id: number): Promise<boolean> {
     // Also delete all cards in this column
-    const cardsInColumn = Array.from(this.kanbanCards.values()).filter(card => card.columnId === id);
+    const cardsInColumn = Array.from(this.kanbanCards.values()).filter(```tool_code
+card => card.columnId === id);
     cardsInColumn.forEach(card => this.kanbanCards.delete(card.id));
 
     return this.kanbanColumns.delete(id);
@@ -2400,101 +2401,141 @@ class MemStorage implements IStorage {
     // Store in actual storage system
     return message;
   }
-}
 
-// Create and export the storage instance
-console.log("🔄 Initializing in-memory storage...");
-const memStorage = new MemStorage();
-
-// This commit introduces GitHub integration storage methods to the MemStorage class.
-(memStorage as any).initializeDatabase = async function() {
-    console.log("🔄 Initializing database...");
-
-    try {
-      // Test connection first
-      //await this.testConnection(); // no testConnection method in Memorage
-
-      // Create default super admin
-      await this.createDefaultSuperAdmin();
-
-      console.log("✅ Database initialized successfully");
-    } catch (error) {
-      console.error("❌ Database initialization failed:", error);
-      throw error;
-    }
+  private data: {
+    users: any[];
+    projects: any[];
+    modules: any[];
+    testCases: any[];
+    bugs: any[];
+    notebooks: any[];
+    documents: any[];
+    folders: any[];
+    timesheets: any[];
+    userSessions: any[];
+    projectMembers: any[];
+    testSheets: any[];
+    todos: any[];
+    chatMessages: any[];
+    customMarkers: any[];
+    matrixCells: any[];
+  } = {
+    users: [],
+    projects: [],
+    modules: [],
+    testCases: [],
+    bugs: [],
+    notebooks: [],
+    documents: [],
+    folders: [],
+    timesheets: [],
+    userSessions: [],
+    projectMembers: [],
+    testSheets: [],
+    todos: [],
+    chatMessages: [],
+    customMarkers: [],
+    matrixCells: [],
   };
 
-  // Create default super admin user
-(memStorage as any).createDefaultSuperAdmin = async function() {
-    const defaultAdminEmail = "ramesh@navadhiti.com";
-    const defaultAdminPassword = "P@ssw0rd";
+  async getProjectMembers(projectId: number) {
+    return this.data.projectMembers.filter(member => member.projectId === projectId);
+  }
 
-    try {
-      // Check if admin already exists
-      const existingAdmin = await this.getUserByEmail(defaultAdminEmail);
+  // Custom Markers Methods
+  async getCustomMarkersByProject(projectId: number) {
+    return this.data.customMarkers?.filter(marker => marker.projectId === projectId) || [];
+  }
 
-      if (existingAdmin) {
-        console.log("ℹ️ Default super admin already exists");
-        return existingAdmin;
-      }
+  async createCustomMarker(markerData: any) {
+    if (!this.data.customMarkers) {
+      this.data.customMarkers = [];
+    }
 
-      // Import bcrypt for password hashing
-      const bcrypt = await import("bcrypt");
+    const marker = {
+      ...markerData,
+      id: `marker-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
 
-      // Hash the default password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(defaultAdminPassword, salt);
+    this.data.customMarkers.push(marker);
+    await this.saveData();
+    return marker;
+  }
 
-      // Create the default super admin user
-      const adminUser = {
-        firstName: "Ramesh",
-        lastName: "Admin",
-        email: defaultAdminEmail,
-        password: hashedPassword,
-        role: "Admin" as const,
-        status: "Active" as const,
-        phoneNumber: null,
-        profilePicture: null,
-        theme: "light" as const,
-        lastLoginAt: null,
-        tempPassword: null,
-        tempPasswordUsed: null,
-        resetToken: null,
-        resetTokenExpires: null,
-        verificationToken: null,
-        verified: true
+  async updateCustomMarker(id: string, updateData: any) {
+    if (!this.data.customMarkers) {
+      this.data.customMarkers = [];
+    }
+
+    const markerIndex = this.data.customMarkers.findIndex(marker => marker.id === id);
+    if (markerIndex === -1) {
+      throw new Error('Marker not found');
+    }
+
+    this.data.customMarkers[markerIndex] = {
+      ...this.data.customMarkers[markerIndex],
+      ...updateData,
+      updatedAt: new Date().toISOString()
+    };
+
+    await this.saveData();
+    return this.data.customMarkers[markerIndex];
+  }
+
+  async deleteCustomMarker(id: string) {
+    if (!this.data.customMarkers) {
+      return true;
+    }
+
+    const markerIndex = this.data.customMarkers.findIndex(marker => marker.id === id);
+    if (markerIndex === -1) {
+      throw new Error('Marker not found');
+    }
+
+    this.data.customMarkers.splice(markerIndex, 1);
+    await this.saveData();
+    return true;
+  }
+
+  // Matrix Cells Methods
+  async getMatrixCellsByProject(projectId: number) {
+    return this.data.matrixCells?.filter(cell => cell.projectId === projectId) || [];
+  }
+
+  async createOrUpdateMatrixCell(cellData: any) {
+    if (!this.data.matrixCells) {
+      this.data.matrixCells = [];
+    }
+
+    // Check if cell already exists
+    const existingIndex = this.data.matrixCells.findIndex(
+      cell => cell.rowModuleId === cellData.rowModuleId && 
+              cell.colModuleId === cellData.colModuleId && 
+              cell.projectId === cellData.projectId
+    );
+
+    if (existingIndex !== -1) {
+      // Update existing cell
+      this.data.matrixCells[existingIndex] = {
+        ...this.data.matrixCells[existingIndex],
+        ...cellData,
+        updatedAt: new Date().toISOString()
+      };
+      await this.saveData();
+      return this.data.matrixCells[existingIndex];
+    } else {
+      // Create new cell
+      const cell = {
+        ...cellData,
+        id: `cell-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
-      const createdAdmin = await this.createUser(adminUser);
-      console.log("✅ Default super admin created successfully:", defaultAdminEmail);
-
-      return createdAdmin;
-    } catch (error) {
-      console.error("❌ Failed to create default super admin:", error);
-      // Don't throw error to prevent app startup failure
-      return null;
+      this.data.matrixCells.push(cell);
+      await this.saveData();
+      return cell;
     }
-  };
-
-// Initialize with default data
-(memStorage as any).initializeDefaultData();
-
-export const storage: IStorage = memStorage;
-console.log("✅ In-memory storage initialized successfully");
-
-export async function closeConnection() {
-  console.log("In-memory storage - no connection to close");
-}
-
-export interface Notebook {
-    id: number;
-    userId: number;
-    title: string;
-    content: string;
-    createdAt: string;
-    updatedAt: string;
-    isPinned?: boolean;
-    isArchived?: boolean;
-    tags?: string[];
-    color?: string;
-}
+  }
