@@ -588,12 +588,10 @@ export default function NotebooksPage() {
 
                     {selectedNotebook.attachments && selectedNotebook.attachments.length > 0 && (
                       <div className="mb-4">
-                        <h4 className="text-sm font-medium mb-2">Attachments</h4>
+                        <h4 className="text-sm font-medium mb-2">Attachments ({selectedNotebook.attachments.length})</h4>
                         <div className="space-y-2">
                           {selectedNotebook.attachments.map((attachment: any, index: number) => (
-                            <div key={index} className="flex items-center gap-2 text-sm p-2 border rounded">
-                              <AttachmentViewer attachment={attachment} />
-                            </div>
+                            <AttachmentViewer key={index} attachment={attachment} />
                           ))}
                         </div>
                       </div>
