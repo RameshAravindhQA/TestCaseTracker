@@ -865,10 +865,9 @@ export default function SettingsPage() {
                                 </SelectContent>
                               </Select>
                               <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                            </Form<FormItem>
+                        )}
+                      />
 
                       Implementing permissions management section in settings page.```text
                       <FormField

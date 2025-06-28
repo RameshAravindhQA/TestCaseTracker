@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,46 +8,22 @@ import { useToast } from "@/hooks/use-toast";
 import { TestSheet } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 import {
-  Save,
+  Plus,
   Download,
   Upload,
-  Plus,
-  Minus,
-  Bold,
-  Italic,
-  Underline,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Palette,
-  Grid3X3,
-  Search,
-  Filter,
-  SortAsc,
-  SortDesc,
+  Save,
+  RotateCcw,
   Copy,
-  Paste,
-  Undo,
-  Redo,
-  Formula,
-  BarChart3,
-  PieChart,
-  LineChart,
-  Merge,
-  Split,
-  Lock,
-  Unlock,
-  Eye,
-  EyeOff,
-  MoreHorizontal,
-  Calculator,
-  Calendar,
-  Hash,
-  DollarSign,
-  Percent,
-  Type,
+  Clipboard,
+  Scissors,
+  Trash2,
   ChevronDown,
-  X
+  Type,
+  Hash,
+  Calendar,
+  ToggleLeft,
+  List,
+  Calculator
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -120,9 +95,9 @@ const getColumnLabel = (index: number): string => {
 
 const parseFormula = (formula: string, cells: Record<string, CellData>): number => {
   if (!formula.startsWith('=')) return parseFloat(formula) || 0;
-  
+
   const expression = formula.slice(1);
-  
+
   // Handle SUM function
   if (expression.toUpperCase().startsWith('SUM(')) {
     const range = expression.slice(4, -1);
@@ -130,13 +105,13 @@ const parseFormula = (formula: string, cells: Record<string, CellData>): number 
     // Simple range calculation for demo
     return 0; // Implement proper range calculation
   }
-  
+
   // Handle AVERAGE function
   if (expression.toUpperCase().startsWith('AVERAGE(')) {
     const range = expression.slice(8, -1);
     return 0; // Implement proper average calculation
   }
-  
+
   // Handle simple arithmetic
   try {
     return eval(expression.replace(/[A-Z]+\d+/g, '0')); // Replace cell refs with 0 for demo
@@ -147,10 +122,10 @@ const parseFormula = (formula: string, cells: Record<string, CellData>): number 
 
 const formatCellValue = (value: string, format?: CellData['format']): string => {
   if (!format?.numberFormat || format.numberFormat === 'general') return value;
-  
+
   const numValue = parseFloat(value);
   if (isNaN(numValue)) return value;
-  
+
   switch (format.numberFormat) {
     case 'currency':
       return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(numValue);
@@ -190,7 +165,7 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
   const [searchTerm, setSearchTerm] = useState('');
   const [replaceMode, setReplaceMode] = useState(false);
   const [replaceTerm, setReplaceTerm] = useState('');
-  
+
   const gridRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -241,11 +216,11 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
           ...updates
         }
       };
-      
+
       // Add to history
       setHistory(h => [...h.slice(0, historyIndex + 1), prev]);
       setHistoryIndex(i => i + 1);
-      
+
       return newCells;
     });
   }, [historyIndex]);
@@ -317,12 +292,12 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
     if (clipboard && selectedCell) {
       const offsetRow = selectedCell.row - clipboard.range.start.row;
       const offsetCol = selectedCell.col - clipboard.range.start.col;
-      
+
       Object.entries(clipboard.cells).forEach(([originalKey, cellData]) => {
         // Calculate new position
         // Implementation for pasting with offset
       });
-      
+
       toast({ title: "Pasted", description: "Content pasted successfully" });
     }
   };
@@ -344,7 +319,7 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
   const searchAndReplace = () => {
     let replacements = 0;
     const newCells = { ...cells };
-    
+
     Object.entries(newCells).forEach(([key, cellData]) => {
       if (cellData.value.includes(searchTerm)) {
         if (replaceMode) {
@@ -356,7 +331,7 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
         }
       }
     });
-    
+
     if (replaceMode) {
       setCells(newCells);
       toast({
@@ -386,12 +361,12 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
       };
 
       await apiRequest('PUT', `/api/test-sheets/${sheet.id}`, updatedSheet);
-      
+
       toast({
         title: "Sheet saved",
         description: "Your changes have been saved successfully.",
       });
-      
+
       onSave();
     } catch (error) {
       toast({
@@ -538,7 +513,7 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
                   <Copy className="h-4 w-4" />
                 </Button>
                 <Button size="sm" variant="outline" onClick={pasteRange}>
-                  <Paste className="h-4 w-4" />
+                  <Clipboard className="h-4 w-4" />
                 </Button>
               </div>
 
@@ -576,7 +551,7 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
               {/* Column Headers */}
               <div className="flex sticky top-0 bg-gray-50 border-b z-10">
                 <div className="w-12 h-8 border-r bg-gray-100 flex items-center justify-center text-xs font-medium">
-                  
+
                 </div>
                 {Array.from({ length: cols }, (_, col) => (
                   <div

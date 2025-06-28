@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,7 +80,7 @@ export function Messenger() {
   const [activeThread, setActiveThread] = useState<Thread | null>(null);
   const [showUserPanel, setShowUserPanel] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-  
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -215,7 +214,7 @@ export function Messenger() {
               </Button>
             </div>
           </div>
-          
+
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -300,9 +299,9 @@ export function Messenger() {
                           user.status === 'away' ? 'bg-yellow-500' : 'bg-gray-400'
                         }`} />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{user.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      <div className="flex-1">
+                        <p className="font-medium">{user.name || 'Unknown User'}</p>
+                        <p className="text-sm text-gray-500">{user.email || 'No email'}</p>
                       </div>
                     </div>
                   ))}

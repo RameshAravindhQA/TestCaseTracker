@@ -1,23 +1,19 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { MainLayout } from "@/components/layout/main-layout";
+import { NotebookForm } from "@/components/notebooks/notebook-form";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Plus, BookOpen, Calendar, Tag, Trash2, Edit, Search, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ColorPicker } from "@/components/ui/color-picker";
+import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { 
-  Search, 
-  Plus, 
   MoreHorizontal, 
-  Edit, 
-  Archive, 
   Pin, 
-  Trash2,
-  BookOpen,
+  Archive, 
   Filter,
   StickyNote,
   Grid,
@@ -44,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { NotebookForm } from "@/components/notebooks/notebook-form";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { Notebook } from "@/types";
 
 export default function NotebooksPage() {
@@ -69,6 +65,15 @@ export default function NotebooksPage() {
     refetchInterval: 5000,
     refetchOnWindowFocus: true,
   });
+
+  // Function to refresh notebooks
+  const refreshNotebooks = () => {
+    refetch();
+    toast({
+      title: "Refreshing",
+      description: "Notebooks are being refreshed.",
+    });
+  };
 
   // Update notebook mutation
   const updateNotebookMutation = useMutation({
@@ -132,7 +137,7 @@ export default function NotebooksPage() {
     const titleText = notebook.title.toLowerCase();
     const contentText = notebook.content.toLowerCase();
     const tagsText = notebook.tags ? notebook.tags.join(' ').toLowerCase() : '';
-    
+
     const matchesSearch = searchWords.every(word => 
       titleText.includes(word) || 
       contentText.includes(word) || 
@@ -638,6 +643,16 @@ export default function NotebooksPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Floating Refresh Button */}
+      <Button
+        onClick={refreshNotebooks}
+        className="fixed right-4 top-1/2 transform -translate-y-1/2 z-50 rounded-full h-12 w-12 p-0 shadow-lg"
+        variant="outline"
+        title="Refresh Notebooks"
+      >
+        <RefreshCw className="h-5 w-5" />
+      </Button>
     </MainLayout>
   );
 }

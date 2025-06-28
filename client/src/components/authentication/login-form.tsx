@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { Mail, Lock, Github } from "lucide-react";
 import { useState } from "react";
+import { LoginMotivationDialog } from "@/components/ui/login-motivation-dialog";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -27,6 +28,8 @@ export function LoginForm() {
   const { toast } = useToast();
   const [isOAuthLoading, setIsOAuthLoading] = useState<string | null>(null);
   // No longer need to manage password visibility state as it's handled by the PasswordInput component
+  const [showMotivationDialog, setShowMotivationDialog] = useState(false);
+  const [loggedInUserName, setLoggedInUserName] = useState("");
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),

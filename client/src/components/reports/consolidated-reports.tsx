@@ -128,7 +128,7 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
   const [newStatus, setNewStatus] = useState<string>("");
   const [statusUpdateDialog, setStatusUpdateDialog = useState(false);
   const [selectedPriority, setSelectedPriority = useState<string>('');
-  const [selectedModule, setSelectedModule = useState<string>('');
+  const [selectedModule, setSelectedModule] = useState<string>('');
   const [selectedSeverity, setSelectedSeverity] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -299,8 +299,8 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     },
     onError: (error) => {
       toast({
-        title: "Update Failed",
-        description: `Failed to update status: ${error.message}`,
+        title: "Error",
+        description: `Failed to update status: ${error}`,
         variant: "destructive",
       });
     },
@@ -1325,11 +1325,16 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
     const statusOptions = ['all', 'Not Executed', 'Pass', 'Fail', 'Open', 'In Progress', 'Resolved', 'Closed'];
     const priorityOptions = ['all', 'Low', 'Medium', 'High', 'Critical'];
     const severityOptions = ['all', 'Minor', 'Major', 'Critical', 'Blocker'];
-  
+
 
   const handleStatusUpdateFromDropdown = (id: number, type: 'testcase' | 'bug', newStatus: string) => {
     updateStatusMutation.mutate({ id, type, status: newStatus });
   };
+
+  const [filters, setFilters] = useState({
+    status: "",
+    priority: "",
+  });
 
   return (
     <motion.div 
@@ -1559,37 +1564,36 @@ export function ConsolidatedReports({ selectedProjectId, projectId, onClose }: C
               </SelectContent>
             </Select>
 
-            <Select 
-              key={`status-${filterKey}`}
-              value={selectedStatus} 
-              onValueChange={handleStatusChange}
-            >
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Pass">Pass</SelectItem>
-                <SelectItem value="Fail">Fail</SelectItem>
-                <SelectItem value="Blocked">Blocked</SelectItem>
-                <SelectItem value="Not Executed">Not Executed</SelectItem>
-              </SelectContent>
-            </Select>            <Select 
-              key={`priority-${filterKey}`}
-              value={selectedPriority} 
-              onValueChange={handlePriorityChange}
-            >
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="All Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priority</SelectItem>
-                <SelectItem value="Critical">Critical</SelectItem>
-                <SelectItem value="High">High</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
-                <SelectItem value="Low">Low</SelectItem>
-              </SelectContent>
-            </Select>
+            
+            <Select value={filters.status} onValueChange={(value) => setFilters({...filters, status: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="All Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">All Status</SelectItem>
+                          <SelectItem value="not-executed">Not Executed</SelectItem>
+                          <SelectItem value="passed">Passed</SelectItem>
+                          <SelectItem value="failed">Failed</SelectItem>
+                          <SelectItem value="blocked">Blocked</SelectItem>
+                          <SelectItem value="open">Open</SelectItem>
+                          <SelectItem value="in-progress">In Progress</SelectItem>
+                          <SelectItem value="resolved">Resolved</SelectItem>
+                          <SelectItem value="closed">Closed</SelectItem>
+                        </SelectContent>
+                      </Select>
+             <Select value={filters.priority} onValueChange={(value) => setFilters({...filters, priority: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="All Priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">All Priority</SelectItem>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="critical">Critical</SelectItem>
+                          <SelectItem value="blocker">Blocker</SelectItem>
+                        </SelectContent>
+                      </Select>
           <Select value={severityFilter} onValueChange={setSeverityFilter}>
             <SelectTrigger>
               <SelectValue placeholder="Filter by Severity" />
