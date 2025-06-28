@@ -85,14 +85,6 @@ export default function TraceabilityMatrixPage() {
   });
   const matrixRef = useRef<HTMLDivElement>(null);
 
-  // Initialize with first project if available
-  useEffect(() => {
-    if (!selectedProjectId && projects && projects.length > 0) {
-      console.log('Auto-selecting first project:', projects[0].id);
-      setSelectedProjectId(projects[0].id);
-    }
-  }, [projects, selectedProjectId]);
-
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -105,6 +97,14 @@ export default function TraceabilityMatrixPage() {
       return response.json();
     },
   });
+
+  // Initialize with first project if available
+  useEffect(() => {
+    if (!selectedProjectId && projects && projects.length > 0) {
+      console.log('Auto-selecting first project:', projects[0].id);
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects, selectedProjectId]);
 
   // Fetch modules for selected project
   const { data: projectModules } = useQuery({
