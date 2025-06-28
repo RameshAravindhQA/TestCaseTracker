@@ -175,9 +175,19 @@ const Messenger = () => {
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: { message: string; replyToId?: number; attachments?: string[] }) => {
       if (!selectedConversation) throw new Error("No conversation selected");
-      const response = await apiRequest("POST", `/api/projects/${selectedConversation}/chat`, messageData);
-      if (!response.ok) throw new Error("Failed to send message");
-      return response.json();
+      
+      try {
+        const response = await apiRequest("POST", `/api/projects/${selectedConversation}/chat`, messageData);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Send message error:", errorText);
+          throw new Error(`Failed to send message: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error("Send message API error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       refetchMessages();
@@ -188,10 +198,11 @@ const Messenger = () => {
         description: "Your message has been sent successfully.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Send message mutation error:", error);
       toast({
         title: "Error",
-        description: "Failed to send message. Please try again.",
+        description: `Failed to send message: ${error.message}. Please try again.`,
         variant: "destructive",
       });
     },
@@ -223,7 +234,21 @@ const Messenger = () => {
   });
 
   const handleSendMessage = () => {
-    if (!newMessage.trim() || !selectedConversation) return;
+    if (!newMessage.trim() || !selectedConversation) {
+      console.warn("Cannot send message: empty message or no conversation selected");
+      return;
+    }
+
+    if (sendMessageMutation.isPending) {
+      console.warn("Message send already in progress");
+      return;
+    }
+
+    console.log("Sending message:", {
+      conversationId: selectedConversation,
+      message: newMessage.trim(),
+      replyToId: replyingTo?.id
+    });
 
     sendMessageMutation.mutate({
       message: newMessage.trim(),

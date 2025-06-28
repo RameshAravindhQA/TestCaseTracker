@@ -11,38 +11,42 @@ interface ApiRequestOptions {
   isFormData?: boolean;
 }
 
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-  options?: ApiRequestOptions
-): Promise<Response> {
-  const isFormData = options?.isFormData || false;
-  let headers: Record<string, string> = {};
-  let body: any = undefined;
-  
-  if (data) {
-    if (isFormData && data instanceof FormData) {
-      // For FormData, don't set Content-Type header as browser will set it with boundary
-      body = data;
-      console.log("Sending FormData", Array.from(data.entries()).map(([key, val]) => 
-        `${key}: ${val instanceof File ? `${val.name} (${val.type}, ${val.size} bytes)` : val}`
-      ));
-    } else {
-      headers["Content-Type"] = "application/json";
-      body = JSON.stringify(data);
-    }
-  }
-  
-  const res = await fetch(url, {
+export async function apiRequest(method: string, url: string, data?: any): Promise<Response> {
+  const options: RequestInit = {
     method,
-    headers,
-    body,
-    credentials: "include",
-  });
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  };
 
-  await throwIfResNotOk(res);
-  return res;
+  if (data) {
+    options.body = JSON.stringify(data);
+  }
+
+  try {
+    const response = await fetch(url, options);
+
+    if (response.status === 401) {
+      console.log("Unauthorized request, clearing auth and redirecting to login");
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+      throw new Error('Unauthorized');
+    }
+
+    if (!response.ok) {
+      console.error(`API request failed: ${method} ${url}`, {
+        status: response.status,
+        statusText: response.statusText
+      });
+    }
+
+    return response;
+  } catch (error) {
+    console.error(`Network error for ${method} ${url}:`, error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
