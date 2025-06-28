@@ -845,7 +845,8 @@ class MemStorage implements IStorage {
     return card;
   }
 
-  async getKanbanCards(columnId: number): Promise<KanbanCard[]> {    return Array.from(this.kanbanCards.values())
+  async getKanbanCards(columnId: number): Promise<KanbanCard[]> {
+    return Array.from(this.kanbanCards.values())
       .filter(card => card.columnId === columnId)
       .sort((a, b) => a.position - b.position);
   }
@@ -1974,6 +1975,153 @@ Adding todos Map to the MemStorage class to store todo items.```text
     if (!todo || todo.userId !== userId) return false;
 
     return this.todos.delete(id);
+  }
+
+  async getCustomMarkersByProject(projectId: number): Promise<any[]> {
+    return Array.from(this.customMarkers.values()).filter(marker => marker.projectId === projectId);
+  }
+
+  async createCustomMarker(data: Omit<CustomMarker, 'id'>): Promise<CustomMarker> {
+    const id = this.nextId++;
+
+    const marker: CustomMarker = {
+      ...data,
+      id
+    };
+
+    this.customMarkers.set(id, marker);
+    return marker;
+  }
+
+  async updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null> {
+    const marker = this.customMarkers.get(id);
+    if (!marker) return null;
+
+    const updatedMarker = { ...marker, ...data };
+    this.customMarkers.set(id, updatedMarker);
+    return updatedMarker;
+  }
+
+  async deleteCustomMarker(id: number): Promise<boolean> {
+    return this.customMarkers.delete(id);
+  }
+
+  async getMatrixCellsByProject(projectId: number): Promise<any[]> {
+    return Array.from(this.matrixCells.values()).filter(cell => cell.projectId === projectId);
+  }
+
+  async createMatrixCell(data: Omit<MatrixCell, 'id'>): Promise<MatrixCell> {
+    const id = this.nextId++;
+
+    const cell: MatrixCell = {
+      ...data,
+      id
+    };
+
+    this.matrixCells.set(id, cell);
+    return cell;
+  }
+
+  async getTagsByProject(projectId: number): Promise<Tag[]> {
+    return Array.from(this.tags.values()).filter(tag => tag.projectId === projectId);
+  }
+
+  async getKanbanColumnsByProject(projectId: number): Promise<KanbanColumn[]> {
+    return Array.from(this.kanbanColumns.values())
+      .filter(col => col.projectId === projectId)
+      .sort((a, b) => a.position - b.position);
+  }
+
+  async getKanbanCardsByColumn(columnId: number): Promise<KanbanCard[]> {
+    return Array.from(this.kanbanCards.values())
+      .filter(card => card.columnId === columnId)
+      .sort((a, b) => a.position - b.position);
+  }
+
+  async getDocumentsByProject(projectId: number): Promise<Document[]> {
+    return Array.from(this.documents.values()).filter(doc => doc.projectId === projectId);
+  }
+
+  async getDocumentFoldersByProject(projectId: number): Promise<DocumentFolder[]> {
+    return Array.from(this.documentFolders.values()).filter(folder => folder.projectId === projectId);
+  }
+
+  // Messenger methods
+  async getChatsByUser(userId: number): Promise<any[]> {
+    // Mock implementation - replace with actual database logic
+    return [
+      {
+        id: 1,
+        name: 'General Discussion',
+        type: 'group',
+        participants: Array.from(this.users.values()).slice(0, 3),
+        lastMessage: {
+          id: 1,
+          content: 'Hello everyone!',
+          senderId: 1,
+          createdAt: new Date().toISOString()
+        },
+        unreadCount: 2,
+        isArchived: false,
+        createdAt: new Date().toISOString()
+      }
+    ];
+  }
+
+  async createChat(chatData: any): Promise<any> {
+    const id = this.getNextId();
+    const chat = {
+      id,
+      ...chatData,
+      createdAt: new Date().toISOString(),
+      unreadCount: 0,
+      isArchived: false
+    };
+    // Store in actual storage system
+    return chat;
+  }
+
+  async getMessagesByChat(chatId: number): Promise<any[]> {
+    // Mock implementation
+    return [
+      {
+        id: 1,
+        content: 'Hello everyone! Welcome to the team.',
+        senderId: 1,
+        chatId,
+        type: 'text',
+        reactions: [],
+        isPinned: false,
+        isEdited: false,
+        createdAt: new Date(Date.now() - 3600000).toISOString()
+      },
+      {
+        id: 2,
+        content: 'Thanks for the warm welcome!',
+        senderId: 2,
+        chatId,
+        type: 'text',
+        reactions: [{ emoji: '👍', userId: 1, count: 1 }],
+        isPinned: false,
+        isEdited: false,
+        createdAt: new Date().toISOString()
+      }
+    ];
+  }
+
+  async createMessage(messageData: any): Promise<any> {
+    const id = this.getNextId();
+    const message = {
+      id,
+      ...messageData,
+      type: 'text',
+      reactions: [],
+      isPinned: false,
+      isEdited: false,
+      createdAt: new Date().toISOString()
+    };
+    // Store in actual storage system
+    return message;
   }
 }
 
