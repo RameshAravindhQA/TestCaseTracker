@@ -1745,7 +1745,6 @@ class MemStorage implements IStorage {
 
       // Convert array to object format for storage
       const matrixMap: Record<string, number> = {};
-```tool_code
       matrixData.forEach(item => {
         const key = `${item.fromModuleId}-${item.toModuleId}`;
         matrixMap[key] = item.markerId;
