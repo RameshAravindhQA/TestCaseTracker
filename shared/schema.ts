@@ -54,7 +54,7 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   description: text("description"),
   prefix: text("prefix").notNull(), // 3-letter project prefix for IDs
-  status: text("status", { enum: ["Active", "Completed", "On Hold"] }).notNull().default("Active"),
+  status: text("status").$type<"Active" | "Completed" | "On Hold">().notNull().default("Active"),
   customerId: integer("customer_id"),
   createdById: integer("created_by_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -86,7 +86,7 @@ export const modules = pgTable("modules", {
   name: text("name").notNull(),
   description: text("description"),
   projectId: integer("project_id").notNull(),
-  status: text("status", { enum: ["Active", "Completed", "On Hold"] }).notNull().default("Active"),
+  status: text("status").$type<"Active" | "Completed" | "On Hold">().notNull().default("Active"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
