@@ -7916,7 +7916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get('/chats', isAuthenticated, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      const chats = await storage.getChatsByUser(userId);
+      const chats = await storage.getUserConversations(userId);
       res.json(chats);
     } catch (error) {
       console.error('Error fetching chats:', error);
@@ -7924,15 +7924,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  apiRouter.post('/chats', isAuthenticated, async (req, res) => {
+  apiRouter.post('/chats/direct', isAuthenticated, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      const chatData = { ...req.body, createdById: userId };
-      const chat = await storage.createChat(chatData);
+      const { targetUserId } = req.body;
+      
+      if (!targetUserId) {
+        return res.status(400).json({ error: 'Target user ID is required' });
+      }
+
+      const chat = await storage.createDirectConversation(userId, targetUserId);
       res.status(201).json(chat);
     } catch (error) {
-      console.error('Error creating chat:', error);
-      res.status(500).json({ error: 'Failed to create chat' });
+      console.error('Error creating direct chat:', error);
+      res.status(500).json({ error: 'Failed to create direct chat' });
+    }
+  });
+
+  apiRouter.post('/chats/group', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { name, description, participants } = req.body;
+      
+      if (!name || !participants || participants.length === 0) {
+        return res.status(400).json({ error: 'Group name and participants are required' });
+      }
+
+      const chat = await storage.createGroupConversation(userId, name, description, participants);
+      res.status(201).json(chat);
+    } catch (error) {
+      console.error('Error creating group chat:', error);
+      res.status(500).json({ error: 'Failed to create group chat' });
     }
   });
 
@@ -7944,6 +7966,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching messages:', error);
       res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  });
+
+  // Public users endpoint for messenger
+  apiRouter.get('/users/public', isAuthenticated, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const publicUsers = users.map(user => ({
+        id: user.id,
+        name: user.firstName + ' ' + (user.lastName || ''),
+        email: user.email,
+        isOnline: false,
+        lastSeen: null
+      }));
+      res.json(publicUsers);
+    } catch (error) {
+      console.error('Error fetching public users:', error);
+      res.status(500).json({ error: 'Failed to fetch users' });
     }
   });
 

@@ -192,6 +192,32 @@ export interface IStorage {
     // Traceability Matrix operations
   getTraceabilityMatrix(projectId: number): Promise<any>;
   saveTraceabilityMatrix(projectId: number, matrixData: any[]): Promise<any>;
+
+  // Enhanced Chat and Messaging methods
+  getChatsByUser(userId: number): Promise<any[]>;
+  getDirectConversation(userId1: number, userId2: number): Promise<any | null>;
+  addParticipantToConversation(conversationId: number, userId: number): Promise<boolean>;
+  removeParticipantFromConversation(conversationId: number, userId: number): Promise<boolean>;
+  updateConversation(id: number, updates: any): Promise<any | null>;
+  deleteConversation(id: number): Promise<boolean>;
+  addConversationMember(conversationId: number, userId: number): Promise<boolean>;
+  removeConversationMember(conversationId: number, userId: number): Promise<boolean>;
+  getConversationMembers(conversationId: number): Promise<any[]>;
+  createChatMessage(messageData: any): Promise<any>;
+  getChatMessages(conversationId: number, limit?: number, offset?: number): Promise<any[]>;
+  getChatMessage(id: number): Promise<any | null>;
+  updateChatMessage(id: number, userId: number, updates: any): Promise<any | null>;
+  deleteChatMessage(id: number, userId: number): Promise<boolean>;
+  addMessageReaction(messageId: number, userId: number, emoji: string): Promise<any | null>;
+  getMessageThread(parentMessageId: number): Promise<any[]>;
+  markMessageAsRead(messageId: number, userId: number): Promise<void>;
+  markConversationAsRead(conversationId: number, userId: number): Promise<void>;
+  getUnreadCountForUser(conversationId: number, userId: number): Promise<number>;
+  searchMessages(query: string, conversationId?: number, userId?: number): Promise<any[]>;
+  getUserConversations(userId: number): Promise<any[]>;
+  getMessagesByChat(chatId: number): Promise<any[]>;
+  createMessage(messageData: any): Promise<any>;
+  createConversation(conversationData: any): Promise<any>;
 }
 
 /**
@@ -206,7 +232,6 @@ class MemStorage implements IStorage {
   private bugs = new Map<number, any>();
   private activities = new Map<number, any>();
   private tags = new Map<number, any>();
-  private chatMessages = new Map<number, any>();
   private documents = new Map<number, any>();
   private documentFolders = new Map<number, any>();
   private testSheets = new Map<number, any>();
@@ -227,6 +252,13 @@ class MemStorage implements IStorage {
   private kanbanColumns: Map<number, any> = new Map();
   private kanbanCards: Map<number, any> = new Map();
   private traceabilityMatrixes: Map<number, any> = new Map();
+  // Enhanced Chat and Messaging methods
+  private conversations = new Map<number, any>();
+  private chatMessages = new Map<number, any>();
+  private messageReactions = new Map<number, any[]>();
+  private messageThreads = new Map<number, number[]>();
+  private conversationMembers = new Map<number, Set<number>>();
+  private messageReadStatus = new Map<string, Set<number>>(); // messageId-userId -> Set<userId>
 
   private nextId = 1;
   private testSheetIdCounter = 1;
@@ -768,7 +800,8 @@ class MemStorage implements IStorage {
     return updatedCustomer;
   }
 
-  async deleteCustomer(id: number): Promise<boolean> {
+  async deleteCustomer(id: number): Promise<```tool_code
+boolean> {
     return this.customers.delete(id);
   }
 
@@ -1713,6 +1746,7 @@ class MemStorage implements IStorage {
 
       // Convert array to object format for storage
       const matrixMap: Record<string, number> = {};
+```tool_code
       matrixData.forEach(item => {
         const key = `${item.fromModuleId}-${item.toModuleId}`;
         matrixMap[key] = item.markerId;

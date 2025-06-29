@@ -895,3 +895,32 @@ export type TestSheet = z.infer<typeof insertTestSheetSchema> & {
 };
 
 export type InsertTestSheet = z.infer<typeof insertTestSheetSchema>;
+
+import { sql } from 'drizzle-orm';
+import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
+
+export const conversations = sqliteTable('conversations', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  type: text('type').notNull().default('direct'), // 'direct' or 'group'
+  name: text('name'),
+  description: text('description'),
+  user1Id: integer('user1_id').references(() => users.id),
+  user2Id: integer('user2_id').references(() => users.id),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`)
+});
+
+export const chatMessages = sqliteTable('chat_messages', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  projectId: integer('project_id').references(() => projects.id),
+  userId: integer('user_id').notNull().references(() => users.id),
+  userName: text('user_name').notNull(),
+  message: text('message').notNull(),
+  type: text('type').notNull().default('text'),
+  timestamp: text('timestamp').notNull().default(sql`(datetime('now'))`),
+  replyToId: integer('reply_to_id').references(() => chatMessages.id),
+  attachments: text('attachments'),
+  conversationId: integer('conversation_id').references(() => conversations.id),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`)
+});
