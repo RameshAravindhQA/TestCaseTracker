@@ -11,8 +11,8 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   phoneNumber: text("phone_number"),
-  role: text("role", { enum: ["Tester", "Developer", "Admin"] }).notNull().default("Tester"),
-  status: text("status", { enum: ["Active", "Inactive"] }).notNull().default("Active"),
+  role: text("role").$type<"Tester" | "Developer" | "Admin">().notNull().default("Tester"),
+  status: text("status").$type<"Active" | "Inactive">().notNull().default("Active"),
   profilePicture: text("profile_picture"),
   theme: text("theme").default("default"),
   tempPassword: text("temp_password"),
@@ -72,7 +72,7 @@ export const projectMembers = pgTable("project_members", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull(),
   userId: integer("user_id").notNull(),
-  role: text("role", { enum: ["Tester", "Developer", "Admin"] }).notNull(),
+  role: text("role").$type<"Tester" | "Developer" | "Admin">().notNull(),
 });
 
 export const insertProjectMemberSchema = createInsertSchema(projectMembers).omit({
@@ -108,8 +108,8 @@ export const testCases = pgTable("test_cases", {
   testSteps: text("test_steps").notNull(),
   expectedResult: text("expected_result").notNull(),
   actualResult: text("actual_result"),
-  status: text("status", { enum: ["Pass", "Fail", "Blocked", "Not Executed"] }).notNull().default("Not Executed"),
-  priority: text("priority", { enum: ["High", "Medium", "Low"] }).notNull().default("Medium"),
+  status: text("status").$type<"Pass" | "Fail" | "Blocked" | "Not Executed">().notNull().default("Not Executed"),
+  priority: text("priority").$type<"High" | "Medium" | "Low">().notNull().default("Medium"),
   comments: text("comments"),
   tags: json("tags").default([]),
   createdById: integer("created_by_id").notNull(),
@@ -191,7 +191,7 @@ export const testingTypeFields = pgTable("testing_type_fields", {
   testingTypeId: integer("testing_type_id").notNull(),
   name: text("name").notNull(),
   label: text("label").notNull(),
-  type: text("type", { enum: ["text", "textarea", "select", "multiselect", "checkbox", "radio", "date", "number", "auto"] }).notNull(),
+  type: text("type").$type<"text" | "textarea" | "select" | "multiselect" | "checkbox" | "radio" | "date" | "number" | "auto">().notNull(),
   options: json("options").default([]),
   defaultValue: text("default_value"),
   placeholder: text("placeholder"),
@@ -235,7 +235,7 @@ export const documentFolders = pgTable("document_folders", {
   projectId: integer("project_id").notNull(),
   parentFolderId: integer("parent_folder_id"),
   createdById: integer("created_by_id").notNull(),
-  viewType: text("view_type", { enum: ["List", "Grid", "Windows"] }).default("List"),
+  viewType: text("view_type").$type<"List" | "Grid" | "Windows">().default("List"),
   icon: text("icon"),
   path: text("path"),
   isDeleted: boolean("is_deleted").default(false),
@@ -292,7 +292,7 @@ export const customers = pgTable("customers", {
   email: text("email"),
   phone: text("phone"),
   address: text("address"),
-  status: text("status", { enum: ["Active", "Inactive"] }).notNull().default("Active"),
+  status: text("status").$type<"Active" | "Inactive">().notNull().default("Active"),
   createdById: integer("created_by_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -492,7 +492,7 @@ export const timeSheets = pgTable("time_sheets", {
   endTime: text("end_time").notNull(),
   tags: json("tags").default([]),
   hours: integer("hours").notNull(),
-  status: text("status", { enum: ["Pending", "Approved", "Rejected"] }).notNull().default("Pending"),
+  status: text("status").$type<"Pending" | "Approved" | "Rejected">().notNull().default("Pending"),
   approvedById: integer("approved_by_id"),
   approvalDate: timestamp("approval_date"),
   comments: text("comments"),
@@ -671,7 +671,7 @@ export const sprints = pgTable("sprints", {
   projectId: integer("project_id").notNull(),
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
-  status: text("status", { enum: ["Planning", "Active", "Completed"] }).notNull().default("Planning"),
+  status: text("status").$type<"Planning" | "Active" | "Completed">().notNull().default("Planning"),
   createdById: integer("created_by_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at"),
@@ -699,7 +699,7 @@ export const kanbanCards = pgTable("kanban_cards", {
   columnId: integer("column_id").notNull(),
   sprintId: integer("sprint_id"),
   projectId: integer("project_id").notNull(),
-  priority: text("priority", { enum: ["Low", "Medium", "High", "Critical"] }).notNull().default("Medium"),
+  priority: text("priority").$type<"Low" | "Medium" | "High" | "Critical">().notNull().default("Medium"),
   order: integer("order").notNull(),
   estimatedHours: integer("estimated_hours"),
   actualHours: integer("actual_hours"),
@@ -896,31 +896,3 @@ export type TestSheet = z.infer<typeof insertTestSheetSchema> & {
 
 export type InsertTestSheet = z.infer<typeof insertTestSheetSchema>;
 
-import { sql } from 'drizzle-orm';
-import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
-
-export const conversations = sqliteTable('conversations', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  type: text('type').notNull().default('direct'), // 'direct' or 'group'
-  name: text('name'),
-  description: text('description'),
-  user1Id: integer('user1_id').references(() => users.id),
-  user2Id: integer('user2_id').references(() => users.id),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`)
-});
-
-export const chatMessages = sqliteTable('chat_messages', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  projectId: integer('project_id').references(() => projects.id),
-  userId: integer('user_id').notNull().references(() => users.id),
-  userName: text('user_name').notNull(),
-  message: text('message').notNull(),
-  type: text('type').notNull().default('text'),
-  timestamp: text('timestamp').notNull().default(sql`(datetime('now'))`),
-  replyToId: integer('reply_to_id').references(() => chatMessages.id),
-  attachments: text('attachments'),
-  conversationId: integer('conversation_id').references(() => conversations.id),
-  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`)
-});
