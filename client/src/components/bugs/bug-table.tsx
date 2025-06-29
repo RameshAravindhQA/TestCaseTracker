@@ -289,35 +289,30 @@ ${bug.comments || 'No comments provided.'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Select
-                        value={bug.status}
-                        onValueChange={(newStatus) => {
+                      <Badge 
+                        variant="outline" 
+                        className={`cursor-pointer transition-colors ${
+                          bug.status === "Open" 
+                            ? "bg-gradient-to-r from-red-500 to-red-600 text-white border-red-600 hover:from-red-600 hover:to-red-700"
+                            : bug.status === "In Progress" 
+                            ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-600 hover:from-blue-600 hover:to-blue-700"
+                            : bug.status === "Resolved"
+                            ? "bg-gradient-to-r from-green-500 to-green-600 text-white border-green-600 hover:from-green-600 hover:to-green-700"
+                            : bug.status === "Closed"
+                            ? "bg-gradient-to-r from-gray-500 to-gray-600 text-white border-gray-600 hover:from-gray-600 hover:to-gray-700"
+                            : "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-yellow-600 hover:from-yellow-600 hover:to-yellow-700"
+                        }`}
+                        onClick={() => {
+                          // Cycle through statuses when clicked
+                          const statuses = ["Open", "In Progress", "Resolved", "Closed", "Rejected"];
+                          const currentIndex = statuses.indexOf(bug.status);
+                          const nextStatus = statuses[(currentIndex + 1) % statuses.length];
+                          console.log('Updating bug status:', bug.id, 'to', nextStatus);
                           // Handle status update here
-                          const updatedBug = { ...bug, status: newStatus };
-                          console.log('Updating bug status:', bug.id, 'to', newStatus);
                         }}
                       >
-                        <SelectTrigger className={`w-32 ${
-                          bug.status === "Open" 
-                            ? "border-red-200 bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-white dark:border-red-700"
-                            : bug.status === "In Progress" 
-                            ? "border-blue-200 bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-white dark:border-blue-700"
-                            : bug.status === "Resolved"
-                            ? "border-green-200 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-white dark:border-green-700"
-                            : bug.status === "Closed"
-                            ? "border-gray-200 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                            : "border-yellow-200 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-white dark:border-yellow-700"
-                        }`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Open">Open</SelectItem>
-                          <SelectItem value="In Progress">In Progress</SelectItem>
-                          <SelectItem value="Resolved">Resolved</SelectItem>
-                          <SelectItem value="Closed">Closed</SelectItem>
-                          <SelectItem value="Rejected">Rejected</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        {bug.status}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {(() => {

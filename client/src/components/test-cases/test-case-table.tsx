@@ -420,30 +420,27 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
                       />
                     </TableCell>
                     <TableCell>
-                      <Select
-                        value={testCase.status}
-                        onValueChange={(value) => {
-                          handleUpdateTestCase(testCase.id, { status: value });
+                      <Badge 
+                        variant="outline" 
+                        className={`cursor-pointer transition-colors ${
+                          testCase.status === "Pass" 
+                            ? "bg-gradient-to-r from-green-500 to-green-600 text-white border-green-600 hover:from-green-600 hover:to-green-700"
+                            : testCase.status === "Fail" 
+                            ? "bg-gradient-to-r from-red-500 to-red-600 text-white border-red-600 hover:from-red-600 hover:to-red-700"
+                            : testCase.status === "Blocked"
+                            ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-600 hover:from-orange-600 hover:to-orange-700"
+                            : "bg-gradient-to-r from-gray-500 to-gray-600 text-white border-gray-600 hover:from-gray-600 hover:to-gray-700"
+                        }`}
+                        onClick={() => {
+                          // Cycle through statuses when clicked
+                          const statuses = ["Not Executed", "Pass", "Fail", "Blocked"];
+                          const currentIndex = statuses.indexOf(testCase.status);
+                          const nextStatus = statuses[(currentIndex + 1) % statuses.length];
+                          handleUpdateTestCase(testCase.id, { status: nextStatus });
                         }}
                       >
-                        <SelectTrigger className={`w-32 ${
-                          testCase.status === "Pass" 
-                            ? "border-green-200 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-white dark:border-green-700"
-                            : testCase.status === "Fail" 
-                            ? "border-red-200 bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-white dark:border-red-700"
-                            : testCase.status === "Blocked"
-                            ? "border-orange-200 bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-white dark:border-orange-700"
-                            : "border-gray-200 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                        }`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Not Executed">Not Executed</SelectItem>
-                          <SelectItem value="Pass">Pass</SelectItem>
-                          <SelectItem value="Fail">Fail</SelectItem>
-                          <SelectItem value="Blocked">Blocked</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        {testCase.status}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={

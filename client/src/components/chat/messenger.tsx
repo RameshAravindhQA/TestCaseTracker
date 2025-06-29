@@ -49,6 +49,7 @@ export function Messenger() {
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -270,6 +271,9 @@ export function Messenger() {
         description: "Failed to connect to user service",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
+      setHasInitialLoad(true);
     }
   };
 
@@ -440,7 +444,7 @@ export function Messenger() {
   }
 
   // Show loading state while initial data is being fetched
-  if (users.length === 0 && chats.length === 0) {
+  if (isLoading) {
       return (
         <div className="flex flex-col h-screen">
           <div className="flex items-center justify-center h-full">
@@ -456,6 +460,32 @@ export function Messenger() {
           </div>
         </div>
       );
+  }
+
+  // Show welcome state if no users or chats but not loading
+  if (users.length === 0 && chats.length === 0) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-50">
+        <div className="flex items-center justify-center h-full">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center max-w-md mx-auto p-8"
+          >
+            <MessageCircle className="h-16 w-16 text-blue-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Messenger</h2>
+            <p className="text-gray-600 mb-6">
+              Connect with your team members and start conversations. Once other users join the platform, you'll be able to chat with them here.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800">
+                <strong>Getting Started:</strong> Invite team members to join your project to start messaging.
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
   }
 
   return (
