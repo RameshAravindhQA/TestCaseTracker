@@ -800,8 +800,7 @@ class MemStorage implements IStorage {
     return updatedCustomer;
   }
 
-  async deleteCustomer(id: number): Promise<```tool_code
-boolean> {
+  async deleteCustomer(id: number): Promise<boolean> {
     return this.customers.delete(id);
   }
 
