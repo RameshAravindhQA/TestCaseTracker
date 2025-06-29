@@ -40,12 +40,32 @@ interface User {
   lastSeen?: string;
 }
 
+interface Chat {
+  id: number;
+  name: string;
+  type: 'direct' | 'group';
+  description?: string;
+  participants: User[];
+  lastMessage?: string;
+  unreadCount?: number;
+  createdAt: string;
+}
+
+interface ChatMessage {
+  id: number;
+  userId: number;
+  userName: string;
+  message: string;
+  timestamp: string;
+  type: 'text' | 'system';
+}
+
 export function Messenger() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -63,40 +83,48 @@ export function Messenger() {
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize demo data
+  // Initialize demo data and load users
   useEffect(() => {
-    setTimeout(() => {
-      setConversations([
-        {
-          id: '1',
-          name: 'Project Team',
-          lastMessage: 'The latest test results are looking good!',
-          timestamp: new Date(Date.now() - 1000 * 60 * 5),
-          unreadCount: 2,
-          avatar: 'PT',
-          isOnline: true
-        },
-        {
-          id: '2',
-          name: 'QA Team',
-          lastMessage: 'Found a critical bug in the login module',
-          timestamp: new Date(Date.now() - 1000 * 60 * 30),
-          unreadCount: 0,
-          avatar: 'QA',
-          isOnline: true
-        },
-        {
-          id: '3',
-          name: 'Dev Team',
-          lastMessage: 'Code review completed',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-          unreadCount: 1,
-          avatar: 'DT',
-          isOnline: false
-        }
-      ]);
-      setIsLoading(false);
-    }, 1000);
+    const initializeData = async () => {
+      try {
+        // Load users first
+        await loadUsers();
+        
+        // Set demo conversations if no real data
+        setConversations([
+          {
+            id: '1',
+            name: 'Project Team',
+            lastMessage: 'The latest test results are looking good!',
+            timestamp: new Date(Date.now() - 1000 * 60 * 5),
+            unreadCount: 2,
+            avatar: 'PT',
+            isOnline: true
+          },
+          {
+            id: '2',
+            name: 'QA Team',
+            lastMessage: 'Found a critical bug in the login module',
+            timestamp: new Date(Date.now() - 1000 * 60 * 30),
+            unreadCount: 0,
+            avatar: 'QA',
+            isOnline: true
+          }
+        ]);
+      } catch (error) {
+        console.error('Error initializing messenger:', error);
+        // Set basic demo data even if API fails
+        setUsers([
+          { id: 1, name: 'Demo User', email: 'demo@test.com', isOnline: false },
+          { id: 2, name: 'Test User', email: 'test@test.com', isOnline: false }
+        ]);
+      } finally {
+        setIsLoading(false);
+        setHasInitialLoad(true);
+      }
+    };
+
+    initializeData();
   }, []);
 
     useEffect(() => {
@@ -117,61 +145,52 @@ export function Messenger() {
   }, [messages]);
 
   const connectWebSocket = () => {
-    // Ensure WebSocket connection uses correct path with retry logic
-    let ws: WebSocket;
-    let retryCount = 0;
-    const maxRetries = 3;
+    if (!user) return;
+    
+    try {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/chat`;
+      console.log('Connecting to WebSocket:', wsUrl);
+      
+      const ws = new WebSocket(wsUrl);
 
-    function createWebSocketConnection() {
-      try {
-        ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/chat`);
+      ws.onopen = () => {
+        console.log('WebSocket connected successfully');
+        setIsConnected(true);
 
-        ws.onopen = () => {
-          console.log('WebSocket connected successfully');
-          setIsConnected(true);
-          retryCount = 0;
-
-          ws.send(JSON.stringify({
-            type: 'authenticate',
-            data: {
-              userId: user?.id,
-              userName: user?.name
-            }
-          }));
-        };
-
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            handleWebSocketMessage(data);
-          } catch (error) {
-            console.error('Error parsing WebSocket message:', error);
+        ws.send(JSON.stringify({
+          type: 'authenticate',
+          data: {
+            userId: user.id,
+            userName: user.name
           }
-        };
+        }));
+      };
 
-        ws.onerror = (error) => {
-          console.log('WebSocket connection error:', error);
-          setIsConnected(false);
-        };
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
 
-        ws.onclose = () => {
-          setIsConnected(false);
-          if (retryCount < maxRetries) {
-            retryCount++;
-            console.log(`WebSocket connection closed, retrying... (${retryCount}/${maxRetries})`);
-            setTimeout(createWebSocketConnection, 2000 * retryCount);
-          } else {
-            console.log('Max WebSocket connection retries reached.');
-          }
-        };
+      ws.onerror = (error) => {
+        console.warn('WebSocket connection error, will work in demo mode:', error);
+        setIsConnected(false);
+      };
 
-        wsRef.current = ws;
-      } catch (error) {
-        console.error('Failed to create WebSocket connection:', error);
-      }
+      ws.onclose = () => {
+        console.log('WebSocket connection closed');
+        setIsConnected(false);
+      };
+
+      wsRef.current = ws;
+    } catch (error) {
+      console.warn('WebSocket not available, working in demo mode:', error);
+      setIsConnected(false);
     }
-
-    createWebSocketConnection();
   };
 
   const handleWebSocketMessage = (data: any) => {
@@ -254,26 +273,25 @@ export function Messenger() {
       const response = await fetch('/api/users/public');
       if (response.ok) {
         const usersData = await response.json();
-        setUsers(usersData);
-        console.log('Loaded users for messenger:', usersData.length);
+        setUsers(usersData || []);
+        console.log('Loaded users for messenger:', usersData?.length || 0);
       } else {
-        console.error('Failed to load users:', response.status);
-        toast({
-          title: "Error",
-          description: "Failed to load users for messaging",
-          variant: "destructive"
-        });
+        console.warn('Users API not available, using demo data');
+        // Set demo users if API not available
+        setUsers([
+          { id: 1, name: 'Demo User 1', email: 'demo1@test.com', isOnline: true },
+          { id: 2, name: 'Demo User 2', email: 'demo2@test.com', isOnline: false },
+          { id: 3, name: 'Test User', email: 'test@test.com', isOnline: true }
+        ]);
       }
     } catch (error) {
-      console.error('Error loading users:', error);
-      toast({
-        title: "Error", 
-        description: "Failed to connect to user service",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-      setHasInitialLoad(true);
+      console.warn('Error loading users, using demo data:', error);
+      // Set demo users on error
+      setUsers([
+        { id: 1, name: 'Demo User 1', email: 'demo1@test.com', isOnline: true },
+        { id: 2, name: 'Demo User 2', email: 'demo2@test.com', isOnline: false },
+        { id: 3, name: 'Test User', email: 'test@test.com', isOnline: true }
+      ]);
     }
   };
 

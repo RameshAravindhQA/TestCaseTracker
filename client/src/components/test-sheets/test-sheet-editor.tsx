@@ -302,21 +302,33 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
         end: { row, col }
       });
     } else {
+      // Save current editing cell before switching
+      if (editingCell && (editingCell.row !== row || editingCell.col !== col)) {
+        setEditingCell(null);
+      }
+      
       setSelectedCell({ row, col });
       setSelectedRange(null);
       const cellKey = getCellKey(row, col);
       const cellData = cells[cellKey];
       setFormulaBarValue(cellData?.formula || cellData?.value || '');
+      
+      // Single-click editing - start editing immediately
+      setTimeout(() => {
+        setEditingCell({ row, col });
+      }, 100);
     }
   };
 
   const handleCellDoubleClick = (row: number, col: number) => {
+    // Keep double-click as alternative for formula editing
     setEditingCell({ row, col });
     const cellKey = getCellKey(row, col);
     const cellData = cells[cellKey];
     if (inputRef.current) {
       inputRef.current.value = cellData?.formula || cellData?.value || '';
       inputRef.current.focus();
+      inputRef.current.select(); // Select all text for easy replacement
     }
   };
 
@@ -547,14 +559,53 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
           {/* Toolbar */}
           <div className="border-b p-2 space-y-2">
             {/* Formula Bar */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 relative">
               <span className="text-sm font-medium">fx</span>
-              <Input
-                value={formulaBarValue}
-                onChange={(e) => handleFormulaBarChange(e.target.value)}
-                placeholder="Enter formula or value"
-                className="flex-1"
-              />
+              <div className="flex-1 relative">
+                <Input
+                  value={formulaBarValue}
+                  onChange={(e) => handleFormulaBarChange(e.target.value)}
+                  placeholder="Enter formula or value (start with = for formulas)"
+                  className="w-full"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && selectedCell) {
+                      const isFormula = formulaBarValue.startsWith('=');
+                      updateCell(selectedCell.row, selectedCell.col, {
+                        value: formulaBarValue,
+                        formula: isFormula ? formulaBarValue : undefined
+                      });
+                    }
+                  }}
+                />
+                
+                {/* Formula suggestions */}
+                {formulaBarValue.startsWith('=') && formulaBarValue.length > 1 && (
+                  <div className="absolute top-full left-0 right-0 bg-white border rounded-md shadow-lg z-50 max-h-32 overflow-y-auto">
+                    {['SUM', 'AVERAGE', 'COUNT', 'MIN', 'MAX', 'IF', 'VLOOKUP'].filter(func => 
+                      func.toLowerCase().includes(formulaBarValue.slice(1).toLowerCase())
+                    ).map(func => (
+                      <div 
+                        key={func}
+                        className="px-3 py-1 hover:bg-blue-50 cursor-pointer text-sm"
+                        onClick={() => {
+                          const currentFormula = formulaBarValue.slice(1);
+                          const newFormula = `=${func}(`;
+                          setFormulaBarValue(newFormula);
+                          if (selectedCell) {
+                            updateCell(selectedCell.row, selectedCell.col, {
+                              formula: newFormula,
+                              value: newFormula
+                            });
+                          }
+                        }}
+                      >
+                        <span className="font-medium text-blue-600">{func}</span>
+                        <span className="text-gray-500 ml-2">({func === 'SUM' ? 'range' : func === 'AVERAGE' ? 'range' : func === 'COUNT' ? 'range' : func === 'IF' ? 'condition, true_value, false_value' : 'arguments'})</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Formatting Toolbar */}
@@ -715,22 +766,29 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
                       col >= Math.min(selectedRange.start.col, selectedRange.end.col) &&
                       col <= Math.max(selectedRange.start.col, selectedRange.end.col);
 
+                    const cellValue = cellData ? formatCellValue(cellData.value, cellData.format) : '';
+                    const minWidth = Math.max(80, cellValue.length * 7 + 16); // Auto-expand based on content
+
                     return (
                       <div
                         key={col}
                         className={cn(
-                          "w-24 h-8 border-r border-b flex items-center px-1 cursor-cell text-xs",
-                          isSelected && "bg-blue-100 border-blue-500",
+                          "h-8 border-r border-b flex items-center px-1 cursor-cell text-xs relative group",
+                          isSelected && "bg-blue-100 border-blue-500 ring-2 ring-blue-500",
                           isInRange && "bg-blue-50",
                           cellData?.format?.backgroundColor && `bg-${cellData.format.backgroundColor}`,
                           cellData?.format?.bold && "font-bold",
                           cellData?.format?.italic && "italic",
-                          cellData?.format?.underline && "underline"
+                          cellData?.format?.underline && "underline",
+                          "hover:bg-gray-50 transition-colors"
                         )}
                         style={{
+                          width: Math.max(96, minWidth), // Dynamic width
                           textAlign: cellData?.format?.textAlign || 'left',
                           color: cellData?.format?.fontColor,
-                          fontSize: cellData?.format?.fontSize ? `${cellData.format.fontSize}px` : '12px'
+                          fontSize: cellData?.format?.fontSize ? `${cellData.format.fontSize}px` : '12px',
+                          whiteSpace: 'pre-wrap', // Text wrapping
+                          wordBreak: 'break-word'
                         }}
                         onClick={(e) => handleCellClick(row, col, e)}
                         onDoubleClick={() => handleCellDoubleClick(row, col)}
@@ -738,8 +796,9 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
                         {editingCell?.row === row && editingCell?.col === col ? (
                           <input
                             ref={inputRef}
-                            className="w-full h-full bg-transparent border-none outline-none"
+                            className="w-full h-full bg-transparent border-none outline-none text-xs px-1"
                             defaultValue={cellData?.formula || cellData?.value || ''}
+                            autoFocus
                             onBlur={(e) => {
                               const value = e.target.value;
                               const isFormula = value.startsWith('=');
@@ -752,6 +811,7 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
                             }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
+                                e.preventDefault();
                                 const value = (e.target as HTMLInputElement).value;
                                 const isFormula = value.startsWith('=');
                                 updateCell(row, col, {
@@ -760,14 +820,139 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
                                 });
                                 setEditingCell(null);
                                 setFormulaBarValue(value);
+                                
+                                // Move to next row (Google Sheets behavior)
+                                if (row < rows - 1) {
+                                  setSelectedCell({ row: row + 1, col });
+                                  setTimeout(() => setEditingCell({ row: row + 1, col }), 100);
+                                }
+                              } else if (e.key === 'Tab') {
+                                e.preventDefault();
+                                const value = (e.target as HTMLInputElement).value;
+                                const isFormula = value.startsWith('=');
+                                updateCell(row, col, {
+                                  value: isFormula ? value : value,
+                                  formula: isFormula ? value : undefined
+                                });
+                                setEditingCell(null);
+                                setFormulaBarValue(value);
+                                
+                                // Move to next column (Google Sheets behavior)
+                                if (col < cols - 1) {
+                                  setSelectedCell({ row, col: col + 1 });
+                                  setTimeout(() => setEditingCell({ row, col: col + 1 }), 100);
+                                }
                               } else if (e.key === 'Escape') {
                                 setEditingCell(null);
+                              } else if (e.key === 'ArrowUp' && !e.ctrlKey) {
+                                e.preventDefault();
+                                if (row > 0) {
+                                  setSelectedCell({ row: row - 1, col });
+                                  setEditingCell(null);
+                                }
+                              } else if (e.key === 'ArrowDown' && !e.ctrlKey) {
+                                e.preventDefault();
+                                if (row < rows - 1) {
+                                  setSelectedCell({ row: row + 1, col });
+                                  setEditingCell(null);
+                                }
+                              } else if (e.key === 'ArrowLeft' && !e.ctrlKey && (e.target as HTMLInputElement).selectionStart === 0) {
+                                e.preventDefault();
+                                if (col > 0) {
+                                  setSelectedCell({ row, col: col - 1 });
+                                  setEditingCell(null);
+                                }
+                              } else if (e.key === 'ArrowRight' && !e.ctrlKey && (e.target as HTMLInputElement).selectionStart === (e.target as HTMLInputElement).value.length) {
+                                e.preventDefault();
+                                if (col < cols - 1) {
+                                  setSelectedCell({ row, col: col + 1 });
+                                  setEditingCell(null);
+                                }
                               }
+                            }}
+                            onChange={(e) => {
+                              // Real-time auto-save as user types
+                              const value = e.target.value;
+                              setFormulaBarValue(value);
                             }}
                           />
                         ) : (
-                          <span className="truncate">
-                            {cellData ? formatCellValue(cellData.value, cellData.format) : ''}
+                          <span 
+                            className="block w-full h-full min-h-[20px] whitespace-pre-wrap"
+                            style={{ overflowWrap: 'break-word' }}
+                            draggable={!!cellData?.value}
+                            onDragStart={(e) => {
+                              if (cellData) {
+                                e.dataTransfer.setData('text/plain', cellData.value);
+                                e.dataTransfer.setData('application/x-cell-data', JSON.stringify({
+                                  row, col, value: cellData.value, formula: cellData.formula
+                                }));
+                              }
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.parentElement?.classList.add('bg-green-50');
+                            }}
+                            onDragLeave={(e) => {
+                              e.currentTarget.parentElement?.classList.remove('bg-green-50');
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.parentElement?.classList.remove('bg-green-50');
+                              
+                              const cellDataStr = e.dataTransfer.getData('application/x-cell-data');
+                              if (cellDataStr) {
+                                try {
+                                  const draggedData = JSON.parse(cellDataStr);
+                                  if (draggedData.formula) {
+                                    // Auto-adjust formula references when dragging
+                                    const rowDiff = row - draggedData.row;
+                                    const colDiff = col - draggedData.col;
+                                    let adjustedFormula = draggedData.formula;
+                                    
+                                    // Simple formula adjustment for cell references
+                                    adjustedFormula = adjustedFormula.replace(/([A-Z]+)(\d+)/g, (match: string, colRef: string, rowRef: string) => {
+                                      const origCol = COLUMN_LABELS.indexOf(colRef);
+                                      const origRow = parseInt(rowRef);
+                                      const newCol = Math.max(0, origCol + colDiff);
+                                      const newRow = Math.max(1, origRow + rowDiff);
+                                      return `${COLUMN_LABELS[newCol] || 'A'}${newRow}`;
+                                    });
+                                    
+                                    updateCell(row, col, {
+                                      formula: adjustedFormula,
+                                      value: adjustedFormula
+                                    });
+                                  } else {
+                                    updateCell(row, col, {
+                                      value: draggedData.value
+                                    });
+                                  }
+                                } catch (error) {
+                                  console.error('Error parsing dragged cell data:', error);
+                                }
+                              } else {
+                                const text = e.dataTransfer.getData('text/plain');
+                                if (text) {
+                                  updateCell(row, col, { value: text });
+                                }
+                              }
+                            }}
+                          >
+                            {cellValue}
+                            
+                            {/* Auto-fill handle */}
+                            {isSelected && (
+                              <div 
+                                className="absolute bottom-0 right-0 w-2 h-2 bg-blue-500 cursor-crosshair opacity-75 hover:opacity-100"
+                                style={{ transform: 'translate(50%, 50%)' }}
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  // Auto-fill functionality
+                                  console.log('Auto-fill started from', row, col);
+                                }}
+                              />
+                            )}
                           </span>
                         )}
                       </div>
