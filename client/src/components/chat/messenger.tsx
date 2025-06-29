@@ -11,25 +11,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Send, MessageCircle, Users, Settings, Plus, Search, UserPlus, Hash, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { motion } from "framer-motion";
 
 interface Message {
-  id: number;
-  userId: number;
-  userName: string;
-  message: string;
-  timestamp: string;
-  type: 'text' | 'system';
+  id: string;
+  content: string;
+  sender: string;
+  timestamp: Date;
+  isCurrentUser: boolean;
 }
 
-interface Chat {
-  id: number;
+interface Conversation {
+  id: string;
   name: string;
-  type: 'direct' | 'group';
-  participants: number[];
-  lastMessage?: string;
-  lastActivity?: string;
-  unreadCount?: number;
-  description?: string;
+  lastMessage: string;
+  timestamp: Date;
+  unreadCount: number;
+  avatar: string;
+  isOnline: boolean;
 }
 
 interface User {
@@ -41,17 +40,20 @@ interface User {
   lastSeen?: string;
 }
 
-export default function Messenger() {
+export function Messenger() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'chats' | 'users'>('chats');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [groupName, setGroupName] = useState('');
@@ -60,7 +62,43 @@ export default function Messenger() {
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Initialize demo data
   useEffect(() => {
+    setTimeout(() => {
+      setConversations([
+        {
+          id: '1',
+          name: 'Project Team',
+          lastMessage: 'The latest test results are looking good!',
+          timestamp: new Date(Date.now() - 1000 * 60 * 5),
+          unreadCount: 2,
+          avatar: 'PT',
+          isOnline: true
+        },
+        {
+          id: '2',
+          name: 'QA Team',
+          lastMessage: 'Found a critical bug in the login module',
+          timestamp: new Date(Date.now() - 1000 * 60 * 30),
+          unreadCount: 0,
+          avatar: 'QA',
+          isOnline: true
+        },
+        {
+          id: '3',
+          name: 'Dev Team',
+          lastMessage: 'Code review completed',
+          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+          unreadCount: 1,
+          avatar: 'DT',
+          isOnline: false
+        }
+      ]);
+      setIsLoading(false);
+    }, 1000);
+  }, []);
+
+    useEffect(() => {
     if (user) {
       connectWebSocket();
       loadChats();
@@ -328,8 +366,8 @@ export default function Messenger() {
     }
   };
 
-  const sendMessage = () => {
-    if (!newMessage.trim() || !selectedChat || !wsRef.current) return;
+  const handleSendMessage = () => {
+        if (!newMessage.trim() || !selectedChat || !wsRef.current) return;
 
     const messageData = {
       type: 'send_message',
@@ -348,6 +386,22 @@ export default function Messenger() {
       e.preventDefault();
       sendMessage();
     }
+  };
+
+
+  const sendMessage = () => {
+    if (!newMessage.trim() || !selectedChat || !wsRef.current) return;
+
+    const messageData = {
+      type: 'send_message',
+      data: {
+        conversationId: selectedChat.id,
+        message: newMessage.trim()
+      }
+    };
+
+    wsRef.current.send(JSON.stringify(messageData));
+    setNewMessage('');
   };
 
   const scrollToBottom = () => {
@@ -387,17 +441,21 @@ export default function Messenger() {
 
   // Show loading state while initial data is being fetched
   if (users.length === 0 && chats.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Card className="w-96">
-          <CardContent className="p-6 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Messenger</h3>
-            <p className="text-gray-600">Setting up your conversations...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+      return (
+        <div className="flex flex-col h-screen">
+          <div className="flex items-center justify-center h-full">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center"
+            >
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading Messenger</p>
+              <p className="text-sm text-gray-500">Setting up your conversations...</p>
+            </motion.div>
+          </div>
+        </div>
+      );
   }
 
   return (

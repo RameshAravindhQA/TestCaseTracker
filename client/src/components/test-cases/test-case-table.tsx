@@ -420,14 +420,30 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
                       />
                     </TableCell>
                     <TableCell>
-                      <Input
+                      <Select
                         value={testCase.status}
-                        onChange={(e) => {
-                          handleUpdateTestCase(testCase.id, { status: e.target.value });
+                        onValueChange={(value) => {
+                          handleUpdateTestCase(testCase.id, { status: value });
                         }}
-                        className="w-24"
-                        placeholder="Status"
-                      />
+                      >
+                        <SelectTrigger className={`w-32 ${
+                          testCase.status === "Pass" 
+                            ? "border-green-200 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-white dark:border-green-700"
+                            : testCase.status === "Fail" 
+                            ? "border-red-200 bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-white dark:border-red-700"
+                            : testCase.status === "Blocked"
+                            ? "border-orange-200 bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-white dark:border-orange-700"
+                            : "border-gray-200 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                        }`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Not Executed">Not Executed</SelectItem>
+                          <SelectItem value="Pass">Pass</SelectItem>
+                          <SelectItem value="Fail">Fail</SelectItem>
+                          <SelectItem value="Blocked">Blocked</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={
