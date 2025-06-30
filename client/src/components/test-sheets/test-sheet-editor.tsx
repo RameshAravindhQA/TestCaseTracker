@@ -263,6 +263,11 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
   const [selectedRange, setSelectedRange] = useState<{ start: { row: number; col: number }; end: { row: number; col: number } } | null>(null);
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
   const [formulaBarValue, setFormulaBarValue] = useState('');
+  const [showFormulaSuggestions, setShowFormulaSuggestions] = useState(false);
+  const [formulaSuggestions, setFormulaSuggestions] = useState<Array<{name: string, description: string, example: string}>>([]);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+  const [showCellSuggestions, setShowCellSuggestions] = useState(false);
+  const [cellSuggestions, setCellSuggestions] = useState<string[]>([]);
   const [sheetTabs, setSheetTabs] = useState([{ id: 'sheet1', name: 'Sheet1', active: true }]);
   const [activeSheet, setActiveSheet] = useState('sheet1');
   const [frozenRows, setFrozenRows] = useState(0);
@@ -282,6 +287,37 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
 
   const gridRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const formulaBarRef = useRef<HTMLInputElement>(null);
+
+  // Formula suggestions data
+  const FORMULA_FUNCTIONS = [
+    { name: 'SUM', description: 'Adds all numbers in a range of cells', example: 'SUM(A1:A10)' },
+    { name: 'AVERAGE', description: 'Returns the average of numbers in a range', example: 'AVERAGE(A1:A10)' },
+    { name: 'COUNT', description: 'Counts the number of cells that contain numbers', example: 'COUNT(A1:A10)' },
+    { name: 'COUNTA', description: 'Counts non-empty cells in a range', example: 'COUNTA(A1:A10)' },
+    { name: 'MAX', description: 'Returns the largest value in a range', example: 'MAX(A1:A10)' },
+    { name: 'MIN', description: 'Returns the smallest value in a range', example: 'MIN(A1:A10)' },
+    { name: 'IF', description: 'Returns one value if condition is true, another if false', example: 'IF(A1>10, "High", "Low")' },
+    { name: 'CONCATENATE', description: 'Joins several text strings into one', example: 'CONCATENATE(A1, " ", B1)' },
+    { name: 'LEFT', description: 'Returns leftmost characters from text', example: 'LEFT(A1, 5)' },
+    { name: 'RIGHT', description: 'Returns rightmost characters from text', example: 'RIGHT(A1, 3)' },
+    { name: 'MID', description: 'Returns characters from middle of text', example: 'MID(A1, 2, 4)' },
+    { name: 'LEN', description: 'Returns the length of text', example: 'LEN(A1)' },
+    { name: 'UPPER', description: 'Converts text to uppercase', example: 'UPPER(A1)' },
+    { name: 'LOWER', description: 'Converts text to lowercase', example: 'LOWER(A1)' },
+    { name: 'ROUND', description: 'Rounds a number to specified digits', example: 'ROUND(A1, 2)' },
+    { name: 'POWER', description: 'Returns number raised to a power', example: 'POWER(A1, 2)' },
+    { name: 'SQRT', description: 'Returns the square root of a number', example: 'SQRT(A1)' },
+    { name: 'ABS', description: 'Returns absolute value of a number', example: 'ABS(A1)' },
+    { name: 'TODAY', description: 'Returns current date', example: 'TODAY()' },
+    { name: 'NOW', description: 'Returns current date and time', example: 'NOW()' },
+    { name: 'YEAR', description: 'Returns the year from a date', example: 'YEAR(A1)' },
+    { name: 'MONTH', description: 'Returns the month from a date', example: 'MONTH(A1)' },
+    { name: 'DAY', description: 'Returns the day from a date', example: 'DAY(A1)' },
+    { name: 'AND', description: 'Returns TRUE if all conditions are true', example: 'AND(A1>5, B1<10)' },
+    { name: 'OR', description: 'Returns TRUE if any condition is true', example: 'OR(A1>5, B1<10)' },
+    { name: 'NOT', description: 'Reverses the logic of a condition', example: 'NOT(A1>5)' }
+  ];
 
   const rows = sheet.data.rows || 100;
   const cols = sheet.data.cols || 26;
@@ -361,6 +397,53 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
 
   const handleFormulaBarChange = (value: string) => {
     setFormulaBarValue(value);
+    
+    // Handle formula suggestions
+    if (value.startsWith('=')) {
+      const formulaText = value.slice(1).toUpperCase();
+      const lastWord = formulaText.split(/[^A-Z]/).pop() || '';
+      
+      // Show function suggestions
+      if (lastWord && /^[A-Z]+$/.test(lastWord)) {
+        const suggestions = FORMULA_FUNCTIONS.filter(func => 
+          func.name.startsWith(lastWord)
+        );
+        setFormulaSuggestions(suggestions);
+        setShowFormulaSuggestions(suggestions.length > 0);
+        setSelectedSuggestionIndex(0);
+      } else {
+        setShowFormulaSuggestions(false);
+      }
+      
+      // Show cell reference suggestions
+      const cellRefMatch = formulaText.match(/([A-Z]*)(\d*)$/);
+      if (cellRefMatch && cellRefMatch[1]) {
+        const colPrefix = cellRefMatch[1];
+        const rowPrefix = cellRefMatch[2];
+        const suggestions: string[] = [];
+        
+        // Generate cell suggestions
+        for (let col = 0; col < Math.min(cols, 10); col++) {
+          const colLetter = getColumnLabel(col);
+          if (colLetter.startsWith(colPrefix)) {
+            for (let row = 1; row <= Math.min(rows, 20); row++) {
+              if (!rowPrefix || row.toString().startsWith(rowPrefix)) {
+                suggestions.push(`${colLetter}${row}`);
+              }
+            }
+          }
+        }
+        
+        setCellSuggestions(suggestions.slice(0, 10));
+        setShowCellSuggestions(suggestions.length > 0);
+      } else {
+        setShowCellSuggestions(false);
+      }
+    } else {
+      setShowFormulaSuggestions(false);
+      setShowCellSuggestions(false);
+    }
+
     if (selectedCell) {
       const isFormula = value.startsWith('=');
       if (isFormula) {
@@ -374,6 +457,100 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
           formula: undefined
         });
       }
+    }
+  };
+
+  const insertFormulaSuggestion = (suggestion: any) => {
+    if (!selectedCell) return;
+    
+    const currentValue = formulaBarValue;
+    const formulaText = currentValue.slice(1);
+    const lastWordMatch = formulaText.match(/[A-Z]*$/);
+    
+    if (lastWordMatch) {
+      const beforeLastWord = formulaText.slice(0, lastWordMatch.index);
+      const newValue = `=${beforeLastWord}${suggestion.name}(`;
+      setFormulaBarValue(newValue);
+      setShowFormulaSuggestions(false);
+      
+      // Focus back to formula bar and position cursor
+      if (formulaBarRef.current) {
+        formulaBarRef.current.focus();
+        setTimeout(() => {
+          if (formulaBarRef.current) {
+            formulaBarRef.current.setSelectionRange(newValue.length, newValue.length);
+          }
+        }, 0);
+      }
+    }
+  };
+
+  const insertCellSuggestion = (cellRef: string) => {
+    if (!selectedCell) return;
+    
+    const currentValue = formulaBarValue;
+    const formulaText = currentValue.slice(1);
+    const cellRefMatch = formulaText.match(/([A-Z]*)(\d*)$/);
+    
+    if (cellRefMatch) {
+      const beforeCellRef = formulaText.slice(0, cellRefMatch.index);
+      const newValue = `=${beforeCellRef}${cellRef}`;
+      setFormulaBarValue(newValue);
+      setShowCellSuggestions(false);
+      
+      // Focus back to formula bar
+      if (formulaBarRef.current) {
+        formulaBarRef.current.focus();
+        setTimeout(() => {
+          if (formulaBarRef.current) {
+            formulaBarRef.current.setSelectionRange(newValue.length, newValue.length);
+          }
+        }, 0);
+      }
+    }
+  };
+
+  const handleFormulaBarKeyDown = (e: React.KeyboardEvent) => {
+    if (showFormulaSuggestions && formulaSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev < formulaSuggestions.length - 1 ? prev + 1 : 0
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : formulaSuggestions.length - 1
+        );
+      } else if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault();
+        insertFormulaSuggestion(formulaSuggestions[selectedSuggestionIndex]);
+      } else if (e.key === 'Escape') {
+        setShowFormulaSuggestions(false);
+      }
+    } else if (showCellSuggestions && cellSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev < cellSuggestions.length - 1 ? prev + 1 : 0
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : cellSuggestions.length - 1
+        );
+      } else if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault();
+        insertCellSuggestion(cellSuggestions[selectedSuggestionIndex]);
+      } else if (e.key === 'Escape') {
+        setShowCellSuggestions(false);
+      }
+    } else if (e.key === 'Enter' && selectedCell) {
+      const isFormula = formulaBarValue.startsWith('=');
+      updateCell(selectedCell.row, selectedCell.col, {
+        value: formulaBarValue,
+        formula: isFormula ? formulaBarValue : undefined
+      });
     }
   };
 
@@ -563,44 +740,58 @@ export default function TestSheetEditor({ sheet, open, onOpenChange, onSave }: T
               <span className="text-sm font-medium">fx</span>
               <div className="flex-1 relative">
                 <Input
+                  ref={formulaBarRef}
                   value={formulaBarValue}
                   onChange={(e) => handleFormulaBarChange(e.target.value)}
+                  onKeyDown={handleFormulaBarKeyDown}
                   placeholder="Enter formula or value (start with = for formulas)"
                   className="w-full"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && selectedCell) {
-                      const isFormula = formulaBarValue.startsWith('=');
-                      updateCell(selectedCell.row, selectedCell.col, {
-                        value: formulaBarValue,
-                        formula: isFormula ? formulaBarValue : undefined
-                      });
-                    }
-                  }}
+                  autoComplete="off"
                 />
                 
-                {/* Formula suggestions */}
-                {formulaBarValue.startsWith('=') && formulaBarValue.length > 1 && (
-                  <div className="absolute top-full left-0 right-0 bg-white border rounded-md shadow-lg z-50 max-h-32 overflow-y-auto">
-                    {['SUM', 'AVERAGE', 'COUNT', 'MIN', 'MAX', 'IF', 'VLOOKUP'].filter(func => 
-                      func.toLowerCase().includes(formulaBarValue.slice(1).toLowerCase())
-                    ).map(func => (
+                {/* Formula Function Suggestions */}
+                {showFormulaSuggestions && formulaSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 bg-white border rounded-md shadow-lg z-50 max-h-64 overflow-y-auto">
+                    <div className="p-2 border-b bg-gray-50 text-xs text-gray-600 font-medium">
+                      Functions - Press Tab or Enter to insert
+                    </div>
+                    {formulaSuggestions.map((func, index) => (
                       <div 
-                        key={func}
-                        className="px-3 py-1 hover:bg-blue-50 cursor-pointer text-sm"
-                        onClick={() => {
-                          const currentFormula = formulaBarValue.slice(1);
-                          const newFormula = `=${func}(`;
-                          setFormulaBarValue(newFormula);
-                          if (selectedCell) {
-                            updateCell(selectedCell.row, selectedCell.col, {
-                              formula: newFormula,
-                              value: newFormula
-                            });
-                          }
-                        }}
+                        key={func.name}
+                        className={`px-3 py-2 cursor-pointer text-sm border-l-2 ${
+                          index === selectedSuggestionIndex 
+                            ? 'bg-blue-50 border-blue-500' 
+                            : 'hover:bg-gray-50 border-transparent'
+                        }`}
+                        onClick={() => insertFormulaSuggestion(func)}
                       >
-                        <span className="font-medium text-blue-600">{func}</span>
-                        <span className="text-gray-500 ml-2">({func === 'SUM' ? 'range' : func === 'AVERAGE' ? 'range' : func === 'COUNT' ? 'range' : func === 'IF' ? 'condition, true_value, false_value' : 'arguments'})</span>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-blue-600">{func.name}</span>
+                          <span className="text-xs text-gray-400">{func.example}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">{func.description}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Cell Reference Suggestions */}
+                {showCellSuggestions && cellSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 w-48 bg-white border rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
+                    <div className="p-2 border-b bg-gray-50 text-xs text-gray-600 font-medium">
+                      Cell References
+                    </div>
+                    {cellSuggestions.map((cellRef, index) => (
+                      <div 
+                        key={cellRef}
+                        className={`px-3 py-1 cursor-pointer text-sm ${
+                          index === selectedSuggestionIndex 
+                            ? 'bg-blue-50 text-blue-600' 
+                            : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => insertCellSuggestion(cellRef)}
+                      >
+                        {cellRef}
                       </div>
                     ))}
                   </div>
