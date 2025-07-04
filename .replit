@@ -1,0 +1,28 @@
+modules = ["nodejs-20", "postgresql-16", "python-3.11"]
+
+[[ports]]
+localPort = 5000
+externalPort = 5000
+
+[[ports]]
+localPort = 5006
+externalPort = 80
+
+[[ports]]
+localPort = 24678
+externalPort = 3000
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Start Development Server"
+
+[[workflows.workflow]]
+name = "Start Development Server"
+author = 42350653
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
