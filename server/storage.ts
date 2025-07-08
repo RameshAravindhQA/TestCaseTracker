@@ -279,6 +279,20 @@ class MemStorage implements IStorage {
     return this.nextId++;
   }
 
+  private recordActivity(entityType: string, action: string, entityId: number, userId?: number): void {
+    try {
+      this.createActivity({
+        userId: userId || 1,
+        action,
+        entityType,
+        entityId,
+        details: { entityType, action, entityId }
+      });
+    } catch (error) {
+      console.warn('Failed to record activity:', error);
+    }
+  }
+
   // User operations
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
@@ -1027,6 +1041,99 @@ class MemStorage implements IStorage {
   async deleteMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<boolean> {
     const key = `${rowModuleId}-${colModuleId}-${projectId}`;
     return this.matrixCells.delete(key);
+  }
+
+  // Project member operations
+  async getProjectMembers(projectId: number): Promise<any[]> {
+    return Array.from(this.projectMembers.values()).filter(member => member.projectId === projectId);
+  }
+
+  async addProjectMember(memberData: any): Promise<any> {
+    const id = this.getNextId();
+    const member = { ...memberData, id, createdAt: new Date() };
+    this.projectMembers.set(id, member);
+    return member;
+  }
+
+  async removeProjectMember(projectId: number, userId: number): Promise<boolean> {
+    const members = Array.from(this.projectMembers.entries());
+    const memberToRemove = members.find(([id, member]) => member.projectId === projectId && member.userId === userId);
+    if (memberToRemove) {
+      return this.projectMembers.delete(memberToRemove[0]);
+    }
+    return false;
+  }
+
+  // Activity operations
+  async createActivity(activityData: any): Promise<any> {
+    const id = this.getNextId();
+    const activity = { ...activityData, id, createdAt: new Date() };
+    this.activities.set(id, activity);
+    return activity;
+  }
+
+  async getActivities(): Promise<any[]> {
+    return Array.from(this.activities.values());
+  }
+
+  // Projects by user
+  async getProjectsByUserId(userId: number): Promise<any[]> {
+    const userProjects = Array.from(this.projects.values()).filter(project => project.createdById === userId);
+    const memberProjects = Array.from(this.projectMembers.values())
+      .filter(member => member.userId === userId)
+      .map(member => this.projects.get(member.projectId))
+      .filter(project => project !== undefined);
+    
+    // Combine and deduplicate
+    const allProjects = [...userProjects, ...memberProjects];
+    const uniqueProjects = allProjects.filter((project, index, self) => 
+      index === self.findIndex(p => p.id === project.id)
+    );
+    
+    return uniqueProjects;
+  }
+
+  // Conversation operations for messenger
+  async createDirectConversation(userId1: number, userId2: number): Promise<any> {
+    // Check if conversation already exists
+    const existingConversation = await this.getDirectConversation(userId1, userId2);
+    if (existingConversation) {
+      return existingConversation;
+    }
+
+    // Get user info for conversation name
+    const user1 = await this.getUser(userId1);
+    const user2 = await this.getUser(userId2);
+    
+    if (!user1 || !user2) {
+      throw new Error('One or both users not found');
+    }
+
+    const id = this.getNextId();
+    const now = new Date();
+    
+    const conversation = {
+      id: id.toString(),
+      type: 'direct',
+      name: `${user2.firstName} ${user2.lastName}`.trim() || user2.email,
+      participants: [userId1, userId2],
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      isActive: true,
+      lastMessage: null,
+      unreadCount: 0,
+      memberCount: 2
+    };
+
+    this.conversations.set(id, conversation);
+    return conversation;
+  }
+
+  async getConversationMessages(conversationId: string): Promise<any[]> {
+    const numericId = parseInt(conversationId, 10);
+    return Array.from(this.chatMessages.values())
+      .filter(message => message.conversationId === conversationId || message.conversationId === numericId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }
 
   // Test Sheet operations
