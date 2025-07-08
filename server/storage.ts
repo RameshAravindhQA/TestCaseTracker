@@ -269,6 +269,7 @@ class MemStorage implements IStorage {
   private messageThreads = new Map<number, number[]>();
   private conversationMembers = new Map<number, Set<number>>();
   private messageReadStatus = new Map<string, Set<number>>(); // messageId-userId -> Set<userId>
+  private onlyOfficeDocuments = new Map<string, any>();
 
   private nextId = 1;
   private testSheetIdCounter = 1;
@@ -1852,6 +1853,35 @@ class MemStorage implements IStorage {
 
     this.users.set(1, defaultAdmin);
 
+    // Add sample OnlyOffice documents for testing
+    this.onlyOfficeDocuments.set('sample_doc_1', {
+      id: 'sample_doc_1',
+      title: 'Test Plan Template',
+      type: 'text',
+      fileType: 'docx',
+      projectId: 1,
+      createdBy: 1,
+      key: 'test_plan_template',
+      url: '/uploads/documents/test_plan_template.docx',
+      content: 'Test Plan Template Content',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    this.onlyOfficeDocuments.set('sample_doc_2', {
+      id: 'sample_doc_2',
+      title: 'Test Data Spreadsheet',
+      type: 'spreadsheet',
+      fileType: 'xlsx',
+      projectId: 1,
+      createdBy: 1,
+      key: 'test_data_spreadsheet',
+      url: '/uploads/documents/test_data.xlsx',
+      content: 'Test Data Spreadsheet Content',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
     // Set counters to start fresh
     this.nextId = 2;
 
@@ -1860,7 +1890,8 @@ class MemStorage implements IStorage {
       projects: this.projects.size,
       modules: this.modules.size,
       testCases: this.testCases.size,
-      bugs: this.bugs.size
+      bugs: this.bugs.size,
+      onlyOfficeDocuments: this.onlyOfficeDocuments.size
     });
   }
 
@@ -1973,28 +2004,29 @@ class MemStorage implements IStorage {
 
   // Conversation and messaging functions
   async getConversation(id: string): Promise<any | null> {
-    return this.conversations.find(conv => conv.id === id) || null;
+    return Array.from(this.conversations.values()).find(conv => conv.id === id) || null;
   }
 
   async getUserConversations(userId: number): Promise<any[]> {
-    return this.conversations.filter(conv => 
+    return Array.from(this.conversations.values()).filter(conv => 
       conv.participants.includes(userId)
     );
   }
 
   async createDirectConversation(data: any): Promise<any> {
+    const id = this.getNextId();
     const conversation = {
-      id: (this.conversations.length + 1).toString(),
+      id: id.toString(),
       ...data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    this.conversations.push(conversation);
+    this.conversations.set(id, conversation);
     return conversation;
   }
 
   async getDirectConversation(userId1: number, userId2: number): Promise<any | null> {
-    return this.conversations.find(conv => 
+    return Array.from(this.conversations.values()).find(conv => 
       conv.type === 'direct' && 
       conv.participants.includes(userId1) && 
       conv.participants.includes(userId2)

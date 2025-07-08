@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OnlyOfficeTest } from "@/components/test-sheets/onlyoffice-test";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { 
@@ -635,11 +637,17 @@ export default function TestSheetsPage() {
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Test Sheets & Documents</h1>
-            <p className="text-gray-600 mt-2">Create and manage documents with OnlyOffice integration</p>
-          </div>
+        <Tabs defaultValue="documents" className="h-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="test">Unit Test</TabsTrigger>
+          </TabsList>
+          <TabsContent value="documents" className="h-full">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-3xl font-bold">Test Sheets & Documents</h1>
+                <p className="text-gray-600 mt-2">Create and manage documents with OnlyOffice integration</p>
+              </div>
 
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
@@ -849,6 +857,14 @@ export default function TestSheetsPage() {
             </CardContent>
           </Card>
         )}
+            </div>
+          </TabsContent>
+          <TabsContent value="test" className="h-full">
+            <div className="p-6">
+              <OnlyOfficeTest />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
