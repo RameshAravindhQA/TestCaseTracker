@@ -793,5 +793,719 @@ class MemStorage implements IStorage {
 
     this.customers.set(id, customer);
     return customer;
-  }```text
-The provided changes are redundant and do not contribute meaningfully to the code's functionality or bug fixes. Therefore, the original code is preserved.
+  }  
+  async getCustomers(): Promise<Customer[]> {
+    return Array.from(this.customers.values());
+  }
+
+  async getCustomer(id: number): Promise<Customer | undefined> {
+    return this.customers.get(id);
+  }
+
+  async updateCustomer(id: number, customerData: Partial<Customer>): Promise<Customer | undefined> {
+    const customer = this.customers.get(id);
+    if (!customer) return undefined;
+
+    const updatedCustomer = { ...customer, ...customerData, updatedAt: new Date() };
+    this.customers.set(id, updatedCustomer);
+    return updatedCustomer;
+  }
+
+  async deleteCustomer(id: number): Promise<boolean> {
+    return this.customers.delete(id);
+  }
+
+  // Tag operations
+  async createTag(data: Omit<Tag, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tag> {
+    const id = this.nextId++;
+    const now = new Date();
+
+    const tag: Tag = {
+      ...data,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.tags.set(id, tag);
+    return tag;
+  }
+
+  async getTags(): Promise<Tag[]> {
+    return Array.from(this.tags.values());
+  }
+
+  async getTagsByProject(projectId: number): Promise<Tag[]> {
+    return Array.from(this.tags.values()).filter(tag => tag.projectId === projectId);
+  }
+
+  async getTag(id: number): Promise<Tag | undefined> {
+    return this.tags.get(id);
+  }
+
+  async updateTag(id: number, tagData: Partial<Tag>): Promise<Tag | undefined> {
+    const tag = this.tags.get(id);
+    if (!tag) return undefined;
+
+    const updatedTag = { ...tag, ...tagData, updatedAt: new Date() };
+    this.tags.set(id, updatedTag);
+    return updatedTag;
+  }
+
+  async deleteTag(id: number): Promise<boolean> {
+    return this.tags.delete(id);
+  }
+
+  // Kanban operations
+  async createKanbanColumn(data: Omit<KanbanColumn, 'id' | 'createdAt' | 'updatedAt'>): Promise<KanbanColumn> {
+    const id = this.nextId++;
+    const now = new Date();
+
+    const column: KanbanColumn = {
+      ...data,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.kanbanColumns.set(id, column);
+    return column;
+  }
+
+  async getKanbanColumns(): Promise<KanbanColumn[]> {
+    return Array.from(this.kanbanColumns.values());
+  }
+
+  async getKanbanColumnsByProject(projectId: number): Promise<KanbanColumn[]> {
+    return Array.from(this.kanbanColumns.values()).filter(column => column.projectId === projectId);
+  }
+
+  async getKanbanColumn(id: number): Promise<KanbanColumn | undefined> {
+    return this.kanbanColumns.get(id);
+  }
+
+  async updateKanbanColumn(id: number, columnData: Partial<KanbanColumn>): Promise<KanbanColumn | undefined> {
+    const column = this.kanbanColumns.get(id);
+    if (!column) return undefined;
+
+    const updatedColumn = { ...column, ...columnData, updatedAt: new Date() };
+    this.kanbanColumns.set(id, updatedColumn);
+    return updatedColumn;
+  }
+
+  async deleteKanbanColumn(id: number): Promise<boolean> {
+    return this.kanbanColumns.delete(id);
+  }
+
+  async createKanbanCard(data: Omit<KanbanCard, 'id' | 'createdAt' | 'updatedAt'>): Promise<KanbanCard> {
+    const id = this.nextId++;
+    const now = new Date();
+
+    const card: KanbanCard = {
+      ...data,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.kanbanCards.set(id, card);
+    return card;
+  }
+
+  async getKanbanCards(): Promise<KanbanCard[]> {
+    return Array.from(this.kanbanCards.values());
+  }
+
+  async getKanbanCardsByColumn(columnId: number): Promise<KanbanCard[]> {
+    return Array.from(this.kanbanCards.values()).filter(card => card.columnId === columnId);
+  }
+
+  async getKanbanCard(id: number): Promise<KanbanCard | undefined> {
+    return this.kanbanCards.get(id);
+  }
+
+  async updateKanbanCard(id: number, cardData: Partial<KanbanCard>): Promise<KanbanCard | undefined> {
+    const card = this.kanbanCards.get(id);
+    if (!card) return undefined;
+
+    const updatedCard = { ...card, ...cardData, updatedAt: new Date() };
+    this.kanbanCards.set(id, updatedCard);
+    return updatedCard;
+  }
+
+  async deleteKanbanCard(id: number): Promise<boolean> {
+    return this.kanbanCards.delete(id);
+  }
+
+  // Matrix operations
+  async getCustomMarkers(): Promise<CustomMarker[]> {
+    return Array.from(this.customMarkers.values());
+  }
+
+  async getCustomMarkersByProject(projectId: number): Promise<CustomMarker[]> {
+    return Array.from(this.customMarkers.values()).filter(marker => marker.projectId === projectId);
+  }
+
+  async getCustomMarker(id: number): Promise<CustomMarker | undefined> {
+    return this.customMarkers.get(id);
+  }
+
+  async createCustomMarker(marker: InsertCustomMarker): Promise<CustomMarker> {
+    const id = this.nextId++;
+    const now = new Date();
+
+    const customMarker: CustomMarker = {
+      ...marker,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.customMarkers.set(id, customMarker);
+    return customMarker;
+  }
+
+  async updateCustomMarker(id: number, markerData: Partial<CustomMarker>): Promise<CustomMarker | undefined> {
+    const marker = this.customMarkers.get(id);
+    if (!marker) return undefined;
+
+    const updatedMarker = { ...marker, ...markerData, updatedAt: new Date() };
+    this.customMarkers.set(id, updatedMarker);
+    return updatedMarker;
+  }
+
+  async deleteCustomMarker(id: number): Promise<boolean> {
+    return this.customMarkers.delete(id);
+  }
+
+  async getMatrixCells(): Promise<MatrixCell[]> {
+    return Array.from(this.matrixCells.values());
+  }
+
+  async getMatrixCellsByProject(projectId: number): Promise<MatrixCell[]> {
+    return Array.from(this.matrixCells.values()).filter(cell => cell.projectId === projectId);
+  }
+
+  async getMatrixCell(id: number): Promise<MatrixCell | undefined> {
+    return this.matrixCells.get(id);
+  }
+
+  async getMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<MatrixCell | undefined> {
+    const key = `${rowModuleId}-${colModuleId}-${projectId}`;
+    return this.matrixCells.get(key);
+  }
+
+  async createMatrixCell(cell: InsertMatrixCell): Promise<MatrixCell> {
+    const id = this.nextId++;
+    const now = new Date();
+
+    const matrixCell: MatrixCell = {
+      ...cell,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const key = `${cell.rowModuleId}-${cell.colModuleId}-${cell.projectId}`;
+    this.matrixCells.set(key, matrixCell);
+    return matrixCell;
+  }
+
+  async updateMatrixCell(id: number, cellData: Partial<MatrixCell>): Promise<MatrixCell | undefined> {
+    const cell = this.matrixCells.get(id);
+    if (!cell) return undefined;
+
+    const updatedCell = { ...cell, ...cellData, updatedAt: new Date() };
+    this.matrixCells.set(id, updatedCell);
+    return updatedCell;
+  }
+
+  async deleteMatrixCell(id: number): Promise<boolean> {
+    return this.matrixCells.delete(id);
+  }
+
+  async deleteMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<boolean> {
+    const key = `${rowModuleId}-${colModuleId}-${projectId}`;
+    return this.matrixCells.delete(key);
+  }
+
+  // Test Sheet operations
+  async getTestSheets(projectId?: number): Promise<TestSheet[]> {
+    let sheets = Array.from(this.testSheets.values());
+    if (projectId) {
+      sheets = sheets.filter(sheet => sheet.projectId === projectId);
+    }
+    return sheets;
+  }
+
+  async getTestSheet(id: number): Promise<TestSheet | undefined> {
+    return this.testSheets.get(id);
+  }
+
+  async createTestSheet(sheet: InsertTestSheet): Promise<TestSheet> {
+    const id = this.testSheetIdCounter++;
+    const now = new Date();
+    const testSheet: TestSheet = {
+      ...sheet,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.testSheets.set(id, testSheet);
+    return testSheet;
+  }
+
+  async updateTestSheet(id: number, sheetData: Partial<TestSheet>): Promise<TestSheet | undefined> {
+    const sheet = this.testSheets.get(id);
+    if (!sheet) return undefined;
+
+    const updatedSheet = { ...sheet, ...sheetData, updatedAt: new Date() };
+    this.testSheets.set(id, updatedSheet);
+    return updatedSheet;
+  }
+
+  async deleteTestSheet(id: number): Promise<boolean> {
+    return this.testSheets.delete(id);
+  }
+
+  // GitHub Integration methods
+  async getGitHubConfig(projectId: number): Promise<any | undefined> {
+    return this.githubConfigs.find(config => config.projectId === projectId);
+  }
+
+  async createGitHubConfig(data: any): Promise<any> {
+    const id = this.nextId++;
+    const config = { ...data, id };
+    this.githubConfigs.push(config);
+    return config;
+  }
+
+  async updateGitHubConfig(id: number, data: any): Promise<any | null> {
+    const configIndex = this.githubConfigs.findIndex(config => config.id === id);
+    if (configIndex === -1) {
+      return null;
+    }
+    this.githubConfigs[configIndex] = { ...this.githubConfigs[configIndex], ...data };
+    return this.githubConfigs[configIndex];
+  }
+
+  async createGitHubIssue(data: any): Promise<any> {
+    const id = this.nextId++;
+    const issue = { ...data, id };
+    this.githubIssues.push(issue);
+    return issue;
+  }
+
+  async getGitHubIssue(id: number): Promise<any | undefined> {
+    return this.githubIssues.find(issue => issue.id === id);
+  }
+
+  async getGitHubIssueByBugId(bugId: number): Promise<any | undefined> {
+    return this.githubIssues.find(issue => issue.bugId === bugId);
+  }
+
+  async getGitHubIssueByGitHubId(githubId: number): Promise<any | undefined> {
+    return this.githubIssues.find(issue => issue.githubId === githubId);
+  }
+
+  async updateGitHubIssue(id: number, data: any): Promise<any | null> {
+    const issueIndex = this.githubIssues.findIndex(issue => issue.id === id);
+    if (issueIndex === -1) {
+      return null;
+    }
+    this.githubIssues[issueIndex] = { ...this.githubIssues[issueIndex], ...data };
+    return this.githubIssues[issueIndex];
+  }
+
+    // Notebook operations
+    async getNotebooks(userId: number): Promise<Notebook[]> {
+        return this.notebooksData.notebooks.filter(notebook => notebook.userId === userId);
+    }
+
+    async getNotebook(id: number, userId: number): Promise<Notebook | null> {
+        const notebook = this.notebooksData.notebooks.find(notebook => notebook.id === id && notebook.userId === userId);
+        return notebook || null;
+    }
+
+    async createNotebook(notebookData: Omit<Notebook, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notebook> {
+        const newNotebook: Notebook = {
+            ...notebookData,
+            id: this.getNextId(),
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+        this.notebooksData.notebooks.push(newNotebook);
+        return newNotebook;
+    }
+
+    async updateNotebook(id: number, userId: number, updates: Partial<Notebook>): Promise<Notebook | null> {
+        const notebookIndex = this.notebooksData.notebooks.findIndex(notebook => notebook.id === id && notebook.userId === userId);
+        if (notebookIndex === -1) {
+            return null;
+        }
+        this.notebooksData.notebooks[notebookIndex] = {
+            ...this.notebooksData.notebooks[notebookIndex],
+            ...updates,
+            updatedAt: new Date()
+        };
+        return this.notebooksData.notebooks[notebookIndex];
+    }
+
+    async deleteNotebook(id: number, userId: number): Promise<boolean> {
+        const initialLength = this.notebooksData.notebooks.length;
+        this.notebooksData.notebooks = this.notebooksData.notebooks.filter(notebook => !(notebook.id === id && notebook.userId === userId));
+        return this.notebooksData.notebooks.length !== initialLength;
+    }
+
+  // Chat operations
+  async createChatMessage(message: any): Promise<any> {
+    const id = this.nextId++;
+    const now = new Date();
+    const chatMessage = { ...message, id, createdAt: now };
+    this.messages.push(chatMessage);
+    return chatMessage;
+  }
+
+  async getChatMessages(projectId: number, limit?: number): Promise<any[]> {
+    let messages = this.messages.filter(message => message.projectId === projectId);
+    if (limit) {
+      messages = messages.slice(0, limit);
+    }
+    return messages;
+  }
+
+  async updateChatMessage(messageId: number, userId: number, updates: any): Promise<any | null> {
+    const messageIndex = this.messages.findIndex(message => message.id === messageId && message.userId === userId);
+    if (messageIndex === -1) {
+      return null;
+    }
+    this.messages[messageIndex] = { ...this.messages[messageIndex], ...updates };
+    return this.messages[messageIndex];
+  }
+
+  // Comment operations
+  async getBugComment(commentId: number): Promise<any> {
+      return this.messages.find(message => message.id === commentId);
+  }
+  async updateComment(commentId: number, updates: any): Promise<any> {
+      const messageIndex = this.messages.findIndex(message => message.id === commentId);
+      if (messageIndex === -1) {
+          return null;
+      }
+      this.messages[messageIndex] = { ...this.messages[messageIndex], ...updates };
+      return this.messages[messageIndex];
+  }
+
+    // Traceability Matrix operations
+  async getTraceabilityMatrix(projectId: number): Promise<any> {
+    return this.traceabilityMatrixes.get(projectId);
+  }
+
+  async saveTraceabilityMatrix(projectId: number, matrixData: any[]): Promise<any> {
+    this.traceabilityMatrixes.set(projectId, matrixData);
+    return matrixData;
+  }
+
+  // Enhanced Chat and Messaging methods
+    async getUserConversations(userId: number): Promise<any[]> {
+        return Array.from(this.conversations.values())
+            .filter(conversation => conversation.participants.includes(userId));
+    }
+
+    async getDirectConversation(userId1: number, userId2: number): Promise<any | null> {
+        for (const conversation of this.conversations.values()) {
+            if (conversation.type === 'direct' &&
+                conversation.participants.includes(userId1) &&
+                conversation.participants.includes(userId2) &&
+                conversation.participants.length === 2) {
+                return conversation;
+            }
+        }
+        return null;
+    }
+
+    async createConversation(conversationData: any): Promise<any> {
+        const id = this.getNextId();
+        const now = new Date();
+
+        const conversation = {
+            ...conversationData,
+            id,
+            createdAt: now,
+            updatedAt: now,
+            participants: conversationData.participants || []
+        };
+
+        this.conversations.set(id, conversation);
+        return conversation;
+    }
+
+    async getConversation(id: string): Promise<any | null> {
+        const conversationId = parseInt(id, 10);
+        return this.conversations.get(conversationId) || null;
+    }
+
+    async getMessagesByChat(chatId: number): Promise<any[]> {
+        return Array.from(this.chatMessages.values())
+            .filter(message => message.chatId === chatId);
+    }
+
+    async addParticipantToConversation(conversationId: string, userId: number): Promise<boolean> {
+        const conversationIdNum = parseInt(conversationId, 10);
+        const conversation = this.conversations.get(conversationIdNum);
+        if (!conversation) return false;
+
+        if (!conversation.participants.includes(userId)) {
+            conversation.participants.push(userId);
+            conversation.updatedAt = new Date();
+            this.conversations.set(conversationIdNum, conversation);
+            return true;
+        }
+        return false;
+    }
+
+    async removeParticipantFromConversation(conversationId: string, userId: number): Promise<boolean> {
+        const conversationIdNum = parseInt(conversationId, 10);
+        const conversation = this.conversations.get(conversationIdNum);
+        if (!conversation) return false;
+
+        conversation.participants = conversation.participants.filter(uid => uid !== userId);
+        conversation.updatedAt = new Date();
+        this.conversations.set(conversationIdNum, conversation);
+        return true;
+    }
+
+    async updateConversation(id: string, updates: any): Promise<any | null> {
+        const conversationId = parseInt(id, 10);
+        const conversation = this.conversations.get(conversationId);
+        if (!conversation) return null;
+
+        const updatedConversation = { ...conversation, ...updates, updatedAt: new Date() };
+        this.conversations.set(conversationId, updatedConversation);
+        return updatedConversation;
+    }
+
+    async deleteConversation(id: string): Promise<boolean> {
+        const conversationId = parseInt(id, 10);
+        return this.conversations.delete(conversationId);
+    }
+
+    async addConversationMember(conversationId: string, userId: number): Promise<boolean> {
+        const conversationIdNum = parseInt(conversationId, 10);
+        let members = this.conversationMembers.get(conversationIdNum) || new Set<number>();
+        members.add(userId);
+        this.conversationMembers.set(conversationIdNum, members);
+        return true;
+    }
+
+    async removeConversationMember(conversationId: string, userId: number): Promise<boolean> {
+        const conversationIdNum = parseInt(conversationId, 10);
+        let members = this.conversationMembers.get(conversationIdNum);
+        if (!members) return false;
+        members.delete(userId);
+        this.conversationMembers.set(conversationIdNum, members);
+        return true;
+    }
+
+    async getConversationMembers(conversationId: string): Promise<any[]> {
+        const conversationIdNum = parseInt(conversationId, 10);
+        const members = this.conversationMembers.get(conversationIdNum) || new Set<number>();
+        return Array.from(members);
+    }
+
+    async createChatMessage(messageData: any): Promise<any> {
+        const id = this.getNextId();
+        const now = new Date();
+
+        const message = {
+            ...messageData,
+            id,
+            createdAt: now,
+            updatedAt: now
+        };
+
+        this.chatMessages.set(id, message);
+        return message;
+    }
+
+    async getChatMessages(conversationId: number, limit?: number, offset?: number): Promise<any[]> {
+        let messages = Array.from(this.chatMessages.values())
+            .filter(message => message.conversationId === conversationId);
+
+        if (offset) {
+            messages = messages.slice(offset);
+        }
+        if (limit) {
+            messages = messages.slice(0, limit);
+        }
+
+        return messages;
+    }
+
+    async getChatMessage(id: string): Promise<any | null> {
+        const messageId = parseInt(id, 10);
+        return this.chatMessages.get(messageId) || null;
+    }
+
+    async updateChatMessage(id: string, userId: number, updates: any): Promise<any | null> {
+        const messageId = parseInt(id, 10);
+        const message = this.chatMessages.get(messageId);
+
+        if (!message || message.userId !== userId) {
+            return null;
+        }
+
+        const updatedMessage = { ...message, ...updates, updatedAt: new Date() };
+        this.chatMessages.set(messageId, updatedMessage);
+        return updatedMessage;
+    }
+
+    async deleteChatMessage(id: string, userId: number): Promise<boolean> {
+        const messageId = parseInt(id, 10);
+        const message = this.chatMessages.get(messageId);
+
+        if (!message || message.userId !== userId) {
+            return false;
+        }
+
+        return this.chatMessages.delete(messageId);
+    }
+
+    async addMessageReaction(messageId: string, userId: number, emoji: string): Promise<any | null> {
+        const messageIdNum = parseInt(messageId, 10);
+        let reactions = this.messageReactions.get(messageIdNum) || [];
+
+        // Check if the user has already reacted with the same emoji
+        const existingReaction = reactions.find(reaction => reaction.userId === userId && reaction.emoji === emoji);
+        if (existingReaction) {
+            return null; // User has already reacted with this emoji
+        }
+
+        reactions.push({ userId, emoji });
+        this.messageReactions.set(messageIdNum, reactions);
+        return { userId, emoji };
+    }
+
+    async getMessageThread(parentMessageId: string): Promise<any[]> {
+        const parentMessageIdNum = parseInt(parentMessageId, 10);
+        const threadIds = this.messageThreads.get(parentMessageIdNum) || [];
+        return Array.from(this.chatMessages.values())
+            .filter(message => threadIds.includes(message.id));
+    }
+
+    async markMessageAsRead(messageId: string, userId: number): Promise<void> {
+        const messageIdStr = messageId;
+        let readStatus = this.messageReadStatus.get(`${messageIdStr}-${userId}`) || new Set<number>();
+        readStatus.add(userId);
+        this.messageReadStatus.set(`${messageIdStr}-${userId}`, readStatus);
+    }
+
+    async markConversationAsRead(conversationId: string, userId: number): Promise<void> {
+        const conversationIdNum = parseInt(conversationId, 10);
+        for (const message of this.chatMessages.values()) {
+            if (message.conversationId === conversationIdNum) {
+                this.markMessageAsRead(message.id.toString(), userId);
+            }
+        }
+    }
+
+    async getUnreadCountForUser(conversationId: string, userId: number): Promise<number> {
+        const conversationIdNum = parseInt(conversationId, 10);
+        let unreadCount = 0;
+        for (const message of this.chatMessages.values()) {
+            if (message.conversationId === conversationIdNum) {
+                const readStatus = this.messageReadStatus.get(`${message.id}-${userId}`);
+                if (!readStatus || !readStatus.has(userId)) {
+                    unreadCount++;
+                }
+            }
+        }
+        return unreadCount;
+    }
+
+  // OnlyOffice Documents
+  async getOnlyOfficeDocuments(projectId?: number): Promise<any[]> {
+        let documents = Array.from(this.documents.values());
+        if (projectId) {
+            documents = documents.filter(doc => doc.projectId === projectId);
+        }
+        return documents;
+  }
+  async getOnlyOfficeDocument(id: string): Promise<any | null> {
+        const documentId = parseInt(id, 10);
+        return this.documents.get(documentId) || null;
+  }
+  async createOnlyOfficeDocument(data: any): Promise<any> {
+        const id = this.getNextId();
+        const now = new Date();
+        const document = { ...data, id, createdAt: now };
+        this.documents.set(id, document);
+        return document;
+  }
+  async updateOnlyOfficeDocument(id: string, updates: any): Promise<any | null> {
+        const documentId = parseInt(id, 10);
+        const document = this.documents.get(documentId);
+        if (!document) return null;
+        const updatedDocument = { ...document, ...updates };
+        this.documents.set(documentId, updatedDocument);
+        return updatedDocument;
+  }
+  async deleteOnlyOfficeDocument(id: string): Promise<boolean> {
+        const documentId = parseInt(id, 10);
+        return this.documents.delete(documentId);
+  }
+    
+    async searchMessages(query: string, conversationId?: number, userId?: number): Promise<any[]> {
+        let results = Array.from(this.chatMessages.values())
+            .filter(message => message.content.includes(query));
+        
+        if (conversationId) {
+            results = results.filter(message => message.conversationId === conversationId);
+        }
+        
+        if (userId) {
+            results = results.filter(message => message.userId === userId);
+        }
+        
+        return results;
+    }
+  
+    async getUserConversations(userId: number): Promise<any[]> {
+        return Array.from(this.conversations.values())
+            .filter(conversation => conversation.participants.includes(userId));
+    }
+
+    async getMessagesByChat(chatId: number): Promise<any[]> {
+        return Array.from(this.chatMessages.values())
+            .filter(message => message.chatId === chatId);
+    }
+
+    async createMessage(messageData: any): Promise<any> {
+        const id = this.getNextId();
+        const now = new Date();
+        const message = { ...messageData, id, createdAt: now };
+        this.chatMessages.set(id, message);
+        return message;
+    }
+
+    async createConversation(conversationData: any): Promise<any> {
+        const id = this.getNextId();
+        const now = new Date();
+
+        const conversation = {
+            ...conversationData,
+            id,
+            createdAt: now,
+            updatedAt: now,
+            participants: conversationData.participants || []
+        };
+
+        this.conversations.set(id, conversation);
+        return conversation;
+    }
+}
+
+export { MemStorage };
+
+// Singleton instance for convenience.  Can still create multiple if desired.
+export const memStorage = new MemStorage();
