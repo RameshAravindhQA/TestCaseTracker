@@ -2,7 +2,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { logger } from './logger';
 
-import { storage } from './storage';
+import { memStorage as storage } from './storage';
 
 export function setupWebSocket(server: HTTPServer) {
   const io = new SocketIOServer(server, {
@@ -46,7 +46,7 @@ export function setupWebSocket(server: HTTPServer) {
       logger.info(`Socket ${socket.id} joined conversation ${conversationId}`);
       
       // Send conversation messages
-      const messages = await storage.getConversationMessages(conversationId);
+      const messages = await storage.getChatMessages(conversationId);
       socket.emit('conversation_messages', { conversationId, messages });
     });
 
@@ -68,7 +68,7 @@ export function setupWebSocket(server: HTTPServer) {
         }
 
         // Create message
-        const newMessage = await storage.createMessage({
+        const newMessage = await storage.createChatMessage({
           conversationId,
           senderId: currentUserId,
           senderName: `${sender.firstName} ${sender.lastName || ''}`.trim(),
