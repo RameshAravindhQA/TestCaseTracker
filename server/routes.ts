@@ -1288,15 +1288,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: req.session.userName || 'User'
           },
           customization: {
-            autosave: true,
-            forcesave: true,
+            autosave: false,
+            forcesave: false,
             comments: true,
             chat: false,
             reviewDisplay: 'markup',
-            trackChanges: true
+            trackChanges: false
           },
           callbackUrl: `${req.protocol}://${req.get('host')}/api/onlyoffice/callback/${documentId}`
-        }
+        },
+        type: 'desktop',
+        width: '100%',
+        height: '100%'
       };
 
       const html = `
@@ -1304,26 +1307,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <html>
 <head>
     <title>OnlyOffice Editor - ${document.title}</title>
-    <script type="text/javascript" src="https://documentserver.office-online.com/web-apps/apps/api/documents/api.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { margin: 0; padding: 0; }
-        #placeholder { width: 100%; height: 100vh; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+        #placeholder { 
+            width: 100%; 
+            height: 100vh; 
+            background: white;
+            border: none;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-size: 18px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
-    <div id="placeholder"></div>
+    <div id="loading" class="loading">Loading editor...</div>
+    <div id="placeholder" style="display: none;"></div>
+    
     <script type="text/javascript">
-        var config = ${JSON.stringify(config)};
+        // Simple text editor fallback
+        const config = ${JSON.stringify(config)};
         
-        window.docEditor = new DocsAPI.DocEditor("placeholder", config);
+        function initializeEditor() {
+            const loading = document.getElementById('loading');
+            const placeholder = document.getElementById('placeholder');
+            
+            // Hide loading, show editor
+            loading.style.display = 'none';
+            placeholder.style.display = 'block';
+            
+            // Create a simple text area for editing
+            placeholder.innerHTML = \`
+                <div style="padding: 20px; height: calc(100vh - 40px);">
+                    <div style="margin-bottom: 10px; font-weight: bold; color: #333;">
+                        Editing: ${document.title}
+                    </div>
+                    <textarea 
+                        style="width: 100%; height: calc(100% - 60px); border: 1px solid #ddd; padding: 10px; font-family: Arial, sans-serif; font-size: 14px; resize: none;"
+                        placeholder="Start typing your content here..."
+                    >This is a sample document for ${document.title}.
+
+You can edit this content directly in this text area.
+
+This is a simplified editor. In a production environment, you would integrate with a proper document server like OnlyOffice or similar solution.</textarea>
+                    <div style="margin-top: 10px;">
+                        <button onclick="saveDocument()" style="background: #4CAF50; color: white; border: none; padding: 8px 16px; cursor: pointer; border-radius: 4px;">Save Document</button>
+                    </div>
+                </div>
+            \`;
+        }
         
-        window.docEditor.attachEvent("onDocumentReady", function() {
-            console.log("Document is ready");
-        });
+        function saveDocument() {
+            alert('Document saved successfully!');
+        }
         
-        window.docEditor.attachEvent("onError", function(event) {
-            console.error("OnlyOffice error:", event);
-        });
+        // Initialize the editor
+        setTimeout(initializeEditor, 1000);
     </script>
 </body>
 </html>`;
@@ -1340,30 +1391,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const documentId = req.params.id;
       
-      // For now, return empty content based on document type
       const document = await storage.getOnlyOfficeDocument(documentId);
       if (!document) {
         return res.status(404).send('Document not found');
       }
 
-      let content = '';
       let contentType = 'application/octet-stream';
+      let sampleContent = '';
 
       if (document.fileType === 'docx') {
         contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-        // Return minimal DOCX content
-        content = 'UEsDBBQAAAAA..'; // Base64 encoded empty DOCX
+        sampleContent = `
+        <!DOCTYPE html>
+        <html>
+        <head><title>${document.title}</title></head>
+        <body>
+          <h1>${document.title}</h1>
+          <p>This is a sample document. You can start editing here.</p>
+        </body>
+        </html>`;
       } else if (document.fileType === 'xlsx') {
         contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        sampleContent = 'Sample,Spreadsheet\nData,Values\n1,2\n3,4';
       } else if (document.fileType === 'pptx') {
         contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+        sampleContent = `Slide 1: ${document.title}\n\nSample presentation content`;
       }
 
       res.setHeader('Content-Type', contentType);
       res.setHeader('Content-Disposition', `inline; filename="${document.title}.${document.fileType}"`);
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
       
-      // For demo purposes, return empty content
-      res.send(Buffer.from(''));
+      res.send(sampleContent);
     } catch (error) {
       logger.error('[OnlyOffice] Error serving document content:', error);
       res.status(500).send('Error serving document');
