@@ -2652,6 +2652,9 @@ async createConversation(conversationData: any): Promise<any> {
     this.conversations.set(id, conversation);
 
     // Initialize members
+    if (!this.conversationMembers) {
+      this.conversationMembers = new Map();
+    }
     this.conversationMembers.set(id, new Set(conversationData.participants));
 
     console.log('[Storage] Successfully created conversation:', conversation);
@@ -3141,14 +3144,32 @@ async createConversation(conversationData: any): Promise<any> {
   }
 
   async getDirectConversation(userId1: number, userId2: number): Promise<any | null> {
+    console.log(`[Storage] Looking for direct conversation between users ${userId1} and ${userId2}`);
+    console.log(`[Storage] Total conversations: ${this.conversations.size}`);
+    
     const conversations = Array.from(this.conversations.values());
+    console.log(`[Storage] Searching through ${conversations.length} conversations`);
+    
     const directConversation = conversations.find(conv => {
+        console.log(`[Storage] Checking conversation ${conv.id}:`, {
+          type: conv.type,
+          participants: conv.participants,
+          participantCount: conv.participants?.length
+        });
+        
         if (conv.type !== 'direct' || !conv.participants || conv.participants.length !== 2) {
             return false;
         }
-        return conv.participants.includes(userId1) && conv.participants.includes(userId2);
+        
+        const hasUser1 = conv.participants.includes(userId1);
+        const hasUser2 = conv.participants.includes(userId2);
+        const match = hasUser1 && hasUser2;
+        
+        console.log(`[Storage] Participant check: hasUser1=${hasUser1}, hasUser2=${hasUser2}, match=${match}`);
+        return match;
     });
 
+    console.log(`[Storage] Direct conversation found:`, directConversation ? directConversation.id : 'none');
     return directConversation || null;
   }
 

@@ -1407,10 +1407,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 // Comprehensive Chat API for Messenger
   apiRouter.get("/chats", isAuthenticated, async (req, res) => {
     try {
+      // Validate session
+      if (!req.session.userId) {
+        logger.warn('No userId in session for chats request');
+        return res.status(401).json({ error: 'User session invalid' });
+      }
+
       logger.info(`Getting conversations for user: ${req.session.userId}`);
       
       // Get user's conversations/chats
-      const userChats = await storage.getUserConversations(req.session.userId!);
+      const userChats = await storage.getUserConversations(req.session.userId);
       
       logger.info(`Found ${userChats.length} conversations for user ${req.session.userId}`);
       
@@ -1437,10 +1443,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.get("/chats/:chatId/messages", isAuthenticated, async (req, res) => {
     try {
+      // Validate session
+      if (!req.session.userId) {
+        logger.warn('No userId in session for messages request');
+        return res.status(401).json({ error: 'User session invalid' });
+      }
+
       const chatId = req.params.chatId;
       const numericChatId = parseInt(chatId);
       
-      logger.info(`Getting messages for chat: ${chatId}, numeric: ${numericChatId}`);
+      logger.info(`Getting messages for chat: ${chatId}, numeric: ${numericChatId}, user: ${req.session.userId}`);
       
       let messages;
       if (isNaN(numericChatId)) {
@@ -1459,15 +1471,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Consolidated Direct Chat Creation Endpoint
   apiRouter.post("/chats/direct", isAuthenticated, async (req, res) => {
     try {
+      // Validate session
+      if (!req.session.userId) {
+        logger.warn('No userId in session for direct chat creation');
+        return res.status(401).json({ error: 'User session invalid' });
+      }
+
       const { targetUserId } = req.body;
       
-      logger.info('Creating direct conversation:', { 
-        currentUserId: req.session.userId, 
-        targetUserId: targetUserId 
-      });
+      logger.info(`Create direct chat request: from ${req.session.userId} to ${targetUserId}`);
       
+      // Validate input
       if (!targetUserId) {
         logger.warn('Missing targetUserId in request');
         return res.status(400).json({ error: 'Target user ID is required' });
@@ -1486,136 +1503,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Cannot create conversation with yourself' });
       }
 
-      // Check if direct conversation already exists
-      const existingConversation = await storage.getDirectConversation(req.session.userId!, targetUserIdNum);
-      if (existingConversation) {
-        logger.info('Direct conversation already exists:', existingConversation.id);
-        return res.json(existingConversation);
-      }
-
-      // Get target user info to create conversation name
-      const targetUser = await storage.getUser(targetUserIdNum);
-      if (!targetUser) {
-        logger.warn('Target user not found:', targetUserIdNum);
-        return res.status(404).json({ error: 'Target user not found' });
-      }
-
-      // Create new direct conversation
-      const conversation = await storage.createConversation({
-        type: 'direct',
-        name: `${targetUser.firstName} ${targetUser.lastName}`.trim() || targetUser.email,
-        participants: [req.session.userId!, targetUserIdNum],
-        createdBy: req.session.userId!,
-        isActive: true
-      });
-
-      logger.info('Created direct conversation:', conversation.id);
-      res.json(conversation);
-    } catch (error) {
-      logger.error('Error creating direct conversation:', error);
-      res.status(500).json({ error: 'Failed to create conversation' });
-    }
-  });
-
-  // Get conversation messages
-  apiRouter.get("/chats/:conversationId/messages", isAuthenticated, async (req, res) => {
-    try {
-      const { conversationId } = req.params;
-      logger.info(`Getting messages for conversation: ${conversationId}`);
-      
-      // Verify user has access to this conversation
-      const conversation = await storage.getConversation(conversationId);
-      if (!conversation) {
-        logger.warn('Conversation not found:', conversationId);
-        return res.status(404).json({ error: 'Conversation not found' });
-      }
-
-      if (!conversation.participants.includes(req.session.userId!)) {
-        logger.warn('User not authorized for conversation:', conversationId);
-        return res.status(403).json({ error: 'Not authorized' });
-      }
-
-      const messages = await storage.getConversationMessages(conversationId);
-      logger.info(`Found ${messages.length} messages for conversation ${conversationId}`);
-      res.json(messages);
-    } catch (error) {
-      logger.error('Error getting conversation messages:', error);
-      res.status(500).json({ error: 'Failed to get messages' });
-    }
-  });
-
-  // Send message to conversation
-  apiRouter.post("/chats/:conversationId/messages", isAuthenticated, async (req, res) => {
-    try {
-      const { conversationId } = req.params;
-      const { message, replyToId } = req.body;
-      
-      logger.info(`Sending message to conversation: ${conversationId}`);
-      
-      if (!message || !message.trim()) {
-        return res.status(400).json({ error: 'Message content is required' });
-      }
-
-      // Verify user has access to this conversation
-      const conversation = await storage.getConversation(conversationId);
-      if (!conversation) {
-        logger.warn('Conversation not found:', conversationId);
-        return res.status(404).json({ error: 'Conversation not found' });
-      }
-
-      if (!conversation.participants.includes(req.session.userId!)) {
-        logger.warn('User not authorized for conversation:', conversationId);
-        return res.status(403).json({ error: 'Not authorized' });
-      }
-
-      // Get sender info
-      const sender = await storage.getUser(req.session.userId!);
-      if (!sender) {
-        logger.error('Sender not found:', req.session.userId);
-        return res.status(404).json({ error: 'Sender not found' });
-      }
-
-      // Create message
-      const newMessage = await storage.createMessage({
-        conversationId,
-        senderId: req.session.userId!,
-        senderName: `${sender.firstName} ${sender.lastName}`.trim() || sender.email,
-        message: message.trim(),
-        type: 'text',
-        replyToId
-      });
-
-      logger.info('Message created successfully:', newMessage.id);
-      res.json(newMessage);
-    } catch (error) {
-      logger.error('Error sending message:', error);
-      res.status(500).json({ error: 'Failed to send message' });
-    }
-  });
-
-  // Create direct conversation
-  apiRouter.post("/chats/direct", isAuthenticated, async (req, res) => {
-    try {
-      const { targetUserId } = req.body;
-      
-      logger.info(`Create direct chat request: from ${req.session.userId} to ${targetUserId}`);
-      
-      if (!targetUserId) {
-        return res.status(400).json({ error: 'Target user ID is required' });
-      }
-      
-      const targetUserIdNum = parseInt(targetUserId);
-      if (isNaN(targetUserIdNum)) {
-        logger.warn('Invalid target user ID format:', targetUserId);
-        return res.status(400).json({ error: 'Invalid user ID format' });
-      }
-      
-      // Don't allow creating conversation with yourself
-      if (targetUserIdNum === req.session.userId) {
-        logger.warn('User attempted to create conversation with themselves');
-        return res.status(400).json({ error: 'Cannot create conversation with yourself' });
-      }
-      
       // Check if target user exists
       const targetUser = await storage.getUser(targetUserIdNum);
       if (!targetUser) {
@@ -1629,9 +1516,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: targetUser.lastName,
         email: targetUser.email
       });
-      
+
       // Check if direct conversation already exists
-      let conversation = await storage.getDirectConversation(req.session.userId!, targetUserIdNum);
+      let conversation = await storage.getDirectConversation(req.session.userId, targetUserIdNum);
       logger.info('Existing conversation check result:', conversation);
       
       if (!conversation) {
@@ -1643,14 +1530,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const conversationData = {
           type: 'direct' as const,
           name: fullName,
-          participants: [req.session.userId!, targetUserIdNum],
-          createdBy: req.session.userId!,
+          participants: [req.session.userId, targetUserIdNum],
+          createdBy: req.session.userId,
           isActive: true
         };
         
         logger.info('Creating new conversation with data:', conversationData);
         
-        // Store the conversation using the correct method
         try {
           conversation = await storage.createConversation(conversationData);
           logger.info('Successfully created conversation:', conversation);
@@ -1672,7 +1558,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: conversation.updatedAt || conversation.createdAt,
         isActive: conversation.isActive,
         lastMessage: null,
-        unreadCount: 0
+        unreadCount: 0,
+        memberCount: conversation.participants?.length || 0
       };
       
       logger.info('Returning conversation:', responseConversation);
@@ -1683,6 +1570,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Failed to create direct chat',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // Send message to conversation
+  apiRouter.post("/chats/:conversationId/messages", isAuthenticated, async (req, res) => {
+    try {
+      // Validate session
+      if (!req.session.userId) {
+        logger.warn('No userId in session for message sending');
+        return res.status(401).json({ error: 'User session invalid' });
+      }
+
+      const { conversationId } = req.params;
+      const { message, replyToId } = req.body;
+      
+      logger.info(`Sending message to conversation: ${conversationId} from user: ${req.session.userId}`);
+      
+      if (!message || !message.trim()) {
+        return res.status(400).json({ error: 'Message content is required' });
+      }
+
+      // Verify user has access to this conversation
+      const conversation = await storage.getConversation(conversationId);
+      if (!conversation) {
+        logger.warn('Conversation not found:', conversationId);
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+
+      if (!conversation.participants.includes(req.session.userId)) {
+        logger.warn('User not authorized for conversation:', conversationId);
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+
+      // Get sender info
+      const sender = await storage.getUser(req.session.userId);
+      if (!sender) {
+        logger.error('Sender not found:', req.session.userId);
+        return res.status(404).json({ error: 'Sender not found' });
+      }
+
+      // Create message
+      const newMessage = await storage.createMessage({
+        conversationId,
+        senderId: req.session.userId,
+        senderName: `${sender.firstName} ${sender.lastName}`.trim() || sender.email,
+        message: message.trim(),
+        type: 'text',
+        replyToId
+      });
+
+      logger.info('Message created successfully:', newMessage.id);
+      res.json(newMessage);
+    } catch (error) {
+      logger.error('Error sending message:', error);
+      res.status(500).json({ error: 'Failed to send message' });
     }
   });
 
