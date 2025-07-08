@@ -858,6 +858,11 @@ export default function TestSheetsPage() {
           </Card>
         )}
             </div>
+          </TabsContent>
+          <TabsContent value="test" className="h-full">
+            <div className="p-6">
+              <OnlyOfficeTest />
+            </div>
           </TabsContent></old_str>
           <TabsContent value="test" className="h-full">
             <div className="p-6">
