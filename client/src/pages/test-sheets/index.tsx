@@ -73,23 +73,23 @@ export default function TestSheetsPage() {
 
   useEffect(() => {
     console.log('[TestSheets] Component mounted, user:', user);
-    
+
     const initializeComponent = async () => {
       try {
         // Always try to load, even without user initially
         setIsInitialLoading(true);
         setAuthError(null);
-        
+
         // First try to load projects to test authentication
         await loadProjects();
-        
+
         // If successful, load documents
         await loadDocuments();
-        
+
         console.log('[TestSheets] Initialization completed successfully');
       } catch (error) {
         console.error('[TestSheets] Error during initialization:', error);
-        
+
         // Check if it's an authentication error
         if (error.message?.includes('401') || error.message?.includes('authentication')) {
           setAuthError('Please log in to access Test Sheets');
@@ -100,7 +100,7 @@ export default function TestSheetsPage() {
         setIsInitialLoading(false);
       }
     };
-    
+
     // Initialize immediately, don't wait for user state
     initializeComponent();
   }, []);
@@ -115,7 +115,7 @@ export default function TestSheetsPage() {
   const loadProjects = async () => {
     try {
       console.log('[TestSheets] Loading projects...');
-      
+
       const response = await fetch('/api/projects', {
         credentials: 'include',
         headers: {
@@ -134,7 +134,7 @@ export default function TestSheetsPage() {
         const projectData = await response.json();
         console.log('[TestSheets] Loaded projects:', projectData.length);
         setProjects(Array.isArray(projectData) ? projectData : []);
-        
+
         // Clear any previous auth errors if successful
         setAuthError(null);
       } else if (response.status === 404) {
@@ -145,7 +145,7 @@ export default function TestSheetsPage() {
         console.error('[TestSheets] Failed to load projects:', response.status, response.statusText);
         const errorText = await response.text();
         console.error('[TestSheets] Error response:', errorText);
-        
+
         throw new Error(`Failed to load projects (${response.status})`);
       }
     } catch (error) {
@@ -205,7 +205,7 @@ export default function TestSheetsPage() {
     } catch (error) {
       console.error('[TestSheets] Error loading documents:', error);
       setDocuments([]);
-      
+
       // Check if it's a network error
       if (error instanceof TypeError && error.message.includes('fetch')) {
         toast({
@@ -318,11 +318,11 @@ export default function TestSheetsPage() {
   const openDocument = async (document: OnlyOfficeDocument) => {
     try {
       console.log('[TestSheets] Opening document in OnlyOffice editor:', document);
-      
+
       // Open OnlyOffice editor directly using the dedicated editor endpoint
       const editorUrl = `/api/onlyoffice/editor/${document.id}`;
       const editorWindow = window.open(editorUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-      
+
       if (editorWindow) {
         toast({
           title: "Success",
@@ -645,9 +645,9 @@ export default function TestSheetsPage() {
           <TabsContent value="documents" className="h-full">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-3xl font-bold">Test Sheets & Documents</h1>
-                <p className="text-gray-600 mt-2">Create and manage documents with OnlyOffice integration</p>
-              </div>
+              <h1 className="text-3xl font-bold">OnlyOffice Document Manager</h1>
+              <p className="text-gray-600 mt-2">Create and manage documents with OnlyOffice editor integration</p>
+            </div>
 
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>

@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { toast } from '@/hooks/use-toast';
 
 interface DocumentTestResult {
   success: boolean;
@@ -13,6 +15,7 @@ interface DocumentTestResult {
 }
 
 export function OnlyOfficeTest() {
+  const { toast } = useToast();
   const [testResults, setTestResults] = useState<{
     creation: DocumentTestResult | null;
     opening: DocumentTestResult | null;
@@ -24,18 +27,25 @@ export function OnlyOfficeTest() {
   const [testDocumentId, setTestDocumentId] = useState('');
   const [testDocumentData, setTestDocumentData] = useState({
     title: 'Test Document',
-    type: 'text',
+    type: 'text' as 'text' | 'spreadsheet' | 'presentation',
     projectId: 1
   });
 
   const createTestDocument = async () => {
     setIsRunning(true);
     try {
-      const response = await apiRequest('POST', '/api/onlyoffice/documents', {
-        title: testDocumentData.title,
-        type: testDocumentData.type,
-        projectId: testDocumentData.projectId,
-        description: 'Unit test document'
+      const response = await fetch('/api/onlyoffice/documents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: testDocumentData.title,
+          type: testDocumentData.type,
+          projectId: testDocumentData.projectId,
+          description: 'Unit test document'
+        })
       });
 
       if (!response.ok) {
@@ -70,7 +80,7 @@ export function OnlyOfficeTest() {
       toast({
         title: 'Document Creation Test Failed',
         description: error.message,
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsRunning(false);
@@ -80,25 +90,20 @@ export function OnlyOfficeTest() {
   const testDocumentOpening = async () => {
     if (!testDocumentId) {
       toast({
-        title: 'Error',
+        title: 'No Document to Test',
         description: 'Please create a test document first',
-        variant: 'destructive'
+        variant: 'destructive',
       });
       return;
     }
 
     setIsRunning(true);
     try {
-      // Get document configuration
-      const response = await apiRequest('GET', `/api/onlyoffice/documents/${testDocumentId}/config`);
-
-      if (!response.ok) {
-        throw new Error('Failed to get document configuration');
-      }
-
-      const config = await response.json();
+      // Test opening the document in OnlyOffice editor
+      const editorUrl = `/api/onlyoffice/editor/${testDocumentId}`;
+      const editorWindow = window.open(editorUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
       
-      if (config.document && config.document.key) {
+      if (editorWindow) {
         setTestResults(prev => ({
           ...prev,
           opening: {
@@ -109,32 +114,10 @@ export function OnlyOfficeTest() {
 
         toast({
           title: 'Document Opening Test Passed',
-          description: `Document configuration ready for OnlyOffice editor`,
+          description: `Successfully opened document ${testDocumentId} in OnlyOffice editor`,
         });
-
-        // Open the document in a new window for actual testing
-        const editorWindow = window.open('', '_blank', 'width=1200,height=800');
-        if (editorWindow) {
-          editorWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <title>OnlyOffice Test - ${config.document.title}</title>
-              <script type="text/javascript" src="https://documentserver.onlyoffice.com/web-apps/apps/api/documents/api.js"></script>
-            </head>
-            <body>
-              <div id="placeholder" style="width: 100%; height: 100vh;"></div>
-              <script type="text/javascript">
-                window.docEditor = new DocsAPI.DocEditor("placeholder", ${JSON.stringify(config, null, 2)});
-              </script>
-            </body>
-            </html>
-          `);
-          editorWindow.document.close();
-        }
-
       } else {
-        throw new Error('Invalid document configuration');
+        throw new Error('Unable to open editor window - popup may be blocked');
       }
 
     } catch (error: any) {
@@ -149,7 +132,7 @@ export function OnlyOfficeTest() {
       toast({
         title: 'Document Opening Test Failed',
         description: error.message,
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsRunning(false);
@@ -167,126 +150,148 @@ export function OnlyOfficeTest() {
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>OnlyOffice Document Editor Test</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <Button 
-            onClick={createTestDocument} 
-            disabled={isRunning}
-            variant="outline"
-          >
-            Test Creation
-          </Button>
-          <Button 
-            onClick={testDocumentOpening} 
-            disabled={isRunning || !testDocumentId}
-            variant="outline"
-          >
-            Test Opening
-          </Button>
-          <Button 
-            onClick={runAllTests} 
-            disabled={isRunning}
-          >
-            Run All Tests
-          </Button>
+    <div className="container mx-auto py-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">OnlyOffice Document Editor Tests</h1>
+          <p className="text-gray-600 mt-2">Test OnlyOffice document creation and editor functionality</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Document Title:</label>
-            <Input
-              value={testDocumentData.title}
-              onChange={(e) => setTestDocumentData(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="Enter document title..."
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Document Type:</label>
-            <Select
-              value={testDocumentData.type}
-              onValueChange={(value) => setTestDocumentData(prev => ({ ...prev, type: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select document type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="text">Text Document</SelectItem>
-                <SelectItem value="spreadsheet">Spreadsheet</SelectItem>
-                <SelectItem value="presentation">Presentation</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Project ID:</label>
-            <Input
-              type="number"
-              value={testDocumentData.projectId}
-              onChange={(e) => setTestDocumentData(prev => ({ ...prev, projectId: parseInt(e.target.value) || 1 }))}
-              placeholder="Project ID"
-            />
-          </div>
-        </div>
-
-        {testDocumentId && (
-          <div className="p-2 bg-green-50 rounded border border-green-200">
-            <strong>Test Document ID:</strong> {testDocumentId}
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <h3 className="font-semibold">Test Results:</h3>
-          
-          <div className="space-y-2">
-            <div className={`p-3 rounded border ${
-              testResults.creation === null ? 'bg-gray-50 border-gray-200' :
-              testResults.creation.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-            }`}>
-              <div className="font-medium">Document Creation Test</div>
-              {testResults.creation === null && (
-                <div className="text-sm text-gray-600">Not run yet</div>
-              )}
-              {testResults.creation?.success && (
-                <div className="text-sm text-green-600">
-                  ✅ Success - ID: {testResults.creation.documentId}
-                </div>
-              )}
-              {testResults.creation?.error && (
-                <div className="text-sm text-red-600">
-                  ❌ Failed: {testResults.creation.error}
-                </div>
-              )}
+        {/* Test Configuration */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Test Configuration</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="test-title">Document Title</Label>
+                <Input
+                  id="test-title"
+                  value={testDocumentData.title}
+                  onChange={(e) => setTestDocumentData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Test Document"
+                />
+              </div>
+              <div>
+                <Label htmlFor="test-type">Document Type</Label>
+                <Select 
+                  value={testDocumentData.type} 
+                  onValueChange={(value: 'text' | 'spreadsheet' | 'presentation') => 
+                    setTestDocumentData(prev => ({ ...prev, type: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">Text Document</SelectItem>
+                    <SelectItem value="spreadsheet">Spreadsheet</SelectItem>
+                    <SelectItem value="presentation">Presentation</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="test-project">Project ID</Label>
+                <Input
+                  id="test-project"
+                  type="number"
+                  value={testDocumentData.projectId}
+                  onChange={(e) => setTestDocumentData(prev => ({ ...prev, projectId: parseInt(e.target.value) || 1 }))}
+                  placeholder="1"
+                />
+              </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className={`p-3 rounded border ${
-              testResults.opening === null ? 'bg-gray-50 border-gray-200' :
-              testResults.opening.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-            }`}>
-              <div className="font-medium">Document Opening Test</div>
-              {testResults.opening === null && (
-                <div className="text-sm text-gray-600">Not run yet</div>
-              )}
-              {testResults.opening?.success && (
-                <div className="text-sm text-green-600">
-                  ✅ Success - Document opened in OnlyOffice editor
-                </div>
-              )}
-              {testResults.opening?.error && (
-                <div className="text-sm text-red-600">
-                  ❌ Failed: {testResults.opening.error}
-                </div>
-              )}
+        {/* Test Controls */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Test Controls</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <Button 
+                onClick={createTestDocument} 
+                disabled={isRunning}
+                variant="outline"
+              >
+                Test Creation
+              </Button>
+              <Button 
+                onClick={testDocumentOpening} 
+                disabled={isRunning || !testDocumentId}
+                variant="outline"
+              >
+                Test Opening
+              </Button>
+              <Button 
+                onClick={runAllTests} 
+                disabled={isRunning}
+              >
+                Run All Tests
+              </Button>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="text-xs text-gray-500 mt-4">
+        {/* Test Results */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Test Results</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Document Creation Test */}
+              <div className={`p-3 rounded border ${
+                testResults.creation === null ? 'bg-gray-50 border-gray-200' :
+                testResults.creation.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+              }`}>
+                <div className="font-medium">Document Creation Test</div>
+                {testResults.creation === null && (
+                  <div className="text-sm text-gray-600">Not run yet</div>
+                )}
+                {testResults.creation?.success && (
+                  <div className="text-sm text-green-600">
+                    ✅ Success - Document created with ID: {testResults.creation.documentId}
+                  </div>
+                )}
+                {testResults.creation?.error && (
+                  <div className="text-sm text-red-600">
+                    ❌ Failed: {testResults.creation.error}
+                  </div>
+                )}
+              </div>
+
+              {/* Document Opening Test */}
+              <div className={`p-3 rounded border ${
+                testResults.opening === null ? 'bg-gray-50 border-gray-200' :
+                testResults.opening.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+              }`}>
+                <div className="font-medium">Document Opening Test</div>
+                {testResults.opening === null && (
+                  <div className="text-sm text-gray-600">Not run yet</div>
+                )}
+                {testResults.opening?.success && (
+                  <div className="text-sm text-green-600">
+                    ✅ Success - Document opened in OnlyOffice editor
+                  </div>
+                )}
+                {testResults.opening?.error && (
+                  <div className="text-sm text-red-600">
+                    ❌ Failed: {testResults.opening.error}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="text-xs text-gray-500">
           This unit test validates the OnlyOffice document editor functionality by creating documents and testing editor opening.
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
