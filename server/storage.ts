@@ -781,8 +781,7 @@ class MemStorage implements IStorage {
 
   // Customer operations
   async createCustomer(data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Customer> {
-    ```tool_code
-const id = this.nextId++;
+    const id = this.nextId++;
     const now = new Date();
 
     const customer: Customer = {
