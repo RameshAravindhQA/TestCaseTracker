@@ -1,0 +1,33 @@
+User authenticated: ragul
+messenger.tsx:113 User authenticated, connecting WebSocket and loading users
+messenger.tsx:152 Connecting to WebSocket...
+messenger.tsx:327 Loading online users...
+messenger.tsx:127 Loading conversations...
+messenger.tsx:133 Loaded conversations: Array(0)
+messenger.tsx:333 Loaded users: Array(2)
+messenger.tsx:352 Formatted users: Array(2)
+messenger.tsx:162 WebSocket connected
+messenger.tsx:1013 Starting conversation with user: Object
+messenger.tsx:1064 Created conversation: Object
+messenger.tsx:523 [Messenger] Joining conversation: 2
+api/chats/2/messages:1  Failed to load resource: the server responded with a status of 404 (Not Found)Understand this error
+messenger.tsx:538 [Messenger] Failed to load messages: 404
+joinConversation @ messenger.tsx:538Understand this error
+chunk-XNYEYNH5.js?v=c8558217:339 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ chunk-XNYEYNH5.js?v=c8558217:339Understand this warning
+messenger.tsx:523 [Messenger] Joining conversation: 2
+api/chats/2/messages:1  Failed to load resource: the server responded with a status of 404 (Not Found)Understand this error
+messenger.tsx:538 [Messenger] Failed to load messages: 404
+joinConversation @ messenger.tsx:538Understand this error
+:24678/:1  Failed to load resource: net::ERR_CONNECTION_TIMED_OUTUnderstand this error
+messenger.tsx:523 [Messenger] Joining conversation: 2
+api/chats/2/messages:1  Failed to load resource: the server responded with a status of 404 (Not Found)Understand this error
+messenger.tsx:538 [Messenger] Failed to load messages: 404
+joinConversation @ messenger.tsx:538Understand this error
+messenger.tsx:555 [Messenger] Sending message to conversation: 2
+api/chats/2/messages:1  Failed to load resource: the server responded with a status of 404 (Not Found)Understand this error
+messenger.tsx:591 Error sending message: Error: Failed to send message
+    at sendMessage (messenger.tsx:588:15)
+sendMessage @ messenger.tsx:591Understand this error
+messenger.tsx:609 [Messenger] Falling back to WebSocket
+:24678/:1  Failed to load resource: net::ERR_CONNECTION_TIMED_OUT
