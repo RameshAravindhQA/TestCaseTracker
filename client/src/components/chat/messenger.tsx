@@ -521,15 +521,15 @@ export function Messenger() {
 
   const joinConversation = async (conversationId: string) => {
     console.log('[Messenger] Joining conversation:', conversationId);
-    
+
     setSelectedConversation(conversationId);
-    
+
     // Load messages for this conversation
     try {
       const response = await fetch(`/api/chats/${conversationId}/messages`, {
         credentials: 'include'
       });
-      
+
       if (response.ok) {
         const messages = await response.json();
         console.log('[Messenger] Loaded messages for conversation:', messages.length);
@@ -571,17 +571,17 @@ export function Messenger() {
       if (response.ok) {
         const message = await response.json();
         console.log('[Messenger] Message sent successfully:', message);
-        
+
         // Add message to current conversation
         setMessages(prev => [...prev, message]);
-        
+
         // Update conversation last message
         setConversations(prev => prev.map(conv => 
           conv.id === selectedConversation 
             ? { ...conv, lastMessage: message }
             : conv
         ));
-        
+
         setNewMessage('');
         setReplyingTo(null);
       } else {
@@ -590,24 +590,42 @@ export function Messenger() {
     } catch (error) {
       console.error('Error sending message:', error);
 
-      // Fallback to WebSocket if available
-      if (wsRef.current) {
-        console.log('[Messenger] Falling back to WebSocket');
-        wsRef.current.emit('send_message', {
-          conversationId: selectedConversation,
-          message: newMessage.trim(),
-          type: 'text',
-          replyTo: replyingTo?.id
-        });
-
-        setNewMessage('');
-        setReplyingTo(null);
-      } else {
+      // Enhanced error handling with retry logic
+      if (error.message?.includes('404')) {
+        console.log('[Messenger] Conversation not found, attempting to refresh conversations');
+        loadConversations(); // Refresh conversations
         toast({
           title: "Error",
-          description: "Failed to send message",
+          description: "Conversation not found. Please try again.",
           variant: "destructive"
         });
+      } else if (error.message?.includes('403')) {
+        toast({
+          title: "Error", 
+          description: "Access denied to this conversation.",
+          variant: "destructive"
+        });
+      } else {
+        console.log('[Messenger] Falling back to WebSocket');
+
+        // Fallback to WebSocket if available
+        if (wsRef.current && wsRef.current.connected) {
+          wsRef.current.emit('send_message', {
+            conversationId: selectedConversation,
+            message: newMessage.trim(),
+            type: 'text',
+            replyTo: replyingTo?.id
+          });
+
+          setNewMessage('');
+          setReplyingTo(null);
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to send message. Please check your connection.",
+            variant: "destructive"
+          });
+        }
       }
     }
   };
@@ -949,8 +967,7 @@ export function Messenger() {
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1">
-                                <span className="text-sm font-medium">{chatUser.name}</span>
-                                <div className="text-xs text-gray-500">{chatUser.email}</div>
+                                <span className="text-sm font-medium">{chatUser.name}</span><div className="text-xs text-gray-500">{chatUser.email}</div>
                               </div>
                             </div>
                           ))
@@ -1014,7 +1031,7 @@ export function Messenger() {
 
                         if (existingConversation) {
                           setSelectedConversation(existingConversation.id);
-                          
+
                           // Load messages immediately
                           await joinConversation(existingConversation.id);
 
@@ -1052,7 +1069,7 @@ export function Messenger() {
                             return [...prev, conversation];
                           });
                           setSelectedConversation(conversation.id);
-                          
+
                           // Load messages immediately after selecting conversation
                           await joinConversation(conversation.id);
 
