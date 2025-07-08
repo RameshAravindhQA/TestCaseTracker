@@ -1453,24 +1453,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       logger.info(`Getting messages for chat: ${chatId}, user: ${req.session.userId}`);
       
-      // First verify the conversation exists
-      const conversation = await storage.getConversation(chatId);
-      if (!conversation) {
-        logger.warn(`Conversation not found: ${chatId}`);
-        return res.status(404).json({ error: 'Conversation not found' });
-      }
+      // Try to get the conversation - if it doesn't exist, return empty messages array
+      try {
+        const conversation = await storage.getConversation(chatId);
+        if (!conversation) {
+          logger.warn(`Conversation not found: ${chatId}, returning empty messages`);
+          return res.json([]);
+        }
 
-      // Verify user has access to this conversation
-      if (!conversation.participants.includes(req.session.userId)) {
-        logger.warn(`User ${req.session.userId} not authorized for conversation ${chatId}`);
-        return res.status(403).json({ error: 'Not authorized' });
-      }
+        // Verify user has access to this conversation
+        if (!conversation.participants.includes(req.session.userId)) {
+          logger.warn(`User ${req.session.userId} not authorized for conversation ${chatId}`);
+          return res.status(403).json({ error: 'Not authorized' });
+        }
 
-      // Get messages for the conversation
-      const messages = await storage.getChatMessages(chatId);
-      
-      logger.info(`Found ${messages.length} messages for chat ${chatId}`);
-      res.json(messages);
+        // Get messages for the conversation
+        const messages = await storage.getChatMessages(chatId);
+        
+        logger.info(`Found ${messages.length} messages for chat ${chatId}`);
+        res.json(messages);
+      } catch (convError) {
+        logger.warn(`Error getting conversation ${chatId}:`, convError);
+        // Return empty array instead of error for non-existent conversations
+        res.json([]);
+      }
     } catch (error) {
       logger.error('Get chat messages error:', error);
       res.status(500).json({ error: 'Failed to fetch chat messages' });
@@ -1597,10 +1603,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Message content is required' });
       }
 
-      // Verify user has access to this conversation
-      const conversation = await storage.getConversation(conversationId);
-      if (!conversation) {
-        logger.warn('Conversation not found:', conversationId);
+      // Try to get the conversation - create if it doesn't exist for direct chats
+      let conversation;
+      try {
+        conversation = await storage.getConversation(conversationId);
+        if (!conversation) {
+          logger.warn('Conversation not found, checking if we can create it:', conversationId);
+          // For now, return an error - the frontend should create conversations first
+          return res.status(404).json({ error: 'Conversation not found' });
+        }
+      } catch (convError) {
+        logger.error('Error getting conversation:', convError);
         return res.status(404).json({ error: 'Conversation not found' });
       }
 

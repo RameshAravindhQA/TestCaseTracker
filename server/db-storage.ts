@@ -1272,4 +1272,34 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  async getConversation(conversationId: string): Promise<any> {
+    try {
+      console.log(`[Storage] Getting conversation with ID: ${conversationId}`);
+
+      // Convert to number for comparison since database stores as integer
+      const conversationIdNum = parseInt(conversationId);
+      if (isNaN(conversationIdNum)) {
+        console.log(`[Storage] Invalid conversation ID format: ${conversationId}`);
+        return null;
+      }
+
+      const conversations = await this.getUserConversations();
+      console.log(`[Storage] Total conversations available: ${conversations.length}`);
+      console.log(`[Storage] Available conversation IDs: ${conversations.map(c => c.id).join(', ')}`);
+
+      const conversation = conversations.find(c => c.id === conversationIdNum);
+
+      if (conversation) {
+        console.log(`[Storage] Found conversation: ${conversation.id}`);
+      } else {
+        console.log(`[Storage] Conversation not found with ID: ${conversationIdNum}`);
+      }
+
+      return conversation || null;
+    } catch (error) {
+      console.error('[Storage] Error getting conversation:', error);
+      throw error;
+    }
+  }
 }
