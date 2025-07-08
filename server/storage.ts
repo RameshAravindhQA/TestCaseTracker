@@ -1993,7 +1993,7 @@ class MemStorage implements IStorage {
     if (index === -1) {
       return null;
     }
-    
+
     this.githubIssues[index] = {
       ...this.githubIssues[index],
       ...data,
@@ -2957,7 +2957,7 @@ async createConversation(conversationData: any): Promise<any> {
 
   async markConversationAsRead(conversationId: number, userId: number): Promise<void> {
     const messages = Array.from(this.chatMessages.values())
-      .filter(msg => msg.conversationId === conversationId);
+      .filter(msg => msg.conversationId === conversationId && msg.userId !== userId);
 
     for (const message of messages) {
       await this.markMessageAsRead(message.id, userId);
@@ -3146,25 +3146,25 @@ async createConversation(conversationData: any): Promise<any> {
   async getDirectConversation(userId1: number, userId2: number): Promise<any | null> {
     console.log(`[Storage] Looking for direct conversation between users ${userId1} and ${userId2}`);
     console.log(`[Storage] Total conversations: ${this.conversations.size}`);
-    
+
     const conversations = Array.from(this.conversations.values());
     console.log(`[Storage] Searching through ${conversations.length} conversations`);
-    
+
     const directConversation = conversations.find(conv => {
         console.log(`[Storage] Checking conversation ${conv.id}:`, {
           type: conv.type,
           participants: conv.participants,
           participantCount: conv.participants?.length
         });
-        
+
         if (conv.type !== 'direct' || !conv.participants || conv.participants.length !== 2) {
             return false;
         }
-        
+
         const hasUser1 = conv.participants.includes(userId1);
         const hasUser2 = conv.participants.includes(userId2);
         const match = hasUser1 && hasUser2;
-        
+
         console.log(`[Storage] Participant check: hasUser1=${hasUser1}, hasUser2=${hasUser2}, match=${match}`);
         return match;
     });

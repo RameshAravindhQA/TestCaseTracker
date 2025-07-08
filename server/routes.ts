@@ -1450,18 +1450,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const chatId = req.params.chatId;
-      const numericChatId = parseInt(chatId);
       
-      logger.info(`Getting messages for chat: ${chatId}, numeric: ${numericChatId}, user: ${req.session.userId}`);
+      logger.info(`Getting messages for chat: ${chatId}, user: ${req.session.userId}`);
       
-      let messages;
-      if (isNaN(numericChatId)) {
-        // Handle string-based conversation IDs
-        messages = await storage.getChatMessages(chatId);
-      } else {
-        // Handle numeric conversation IDs
-        messages = await storage.getMessagesByChat(numericChatId);
+      // First verify the conversation exists
+      const conversation = await storage.getConversation(chatId);
+      if (!conversation) {
+        logger.warn(`Conversation not found: ${chatId}`);
+        return res.status(404).json({ error: 'Conversation not found' });
       }
+
+      // Verify user has access to this conversation
+      if (!conversation.participants.includes(req.session.userId)) {
+        logger.warn(`User ${req.session.userId} not authorized for conversation ${chatId}`);
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+
+      // Get messages for the conversation
+      const messages = await storage.getChatMessages(chatId);
       
       logger.info(`Found ${messages.length} messages for chat ${chatId}`);
       res.json(messages);
