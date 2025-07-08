@@ -24,18 +24,18 @@ export function setupWebSocket(server: HTTPServer) {
       const { userId, userName } = data;
       currentUserId = userId;
       userSockets.set(userId, socket);
-      
+
       logger.info(`User ${userId} (${userName}) authenticated`);
-      
+
       // Get user's conversations
       const conversations = await storage.getUserConversations(userId);
       socket.emit('conversations_list', conversations);
-      
+
       // Join user to their conversations
       conversations.forEach(conv => {
         socket.join(`conversation_${conv.id}`);
       });
-      
+
       socket.emit('authenticated', { user: { id: userId, name: userName }, onlineUsers: [] });
     });
 
@@ -44,7 +44,7 @@ export function setupWebSocket(server: HTTPServer) {
       const { conversationId } = data;
       socket.join(`conversation_${conversationId}`);
       logger.info(`Socket ${socket.id} joined conversation ${conversationId}`);
-      
+
       // Send conversation messages
       const messages = await storage.getChatMessages(conversationId);
       socket.emit('conversation_messages', { conversationId, messages });
@@ -54,7 +54,7 @@ export function setupWebSocket(server: HTTPServer) {
     socket.on('send_message', async (data) => {
       try {
         const { conversationId, message, type = 'text', replyTo } = data;
-        
+
         if (!currentUserId) {
           socket.emit('error', { message: 'Not authenticated' });
           return;
