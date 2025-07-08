@@ -1,6 +1,6 @@
 import { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { memStorage as storage } from "./storage";
 import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject } from "./matrix-fix";
 // Removed automation service import
 import { logger } from "./logger";
