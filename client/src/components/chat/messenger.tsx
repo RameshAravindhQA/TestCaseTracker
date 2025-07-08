@@ -967,7 +967,8 @@ export function Messenger() {
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1">
-                                <span className="text-sm font-medium">{chatUser.name}</span><div className="text-xs text-gray-500">{chatUser.email}</div>
+                                <span className="text-sm font-medium">{chatUser.name}</span><div className="text-xs text-gray-code
+500">{chatUser.email}</div>
                               </div>
                             </div>
                           ))

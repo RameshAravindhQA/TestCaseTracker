@@ -792,9 +792,7 @@ class MemStorage implements IStorage {
       id,
       createdAt: now,
       updatedAt: now
-    };
-
-    this.customers.set(id, customer);
+    };    this.customers.set(id, customer);
     return customer;
   }
 
@@ -2037,13 +2035,30 @@ class MemStorage implements IStorage {
     return this.messages.filter(msg => msg.conversationId === conversationId);
   }
 
-  async createMessage(data: any): Promise<any> {
+  async createMessage(messageData: any): Promise<any> {
+    const id = this.getNextId();
     const message = {
-      id: (this.messages.length + 1).toString(),
-      ...data,
+      id,
+      ...messageData,
+      conversationId: typeof messageData.conversationId === 'string' ? 
+        parseInt(messageData.conversationId) : messageData.conversationId,
+      type: 'text',
+      reactions: [],
+      isPinned: false,
+      isEdited: false,
       createdAt: new Date().toISOString()
     };
-    this.messages.push(message);
+
+    this.chatMessages.set(id, message);
+
+    // Update conversation's last message
+    const conversation = await this.getConversation(messageData.conversationId);
+    if (conversation) {
+      conversation.lastMessage = message;
+      conversation.lastMessageAt = message.createdAt;
+      conversation.updatedAt = message.createdAt;
+    }
+
     return message;
   }
 

@@ -28,9 +28,11 @@ export function setupWebSocket(server: HTTPServer) {
     // Handle new messages
     socket.on('send-message', (data) => {
       const { conversationId, message } = data;
-      // Broadcast to all users in the conversation
-      socket.to(`conversation_${conversationId}`).emit('new-message', message);
-      logger.info(`Message sent to conversation ${conversationId}`);
+      logger.info(`WebSocket: Broadcasting message to conversation ${conversationId}`);
+      
+      // Broadcast to all users in the conversation (including the sender)
+      io.to(`conversation_${conversationId}`).emit('new-message', message);
+      logger.info(`Message broadcasted to conversation ${conversationId}`);
     });
 
     // Handle typing indicators
