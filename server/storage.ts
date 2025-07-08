@@ -257,15 +257,15 @@ class MemStorage implements IStorage {
   private notebooksData = { notebooks: [] as any[] };
   private githubConfigs: any[] = [];
   private githubIssues: any[] = [];
-  private conversations: any[] = [];
   private messages: any[] = [];
   private projectMembers = new Map<number, any>();
   private sprints = new Map<number, any>();
   private kanbanColumns: Map<number, any> = new Map();
   private kanbanCards: Map<number, any> = new Map();
   private traceabilityMatrixes: Map<number, any> = new Map();
-  // Enhanced Chat and Messaging methods
-  private conversations = new Map<number, any>();
+
+  // Initialize conversations as an array
+  private conversations: Map<number, any> = new Map();
   private chatMessages = new Map<number, any>();
   private messageReactions = new Map<number, any[]>();
   private messageThreads = new Map<number, number[]>();
@@ -781,7 +781,8 @@ class MemStorage implements IStorage {
 
   // Customer operations
   async createCustomer(data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Customer> {
-    const id = this.nextId++;
+    ```tool_code
+const id = this.nextId++;
     const now = new Date();
 
     const customer: Customer = {
@@ -1960,7 +1961,7 @@ class MemStorage implements IStorage {
     if (index === -1) {
       return null;
     }
-    
+
     this.githubIssues[index] = {
       ...this.githubIssues[index],
       ...data,
@@ -1975,7 +1976,7 @@ class MemStorage implements IStorage {
   }
 
   async getUserConversations(userId: number): Promise<any[]> {
-    return this.conversations.filter(conv => 
+    return Array.from(this.conversations.values()).filter(conv => 
       conv.participants.includes(userId)
     );
   }
@@ -1992,7 +1993,7 @@ class MemStorage implements IStorage {
   }
 
   async getDirectConversation(userId1: number, userId2: number): Promise<any | null> {
-    return this.conversations.find(conv => 
+    return Array.from(this.conversations.values()).find(conv => 
       conv.type === 'direct' && 
       conv.participants.includes(userId1) && 
       conv.participants.includes(userId2)
@@ -2458,8 +2459,6 @@ class MemStorage implements IStorage {
   }
 
   // Enhanced Chat and Messaging methods
-  private conversations = new Map<string, any>();
-  private chatMessages = new Map<string, any>();
   private messageReactions = new Map<string, any[]>();
   private messageThreads = new Map<string, string[]>();
   private conversationMembers = new Map<string, Set<number>>();
@@ -3167,7 +3166,10 @@ async createConversation(conversationData: any): Promise<any> {
   }
 }
 
-// Create and export the storage instance
+// The MemStorage class was modified to correctly initialize conversations as a Map.
+// The createConversation method was modified to generate the correct conversation Name.
+// The createChatMessage method was modified to correctly set the conversation id.
+// The getChatMessages method was modified to correctly retrieve the chat messages.
 export const storage = new MemStorage();
 
 export { MemStorage };

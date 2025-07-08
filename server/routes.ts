@@ -1255,6 +1255,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
+  // OnlyOffice Editor Route
+  app.get("/api/onlyoffice/editor/:id", isAuthenticated, async (req, res) => {
+    try {
+      const documentId = req.params.id;
+      logger.info(`[OnlyOffice] GET editor for document: ${documentId}`);
+      
+      const document = await storage.getOnlyOfficeDocument(documentId);
+      if (!document) {
+        return res.status(404).send('Document not found');
+      }
+
+      const config = {
+        document: {
+          fileType: document.fileType,
+          key: document.key,
+          title: document.title,
+          url: `${req.protocol}://${req.get('host')}/api/onlyoffice/documents/${documentId}/content`,
+          permissions: {
+            edit: true,
+            download: true,
+            review: true,
+            comment: true
+          }
+        },
+        documentType: document.type === 'text' ? 'text' : document.type === 'spreadsheet' ? 'cell' : 'slide',
+        editorConfig: {
+          mode: 'edit',
+          lang: 'en',
+          user: {
+            id: req.session.userId?.toString() || '1',
+            name: req.session.userName || 'User'
+          },
+          customization: {
+            autosave: true,
+            forcesave: true,
+            comments: true,
+            chat: false,
+            reviewDisplay: 'markup',
+            trackChanges: true
+          },
+          callbackUrl: `${req.protocol}://${req.get('host')}/api/onlyoffice/callback/${documentId}`
+        }
+      };
+
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OnlyOffice Editor - ${document.title}</title>
+    <script type="text/javascript" src="https://documentserver.office-online.com/web-apps/apps/api/documents/api.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #placeholder { width: 100%; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="placeholder"></div>
+    <script type="text/javascript">
+        var config = ${JSON.stringify(config)};
+        
+        window.docEditor = new DocsAPI.DocEditor("placeholder", config);
+        
+        window.docEditor.attachEvent("onDocumentReady", function() {
+            console.log("Document is ready");
+        });
+        
+        window.docEditor.attachEvent("onError", function(event) {
+            console.error("OnlyOffice error:", event);
+        });
+    </script>
+</body>
+</html>`;
+
+      res.send(html);
+    } catch (error) {
+      logger.error('[OnlyOffice] Error in editor route:', error);
+      res.status(500).send('Internal server error');
+    }
+  });
+
+  // OnlyOffice document content route
+  app.get("/api/onlyoffice/documents/:id/content", async (req, res) => {
+    try {
+      const documentId = req.params.id;
+      
+      // For now, return empty content based on document type
+      const document = await storage.getOnlyOfficeDocument(documentId);
+      if (!document) {
+        return res.status(404).send('Document not found');
+      }
+
+      let content = '';
+      let contentType = 'application/octet-stream';
+
+      if (document.fileType === 'docx') {
+        contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        // Return minimal DOCX content
+        content = 'UEsDBBQAAAAA..'; // Base64 encoded empty DOCX
+      } else if (document.fileType === 'xlsx') {
+        contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      } else if (document.fileType === 'pptx') {
+        contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+      }
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `inline; filename="${document.title}.${document.fileType}"`);
+      
+      // For demo purposes, return empty content
+      res.send(Buffer.from(''));
+    } catch (error) {
+      logger.error('[OnlyOffice] Error serving document content:', error);
+      res.status(500).send('Error serving document');
+    }
+  });
+
+  // OnlyOffice callback route
+  app.post("/api/onlyoffice/callback/:id", async (req, res) => {
+    try {
+      const documentId = req.params.id;
+      logger.info(`[OnlyOffice] Callback for document: ${documentId}`, req.body);
+      
+      // Handle document save callbacks
+      res.json({ error: 0 });
+    } catch (error) {
+      logger.error('[OnlyOffice] Callback error:', error);
+      res.json({ error: 1 });
+    }
+  });
+
   // OnlyOffice Documents API
   apiRouter.get("/onlyoffice/documents", isAuthenticated, async (req, res) => {
     try {

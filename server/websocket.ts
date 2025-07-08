@@ -2,50 +2,118 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { logger } from './logger';
 
+import { storage } from './storage';
+
 export function setupWebSocket(server: HTTPServer) {
   const io = new SocketIOServer(server, {
     cors: {
       origin: "*",
       methods: ["GET", "POST"]
-    }
+    },
+    path: "/socket.io"
   });
+
+  const userSockets = new Map<number, any>();
 
   io.on('connection', (socket) => {
     logger.info(`User connected: ${socket.id}`);
+    let currentUserId: number | null = null;
 
-    // Join user to their personal room
-    socket.on('join-user', (userId) => {
-      socket.join(`user_${userId}`);
-      logger.info(`User ${userId} joined personal room`);
+    // Handle user authentication
+    socket.on('authenticate', async (data) => {
+      const { userId, userName } = data;
+      currentUserId = userId;
+      userSockets.set(userId, socket);
+      
+      logger.info(`User ${userId} (${userName}) authenticated`);
+      
+      // Get user's conversations
+      const conversations = await storage.getUserConversations(userId);
+      socket.emit('conversations_list', conversations);
+      
+      // Join user to their conversations
+      conversations.forEach(conv => {
+        socket.join(`conversation_${conv.id}`);
+      });
+      
+      socket.emit('authenticated', { user: { id: userId, name: userName }, onlineUsers: [] });
     });
 
     // Join conversation room
-    socket.on('join-conversation', (conversationId) => {
+    socket.on('join_conversation', async (data) => {
+      const { conversationId } = data;
       socket.join(`conversation_${conversationId}`);
       logger.info(`Socket ${socket.id} joined conversation ${conversationId}`);
+      
+      // Send conversation messages
+      const messages = await storage.getConversationMessages(conversationId);
+      socket.emit('conversation_messages', { conversationId, messages });
     });
 
     // Handle new messages
-    socket.on('send-message', (data) => {
-      const { conversationId, message } = data;
-      // Broadcast to all users in the conversation
-      socket.to(`conversation_${conversationId}`).emit('new-message', message);
-      logger.info(`Message sent to conversation ${conversationId}`);
+    socket.on('send_message', async (data) => {
+      try {
+        const { conversationId, message, type = 'text', replyTo } = data;
+        
+        if (!currentUserId) {
+          socket.emit('error', { message: 'Not authenticated' });
+          return;
+        }
+
+        // Get sender info
+        const sender = await storage.getUser(currentUserId);
+        if (!sender) {
+          socket.emit('error', { message: 'Sender not found' });
+          return;
+        }
+
+        // Create message
+        const newMessage = await storage.createMessage({
+          conversationId,
+          senderId: currentUserId,
+          senderName: `${sender.firstName} ${sender.lastName || ''}`.trim(),
+          message,
+          type,
+          replyTo,
+          timestamp: new Date().toISOString()
+        });
+
+        // Broadcast to all users in the conversation
+        io.to(`conversation_${conversationId}`).emit('new_message', newMessage);
+        logger.info(`Message sent to conversation ${conversationId}`);
+      } catch (error) {
+        logger.error('Error sending message:', error);
+        socket.emit('error', { message: 'Failed to send message' });
+      }
     });
 
     // Handle typing indicators
-    socket.on('typing-start', (data) => {
-      const { conversationId, userId, userName } = data;
-      socket.to(`conversation_${conversationId}`).emit('user-typing', { userId, userName });
+    socket.on('typing_start', (data) => {
+      const { conversationId } = data;
+      if (currentUserId) {
+        socket.to(`conversation_${conversationId}`).emit('user_typing', { 
+          conversationId, 
+          userId: currentUserId, 
+          userName: `User ${currentUserId}` 
+        });
+      }
     });
 
-    socket.on('typing-stop', (data) => {
-      const { conversationId, userId } = data;
-      socket.to(`conversation_${conversationId}`).emit('user-stopped-typing', { userId });
+    socket.on('typing_stop', (data) => {
+      const { conversationId } = data;
+      if (currentUserId) {
+        socket.to(`conversation_${conversationId}`).emit('user_stopped_typing', { 
+          conversationId, 
+          userId: currentUserId 
+        });
+      }
     });
 
     socket.on('disconnect', () => {
       logger.info(`User disconnected: ${socket.id}`);
+      if (currentUserId) {
+        userSockets.delete(currentUserId);
+      }
     });
   });
 
