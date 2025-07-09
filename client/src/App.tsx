@@ -31,6 +31,7 @@ import FunctionalFlowPage from "@/pages/functional-flow/index";
 import { Loader2 } from "lucide-react";
 import TimesheetsPage from "@/pages/timesheets/index";
 import NotebooksPage from "@/pages/notebooks/index";
+import TestSheetsPage from "@/pages/test-sheets/index";
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -144,7 +145,7 @@ function Router() {
         <ProtectedComponent Component={TraceabilityMatrixPage} />
       </Route>
       <Route path="/test-sheets">
-         <ProtectedLazyComponent Component={lazy(() => import("./pages/test-sheets"))} />
+         <ProtectedLazyComponent Component={lazy(() => import("./pages/test-sheets/index"))} />
       </Route>
       <Route path="/github">
         <ProtectedLazyComponent Component={lazy(() => import("./pages/github"))} />

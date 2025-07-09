@@ -1454,8 +1454,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       logger.info(`Getting messages for chat: ${chatId}, user: ${req.session.userId}`);
       
       // Try to get the conversation - if it doesn't exist, return empty messages array
+      let conversation;
       try {
-        const conversation = await storage.getConversation(chatId);
+        conversation = await storage.getConversation(chatId);
         if (!conversation) {
           logger.warn(`Conversation not found: ${chatId}, returning empty messages`);
           return res.json([]);

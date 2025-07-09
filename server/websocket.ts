@@ -1,13 +1,16 @@
+
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { logger } from './logger';
+import { storage } from './storage';
 
 export function setupWebSocket(server: HTTPServer) {
   const io = new SocketIOServer(server, {
     cors: {
       origin: "*",
       methods: ["GET", "POST"]
-    }
+    },
+    path: '/socket.io'
   });
 
   io.on('connection', (socket) => {
@@ -30,7 +33,7 @@ export function setupWebSocket(server: HTTPServer) {
       const { conversationId, message } = data;
       logger.info(`WebSocket: Broadcasting message to conversation ${conversationId}`);
       
-      // Broadcast to all users in the conversation (including the sender)
+      // Broadcast to all users in the conversation (including the sender for real-time updates)
       io.to(`conversation_${conversationId}`).emit('new-message', message);
       logger.info(`Message broadcasted to conversation ${conversationId}`);
     });

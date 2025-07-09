@@ -5,7 +5,6 @@ import path from "path";
 import { createServer } from "http";
 import { logger } from "./logger";
 import { initializeDatabase } from "./matrix-fix";
-import { setupWebSocket } from "./websocket";
 import { registerRoutes } from "./routes";
 
 const PORT = process.env.PORT || 5000;
@@ -89,9 +88,10 @@ async function startServer() {
       throw err;
     });
 
-    // Initialize WebSocket server for chat
-    const chatWS = setupWebSocket(httpServer);
-    (global as any).chatWebSocket = chatWS;
+    // Initialize WebSocket server
+    const { setupWebSocket } = await import("./websocket");
+    const io = setupWebSocket(httpServer);
+    (global as any).socketIO = io;
 
     // Add small delay before setting up Vite to ensure WebSocket is properly initialized
     await new Promise(resolve => setTimeout(resolve, 100));

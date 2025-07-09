@@ -1,3 +1,4 @@
+
 import { io, Socket } from 'socket.io-client';
 import { ChatMessage } from '@/types';
 
@@ -15,13 +16,14 @@ class WebSocketClient {
   private connect() {
     try {
       // Connect to the WebSocket server
-      this.socket = io('/', {
+      this.socket = io(window.location.origin, {
         transports: ['websocket', 'polling'],
         timeout: 10000,
         forceNew: true,
         reconnection: true,
         reconnectionAttempts: this.maxReconnectAttempts,
-        reconnectionDelay: this.reconnectDelay
+        reconnectionDelay: this.reconnectDelay,
+        path: '/socket.io'
       });
 
       this.socket.on('connect', () => {
@@ -87,7 +89,7 @@ class WebSocketClient {
     }
   }
 
-  public sendMessage(conversationId: string, message: ChatMessage) {
+  public sendMessage(conversationId: string, message: any) {
     if (this.socket?.connected) {
       this.socket.emit('send-message', { conversationId, message });
       console.log(`📤 Sent message to conversation: ${conversationId}`);

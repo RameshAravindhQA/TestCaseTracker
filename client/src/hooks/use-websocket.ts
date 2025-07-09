@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { websocketClient } from '@/lib/websocket';
+
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { ChatMessage } from '@/types';
 
 interface WebSocketStatus {
@@ -11,64 +11,97 @@ export function useWebSocket() {
   const [status, setStatus] = useState<WebSocketStatus>({ connected: false });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const socketRef = useRef<any>(null);
 
   useEffect(() => {
-    // Connection status handler
-    const handleConnectionStatus = (statusData: WebSocketStatus) => {
-      setStatus(statusData);
-    };
-
-    // Message handler
-    const handleMessage = (message: ChatMessage) => {
-      setMessages(prev => [...prev, message]);
-    };
-
-    // Typing handlers
-    const handleTypingStart = ({ userId, userName }: { userId: number; userName: string }) => {
-      setTypingUsers(prev => new Set(prev).add(userName));
-    };
-
-    const handleTypingStop = ({ userId }: { userId: number }) => {
-      setTypingUsers(prev => {
-        const newSet = new Set(prev);
-        // Remove user from typing (we'd need to track userId -> userName mapping)
-        return newSet;
+    // Initialize Socket.IO connection
+    try {
+      // @ts-ignore
+      const socket = io(window.location.origin, {
+        transports: ['websocket', 'polling'],
+        path: '/socket.io'
       });
-    };
 
-    // Register event listeners
-    websocketClient.on('connection-status', handleConnectionStatus);
-    websocketClient.on('message', handleMessage);
-    websocketClient.on('typing-start', handleTypingStart);
-    websocketClient.on('typing-stop', handleTypingStop);
+      socketRef.current = socket;
 
-    // Cleanup
-    return () => {
-      websocketClient.off('connection-status', handleConnectionStatus);
-      websocketClient.off('message', handleMessage);
-      websocketClient.off('typing-start', handleTypingStart);
-      websocketClient.off('typing-stop', handleTypingStop);
-    };
+      socket.on('connect', () => {
+        console.log('✅ WebSocket connected successfully');
+        setStatus({ connected: true });
+      });
+
+      socket.on('disconnect', (reason) => {
+        console.log('❌ WebSocket disconnected:', reason);
+        setStatus({ connected: false });
+      });
+
+      socket.on('connect_error', (error) => {
+        console.error('❌ WebSocket connection error:', error);
+        setStatus({ connected: false, error: error.message });
+      });
+
+      // Message handling
+      socket.on('new-message', (message: ChatMessage) => {
+        console.log('📩 New message received:', message);
+        setMessages(prev => [...prev, message]);
+      });
+
+      // Typing indicators
+      socket.on('user-typing', ({ userId, userName }) => {
+        console.log('✍️ User typing:', { userId, userName });
+        setTypingUsers(prev => new Set(prev).add(userName));
+      });
+
+      socket.on('user-stopped-typing', ({ userId }) => {
+        console.log('⏹️ User stopped typing:', userId);
+        setTypingUsers(prev => {
+          const newSet = new Set(prev);
+          // Note: We'd need to maintain a userId -> userName mapping to properly remove
+          return newSet;
+        });
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    } catch (error) {
+      console.error('❌ Failed to create WebSocket connection:', error);
+      setStatus({ connected: false, error: 'Failed to connect' });
+    }
   }, []);
 
-  const sendMessage = useCallback((conversationId: string, message: ChatMessage) => {
-    websocketClient.sendMessage(conversationId, message);
+  const sendMessage = useCallback((conversationId: string, message: any) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('send-message', { conversationId, message });
+      console.log(`📤 Sent message to conversation: ${conversationId}`);
+    } else {
+      console.warn('⚠️ Cannot send message: WebSocket not connected');
+    }
   }, []);
 
   const joinConversation = useCallback((conversationId: string) => {
-    websocketClient.joinConversation(conversationId);
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('join-conversation', conversationId);
+      console.log(`💬 Joined conversation: ${conversationId}`);
+    }
   }, []);
 
   const joinUser = useCallback((userId: number) => {
-    websocketClient.joinUser(userId);
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('join-user', userId);
+      console.log(`👤 Joined user room: ${userId}`);
+    }
   }, []);
 
   const startTyping = useCallback((conversationId: string, userId: number, userName: string) => {
-    websocketClient.startTyping(conversationId, userId, userName);
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('typing-start', { conversationId, userId, userName });
+    }
   }, []);
 
   const stopTyping = useCallback((conversationId: string, userId: number) => {
-    websocketClient.stopTyping(conversationId, userId);
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('typing-stop', { conversationId, userId });
+    }
   }, []);
 
   return {
@@ -80,6 +113,7 @@ export function useWebSocket() {
     joinUser,
     startTyping,
     stopTyping,
-    isConnected: status.connected
+    isConnected: status.connected,
+    socket: socketRef.current
   };
 }
