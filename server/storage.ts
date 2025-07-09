@@ -1735,12 +1735,13 @@ class MemStorage implements IStorage {
       }
     }
     return null;
-  }  // Additional missing methods for traceability
-  async getTraceabilityMatrix(projectId: number): Promise<any>```tool_code
- {
+  }
+
+  // Additional missing methods for traceability
+  async getTraceabilityMatrix(projectId: number): Promise<any> {
     // For now, return empty matrix data
     // This should be implemented to fetch actual matrix data from storage
-        return {};
+    return {};
   }
 
   async saveTraceabilityMatrix(projectId: number, matrixData: any[]): Promise<any> {
@@ -2867,7 +2868,7 @@ async createConversation(conversationData: any): Promise<any> {
     return {
       ...message,
       user: this.users.get(message.userId) ? {
-        id: msg.userId,
+        id: message.userId,
         firstName: this.users.get(message.userId)!.firstName,
         lastName: this.users.get(message.userId)!.lastName,
         profilePicture: this.users.get(message.userId)!.profilePicture
