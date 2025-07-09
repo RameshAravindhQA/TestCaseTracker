@@ -12,7 +12,7 @@ run = ["npm", "run", "start"]
 build = ["npm", "run", "build"]
 
 [workflows]
-runButton = "Start Backend and Frontend"
+runButton = "Clean Server Start"
 
 [[workflows.workflow]]
 name = "Project"
@@ -40,6 +40,19 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd TestCaseTracker && npm run dev"
+
+[[workflows.workflow]]
+name = "Clean Server Start"
+author = 41921917
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "chmod +x TestCaseTracker/replit_run.sh"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "./TestCaseTracker/replit_run.sh"
 
 [[ports]]
 localPort = 3000

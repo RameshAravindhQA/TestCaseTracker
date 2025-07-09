@@ -419,7 +419,7 @@ export function DashboardPage() {
 // Show welcome dialog and onboarding for new users
   useEffect(() => {
     console.log('🎯 TUTORIAL EFFECT - Checking tutorial states');
-    
+
     const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
     const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
 
@@ -451,7 +451,7 @@ export function DashboardPage() {
         console.log('⏰ Opening onboarding tutorial after delay');
         setIsOnboardingOpen(true);
       }, 1000);
-      
+
       return () => {
         console.log('🧹 Cleaning up onboarding timer');
         clearTimeout(timer);
@@ -463,7 +463,7 @@ const handleWelcomeClose = () => {
     console.log('👋 Welcome dialog closed');
     setIsWelcomeOpen(false);
     localStorage.setItem('hasSeenWelcome', 'true');
-    
+
     // After welcome is closed, check if we should show onboarding
     const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
     if (!hasCompletedOnboarding && user) {
@@ -501,4 +501,41 @@ const handleWelcomeClose = () => {
     setIsOnboardingOpen(false);
     setIsUserGuideOpen(false);
     setTutorialError(null);
+  };
+const [showTutorial, setShowTutorial] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+
+  console.log('Dashboard render:', { user, isAuthenticated, showTutorial, showDebugPanel });
+
+  useEffect(() => {
+    console.log('Dashboard useEffect - checking auth:', { isAuthenticated, user });
+
+    if (!isAuthenticated) {
+      console.log('Not authenticated, redirecting to login');
+      navigate('/login');
+      return;
+    }
+
+    // Check if user is a first-time user to show tutorial
+    const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
+    if (!hasSeenTutorial && user) {
+      console.log('First-time user, showing tutorial');
+      setShowTutorial(true);
+    }
+
+    // Only show debug panel in development
+    if (process.env.NODE_ENV === 'development') {
+      setShowDebugPanel(true);
+    }
+  }, [isAuthenticated, navigate, user]);
+const handleTutorialComplete = () => {
+    console.log('Tutorial completed, hiding tutorial');
+    localStorage.setItem('hasSeenTutorial', 'true');
+    setShowTutorial(false);
+  };
+
+  const handleTutorialClose = () => {
+    console.log('Tutorial closed');
+    localStorage.setItem('hasSeenTutorial', 'true');
+    setShowTutorial(false);
   };
