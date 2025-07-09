@@ -1,17 +1,25 @@
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { MessageCircle } from 'lucide-react';
 
-export default function TestSheetsPage() {
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+export default function TestSheets() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redirect to dashboard since test sheets module is removed
+    navigate('/dashboard');
+  }, [navigate]);
+
   return (
-    <div className="flex items-center justify-center h-full">
-      <Card className="w-96">
-        <CardContent className="p-6 text-center">
-          <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Test Sheets Module Removed</h3>
-          <p className="text-gray-600">This module has been removed as requested.</p>
-        </CardContent>
-      </Card>
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+          Test Sheets Module Removed
+        </h2>
+        <p className="text-gray-600 mb-4">
+          This module has been removed. Redirecting to dashboard...
+        </p>
+      </div>
     </div>
   );
 }

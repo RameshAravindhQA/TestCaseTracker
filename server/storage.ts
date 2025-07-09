@@ -792,6 +792,7 @@ class MemStorage implements IStorage {
       id,
       createdAt: now,
       updatedAt: now
+```tool_code
     };    this.customers.set(id, customer);
     return customer;
   }
@@ -1735,7 +1736,8 @@ class MemStorage implements IStorage {
     }
     return null;
   }  // Additional missing methods for traceability
-  async getTraceabilityMatrix(projectId: number): Promise<any> {
+  async getTraceabilityMatrix(projectId: number): Promise<any>```tool_code
+ {
     // For now, return empty matrix data
     // This should be implemented to fetch actual matrix data from storage
         return {};
@@ -2000,70 +2002,93 @@ class MemStorage implements IStorage {
     return this.githubIssues[index];
   }
 
-  // Conversation and messaging functions
-  async getConversation(id: string | number): Promise<any | null> {
-    const searchId = typeof id === 'string' ? parseInt(id) : id;
-    return this.conversations.get(searchId) || null;
+  async getChatMessages(projectId: number, limit?: number): Promise<any[]> {
+    const parsedProjectId = parseInt(String(projectId));
+
+    if (isNaN(parsedProjectId)) {
+      console.error(`Invalid project ID for chat messages: ${projectId}`);
+      return [];
+    }
+
+    if (!this.chatMessages.has(parsedProjectId)) {
+      console.log(`No chat messages found for project ${parsedProjectId}`);
+      return [];
+    }
+
+    const messages = this.chatMessages.get(parsedProjectId) || [];
+    const result = messages.slice(-limit); // Return the last 'limit' messages
+
+    console.log(`Retrieved ${result.length} chat messages for project ${parsedProjectId}`);
+    return result;
+  }
+
+  // Conversation management methods
+  async createConversation(conversation: any): Promise<void> {
+    // Store conversation in memory (in production, use database)
+    if (!this.conversations) {
+      this.conversations = [];
+    }
+    this.conversations.push(conversation);
   }
 
   async getUserConversations(userId: number): Promise<any[]> {
-    return Array.from(this.conversations.values()).filter(conv => 
+    if (!this.conversations) {
+      this.conversations = [];
+    }
+    return this.conversations.filter(conv => 
       conv.participants.includes(userId)
     );
   }
 
-  async createDirectConversation(data: any): Promise<any> {
-    const id = this.getNextId();
-    const conversation = {
-      id: id.toString(),
-      ...data,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    this.conversations.set(id, conversation);
-    return conversation;
-  }
-
-  async getDirectConversation(userId1: number, userId2: number): Promise<any | null> {
-    return Array.from(this.conversations.values()).find(conv => 
+  async findDirectConversation(userId1: number, userId2: number): Promise<any | null> {
+    if (!this.conversations) {
+      this.conversations = [];
+    }
+    return this.conversations.find(conv => 
       conv.type === 'direct' && 
       conv.participants.includes(userId1) && 
       conv.participants.includes(userId2)
     ) || null;
   }
 
-  async getConversationMessages(conversationId: string): Promise<any[]> {
-    return this.messages.filter(msg => msg.conversationId === conversationId);
+  async getConversationMessages(conversationId: string, limit: number = 50): Promise<any[]> {
+    return this.chatMessages
+      .filter(msg => msg.conversationId === conversationId)
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+      .slice(-limit);
   }
 
-  async createMessage(messageData: any): Promise<any> {
-    const id = this.getNextId();
-    const conversationId = typeof messageData.conversationId === 'string' ? 
-      parseInt(messageData.conversationId) : messageData.conversationId;
-    
-    const message = {
-      id,
-      ...messageData,
-      conversationId,
-      type: 'text',
-      reactions: [],
-      isPinned: false,
-      isEdited: false,
-      createdAt: new Date().toISOString()
-    };
+  async markConversationAsRead(conversationId: string, userId: number): Promise<void> {
+    // Mark all messages in conversation as read by user
+    this.chatMessages
+      .filter(msg => msg.conversationId === conversationId && msg.userId !== userId)
+      .forEach(msg => {
+        if (!msg.readBy) msg.readBy = [];
+        if (!msg.readBy.includes(userId)) {
+          msg.readBy.push(userId);
+        }
+      });
+  }
 
-    this.chatMessages.set(id, message);
+  async markMessageAsRead(messageId: number, userId: number): Promise<void> {
+    const message = this.chatMessages.find(msg => msg.id === messageId);
+    if (message) {
+      if (!message.readBy) message.readBy = [];
+      if (!message.readBy.includes(userId)) {
+        message.readBy.push(userId);
+      }
+    }
+  }
 
-    // Update conversation's last message
-    const conversation = this.conversations.get(conversationId);
+  async updateConversationLastMessage(conversationId: string, message: any): Promise<void> {
+    if (!this.conversations) {
+      this.conversations = [];
+    }
+    const conversation = this.conversations.find(conv => conv.id === conversationId);
     if (conversation) {
       conversation.lastMessage = message;
-      conversation.lastMessageAt = message.createdAt;
-      conversation.updatedAt = message.createdAt;
-      this.conversations.set(conversationId, conversation);
+      conversation.updatedAt = new Date();
     }
-
-    return message;
   }
 
   // Notebooks CRUD operations
@@ -2166,26 +2191,6 @@ class MemStorage implements IStorage {
     };
     this.chatMessages.set(messageId, updatedMessage);
     return updatedMessage;
-  }
-
-  async getChatMessages(projectId: number, limit: number = 50): Promise<any[]> {
-    const parsedProjectId = parseInt(String(projectId));
-
-    if (isNaN(parsedProjectId)) {
-      console.error(`Invalid project ID for chat messages: ${projectId}`);
-      return [];
-    }
-
-    if (!this.chatMessages.has(parsedProjectId)) {
-      console.log(`No chat messages found for project ${parsedProjectId}`);
-      return [];
-    }
-
-    const messages = this.chatMessages.get(parsedProjectId) || [];
-    const result = messages.slice(-limit); // Return the last 'limit' messages
-
-    console.log(`Retrieved ${result.length} chat messages for project ${parsedProjectId}`);
-    return result;
   }
 
   // Helper functions for JSON file operations
