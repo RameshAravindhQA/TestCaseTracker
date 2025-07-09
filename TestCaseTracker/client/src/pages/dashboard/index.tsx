@@ -143,6 +143,15 @@ import {
                 <Play className="h-4 w-4" />
                 Tutorial
               </Button>
+              <Button 
+                onClick={() => setIsDebugPanelOpen(true)}
+                variant="outline" 
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Bug className="h-4 w-4" />
+                Debug
+              </Button>
             </div>
           </div>
         </div>
@@ -275,18 +284,94 @@ import {
           onClose={() => setIsUserGuideOpen(false)}
         />
       )}
+
+      {/* Debug Panel */}
+      {isDebugPanelOpen && (
+        <DebugTutorialPanel
+          isWelcomeOpen={isWelcomeOpen}
+          isOnboardingOpen={isOnboardingOpen}
+          isUserGuideOpen={isUserGuideOpen}
+          user={user}
+          onResetTutorial={() => {
+            console.log('🚨 EMERGENCY RESET - Clearing all tutorial states');
+            localStorage.removeItem('hasSeenWelcome');
+            localStorage.removeItem('hasCompletedOnboarding');
+            setIsWelcomeOpen(false);
+            setIsOnboardingOpen(false);
+            setIsUserGuideOpen(false);
+            window.location.reload();
+          }}
+          onShowOnboarding={() => setIsOnboardingOpen(true)}
+          onHideAll={() => {
+            setIsWelcomeOpen(false);
+            setIsOnboardingOpen(false);
+            setIsUserGuideOpen(false);
+          }}
+          onClose={() => setIsDebugPanelOpen(false)}
+        />
+      )}
     </MainLayout>
   );
 }
 import { DashboardWelcomeDialog } from "@/components/ui/dashboard-welcome-dialog";
 import { OnboardingTutorial } from "@/components/onboarding/onboarding-tutorial";
 import { UserGuideDialog } from "@/components/ui/user-guide-dialog";
-import { BookOpen, Download, Play } from "lucide-react";
+import { DebugTutorialPanel } from "@/components/ui/debug-tutorial-panel";
+import { BookOpen, Download, Play, Bug } from "lucide-react";
 export function DashboardPage() {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
+  const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false);
   const { user } = useAuth();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 DASHBOARD DEBUG - Component mounted/updated');
+    console.log('👤 User state:', user);
+    console.log('🎯 Tutorial states:', {
+      isWelcomeOpen,
+      isOnboardingOpen,
+      isUserGuideOpen
+    });
+    console.log('💾 LocalStorage check:', {
+      hasSeenWelcome: localStorage.getItem('hasSeenWelcome'),
+      hasCompletedOnboarding: localStorage.getItem('hasCompletedOnboarding')
+    });
+
+    // Add global debug functions
+    (window as any).debugTutorial = {
+      resetTutorial: () => {
+        console.log('🚨 Resetting all tutorial states');
+        localStorage.removeItem('hasSeenWelcome');
+        localStorage.removeItem('hasCompletedOnboarding');
+        setIsWelcomeOpen(false);
+        setIsOnboardingOpen(false);
+        setIsUserGuideOpen(false);
+        window.location.reload();
+      },
+      showOnboarding: () => {
+        console.log('🎓 Manually showing onboarding');
+        setIsOnboardingOpen(true);
+      },
+      hideAll: () => {
+        console.log('🚫 Hiding all dialogs');
+        setIsWelcomeOpen(false);
+        setIsOnboardingOpen(false);
+        setIsUserGuideOpen(false);
+      },
+      getState: () => ({
+        user,
+        isWelcomeOpen,
+        isOnboardingOpen,
+        isUserGuideOpen,
+        hasSeenWelcome: localStorage.getItem('hasSeenWelcome'),
+        hasCompletedOnboarding: localStorage.getItem('hasCompletedOnboarding')
+      })
+    };
+
+    console.log('🛠️ Debug functions available: window.debugTutorial');
+  }, [user, isWelcomeOpen, isOnboardingOpen, isUserGuideOpen]);
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
     queryFn: async () => {
@@ -301,30 +386,61 @@ export function DashboardPage() {
 
 // Show welcome dialog and onboarding for new users
   useEffect(() => {
+    console.log('🎯 TUTORIAL EFFECT - Checking tutorial states');
+    
     const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
     const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
 
+    console.log('📝 Tutorial localStorage values:', {
+      hasSeenWelcome,
+      hasCompletedOnboarding,
+      user: user?.id,
+      isProjectsLoading
+    });
+
     if (!hasSeenWelcome && user) {
+      console.log('🎉 Setting welcome dialog to open');
       setIsWelcomeOpen(true);
     }
 
     // Show onboarding for new users who haven't completed it
     if (user && !hasCompletedOnboarding && !isProjectsLoading) {
+      console.log('🚀 Preparing to show onboarding tutorial');
       // Delay to ensure proper loading
       const timer = setTimeout(() => {
+        console.log('⏰ Opening onboarding tutorial after delay');
         setIsOnboardingOpen(true);
       }, 2000);
       
-      return () => clearTimeout(timer);
+      return () => {
+        console.log('🧹 Cleaning up onboarding timer');
+        clearTimeout(timer);
+      };
+    }
+
+    // Timeout mechanism to prevent infinite loading
+    if (user && !hasCompletedOnboarding && isProjectsLoading) {
+      console.log('⏳ Projects still loading, setting timeout');
+      const timeoutTimer = setTimeout(() => {
+        console.log('⏰ Timeout reached, showing onboarding anyway');
+        setIsOnboardingOpen(true);
+      }, 5000);
+      
+      return () => {
+        console.log('🧹 Cleaning up timeout timer');
+        clearTimeout(timeoutTimer);
+      };
     }
   }, [user, isProjectsLoading]);
 
 const handleWelcomeClose = () => {
+    console.log('👋 Welcome dialog closed');
     setIsWelcomeOpen(false);
     localStorage.setItem('hasSeenWelcome', 'true');
   };
 
   const handleOnboardingComplete = () => {
+    console.log('✅ Onboarding completed');
     localStorage.setItem('hasCompletedOnboarding', 'true');
     setIsOnboardingOpen(false);
   };

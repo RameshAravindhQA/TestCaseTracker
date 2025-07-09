@@ -27,6 +27,18 @@ export function OnboardingTutorial({ isOpen, onClose, onComplete }: OnboardingTu
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const { user } = useAuth();
 
+  // Debug logging
+  useEffect(() => {
+    console.log('🎓 ONBOARDING TUTORIAL - Component mounted/updated');
+    console.log('📖 Tutorial state:', {
+      isOpen,
+      currentStep,
+      completedSteps,
+      user: user?.id,
+      userFirstName: user?.firstName
+    });
+  }, [isOpen, currentStep, completedSteps, user]);
+
   const steps: OnboardingStep[] = [
     {
       id: 1,
@@ -77,6 +89,7 @@ export function OnboardingTutorial({ isOpen, onClose, onComplete }: OnboardingTu
   ];
 
   const handleNext = () => {
+    console.log('⏭️ Next button clicked, current step:', currentStep);
     if (currentStep < steps.length - 1) {
       setCompletedSteps([...completedSteps, currentStep]);
       setCurrentStep(currentStep + 1);
@@ -86,12 +99,14 @@ export function OnboardingTutorial({ isOpen, onClose, onComplete }: OnboardingTu
   };
 
   const handlePrevious = () => {
+    console.log('⏮️ Previous button clicked, current step:', currentStep);
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
   };
 
   const handleComplete = () => {
+    console.log('🎉 Tutorial completed');
     setCompletedSteps([...completedSteps, currentStep]);
     onComplete();
     onClose();
@@ -103,17 +118,28 @@ export function OnboardingTutorial({ isOpen, onClose, onComplete }: OnboardingTu
 
   const currentStepData = steps[currentStep];
 
+  // Debug rendering
+  if (isOpen) {
+    console.log('🎨 ONBOARDING TUTORIAL - Rendering dialog');
+    console.log('📄 Current step data:', currentStepData);
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" style={{ zIndex: 9999 }}>
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
               🚀 Getting Started Guide
             </DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleComplete}>
+                Skip All
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
