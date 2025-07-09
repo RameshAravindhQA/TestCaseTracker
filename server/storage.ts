@@ -793,7 +793,9 @@ class MemStorage implements IStorage {
       createdAt: now,
       updatedAt: now
 ```tool_code
-    };    this.customers.set(id, customer);
+    };
+    
+    this.customers.set(id, customer);
     return customer;
   }
 
@@ -1945,7 +1947,8 @@ class MemStorage implements IStorage {
     return this.githubConfigs.find(config => config.projectId === projectId);
   }
 
-  async createGitHubConfig(data: any): Promise<any> {    const config = {
+  async createGitHubConfig(data: any): Promise<any> {
+    const config = {
       id: this.githubConfigs.length + 1,
       ...data,
       createdAt: new Date().toISOString(),

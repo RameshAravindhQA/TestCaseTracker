@@ -105,7 +105,7 @@ async function startServer() {
       serveStatic(app);
     }
 
-    // Start the server on the specified port
+    // Start the server
     httpServer.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://0.0.0.0:${PORT}`);
       console.log(`WebSocket server initialized for real-time chat`);

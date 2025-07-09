@@ -1454,9 +1454,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       logger.info(`Getting messages for chat: ${chatId}, user: ${req.session.userId}`);
       
       // Try to get the conversation - if it doesn't exist, return empty messages array
-      let conversation;
       try {
-        conversation = await storage.getConversation(chatId);
+        const conversation = await storage.getConversation(chatId);
         if (!conversation) {
           logger.warn(`Conversation not found: ${chatId}, returning empty messages`);
           return res.json([]);
@@ -1555,7 +1554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           logger.info('Successfully created conversation:', conversation);
         } catch (createError) {
           logger.error('Error creating conversation:', createError);
-          return res.status(500).json({ error: 'Failed to create conversation' });
+          throw new Error('Failed to create conversation in database');
         }
       } else {
         logger.info('Using existing conversation:', conversation.id);
@@ -1576,7 +1575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       logger.info('Returning conversation:', responseConversation);
-      res.status(201).json(responseConversation);
+      res.json(responseConversation);
     } catch (error) {
       logger.error('Create direct chat error:', error);
       res.status(500).json({ 
