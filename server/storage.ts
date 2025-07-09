@@ -792,11 +792,10 @@ class MemStorage implements IStorage {
       id,
       createdAt: now,
       updatedAt: now
-```tool_code
     };
-    
+
     this.customers.set(id, customer);
-    return customer;
+        return customer;
   }
 
   async getCustomers(): Promise<Customer[]> {

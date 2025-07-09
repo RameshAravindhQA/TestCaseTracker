@@ -15,7 +15,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Start TestCase Tracker"
+runButton = "Start TestCase Tracker Fixed"
 
 [[workflows.workflow]]
 name = "Project"
@@ -43,6 +43,19 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow]]
+name = "Start TestCase Tracker Fixed"
+author = 44790825
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install --silent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
