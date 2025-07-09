@@ -1555,7 +1555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           logger.info('Successfully created conversation:', conversation);
         } catch (createError) {
           logger.error('Error creating conversation:', createError);
-          throw new Error('Failed to create conversation in database');
+          return res.status(500).json({ error: 'Failed to create conversation' });
         }
       } else {
         logger.info('Using existing conversation:', conversation.id);
@@ -1576,7 +1576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       logger.info('Returning conversation:', responseConversation);
-      res.json(responseConversation);
+      res.status(201).json(responseConversation);
     } catch (error) {
       logger.error('Create direct chat error:', error);
       res.status(500).json({ 

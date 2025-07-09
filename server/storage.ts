@@ -2001,8 +2001,9 @@ class MemStorage implements IStorage {
   }
 
   // Conversation and messaging functions
-  async getConversation(id: string): Promise<any | null> {
-    return Array.from(this.conversations.values()).find(conv => conv.id === id) || null;
+  async getConversation(id: string | number): Promise<any | null> {
+    const searchId = typeof id === 'string' ? parseInt(id) : id;
+    return this.conversations.get(searchId) || null;
   }
 
   async getUserConversations(userId: number): Promise<any[]> {
@@ -2037,11 +2038,13 @@ class MemStorage implements IStorage {
 
   async createMessage(messageData: any): Promise<any> {
     const id = this.getNextId();
+    const conversationId = typeof messageData.conversationId === 'string' ? 
+      parseInt(messageData.conversationId) : messageData.conversationId;
+    
     const message = {
       id,
       ...messageData,
-      conversationId: typeof messageData.conversationId === 'string' ? 
-        parseInt(messageData.conversationId) : messageData.conversationId,
+      conversationId,
       type: 'text',
       reactions: [],
       isPinned: false,
@@ -2052,11 +2055,12 @@ class MemStorage implements IStorage {
     this.chatMessages.set(id, message);
 
     // Update conversation's last message
-    const conversation = await this.getConversation(messageData.conversationId);
+    const conversation = this.conversations.get(conversationId);
     if (conversation) {
       conversation.lastMessage = message;
       conversation.lastMessageAt = message.createdAt;
       conversation.updatedAt = message.createdAt;
+      this.conversations.set(conversationId, conversation);
     }
 
     return message;

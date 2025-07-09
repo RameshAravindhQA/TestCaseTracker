@@ -13,6 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { MainLayout } from '@/components/layout/main-layout';
+import { ProjectSelect } from '@/components/ui/project-select';
 
 interface OnlyOfficeDocument {
   id: string;
@@ -55,9 +57,10 @@ export default function TestSheetsPage() {
 
   // Get OnlyOffice documents
   const { data: documents = [], isLoading } = useQuery({
-    queryKey: ['onlyoffice', 'documents'],
+    queryKey: ['onlyoffice', 'documents', selectedProject],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/onlyoffice/documents');
+      const url = selectedProject ? `/api/onlyoffice/documents?projectId=${selectedProject}` : '/api/onlyoffice/documents';
+      const response = await apiRequest('GET', url);
       return response.json();
     }
   });
@@ -206,210 +209,213 @@ export default function TestSheetsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Test Sheets</h1>
-          <p className="text-gray-600">Create and manage test documentation with OnlyOffice</p>
-        </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Document
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Document</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="document-title">Document Title</Label>
-                <Input
-                  id="document-title"
-                  value={newDocumentTitle}
-                  onChange={(e) => setNewDocumentTitle(e.target.value)}
-                  placeholder="Enter document title"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="document-type">Document Type</Label>
-                <Select value={newDocumentType} onValueChange={(value: any) => setNewDocumentType(value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select document type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="h-4 w-4" />
-                        <span>Text Document</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="spreadsheet">
-                      <div className="flex items-center space-x-2">
-                        <FileSpreadsheet className="h-4 w-4" />
-                        <span>Spreadsheet</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="presentation">
-                      <div className="flex items-center space-x-2">
-                        <Presentation className="h-4 w-4" />
-                        <span>Presentation</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="project-select">Project</Label>
-                <Select value={selectedProject?.toString()} onValueChange={(value) => setSelectedProject(parseInt(value))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects?.map((project: Project) => (
-                      <SelectItem key={project.id} value={project.id.toString()}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleCreateDocument}
-                  disabled={createDocumentMutation.isPending}
-                >
-                  {createDocumentMutation.isPending ? 'Creating...' : 'Create'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Tabs defaultValue="documents" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="editor" disabled={!selectedDocument}>
-            Editor {selectedDocument && `- ${selectedDocument.title}`}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="documents" className="space-y-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading documents...</p>
-              </div>
-            </div>
-          ) : documents.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <FileSpreadsheet className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Documents Found</h3>
-                <p className="text-gray-600 mb-4">Create your first test sheet to get started</p>
-                <Button onClick={() => setIsCreateDialogOpen(true)}>
+    <MainLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Test Sheets</h1>
+            <p className="text-gray-600">Create and manage test documentation with OnlyOffice</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <ProjectSelect
+              selectedProjectId={selectedProject}
+              onProjectChange={setSelectedProject}
+              projects={projects}
+            />
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button disabled={!selectedProject}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Document
                 </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {documents.map((document: OnlyOfficeDocument) => (
-                <Card key={document.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-2">
-                        {getDocumentTypeIcon(document.type)}
-                        <CardTitle className="text-sm font-medium truncate">
-                          {document.title}
-                        </CardTitle>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {getDocumentTypeLabel(document.type)}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-2">
-                      <p className="text-xs text-gray-500">
-                        Created: {new Date(document.createdAt).toLocaleDateString()}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Modified: {new Date(document.lastModified).toLocaleDateString()}
-                      </p>
-                      <div className="flex space-x-2">
-                        <Button 
-                          size="sm" 
-                          className="flex-1"
-                          onClick={() => openDocument(document)}
-                        >
-                          <Edit className="h-3 w-3 mr-1" />
-                          Edit
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Share className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create New Document</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="document-title">Document Title</Label>
+                    <Input
+                      id="document-title"
+                      value={newDocumentTitle}
+                      onChange={(e) => setNewDocumentTitle(e.target.value)}
+                      placeholder="Enter document title"
+                    />
+                  </div>
 
-        <TabsContent value="editor">
-          {selectedDocument ? (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center space-x-2">
-                    {getDocumentTypeIcon(selectedDocument.type)}
-                    <span>{selectedDocument.title}</span>
-                  </CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
+                  <div>
+                    <Label htmlFor="document-type">Document Type</Label>
+                    <Select value={newDocumentType} onValueChange={(value: any) => setNewDocumentType(value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select document type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="h-4 w-4" />
+                            <span>Text Document</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="spreadsheet">
+                          <div className="flex items-center space-x-2">
+                            <FileSpreadsheet className="h-4 w-4" />
+                            <span>Spreadsheet</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="presentation">
+                          <div className="flex items-center space-x-2">
+                            <Presentation className="h-4 w-4" />
+                            <span>Presentation</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                      Cancel
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <Share className="h-4 w-4 mr-2" />
-                      Share
+                    <Button 
+                      onClick={handleCreateDocument}
+                      disabled={createDocumentMutation.isPending || !selectedProject}
+                    >
+                      {createDocumentMutation.isPending ? 'Creating...' : 'Create'}
                     </Button>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div 
-                  id="onlyoffice-editor" 
-                  className="w-full border border-gray-200 rounded-lg"
-                  style={{ minHeight: '600px' }}
-                />
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <FileSpreadsheet className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Document Selected</h3>
-                <p className="text-gray-600">Select a document from the Documents tab to start editing</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        {!selectedProject ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <FileSpreadsheet className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Project</h3>
+              <p className="text-gray-600">Choose a project to view and create test sheets</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Tabs defaultValue="documents" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="documents">Documents</TabsTrigger>
+              <TabsTrigger value="editor" disabled={!selectedDocument}>
+                Editor {selectedDocument && `- ${selectedDocument.title}`}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="documents" className="space-y-4">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading documents...</p>
+                  </div>
+                </div>
+              ) : documents.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <FileSpreadsheet className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Documents Found</h3>
+                    <p className="text-gray-600 mb-4">Create your first test sheet to get started</p>
+                    <Button onClick={() => setIsCreateDialogOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Document
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {documents.map((document: OnlyOfficeDocument) => (
+                    <Card key={document.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center space-x-2">
+                            {getDocumentTypeIcon(document.type)}
+                            <CardTitle className="text-sm font-medium truncate">
+                              {document.title}
+                            </CardTitle>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {getDocumentTypeLabel(document.type)}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="space-y-2">
+                          <p className="text-xs text-gray-500">
+                            Created: {new Date(document.createdAt).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Modified: {new Date(document.lastModified).toLocaleDateString()}
+                          </p>
+                          <div className="flex space-x-2">
+                            <Button 
+                              size="sm" 
+                              className="flex-1"
+                              onClick={() => openDocument(document)}
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                            <Button size="sm" variant="outline">
+                              <Share className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="editor">
+              {selectedDocument ? (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center space-x-2">
+                        {getDocumentTypeIcon(selectedDocument.type)}
+                        <span>{selectedDocument.title}</span>
+                      </CardTitle>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm">
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Share className="h-4 w-4 mr-2" />
+                          Share
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div 
+                      id="onlyoffice-editor" 
+                      className="w-full border border-gray-200 rounded-lg"
+                      style={{ minHeight: '600px' }}
+                    />
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <FileSpreadsheet className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Document Selected</h3>
+                    <p className="text-gray-600">Select a document from the Documents tab to start editing</p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
+    </MainLayout>
   );
 }
 

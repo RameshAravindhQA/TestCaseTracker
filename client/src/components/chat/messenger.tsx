@@ -798,8 +798,15 @@ export function Messenger() {
   }
 
   return (
-    <div className="h-full bg-white">
-      <div className="flex h-full">
+    <div className="h-full w-full bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Messenger</h1>
+        <p className="text-gray-600 dark:text-gray-400">Communicate with your team members</p>
+      </div>
+      <div className="flex-1 flex overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow"
+        ref={messengerRef}
+      >
+        <div className="flex h-full">
         {/* Conversations Sidebar */}
         <div className="w-80 border-r border-gray-200 flex flex-col">
           {/* Header */}
@@ -1099,6 +1106,7 @@ export function Messenger() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
