@@ -1,0 +1,410 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 20px;
+    border: 2px solid transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground));
+  }
+}
+
+:root {
+  /* Default light theme with blue primary color */
+  --background: 0 0% 100%;
+  --foreground: 20 14.3% 4.1%;
+  --muted: 60 4.8% 95.9%;
+  --muted-foreground: 25 5.3% 44.7%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 14.3% 4.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 20 14.3% 4.1%;
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --primary: 207 90% 54%;
+  --primary-foreground: 211 100% 99%;
+  --secondary: 60 4.8% 95.9%;
+  --secondary-foreground: 24 9.8% 10%;
+  --accent: 60 4.8% 95.9%;
+  --accent-foreground: 24 9.8% 10%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 20 14.3% 4.1%;
+  --radius: 0.5rem;
+}
+
+/* Dark theme - using dark grey instead of black */
+.dark {
+  --background: 240 10% 13%; /* Dark grey instead of almost black */
+  --foreground: 0 0% 98%;
+  --muted: 240 3.7% 20%;
+  --muted-foreground: 240 5% 75%;
+  --popover: 240 10% 13%;
+  --popover-foreground: 0 0% 98%;
+  --card: 240 10% 16%;
+  --card-foreground: 0 0% 98%;
+  --border: 240 3.7% 25%;
+  --input: 240 3.7% 25%;
+  --primary: 207 90% 54%;
+  --primary-foreground: 211 100% 99%;
+  --secondary: 240 3.7% 20%;
+  --secondary-foreground: 0 0% 98%;
+  --accent: 240 3.7% 20%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 40%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 240 4.9% 83.9%;
+  --radius: 0.5rem;
+}
+
+/* Theme color variations */
+/* Blue theme is default */
+
+/* Blue Theme - Default */
+.theme-blue {
+  --primary: 217 91% 60%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 217 91% 60%;
+  --accent: 217 91% 95%;
+  --accent-foreground: 217 91% 35%;
+}
+.dark.theme-blue {
+  --primary: 217 91% 60%;
+  --ring: 217 91% 60%;
+  --accent: 217 91% 95%;
+  --accent-foreground: 217 91% 35%;
+}
+
+/* Purple Theme */
+.theme-purple {
+  --primary: 270 70% 55%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 270 70% 55%;
+  --accent: 270 40% 90%;
+  --accent-foreground: 270 70% 30%;
+}
+.dark.theme-purple {
+  --primary: 270 70% 55%;
+  --ring: 270 70% 55%;
+  --accent: 270 40% 90%;
+  --accent-foreground: 270 70% 30%;
+}
+
+/* Teal Theme */
+.theme-teal {
+  --primary: 175 70% 41%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 175 70% 41%;
+  --accent: 175 40% 90%;
+  --accent-foreground: 175 70% 25%;
+}
+.dark.theme-teal {
+  --primary: 175 70% 41%;
+  --ring: 175 70% 41%;
+  --accent: 175 40% 90%;
+  --accent-foreground: 175 70% 25%;
+}
+
+/* Green Theme */
+.theme-green {
+  --primary: 142 76% 36%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 142 76% 36%;
+  --accent: 142 76% 90%;
+  --accent-foreground: 142 76% 25%;
+}
+.dark.theme-green {
+  --primary: 142 76% 36%;
+  --ring: 142 76% 36%;
+  --accent: 142 76% 90%;
+  --accent-foreground: 142 76% 25%;
+}
+
+/* Red Theme */
+.theme-red {
+  --primary: 0 91% 65%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 0 91% 65%;
+  --accent: 0 91% 95%;
+  --accent-foreground: 0 91% 35%;
+}
+.dark.theme-red {
+  --primary: 0 91% 65%;
+  --ring: 0 91% 65%;
+  --accent: 0 91% 95%;
+  --accent-foreground: 0 91% 35%;
+}
+
+/* Orange Theme */
+.theme-orange {
+  --primary: 27 96% 61%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 27 96% 61%;
+  --accent: 27 96% 95%;
+  --accent-foreground: 27 96% 35%;
+}
+.dark.theme-orange {
+  --primary: 27 96% 61%;
+  --ring: 27 96% 61%;
+  --accent: 27 96% 95%;
+  --accent-foreground: 27 96% 35%;
+}
+
+/* Pink Theme */
+.theme-pink {
+  --primary: 330 81% 60%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 330 81% 60%;
+  --accent: 330 81% 95%;
+  --accent-foreground: 330 81% 40%;
+}
+.dark.theme-pink {
+  --primary: 330 81% 60%;
+  --ring: 330 81% 60%;
+  --accent: 330 81% 95%;
+  --accent-foreground: 330 81% 40%;
+}
+
+/* Indigo Theme */
+.theme-indigo {
+  --primary: 240 81% 60%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 240 81% 60%;
+  --accent: 240 81% 95%;
+  --accent-foreground: 240 81% 40%;
+}
+.dark.theme-indigo {
+  --primary: 240 81% 60%;
+  --ring: 240 81% 60%;
+  --accent: 240 81% 95%;
+  --accent-foreground: 240 81% 40%;
+}
+
+/* Amber Theme */
+.theme-amber {
+  --primary: 45 93% 55%;
+  --primary-foreground: 0 0% 10%;
+  --ring: 45 93% 55%;
+  --accent: 45 93% 95%;
+  --accent-foreground: 45 93% 30%;
+}
+.dark.theme-amber {
+  --primary: 45 93% 55%;
+  --ring: 45 93% 55%;
+  --accent: 45 93% 95%;
+  --accent-foreground: 45 93% 30%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Make input borders more visible in dark mode */
+  .dark input, 
+  .dark textarea, 
+  .dark select {
+    @apply border-gray-500;
+    @apply text-white;
+  }
+
+  /* Ensure all user input text is white in dark mode */
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    @apply text-gray-400;
+  }
+
+  /* Animation transitions for UI elements */
+  .animate-transition {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Pulse animation for active elements */
+  .animate-pulse-subtle {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  /* Toast container positioning - move to upper right */
+  :root {
+    --toastify-toast-width: 320px;
+    --toastify-toast-offset: 1rem;
+  }
+
+  div[data-sonner-toaster][data-position*="right"] {
+    right: var(--toastify-toast-offset);
+    top: var(--toastify-toast-offset);
+    bottom: auto;
+  }
+}
+
+/* Dark mode styles */
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 84% 4.9%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 75.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 25.5%;
+  --input: 217.2 32.6% 15.5%;
+  --ring: 212.7 26.8% 83.9%;
+  --chart-1: 220 70% 50%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
+}
+
+/* Dark mode input and text visibility fixes */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: hsl(var(--input));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .bg-background {
+  color: hsl(var(--foreground));
+}
+
+.dark .text-foreground {
+  color: hsl(var(--foreground));
+}
+
+.dark th,
+.dark td {
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--border));
+}
+
+.dark .border {
+  border-color: hsl(var(--border));
+}
+
+/* Dark mode specific component fixes */
+.dark [data-radix-collection-item] {
+  color: hsl(var(--foreground));
+}
+
+.dark [role="menuitem"],
+.dark [role="option"] {
+  color: hsl(var(--foreground));
+}
+
+.dark .text-gray-500 {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .text-gray-600 {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .text-gray-700 {
+  color: hsl(var(--foreground));
+}
+
+.dark .text-gray-800 {
+  color: hsl(var(--foreground));
+}
+
+.dark .text-gray-900 {
+  color: hsl(var(--foreground));
+}
+
+/* Matrix column header rotation */
+.writing-mode-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+/* Matrix table styling */
+.matrix-table th:not(:first-child) {
+  width: 80px !important;
+  min-width: 80px !important;
+  max-width: 80px !important;
+  padding: 4px !important;
+}
+
+.matrix-table td:not(:first-child) {
+  width: 80px !important;
+  min-width: 80px !important;
+  max-width: 80px !important;
+  padding: 4px !important;
+}
+
+/* Compact matrix styling */
+.matrix-compact {
+  font-size: 0.75rem;
+}
+
+.matrix-compact .select-trigger {
+  height: 28px;
+  font-size: 0.7rem;
+}
+
+/* Custom scrollbar for matrix */
+.matrix-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.matrix-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.matrix-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.matrix-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
