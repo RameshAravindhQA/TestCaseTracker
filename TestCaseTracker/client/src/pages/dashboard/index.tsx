@@ -294,15 +294,15 @@ export function DashboardPage() {
   useEffect(() => {
     const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
     
-    // If user has no projects and hasn't completed onboarding, show it
-    if (user && !hasCompletedOnboarding && projects && projects.length === 0 && !isProjectsLoading) {
+    // Always show tutorial for new users, regardless of projects
+    if (user && !hasCompletedOnboarding && !isProjectsLoading) {
       const timer = setTimeout(() => {
         setIsOnboardingOpen(true);
       }, 1500);
       
       return () => clearTimeout(timer);
     }
-  }, [user, projects, isProjectsLoading]);
+  }, [user, isProjectsLoading]);
 
 const handleWelcomeClose = () => {
     setIsWelcomeOpen(false);

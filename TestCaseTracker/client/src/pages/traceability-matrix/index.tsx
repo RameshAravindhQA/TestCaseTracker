@@ -540,7 +540,7 @@ export default function TraceabilityMatrixPage() {
             />
           </div>
           <Card>
-            <CardContent className="pt-6 text-center">
+            <CardContent className="pt-4 text-center">
               <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 {!projects || projects.length === 0 ? 'No Projects Available' : 'No Project Selected'}
@@ -650,7 +650,7 @@ export default function TraceabilityMatrixPage() {
 
         {!selectedProjectId || !projects || projects.length === 0 ? (
           <Card>
-            <CardContent className="pt-6 text-center">
+            <CardContent className="pt-4 text-center">
               <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 {!projects || projects.length === 0 ? 'No Projects Available' : 'No Project Selected'}
@@ -814,7 +814,7 @@ export default function TraceabilityMatrixPage() {
               </Card>
             ) : (
               <Card>
-                <CardContent className="pt-6 text-center">
+                <CardContent className="pt-4 text-center">
                   <FileText className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900">No modules available</h3>
                   <p className="mt-1 text-sm text-gray-500">

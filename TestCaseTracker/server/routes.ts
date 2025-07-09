@@ -902,8 +902,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/projects/:projectId/matrix/markers", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
-      // TODO: Implement getCustomMarkers in storage
-      res.json([]);
+      const markers = await storage.getCustomMarkers(projectId);
+      res.json(markers);
     } catch (error) {
       console.error("Get custom markers error:", error);
       res.status(500).json({ message: "Failed to fetch custom markers" });
@@ -913,13 +913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
     try {
       const markerData = req.body;
-      const newMarker = {
-        id: `marker-${Date.now()}`,
-        ...markerData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      // TODO: Implement createCustomMarker in storage
+      const newMarker = await storage.createCustomMarker(markerData);
       res.status(201).json(newMarker);
     } catch (error) {
       console.error("Create custom marker error:", error);
@@ -957,8 +951,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/projects/:projectId/matrix/cells", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
-      // TODO: Implement getMatrixCells in storage
-      res.json([]);
+      const cells = await storage.getMatrixCells(projectId);
+      res.json(cells);
     } catch (error) {
       console.error("Get matrix cells error:", error);
       res.status(500).json({ message: "Failed to fetch matrix cells" });
@@ -968,13 +962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
     try {
       const cellData = req.body;
-      const newCell = {
-        id: `cell-${Date.now()}`,
-        ...cellData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      // TODO: Implement createMatrixCell in storage
+      const newCell = await storage.createMatrixCell(cellData);
       res.status(201).json(newCell);
     } catch (error) {
       console.error("Create matrix cell error:", error);
