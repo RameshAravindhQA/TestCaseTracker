@@ -106,6 +106,7 @@ export function Messenger() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const messengerRef = useRef<HTMLDivElement>(null);
 
   // Initialize WebSocket connection
   useEffect(() => {
