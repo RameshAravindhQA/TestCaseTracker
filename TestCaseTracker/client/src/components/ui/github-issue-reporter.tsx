@@ -118,9 +118,13 @@ export function GitHubIssueReporter() {
     const newX = e.clientX - dragOffset.x;
     const newY = e.clientY - dragOffset.y;
     
-    // Constrain to viewport
-    const maxX = window.innerWidth - 200;
-    const maxY = window.innerHeight - 200;
+    // Constrain to viewport with proper boundaries
+    const element = draggableRef.current;
+    if (!element) return;
+    
+    const rect = element.getBoundingClientRect();
+    const maxX = window.innerWidth - rect.width;
+    const maxY = window.innerHeight - rect.height;
     
     setPosition({
       x: Math.max(0, Math.min(newX, maxX)),

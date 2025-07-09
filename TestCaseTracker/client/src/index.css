@@ -365,19 +365,31 @@
   text-orientation: mixed;
 }
 
+.rotate-270 {
+  transform: rotate(270deg);
+  transform-origin: center;
+}
+
 /* Matrix table styling */
 .matrix-table th:not(:first-child) {
-  width: 80px !important;
-  min-width: 80px !important;
-  max-width: 80px !important;
-  padding: 4px !important;
+  width: 60px !important;
+  min-width: 60px !important;
+  max-width: 60px !important;
+  padding: 0.25rem !important;
 }
 
 .matrix-table td:not(:first-child) {
-  width: 80px !important;
-  min-width: 80px !important;
-  max-width: 80px !important;
-  padding: 4px !important;
+  width: 60px !important;
+  min-width: 60px !important;
+  max-width: 60px !important;
+  padding: 0.25rem !important;
+  text-align: center !important;
+}
+
+.matrix-table td:first-child {
+  padding: 0.5rem !important;
+  text-align: center !important;
+  font-weight: 500 !important;
 }
 
 /* Compact matrix styling */

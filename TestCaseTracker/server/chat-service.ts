@@ -102,25 +102,33 @@ class ChatService extends EventEmitter {
   }
 
   async createChatMessage(messageData: any): Promise<ChatMessage> {
-    const chatMessage: ChatMessage = {
-      id: Date.now(),
-      projectId: messageData.conversationId || 1,
-      userId: messageData.userId,
-      userName: messageData.userName,
-      userAvatar: undefined,
-      message: messageData.message,
-      timestamp: new Date(),
-      type: messageData.type || 'text',
-      mentionedUsers: this.extractMentions(messageData.message),
-    };
+    try {
+      const chatMessage: ChatMessage = {
+        id: Date.now(),
+        projectId: messageData.conversationId || 1,
+        userId: messageData.userId,
+        userName: messageData.userName,
+        userAvatar: undefined,
+        message: messageData.message,
+        timestamp: new Date(),
+        type: messageData.type || 'text',
+        mentionedUsers: this.extractMentions(messageData.message),
+      };
 
-    // Store message in database
-    await storage.createChatMessage({
-      ...chatMessage,
-      conversationId: messageData.conversationId
-    });
+      // Store message in database with proper error handling
+      const savedMessage = await storage.createChatMessage({
+        ...chatMessage,
+        conversationId: messageData.conversationId
+      });
 
-    return chatMessage;
+      return {
+        ...chatMessage,
+        id: savedMessage.id
+      };
+    } catch (error) {
+      console.error('Error creating chat message:', error);
+      throw new Error('Failed to create chat message');
+    }
   }
 }
 

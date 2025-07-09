@@ -405,6 +405,9 @@ export function Messenger() {
       case 'connected':
         console.log('WebSocket connected:', data.message);
         break;
+      case 'pong':
+        // Heartbeat response, no action needed
+        break;
       case 'error':
         console.error('WebSocket error:', data.error);
         toast({

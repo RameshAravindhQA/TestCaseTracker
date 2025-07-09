@@ -736,7 +736,7 @@ export default function TraceabilityMatrixPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto border rounded-lg">
-                    <Table>
+                    <Table className="matrix-table">
                       <TableHeader>
                         <TableRow className="bg-gray-50">
                           <TableHead className="w-[200px] sticky left-0 bg-gray-50 z-10 border-r-2 border-gray-200 font-semibold">
@@ -746,9 +746,9 @@ export default function TraceabilityMatrixPage() {
                             </div>
                           </TableHead>
                           {modules.map(module => (
-                            <TableHead key={module.id} className="text-center w-[80px] bg-gray-50 border-r border-gray-200 p-1">
-                              <div className="writing-mode-vertical h-32 flex items-center justify-center">
-                                <div className="transform -rotate-90 whitespace-nowrap font-medium text-xs" title={module.name}>
+                            <TableHead key={module.id} className="text-center w-[60px] bg-gray-50 border-r border-gray-200 p-1">
+                              <div className="h-24 flex items-center justify-center">
+                                <div className="transform rotate-270 whitespace-nowrap font-medium text-xs" title={module.name}>
                                   {module.name}
                                 </div>
                               </div>
@@ -759,18 +759,10 @@ export default function TraceabilityMatrixPage() {
                       <TableBody>
                         {modules.map((rowModule, rowIndex) => (
                           <TableRow key={rowModule.id} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
-                            <TableCell className="sticky left-0 bg-inherit z-10 border-r-2 border-gray-200 p-4">
-                              <div className="flex items-center gap-2">
+                            <TableCell className="sticky left-0 bg-inherit z-10 border-r-2 border-gray-200 p-2 text-center">
+                              <div className="flex items-center justify-center gap-2">
                                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <div>
-                                  <div className="font-medium text-sm">{rowModule.name}</div>
-                                  <div className="text-xs text-muted-foreground">Row {rowModule.id}</div>
-                                  {rowModule.description && (
-                                    <div className="text-xs text-muted-foreground truncate max-w-[150px]" title={rowModule.description}>
-                                      {rowModule.description}
-                                    </div>
-                                  )}
-                                </div>
+                                <div className="font-medium text-sm">{rowModule.name}</div>
                               </div>
                             </TableCell>
                             {modules.map(colModule => {
