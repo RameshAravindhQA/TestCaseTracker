@@ -110,12 +110,11 @@ async function startServer() {
       console.log(`✅ Server running on http://0.0.0.0:${PORT}`);
       console.log(`✅ WebSocket server initialized for real-time chat`);
       console.log(`✅ Application ready for use`);
+      logger.info(`Server started on port ${PORT} with WebSocket support`);
+      log(`serving on port ${PORT}`);
     }).on('error', (error) => {
       console.error('❌ Server failed to start:', error);
       process.exit(1);
-    });
-      logger.info(`Server started on port ${PORT} with WebSocket support`);
-      log(`serving on port ${PORT}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);
