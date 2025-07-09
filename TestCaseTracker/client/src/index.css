@@ -1,3 +1,45 @@
+
+/* Fix for dialog overlay issues */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.dialog-content {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Prevent body scroll when dialog is open */
+body.dialog-open {
+  overflow: hidden;
+}
+
+/* Fix for tutorial overlay */
+[data-state="open"] {
+  pointer-events: auto !important;
+}
+
+/* Ensure dialog content is always visible */
+.dialog-content * {
+  color: inherit;
+  background: inherit;
+}
+
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

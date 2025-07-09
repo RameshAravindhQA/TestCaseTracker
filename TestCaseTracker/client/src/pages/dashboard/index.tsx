@@ -269,12 +269,40 @@ import {
       )}
 
       {/* Onboarding Tutorial */}
-      {isOnboardingOpen && (
+      {isOnboardingOpen && !isWelcomeOpen && !isUserGuideOpen && (
         <OnboardingTutorial
           isOpen={isOnboardingOpen}
-          onClose={() => setIsOnboardingOpen(false)}
+          onClose={() => {
+            console.log('🎓 Onboarding dialog closed');
+            setIsOnboardingOpen(false);
+          }}
           onComplete={handleOnboardingComplete}
         />
+      )}
+
+      {/* Tutorial Error Handler */}
+      {tutorialError && (
+        <div className="fixed top-4 right-4 z-[10001] bg-red-500 text-white p-4 rounded-lg shadow-lg">
+          <div className="flex items-center justify-between">
+            <p>Tutorial Error: {tutorialError}</p>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setTutorialError(null)}
+              className="text-white hover:text-red-200"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={resetTutorialState}
+            className="mt-2 text-white border-white hover:bg-white hover:text-red-500"
+          >
+            Reset Tutorial
+          </Button>
+        </div>
       )}
 
       {/* User Guide Dialog */}
@@ -323,7 +351,11 @@ export function DashboardPage() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
   const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false);
+  const [tutorialError, setTutorialError] = useState<string | null>(null);
   const { user } = useAuth();
+
+  // Safety mechanism to prevent multiple overlays
+  const hasActiveOverlay = isWelcomeOpen || isOnboardingOpen || isUserGuideOpen;
 
   // Debug logging
   useEffect(() => {
@@ -398,49 +430,75 @@ export function DashboardPage() {
       isProjectsLoading
     });
 
-    if (!hasSeenWelcome && user) {
+    // Only show dialogs if user is authenticated and not in error state
+    if (!user) {
+      console.log('❌ No user, skipping tutorial');
+      return;
+    }
+
+    // Show welcome dialog first
+    if (!hasSeenWelcome) {
       console.log('🎉 Setting welcome dialog to open');
       setIsWelcomeOpen(true);
+      return; // Don't show onboarding until welcome is closed
     }
 
     // Show onboarding for new users who haven't completed it
-    if (user && !hasCompletedOnboarding && !isProjectsLoading) {
+    if (!hasCompletedOnboarding && !isOnboardingOpen) {
       console.log('🚀 Preparing to show onboarding tutorial');
-      // Delay to ensure proper loading
+      // Short delay to ensure DOM is ready
       const timer = setTimeout(() => {
         console.log('⏰ Opening onboarding tutorial after delay');
         setIsOnboardingOpen(true);
-      }, 2000);
+      }, 1000);
       
       return () => {
         console.log('🧹 Cleaning up onboarding timer');
         clearTimeout(timer);
       };
     }
-
-    // Timeout mechanism to prevent infinite loading
-    if (user && !hasCompletedOnboarding && isProjectsLoading) {
-      console.log('⏳ Projects still loading, setting timeout');
-      const timeoutTimer = setTimeout(() => {
-        console.log('⏰ Timeout reached, showing onboarding anyway');
-        setIsOnboardingOpen(true);
-      }, 5000);
-      
-      return () => {
-        console.log('🧹 Cleaning up timeout timer');
-        clearTimeout(timeoutTimer);
-      };
-    }
-  }, [user, isProjectsLoading]);
+  }, [user, isProjectsLoading, isOnboardingOpen]);
 
 const handleWelcomeClose = () => {
     console.log('👋 Welcome dialog closed');
     setIsWelcomeOpen(false);
     localStorage.setItem('hasSeenWelcome', 'true');
+    
+    // After welcome is closed, check if we should show onboarding
+    const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
+    if (!hasCompletedOnboarding && user) {
+      console.log('🎓 Showing onboarding after welcome close');
+      setTimeout(() => {
+        setIsOnboardingOpen(true);
+      }, 500);
+    }
   };
 
   const handleOnboardingComplete = () => {
-    console.log('✅ Onboarding completed');
-    localStorage.setItem('hasCompletedOnboarding', 'true');
+    try {
+      console.log('✅ Onboarding completed');
+      localStorage.setItem('hasCompletedOnboarding', 'true');
+      setIsOnboardingOpen(false);
+      setTutorialError(null);
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      setTutorialError('Failed to complete onboarding');
+      setIsOnboardingOpen(false);
+    }
+  };
+
+  const handleTutorialError = (error: string) => {
+    console.error('Tutorial error:', error);
+    setTutorialError(error);
+    setIsWelcomeOpen(false);
     setIsOnboardingOpen(false);
+    setIsUserGuideOpen(false);
+  };
+
+  const resetTutorialState = () => {
+    console.log('🔄 Resetting tutorial state');
+    setIsWelcomeOpen(false);
+    setIsOnboardingOpen(false);
+    setIsUserGuideOpen(false);
+    setTutorialError(null);
   };

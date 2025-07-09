@@ -89,27 +89,41 @@ export function OnboardingTutorial({ isOpen, onClose, onComplete }: OnboardingTu
   ];
 
   const handleNext = () => {
-    console.log('⏭️ Next button clicked, current step:', currentStep);
-    if (currentStep < steps.length - 1) {
-      setCompletedSteps([...completedSteps, currentStep]);
-      setCurrentStep(currentStep + 1);
-    } else {
-      handleComplete();
+    try {
+      console.log('⏭️ Next button clicked, current step:', currentStep);
+      if (currentStep < steps.length - 1) {
+        setCompletedSteps([...completedSteps, currentStep]);
+        setCurrentStep(currentStep + 1);
+      } else {
+        handleComplete();
+      }
+    } catch (error) {
+      console.error('Error in handleNext:', error);
     }
   };
 
   const handlePrevious = () => {
-    console.log('⏮️ Previous button clicked, current step:', currentStep);
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+    try {
+      console.log('⏮️ Previous button clicked, current step:', currentStep);
+      if (currentStep > 0) {
+        setCurrentStep(currentStep - 1);
+      }
+    } catch (error) {
+      console.error('Error in handlePrevious:', error);
     }
   };
 
   const handleComplete = () => {
-    console.log('🎉 Tutorial completed');
-    setCompletedSteps([...completedSteps, currentStep]);
-    onComplete();
-    onClose();
+    try {
+      console.log('🎉 Tutorial completed');
+      setCompletedSteps([...completedSteps, currentStep]);
+      onComplete();
+      onClose();
+    } catch (error) {
+      console.error('Error in handleComplete:', error);
+      // Force close even if there's an error
+      onClose();
+    }
   };
 
   const handleStepClick = (stepIndex: number) => {
@@ -124,9 +138,27 @@ export function OnboardingTutorial({ isOpen, onClose, onComplete }: OnboardingTu
     console.log('📄 Current step data:', currentStepData);
   }
 
+  // If not open, don't render anything
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" style={{ zIndex: 9999 }}>
+    <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white" 
+        style={{ 
+          zIndex: 10000,
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+          border: '1px solid #e5e7eb'
+        }}
+      >
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
