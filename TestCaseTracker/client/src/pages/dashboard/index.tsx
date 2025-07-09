@@ -126,6 +126,24 @@ import {
                 <p className="text-muted-foreground mt-1">Overview of your testing projects and metrics</p>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => setIsUserGuideOpen(true)}
+                variant="outline" 
+                className="flex items-center gap-2"
+              >
+                <BookOpen className="h-4 w-4" />
+                User Guide
+              </Button>
+              <Button 
+                onClick={() => setIsOnboardingOpen(true)}
+                variant="outline" 
+                className="flex items-center gap-2"
+              >
+                <Play className="h-4 w-4" />
+                Tutorial
+              </Button>
+            </div>
           </div>
         </div>
 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -249,14 +267,25 @@ import {
           onComplete={handleOnboardingComplete}
         />
       )}
+
+      {/* User Guide Dialog */}
+      {isUserGuideOpen && (
+        <UserGuideDialog
+          isOpen={isUserGuideOpen}
+          onClose={() => setIsUserGuideOpen(false)}
+        />
+      )}
     </MainLayout>
   );
 }
 import { DashboardWelcomeDialog } from "@/components/ui/dashboard-welcome-dialog";
 import { OnboardingTutorial } from "@/components/onboarding/onboarding-tutorial";
+import { UserGuideDialog } from "@/components/ui/user-guide-dialog";
+import { BookOpen, Download, Play } from "lucide-react";
 export function DashboardPage() {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
   const { user } = useAuth();
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -280,25 +309,11 @@ export function DashboardPage() {
     }
 
     // Show onboarding for new users who haven't completed it
-    if (user && !hasCompletedOnboarding) {
+    if (user && !hasCompletedOnboarding && !isProjectsLoading) {
       // Delay to ensure proper loading
       const timer = setTimeout(() => {
         setIsOnboardingOpen(true);
       }, 2000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [user]);
-
-  // Separate effect for projects-based onboarding trigger
-  useEffect(() => {
-    const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
-    
-    // Always show tutorial for new users, regardless of projects
-    if (user && !hasCompletedOnboarding && !isProjectsLoading) {
-      const timer = setTimeout(() => {
-        setIsOnboardingOpen(true);
-      }, 1500);
       
       return () => clearTimeout(timer);
     }

@@ -39,7 +39,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd TestCaseTracker-1 && npm run dev"
+args = "cd TestCaseTracker && npm run dev"
 
 [[ports]]
 localPort = 3000
