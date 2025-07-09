@@ -116,3 +116,52 @@ function moveFiles() {
 
 // Run the organization
 moveFiles();
+const fs = require('fs');
+const path = require('path');
+
+console.log('🔧 Organizing project structure...');
+
+// Function to safely remove directory
+function removeDir(dirPath) {
+  if (fs.existsSync(dirPath)) {
+    try {
+      fs.rmSync(dirPath, { recursive: true, force: true });
+      console.log(`✅ Removed: ${dirPath}`);
+    } catch (error) {
+      console.log(`⚠️  Could not remove ${dirPath}: ${error.message}`);
+    }
+  }
+}
+
+// Function to safely remove file
+function removeFile(filePath) {
+  if (fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+      console.log(`✅ Removed: ${filePath}`);
+    } catch (error) {
+      console.log(`⚠️  Could not remove ${filePath}: ${error.message}`);
+    }
+  }
+}
+
+// Remove duplicate directories
+console.log('\n🗂️  Removing duplicate directories...');
+removeDir('./TestCaseTracker');
+
+// Remove unnecessary files
+console.log('\n📄 Removing unnecessary files...');
+removeFile('./pyproject.toml');
+removeFile('./uv.lock');
+removeFile('./run-messenger-tests.js');
+removeFile('./run.js');
+removeFile('./simple-start.js');
+removeFile('./start-app.js');
+
+console.log('\n✨ Project organization complete!');
+console.log('\n📁 Current structure:');
+console.log('├── client/          (Frontend React app)');
+console.log('├── server/          (Backend Express app)');
+console.log('├── shared/          (Shared types)');
+console.log('├── uploads/         (File uploads)');
+console.log('└── package.json     (Main dependencies)');

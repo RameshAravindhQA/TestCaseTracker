@@ -952,8 +952,7 @@ export function Messenger() {
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-900 truncate">
-                              {conversation.name}
+                            <h3 className="text-sm font-medium text-gray-900                              {conversation.name}
                             </h3>
                           </div>
                           {conversation.lastMessage && (
