@@ -1,0 +1,36 @@
+rest-express@1.0.0 dev
+> tsx server/index.ts
+
+✅ Database connection established for matrix operations
+🚀 Starting Test Case Management System...
+Profile pictures directory exists: /home/runner/workspace/TestCaseTracker/uploads/profile-pictures
+Documents directory exists: /home/runner/workspace/TestCaseTracker/uploads/documents
+Bug attachments directory exists: /home/runner/workspace/TestCaseTracker/uploads/bug-attachment
+Test file created successfully: /home/runner/workspace/TestCaseTracker/uploads/profile-pictures/test.txt
+Test file removed successfully
+Profile pictures directory exists: /home/runner/workspace/TestCaseTracker/uploads/profile-pictures
+Documents directory exists: /home/runner/workspace/TestCaseTracker/uploads/documents
+Bug attachments directory exists: /home/runner/workspace/TestCaseTracker/uploads/bug-attachment
+Test file created successfully: /home/runner/workspace/TestCaseTracker/uploads/profile-pictures/test.txt
+Test file removed successfully
+Profile pictures directory exists: /home/runner/workspace/TestCaseTracker/uploads/profile-pictures
+Documents directory exists: /home/runner/workspace/TestCaseTracker/uploads/documents
+Bug attachments directory exists: /home/runner/workspace/TestCaseTracker/uploads/bug-attachment
+Test file created successfully: /home/runner/workspace/TestCaseTracker/uploads/profile-pictures/test.txt
+Test file removed successfully
+Profile pictures directory exists: /home/runner/workspace/TestCaseTracker/uploads/profile-pictures
+Documents directory exists: /home/runner/workspace/TestCaseTracker/uploads/documents
+Bug attachments directory exists: /home/runner/workspace/TestCaseTracker/uploads/bug-attachment
+Test file created successfully: /home/runner/workspace/TestCaseTracker/uploads/profile-pictures/test.txt
+Test file removed successfully
+Database not available, running without matrix persistence: password authentication failed for user 'neondb_owner'
+✅ Database initialized successfully
+[2025-07-09T17:27:01.257Z] INFO: WebSocket server started on path /ws
+Server running on http://0.0.0.0:5000
+WebSocket server initialized for real-time chat
+[2025-07-09T17:27:01.397Z] INFO: Server started on port 5000 with WebSocket support
+5:27:01 PM [express] serving on port 5000
+5:27:03 PM [vite] Loading client template from: /home/runner/workspace/TestCaseTracker/client/index.html
+5:27:03 PM [vite] Loading client template from: /home/runner/workspace/TestCaseTracker/client/index.html
+5:27:03 PM [vite] Pre-transform error: Failed to resolve import "react-router-dom" from "client/src/main.tsx?v=7IE7DVABAW6XXXQ2LW3yf". Does the file exist?
+✨ Server stopped successfully
