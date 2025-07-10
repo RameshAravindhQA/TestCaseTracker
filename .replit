@@ -22,4 +22,4 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd TestCaseTracker && node dev.js"
+args = "cd TestCaseTracker && npm install && node dev.js"

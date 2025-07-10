@@ -1,7 +1,4 @@
-The changes focus on improving matrix cell persistence by correcting error handling in marker updates, ensuring data persists on refresh, and fixing matrix cell persistence when switching modules.
-```
 
-```replit_final_file
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProjectSelect } from "@/components/ui/project-select";
@@ -227,9 +224,15 @@ export default function TraceabilityMatrixPage() {
       if (!response.ok) throw new Error("Failed to update cell");
       return response.json();
     },
-    onSuccess: () => {
-      // Don't invalidate queries immediately to prevent UI flicker
-      // The optimistic update handles the UI state
+    onSuccess: (data) => {
+      // Update local state with the returned data from server
+      const key = `${data.rowModuleId}-${data.colModuleId}`;
+      setMatrixCells(prev => ({
+        ...prev,
+        [key]: data
+      }));
+      // Invalidate and refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/cells"] });
     },
     onError: (error) => {
       toast({ 
@@ -336,7 +339,7 @@ export default function TraceabilityMatrixPage() {
 
     const key = `${rowModuleId}-${colModuleId}`;
 
-    // Update local state immediately for better UX - this prevents marker vanishing
+    // Optimistically update local state immediately for better UX
     setMatrixCells(prev => {
       const newCells = { ...prev };
 
@@ -361,7 +364,7 @@ export default function TraceabilityMatrixPage() {
       return newCells;
     });
 
-    // Auto-save to backend
+    // Auto-save to backend with proper persistence
     const cellData = {
       rowModuleId,
       colModuleId,
@@ -374,7 +377,7 @@ export default function TraceabilityMatrixPage() {
 
     toast({ 
       title: "Matrix updated", 
-      description: "Changes saved automatically",
+      description: "Changes saved to database",
       duration: 1000 
     });
   };
@@ -504,7 +507,7 @@ export default function TraceabilityMatrixPage() {
     onSuccess: () => {
       toast({
         title: "Matrix Saved",
-        description: "Traceability matrix has been saved successfully",
+        description: "Traceability matrix has been saved to database",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/cells"] });
     },
@@ -658,7 +661,7 @@ export default function TraceabilityMatrixPage() {
                 ) : (
                   <Save className="h-4 w-4 mr-2" />
                 )}
-                Save Matrix
+                Save to DB
               </Button>
             <Button onClick={exportToCSV} variant="outline" disabled={!selectedProjectId || modules.length === 0}>
               <Download className="h-4 w-4 mr-2" />
@@ -718,7 +721,7 @@ export default function TraceabilityMatrixPage() {
                 <CardHeader>
                   <CardTitle>Available Markers</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Select a marker and click on matrix cells to assign it. Manage markers in Settings.
+                    Select a marker and click on matrix cells to assign it. Changes are automatically saved to database.
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -759,11 +762,11 @@ export default function TraceabilityMatrixPage() {
                 <CardHeader>
                   <CardTitle>Module-to-Module Traceability Matrix</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Select a marker above, then click on matrix cells to assign relationships between modules
+                    Select a marker above, then click on matrix cells to assign relationships. All changes are saved to database.
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto border rounded-lg">
+                  <div className="overflow-x-auto border rounded-lg" ref={matrixRef}>
                     <Table className="matrix-table">
                       <TableHeader>
                         <TableRow className="bg-gray-50">

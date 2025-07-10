@@ -962,11 +962,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
     try {
       const cellData = req.body;
-      const newCell = await storage.createMatrixCell(cellData);
-      res.status(201).json(newCell);
+      
+      // Use createOrUpdateMatrixCell for proper upsert behavior
+      const cell = await storage.createOrUpdateMatrixCell(cellData);
+      
+      if (cell === null) {
+        // Cell was deleted (empty value)
+        res.status(200).json({ message: "Matrix cell removed" });
+      } else {
+        res.status(200).json(cell);
+      }
     } catch (error) {
-      console.error("Create matrix cell error:", error);
-      res.status(500).json({ message: "Failed to create matrix cell" });
+      console.error("Create/update matrix cell error:", error);
+      res.status(500).json({ message: "Failed to save matrix cell" });
     }
   });
 

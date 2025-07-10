@@ -1706,18 +1706,32 @@ class MemStorage implements IStorage {
 
   // Matrix cell operations with proper storage
   async createMatrixCell(data: any): Promise<MatrixCell> {
-    const id = this.getNextId();
     const key = `${data.rowModuleId}-${data.colModuleId}-${data.projectId}`;
-
-    const cell: MatrixCell = {
-      ...data,
-      id: id.toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    this.matrixCells.set(key, cell);
-    return cell;
+    
+    // Check if cell already exists, if so update it
+    const existingCell = this.matrixCells.get(key);
+    
+    if (existingCell) {
+      const updatedCell: MatrixCell = {
+        ...existingCell,
+        ...data,
+        updatedAt: new Date().toISOString()
+      };
+      this.matrixCells.set(key, updatedCell);
+      console.log(`Storage: Updated matrix cell ${key} with value ${data.value}`);
+      return updatedCell;
+    } else {
+      const id = this.getNextId();
+      const cell: MatrixCell = {
+        ...data,
+        id: id.toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      this.matrixCells.set(key, cell);
+      console.log(`Storage: Created matrix cell ${key} with value ${data.value}`);
+      return cell;
+    }
   }
 
   async getMatrixCells(): Promise<MatrixCell[]> {
@@ -2367,6 +2381,15 @@ class MemStorage implements IStorage {
     // Create a unique key for the cell
     const key = `${cellData.rowModuleId}-${cellData.colModuleId}-${cellData.projectId}`;
     
+    // If value is empty or 'no-marker', delete the cell
+    if (!cellData.value || cellData.value === 'no-marker' || cellData.value === '') {
+      const deleted = this.matrixCells.delete(key);
+      if (deleted) {
+        console.log(`Storage: Deleted matrix cell ${key}`);
+      }
+      return null;
+    }
+    
     // Check if cell already exists
     const existingCell = this.matrixCells.get(key);
 
@@ -2378,7 +2401,7 @@ class MemStorage implements IStorage {
         updatedAt: new Date().toISOString()
       };
       this.matrixCells.set(key, updatedCell);
-      console.log(`Storage: Updated matrix cell ${key} with marker ${cellData.markerId}`);
+      console.log(`Storage: Updated matrix cell ${key} with marker ${cellData.value}`);
       return updatedCell;
     } else {
       // Create new cell
@@ -2390,7 +2413,7 @@ class MemStorage implements IStorage {
       };
 
       this.matrixCells.set(key, cell);
-      console.log(`Storage: Created matrix cell ${key} with marker ${cellData.markerId}`);
+      console.log(`Storage: Created matrix cell ${key} with marker ${cellData.value}`);
       return cell;
     }
   }
