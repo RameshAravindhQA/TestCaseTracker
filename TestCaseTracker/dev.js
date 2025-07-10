@@ -1,20 +1,15 @@
 #!/usr/bin/env node
 
-const { spawn } = require('child_process');
-const path = require('path');
-
-// __dirname is already available in CommonJS
+import { spawn } from 'child_process';
+import path from 'path';
 
 console.log('🚀 Starting TestCaseTracker Application...');
 
-// Change to the TestCaseTracker subdirectory
-const appPath = path.join(__dirname, 'TestCaseTracker');
-
-process.chdir(appPath);
+// We're already in the organized_testcase_tracker directory
 console.log('📂 Working directory:', process.cwd());
 
-// Start the server using npm run dev (which uses tsx)
-const server = spawn('npm', ['run', 'dev'], {
+// Start the server using tsx
+const server = spawn('npx', ['tsx', 'server/index.ts'], {
   stdio: 'inherit',
   shell: true,
   env: { 

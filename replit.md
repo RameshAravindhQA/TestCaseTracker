@@ -1,8 +1,8 @@
-# TestCaseTracker - Test Case Management System
+# TestCaseTracker - Replit.md
 
 ## Overview
 
-TestCaseTracker is a comprehensive test case management system built with modern web technologies. It provides a complete solution for managing test cases, bugs, projects, team collaboration, and traceability matrices with real-time communication features.
+TestCaseTracker is a comprehensive test case management system built with TypeScript, React, and Express. It provides a complete solution for managing test cases, bugs, projects, team collaboration, and reporting. The application features a modern web architecture with real-time capabilities, comprehensive testing workflows, and integrated project management tools.
 
 ## User Preferences
 
@@ -11,141 +11,109 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Overall Architecture
-- **Frontend**: React 18+ with TypeScript, built using Vite
-- **Backend**: Express.js with TypeScript running in ES modules mode
-- **Database**: Dual storage system - in-memory for development, PostgreSQL with Drizzle ORM for production
-- **Real-time Features**: WebSocket integration for chat and live collaboration
+- **Frontend**: React 18+ with TypeScript using Vite as the build tool
+- **Backend**: Express.js with TypeScript in ES modules  
+- **Database**: Flexible storage layer with in-memory fallback and PostgreSQL support via Drizzle ORM
+- **Real-time Communication**: WebSocket integration for chat and collaboration
 - **UI Framework**: Tailwind CSS with shadcn/ui components (Radix UI primitives)
-- **State Management**: TanStack Query for server state, React Context for auth
-- **Routing**: Wouter for lightweight client-side routing
-
-### Project Structure (Updated July 2025)
-The project has been reorganized into a clean, structured folder hierarchy:
-- **organized_testcase_tracker/**: Main project directory with organized structure
-- **docs/**: All documentation files consolidated
-- **config/**: Configuration files (TypeScript, Vite, Tailwind, etc.)
-- **scripts/**: Build and deployment scripts
-- **assets/**: Project assets including attached files and static content
-- **client/**: React frontend application
-- **server/**: Express backend application
-- **shared/**: Shared code between client and server
-- **db/**: Database connection and setup
-- **uploads/**: File upload directories
+- **State Management**: TanStack Query for server state management
+- **Routing**: Wouter for client-side routing
 
 ### Key Components
 
 #### Frontend Architecture
-- **Component Structure**: Modular React components with TypeScript interfaces
-- **Form Management**: React Hook Form with Zod validation schemas
-- **Styling**: Tailwind CSS with CSS custom properties for theming
-- **Charts and Visualization**: Recharts for analytics and reporting
-- **File Handling**: Support for CSV import/export, image uploads, and document management
-- **Icon System**: Lucide React for consistent iconography
-- **Theme Support**: Dark/light mode with next-themes integration
+- **Component Structure**: Modular React components with TypeScript
+- **Styling**: Tailwind CSS with custom design system and CSS variables
+- **Form Handling**: React Hook Form with Zod validation (@hookform/resolvers)
+- **Charts**: Recharts for data visualization and reporting
+- **UI Components**: shadcn/ui component library with consistent design patterns
+- **Build Tool**: Vite with optimized bundling and hot module replacement
 
 #### Backend Architecture
-- **API Design**: RESTful endpoints with comprehensive CRUD operations
-- **Authentication**: JWT-based with role-based access control (Admin, Manager, Developer, Tester)
-- **File Storage**: Multer for uploads with Sharp for image processing
-- **Real-time Communication**: WebSocket server for chat and notifications
-- **Email Service**: Nodemailer integration for user notifications
-- **GitHub Integration**: Direct issue creation from bug reports
+- **API Design**: RESTful API with Express.js using TypeScript
+- **Authentication**: JWT-based authentication with role-based access control
+- **File Handling**: Multer for file uploads with Sharp for image processing
+- **Email Service**: Nodemailer integration for notifications and user management
+- **WebSocket**: Real-time chat and collaboration features on `/ws` path
+- **Error Handling**: Comprehensive error handling with logging service
 
 #### Storage Layer
 - **Primary Storage**: In-memory storage system for development and testing
-- **Database Integration**: PostgreSQL with Drizzle ORM for production
-- **Migration System**: Drizzle Kit for schema migrations and database management
-- **Data Persistence**: Automatic fallback to in-memory when database unavailable
+- **Database Integration**: Optional PostgreSQL with Drizzle ORM using Neon serverless
+- **Schema**: Comprehensive database schema supporting:
+  - Users, Projects, and Project Members
+  - Modules, Test Cases, and Bug tracking
+  - Time sheets and Customer management
+  - Sprint planning and Kanban boards
+  - Traceability matrices and Custom markers
+  - Document management and Chat messages
+- **Migration System**: Drizzle Kit for database migrations and schema management
 
 ## Data Flow
 
-### Authentication Flow
+### User Authentication Flow
 1. User registers/logs in through React frontend
 2. Backend validates credentials and issues JWT token
-3. Token stored in client and included in API requests
-4. Role-based permissions enforced on protected routes
+3. Token stored in client and sent with subsequent requests
+4. Role-based access control enforced on API endpoints
+5. User roles: Admin, Manager, Developer, Tester with hierarchical permissions
 
-### Real-time Communication
-1. WebSocket connection established on user login
+### Test Case Management Flow
+1. Projects created by Admin/Manager users
+2. Modules organized within projects
+3. Test cases created with auto-generated IDs (TC-001, TC-002, etc.)
+4. Test execution tracked with status updates
+5. Results and metrics aggregated for reporting
+
+### Real-time Features
+1. WebSocket connection established on `/ws` path
 2. Chat messages broadcast to project participants
-3. Typing indicators and presence status updates
-4. File attachments and mentions supported
-
-### Project Management Flow
-1. Projects created with modules and test cases
-2. Traceability matrix tracks relationships between modules
-3. Bug reports linked to test cases and GitHub issues
-4. Time tracking and Kanban boards for agile management
+3. Live collaboration indicators and typing status
+4. Real-time notifications for bug assignments and updates
 
 ## External Dependencies
 
 ### Core Dependencies
-- **React Router**: react-router-dom for navigation (newer version 7.6.3)
-- **Database**: @neondatabase/serverless for PostgreSQL connection
-- **ORM**: Drizzle ORM with migrations support
-- **UI Components**: Radix UI primitives with shadcn/ui styling
-- **Form Validation**: React Hook Form with Zod schemas
-- **Charts**: Recharts for data visualization
-- **File Processing**: Multer and Sharp for uploads
-- **Authentication**: bcrypt and jsonwebtoken
-- **Email**: Nodemailer for notifications
+- **Database**: @neondatabase/serverless for PostgreSQL connectivity
+- **ORM**: drizzle-orm with drizzle-kit for migrations
+- **Authentication**: jsonwebtoken and bcrypt for security
+- **File Processing**: multer and sharp for uploads
+- **Email**: nodemailer for notifications
 - **WebSocket**: ws for real-time communication
 
-### Development Dependencies
-- **Build Tool**: Vite with TypeScript support
-- **Testing**: Vitest with coverage reporting
-- **Linting**: ESLint with TypeScript configuration
-- **CSS**: Tailwind CSS with PostCSS
+### Frontend Dependencies
+- **UI Components**: @radix-ui/* components for accessibility
+- **State Management**: @tanstack/react-query for server state
+- **Forms**: react-hook-form with @hookform/resolvers
+- **Validation**: zod for type-safe validation
+- **Charts**: recharts for data visualization
+- **Styling**: tailwindcss with @tailwindcss/vite
+
+### Development Tools
+- **Build**: vite with @vitejs/plugin-react
+- **Testing**: vitest for unit and integration tests
+- **TypeScript**: Full TypeScript support with strict configuration
+- **Linting**: ESLint configuration for code quality
 
 ## Deployment Strategy
 
 ### Development Environment
-- Single command startup: `npm run dev`
-- Hot module replacement with Vite
-- In-memory storage for quick development
-- WebSocket server on separate path to avoid conflicts
+- Vite dev server for frontend with HMR on port 24678
+- Express server on port 5000 (configurable via PORT env var)
+- WebSocket server integrated with HTTP server
+- In-memory storage as fallback when no database configured
 
-### Production Environment
-- PostgreSQL database required
-- Environment variables for configuration
-- Static file serving through Express
-- WebSocket integration for real-time features
+### Production Considerations
+- Environment variables for database connection (DATABASE_URL)
+- JWT secret configuration for security
+- Email service configuration for notifications
+- File upload directory management
+- WebSocket scaling considerations for multiple instances
 
-### Database Setup
-- Drizzle migrations for schema management
-- Automatic fallback to in-memory storage
-- Connection pooling with Neon serverless
-- Schema validation with Zod
+### Configuration Files
+- `drizzle.config.ts`: Database configuration and migration settings
+- `vite.config.ts`: Frontend build configuration with path aliases
+- `tailwind.config.ts`: Design system and theming configuration
+- `tsconfig.json`: TypeScript configuration with path mapping
 
-## Key Features
-
-### Test Case Management
-- Complete CRUD operations for test cases
-- Module-based organization
-- Priority and status tracking
-- CSV import/export functionality
-
-### Bug Tracking
-- GitHub integration for issue creation
-- Screenshot and attachment support
-- Severity and priority classification
-- Status workflow management
-
-### Team Collaboration
-- Real-time chat with WebSocket
-- Project-based messaging
-- File sharing capabilities
-- User presence indicators
-
-### Reporting and Analytics
-- Dashboard with metrics visualization
-- Traceability matrix with custom markers
-- CSV export for external reporting
-- Time tracking and productivity metrics
-
-### Advanced Features
-- Kanban board for agile management
-- Document management system
-- Automated test execution tracking
-- Role-based access control
-- Dark/light theme support
+The application is designed to work seamlessly in Replit's environment with automatic fallback to in-memory storage when PostgreSQL is not available, making it easy to develop and test without complex setup requirements.
