@@ -331,11 +331,11 @@ export default function TraceabilityMatrixPage() {
     if (!selectedProjectId) return;
 
     const key = `${rowModuleId}-${colModuleId}`;
-    
+
     // Update local state immediately for better UX - this prevents marker vanishing
     setMatrixCells(prev => {
       const newCells = { ...prev };
-      
+
       if (value === 'no-marker' || value === '') {
         // Remove the cell if no marker is selected
         delete newCells[key];
@@ -353,7 +353,7 @@ export default function TraceabilityMatrixPage() {
           updatedAt: new Date().toISOString()
         };
       }
-      
+
       return newCells;
     });
 

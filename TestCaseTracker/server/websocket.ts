@@ -92,6 +92,9 @@ export class ChatWebSocketServer {
       case 'get_presence':
         await this.handleGetPresence(ws, data);
         break;
+      case 'ping':
+        await this.handlePing(ws, data);
+        break;
       default:
         this.sendError(ws, `Unknown message type: ${type}`);
     }
@@ -324,6 +327,14 @@ export class ChatWebSocketServer {
     this.send(ws, {
       type: 'presence_update',
       presence
+    });
+  }
+
+  private async handlePing(ws: WebSocket, data: any) {
+    // Respond with pong to keep connection alive
+    this.send(ws, {
+      type: 'pong',
+      timestamp: new Date().toISOString()
     });
   }
 
