@@ -1,4 +1,4 @@
-run = ["node", "TestCaseTracker/dev.js"]
+run = ["node", "organized_testcase_tracker/dev.js"]
 
 [deployment]
 deploymentTarget = "cloudrun"

@@ -19,6 +19,19 @@ Preferred communication style: Simple, everyday language.
 - **State Management**: TanStack Query for server state, React Context for auth
 - **Routing**: Wouter for lightweight client-side routing
 
+### Project Structure (Updated July 2025)
+The project has been reorganized into a clean, structured folder hierarchy:
+- **organized_testcase_tracker/**: Main project directory with organized structure
+- **docs/**: All documentation files consolidated
+- **config/**: Configuration files (TypeScript, Vite, Tailwind, etc.)
+- **scripts/**: Build and deployment scripts
+- **assets/**: Project assets including attached files and static content
+- **client/**: React frontend application
+- **server/**: Express backend application
+- **shared/**: Shared code between client and server
+- **db/**: Database connection and setup
+- **uploads/**: File upload directories
+
 ### Key Components
 
 #### Frontend Architecture
