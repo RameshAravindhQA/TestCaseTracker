@@ -1,15 +1,46 @@
 #!/usr/bin/env node
+
 const { spawn } = require('child_process');
 const path = require('path');
 
-// Change to TestCaseTracker directory and run the dev command
-process.chdir(path.join(__dirname, 'TestCaseTracker'));
+// __dirname is already available in CommonJS
 
-const child = spawn('npm', ['run', 'dev'], {
+console.log('🚀 Starting TestCaseTracker Application...');
+
+// Change to the TestCaseTracker subdirectory
+const appPath = path.join(__dirname, 'TestCaseTracker');
+
+process.chdir(appPath);
+console.log('📂 Working directory:', process.cwd());
+
+// Start the server using npm run dev (which uses tsx)
+const server = spawn('npm', ['run', 'dev'], {
   stdio: 'inherit',
-  shell: true
+  shell: true,
+  env: { 
+    ...process.env, 
+    NODE_ENV: 'development',
+    PORT: '5000'
+  }
 });
 
-child.on('close', (code) => {
+server.on('error', (error) => {
+  console.error('❌ Failed to start server:', error);
+  process.exit(1);
+});
+
+server.on('exit', (code) => {
+  console.log(`Server exited with code ${code}`);
   process.exit(code);
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('🛑 Received SIGTERM, shutting down gracefully...');
+  server.kill('SIGTERM');
+});
+
+process.on('SIGINT', () => {
+  console.log('🛑 Received SIGINT, shutting down gracefully...');
+  server.kill('SIGINT');
 });
