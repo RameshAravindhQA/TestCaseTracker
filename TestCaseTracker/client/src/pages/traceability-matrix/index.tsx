@@ -224,6 +224,16 @@ export default function TraceabilityMatrixPage() {
       return response.json();
     },
     onSuccess: () => {
+      // Don't invalidate queries immediately to prevent UI flicker
+      // The optimistic update handles the UI state
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Save failed", 
+        description: "Failed to save matrix cell", 
+        variant: "destructive" 
+      });
+      // Revert optimistic update by refetching
       queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/cells"] });
     }
   });
@@ -320,35 +330,49 @@ export default function TraceabilityMatrixPage() {
   const handleCellValueChange = (rowModuleId: number, colModuleId: number, value: string) => {
     if (!selectedProjectId) return;
 
+    const key = `${rowModuleId}-${colModuleId}`;
+    
+    // Update local state immediately for better UX - this prevents marker vanishing
+    setMatrixCells(prev => {
+      const newCells = { ...prev };
+      
+      if (value === 'no-marker' || value === '') {
+        // Remove the cell if no marker is selected
+        delete newCells[key];
+      } else {
+        // Update or create the cell
+        newCells[key] = {
+          ...prev[key],
+          id: prev[key]?.id || `cell-${Date.now()}`,
+          rowModuleId,
+          colModuleId,
+          projectId: selectedProjectId,
+          value: value,
+          createdById: 1,
+          createdAt: prev[key]?.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      }
+      
+      return newCells;
+    });
+
+    // Auto-save to backend
     const cellData = {
       rowModuleId,
       colModuleId,
       projectId: selectedProjectId,
-      value: value,
+      value: value === 'no-marker' ? '' : value,
       createdById: 1 // Replace with actual user ID
     };
 
-    // Auto-save
     updateCellMutation.mutate(cellData);
 
-    // Update local state immediately for better UX
-    const key = `${rowModuleId}-${colModuleId}`;
-    setMatrixCells(prev => ({
-      ...prev,
-      [key]: {
-        ...prev[key],
-        id: prev[key]?.id || `cell-${Date.now()}`,
-        rowModuleId,
-        colModuleId,
-        projectId: selectedProjectId,
-        value: value,
-        createdById: 1,
-        createdAt: prev[key]?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    }));
-
-    toast({ title: "Matrix updated", description: "Changes saved automatically" });
+    toast({ 
+      title: "Matrix updated", 
+      description: "Changes saved automatically",
+      duration: 1000 
+    });
   };
 
   const getCellContent = (rowModuleId: number, colModuleId: number) => {
@@ -739,10 +763,10 @@ export default function TraceabilityMatrixPage() {
                     <Table className="matrix-table">
                       <TableHeader>
                         <TableRow className="bg-gray-50">
-                          <TableHead className="w-[200px] sticky left-0 bg-gray-50 z-10 border-r-2 border-gray-200 font-semibold">
-                            <div className="flex items-center gap-2">
+                          <TableHead className="w-[120px] sticky left-0 bg-gray-50 z-10 border-r-2 border-gray-200 font-semibold">
+                            <div className="flex items-center gap-1 px-2">
                               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              Modules
+                              <span className="text-xs">Modules</span>
                             </div>
                           </TableHead>
                           {modules.map(module => (
@@ -759,10 +783,12 @@ export default function TraceabilityMatrixPage() {
                       <TableBody>
                         {modules.map((rowModule, rowIndex) => (
                           <TableRow key={rowModule.id} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
-                            <TableCell className="sticky left-0 bg-inherit z-10 border-r-2 border-gray-200 p-2 text-center">
-                              <div className="flex items-center justify-center gap-2">
+                            <TableCell className="sticky left-0 bg-inherit z-10 border-r-2 border-gray-200 p-1 text-center">
+                              <div className="flex items-center justify-center gap-1 px-1">
                                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <div className="font-medium text-sm">{rowModule.name}</div>
+                                <div className="font-medium text-xs truncate max-w-[80px]" title={rowModule.name}>
+                                  {rowModule.name}
+                                </div>
                               </div>
                             </TableCell>
                             {modules.map(colModule => {
@@ -779,10 +805,26 @@ export default function TraceabilityMatrixPage() {
                                   ) : (
                                     <Select
                                       value={cell?.value || 'no-marker'}
-                                      onValueChange={(value) => handleCellValueChange(rowModule.id, colModule.id, value === 'no-marker' ? '' : value)}
+                                      onValueChange={(value) => handleCellValueChange(rowModule.id, colModule.id, value)}
                                     >
                                       <SelectTrigger className="h-8 w-full border-dashed text-xs">
-                                        <SelectValue placeholder="..." />
+                                        <SelectValue>
+                                          {cell?.value && cell.value !== 'no-marker' ? (
+                                            <div className="flex items-center gap-1">
+                                              <div
+                                                className="w-3 h-3 rounded-full border"
+                                                style={{ 
+                                                  backgroundColor: customMarkers.find(m => m.markerId === cell.value)?.color || '#ccc'
+                                                }}
+                                              />
+                                              <span className="text-xs">
+                                                {customMarkers.find(m => m.markerId === cell.value)?.label || '...'}
+                                              </span>
+                                            </div>
+                                          ) : (
+                                            <span className="text-gray-400 text-xs">...</span>
+                                          )}
+                                        </SelectValue>
                                       </SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="no-marker">
