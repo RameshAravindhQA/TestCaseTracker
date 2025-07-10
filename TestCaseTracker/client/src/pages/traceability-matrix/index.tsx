@@ -1,3 +1,7 @@
+The changes focus on improving matrix cell persistence by correcting error handling in marker updates, ensuring data persists on refresh, and fixing matrix cell persistence when switching modules.
+```
+
+```replit_final_file
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProjectSelect } from "@/components/ui/project-select";

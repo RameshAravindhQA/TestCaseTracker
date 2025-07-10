@@ -2067,83 +2067,59 @@ class MemStorage implements IStorage {
   }
 
   async getMessagesByChat(chatId: number): Promise<any[]> {
-    // First try to get from conversation-specific cache
-    const cachedMessages = this.conversationMessages.get(chatId);
-    if (cachedMessages && cachedMessages.length > 0) {
-      console.log(`Storage: Retrieved ${cachedMessages.length} cached messages for chat ${chatId}`);
-      return cachedMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    }
-
-    // Fallback to searching all messages
+    // Get all messages for this conversation
     const allMessages = Array.from(this.chatMessages.values());
     const messages = allMessages.filter(msg => 
       msg.conversationId === chatId || msg.chatId === chatId
     ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    console.log(`Storage: Retrieved ${messages.length} messages for chat ${chatId} from all messages`);
+    // Always update the cache with fresh data
+    this.conversationMessages.set(chatId, messages);
+
+    console.log(`Storage: Retrieved ${messages.length} messages for chat ${chatId}`);
     return messages;
   }
 
   async getUserConversations(userId: number): Promise<any[]> {
-    // Get stored conversations for user
-    const userConversations = Array.from(this.conversations.values()).filter(conv => 
-      conv.participants && conv.participants.some((p: any) => p.id === userId || p === userId)
-    );
-
-    // Get all messages to find conversations with messages
-    const allMessages = Array.from(this.chatMessages.values());
     const conversationMap = new Map();
-
-    // Process existing conversations
-    userConversations.forEach(conv => {
-      conversationMap.set(conv.id, {
-        ...conv,
-        lastMessage: conv.lastMessage || "No messages yet",
-        unreadCount: conv.unreadCount || 0
-      });
-    });
-
-    // Find conversations from messages
+    const allMessages = Array.from(this.chatMessages.values());
+    
+    // Group messages by conversation and create unique conversations
+    const conversationMessages = new Map();
+    
     for (const message of allMessages) {
-      if (message.conversationId && !conversationMap.has(message.conversationId)) {
-        // Create conversation from message data
-        const targetUser = await this.getUser(message.userId === userId ? 
-          (message.targetUserId || this.getOtherUserFromConversation(message.conversationId, userId)) : 
-          message.userId
-        );
-        
-        if (targetUser) {
-          conversationMap.set(message.conversationId, {
-            id: message.conversationId,
-            name: `${targetUser.firstName} ${targetUser.lastName || ''}`.trim(),
-            type: "direct",
-            participants: [{ id: targetUser.id, name: `${targetUser.firstName} ${targetUser.lastName || ''}`.trim() }],
-            lastMessage: message.message,
-            unreadCount: 0,
-            createdAt: message.createdAt
-          });
-        }
-      } else if (conversationMap.has(message.conversationId)) {
-        // Update last message
-        const conv = conversationMap.get(message.conversationId);
-        if (new Date(message.timestamp) > new Date(conv.createdAt)) {
-          conv.lastMessage = message.message;
-          conv.createdAt = message.timestamp;
-        }
+      const convId = message.conversationId;
+      if (!conversationMessages.has(convId)) {
+        conversationMessages.set(convId, []);
       }
+      conversationMessages.get(convId).push(message);
     }
 
-    // Add default general chat if no conversations exist
-    if (conversationMap.size === 0) {
-      conversationMap.set(1, {
-        id: 1,
-        name: "General Chat",
-        type: "group",
-        participants: [{ id: userId, name: "You" }],
-        lastMessage: "Welcome to the chat!",
-        unreadCount: 0,
-        createdAt: new Date().toISOString()
-      });
+    // Create conversations from message groups
+    for (const [convId, messages] of conversationMessages.entries()) {
+      // Find other participants (not current user)
+      const otherUserIds = [...new Set(messages.map(m => m.userId).filter(id => id !== userId))];
+      
+      if (otherUserIds.length > 0) {
+        const otherUser = await this.getUser(otherUserIds[0]);
+        if (otherUser) {
+          const sortedMessages = messages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          const lastMessage = sortedMessages[0];
+          
+          conversationMap.set(convId, {
+            id: convId,
+            name: `${otherUser.firstName} ${otherUser.lastName || ''}`.trim(),
+            type: "direct",
+            participants: [{ 
+              id: otherUser.id, 
+              name: `${otherUser.firstName} ${otherUser.lastName || ''}`.trim() 
+            }],
+            lastMessage: lastMessage.message,
+            unreadCount: 0,
+            createdAt: lastMessage.timestamp
+          });
+        }
+      }
     }
 
     console.log(`Storage: Retrieved ${conversationMap.size} conversations for user ${userId}`);
@@ -2402,7 +2378,7 @@ class MemStorage implements IStorage {
         updatedAt: new Date().toISOString()
       };
       this.matrixCells.set(key, updatedCell);
-      console.log(`Storage: Updated matrix cell ${key} for project ${cellData.projectId}`);
+      console.log(`Storage: Updated matrix cell ${key} with marker ${cellData.markerId}`);
       return updatedCell;
     } else {
       // Create new cell
@@ -2414,9 +2390,21 @@ class MemStorage implements IStorage {
       };
 
       this.matrixCells.set(key, cell);
-      console.log(`Storage: Created matrix cell ${key} for project ${cellData.projectId}`);
+      console.log(`Storage: Created matrix cell ${key} with marker ${cellData.markerId}`);
       return cell;
     }
+  }
+
+  async getMatrixCellByCoordinates(rowModuleId: number, colModuleId: number, projectId: number): Promise<any | null> {
+    if (!this.matrixCells) {
+      this.matrixCells = new Map();
+    }
+
+    const key = `${rowModuleId}-${colModuleId}-${projectId}`;
+    const cell = this.matrixCells.get(key);
+    
+    console.log(`Storage: Retrieved matrix cell ${key}:`, cell ? `marker ${cell.markerId}` : 'not found');
+    return cell || null;
   }
 
   async deleteMatrixCellByCoordinates(rowModuleId: number, colModuleId: number, projectId: number): Promise<boolean> {
