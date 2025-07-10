@@ -2255,10 +2255,10 @@ class MemStorage implements IStorage {
   async getMatrixCells(projectId: number) {
     try {
       if (!this.matrixCells) {
-        this.matrixCells = [];
+        this.matrixCells = new Map();
       }
 
-      const cells = this.matrixCells.filter(cell => cell.projectId === projectId);
+      const cells = Array.from(this.matrixCells.values()).filter(cell => cell.projectId === projectId);
       console.log(`Storage: Retrieved ${cells.length} matrix cells for project ${projectId}`);
       return cells;
     } catch (error) {
@@ -2268,6 +2268,7 @@ class MemStorage implements IStorage {
   }
   async createMatrixCell(cellData: any) {
     try {
+      const key = `${cellData.rowModuleId}-${cellData.colModuleId}-${cellData.projectId}`;
       const newCell = {
         id: `${Date.now()}`,
         ...cellData,
@@ -2276,9 +2277,9 @@ class MemStorage implements IStorage {
 
       // Store in memory for persistence during session
       if (!this.matrixCells) {
-        this.matrixCells = [];
+        this.matrixCells = new Map();
       }
-      this.matrixCells.push(newCell);
+      this.matrixCells.set(key, newCell);
 
       console.log(`Storage: Created matrix cell ${newCell.id} for project ${cellData.projectId}`);
 
@@ -2312,26 +2313,26 @@ class MemStorage implements IStorage {
     }
   }
   async createOrUpdateMatrixCell(cellData: any) {
-    if (!this.data.matrixCells) {
-      this.data.matrixCells = [];
+    if (!this.matrixCells) {
+      this.matrixCells = new Map();
     }
 
+    // Create a unique key for the cell
+    const key = `${cellData.rowModuleId}-${cellData.colModuleId}-${cellData.projectId}`;
+    
     // Check if cell already exists
-    const existingIndex = this.data.matrixCells.findIndex(
-      cell => cell.rowModuleId === cellData.rowModuleId && 
-              cell.colModuleId === cellData.colModuleId && 
-              cell.projectId === cellData.projectId
-    );
+    const existingCell = this.matrixCells.get(key);
 
-    if (existingIndex !== -1) {
+    if (existingCell) {
       // Update existing cell
-      this.data.matrixCells[existingIndex] = {
-        ...this.data.matrixCells[existingIndex],
+      const updatedCell = {
+        ...existingCell,
         ...cellData,
         updatedAt: new Date().toISOString()
       };
-      await this.saveData();
-      return this.data.matrixCells[existingIndex];
+      this.matrixCells.set(key, updatedCell);
+      console.log(`Storage: Updated matrix cell ${key} for project ${cellData.projectId}`);
+      return updatedCell;
     } else {
       // Create new cell
       const cell = {
@@ -2341,8 +2342,8 @@ class MemStorage implements IStorage {
         updatedAt: new Date().toISOString()
       };
 
-      this.data.matrixCells.push(cell);
-      await this.saveData();
+      this.matrixCells.set(key, cell);
+      console.log(`Storage: Created matrix cell ${key} for project ${cellData.projectId}`);
       return cell;
     }
   }

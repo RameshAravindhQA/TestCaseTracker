@@ -356,29 +356,45 @@ export function Messenger() {
             conversationId: data.message.conversationId
           };
 
-          // Add to current messages if it's the selected conversation
-          if (selectedChat && newMessage.conversationId === selectedChat.id) {
-            setMessages(prev => {
-              // Prevent duplicates
-              const exists = prev.some(msg => msg.id === newMessage.id);
-              if (exists) return prev;
-              return [...prev, newMessage];
-            });
-          }
-
-          // Update cached messages
-          setConversationMessages(prev => {
-            const updated = new Map(prev);
-            const conversationId = newMessage.conversationId || selectedChat?.id;
-            if (conversationId) {
-              const messages = updated.get(conversationId) || [];
-              const exists = messages.some(msg => msg.id === newMessage.id);
-              if (!exists) {
-                updated.set(conversationId, [...messages, newMessage]);
-              }
+          // Only add message if it's NOT from the current user (to prevent showing own messages twice)
+          if (newMessage.userId !== user?.id) {
+            // Add to current messages if it's the selected conversation
+            if (selectedChat && newMessage.conversationId === selectedChat.id) {
+              setMessages(prev => {
+                // Prevent duplicates
+                const exists = prev.some(msg => msg.id === newMessage.id);
+                if (exists) return prev;
+                return [...prev, newMessage];
+              });
             }
-            return updated;
-          });
+
+            // Update cached messages
+            setConversationMessages(prev => {
+              const updated = new Map(prev);
+              const conversationId = newMessage.conversationId || selectedChat?.id;
+              if (conversationId) {
+                const messages = updated.get(conversationId) || [];
+                const exists = messages.some(msg => msg.id === newMessage.id);
+                if (!exists) {
+                  updated.set(conversationId, [...messages, newMessage]);
+                }
+              }
+              return updated;
+            });
+          } else {
+            // For own messages, replace temporary message with server response
+            if (selectedChat && newMessage.conversationId === selectedChat.id) {
+              setMessages(prev => {
+                const tempMsgIndex = prev.findIndex(msg => msg.isTemporary && msg.userId === user?.id);
+                if (tempMsgIndex !== -1) {
+                  const updated = [...prev];
+                  updated[tempMsgIndex] = { ...newMessage, isTemporary: false };
+                  return updated;
+                }
+                return prev;
+              });
+            }
+          }
         }
         break;
       case 'user_typing':
@@ -923,45 +939,39 @@ export function Messenger() {
   const sendMessage = () => {
     if (!newMessage.trim() || !selectedChat) return;
 
+    const messageText = newMessage.trim();
+    const tempId = `temp-${Date.now()}-${user?.id}`;
+    
     // Create message object with attachments and reply data
     const messageToSend = {
-      id: Date.now(),
+      id: tempId,
       userId: user?.id || 1,
       userName: user?.firstName || 'You',
-      message: newMessage.trim(),
+      message: messageText,
       timestamp: new Date().toISOString(),
       type: 'text' as const,
       conversationId: selectedChat.id,
       attachments: attachments.length > 0 ? attachments : undefined,
       replyToId: replyingTo?.id,
       replyToMessage: replyingTo?.message,
-      replyToUser: replyingTo?.userName
+      replyToUser: replyingTo?.userName,
+      isTemporary: true // Mark as temporary message
     };
 
-    // Add to current messages immediately
-    setMessages(prev => {
-      // Prevent duplicates
-      const exists = prev.some(msg => msg.id === messageToSend.id);
-      if (exists) return prev;
-      return [...prev, messageToSend];
-    });
+    // Add to current messages immediately for instant feedback
+    setMessages(prev => [...prev, messageToSend]);
 
     // Update cached messages
     setConversationMessages(prev => {
       const updated = new Map(prev);
       const messages = updated.get(selectedChat.id) || [];
-      const exists = messages.some(msg => msg.id === messageToSend.id);
-      if (!exists) {
-        updated.set(selectedChat.id, [...messages, messageToSend]);
-      }
+      updated.set(selectedChat.id, [...messages, messageToSend]);
       return updated;
     });
 
-    const messageText = newMessage.trim();
+    // Clear input and attachments
     setNewMessage('');
     setReplyingTo(null);
-    
-    // Clear attachments after sending
     setAttachments([]);
 
     // Try to send via WebSocket if connected
@@ -969,17 +979,14 @@ export function Messenger() {
       try {
         const messageData = {
           type: 'send_message',
-          conversationId: selectedChat.id,
-          message: messageText,
-          userId: user?.id,
-          userName: user?.firstName || 'Unknown User',
-          attachments: messageToSend.attachments,
           data: {
             conversationId: selectedChat.id,
             message: messageText,
             userId: user?.id,
             userName: user?.firstName || 'Unknown User',
-            attachments: messageToSend.attachments
+            attachments: messageToSend.attachments,
+            replyToId: replyingTo?.id,
+            tempId: tempId // Include temp ID for replacement
           }
         };
 

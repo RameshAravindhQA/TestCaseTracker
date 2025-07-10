@@ -192,7 +192,8 @@ export class ChatWebSocketServer {
   }
 
   private async handleSendMessage(ws: WebSocket, data: any) {
-    const { conversationId, message, replyToId, attachments } = data;
+    const messageData = data.data || data; // Handle both data structures
+    const { conversationId, message, replyToId, attachments, tempId } = messageData;
     const user = this.getUserByWebSocket(ws);
 
     if (!user || !conversationId || !message) {
@@ -216,7 +217,7 @@ export class ChatWebSocketServer {
       // Clear typing indicator
       this.clearTypingIndicator(user.userId, conversationId);
 
-      // Broadcast message to all users in conversation
+      // Broadcast message to all users in conversation (including sender for consistency)
       this.broadcastToConversation(conversationId, {
         type: 'new_message',
         message: {
@@ -230,10 +231,11 @@ export class ChatWebSocketServer {
         }
       });
 
-      // Send confirmation to sender
+      // Send confirmation to sender with temp ID for replacement
       this.send(ws, {
         type: 'message_sent',
         messageId: chatMessage.id,
+        tempId: tempId,
         timestamp: chatMessage.createdAt
       });
 
