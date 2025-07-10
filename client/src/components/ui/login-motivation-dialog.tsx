@@ -353,7 +353,7 @@ export function LoginMotivationDialog({
             {greeting}, {userFirstName}!
             <Heart className="h-6 w-6 text-red-500 animate-pulse" />
           </DialogTitle>
-          <DialogDescription className="text-base">
+          <div className="text-base text-muted-foreground">
             <div className="flex items-center gap-2 flex-wrap">
               <Clock className="h-4 w-4" />
               <span>Welcome back! Logged in on {formatLoginTime(loginTime)}</span>
@@ -361,7 +361,7 @@ export function LoginMotivationDialog({
                 Session: {sessionDuration}
               </Badge>
             </div>
-          </DialogDescription>
+          </div>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">

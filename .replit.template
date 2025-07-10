@@ -1,0 +1,23 @@
+modules = ["nodejs-20", "postgresql-16"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "TestCaseTracker"
+
+[[workflows.workflow]]
+name = "TestCaseTracker"
+author = "ai"
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[env]
+DATABASE_URL = "postgresql://replit:password@localhost:5432/testcasetracker"
