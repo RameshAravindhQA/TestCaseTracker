@@ -1,0 +1,18 @@
+run = ["node", "start-server.js"]
+
+[deployment]
+deploymentTarget = "cloudrun"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+exposeLocalhost = true
+
+[env]
+NODE_ENV = "development"
+
+[workspace]
+language = "nodejs"
+
+[nix]
+channel = "stable-24_05"
