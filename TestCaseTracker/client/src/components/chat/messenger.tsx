@@ -251,7 +251,7 @@ export function Messenger() {
     const attemptConnection = (retryCount = 0) => {
       try {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/chat`;
         console.log(`WebSocket connection attempt ${retryCount + 1}:`, wsUrl);
 
         const ws = new WebSocket(wsUrl);

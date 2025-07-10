@@ -90,9 +90,18 @@ async function startServer() {
       throw err;
     });
 
-    // Initialize WebSocket server for chat
-    const wss = setupWebSocket(httpServer);
-    (global as any).chatWebSocket = wss;
+    // Setup WebSocket server
+    let chatWsServer;
+    try {
+      const { ChatWebSocketServer } = await import('./websocket.js');
+      chatWsServer = new ChatWebSocketServer(httpServer);
+      logger.info('Chat WebSocket server initialized');
+
+      // Store reference for user registration notifications
+      app.locals.chatWsServer = chatWsServer;
+    } catch (error) {
+      logger.warn('ChatWebSocketServer not available:', error.message);
+    }
 
     // Add small delay before setting up Vite to ensure WebSocket is properly initialized
     await new Promise(resolve => setTimeout(resolve, 100));
