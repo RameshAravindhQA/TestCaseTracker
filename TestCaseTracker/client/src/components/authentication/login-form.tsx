@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { Mail, Lock, Github } from "lucide-react";
 import { useState } from "react";
-import { LoginMotivationDialog } from "@/components/ui/login-motivation-dialog";
+// LoginMotivationDialog removed to prevent blur screen issues
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -28,9 +28,7 @@ export function LoginForm() {
   const { toast } = useToast();
   const [isOAuthLoading, setIsOAuthLoading] = useState<string | null>(null);
   // No longer need to manage password visibility state as it's handled by the PasswordInput component
-  const [showMotivationDialog, setShowMotivationDialog] = useState(false);
-  const [loggedInUserName, setLoggedInUserName] = useState("");
-  const [loginTime, setLoginTime] = useState<Date | null>(null);
+  // Removed motivation dialog state to prevent blur screen
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -64,18 +62,18 @@ export function LoginForm() {
       localStorage.setItem('userId', data.id?.toString() || '');
       localStorage.setItem('loginTime', new Date().toISOString());
 
-      // Extract user's first name for personalization
+      // User login successful, storing basic info
       const firstName = data.firstName || (data.name ? data.name.split(' ')[0] : data.email.split('@')[0]);
-      console.log("Setting user name for motivation dialog:", firstName);
-      setLoggedInUserName(firstName);
-      setLoginTime(new Date());
+      console.log("User logged in:", firstName);
 
       // Invalidate queries to refresh user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
-      // Show motivation dialog immediately after successful login
-      console.log("Opening motivation dialog...");
-      setShowMotivationDialog(true);
+      // Navigate directly to dashboard
+      console.log("Login successful, navigating to dashboard...");
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 100);
     },
     onError: (error: any) => {
       console.error("Login error:", error);
@@ -128,13 +126,7 @@ export function LoginForm() {
     }
   };
 
-  const handleMotivationDialogClose = () => {
-    setShowMotivationDialog(false);
-    // Navigate to dashboard after dialog closes
-    setTimeout(() => {
-      navigate("/dashboard");
-    }, 100);
-  };
+  // Function removed - no longer needed without motivation dialog
 
   return (
     <>
@@ -284,13 +276,7 @@ export function LoginForm() {
         </CardFooter>
       </Card>
 
-      {/* Welcome Dialog */}
-      <LoginMotivationDialog
-        open={showMotivationDialog}
-        onOpenChange={handleMotivationDialogClose}
-        userFirstName={loggedInUserName}
-        loginTime={loginTime}
-      />
+      {/* LoginMotivationDialog removed to prevent blur screen issues */}
     </>
   );
 }
