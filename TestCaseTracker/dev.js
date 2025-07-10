@@ -1,6 +1,4 @@
 
-#!/usr/bin/env node
-
 import { spawn } from 'child_process';
 import path from 'path';
 
@@ -16,40 +14,19 @@ const server = spawn('npx', ['tsx', 'server/index.ts'], {
   env: { 
     ...process.env, 
     NODE_ENV: 'development',
-    PORT: '3001'
+    PORT: '5000'
   }
 });
 
-// Start the frontend Vite dev server
-const frontend = spawn('npx', ['vite', '--config', 'config/vite.config.ts', '--host', '0.0.0.0', '--port', '5000'], {
-  stdio: 'inherit',
-  shell: true,
-  cwd: 'client',
-  env: { 
-    ...process.env, 
-    NODE_ENV: 'development'
-  }
-});
+// Note: Frontend is served by the backend server in this configuration
 
 server.on('error', (error) => {
   console.error('❌ Failed to start server:', error);
   process.exit(1);
 });
 
-frontend.on('error', (error) => {
-  console.error('❌ Failed to start frontend:', error);
-  process.exit(1);
-});
-
 server.on('exit', (code) => {
   console.log(`Server exited with code ${code}`);
-  frontend.kill('SIGTERM');
-  process.exit(code);
-});
-
-frontend.on('exit', (code) => {
-  console.log(`Frontend exited with code ${code}`);
-  server.kill('SIGTERM');
   process.exit(code);
 });
 
@@ -57,11 +34,9 @@ frontend.on('exit', (code) => {
 process.on('SIGTERM', () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
   server.kill('SIGTERM');
-  frontend.kill('SIGTERM');
 });
 
 process.on('SIGINT', () => {
   console.log('🛑 Received SIGINT, shutting down gracefully...');
   server.kill('SIGINT');
-  frontend.kill('SIGINT');
 });

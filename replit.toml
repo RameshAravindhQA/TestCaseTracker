@@ -1,4 +1,4 @@
-run = ["bash", "run-testcase-tracker.sh"]
+run = ["node", "TestCaseTracker/dev.js"]
 
 [deployment]
 deploymentTarget = "cloudrun"
