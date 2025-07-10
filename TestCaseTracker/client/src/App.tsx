@@ -8,8 +8,7 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 import { GitHubIssueReporter } from "@/components/ui/github-issue-reporter";
-import { TutorialManager } from "@/components/onboarding/tutorial-manager";
-import { useTutorial } from "@/hooks/use-tutorial";
+
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/login";
@@ -170,7 +169,7 @@ function App() {
             <Toaster />
             <Router />
             <GitHubIssueReporter />
-            <TutorialProvider />
+            
           </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>
@@ -178,24 +177,6 @@ function App() {
   );
 }
 
-function TutorialProvider() {
-  const {
-    isVisible,
-    hideTutorial,
-    completeModule,
-    currentModule,
-    completedModules
-  } = useTutorial();
 
-  return (
-    <TutorialManager
-      isVisible={isVisible}
-      onClose={hideTutorial}
-      onComplete={completeModule}
-      currentModule={currentModule}
-      completedModules={completedModules}
-    />
-  );
-}
 
 export default App;
