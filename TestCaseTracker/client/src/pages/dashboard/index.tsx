@@ -1,3 +1,11 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { MainLayout } from "@/components/ui/main-layout";
+import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 import {
   TrendingUp,
   Users,
@@ -8,14 +16,68 @@ import {
   TestTube,
   FolderOpen,
   Plus,
-  LayoutDashboard,
-  Folder,
-  FileText,
   BarChart3
 } from "lucide-react";
-// Generate real-time data based only on actual test cases and bugs
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell
+} from "recharts";
+import { Project, TestCase, Bug as BugType } from "@shared/schema";
+
+export function DashboardPage() {
+  const { user } = useAuth();
+
+  // Fetch projects with real-time updates
+  const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/projects");
+      if (!response.ok) throw new Error("Failed to fetch projects");
+      return response.json();
+    },
+    staleTime: 0,
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
+  });
+
+  // Fetch test cases with real-time updates
+  const { data: testCases } = useQuery<TestCase[]>({
+    queryKey: ["/api/test-cases"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/test-cases");
+      if (!response.ok) throw new Error("Failed to fetch test cases");
+      return response.json();
+    },
+    staleTime: 0,
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
+  });
+
+  // Fetch bugs with real-time updates
+  const { data: bugs } = useQuery<BugType[]>({
+    queryKey: ["/api/bugs"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/bugs");
+      if (!response.ok) throw new Error("Failed to fetch bugs");
+      return response.json();
+    },
+    staleTime: 0,
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
+  });
+
+  // Generate real-time data based only on actual test cases and bugs
   const generateRealTimeData = () => {
-    // Return empty data if no actual test cases exist, bugs can be optional
     if (!testCases || testCases.length === 0) {
       return { testExecutionData: [], bugTrendData: [] };
     }
@@ -28,7 +90,6 @@ import {
     });
 
     const testExecutionData = last7Days.map((date, index) => {
-      // Filter test cases based on date (using created/updated date as proxy)
       const dayTestCases = testCases.filter(tc => {
         const tcDate = new Date(tc.updatedAt || tc.createdAt);
         return tcDate.toDateString() === date.toDateString();
@@ -75,160 +136,119 @@ import {
   };
 
   const { testExecutionData, bugTrendData } = generateRealTimeData();
-// Fetch projects for the current user with real-time updates
-  const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/projects");
-      if (!response.ok) throw new Error("Failed to fetch projects");
-      return response.json();
-    },
-    staleTime: 0, // Always fresh data
-    refetchInterval: 10000, // Refetch every 10 seconds
-    refetchOnWindowFocus: true,
-  });
-// Fetch test cases with real-time updates
-  const { data: testCases } = useQuery<TestCase[]>({
-    queryKey: ["/api/test-cases"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/test-cases");
-      if (!response.ok) throw new Error("Failed to fetch test cases");
-      return response.json();
-    },
-    staleTime: 0, // Always fresh data
-    refetchInterval: 5000, // Refetch every 5 seconds
-    refetchOnWindowFocus: true,
-  });
 
-  // Fetch bugs with real-time updates
-  const { data: bugs } = useQuery<Bug[]>({
-    queryKey: ["/api/bugs"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/bugs");
-      if (!response.ok) throw new Error("Failed to fetch bugs");
-      return response.json();
-    },
-    staleTime: 0, // Always fresh data
-    refetchInterval: 5000, // Refetch every 5 seconds
-    refetchOnWindowFocus: true,
-  });
-<div className="mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl opacity-20"></div>
-                <div className="relative p-3 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
-                  <LayoutDashboard className="h-8 w-8 text-white" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                <p className="text-muted-foreground mt-1">Overview of your testing projects and metrics</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                onClick={() => setIsUserGuideOpen(true)}
-                variant="outline" 
-                className="flex items-center gap-2"
-              >
-                <BookOpen className="h-4 w-4" />
-                User Guide
-              </Button>
-              <Button 
-                onClick={() => setIsOnboardingOpen(true)}
-                variant="outline" 
-                className="flex items-center gap-2"
-              >
-                <Play className="h-4 w-4" />
-                Tutorial
-              </Button>
-              <Button 
-                onClick={() => setIsDebugPanelOpen(true)}
-                variant="outline" 
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <Bug className="h-4 w-4" />
-                Debug
-              </Button>
-            </div>
-          </div>
+  // Calculate statistics
+  const totalProjects = projects?.length || 0;
+  const totalTestCases = testCases?.length || 0;
+  const openBugs = bugs?.filter(bug => bug.status !== 'Resolved' && bug.status !== 'Closed').length || 0;
+
+  const passedTests = testCases?.filter(tc => tc.status === 'Pass').length || 0;
+  const totalExecutedTests = testCases?.filter(tc => tc.status !== 'Not Executed').length || 0;
+  const passRate = totalExecutedTests > 0 ? Math.round((passedTests / totalExecutedTests) * 100) : 0;
+
+  // Test status distribution data
+  const testStatusData = [
+    { name: 'Passed', value: testCases?.filter(tc => tc.status === 'Pass').length || 0, color: '#10b981' },
+    { name: 'Failed', value: testCases?.filter(tc => tc.status === 'Fail').length || 0, color: '#ef4444' },
+    { name: 'Blocked', value: testCases?.filter(tc => tc.status === 'Blocked').length || 0, color: '#f59e0b' },
+    { name: 'Not Executed', value: testCases?.filter(tc => tc.status === 'Not Executed').length || 0, color: '#6b7280' }
+  ];
+
+  // Bug severity distribution data
+  const bugSeverityData = [
+    { name: 'Critical', value: bugs?.filter(bug => bug.severity === 'Critical').length || 0, color: '#dc2626' },
+    { name: 'Major', value: bugs?.filter(bug => bug.severity === 'Major').length || 0, color: '#ea580c' },
+    { name: 'Minor', value: bugs?.filter(bug => bug.severity === 'Minor').length || 0, color: '#facc15' },
+    { name: 'Trivial', value: bugs?.filter(bug => bug.severity === 'Trivial').length || 0, color: '#22c55e' }
+  ];
+
+  return (
+    <MainLayout>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600">Overview of your testing projects and metrics</p>
         </div>
-<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title="Total Projects"
-          value={stats?.totalProjects || 0}
-          icon={Folder}
-          trend={stats?.totalProjects > 0 ? "Active projects" : "Create your first project"}
-        />
-        <StatsCard
-          title="Test Cases"
-          value={stats?.totalTestCases || 0}
-          icon={FileText}
-          trend={stats?.totalTestCases > 0 ? "Test cases created" : "No test cases yet"}
-        />
-        <StatsCard
-          title="Open Bugs"
-          value={stats?.openBugs || 0}
-          icon={Bug}
-          trend={stats?.openBugs > 0 ? "Requires attention" : "No open bugs"}
-        />
-        <StatsCard
-          title="Pass Rate"
-          value={`${stats?.passRate || 0}%`}
-          icon={CheckCircle}
-          trend={stats?.passRate > 0 ? "Current success rate" : "No test results yet"}
-        />
+        <Button className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="h-4 w-4 mr-2" />
+          New Project
+        </Button>
       </div>
-{/* Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2">
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
+            <FolderOpen className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalProjects}</div>
+            <p className="text-xs text-muted-foreground">Active testing projects</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Test Cases</CardTitle>
+            <TestTube className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalTestCases}</div>
+            <p className="text-xs text-muted-foreground">Total test cases created</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Open Bugs</CardTitle>
+            <Bug className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{openBugs}</div>
+            <p className="text-xs text-muted-foreground">Unresolved issues</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pass Rate</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{passRate}%</div>
+            <p className="text-xs text-muted-foreground">Test success rate</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              Test Status Overview
+              Real-time Project Health
             </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats && stats.totalTestCases > 0 ? (
-              <TestStatusChart
-                data={[
-                  { name: 'Passed', value: stats.testCaseStatusCounts?.Pass || 0, color: '#22c55e' },
-                  { name: 'Failed', value: stats.testCaseStatusCounts?.Fail || 0, color: '#ef4444' },
-                  { name: 'Blocked', value: stats.testCaseStatusCounts?.Blocked || 0, color: '#f59e0b' },
-                  { name: 'Not Executed', value: stats.testCaseStatusCounts?.['Not Executed'] || 0, color: '#6b7280' },
-                ]}
-              />
-            ) : (
-              <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No test cases available</p>
-                  <p className="text-sm">Create a project and add test cases to see statistics</p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Test Execution Trend</CardTitle>
-            <p className="text-sm text-muted-foreground">Real-time test execution status</p>
+            <CardDescription>Last updated: {new Date().toLocaleTimeString()}</CardDescription>
           </CardHeader>
           <CardContent>
             {testExecutionData.length > 0 ? (
-              <LineChart width={400} height={300} data={testExecutionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="tests" stroke="#8884d8" strokeWidth={2} />
-              </LineChart>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={testExecutionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="pass" stroke="#10b981" strokeWidth={2} name="Passed" />
+                  <Line type="monotone" dataKey="fail" stroke="#ef4444" strokeWidth={2} name="Failed" />
+                  <Line type="monotone" dataKey="blocked" stroke="#f59e0b" strokeWidth={2} name="Blocked" />
+                </LineChart>
+              </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                No test case data available
+                No test execution data available
               </div>
             )}
           </CardContent>
@@ -236,19 +256,24 @@ import {
 
         <Card>
           <CardHeader>
-            <CardTitle>Bug Discovery & Resolution</CardTitle>
-            <p className="text-sm text-muted-foreground">Real-time bug activity overview</p>
+            <CardTitle className="flex items-center gap-2">
+              <Bug className="h-5 w-5" />
+              Bug Discovery & Resolution
+            </CardTitle>
+            <CardDescription>Combined test and bug metrics</CardDescription>
           </CardHeader>
           <CardContent>
-            {bugTrendData.length > 0 ? (
-              <LineChart width={400} height={300} data={bugTrendData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="discovered" stroke="#ef4444" strokeWidth={2} name="Discovered" />
-                <Line type="monotone" dataKey="resolved" stroke="#22c55e" strokeWidth={2} name="Resolved" />
-              </LineChart>
+            {bugTrendData.length > 0 && bugTrendData.some(d => d.discovered > 0 || d.resolved > 0) ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={bugTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="discovered" stroke="#ef4444" strokeWidth={2} name="Discovered" />
+                  <Line type="monotone" dataKey="resolved" stroke="#10b981" strokeWidth={2} name="Resolved" />
+                </LineChart>
+              </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-[300px] text-muted-foreground">
                 No bug data available
@@ -257,285 +282,51 @@ import {
           </CardContent>
         </Card>
       </div>
-</div>
 
-      {/* Welcome Dialog */}
-      {isWelcomeOpen && (
-        <DashboardWelcomeDialog
-          isOpen={isWelcomeOpen}
-          onClose={handleWelcomeClose}
-          userName={user?.firstName || "User"}
-        />
-      )}
+      {/* Status Overview Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Test Status Overview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {testStatusData.map((status) => (
+                <div key={status.name} className="text-center">
+                  <div className="text-2xl font-bold mb-1" style={{ color: status.color }}>
+                    {status.value}
+                  </div>
+                  <div className="text-sm text-gray-600">{status.name}</div>
+                  <div className="text-xs text-gray-500">
+                    {totalTestCases > 0 ? Math.round((status.value / totalTestCases) * 100) : 0}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Onboarding Tutorial */}
-      {isOnboardingOpen && !isWelcomeOpen && !isUserGuideOpen && (
-        <OnboardingTutorial
-          isOpen={isOnboardingOpen}
-          onClose={() => {
-            console.log('🎓 Onboarding dialog closed');
-            setIsOnboardingOpen(false);
-          }}
-          onComplete={handleOnboardingComplete}
-        />
-      )}
-
-      {/* Tutorial Error Handler */}
-      {tutorialError && (
-        <div className="fixed top-4 right-4 z-[10001] bg-red-500 text-white p-4 rounded-lg shadow-lg">
-          <div className="flex items-center justify-between">
-            <p>Tutorial Error: {tutorialError}</p>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setTutorialError(null)}
-              className="text-white hover:text-red-200"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={resetTutorialState}
-            className="mt-2 text-white border-white hover:bg-white hover:text-red-500"
-          >
-            Reset Tutorial
-          </Button>
-        </div>
-      )}
-
-      {/* User Guide Dialog */}
-      {isUserGuideOpen && (
-        <UserGuideDialog
-          isOpen={isUserGuideOpen}
-          onClose={() => setIsUserGuideOpen(false)}
-        />
-      )}
-
-      {/* Debug Panel */}
-      {isDebugPanelOpen && (
-        <DebugTutorialPanel
-          isWelcomeOpen={isWelcomeOpen}
-          isOnboardingOpen={isOnboardingOpen}
-          isUserGuideOpen={isUserGuideOpen}
-          user={user}
-          onResetTutorial={() => {
-            console.log('🚨 EMERGENCY RESET - Clearing all tutorial states');
-            localStorage.removeItem('hasSeenWelcome');
-            localStorage.removeItem('hasCompletedOnboarding');
-            setIsWelcomeOpen(false);
-            setIsOnboardingOpen(false);
-            setIsUserGuideOpen(false);
-            window.location.reload();
-          }}
-          onShowOnboarding={() => setIsOnboardingOpen(true)}
-          onHideAll={() => {
-            setIsWelcomeOpen(false);
-            setIsOnboardingOpen(false);
-            setIsUserGuideOpen(false);
-          }}
-          onClose={() => setIsDebugPanelOpen(false)}
-        />
-      )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Bug Severity Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {bugSeverityData.map((severity) => (
+                <div key={severity.name} className="text-center">
+                  <div className="text-2xl font-bold mb-1" style={{ color: severity.color }}>
+                    {severity.value}
+                  </div>
+                  <div className="text-sm text-gray-600">{severity.name}</div>
+                  <div className="text-xs text-gray-500">
+                    {bugs && bugs.length > 0 ? Math.round((severity.value / bugs.length) * 100) : 0}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </MainLayout>
   );
 }
-import { DashboardWelcomeDialog } from "@/components/ui/dashboard-welcome-dialog";
-import { OnboardingTutorial } from "@/components/onboarding/onboarding-tutorial";
-import { UserGuideDialog } from "@/components/ui/user-guide-dialog";
-import { DebugTutorialPanel } from "@/components/ui/debug-tutorial-panel";
-import { BookOpen, Download, Play, Bug } from "lucide-react";
-export function DashboardPage() {
-  const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-  const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
-  const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false);
-  const [tutorialError, setTutorialError] = useState<string | null>(null);
-  const { user } = useAuth();
-
-  // Safety mechanism to prevent multiple overlays
-  const hasActiveOverlay = isWelcomeOpen || isOnboardingOpen || isUserGuideOpen;
-
-  // Debug logging
-  useEffect(() => {
-    console.log('🔍 DASHBOARD DEBUG - Component mounted/updated');
-    console.log('👤 User state:', user);
-    console.log('🎯 Tutorial states:', {
-      isWelcomeOpen,
-      isOnboardingOpen,
-      isUserGuideOpen
-    });
-    console.log('💾 LocalStorage check:', {
-      hasSeenWelcome: localStorage.getItem('hasSeenWelcome'),
-      hasCompletedOnboarding: localStorage.getItem('hasCompletedOnboarding')
-    });
-
-    // Add global debug functions
-    (window as any).debugTutorial = {
-      resetTutorial: () => {
-        console.log('🚨 Resetting all tutorial states');
-        localStorage.removeItem('hasSeenWelcome');
-        localStorage.removeItem('hasCompletedOnboarding');
-        setIsWelcomeOpen(false);
-        setIsOnboardingOpen(false);
-        setIsUserGuideOpen(false);
-        window.location.reload();
-      },
-      showOnboarding: () => {
-        console.log('🎓 Manually showing onboarding');
-        setIsOnboardingOpen(true);
-      },
-      hideAll: () => {
-        console.log('🚫 Hiding all dialogs');
-        setIsWelcomeOpen(false);
-        setIsOnboardingOpen(false);
-        setIsUserGuideOpen(false);
-      },
-      getState: () => ({
-        user,
-        isWelcomeOpen,
-        isOnboardingOpen,
-        isUserGuideOpen,
-        hasSeenWelcome: localStorage.getItem('hasSeenWelcome'),
-        hasCompletedOnboarding: localStorage.getItem('hasCompletedOnboarding')
-      })
-    };
-
-    console.log('🛠️ Debug functions available: window.debugTutorial');
-  }, [user, isWelcomeOpen, isOnboardingOpen, isUserGuideOpen]);
-  const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/projects");
-      if (!response.ok) throw new Error("Failed to fetch projects");
-      return response.json();
-    },
-    staleTime: 0, // Always fresh data
-    refetchInterval: 10000, // Refetch every 10 seconds
-    refetchOnWindowFocus: true,
-  });
-
-// Show welcome dialog and onboarding for new users
-  useEffect(() => {
-    console.log('🎯 TUTORIAL EFFECT - Checking tutorial states');
-
-    const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
-    const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
-
-    console.log('📝 Tutorial localStorage values:', {
-      hasSeenWelcome,
-      hasCompletedOnboarding,
-      user: user?.id,
-      isProjectsLoading
-    });
-
-    // Only show dialogs if user is authenticated and not in error state
-    if (!user) {
-      console.log('❌ No user, skipping tutorial');
-      return;
-    }
-
-    // Show welcome dialog first
-    if (!hasSeenWelcome) {
-      console.log('🎉 Setting welcome dialog to open');
-      setIsWelcomeOpen(true);
-      return; // Don't show onboarding until welcome is closed
-    }
-
-    // Show onboarding for new users who haven't completed it
-    if (!hasCompletedOnboarding && !isOnboardingOpen) {
-      console.log('🚀 Preparing to show onboarding tutorial');
-      // Short delay to ensure DOM is ready
-      const timer = setTimeout(() => {
-        console.log('⏰ Opening onboarding tutorial after delay');
-        setIsOnboardingOpen(true);
-      }, 1000);
-
-      return () => {
-        console.log('🧹 Cleaning up onboarding timer');
-        clearTimeout(timer);
-      };
-    }
-  }, [user, isProjectsLoading, isOnboardingOpen]);
-
-const handleWelcomeClose = () => {
-    console.log('👋 Welcome dialog closed');
-    setIsWelcomeOpen(false);
-    localStorage.setItem('hasSeenWelcome', 'true');
-
-    // After welcome is closed, check if we should show onboarding
-    const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
-    if (!hasCompletedOnboarding && user) {
-      console.log('🎓 Showing onboarding after welcome close');
-      setTimeout(() => {
-        setIsOnboardingOpen(true);
-      }, 500);
-    }
-  };
-
-  const handleOnboardingComplete = () => {
-    try {
-      console.log('✅ Onboarding completed');
-      localStorage.setItem('hasCompletedOnboarding', 'true');
-      setIsOnboardingOpen(false);
-      setTutorialError(null);
-    } catch (error) {
-      console.error('Error completing onboarding:', error);
-      setTutorialError('Failed to complete onboarding');
-      setIsOnboardingOpen(false);
-    }
-  };
-
-  const handleTutorialError = (error: string) => {
-    console.error('Tutorial error:', error);
-    setTutorialError(error);
-    setIsWelcomeOpen(false);
-    setIsOnboardingOpen(false);
-    setIsUserGuideOpen(false);
-  };
-
-  const resetTutorialState = () => {
-    console.log('🔄 Resetting tutorial state');
-    setIsWelcomeOpen(false);
-    setIsOnboardingOpen(false);
-    setIsUserGuideOpen(false);
-    setTutorialError(null);
-  };
-const [showTutorial, setShowTutorial] = useState(false);
-  const [showDebugPanel, setShowDebugPanel] = useState(false);
-
-  console.log('Dashboard render:', { user, isAuthenticated, showTutorial, showDebugPanel });
-
-  useEffect(() => {
-    console.log('Dashboard useEffect - checking auth:', { isAuthenticated, user });
-
-    if (!isAuthenticated) {
-      console.log('Not authenticated, redirecting to login');
-      navigate('/login');
-      return;
-    }
-
-    // Check if user is a first-time user to show tutorial
-    const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
-    if (!hasSeenTutorial && user) {
-      console.log('First-time user, showing tutorial');
-      setShowTutorial(true);
-    }
-
-    // Only show debug panel in development
-    if (process.env.NODE_ENV === 'development') {
-      setShowDebugPanel(true);
-    }
-  }, [isAuthenticated, navigate, user]);
-const handleTutorialComplete = () => {
-    console.log('Tutorial completed, hiding tutorial');
-    localStorage.setItem('hasSeenTutorial', 'true');
-    setShowTutorial(false);
-  };
-
-  const handleTutorialClose = () => {
-    console.log('Tutorial closed');
-    localStorage.setItem('hasSeenTutorial', 'true');
-    setShowTutorial(false);
-  };
