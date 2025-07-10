@@ -31,6 +31,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     // Only redirect if we're not on login page and not authenticated
     if (!isAuthenticated && location !== "/login") {
       console.log("Not authenticated, redirecting to login");
+      // Clear any problematic localStorage data that might cause issues
+      localStorage.removeItem('hasSeenWelcome');
+      localStorage.removeItem('hasCompletedOnboarding');
+      localStorage.removeItem('showMotivationDialog');
       navigate("/login");
     } else if (isAuthenticated) {
       console.log("User authenticated:", user?.firstName || "User");

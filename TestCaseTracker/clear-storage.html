@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear TestCaseTracker LocalStorage</title>
+</head>
+<body>
+    <h1>TestCaseTracker Storage Cleaner</h1>
+    <p>This page will clear all tutorial and problematic localStorage data that might be causing blur screen issues.</p>
+    <button onclick="clearStorage()">Clear Storage</button>
+    <div id="result"></div>
+
+    <script>
+        function clearStorage() {
+            console.log('Clearing localStorage...');
+            
+            // Clear all tutorial and onboarding related data
+            localStorage.removeItem('hasSeenWelcome');
+            localStorage.removeItem('hasCompletedOnboarding');
+            localStorage.removeItem('tutorialState');
+            localStorage.removeItem('showWelcome');
+            localStorage.removeItem('onboardingComplete');
+            localStorage.removeItem('showMotivationDialog');
+            localStorage.removeItem('loginTime');
+            localStorage.removeItem('welcomeShown');
+            localStorage.removeItem('userGuideOpen');
+            localStorage.removeItem('debugPanelOpen');
+            
+            document.getElementById('result').innerHTML = '<p style="color: green;">✅ LocalStorage cleared successfully! You can now reload the main application.</p>';
+            console.log('localStorage cleared successfully');
+        }
+    </script>
+</body>
+</html>
