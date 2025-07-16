@@ -7,6 +7,11 @@ interface SoundContextType {
   playSound: (type: SoundType) => Promise<void>;
   toggleSound: () => void;
   setVolume: (volume: number) => void;
+  playCrudSound: () => Promise<void>;
+  playErrorSound: () => Promise<void>;
+  playSuccessSound: () => Promise<void>;
+  playMessageSound: () => Promise<void>;
+  playNavigationSound: () => Promise<void>;
 }
 
 const SoundContext = createContext<SoundContextType | undefined>(undefined);
@@ -78,12 +83,38 @@ export const SoundProvider: React.FC<SoundProviderProps> = ({ children }) => {
     }
   };
 
+  // Enhanced sound methods
+  const playCrudSound = async () => {
+    await playSound('crud');
+  };
+
+  const playErrorSound = async () => {
+    await playSound('error');
+  };
+
+  const playSuccessSound = async () => {
+    await playSound('success');
+  };
+
+  const playMessageSound = async () => {
+    await playSound('message');
+  };
+
+  const playNavigationSound = async () => {
+    await playSound('navigation');
+  };
+
   const contextValue: SoundContextType = {
     isEnabled,
     volume,
     playSound,
     toggleSound,
-    setVolume
+    setVolume,
+    playCrudSound,
+    playErrorSound,
+    playSuccessSound,
+    playMessageSound,
+    playNavigationSound
   };
 
   return (

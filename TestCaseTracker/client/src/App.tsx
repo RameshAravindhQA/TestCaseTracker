@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Router, Route, Switch } from 'wouter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -68,8 +67,12 @@ const ProtectedComponent: React.FC<{ children: React.ReactNode; requiredRole?: s
 const App: React.FC = () => {
   useEffect(() => {
     // Setup global fetch interceptor for API sound integration
-    setupGlobalFetchInterceptor();
-    
+    try {
+      setupGlobalFetchInterceptor();
+    } catch (error) {
+      console.error("Failed to setup global fetch interceptor:", error);
+    }
+
     // Setup error handling
     const handleError = (event: ErrorEvent) => {
       console.error('Global error:', event.error);

@@ -1,3 +1,4 @@
+
 import { useCallback, useRef, useEffect } from 'react';
 
 export type SoundType = 'navigation' | 'message' | 'create' | 'update' | 'delete' | 'click' | 'success' | 'error' | 'crud';
@@ -90,6 +91,9 @@ class SoundManager {
 
 // Global sound manager instance
 const soundManager = new SoundManager();
+
+// Export global sound player for external use
+export const globalSoundPlayer = soundManager;
 
 export const useSound = () => {
   const playSound = useCallback(async (type: SoundType) => {

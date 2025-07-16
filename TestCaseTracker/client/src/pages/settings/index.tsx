@@ -56,6 +56,7 @@ import { Badge } from "@/components/ui/badge";
 import { RolePermissions } from "@/components/settings/role-permissions";
 import { MarkerManagement } from "@/components/settings/marker-management";
 import { SoundSettings } from "@/components/settings/sound-settings";
+import { SoundTest } from '@/components/sound-test';
 
 // Types
 interface SystemSettings {
@@ -857,8 +858,8 @@ export default function SettingsPage() {
                                     <SelectValue placeholder="Select location" />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
-                                  ```text
+                               ```text
+                                  <SelectContent>
                                   <SelectItem value="local">Local Storage</SelectItem>
                                   <SelectItem value="s3">Amazon S3</SelectItem>
                                   <SelectItem value="gcs">Google Cloud Storage</SelectItem>
@@ -1235,6 +1236,7 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent>
                   <SoundSettings />
+                  <SoundTest />
                 </CardContent>
               </Card>
             )}
