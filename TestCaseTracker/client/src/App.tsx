@@ -33,6 +33,9 @@ import FunctionalFlowPage from "@/pages/functional-flow/index";
 import { Loader2 } from "lucide-react";
 import TimesheetsPage from "@/pages/timesheets/index";
 import NotebooksPage from "@/pages/notebooks/index";
+import TodosPage from "./pages/todos";
+import TestDataGeneratorPage from "./pages/test-data-generator";
+import { Toaster } from "./components/ui/toaster";
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -169,7 +172,7 @@ function App() {
             <Toaster />
             <Router />
             <GitHubIssueReporter />
-            
+
           </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>

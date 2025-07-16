@@ -184,6 +184,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       href: "/todos",
       icon: <CheckSquare className="h-5 w-5" />,
     },
+    {
+      name: "Test Data Generator",
+      href: "/test-data-generator",
+      icon: <FileText className="h-5 w-5" />,
+    },
   ], []);
 
   const adminItems: NavItem[] = useMemo(() => [

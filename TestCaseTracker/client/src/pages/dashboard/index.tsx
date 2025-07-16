@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ import { Project, TestCase, Bug as BugType } from "@shared/schema";
 
 export function DashboardPage() {
   const { user } = useAuth();
-
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   // Fetch projects with real-time updates
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],

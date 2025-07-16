@@ -9,18 +9,20 @@ import { User } from "@/types";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PasswordInput } from "@/components/ui/password-input";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useColorTheme } from "@/components/theme/theme-provider";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, Play, Pause, Camera } from "lucide-react";
 import { motion } from "framer-motion";
+import Lottie from "lottie-react";
+import { useAuth } from "@/hooks/use-auth";
 
 // Form schema for profile data
 const profileFormSchema = z.object({
@@ -46,11 +48,53 @@ const passwordFormSchema = z.object({
 
 type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
+interface LottieAnimation {
+  id: string;
+  name: string;
+  path: string;
+  preview?: any;
+}
+
 export default function ProfilePage() {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [selectedLottie, setSelectedLottie] = useState<LottieAnimation | null>(null);
+  const [lottieAnimations, setLottieAnimations] = useState<LottieAnimation[]>([
+    { id: 'female-avatar', name: 'Female Avatar', path: '/lottie/female-avatar.json' },
+    { id: 'male-avatar', name: 'Male Avatar', path: '/lottie/male-avatar.json' },
+    { id: 'businessman-rocket', name: 'Businessman Rocket', path: '/lottie/businessman-rocket.json' },
+    { id: 'software-dev', name: 'Software Developer', path: '/lottie/software-dev.json' },
+    { id: 'rocket', name: 'Rocket Animation', path: '/lottie/rocket.json' },
+    { id: 'office-team', name: 'Office Team', path: '/lottie/office-team.json' },
+    { id: 'business-team', name: 'Business Team', path: '/lottie/business-team.json' }
+  ]);
+  const [playingAnimations, setPlayingAnimations] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
+  useEffect(() => {
+    // Load lottie animations
+    const loadAnimations = async () => {
+      const loaded = await Promise.all(
+        lottieAnimations.map(async (animation) => {
+          try {
+            const response = await fetch(animation.path);
+            if (response.ok) {
+              const data = await response.json();
+              return { ...animation, preview: data };
+            }
+          } catch (error) {
+            console.error(`Failed to load ${animation.name}:`, error);
+          }
+          return animation;
+        })
+      );
+      setLottieAnimations(loaded);
+    };
+
+    loadAnimations();
+  }, []);
+
   // Fetch current user data
   const { data: currentUser, isLoading: isUserLoading } = useQuery<User>({
     queryKey: ['/api/user/current'],
@@ -64,7 +108,7 @@ export default function ProfilePage() {
       } catch (err) {
         console.error('Error fetching from /api/user/current:', err);
       }
-      
+
       // Fall back to auth endpoint if needed
       const authResponse = await fetch('/api/auth/user', { credentials: 'include' });
       if (!authResponse.ok) {
@@ -73,10 +117,10 @@ export default function ProfilePage() {
       return authResponse.json();
     }
   });
-  
+
   // Get color theme from context
   const { colorTheme, setColorTheme } = useColorTheme();
-  
+
   // Profile form setup
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -89,10 +133,10 @@ export default function ProfilePage() {
       colorTheme: colorTheme || "blue",
     },
   });
-  
+
   // Update profile form when user data is loaded
   const { isSubmitting: isProfileSubmitting } = profileForm.formState;
-  
+
   // Update default values when user data loads
   React.useEffect(() => {
     if (currentUser && !isProfileSubmitting) {
@@ -106,7 +150,7 @@ export default function ProfilePage() {
       });
     }
   }, [currentUser, isProfileSubmitting, profileForm, colorTheme]);
-  
+
   // Password form setup
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordFormSchema),
@@ -116,7 +160,7 @@ export default function ProfilePage() {
       confirmPassword: "",
     },
   });
-  
+
   // Profile update mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormValues) => {
@@ -142,7 +186,7 @@ export default function ProfilePage() {
       });
     },
   });
-  
+
   // Password update mutation
   const updatePasswordMutation = useMutation({
     mutationFn: async (data: PasswordFormValues) => {
@@ -187,6 +231,36 @@ export default function ProfilePage() {
     },
   });
 
+  const updateLottieAvatarMutation = useMutation({
+    mutationFn: async (lottieData: LottieAnimation) => {
+      const response = await apiRequest("PUT", "/api/users/update-avatar", {
+        profilePicture: lottieData.path,
+        avatarType: 'lottie',
+        avatarData: lottieData
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update avatar");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Avatar updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/current"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Profile picture upload mutation
   const uploadProfilePictureMutation = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -215,21 +289,21 @@ export default function ProfilePage() {
       // Force reload the current user data
       queryClient.invalidateQueries({ queryKey: ['/api/user/current'] });
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-      
+
       // Update the profile picture URL immediately with the new path
       if (data.profilePicture) {
         setProfilePictureUrl(`${data.profilePicture}?t=${Date.now()}`);
       }
-      
+
       // Force refresh the avatar
       refreshAvatar();
-      
+
       // Add a slight delay before stopping the loading state to ensure the data has refreshed
       setTimeout(() => setUploading(false), 1000);
     },
     onError: (error: any) => {
       console.error("Profile picture upload error:", error);
-      
+
       // Try to extract a more detailed error message if available
       let errorMsg = "Failed to upload profile picture. Please try again.";
       if (error instanceof Error) {
@@ -237,7 +311,7 @@ export default function ProfilePage() {
       } else if (typeof error === 'object' && error && 'message' in error) {
         errorMsg = String(error.message);
       }
-      
+
       toast({
         title: "Upload Error",
         description: errorMsg,
@@ -246,23 +320,40 @@ export default function ProfilePage() {
       setUploading(false);
     },
   });
-  
+
   // Form submission handlers
   const onProfileSubmit = (data: ProfileFormValues) => {
     updateProfileMutation.mutate(data);
   };
-  
+
   const onPasswordSubmit = (data: PasswordFormValues) => {
     updatePasswordMutation.mutate(data);
   };
-  
+
+  const handleLottieSelect = (animation: LottieAnimation) => {
+    setSelectedLottie(animation);
+    updateLottieAvatarMutation.mutate(animation);
+  };
+
+  const toggleAnimation = (animationId: string) => {
+    setPlayingAnimations(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(animationId)) {
+        newSet.delete(animationId);
+      } else {
+        newSet.add(animationId);
+      }
+      return newSet;
+    });
+  };
+
   // Handle profile picture upload
   const handleProfilePictureClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-  
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -275,7 +366,7 @@ export default function ProfilePage() {
         });
         return;
       }
-      
+
       // Check file type
       if (!file.type.startsWith('image/')) {
         toast({
@@ -285,24 +376,24 @@ export default function ProfilePage() {
         });
         return;
       }
-      
+
       setUploading(true);
-      
+
       try {
         // Create a new FormData instance
         const formData = new FormData();
-        
+
         // Append the file with the correct field name
         formData.append('profilePicture', file);
-        
+
         // Log what we're uploading
         console.log("Uploading file:", file.name, file.type, file.size);
-        
+
         // Reset the file input to allow selecting the same file again if needed
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
-        
+
         // Mutate with the form data
         uploadProfilePictureMutation.mutate(formData);
       } catch (error) {
@@ -319,31 +410,31 @@ export default function ProfilePage() {
 
   // Create a key for the avatar to force re-render when profile picture changes
   const [avatarKey, setAvatarKey] = useState(() => Date.now());
-  
+
   // Track the profile picture URL separately to avoid disappearing issues
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
-  
+
   // Update profile picture URL when user data changes
   useEffect(() => {
     if (currentUser?.profilePicture) {
       setProfilePictureUrl(`${currentUser.profilePicture}?t=${Date.now()}`);
     }
   }, [currentUser]);
-  
+
   // Refresh avatar key when the manual refresh is needed (like after upload)
   const refreshAvatar = () => {
     const newKey = Date.now();
     setAvatarKey(newKey);
-    
+
     // Also update the URL with the new timestamp
     if (currentUser?.profilePicture) {
       setProfilePictureUrl(`${currentUser.profilePicture}?t=${newKey}`);
     }
   };
-  
+
   // Determine the avatar source - using our tracked URL with cache busting
   const avatarSrc = profilePictureUrl || null; // Use null to trigger the fallback
-  
+
   return (
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
@@ -351,7 +442,7 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Profile</h1>
           <p className="text-gray-500 dark:text-gray-400">Manage your account settings and preferences</p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Profile picture card */}
           <Card className="md:col-span-1">
@@ -415,7 +506,7 @@ export default function ProfilePage() {
               </p>
             </CardContent>
           </Card>
-          
+
           {/* Profile settings tabs */}
           <Card className="md:col-span-2">
             <CardHeader>
@@ -424,11 +515,12 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="profile" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="profile">Profile</TabsTrigger>
                   <TabsTrigger value="password">Password</TabsTrigger>
+                  <TabsTrigger value="avatar">Avatar Animation</TabsTrigger>
                 </TabsList>
-                
+
                 {/* Profile Tab */}
                 <TabsContent value="profile">
                   <Form {...profileForm}>
@@ -450,7 +542,7 @@ export default function ProfilePage() {
                             </FormItem>
                           )}
                         />
-                        
+
                         <FormField
                           control={profileForm.control}
                           name="lastName"
@@ -468,7 +560,7 @@ export default function ProfilePage() {
                           )}
                         />
                       </div>
-                      
+
                       <FormField
                         control={profileForm.control}
                         name="email"
@@ -486,7 +578,7 @@ export default function ProfilePage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={profileForm.control}
                         name="role"
@@ -506,7 +598,7 @@ export default function ProfilePage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={profileForm.control}
                         name="theme"
@@ -535,7 +627,7 @@ export default function ProfilePage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={profileForm.control}
                         name="colorTheme"
@@ -573,7 +665,7 @@ export default function ProfilePage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <div className="flex justify-end pt-2">
                         <Button type="submit" disabled={isProfileSubmitting}>
                           {isProfileSubmitting ? (
@@ -589,7 +681,7 @@ export default function ProfilePage() {
                     </form>
                   </Form>
                 </TabsContent>
-                
+
                 {/* Password Tab */}
                 <TabsContent value="password">
                   <Form {...passwordForm}>
@@ -610,9 +702,9 @@ export default function ProfilePage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <Separator className="my-4" />
-                      
+
                       <FormField
                         control={passwordForm.control}
                         name="newPassword"
@@ -632,7 +724,7 @@ export default function ProfilePage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={passwordForm.control}
                         name="confirmPassword"
@@ -649,7 +741,7 @@ export default function ProfilePage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <div className="flex justify-end pt-2">
                         <Button 
                           type="submit" 
@@ -667,6 +759,50 @@ export default function ProfilePage() {
                       </div>
                     </form>
                   </Form>
+                </TabsContent>
+                 {/* Avatar Animation Tab */}
+                 <TabsContent value="avatar">
+                  <CardHeader>
+                    <CardTitle>Select Avatar Animation</CardTitle>
+                    <CardDescription>Choose a Lottie animation for your avatar</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
+                    {lottieAnimations.map((animation) => (
+                      <motion.div
+                        key={animation.id}
+                        className={`relative rounded-md border p-2 cursor-pointer hover:shadow-md transition-shadow duration-300 ${selectedLottie?.id === animation.id ? 'border-primary border-2' : 'border-muted'}`}
+                        onClick={() => handleLottieSelect(animation)}
+                      >
+                        {animation.preview && (
+                          <div className="relative">
+                            <Lottie
+                              animationData={animation.preview}
+                              loop
+                              autoplay={playingAnimations.has(animation.id)}
+                              style={{ height: 100, width: 100 }}
+                            />
+                            <div className="absolute top-0 right-0 p-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent animation selection
+                                  toggleAnimation(animation.id);
+                                }}
+                              >
+                                {playingAnimations.has(animation.id) ? (
+                                  <Pause className="h-4 w-4" />
+                                ) : (
+                                  <Play className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        <p className="text-sm text-muted-foreground text-center mt-2">{animation.name}</p>
+                      </motion.div>
+                    ))}
+                  </CardContent>
                 </TabsContent>
               </Tabs>
             </CardContent>
