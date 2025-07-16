@@ -33,6 +33,7 @@ import {
   Cell
 } from "recharts";
 import { Project, TestCase, Bug as BugType } from "@shared/schema";
+import { SoundDebug } from '@/components/sound-debug'
 
 export function DashboardPage() {
   const { user } = useAuth();

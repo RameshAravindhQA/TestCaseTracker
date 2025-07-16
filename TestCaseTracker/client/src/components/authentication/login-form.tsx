@@ -15,6 +15,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Mail, Lock, Github } from "lucide-react";
 import { useState } from "react";
 // LoginMotivationDialog removed to prevent blur screen issues
+import { SoundButton } from "@/components/ui/sound-button";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -187,11 +188,12 @@ export function LoginForm() {
                   </FormItem>
                 )}
               />
-              <Button 
+              <SoundButton 
                 type="submit" 
                 className="w-full mt-6" 
                 size="lg"
                 disabled={loginMutation.isPending}
+                soundType="click"
               >
                 {loginMutation.isPending ? (
                   <>
@@ -199,7 +201,7 @@ export function LoginForm() {
                     <span className="animate-spin">⟳</span>
                   </>
                 ) : "Sign In"}
-              </Button>
+              </SoundButton>
             </form>
           </Form>
 

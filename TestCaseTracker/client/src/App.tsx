@@ -192,20 +192,23 @@ function Router() {
 }
 
 function App() {
+  // Initialize sound manager
+  React.useEffect(() => {
+    if (window.soundManager) {
+      console.log('Sound manager initialized');
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light" defaultColorTheme="blue">
-        <AuthProvider>
-          <SoundProvider>
-            <TooltipProvider>
-              <Toaster />
-              <SoundIntegrationSetup />
-              <Router />
-              <GitHubIssueReporter />
-            </TooltipProvider>
-          </SoundProvider>
-        </AuthProvider>
-      </ThemeProvider>
+      <SoundProvider>
+        <TooltipProvider>
+          <Toaster />
+          <SoundIntegrationSetup />
+          <Router />
+          <GitHubIssueReporter />
+        </TooltipProvider>
+      </SoundProvider>
     </QueryClientProvider>
   );
 }
