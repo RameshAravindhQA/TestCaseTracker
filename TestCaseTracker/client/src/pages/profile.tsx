@@ -357,13 +357,16 @@ export default function ProfilePage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Check if it's a Lottie file
+      const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
+      
       // Handle Lottie file upload
-      if (file.type === 'application/json' || file.name.endsWith('.json')) {
+      if (isLottieFile) {
         handleLottieFileUpload(file);
         return;
       }
+      
       // Check file size (limit to 2MB for images, 20MB for lottie)
-      const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
       const maxSize = isLottieFile ? 20 * 1024 * 1024 : 2 * 1024 * 1024;
       const maxSizeText = isLottieFile ? '20MB' : '2MB';
       
@@ -377,7 +380,6 @@ export default function ProfilePage() {
       }
 
       // Check file type
-      const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
       if (!file.type.startsWith('image/') && !isLottieFile) {
         toast({
           title: "Invalid file type",
