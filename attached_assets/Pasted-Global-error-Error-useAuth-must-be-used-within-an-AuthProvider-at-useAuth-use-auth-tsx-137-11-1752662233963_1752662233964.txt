@@ -1,0 +1,73 @@
+Global error: Error: useAuth must be used within an AuthProvider
+    at useAuth (use-auth.tsx:137:11)
+    at WelcomeDialog (welcome-dialog.tsx:16:20)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=feb7c363:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=feb7c363:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=feb7c363:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=feb7c363:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=feb7c363:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=feb7c363:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=feb7c363:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=feb7c363:19198:20)
+(anonymous) @ main.tsx:17Understand this error
+use-auth.tsx:137 Uncaught Error: useAuth must be used within an AuthProvider
+    at useAuth (use-auth.tsx:137:11)
+    at WelcomeDialog (welcome-dialog.tsx:16:20)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=feb7c363:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=feb7c363:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=feb7c363:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=feb7c363:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=feb7c363:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=feb7c363:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=feb7c363:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=feb7c363:19198:20)Understand this error
+main.tsx:17 Global error: Error: useAuth must be used within an AuthProvider
+    at useAuth (use-auth.tsx:137:11)
+    at WelcomeDialog (welcome-dialog.tsx:16:20)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=feb7c363:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=feb7c363:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=feb7c363:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=feb7c363:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=feb7c363:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=feb7c363:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=feb7c363:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=feb7c363:19198:20)
+(anonymous) @ main.tsx:17Understand this error
+use-auth.tsx:137 Uncaught Error: useAuth must be used within an AuthProvider
+    at useAuth (use-auth.tsx:137:11)
+    at WelcomeDialog (welcome-dialog.tsx:16:20)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=feb7c363:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=feb7c363:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=feb7c363:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=feb7c363:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=feb7c363:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=feb7c363:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=feb7c363:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=feb7c363:19198:20)Understand this error
+chunk-RPCDYKBN.js?v=feb7c363:14032 The above error occurred in the <WelcomeDialog> component:
+
+    at WelcomeDialog (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/components/ui/welcome-dialog.tsx:25:33)
+    at SoundProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/hooks/use-sound-provider.tsx:21:33)
+    at QueryClientProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/@tanstack_react-query.js?v=feb7c363:2933:3)
+    at App (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/App.tsx?v=CtrE1O9heCfbNe9IrpV8P:484:53)
+    at AuthProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/hooks/use-auth.tsx?v=CtrE1O9heCfbNe9IrpV8P:26:32)
+    at QueryClientProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/@tanstack_react-query.js?v=feb7c363:2933:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-RPCDYKBN.js?v=feb7c363:14032Understand this error
+main.tsx:17 Global error: Error: useAuth must be used within an AuthProvider
+    at useAuth (use-auth.tsx:137:11)
+    at WelcomeDialog (welcome-dialog.tsx:16:20)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=feb7c363:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=feb7c363:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=feb7c363:15914:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=feb7c363:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=feb7c363:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=feb7c363:19137:13)
+    at renderRootSync (chunk-RPCDYKBN.js?v=feb7c363:19116:15)
+    at recoverFromConcurrentError (chunk-RPCDYKBN.js?v=feb7c363:18736:28)
+(anonymous) @ main.tsx:17Understand this error
+chunk-RPCDYKBN.js?v=feb7c363:19413 Uncaught Error: useAuth must be used within an AuthProvider
+    at useAuth (use-auth.tsx:137:11)
+    at WelcomeDialog (welcome-dialog.tsx:16:20)
