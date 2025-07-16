@@ -76,7 +76,6 @@ function SoundIntegrationSetup() {
     // Check if sound manager is available
     if (window.soundManager) {
       console.log('✅ Sound manager is available');
-      console.log('🔊 Sound settings:', window.soundManager.getSettings());
     } else {
       console.warn('⚠️ Sound manager not available, attempting to initialize...');
 
@@ -84,7 +83,7 @@ function SoundIntegrationSetup() {
       import('./lib/soundManager.js').then(() => {
         console.log('✅ Sound manager imported');
         if (window.soundManager) {
-          console.log('🔊 Sound manager initialized with settings:', window.soundManager.getSettings());
+          console.log('🔊 Sound manager initialized successfully');
         }
       }).catch(error => {
         console.error('❌ Failed to import sound manager:', error);
@@ -103,25 +102,6 @@ function SoundIntegrationSetup() {
         console.error('❌ Failed to import global sound handler:', error);
       });
     }
-
-    // Add debug event listeners
-    const debugClickHandler = (event: Event) => {
-      console.log('🖱️ Click detected on:', event.target);
-      if (window.soundManager) {
-        window.soundManager.playClick().then(() => {
-          console.log('🔊 Click sound played');
-        }).catch(error => {
-          console.error('❌ Failed to play click sound:', error);
-        });
-      }
-    };
-
-    // Add temporary debug listener
-    document.addEventListener('click', debugClickHandler);
-
-    return () => {
-      document.removeEventListener('click', debugClickHandler);
-    };
   }, []);
 
   return null;
