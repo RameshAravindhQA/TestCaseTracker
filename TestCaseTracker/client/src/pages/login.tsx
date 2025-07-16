@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { LoginForm } from "@/components/authentication/login-form";
 import { useAuth } from "@/hooks/use-auth";
 
-export function LoginPage() {
+function LoginPage() {
   const [location, setLocation] = useLocation();
   const { user, loading } = useAuth();
 
@@ -60,3 +60,5 @@ export function LoginPage() {
     </div>
   );
 }
+
+export default LoginPage;
