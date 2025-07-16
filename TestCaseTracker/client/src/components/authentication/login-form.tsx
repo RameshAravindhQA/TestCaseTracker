@@ -16,6 +16,7 @@ import { Mail, Lock, Github } from "lucide-react";
 import { useState } from "react";
 // LoginMotivationDialog removed to prevent blur screen issues
 import { SoundButton } from "@/components/ui/sound-button";
+import { SoundDebug } from '@/components/sound-debug';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -281,7 +282,10 @@ export function LoginForm() {
         </CardFooter>
       </Card>
 
-      {/* LoginMotivationDialog removed to prevent blur screen issues */}
+      {/* Sound Debug Panel - Development Only */}
+      <div className="mt-4">
+        <SoundDebug />
+      </div>
     </>
   );
 }

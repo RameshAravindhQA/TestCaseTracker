@@ -32,6 +32,83 @@ class SoundManager {
     }
   }
 
+  // Create procedural sounds using Web Audio API
+  createSyntheticSound(type) {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      // Different frequencies and patterns for different sound types
+      switch (type) {
+        case 'click':
+          oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1);
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+          break;
+        case 'success':
+          oscillator.frequency.setValueAtTime(523, audioContext.currentTime); // C5
+          oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.1); // E5
+          oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.2); // G5
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+          break;
+        case 'error':
+          oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+          oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.3);
+          gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+          break;
+        case 'crud':
+          oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+          oscillator.frequency.setValueAtTime(550, audioContext.currentTime + 0.05);
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+          break;
+        case 'message':
+          oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+          oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.1);
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+          break;
+        default:
+          oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      }
+
+      oscillator.type = 'sine';
+      
+      return new Promise((resolve) => {
+        oscillator.onended = () => {
+          audioContext.close();
+          resolve();
+        };
+        
+        oscillator.start();
+        
+        const duration = type === 'success' ? 0.3 : type === 'error' ? 0.3 : type === 'message' ? 0.2 : 0.1;
+        oscillator.stop(audioContext.currentTime + duration);
+      });
+    } catch (error) {
+      console.warn('Failed to create synthetic sound:', error);
+      return Promise.resolve();
+    }
+  }
+
+  createFallbackAudio() {
+    // Create a minimal working audio element
+    const audio = new Audio();
+    // Very short silent audio data URI
+    audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAAAQESWAkAfAAABAAEAZGF0YQAAAAA=';
+    audio.volume = this.volume;
+    return audio;
+  }
+
   async preloadSounds() {
     console.log('🔊 Starting sound preload...');
     
@@ -48,64 +125,72 @@ class SoundManager {
     for (const [type, url] of Object.entries(soundFiles)) {
       try {
         console.log(`🔊 Preloading ${type} from ${url}...`);
-        const audio = new Audio();
-        audio.preload = 'auto';
-        audio.volume = this.volume;
-        audio.crossOrigin = 'anonymous';
         
-        // Create a more robust loading promise
-        const loadPromise = new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            console.warn(`⏰ Audio load timeout for ${type}`);
-            // Create a fallback silent audio
-            const fallbackAudio = this.createFallbackAudio();
-            this.sounds.set(type, fallbackAudio);
-            resolve(fallbackAudio);
-          }, 3000);
+        // Try multiple formats
+        const formats = [url, url.replace('.mp3', '.wav'), url.replace('.mp3', '.ogg')];
+        let audioLoaded = false;
 
-          const onLoad = () => {
-            console.log(`✅ Sound ${type} loaded successfully`);
-            clearTimeout(timeout);
-            audio.removeEventListener('canplaythrough', onLoad);
-            audio.removeEventListener('error', onError);
-            resolve(audio);
-          };
+        for (const formatUrl of formats) {
+          if (audioLoaded) break;
+          
+          try {
+            const audio = new Audio();
+            audio.preload = 'auto';
+            audio.volume = this.volume;
+            audio.crossOrigin = 'anonymous';
+            
+            const loadPromise = new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                console.warn(`⏰ Audio load timeout for ${type} with ${formatUrl}`);
+                reject(new Error('Timeout'));
+              }, 2000);
 
-          const onError = (e) => {
-            console.warn(`❌ Failed to preload sound: ${type}`, e);
-            clearTimeout(timeout);
-            audio.removeEventListener('canplaythrough', onLoad);
-            audio.removeEventListener('error', onError);
-            // Create fallback audio instead of rejecting
-            const fallbackAudio = this.createFallbackAudio();
-            resolve(fallbackAudio);
-          };
+              const onLoad = () => {
+                console.log(`✅ Sound ${type} loaded successfully from ${formatUrl}`);
+                clearTimeout(timeout);
+                audio.removeEventListener('canplaythrough', onLoad);
+                audio.removeEventListener('loadeddata', onLoad);
+                audio.removeEventListener('error', onError);
+                resolve(audio);
+              };
 
-          audio.addEventListener('canplaythrough', onLoad, { once: true });
-          audio.addEventListener('error', onError, { once: true });
-        });
+              const onError = (e) => {
+                console.warn(`❌ Failed to preload sound: ${type} from ${formatUrl}`, e);
+                clearTimeout(timeout);
+                audio.removeEventListener('canplaythrough', onLoad);
+                audio.removeEventListener('loadeddata', onLoad);
+                audio.removeEventListener('error', onError);
+                reject(e);
+              };
 
-        // Set the source after setting up event listeners
-        audio.src = url;
-        
-        const loadedAudio = await loadPromise;
-        this.sounds.set(type, loadedAudio);
-        console.log(`✅ Sound ${type} added to collection`);
+              audio.addEventListener('canplaythrough', onLoad, { once: true });
+              audio.addEventListener('loadeddata', onLoad, { once: true });
+              audio.addEventListener('error', onError, { once: true });
+            });
+
+            audio.src = formatUrl;
+            
+            const loadedAudio = await loadPromise;
+            this.sounds.set(type, loadedAudio);
+            console.log(`✅ Sound ${type} added to collection from ${formatUrl}`);
+            audioLoaded = true;
+          } catch (error) {
+            console.warn(`❌ Error loading ${type} from ${formatUrl}:`, error);
+          }
+        }
+
+        // If no format worked, create synthetic sound
+        if (!audioLoaded) {
+          console.log(`🎵 Creating synthetic sound for ${type}`);
+          this.sounds.set(type, 'synthetic');
+        }
       } catch (error) {
         console.warn(`❌ Error preloading sound: ${type}`, error);
-        // Add fallback audio
-        this.sounds.set(type, this.createFallbackAudio());
+        this.sounds.set(type, 'synthetic');
       }
     }
     
     console.log(`🔊 Sound preload complete. Loaded ${this.sounds.size} sounds:`, Array.from(this.sounds.keys()));
-  }
-
-  createFallbackAudio() {
-    // Create a silent audio element as fallback
-    const audio = new Audio();
-    audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwiBjiuztfSeiMJJX7P9+OQShEIZrjt52d/S';
-    return audio;
   }
 
   async playSound(type) {
@@ -121,6 +206,14 @@ class SoundManager {
       
       if (!audio) {
         console.warn(`❌ Sound not found: ${type}. Available sounds:`, Array.from(this.sounds.keys()));
+        // Create synthetic sound on-demand
+        await this.createSyntheticSound(type);
+        return;
+      }
+
+      if (audio === 'synthetic') {
+        console.log(`🎵 Playing synthetic sound: ${type}`);
+        await this.createSyntheticSound(type);
         return;
       }
 
@@ -131,13 +224,22 @@ class SoundManager {
       clonedAudio.volume = this.volume;
       clonedAudio.currentTime = 0;
 
-      const playPromise = clonedAudio.play();
-      if (playPromise !== undefined) {
-        await playPromise;
-        console.log(`✅ Sound ${type} played successfully`);
+      // Handle different audio states
+      if (clonedAudio.readyState >= 2) { // HAVE_CURRENT_DATA
+        const playPromise = clonedAudio.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+          console.log(`✅ Sound ${type} played successfully`);
+        }
+      } else {
+        console.log(`🎵 Audio not ready, falling back to synthetic sound for ${type}`);
+        await this.createSyntheticSound(type);
       }
     } catch (error) {
       console.warn(`❌ Failed to play sound: ${type}`, error);
+      // Fallback to synthetic sound
+      console.log(`🎵 Falling back to synthetic sound for ${type}`);
+      await this.createSyntheticSound(type);
     }
   }
 
@@ -156,7 +258,9 @@ class SoundManager {
   setVolume(volume) {
     this.volume = Math.max(0, Math.min(1, volume));
     this.sounds.forEach(audio => {
-      audio.volume = this.volume;
+      if (audio !== 'synthetic' && audio.volume !== undefined) {
+        audio.volume = this.volume;
+      }
     });
     this.saveSettings();
   }
