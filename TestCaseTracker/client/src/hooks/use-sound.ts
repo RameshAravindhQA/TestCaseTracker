@@ -18,7 +18,7 @@ const defaultSoundSettings: SoundSettings = {
     crud: '/sounds/crud.mp3',
     error: '/sounds/error.mp3',
     success: '/sounds/success.mp3',
-    message: '/sounds/success.mp3',
+    message: '/sounds/message.mp3',
     navigation: '/sounds/navigation.mp3',
     delete: '/sounds/delete.mp3',
     update: '/sounds/update.mp3',
@@ -54,21 +54,35 @@ export const useSound = () => {
       const soundUrl = settings.sounds[soundType];
       if (!soundUrl) return;
 
-      const audio = new Audio(soundUrl);
+      // Create audio element with preload
+      const audio = new Audio();
+      audio.preload = 'auto';
       audio.volume = settings.volume;
+      
+      // Set source after creating audio element
+      audio.src = soundUrl;
 
       // Handle loading errors gracefully
       audio.addEventListener('error', (e) => {
         console.warn(`Failed to load sound: ${soundUrl}`, e);
       });
 
-      audio.play().catch((error) => {
-        console.warn(`Failed to play sound: ${soundUrl}`, error);
-      });
+      // Attempt to play with fallback
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          // Auto-play policy prevented playback
+          if (error.name === 'NotAllowedError') {
+            console.log('Audio play prevented by browser policy');
+          } else {
+            console.warn(`Failed to play sound: ${soundUrl}`, error);
+          }
+        });
+      }
     } catch (error) {
       console.error('Error playing sound:', error);
     }
-  }, []);
+  }, [getSettings]);
 
   const uploadSound = useCallback((type: SoundType, file: File): Promise<string> => {
     return new Promise((resolve, reject) => {

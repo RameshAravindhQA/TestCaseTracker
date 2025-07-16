@@ -86,18 +86,20 @@ export const SoundProvider: React.FC<SoundProviderProps> = ({ children }) => {
   React.useEffect(() => {
     const handleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      const button = target.closest('button');
-
-      if (button) {
+      
+      // Check if the clicked element or its parent is clickable
+      const clickableElement = target.closest('button, a, [role="button"], .cursor-pointer');
+      
+      if (clickableElement) {
         // Check for specific button types
-        const buttonText = button.textContent?.toLowerCase() || '';
-        const classList = button.className.toLowerCase();
+        const elementText = clickableElement.textContent?.toLowerCase() || '';
+        const classList = clickableElement.className.toLowerCase();
 
-        if (buttonText.includes('delete') || classList.includes('destructive')) {
+        if (elementText.includes('delete') || classList.includes('destructive')) {
           playSound('delete');
-        } else if (buttonText.includes('save') || buttonText.includes('create') || buttonText.includes('add')) {
+        } else if (elementText.includes('save') || elementText.includes('create') || elementText.includes('add')) {
           playSound('create');
-        } else if (buttonText.includes('update') || buttonText.includes('edit')) {
+        } else if (elementText.includes('update') || elementText.includes('edit')) {
           playSound('update');
         } else {
           playSound('click');
@@ -105,8 +107,9 @@ export const SoundProvider: React.FC<SoundProviderProps> = ({ children }) => {
       }
     };
 
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
+    // Use capture phase to ensure we catch all clicks
+    document.addEventListener('click', handleClick, true);
+    return () => document.removeEventListener('click', handleClick, true);
   }, [playSound]);
 
   const value: SoundContextType = {
