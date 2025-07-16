@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,7 +77,7 @@ export default function TestDataGeneratorPage() {
       // Simulate data generation using faker.js patterns
       const data = Array.from({ length: recordCount }, (_, index) => {
         const record: any = { id: index + 1 };
-        
+
         dataFields.forEach(field => {
           if (field.enabled) {
             switch (field.type) {
@@ -191,6 +190,14 @@ export default function TestDataGeneratorPage() {
         lastName: ["Smith", "Jones", "Taylor", "Williams", "Brown", "Davies", "Evans", "Wilson"],
         city: ["London", "Birmingham", "Manchester", "Glasgow", "Liverpool", "Leeds", "Sheffield", "Edinburgh"],
         company: ["BP", "Vodafone", "HSBC", "Shell", "British Airways", "Tesco", "Barclays", "BT Group"]
+      },
+      IN: {
+        firstName: ["Raj", "Priya", "Amit", "Sneha", "Vikram", "Kavya", "Arjun", "Meera", "Rohit", "Sanya", "Dev", "Anita"],
+        lastName: ["Sharma", "Patel", "Singh", "Kumar", "Gupta", "Verma", "Agarwal", "Joshi", "Reddy", "Nair", "Iyer", "Desai"],
+        city: ["Mumbai", "Delhi", "Bangalore", "Chennai", "Kolkata", "Hyderabad", "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Kanpur", "Nagpur"],
+        company: ["Tata Consultancy Services", "Infosys", "Wipro", "HCL Technologies", "Tech Mahindra", "Reliance Industries", "HDFC Bank", "ICICI Bank"],
+        states: ["Maharashtra", "Karnataka", "Tamil Nadu", "Delhi", "West Bengal", "Telangana", "Gujarat", "Rajasthan", "Uttar Pradesh", "Madhya Pradesh"],
+        districts: ["Mumbai", "Bangalore Urban", "Chennai", "New Delhi", "Kolkata", "Hyderabad", "Pune", "Ahmedabad", "Jaipur", "Lucknow"]
       },
       // Add more countries as needed
     };
@@ -456,7 +463,7 @@ export default function TestDataGeneratorPage() {
                   </>
                 )}
               </Button>
-              
+
               {generatedData.length > 0 && (
                 <Button onClick={exportData} variant="outline">
                   <Download className="mr-2 h-4 w-4" />
