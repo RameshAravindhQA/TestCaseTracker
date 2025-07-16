@@ -60,12 +60,14 @@ export default function AutomationPage() {
   const [editingScript, setEditingScript] = useState<AutomationScript | null>(null);
 
   // Fetch projects with modules and test cases
-  const { data: projects = [], isLoading: isProjectsLoading } = useQuery<Project[]>({
-    queryKey: ['/api/projects/automation'],
+  const { data: projects = [], isLoading: projectsLoading } = useQuery({
+    queryKey: ['projects'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/projects/automation');
+      const response = await fetch('/api/projects');
       if (!response.ok) throw new Error('Failed to fetch projects');
-      return response.json();
+      const data = await response.json();
+      console.log('Projects loaded:', data);
+      return data;
     }
   });
 
@@ -240,18 +242,29 @@ export default function AutomationPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="project">Project</Label>
-                    <Select value={selectedProject?.toString()} onValueChange={(value) => setSelectedProject(value)}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select project to automate" />
-                      </SelectTrigger>
-                      <SelectContent>
+                    {projectsLoading ? (
+                      <div className="flex items-center justify-center p-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        <span className="ml-2">Loading projects...</span>
+                      </div>
+                    ) : projects.length === 0 ? (
+                      <div className="p-4 text-center text-muted-foreground">
+                        No projects found. Please create a project first.
+                      </div>
+                    ) : (
+                      <select 
+                        value={selectedProject} 
+                        onChange={(e) => setSelectedProject(e.target.value)}
+                        className="w-full p-2 border rounded-md"
+                      >
+                        <option value="">Select project to automate</option>
                         {projects.map((project: any) => (
-                          <SelectItem key={project.id} value={project.id.toString()}>
-                            {project.name}
-                          </SelectItem>
+                          <option key={project.id} value={project.id}>
+                            {project.name} (ID: {project.id})
+                          </option>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </select>
+                    )}
                   </div>
 
                   <div className="space-y-2">

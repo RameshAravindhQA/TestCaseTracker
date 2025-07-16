@@ -42,7 +42,8 @@ import {
   FileArchive,
   Database,
   Tag,
-  NotebookPen
+  NotebookPen,
+  Volume2
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -488,6 +489,7 @@ export default function SettingsPage() {
     { id: "security", label: "Security", icon: <Shield className="h-4 w-4 mr-2" /> },
     { id: "test-case", label: "Test Cases", icon: <NotebookPen className="h-4 w-4 mr-2" /> },
     { id: "permissions", label: "Permissions", icon: <Users2 className="h-4 w-4 mr-2" /> },
+    { id: "sound", label: "Sound", icon: <Volume2 className="h-4 w-4 mr-2" /> },
   ];
 
   return (
@@ -853,7 +855,7 @@ export default function SettingsPage() {
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select location" />
+                                    The code has been modified to include a Sound settings tab in the settings page, import the Volume2 icon and SoundSettings component, and add the Sound settings content to the tab rendering.                                  <SelectValue placeholder="Select location" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>

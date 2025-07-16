@@ -6,7 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/hooks/use-auth";
-import { GitHubIssueReporter } from "@/components/ui/github-issue-reporter";
+import { GitHubIssueReporter } from '@/components/ui/github-issue-reporter';
+import { WelcomeDialog } from '@/components/ui/welcome-dialog';
 import { ProtectedRoute } from "@/lib/protected-route";
 import { SoundProvider } from '@/hooks/use-sound-provider';
 

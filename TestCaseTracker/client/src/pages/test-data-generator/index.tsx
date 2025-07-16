@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Download, FileText, RefreshCw } from "lucide-react";
+import { Download, FileText, RefreshCw, Database } from "lucide-react";
 
 interface DataField {
   id: string;
@@ -328,8 +328,11 @@ export default function TestDataGeneratorPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Test Data Generator</h1>
+        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-3">
+          <Database className="h-8 w-8 text-blue-600" />
+          <h1 className="text-3xl font-bold">Test Data Generator</h1>
+        </div>
           <p className="text-muted-foreground">
             Generate realistic test data with country-specific formats and custom fields
           </p>

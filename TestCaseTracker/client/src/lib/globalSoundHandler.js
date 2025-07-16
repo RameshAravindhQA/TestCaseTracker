@@ -8,17 +8,34 @@ class GlobalSoundHandler {
 
   setupGlobalListeners() {
     console.log('🔊 Setting up global sound listeners...');
-    
-    // Add click sound to all buttons and interactive elements
+
+    // Global click handler for interactive elements only
     document.addEventListener('click', (event) => {
       const target = event.target;
-      console.log('🖱️ Click detected on:', target.tagName, target.className);
-      
-      if (this.shouldPlayClickSound(target)) {
-        console.log('🔊 Playing click sound for:', target.tagName);
-        this.playClickSound();
-      } else {
-        console.log('🔇 Click sound not triggered for:', target.tagName);
+
+      // Only play sound for interactive elements
+      const interactiveElements = [
+        'button', 'a', 'input', 'select', 'textarea', 'label',
+        '[role="button"]', '[role="link"]', '[role="tab"]', '[role="menuitem"]',
+        '.btn', '.button', '.clickable', '[data-sound="click"]'
+      ];
+
+      const isInteractive = interactiveElements.some(selector => {
+        try {
+          return target.matches(selector) || target.closest(selector);
+        } catch (e) {
+          return false;
+        }
+      });
+
+      // Don't play sound for disabled elements
+      const isDisabled = target.disabled || target.closest('[disabled]') || 
+                        target.classList.contains('disabled') || 
+                        target.closest('.disabled');
+
+      if (isInteractive && !isDisabled && window.soundManager) {
+        console.log('🔊 Global handler: Playing click sound for', target.tagName);
+        window.soundManager.playClick();
       }
     });
 
@@ -122,7 +139,7 @@ class GlobalSoundHandler {
     window.fetch = async (...args) => {
       try {
         const response = await originalFetch(...args);
-        
+
         // Play sound based on response status
         if (response.ok) {
           const url = args[0];
@@ -143,7 +160,7 @@ class GlobalSoundHandler {
         } else {
           this.playErrorSound();
         }
-        
+
         return response;
       } catch (error) {
         this.playErrorSound();
