@@ -40,9 +40,12 @@ class GlobalSoundHandler {
   }
 
   setupGlobalErrorHandling() {
-    // Only handle custom application errors, not console errors
+    // Only handle custom application errors, not console/development errors
     document.addEventListener('app:error', (event) => {
-      if (this.userHasInteracted) {
+      if (this.userHasInteracted && 
+          !this.isNetworkError(event) && 
+          !this.isDevelopmentError(event) && 
+          !this.isResourceError(event)) {
         console.log('🔊 Global handler: Playing error sound for app error');
         this.playSound('error');
       }
@@ -72,6 +75,25 @@ class GlobalSoundHandler {
            errorString.includes('net::err_connection_timed_out') ||
            errorString.includes('websocket') ||
            errorString.includes('socket');
+  }
+
+  // Check if error is development-related (shouldn't trigger sounds)
+  isDevelopmentError(error) {
+    if (!error) return false;
+    const errorString = error.toString().toLowerCase();
+    return errorString.includes('uncaught referenceerror') || 
+           errorString.includes('syntaxerror') ||
+           errorString.includes('chunk-') ||
+           errorString.includes('vite') ||
+           errorString.includes('dev server') ||
+           errorString.includes('hmr') ||
+           errorString.includes('hot reload') ||
+           errorString.includes('useeffect is not defined') ||
+           errorString.includes('console') ||
+           errorString.includes('warning') ||
+           errorString.includes('validatedomnesting') ||
+           errorString.includes('the above error occurred') ||
+           errorString.includes('consider adding an error boundary');
   }
 
   // Check if error is resource-related (shouldn't trigger sounds)

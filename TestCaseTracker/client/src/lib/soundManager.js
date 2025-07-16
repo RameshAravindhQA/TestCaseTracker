@@ -112,7 +112,7 @@ export class SoundManager {
     // Global click detection with priority system
     document.addEventListener('click', (event) => {
       const target = event.target;
-      
+
       // Priority 1: Form submission buttons -> CRUD sound
       if (this.isFormSubmissionButton(target)) {
         console.log('🔊 Form submission button detected, playing CRUD sound');
@@ -143,7 +143,7 @@ export class SoundManager {
 
     const clickableElements = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'];
     const clickableRoles = ['button', 'link', 'tab', 'menuitem'];
-    
+
     // Check tag name
     if (clickableElements.includes(element.tagName)) {
       return true;
@@ -314,6 +314,33 @@ export class SoundManager {
   playSuccessSound() { this.playSound('success'); }
   playErrorSound() { this.playSound('error'); }
   playMessageSound() { this.playSound('message'); }
+
+  setupGlobalErrorHandling() {
+    // Only handle custom application errors, not console errors
+    document.addEventListener('app:error', (event) => {
+      if (this.userHasInteracted && !this.isDevelopmentError(event)) {
+        console.log('🔊 Global handler: Playing error sound for app error');
+        this.playSound('error');
+      }
+    });
+  }
+
+  // Check if error is development/console related (shouldn't trigger sounds)
+  isDevelopmentError(error) {
+    if (!error) return false;
+    const errorString = error.toString().toLowerCase();
+    return errorString.includes('uncaught referenceerror') || 
+           errorString.includes('syntaxerror') ||
+           errorString.includes('chunk-') ||
+           errorString.includes('vite') ||
+           errorString.includes('dev server') ||
+           errorString.includes('hmr') ||
+           errorString.includes('hot reload') ||
+           errorString.includes('useeffect is not defined') ||
+           errorString.includes('console') ||
+           errorString.includes('warning') ||
+           errorString.includes('validatedomnesting');
+  }
 }
 
 // Global instance

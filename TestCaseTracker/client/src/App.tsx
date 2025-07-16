@@ -235,13 +235,13 @@ function AppContent() {
             console.log('🔊 Sound system ready with settings:', window.soundManager?.getSettings());
 
             // Check if user just logged in and show welcome dialog
-            const showWelcome = localStorage.getItem('showWelcomeDialog');
+            const showWelcome = sessionStorage.getItem('showWelcomeDialog');
             if (showWelcome === 'true') {
-              localStorage.removeItem('showWelcomeDialog');
+              sessionStorage.removeItem('showWelcomeDialog');
               // Show welcome dialog after a short delay
               setTimeout(() => {
                 setShowWelcomeDialog(true);
-              }, 1000);
+              }, 2000);
             }
           } else {
             console.warn('⚠️ Sound manager still not available after initialization');
@@ -265,10 +265,10 @@ function AppContent() {
           <Router />
           <GitHubIssueReporter />
 
-          {/* Welcome Dialog - now inside AuthProvider */}
+          {/* Welcome Dialog - triggered after login */}
           <WelcomeDialog 
             open={showWelcomeDialog} 
-            onOpenChange={setShowWelcomeDialog}
+            onClose={() => setShowWelcomeDialog(false)}
           />
         </TooltipProvider>
       </ThemeProvider>

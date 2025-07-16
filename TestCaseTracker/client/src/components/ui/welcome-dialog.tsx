@@ -21,13 +21,18 @@ export function WelcomeDialog({ open: controlledOpen, onClose }: WelcomeDialogPr
     // Only show welcome dialog after successful login
     if (controlledOpen === undefined) {
       const hasShownWelcome = localStorage.getItem(`hasShownWelcome_${user?.id}`);
+      const shouldShowWelcome = sessionStorage.getItem('showWelcomeDialog');
 
-      // Show only if user is authenticated and hasn't seen welcome for this user
-      if (isAuthenticated && user && !hasShownWelcome) {
-        // Add small delay to ensure login process is complete
+      // Show if user is authenticated, hasn't seen welcome, and session indicates to show
+      if (isAuthenticated && user && !hasShownWelcome && shouldShowWelcome === 'true') {
+        // Remove the trigger flag
+        sessionStorage.removeItem('showWelcomeDialog');
+        
+        // Add delay to ensure login process is complete
         const timer = setTimeout(() => {
+          console.log('🎉 Showing welcome dialog for user:', user.firstName);
           setOpen(true);
-        }, 1000);
+        }, 1500);
 
         return () => clearTimeout(timer);
       }
