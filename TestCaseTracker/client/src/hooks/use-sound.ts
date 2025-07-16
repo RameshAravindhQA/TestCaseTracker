@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect } from 'react';
 
 export type SoundType = 'click' | 'crud' | 'error' | 'success' | 'message' | 'navigation' | 'delete' | 'update' | 'create';
@@ -42,24 +41,34 @@ export const useSound = () => {
     localStorage.setItem('soundSettings', JSON.stringify(updated));
   }, [getSoundSettings]);
 
-  const playSound = useCallback((type: SoundType) => {
-    const settings = getSoundSettings();
-    if (!settings.enabled) return;
+  const getSettings = useCallback((): SoundSettings => {
+    const stored = localStorage.getItem('soundSettings');
+    return stored ? { ...defaultSoundSettings, ...JSON.parse(stored) } : defaultSoundSettings;
+  }, []);
 
+  const playSound = useCallback((soundType: SoundType) => {
     try {
-      // Stop previous sound if playing
-      if (globalSoundInstance && !globalSoundInstance.paused) {
-        globalSoundInstance.pause();
-        globalSoundInstance.currentTime = 0;
-      }
+      const settings = getSettings();
+      if (!settings.enabled) return;
 
-      globalSoundInstance = new Audio(settings.sounds[type]);
-      globalSoundInstance.volume = settings.volume;
-      globalSoundInstance.play().catch(console.error);
+      const soundUrl = settings.sounds[soundType];
+      if (!soundUrl) return;
+
+      const audio = new Audio(soundUrl);
+      audio.volume = settings.volume;
+
+      // Handle loading errors gracefully
+      audio.addEventListener('error', (e) => {
+        console.warn(`Failed to load sound: ${soundUrl}`, e);
+      });
+
+      audio.play().catch((error) => {
+        console.warn(`Failed to play sound: ${soundUrl}`, error);
+      });
     } catch (error) {
       console.error('Error playing sound:', error);
     }
-  }, [getSoundSettings]);
+  }, []);
 
   const uploadSound = useCallback((type: SoundType, file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -84,7 +93,7 @@ export const useSound = () => {
   useEffect(() => {
     const handleGlobalClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      
+
       // Check if it's a clickable element
       if (
         target.tagName === 'BUTTON' ||
@@ -100,7 +109,7 @@ export const useSound = () => {
     };
 
     document.addEventListener('click', handleGlobalClick);
-    
+
     return () => {
       document.removeEventListener('click', handleGlobalClick);
     };

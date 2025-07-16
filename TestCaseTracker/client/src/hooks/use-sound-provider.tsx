@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useCallback, ReactNode } from 'react';
 import { useSound, SoundType } from './use-sound';
 import { useToast } from './use-toast';
@@ -57,7 +56,7 @@ export const SoundProvider: React.FC<SoundProviderProps> = ({ children }) => {
   // Setup global error and success handlers
   React.useEffect(() => {
     const originalToast = toast;
-    
+
     // Override toast to play sounds
     const enhancedToast = (options: any) => {
       if (options.variant === 'destructive') {
@@ -78,11 +77,37 @@ export const SoundProvider: React.FC<SoundProviderProps> = ({ children }) => {
     };
 
     window.addEventListener('api-response', handleApiResponse);
-    
+
     return () => {
       window.removeEventListener('api-response', handleApiResponse);
     };
   }, [playErrorSound, playSuccessSound, toast]);
+
+  React.useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const button = target.closest('button');
+
+      if (button) {
+        // Check for specific button types
+        const buttonText = button.textContent?.toLowerCase() || '';
+        const classList = button.className.toLowerCase();
+
+        if (buttonText.includes('delete') || classList.includes('destructive')) {
+          playSound('delete');
+        } else if (buttonText.includes('save') || buttonText.includes('create') || buttonText.includes('add')) {
+          playSound('create');
+        } else if (buttonText.includes('update') || buttonText.includes('edit')) {
+          playSound('update');
+        } else {
+          playSound('click');
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [playSound]);
 
   const value: SoundContextType = {
     playSound,

@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { GitHubIssueReporter } from "@/components/ui/github-issue-reporter";
 import { SoundProvider } from './hooks/use-sound-provider';
+import ProtectedRoute from "@/lib/protected-route";
 
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
