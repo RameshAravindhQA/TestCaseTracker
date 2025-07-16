@@ -1,178 +1,135 @@
-// Global sound event handler
+// Global sound event handler for the entire application
 class GlobalSoundHandler {
   constructor() {
-    console.log('🔊 Initializing Global Sound Handler...');
-    this.setupGlobalListeners();
-    console.log('✅ Global Sound Handler initialized');
+    this.soundManager = null;
+    this.initialized = false;
+    this.userHasInteracted = false;
+    this.setupUserInteractionTracking();
   }
 
-  setupGlobalListeners() {
-    console.log('🔊 Setting up global sound listeners...');
-
-    // Global click handler for interactive elements only
-    document.addEventListener('click', (event) => {
-      const target = event.target;
-
-      // Only play sound for specific interactive elements
-      const isButton = target.tagName.toLowerCase() === 'button' || 
-                      target.getAttribute('role') === 'button' ||
-                      target.closest('button') !== null;
-      
-      const isLink = target.tagName.toLowerCase() === 'a' || 
-                    target.getAttribute('role') === 'link';
-      
-      const isInput = target.tagName.toLowerCase() === 'input' && 
-                     ['submit', 'button', 'reset'].includes(target.type);
-
-      // Don't play sound for disabled elements or divs with selected state
-      const isDisabled = target.disabled || target.closest('[disabled]') || 
-                        target.classList.contains('disabled') || 
-                        target.closest('.disabled');
-
-      // Don't play sound on divs or spans unless they have explicit button role
-      const isDivOrSpan = ['div', 'span'].includes(target.tagName.toLowerCase()) && 
-                         target.getAttribute('role') !== 'button';
-
-      if ((isButton || isLink || isInput) && !isDisabled && !isDivOrSpan && window.soundManager) {
-        console.log('🔊 Global handler: Playing click sound for', target.tagName);
-        window.soundManager.playClick();
-      }
-    });
-
-    // Add sound to form submissions
-    document.addEventListener('submit', () => {
-      this.playCrudSound();
-    });
-
-    // Add sound to input changes for CRUD operations
-    let inputTimer;
-    document.addEventListener('input', () => {
-      clearTimeout(inputTimer);
-      inputTimer = setTimeout(() => {
-        this.playClickSound();
-      }, 200);
-    });
-
-    // Listen for API responses
-    this.setupApiSounds();
-  }
-
-  shouldPlayClickSound(element) {
-    // Only play sound for actual buttons and button-like elements
-    const tagName = element.tagName.toLowerCase();
-
-    // Check if it's a button
-    if (tagName === 'button') {
-      return true;
-    }
-
-    // Check if it's an element with button role
-    if (element.getAttribute('role') === 'button') {
-      return true;
-    }
-
-    // Check if it's a clickable input (submit, button, etc.)
-    if (tagName === 'input' && ['submit', 'button', 'reset'].includes(element.type)) {
-      return true;
-    }
-
-    // Check if it has specific button classes (common UI library patterns)
-    if (element.className && (
-      element.className.includes('btn') ||
-      element.className.includes('button') ||
-      element.className.includes('Button') // React components
-    )) {
-      return true;
-    }
-
-    // Check if it's inside a button element (for nested elements)
-    let parent = element.parentElement;
-    while (parent) {
-      if (parent.tagName.toLowerCase() === 'button' || parent.getAttribute('role') === 'button') {
-        return true;
-      }
-      parent = parent.parentElement;
-    }
-
-    return false;
-  }
-
-  async playClickSound() {
-    console.log('🔊 Global handler: Playing click sound');
-    if (window.soundManager) {
-      await window.soundManager.playClick();
-    } else {
-      console.warn('⚠️ Sound manager not available for click sound');
-    }
-  }
-
-  async playCrudSound() {
-    console.log('🔊 Global handler: Playing CRUD sound');
-    if (window.soundManager) {
-      await window.soundManager.playCrud();
-    } else {
-      console.warn('⚠️ Sound manager not available for CRUD sound');
-    }
-  }
-
-  async playSuccessSound() {
-    console.log('🔊 Global handler: Playing success sound');
-    if (window.soundManager) {
-      await window.soundManager.playSuccess();
-    } else {
-      console.warn('⚠️ Sound manager not available for success sound');
-    }
-  }
-
-  async playErrorSound() {
-    console.log('🔊 Global handler: Playing error sound');
-    if (window.soundManager) {
-      await window.soundManager.playError();
-    } else {
-      console.warn('⚠️ Sound manager not available for error sound');
-    }
-  }
-
-  setupApiSounds() {
-    // Intercept fetch requests
-    const originalFetch = window.fetch;
-    window.fetch = async (...args) => {
-      try {
-        const response = await originalFetch(...args);
-
-        // Play sound based on response status
-        if (response.ok) {
-          const url = args[0];
-          if (typeof url === 'string') {
-            if (url.includes('/api/') && (
-              url.includes('POST') || 
-              url.includes('PUT') || 
-              url.includes('DELETE') ||
-              args[1]?.method === 'POST' ||
-              args[1]?.method === 'PUT' ||
-              args[1]?.method === 'DELETE'
-            )) {
-              this.playCrudSound();
-            } else {
-              this.playSuccessSound();
-            }
-          }
-        } else {
-          this.playErrorSound();
-        }
-
-        return response;
-      } catch (error) {
-        this.playErrorSound();
-        throw error;
-      }
+  // Track when user has actually interacted with the page
+  setupUserInteractionTracking() {
+    const markUserInteraction = () => {
+      this.userHasInteracted = true;
+      console.log('👤 User interaction detected - sounds enabled');
+      // Remove listeners after first interaction
+      document.removeEventListener('click', markUserInteraction);
+      document.removeEventListener('keydown', markUserInteraction);
+      document.removeEventListener('touchstart', markUserInteraction);
     };
+
+    document.addEventListener('click', markUserInteraction);
+    document.addEventListener('keydown', markUserInteraction);
+    document.addEventListener('touchstart', markUserInteraction);
+  }
+
+  async initialize(soundManager) {
+    if (this.initialized) {
+      console.log('🔊 Global sound handler already initialized');
+      return;
+    }
+
+    this.soundManager = soundManager;
+    this.initialized = true;
+
+    console.log('🔊 Global sound handler initialized');
+
+    // Set up global error handling - but don't play sounds automatically
+    this.setupGlobalErrorHandling();
+    this.setupGlobalSuccessHandling();
+  }
+
+  setupGlobalErrorHandling() {
+    // Handle unhandled promise rejections
+    window.addEventListener('unhandledrejection', (event) => {
+      // Only play sound if user has interacted AND it's not a network error
+      if (this.userHasInteracted && !this.isNetworkError(event.reason)) {
+        console.log('🔊 Global handler: Playing error sound for unhandled rejection');
+        this.playSound('error');
+      }
+    });
+
+    // Handle general errors
+    window.addEventListener('error', (event) => {
+      // Only play sound if user has interacted AND it's not a network/resource error
+      if (this.userHasInteracted && !this.isResourceError(event)) {
+        console.log('🔊 Global handler: Playing error sound for general error');
+        this.playSound('error');
+      }
+    });
+  }
+
+  setupGlobalSuccessHandling() {
+    // Listen for custom success events only
+    document.addEventListener('app:success', () => {
+      if (this.userHasInteracted) {
+        console.log('🔊 Global handler: Playing success sound');
+        this.playSound('success');
+      }
+    });
+  }
+
+  // Check if error is network-related (shouldn't trigger sounds)
+  isNetworkError(error) {
+    if (!error) return false;
+    const errorString = error.toString().toLowerCase();
+    return errorString.includes('network') || 
+           errorString.includes('fetch') || 
+           errorString.includes('connection') ||
+           errorString.includes('timeout') ||
+           errorString.includes('err_connection');
+  }
+
+  // Check if error is resource-related (shouldn't trigger sounds)
+  isResourceError(event) {
+    if (!event) return false;
+    return event.type === 'error' && 
+           (event.target.tagName === 'IMG' || 
+            event.target.tagName === 'AUDIO' || 
+            event.target.tagName === 'VIDEO' ||
+            event.target.tagName === 'SCRIPT' ||
+            event.target.tagName === 'LINK');
+  }
+
+  // Public method to play sounds (only if user has interacted)
+  playSound(soundName) {
+    if (!this.initialized || !this.soundManager) {
+      console.warn('🔊 Sound manager not initialized');
+      return;
+    }
+
+    if (!this.userHasInteracted) {
+      console.log('🔊 Skipping sound - user has not interacted yet');
+      return;
+    }
+
+    try {
+      this.soundManager.playSound(soundName);
+    } catch (error) {
+      console.error('🔊 Error playing sound:', error);
+    }
+  }
+
+  // Method to play sound on user actions (buttons, form submissions, etc.)
+  playUserActionSound(soundName) {
+    if (!this.initialized || !this.soundManager) {
+      return;
+    }
+
+    // Mark that user has interacted since they triggered this action
+    this.userHasInteracted = true;
+
+    try {
+      console.log(`🔊 Playing user action sound: ${soundName}`);
+      this.soundManager.playSound(soundName);
+    } catch (error) {
+      console.error('🔊 Error playing user action sound:', error);
+    }
   }
 }
 
-// Initialize global sound handler
-if (typeof window !== 'undefined') {
-  window.globalSoundHandler = new GlobalSoundHandler();
-}
+// Create global instance
+const globalSoundHandler = new GlobalSoundHandler();
 
-export default window.globalSoundHandler;
+// Export for use in other modules
+export default globalSoundHandler;

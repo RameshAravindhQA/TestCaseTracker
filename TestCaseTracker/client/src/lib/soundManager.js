@@ -81,15 +81,15 @@ class SoundManager {
       }
 
       oscillator.type = 'sine';
-      
+
       return new Promise((resolve) => {
         oscillator.onended = () => {
           audioContext.close();
           resolve();
         };
-        
+
         oscillator.start();
-        
+
         const duration = type === 'success' ? 0.3 : type === 'error' ? 0.3 : type === 'message' ? 0.2 : 0.1;
         oscillator.stop(audioContext.currentTime + duration);
       });
@@ -127,20 +127,20 @@ class SoundManager {
     for (const [type, url] of Object.entries(soundFiles)) {
       try {
         console.log(`🔊 Preloading ${type} from ${url}...`);
-        
+
         // Try multiple formats
         const formats = [url, url.replace('.mp3', '.wav'), url.replace('.mp3', '.ogg')];
         let audioLoaded = false;
 
         for (const formatUrl of formats) {
           if (audioLoaded) break;
-          
+
           try {
             const audio = new Audio();
             audio.preload = 'auto';
             audio.volume = this.volume;
             audio.crossOrigin = 'anonymous';
-            
+
             const loadPromise = new Promise((resolve, reject) => {
               const timeout = setTimeout(() => {
                 console.warn(`⏰ Audio load timeout for ${type} with ${formatUrl}`);
@@ -171,7 +171,7 @@ class SoundManager {
             });
 
             audio.src = formatUrl;
-            
+
             const loadedAudio = await loadPromise;
             this.sounds.set(type, loadedAudio);
             console.log(`✅ Sound ${type} added to collection from ${formatUrl}`);
@@ -191,13 +191,13 @@ class SoundManager {
         this.sounds.set(type, 'synthetic');
       }
     }
-    
+
     console.log(`🔊 Sound preload complete. Loaded ${this.sounds.size} sounds:`, Array.from(this.sounds.keys()));
   }
 
   async playSound(type) {
     console.log(`🔊 Attempting to play sound: ${type}`);
-    
+
     if (!this.enabled) {
       console.log('🔇 Sound is disabled, skipping playback');
       return;
@@ -205,7 +205,7 @@ class SoundManager {
 
     try {
       let audio = this.sounds.get(type);
-      
+
       if (!audio) {
         console.warn(`❌ Sound not found: ${type}. Available sounds:`, Array.from(this.sounds.keys()));
         // Create synthetic sound on-demand
@@ -220,7 +220,7 @@ class SoundManager {
       }
 
       console.log(`🔊 Playing sound: ${type} at volume ${this.volume}`);
-      
+
       // Clone the audio to allow multiple simultaneous plays
       const clonedAudio = audio.cloneNode();
       clonedAudio.volume = this.volume;
@@ -293,12 +293,12 @@ class SoundManager {
           const customSounds = this.getCustomSounds();
           customSounds[type] = e.target.result;
           localStorage.setItem('customSounds', JSON.stringify(customSounds));
-          
+
           // Create audio element for the custom sound
           const audio = new Audio(e.target.result);
           audio.volume = this.volume;
           this.sounds.set(type, audio);
-          
+
           resolve();
         } catch (error) {
           reject(error);
@@ -312,13 +312,13 @@ class SoundManager {
   exportSounds() {
     const customSounds = this.getCustomSounds();
     const settings = this.getSettings();
-    
+
     const exportData = {
       sounds: customSounds,
       settings: settings,
       timestamp: new Date().toISOString()
     };
-    
+
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -336,17 +336,17 @@ class SoundManager {
       reader.onload = (e) => {
         try {
           const importData = JSON.parse(e.target.result);
-          
+
           if (importData.sounds) {
             localStorage.setItem('customSounds', JSON.stringify(importData.sounds));
           }
-          
+
           if (importData.settings) {
             this.enabled = importData.settings.enabled !== false;
             this.volume = importData.settings.volume || 0.5;
             this.saveSettings();
           }
-          
+
           // Reload sounds
           this.preloadSounds();
           resolve();
@@ -376,6 +376,16 @@ class SoundManager {
       console.warn('Failed to load custom sounds:', error);
       return {};
     }
+  }
+
+  async loadSound(soundName, customPath = null) {
+    if (this.sounds[soundName]) {
+      return;
+    }
+
+    // Only create synthetic sounds during initialization to avoid network requests
+    console.log(`🎵 Creating synthetic sound for ${soundName}`);
+    this.createSyntheticSound(soundName);
   }
 }
 

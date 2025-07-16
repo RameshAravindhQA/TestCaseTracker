@@ -74,29 +74,34 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Load lottie animations
+    // Load lottie animations with better error handling
     const loadAnimations = async () => {
       const loaded = await Promise.all(
         lottieAnimations.map(async (animation) => {
           try {
+            console.log(`🎬 Loading Lottie: ${animation.name} from ${animation.path}`);
             const response = await fetch(animation.path);
             if (response.ok) {
-              const data = await response.json();
+              const text = await response.text();
+              const data = JSON.parse(text);
               console.log(`✅ Loaded Lottie animation: ${animation.name}`);
               return { ...animation, preview: data };
             } else {
               console.warn(`❌ Failed to load ${animation.name}: ${response.status}`);
+              return animation;
             }
           } catch (error) {
             console.error(`❌ Failed to load ${animation.name}:`, error);
+            return animation;
           }
-          return animation;
         })
       );
       setLottieAnimations(loaded);
     };
 
-    if (lottieAnimations.length > 0) {
+    // Only load if we have animations and haven't loaded them yet
+    const needsLoading = lottieAnimations.some(anim => !anim.preview);
+    if (lottieAnimations.length > 0 && needsLoading) {
       loadAnimations();
     }
   }, []);
