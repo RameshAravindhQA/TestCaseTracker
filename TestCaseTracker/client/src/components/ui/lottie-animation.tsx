@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import Lottie from 'lottie-react';
 
@@ -64,7 +63,18 @@ export function LottieAnimation({
           data = JSON.parse(text);
         } catch (parseError) {
           console.error('❌ JSON parse error:', parseError);
-          throw new Error('Invalid JSON format in animation file');
+
+          // Attempt JSON repair
+          let cleanedText = text.trim();
+          cleanedText = attemptJSONRepair(cleanedText);
+
+          try {
+            data = JSON.parse(cleanedText);
+            console.log('✅ Successfully parsed JSON after repair');
+          } catch (repairError) {
+            console.error('❌ JSON parse error after repair:', repairError);
+            throw new Error('Invalid JSON format in animation file, even after attempting repair');
+          }
         }
 
         // Basic Lottie validation - more lenient
@@ -91,7 +101,7 @@ export function LottieAnimation({
           width: data.w,
           height: data.h
         });
-        
+
         setAnimationData(data);
       } catch (err) {
         console.error('❌ Error loading Lottie animation:', err);
@@ -106,6 +116,38 @@ export function LottieAnimation({
         setLoading(false);
       }
     };
+
+    // Helper function to attempt JSON repair
+    const attemptJSONRepair = (jsonString) => {
+      let repaired = jsonString;
+
+      // Remove any non-printable characters
+      repaired = repaired.replace(/[\x00-\x1F\x7F]/g, '');
+
+      // Fix common JSON issues
+      repaired = repaired.replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
+      repaired = repaired.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2":'); // Quote property names
+      repaired = repaired.replace(/:\s*'([^']*)'/g, ': "$1"'); // Convert single quotes to double quotes
+
+      // Ensure proper closing of objects/arrays
+      const openBraces = (repaired.match(/{/g) || []).length;
+      const closeBraces = (repaired.match(/}/g) || []).length;
+      const openBrackets = (repaired.match(/\[/g) || []).length;
+      const closeBrackets = (repaired.match(/]/g) || []).length;
+
+      // Add missing closing braces
+      for (let i = 0; i < openBraces - closeBraces; i++) {
+        repaired += '}';
+      }
+
+      // Add missing closing brackets
+      for (let i = 0; i < openBrackets - closeBrackets; i++) {
+        repaired += ']';
+      }
+
+      return repaired;
+    };
+
 
     if (animationPath) {
       loadAnimation();
@@ -143,7 +185,7 @@ export function LottieAnimation({
   }
 
   console.log(`🎬 Rendering Lottie animation: ${animationPath}`);
-  
+
   return (
     <div className={className} style={{ width, height }}>
       <Lottie

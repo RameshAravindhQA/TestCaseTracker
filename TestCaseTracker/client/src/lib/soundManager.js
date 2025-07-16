@@ -3,6 +3,7 @@ class SoundManager {
     this.sounds = new Map();
     this.enabled = true;
     this.volume = 0.5;
+    this.clickMuted = false;
     this.loadSettings();
     this.preloadSounds();
   }
@@ -203,6 +204,12 @@ class SoundManager {
       return;
     }
 
+    // Skip click sounds if they are muted (during CRUD operations)
+    if (type === 'click' && this.clickMuted) {
+      console.log('🔇 Click sound is muted during CRUD operation');
+      return;
+    }
+
     try {
       let audio = this.sounds.get(type);
 
@@ -272,6 +279,11 @@ class SoundManager {
       enabled: this.enabled,
       volume: this.volume
     };
+  }
+
+  setClickMuted(muted) {
+    this.clickMuted = muted;
+    console.log(`🔇 Click sounds ${muted ? 'muted' : 'unmuted'}`);
   }
 
   // Import/Export functionality

@@ -14,7 +14,12 @@ export function SoundButton({
   ...props 
 }: SoundButtonProps) {
   const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    // Play sound
+    // Temporarily disable click sounds during CRUD operations
+    if (window.soundManager && soundType !== 'click') {
+      window.soundManager.setClickMuted(true);
+    }
+
+    // Play appropriate sound
     if (window.soundManager) {
       try {
         await window.soundManager.playSound(soundType);
@@ -26,6 +31,13 @@ export function SoundButton({
     // Call original onClick
     if (onClick) {
       onClick(e);
+    }
+
+    // Re-enable click sounds after a short delay
+    if (window.soundManager && soundType !== 'click') {
+      setTimeout(() => {
+        window.soundManager.setClickMuted(false);
+      }, 500);
     }
   };
 

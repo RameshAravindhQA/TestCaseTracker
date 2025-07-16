@@ -5,15 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Play, Square, Trash2, Edit, Plus, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Play, Square, Trash2, Edit, Plus, Clock, CheckCircle, XCircle, Eye, Download, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/auth';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Download, Upload, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { FileText } from 'lucide-react';
 
 interface AutomationScript {
   id: string;
