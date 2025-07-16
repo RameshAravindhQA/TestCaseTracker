@@ -859,8 +859,7 @@ export default function SettingsPage() {
                                   <SelectItem value="s3">Amazon S3</SelectItem>
                                   <SelectItem value="gcs">Google Cloud Storage</SelectItem>
                                   <SelectItem value="azure">Azure Blob Storage</SelectItem>
-                                </```tool_code
-SelectContent>
+                                </SelectContent>
                               </Select>
                               <FormMessage />
                             </FormItem>

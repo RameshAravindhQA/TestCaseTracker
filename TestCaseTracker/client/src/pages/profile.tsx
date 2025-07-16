@@ -12,11 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { PasswordInput } from "@/components/ui/password-input";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { Loader2, Upload, Play, Pause, Camera } from "lucide-react";
@@ -357,13 +357,16 @@ export default function ProfilePage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Check if it's a Lottie file
+      const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
+      
       // Handle Lottie file upload
-      if (file.type === 'application/json' || file.name.endsWith('.json')) {
+      if (isLottieFile) {
         handleLottieFileUpload(file);
         return;
       }
+      
       // Check file size (limit to 2MB for images, 20MB for lottie)
-      const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
       const maxSize = isLottieFile ? 20 * 1024 * 1024 : 2 * 1024 * 1024;
       const maxSizeText = isLottieFile ? '20MB' : '2MB';
       
@@ -377,7 +380,6 @@ export default function ProfilePage() {
       }
 
       // Check file type
-      const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
       if (!file.type.startsWith('image/') && !isLottieFile) {
         toast({
           title: "Invalid file type",
