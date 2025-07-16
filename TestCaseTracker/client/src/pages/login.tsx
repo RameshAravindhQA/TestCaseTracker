@@ -1,57 +1,61 @@
-
-import { LoginForm } from "@/components/authentication/login-form";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { useEffect, useState } from "react";
+import { LoginForm } from "@/components/authentication/login-form";
+import { useAuth } from "@/hooks/use-auth";
 
-export default function Login() {
-  const [, navigate] = useLocation();
-  const [hasChecked, setHasChecked] = useState(false);
-  
-  // Check if already logged in via API
-  const { data: user, isLoading, error } = useQuery({
-    queryKey: ["/api/auth/user"],
-    retry: false,
-    throwOnError: false,
-    enabled: !hasChecked, // Only check once
-  });
-  
-  // Check localStorage for auth status and redirect to dashboard if authenticated
+export function LoginPage() {
+  const [location, setLocation] = useLocation();
+  const { user, loading } = useAuth();
+
   useEffect(() => {
-    if (hasChecked) return;
-
-    // Check both API response and localStorage for authentication status
-    const isAuthenticatedInLocalStorage = localStorage.getItem('isAuthenticated') === 'true';
-    
-    if (!isLoading) {
-      if (user && isAuthenticatedInLocalStorage) {
-        console.log("User already authenticated, redirecting to dashboard");
-        navigate("/dashboard");
-      } else {
-        console.log("Not authenticated, showing login form");
-        // Clear any stale authentication data
-        if (!user) {
-          localStorage.removeItem('isAuthenticated');
-        }
-      }
-      setHasChecked(true);
+    if (!loading && user) {
+      console.log("User authenticated:", user.name);
+      setLocation("/dashboard");
+    } else if (!loading && !user) {
+      console.log("Not authenticated, showing login form");
     }
-  }, [user, isLoading, navigate, hasChecked]);
-  
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="container p-6 space-y-8 max-w-md">
-        <div className="flex flex-col space-y-2 text-center">
-          <img 
-            src="/images/navadhiti-logo-tree.jpg" 
-            alt="NavaDhiti Logo" 
-            className="h-auto w-64 mx-auto mb-4" 
-          />
-        </div>
+  }, [user, loading, setLocation]);
 
-        <div className="flex flex-col space-y-4">
-          <LoginForm />
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+            Sign in to your account
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Or{" "}
+            <a
+              href="/register"
+              className="font-medium text-blue-600 hover:text-blue-500"
+            >
+              create a new account
+            </a>
+          </p>
+        </div>
+        <LoginForm />
       </div>
     </div>
   );

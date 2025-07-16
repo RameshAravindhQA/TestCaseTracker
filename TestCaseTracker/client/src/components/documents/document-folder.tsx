@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDrag, useDrop } from "react-dnd";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Define item types for drag and drop
@@ -63,6 +63,7 @@ export function DocumentFolderComponent({
   const [isOver, setIsOver] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
   
   // Filter documents in this folder
   const folderDocuments = documents.filter(doc => doc.folderId === folder.id);
