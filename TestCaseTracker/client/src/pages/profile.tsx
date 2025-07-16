@@ -445,11 +445,28 @@ export default function ProfilePage() {
   };
 
   const handleLottieFileUpload = async (file: File) => {
+    if (file.size > 20 * 1024 * 1024) { // 20MB limit
+      toast({
+        title: "File too large",
+        description: "Lottie file must be under 20MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    
     try {
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
           const jsonData = JSON.parse(e.target?.result as string);
+          
+          // Validate basic Lottie structure
+          if (!jsonData.v || !jsonData.layers) {
+            throw new Error("Invalid Lottie animation format");
+          }
+          
           const newAnimation: LottieAnimation = {
             id: `custom-${Date.now()}`,
             name: file.name.replace('.json', ''),
@@ -457,36 +474,59 @@ export default function ProfilePage() {
             preview: jsonData
           };
           
-          // Add to animations list
+          // Add to animations list immediately for UI feedback
           setLottieAnimations(prev => [...prev, newAnimation]);
           
           // Save to backend
           const formData = new FormData();
           formData.append('lottieFile', file);
-          formData.append('animationData', JSON.stringify(newAnimation));
+          formData.append('animationData', JSON.stringify({
+            id: newAnimation.id,
+            name: newAnimation.name
+          }));
           
-          const response = await apiRequest("POST", "/api/users/upload-lottie", formData, { isFormData: true });
-          
-          if (response.ok) {
-            const result = await response.json();
-            toast({
-              title: "Success",
-              description: "Lottie animation uploaded successfully!",
-            });
+          try {
+            const response = await apiRequest("POST", "/api/users/upload-lottie", formData, { isFormData: true });
             
-            // Update the animation with server path
-            setLottieAnimations(prev => prev.map(anim => 
-              anim.id === newAnimation.id ? { ...anim, path: result.path } : anim
-            ));
+            if (response.ok) {
+              const result = await response.json();
+              toast({
+                title: "Success",
+                description: "Lottie animation uploaded successfully!",
+              });
+              
+              // Update the animation with server path
+              setLottieAnimations(prev => prev.map(anim => 
+                anim.id === newAnimation.id ? { ...anim, path: result.path } : anim
+              ));
+            } else {
+              throw new Error("Upload failed");
+            }
+          } catch (uploadError) {
+            console.warn("Backend upload failed, keeping local version:", uploadError);
+            // Keep the local version even if backend fails
           }
-        } catch (error) {
+        } catch (parseError) {
+          console.error("Parse error:", parseError);
           toast({
             title: "Error",
-            description: "Invalid Lottie JSON file",
+            description: "Invalid Lottie JSON file format",
             variant: "destructive",
           });
+          
+          // Remove from animations list if parse failed
+          setLottieAnimations(prev => prev.filter(anim => anim.id !== `custom-${Date.now()}`));
         }
       };
+      
+      reader.onerror = () => {
+        toast({
+          title: "Error",
+          description: "Failed to read file",
+          variant: "destructive",
+        });
+      };
+      
       reader.readAsText(file);
     } catch (error) {
       toast({
@@ -494,6 +534,8 @@ export default function ProfilePage() {
         description: "Failed to process Lottie file",
         variant: "destructive",
       });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -827,47 +869,76 @@ export default function ProfilePage() {
                 </TabsContent>
                  {/* Avatar Animation Tab */}
                  <TabsContent value="avatar">
-                  <CardHeader>
-                    <CardTitle>Select Avatar Animation</CardTitle>
-                    <CardDescription>Choose a Lottie animation for your avatar</CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
-                    {lottieAnimations.map((animation) => (
-                      <motion.div
-                        key={animation.id}
-                        className={`relative rounded-md border p-2 cursor-pointer hover:shadow-md transition-shadow duration-300 ${selectedLottie?.id === animation.id ? 'border-primary border-2' : 'border-muted'}`}
-                        onClick={() => handleLottieSelect(animation)}
+                  <div className="space-y-4 pt-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium">Select Avatar Animation</h3>
+                        <p className="text-sm text-muted-foreground">Choose a Lottie animation for your avatar</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
                       >
-                        {animation.preview && (
-                          <div className="relative">
-                            <Lottie
-                              animationData={animation.preview}
-                              loop
-                              autoplay={playingAnimations.has(animation.id)}
-                              style={{ height: 100, width: 100 }}
-                            />
-                            <div className="absolute top-0 right-0 p-1">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Prevent animation selection
-                                  toggleAnimation(animation.id);
-                                }}
-                              >
-                                {playingAnimations.has(animation.id) ? (
-                                  <Pause className="h-4 w-4" />
-                                ) : (
-                                  <Play className="h-4 w-4" />
-                                )}
-                              </Button>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Lottie
+                      </Button>
+                    </div>
+                    
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
+                      {lottieAnimations.map((animation) => (
+                        <motion.div
+                          key={animation.id}
+                          className={`relative rounded-md border p-4 cursor-pointer hover:shadow-md transition-all duration-300 ${selectedLottie?.id === animation.id ? 'border-primary border-2 shadow-lg' : 'border-muted hover:border-primary/50'}`}
+                          onClick={() => handleLottieSelect(animation)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {animation.preview ? (
+                            <div className="relative">
+                              <div className="w-full h-24 flex items-center justify-center">
+                                <Lottie
+                                  animationData={animation.preview}
+                                  loop
+                                  autoplay={playingAnimations.has(animation.id)}
+                                  style={{ height: 80, width: 80 }}
+                                />
+                              </div>
+                              <div className="absolute top-0 right-0 p-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleAnimation(animation.id);
+                                  }}
+                                >
+                                  {playingAnimations.has(animation.id) ? (
+                                    <Pause className="h-3 w-3" />
+                                  ) : (
+                                    <Play className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        <p className="text-sm text-muted-foreground text-center mt-2">{animation.name}</p>
-                      </motion.div>
-                    ))}
-                  </CardContent>
+                          ) : (
+                            <div className="w-full h-24 flex items-center justify-center bg-muted rounded">
+                              <p className="text-xs text-muted-foreground">Loading...</p>
+                            </div>
+                          )}
+                          <p className="text-sm text-center mt-2 font-medium">{animation.name}</p>
+                          {selectedLottie?.id === animation.id && (
+                            <div className="absolute inset-0 bg-primary/10 rounded-md flex items-center justify-center">
+                              <div className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs">
+                                Selected
+                              </div>
+                            </div>
+                          )}
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
                 </TabsContent>
               </Tabs>
             </CardContent>

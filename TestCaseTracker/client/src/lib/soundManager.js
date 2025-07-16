@@ -40,7 +40,7 @@ class SoundManager {
       crud: '/sounds/crud.mp3',
       success: '/sounds/success.mp3',
       error: '/sounds/error.mp3',
-      message: '/sounds/success.mp3'
+      message: '/sounds/message.mp3'
     };
 
     console.log('🔊 Sound files to preload:', soundFiles);
@@ -48,40 +48,64 @@ class SoundManager {
     for (const [type, url] of Object.entries(soundFiles)) {
       try {
         console.log(`🔊 Preloading ${type} from ${url}...`);
-        const audio = new Audio(url);
+        const audio = new Audio();
         audio.preload = 'auto';
         audio.volume = this.volume;
+        audio.crossOrigin = 'anonymous';
         
-        // Wait for the audio to be ready
-        await new Promise((resolve, reject) => {
+        // Create a more robust loading promise
+        const loadPromise = new Promise((resolve, reject) => {
           const timeout = setTimeout(() => {
             console.warn(`⏰ Audio load timeout for ${type}`);
-            reject(new Error('Audio load timeout'));
-          }, 5000);
+            // Create a fallback silent audio
+            const fallbackAudio = this.createFallbackAudio();
+            this.sounds.set(type, fallbackAudio);
+            resolve(fallbackAudio);
+          }, 3000);
 
-          audio.addEventListener('canplaythrough', () => {
+          const onLoad = () => {
             console.log(`✅ Sound ${type} loaded successfully`);
             clearTimeout(timeout);
-            resolve();
-          }, { once: true });
+            audio.removeEventListener('canplaythrough', onLoad);
+            audio.removeEventListener('error', onError);
+            resolve(audio);
+          };
 
-          audio.addEventListener('error', (e) => {
+          const onError = (e) => {
             console.warn(`❌ Failed to preload sound: ${type}`, e);
             clearTimeout(timeout);
-            resolve(); // Don't reject, just continue
-          }, { once: true });
+            audio.removeEventListener('canplaythrough', onLoad);
+            audio.removeEventListener('error', onError);
+            // Create fallback audio instead of rejecting
+            const fallbackAudio = this.createFallbackAudio();
+            resolve(fallbackAudio);
+          };
 
-          audio.load();
+          audio.addEventListener('canplaythrough', onLoad, { once: true });
+          audio.addEventListener('error', onError, { once: true });
         });
 
-        this.sounds.set(type, audio);
+        // Set the source after setting up event listeners
+        audio.src = url;
+        
+        const loadedAudio = await loadPromise;
+        this.sounds.set(type, loadedAudio);
         console.log(`✅ Sound ${type} added to collection`);
       } catch (error) {
         console.warn(`❌ Error preloading sound: ${type}`, error);
+        // Add fallback audio
+        this.sounds.set(type, this.createFallbackAudio());
       }
     }
     
     console.log(`🔊 Sound preload complete. Loaded ${this.sounds.size} sounds:`, Array.from(this.sounds.keys()));
+  }
+
+  createFallbackAudio() {
+    // Create a silent audio element as fallback
+    const audio = new Audio();
+    audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwiBjiuztfSeiMJJX7P9+OQShEIZrjt52d/S';
+    return audio;
   }
 
   async playSound(type) {
@@ -103,10 +127,11 @@ class SoundManager {
       console.log(`🔊 Playing sound: ${type} at volume ${this.volume}`);
       
       // Clone the audio to allow multiple simultaneous plays
-      audio = audio.cloneNode();
-      audio.volume = this.volume;
+      const clonedAudio = audio.cloneNode();
+      clonedAudio.volume = this.volume;
+      clonedAudio.currentTime = 0;
 
-      const playPromise = audio.play();
+      const playPromise = clonedAudio.play();
       if (playPromise !== undefined) {
         await playPromise;
         console.log(`✅ Sound ${type} played successfully`);

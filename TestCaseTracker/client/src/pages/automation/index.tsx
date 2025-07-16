@@ -240,26 +240,16 @@ export default function AutomationPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="project">Project</Label>
-                    <Select value={selectedProject} onValueChange={setSelectedProject}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={isProjectsLoading ? "Loading projects..." : projects.length > 0 ? "Select a project" : "No projects available"} />
+                    <Select value={selectedProject?.toString()} onValueChange={(value) => setSelectedProject(value)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select project to automate" />
                       </SelectTrigger>
                       <SelectContent>
-                        {isProjectsLoading ? (
-                          <SelectItem value="loading" disabled>
-                            Loading projects...
+                        {projects.map((project: any) => (
+                          <SelectItem key={project.id} value={project.id.toString()}>
+                            {project.name}
                           </SelectItem>
-                        ) : projects.length > 0 ? (
-                          projects.map((project: any) => (
-                            <SelectItem key={project.id} value={project.id.toString()}>
-                              {project.name}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no-projects" disabled>
-                            No projects available
-                          </SelectItem>
-                        )}
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

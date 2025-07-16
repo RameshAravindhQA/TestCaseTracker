@@ -82,67 +82,67 @@ export default function TestDataGeneratorPage() {
           if (field.enabled) {
             switch (field.type) {
               case "name.firstName":
-                record[field.id] = generateFakeData("firstName", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("firstName", selectedCountry);
                 break;
               case "name.lastName":
-                record[field.id] = generateFakeData("lastName", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("lastName", selectedCountry);
                 break;
               case "internet.email":
-                record[field.id] = generateFakeData("email", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("email", selectedCountry);
                 break;
               case "phone.number":
-                record[field.id] = generateFakeData("phone", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("phone", selectedCountry);
                 break;
               case "location.streetAddress":
-                record[field.id] = generateFakeData("address", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("address", selectedCountry);
                 break;
               case "location.city":
-                record[field.id] = generateFakeData("city", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("city", selectedCountry);
                 break;
               case "location.country":
                 record[field.id] = countries.find(c => c.code === selectedCountry)?.name || "United States";
                 break;
               case "location.zipCode":
-                record[field.id] = generateFakeData("zipCode", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("zipCode", selectedCountry);
                 break;
               case "company.name":
-                record[field.id] = generateFakeData("company", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("company", selectedCountry);
                 break;
               case "person.jobTitle":
-                record[field.id] = generateFakeData("jobTitle", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("jobTitle", selectedCountry);
                 break;
               case "date.birthdate":
-                record[field.id] = generateFakeData("dateOfBirth", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("dateOfBirth", selectedCountry);
                 break;
               case "image.avatar":
                 record[field.id] = `https://i.pravatar.cc/150?img=${(index % 70) + 1}`;
                 break;
               case "internet.url":
-                record[field.id] = generateFakeData("website", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("website", selectedCountry);
                 break;
               case "internet.userName":
-                record[field.id] = generateFakeData("username", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("username", selectedCountry);
                 break;
               case "string.uuid":
                 record[field.id] = generateUUID();
                 break;
               case "finance.creditCardNumber":
-                record[field.id] = generateFakeData("creditCard", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("creditCard", selectedCountry);
                 break;
               case "finance.iban":
-                record[field.id] = generateFakeData("iban", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("iban", selectedCountry);
                 break;
               case "commerce.price":
                 record[field.id] = (Math.random() * 1000).toFixed(2);
                 break;
               case "commerce.product":
-                record[field.id] = generateFakeData("product", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("product", selectedCountry);
                 break;
               case "lorem.paragraph":
-                record[field.id] = generateFakeData("lorem", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("lorem", selectedCountry);
                 break;
               default:
-                record[field.id] = generateFakeData("text", selectedCountry);
+                record[field.id] = generateFakeDataByCountry("text", selectedCountry);
             }
           }
         });
@@ -430,8 +430,8 @@ export default function TestDataGeneratorPage() {
     };
   };
 
-  const generateFakeData = (type: string, country: string): string => {
-    if (country === 'India') {
+  const generateFakeDataByCountry = (type: string, country: string): string => {
+    if (country === 'IN') {
       const indiaDataGenerators = getIndiaData();
       switch (type) {
         case 'firstName':
@@ -449,7 +449,7 @@ export default function TestDataGeneratorPage() {
         case 'state':
           return indiaDataGenerators['State']();
         case 'zipCode':
-          return indiaDataGenerators['Pincode']();
+          return indiaDataGenerators['Pincode']().toString();
         case 'panNumber':
           return indiaDataGenerators['PAN Number']();
         case 'gstNumber':
@@ -459,7 +459,7 @@ export default function TestDataGeneratorPage() {
         case 'ifscCode':
           return indiaDataGenerators['IFSC Code']();
         case 'accountNumber':
-          return indiaDataGenerators['Account Number']();
+          return indiaDataGenerators['Account Number']().toString();
         case 'vehicleNumber':
           return indiaDataGenerators['Vehicle Number']();
         case 'company':
@@ -467,7 +467,7 @@ export default function TestDataGeneratorPage() {
         case 'jobTitle':
           return indiaDataGenerators['Designation']();
         case 'salary':
-          return indiaDataGenerators['Salary (INR)']();
+          return indiaDataGenerators['Salary (INR)']().toString();
         case 'dateOfBirth':
           return indiaDataGenerators['Date of Birth']();
         case 'education':
@@ -476,68 +476,8 @@ export default function TestDataGeneratorPage() {
           return "Sample Text";
       }
     }
-    // Simple fake data generation based on country
-    const countryData: { [key: string]: { [key: string]: string[] } } = {
-      US: {
-        firstName: ["John", "Jane", "Michael", "Sarah", "David", "Lisa", "Robert", "Mary"],
-        lastName: ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis"],
-        city: ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego"],
-        company: ["Apple Inc", "Microsoft", "Google", "Amazon", "Facebook", "Tesla", "Netflix", "Twitter"]
-      },
-      GB: {
-        firstName: ["James", "Oliver", "William", "Henry", "Emma", "Olivia", "Sophia", "Charlotte"],
-        lastName: ["Smith", "Jones", "Taylor", "Williams", "Brown", "Davies", "Evans", "Wilson"],
-        city: ["London", "Birmingham", "Manchester", "Glasgow", "Liverpool", "Leeds", "Sheffield", "Edinburgh"],
-        company: ["BP", "Vodafone", "HSBC", "Shell", "British Airways", "Tesco", "Barclays", "BT Group"]
-      },
-      // Add more countries as needed
-    };
-
-    const currentCountryData = countryData[country] || countryData.US;
-
-    switch (type) {
-      case "firstName":
-        return getRandomFromArray(currentCountryData.firstName || countryData.US.firstName);
-      case "lastName":
-        return getRandomFromArray(currentCountryData.lastName || countryData.US.lastName);
-      case "email":
-        const firstName = getRandomFromArray(currentCountryData.firstName || countryData.US.firstName);
-        const lastName = getRandomFromArray(currentCountryData.lastName || countryData.US.lastName);
-        return `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`;
-      case "phone":
-        return country === "US" ? `+1-${Math.floor(Math.random() * 900 + 100)}-${Math.floor(Math.random() * 900 + 100)}-${Math.floor(Math.random() * 9000 + 1000)}` :
-               `+44-${Math.floor(Math.random() * 9000 + 1000)}-${Math.floor(Math.random() * 900000 + 100000)}`;
-      case "address":
-        return `${Math.floor(Math.random() * 9999 + 1)} ${getRandomFromArray(["Main St", "Oak Ave", "Pine Rd", "Maple Dr", "Cedar Ln"])}`;
-      case "city":
-        return getRandomFromArray(currentCountryData.city || countryData.US.city);
-      case "zipCode":
-        return country === "US" ? Math.floor(Math.random() * 90000 + 10000).toString() :
-               `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10)} ${Math.floor(Math.random() * 10)}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
-      case "company":
-        return getRandomFromArray(currentCountryData.company || countryData.US.company);
-      case "jobTitle":
-        return getRandomFromArray(["Software Engineer", "Product Manager", "Designer", "Data Analyst", "Marketing Manager", "Sales Representative"]);
-      case "dateOfBirth":
-        const year = Math.floor(Math.random() * 50 + 1950);
-        const month = Math.floor(Math.random() * 12 + 1);
-        const day = Math.floor(Math.random * 28 + 1);
-        return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-      case "website":
-        return `https://www.${getRandomFromArray(["example", "demo", "test", "sample"])}.com`;
-      case "username":
-        return `user${Math.floor(Math.random() * 10000)}`;
-      case "creditCard":
-        return `4${Math.floor(Math.random() * 1000000000000000).toString().padStart(15, '0')}`;
-      case "iban":
-        return `${country}${Math.floor(Math.random() * 100).toString().padStart(2, '0')}${Math.floor(Math.random() * 10000000000000000000).toString().padStart(18, '0')}`;
-      case "product":
-        return getRandomFromArray(["Laptop", "Smartphone", "Tablet", "Headphones", "Camera", "Watch", "Keyboard", "Mouse"]);
-      case "lorem":
-        return "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
-      default:
-        return "Sample Text";
-    }
+    
+    return generateFakeData(type, country);
   };
 
   const getRandomFromArray = (array: string[]): string => {

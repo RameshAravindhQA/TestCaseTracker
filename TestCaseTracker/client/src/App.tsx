@@ -1,5 +1,4 @@
-
-import React, { lazy, ComponentType, Suspense, useEffect } from 'react';
+import React, { lazy, ComponentType, Suspense, useEffect, useState } from 'react';
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -72,14 +71,14 @@ const ProtectedLazyComponent = ({ Component }: { Component: ComponentType }) => 
 function SoundIntegrationSetup() {
   useEffect(() => {
     console.log('🔊 Initializing sound integration...');
-    
+
     // Check if sound manager is available
     if (window.soundManager) {
       console.log('✅ Sound manager is available');
       console.log('🔊 Sound settings:', window.soundManager.getSettings());
     } else {
       console.warn('⚠️ Sound manager not available, attempting to initialize...');
-      
+
       // Try to dynamically import and initialize sound manager
       import('./lib/soundManager.js').then(() => {
         console.log('✅ Sound manager imported');
@@ -96,7 +95,7 @@ function SoundIntegrationSetup() {
       console.log('✅ Global sound handler is available');
     } else {
       console.warn('⚠️ Global sound handler not available, attempting to initialize...');
-      
+
       import('./lib/globalSoundHandler.js').then(() => {
         console.log('✅ Global sound handler imported');
       }).catch(error => {
@@ -247,30 +246,43 @@ function AppContent() {
 }
 
 function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   // Initialize sound manager on app startup
   useEffect(() => {
     console.log('🚀 App starting up...');
-    
+
     // Load sound manager script
     const loadSoundManager = async () => {
       try {
         console.log('🔊 Loading sound manager...');
         await import('./lib/soundManager.js');
         console.log('✅ Sound manager loaded');
-        
+
         console.log('🔊 Loading global sound handler...');
         await import('./lib/globalSoundHandler.js');
         console.log('✅ Global sound handler loaded');
-        
+
         // Wait a bit for initialization
         setTimeout(() => {
           if (window.soundManager) {
-            console.log('🔊 Sound system ready with settings:', window.soundManager.getSettings());
+            console.log('🔊 Sound system ready with settings:', window.soundManager?.getSettings());
+
+            // Check if user just logged in and show welcome dialog
+            const showWelcome = localStorage.getItem('showWelcomeDialog');
+            if (showWelcome === 'true') {
+              localStorage.removeItem('showWelcomeDialog');
+              // Show welcome dialog after a short delay
+              setTimeout(() => {
+                setShowWelcomeDialog(true);
+              }, 1000);
+            }
           } else {
             console.warn('⚠️ Sound manager still not available after initialization');
           }
         }, 100);
-        
+
       } catch (error) {
         console.error('❌ Failed to load sound system:', error);
       }
@@ -283,6 +295,44 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <SoundProvider>
         <AppContent />
+
+        {/* Welcome Dialog */}
+        {showWelcomeDialog && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  Welcome to TestCase Tracker!
+                </h2>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                  You've successfully logged in. Get started by creating your first project or exploring the dashboard.
+                </p>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      setShowWelcomeDialog(false);
+                      window.location.href = '/projects';
+                    }}
+                    className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
+                  >
+                    Create First Project
+                  </button>
+                  <button
+                    onClick={() => setShowWelcomeDialog(false)}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    Explore Dashboard
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </SoundProvider>
     </QueryClientProvider>
   );
