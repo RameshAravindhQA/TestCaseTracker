@@ -1,0 +1,110 @@
+Global error: Error: useAuth must be used within an AuthProvider
+    at useAuth (use-auth.tsx:137:11)
+    at GitHubIssueReporter (github-issue-reporter.tsx:58:20)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=174804f9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=174804f9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=174804f9:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=174804f9:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=174804f9:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=174804f9:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=174804f9:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=174804f9:19198:20)
+(anonymous) @ main.tsx:17
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=174804f9:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=174804f9:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=174804f9:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=174804f9:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=174804f9:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=174804f9:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=174804f9:18678
+workLoop @ chunk-RPCDYKBN.js?v=174804f9:197
+flushWork @ chunk-RPCDYKBN.js?v=174804f9:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=174804f9:384Understand this error
+use-auth.tsx:137 Uncaught Error: useAuth must be used within an AuthProvider
+    at useAuth (use-auth.tsx:137:11)
+    at GitHubIssueReporter (github-issue-reporter.tsx:58:20)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=174804f9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=174804f9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=174804f9:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=174804f9:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=174804f9:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=174804f9:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=174804f9:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=174804f9:19198:20)
+useAuth @ use-auth.tsx:137
+GitHubIssueReporter @ github-issue-reporter.tsx:58
+renderWithHooks @ chunk-RPCDYKBN.js?v=174804f9:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=174804f9:14926
+beginWork @ chunk-RPCDYKBN.js?v=174804f9:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=174804f9:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=174804f9:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=174804f9:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=174804f9:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=174804f9:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=174804f9:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=174804f9:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=174804f9:18678
+workLoop @ chunk-RPCDYKBN.js?v=174804f9:197
+flushWork @ chunk-RPCDYKBN.js?v=174804f9:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=174804f9:384Understand this error
+main.tsx:17 Global error: Error: useAuth must be used within an AuthProvider
+    at useAuth (use-auth.tsx:137:11)
+    at GitHubIssueReporter (github-issue-reporter.tsx:58:20)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=174804f9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=174804f9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=174804f9:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=174804f9:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=174804f9:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=174804f9:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=174804f9:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=174804f9:19198:20)
+(anonymous) @ main.tsx:17
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=174804f9:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=174804f9:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=174804f9:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=174804f9:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=174804f9:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=174804f9:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=174804f9:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=174804f9:18684
+workLoop @ chunk-RPCDYKBN.js?v=174804f9:197
+flushWork @ chunk-RPCDYKBN.js?v=174804f9:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=174804f9:384Understand this error
+use-auth.tsx:137 Uncaught Error: useAuth must be used within an AuthProvider
+    at useAuth (use-auth.tsx:137:11)
+    at GitHubIssueReporter (github-issue-reporter.tsx:58:20)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=174804f9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=174804f9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=174804f9:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=174804f9:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=174804f9:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=174804f9:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=174804f9:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=174804f9:19198:20)
+useAuth @ use-auth.tsx:137
+GitHubIssueReporter @ github-issue-reporter.tsx:58
+renderWithHooks @ chunk-RPCDYKBN.js?v=174804f9:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=174804f9:14926
+beginWork @ chunk-RPCDYKBN.js?v=174804f9:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=174804f9:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=174804f9:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=174804f9:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=174804f9:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=174804f9:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=174804f9:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=174804f9:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=174804f9:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=174804f9:18684
+workLoop @ chunk-RPCDYKBN.js?v=174804f9:197
+flushWork @ chunk-RPCDYKBN.js?v=174804f9:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=174804f9:384Understand this error
+chunk-RPCDYKBN.js?v=174804f9:14032 The above error occurred in the <GitHubIssueReporter> component:
+
+    at GitHubIssueReporter (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/components/ui/github-issue-reporter.tsx:43:20)
+    at Provider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=174804f9:38:15)
+    at TooltipProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=174804f9:65:5)
+    at SoundProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/hooks/use-sound-provider.tsx:21:33)
+    at QueryClientProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/@tanstack_react-query.js?v=174804f9:2933:3)
+    at App (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/App.tsx?v=Ds6_Bd_jZSLbyCWinSnQa:406:9)
+    at AuthProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/hooks/use-auth.tsx?v=Ds6_Bd_jZSLbyCWinSnQa:26:32)
+    at QueryClientProv
