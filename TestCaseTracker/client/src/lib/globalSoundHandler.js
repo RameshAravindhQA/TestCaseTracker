@@ -40,25 +40,11 @@ class GlobalSoundHandler {
   }
 
   setupGlobalErrorHandling() {
-    // Handle unhandled promise rejections
-    window.addEventListener('unhandledrejection', (event) => {
-      // Only play sound if user has interacted AND it's not a network error
-      if (this.userHasInteracted && !this.isNetworkError(event.reason)) {
-        console.log('🔊 Global handler: Playing error sound for unhandled rejection');
+    // Only handle custom application errors, not console errors
+    document.addEventListener('app:error', (event) => {
+      if (this.userHasInteracted) {
+        console.log('🔊 Global handler: Playing error sound for app error');
         this.playSound('error');
-      } else {
-        console.log('🔊 Skipping error sound - network/connection error detected');
-      }
-    });
-
-    // Handle general errors
-    window.addEventListener('error', (event) => {
-      // Only play sound if user has interacted AND it's not a network/resource error
-      if (this.userHasInteracted && !this.isResourceError(event) && !this.isNetworkError(event.message)) {
-        console.log('🔊 Global handler: Playing error sound for general error');
-        this.playSound('error');
-      } else {
-        console.log('🔊 Skipping error sound - resource/network error detected');
       }
     });
   }

@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { ExternalLink, Plus, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ExternalLink, Plus, Trash2, FileSpreadsheet } from "lucide-react";
 
 interface GoogleSheet {
   id: string;
@@ -92,11 +92,16 @@ export default function TestSheetsPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Test Sheets</h1>
-          <p className="text-muted-foreground">
-            Access and manage your Google Sheets directly in the browser
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <FileSpreadsheet className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Test Sheets</h1>
+            <p className="text-muted-foreground">
+              Access and manage your Google Sheets directly in the browser
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

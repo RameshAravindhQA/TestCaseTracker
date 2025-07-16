@@ -160,121 +160,173 @@ export default function TestDataGeneratorPage() {
     }
   };
 
-  const generateTestData = async () => {
-    setIsGenerating(true);
-    try {
-      // Simulate data generation using faker.js patterns
-      const data = Array.from({ length: recordCount }, (_, index) => {
-        const record: any = { id: index + 1 };
+  const [selectedFields, setSelectedFields] = useState({
+    firstName: true,
+    lastName: true,
+    email: true,
+    phone: false,
+    address: false,
+    city: false,
+    zipCode: false,
+    country: false,
+    company: false,
+    jobTitle: false,
+    avatarUrl: false,
+    username: false,
+    dateOfBirth: false,
+    website: false,
+    uuid: false,
+    iban: false,
+    product: false,
+    price: false,
+    creditCard: false,
+    loremText: false,
+    // Country-specific fields
+    socialSecurityNumber: false,
+    nationalId: false,
+    passport: false,
+    bankAccount: false,
+    taxId: false,
+    drivingLicense: false,
+    healthInsurance: false,
+    postalCode: false,
+    region: false,
+    currency: false
+  });
 
-        dataFields.forEach(field => {
-          if (field.enabled) {
-            switch (field.type) {
-              case "name.firstName":
-                record[field.id] = generateFakeDataByCountry("firstName", selectedCountry);
-                break;
-              case "name.lastName":
-                record[field.id] = generateFakeDataByCountry("lastName", selectedCountry);
-                break;
-              case "internet.email":
-                record[field.id] = generateFakeDataByCountry("email", selectedCountry);
-                break;
-              case "phone.number":
-                record[field.id] = generateFakeDataByCountry("phone", selectedCountry);
-                break;
-              case "location.streetAddress":
-                record[field.id] = generateFakeDataByCountry("address", selectedCountry);
-                break;
-              case "location.city":
-                record[field.id] = generateFakeDataByCountry("city", selectedCountry);
-                break;
-              case "location.country":
-                record[field.id] = countries.find(c => c.code === selectedCountry)?.name || "United States";
-                break;
-              case "location.zipCode":
-                record[field.id] = generateFakeDataByCountry("zipCode", selectedCountry);
-                break;
-              case "company.name":
-                record[field.id] = generateFakeDataByCountry("company", selectedCountry);
-                break;
-              case "person.jobTitle":
-                record[field.id] = generateFakeDataByCountry("jobTitle", selectedCountry);
-                break;
-              case "date.birthdate":
-                record[field.id] = generateFakeDataByCountry("dateOfBirth", selectedCountry);
-                break;
-              case "image.avatar":
-                record[field.id] = `https://i.pravatar.cc/150?img=${(index % 70) + 1}`;
-                break;
-              case "internet.url":
-                record[field.id] = generateFakeDataByCountry("website", selectedCountry);
-                break;
-              case "internet.userName":
-                record[field.id] = generateFakeDataByCountry("username", selectedCountry);
-                break;
-              case "string.uuid":
-                record[field.id] = generateUUID();
-                break;
-              case "finance.creditCardNumber":
-                record[field.id] = generateFakeDataByCountry("creditCard", selectedCountry);
-                break;
-              case "finance.iban":
-                record[field.id] = generateFakeDataByCountry("iban", selectedCountry);
-                break;
-              case "commerce.price":
-                record[field.id] = (Math.random() * 1000).toFixed(2);
-                break;
-              case "commerce.product":
-                record[field.id] = generateFakeDataByCountry("product", selectedCountry);
-                break;
-              case "lorem.paragraph":
-                record[field.id] = generateFakeDataByCountry("lorem", selectedCountry);
-                break;
-              default:
-                record[field.id] = generateFakeDataByCountry("text", selectedCountry);
-            }
-          }
-        });
+  const generateData = () => {
+    const data = [];
+    for (let i = 0; i < recordCount; i++) {
+      const record = {};
 
-        // Add country-specific fields
-        Object.keys(dataTypes).forEach(country => {
-          if (selectedCountry === country) {
-            dataTypes[country].forEach(dataType => {
-              record[dataType.replace(/\s+/g, '')] = generateCountrySpecificData(dataType, index);
-            });
-          }
-        });
+      // Set locale based on selected country
+      //faker.setLocale(getLocaleForCountry(selectedCountry));
 
-        // Add custom fields
-        if (customFields.trim()) {
-          try {
-            const customFieldsData = JSON.parse(customFields);
-            Object.assign(record, customFieldsData);
-          } catch (error) {
-            console.error("Invalid custom fields JSON:", error);
+      // if (selectedFields.firstName) record.firstName = faker.person.firstName();
+      // if (selectedFields.lastName) record.lastName = faker.person.lastName();
+      // if (selectedFields.email) record.email = faker.internet.email();
+      // if (selectedFields.phone) record.phone = getCountrySpecificPhone(selectedCountry);
+      // if (selectedFields.address) record.address = faker.location.streetAddress();
+      // if (selectedFields.city) record.city = faker.location.city();
+      // if (selectedFields.zipCode) record.zipCode = getCountrySpecificZipCode(selectedCountry);
+      // if (selectedFields.country) record.country = selectedCountry;
+      // if (selectedFields.company) record.company = faker.company.name();
+      // if (selectedFields.jobTitle) record.jobTitle = faker.person.jobTitle();
+      // if (selectedFields.avatarUrl) record.avatarUrl = faker.image.avatar();
+      // if (selectedFields.username) record.username = faker.internet.userName();
+      // if (selectedFields.dateOfBirth) record.dateOfBirth = faker.date.past({ years: 50 }).toISOString().split('T')[0];
+      // if (selectedFields.website) record.website = faker.internet.url();
+      // if (selectedFields.uuid) record.uuid = faker.string.uuid();
+      // if (selectedFields.iban) record.iban = getCountrySpecificIBAN(selectedCountry);
+      // if (selectedFields.product) record.product = faker.commerce.productName();
+      // if (selectedFields.price) record.price = faker.commerce.price({ symbol: getCurrencySymbol(selectedCountry) });
+      // if (selectedFields.creditCard) record.creditCard = faker.finance.creditCardNumber();
+      // if (selectedFields.loremText) record.loremText = faker.lorem.paragraph();
+
+      dataFields.forEach(field => {
+        if (field.enabled) {
+          switch (field.type) {
+            case "name.firstName":
+              record[field.id] = generateFakeDataByCountry("firstName", selectedCountry);
+              break;
+            case "name.lastName":
+              record[field.id] = generateFakeDataByCountry("lastName", selectedCountry);
+              break;
+            case "internet.email":
+              record[field.id] = generateFakeDataByCountry("email", selectedCountry);
+              break;
+            case "phone.number":
+              record[field.id] = generateFakeDataByCountry("phone", selectedCountry);
+              break;
+            case "location.streetAddress":
+              record[field.id] = generateFakeDataByCountry("address", selectedCountry);
+              break;
+            case "location.city":
+              record[field.id] = generateFakeDataByCountry("city", selectedCountry);
+              break;
+            case "location.country":
+              record[field.id] = countries.find(c => c.code === selectedCountry)?.name || "United States";
+              break;
+            case "location.zipCode":
+              record[field.id] = generateFakeDataByCountry("zipCode", selectedCountry);
+              break;
+            case "company.name":
+              record[field.id] = generateFakeDataByCountry("company", selectedCountry);
+              break;
+            case "person.jobTitle":
+              record[field.id] = generateFakeDataByCountry("jobTitle", selectedCountry);
+              break;
+            case "date.birthdate":
+              record[field.id] = generateFakeDataByCountry("dateOfBirth", selectedCountry);
+              break;
+            case "image.avatar":
+              record[field.id] = `https://i.pravatar.cc/150?img=${(i % 70) + 1}`;
+              break;
+            case "internet.url":
+              record[field.id] = generateFakeDataByCountry("website", selectedCountry);
+              break;
+            case "internet.userName":
+              record[field.id] = generateFakeDataByCountry("username", selectedCountry);
+              break;
+            case "string.uuid":
+              record[field.id] = generateUUID();
+              break;
+            case "finance.creditCardNumber":
+              record[field.id] = generateFakeDataByCountry("creditCard", selectedCountry);
+              break;
+            case "finance.iban":
+              record[field.id] = generateFakeDataByCountry("iban", selectedCountry);
+              break;
+            case "commerce.price":
+              record[field.id] = (Math.random() * 1000).toFixed(2);
+              break;
+            case "commerce.product":
+              record[field.id] = generateFakeDataByCountry("product", selectedCountry);
+              break;
+            case "lorem.paragraph":
+              record[field.id] = generateFakeDataByCountry("lorem", selectedCountry);
+              break;
+            default:
+              record[field.id] = generateFakeDataByCountry("text", selectedCountry);
           }
         }
-
-        return record;
       });
 
-      setGeneratedData(data);
-      toast({
-        title: "Data Generated",
-        description: `Successfully generated ${recordCount} records`
-      });
-    } catch (error) {
-      toast({
-        title: "Generation Failed",
-        description: "Failed to generate test data",
-        variant: "destructive"
-      });
-    } finally {
-      setIsGenerating(false);
+      // Country-specific fields
+      if (selectedFields.socialSecurityNumber) record.socialSecurityNumber = generateCountrySpecificData("SSN", i);
+      if (selectedFields.nationalId) record.nationalId = generateCountrySpecificData("National ID", i);
+      if (selectedFields.passport) record.passport = generateCountrySpecificData("Passport", i);
+      if (selectedFields.bankAccount) record.bankAccount = generateCountrySpecificData("Bank Account", i);
+      if (selectedFields.taxId) record.taxId = generateCountrySpecificData("Tax ID", i);
+      if (selectedFields.drivingLicense) record.drivingLicense = generateCountrySpecificData("Driving License", i);
+      //if (selectedFields.healthInsurance) record.healthInsurance = getCountrySpecificHealthInsurance(selectedCountry);
+      if (selectedFields.postalCode) record.postalCode = generateCountrySpecificData("Postal Code", i);
+      //if (selectedFields.region) record.region = getCountrySpecificRegion(selectedCountry);
+      //if (selectedFields.currency) record.currency = getCurrencyCode(selectedCountry);
+      data.push(record);
     }
+
+    setGeneratedData(data);
   };
 
-  const generateFakeData = (type: string, country: string): string => {
+  // Helper functions for country-specific data
+  const getLocaleForCountry = (country: string) => {
+    const localeMap: { [key: string]: string } = {
+      'United States': 'en_US',
+      'United Kingdom': 'en_GB',
+      'India': 'en_IN',
+      'Germany': 'de',
+      'France': 'fr',
+      'Japan': 'ja',
+      'China': 'zh_CN',
+      'Brazil': 'pt_BR',
+      'Spain': 'es',
+      'Italy': 'it'
+    };
+    return localeMap[country] || 'en_US';
+  };
+
+  const generateFakeDataByCountry = (type: string, country: string): string => {
     // Simple fake data generation based on country
     const countryData: { [key: string]: { [key: string]: string[] } } = {
       US: {
@@ -339,8 +391,68 @@ export default function TestDataGeneratorPage() {
     }
   };
 
-  const getRandomFromArray = (array: string[]): string => {
-    return array[Math.floor(Math.random() * array.length)];
+  const getCountrySpecificPhone = (country: string) => {
+    const phoneFormats: { [key: string]: string } = {
+      'US': '+1-###-###-####',
+      'GB': '+44-####-######',
+      'IN': '+91-#####-#####',
+      'DE': '+49-###-########',
+      'FR': '+33-#-##-##-##-##',
+      'JP': '+81-##-####-####',
+      'CN': '+86-###-####-####',
+      'BR': '+55-##-#####-####',
+      'ES': '+34-###-###-###',
+      'IT': '+39-###-###-####'
+    };
+    return phoneFormats[country] || '+1-###-###-####';
+  };
+
+  const getCountrySpecificZipCode = (country: string) => {
+    const zipFormats: { [key: string]: string } = {
+      'US': '#####',
+      'GB': '??# #??',
+      'IN': '######',
+      'DE': '#####',
+      'FR': '#####',
+      'JP': '###-####',
+      'CN': '######',
+      'BR': '#####-###',
+      'ES': '#####',
+      'IT': '#####'
+    };
+    return zipFormats[country] || '#####';
+  };
+
+  const getCurrencySymbol = (country: string) => {
+    const currencyMap: { [key: string]: string } = {
+      'US': '$',
+      'GB': '£',
+      'IN': '₹',
+      'DE': '€',
+      'FR': '€',
+      'JP': '¥',
+      'CN': '¥',
+      'BR': 'R$',
+      'ES': '€',
+      'IT': '€'
+    };
+    return currencyMap[country] || '$';
+  };
+
+  const getCountrySpecificIBAN = (country: string): string => {
+    const ibanFormats: { [key: string]: string } = {
+        'US': '############',
+        'GB': '########',
+        'IN': '###############',
+        'DE': '####################',
+        'FR': '#####################',
+        'JP': '#######',
+        'CN': '###############',
+        'BR': '########-#',
+        'ES': '####################',
+        'IT': '###########'
+    };
+    return ibanFormats[country] || '############';
   };
 
   const generateUUID = (): string => {
@@ -537,10 +649,111 @@ export default function TestDataGeneratorPage() {
               </CardContent>
             </Card>
 
+             <Card>
+              <CardHeader>
+                <CardTitle>Data Fields</CardTitle>
+                <CardDescription>
+                  Select which fields to include in your test data
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedFields.price}
+                    onChange={(e) => setSelectedFields({...selectedFields, price: e.target.checked})}
+                  />
+                  <span>Price</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedFields.loremText}
+                    onChange={(e) => setSelectedFields({...selectedFields, loremText: e.target.checked})}
+                  />
+                  <span>Lorem Text</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedFields.socialSecurityNumber}
+                    onChange={(e) => setSelectedFields({...selectedFields, socialSecurityNumber: e.target.checked})}
+                  />
+                  <span>Social Security</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedFields.nationalId}
+                    onChange={(e) => setSelectedFields({...selectedFields, nationalId: e.target.checked})}
+                  />
+                  <span>National ID</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedFields.passport}
+                    onChange={(e) => setSelectedFields({...selectedFields, passport: e.target.checked})}
+                  />
+                  <span>Passport</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedFields.bankAccount}
+                    onChange={(e) => setSelectedFields({...selectedFields, bankAccount: e.target.checked})}
+                  />
+                  <span>Bank Account</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedFields.taxId}
+                    onChange={(e) => setSelectedFields({...selectedFields, taxId: e.target.checked})}
+                  />
+                  <span>Tax ID</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedFields.drivingLicense}
+                    onChange={(e) => setSelectedFields({...selectedFields, drivingLicense: e.target.checked})}
+                  />
+                  <span>Driving License</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedFields.healthInsurance}
+                    onChange={(e) => setSelectedFields({...selectedFields, healthInsurance: e.target.checked})}
+                  />
+                  <span>Health Insurance</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedFields.region}
+                    onChange={(e) => setSelectedFields({...selectedFields, region: e.target.checked})}
+                  />
+                  <span>Region/State</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedFields.currency}
+                    onChange={(e) => setSelectedFields({...selectedFields, currency: e.target.checked})}
+                  />
+                  <span>Currency</span>
+                </label>
+              </div>
+              </CardContent>
+            </Card>
+
             {/* Generate Button */}
             <div className="flex gap-4">
               <Button
-                onClick={generateTestData}
+                onClick={generateData}
                 disabled={isGenerating}
                 className="flex-1"
               >

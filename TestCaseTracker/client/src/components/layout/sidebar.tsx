@@ -64,6 +64,8 @@ const SidebarComponent = ({ className }: SidebarProps) => {
   const [location] = useLocation();
   const { toast } = useToast();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const sidebarRef = React.useRef<HTMLDivElement>(null);
+  const activeItemRef = React.useRef<HTMLAnchorElement>(null);
 
   const { data: user } = useQuery<User>({
     queryKey: ["/api/auth/user"],
@@ -217,6 +219,34 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     },
   ], []);
 
+  useEffect(() => {
+    if (activeItemRef.current && sidebarRef.current) {
+      const activeElement = activeItemRef.current;
+      const sidebar = sidebarRef.current;
+
+      // Calculate the position to scroll to
+      const elementTop = activeElement.offsetTop;
+      const elementHeight = activeElement.offsetHeight;
+      const sidebarHeight = sidebar.clientHeight;
+      const sidebarScrollTop = sidebar.scrollTop;
+
+      // Check if element is fully visible
+      const isVisible = (
+        elementTop >= sidebarScrollTop &&
+        elementTop + elementHeight <= sidebarScrollTop + sidebarHeight
+      );
+
+      if (!isVisible) {
+        // Scroll to center the active item
+        const scrollTo = elementTop - (sidebarHeight / 2) + (elementHeight / 2);
+        sidebar.scrollTo({
+          top: scrollTo,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [location]);
+
   return (
     <aside
       className={cn(
@@ -249,22 +279,24 @@ const SidebarComponent = ({ className }: SidebarProps) => {
         ), [user?.name, user?.firstName, user?.lastName, user?.role])}
       </div>
 
-      <nav className="flex-1 overflow-y-auto">
+      <nav className="flex-1 overflow-y-auto" ref={sidebarRef}>
         <div className="px-2 py-4 space-y-1">
           {useMemo(() => 
-            navItems.map((item) => (
+            navItems.map((item) => {
+              const isActive = location.startsWith(item.href);
+              return (
               <div key={item.href}>
                 <Link 
                   href={item.href}
                   className={cn(
                     "flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md group",
-                    location.startsWith(item.href) 
+                    isActive
                       ? "text-white bg-primary"
                       : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
                   )}
                 >
                   <div className="flex items-center">
-                    <span className={cn("mr-3", location.startsWith(item.href) ? "text-white" : "text-gray-500 dark:text-gray-400")}>
+                    <span className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}>
                       {item.icon}
                     </span>
                     {item.name}
@@ -299,7 +331,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                   </div>
                 )}
               </div>
-            )), [navItems, location])}
+            )}), [navItems, location])}
         </div>
 
         {/* User account section */}
@@ -312,23 +344,26 @@ const SidebarComponent = ({ className }: SidebarProps) => {
 
           <div className="px-2 space-y-1">
             {useMemo(() => 
-              userItems.map((item) => (
+              userItems.map((item) => {
+                const isActive = location.startsWith(item.href);
+                return (
                 <Link 
                   key={item.href} 
                   href={item.href}
+                  ref={isActive ? activeItemRef : null}
                   className={cn(
                     "flex items-center px-2 py-2 text-sm font-medium rounded-md group",
-                    location.startsWith(item.href)
+                    isActive
                       ? "text-white bg-primary"
                       : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
                   )}
                 >
-                  <span className={cn("mr-3", location.startsWith(item.href) ? "text-white" : "text-gray-500 dark:text-gray-400")}>
+                  <span className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}>
                     {item.icon}
                   </span>
                   {item.name}
                 </Link>
-              )), [userItems, location])}
+              )}), [userItems, location])}
           </div>
         </>
 
@@ -343,23 +378,25 @@ const SidebarComponent = ({ className }: SidebarProps) => {
 
             <div className="px-2 space-y-1">
               {useMemo(() => 
-                adminItems.map((item) => (
+                adminItems.map((item) => {
+                  const isActive = location.startsWith(item.href);
+                  return (
                   <Link 
                     key={item.href} 
                     href={item.href}
                     className={cn(
                       "flex items-center px-2 py-2 text-sm font-medium rounded-md group",
-                      location.startsWith(item.href)
+                      isActive
                         ? "text-white bg-primary"
                         : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
                     )}
                   >
-                    <span className={cn("mr-3", location.startsWith(item.href) ? "text-white" : "text-gray-500 dark:text-gray-400")}>
+                    <span className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}>
                       {item.icon}
                     </span>
                     {item.name}
                   </Link>
-                )), [adminItems, location])}
+                )}), [adminItems, location])}
             </div>
           </>
         )}

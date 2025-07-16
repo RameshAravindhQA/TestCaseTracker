@@ -947,8 +947,8 @@ export default function ProfilePage() {
                         >
                           {animation.preview ? (
                             <div className="relative">
-                              <div className="w-full h-24 flex items-center justify-center">
-                                {animation.preview ? (
+                              <div className="w-full h-24 flex items-center justify-center{
+                                animation.preview ? (
                                   <Lottie                                    animationData={animation.preview}
                                     loop={true}
                                     autoplay={playingAnimations.has(animation.id)}

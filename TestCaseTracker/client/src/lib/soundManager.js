@@ -109,33 +109,69 @@ export class SoundManager {
       this.playSound('crud');
     }, true);
 
-    // Button click detection with form context
+    // Global click detection with priority system
     document.addEventListener('click', (event) => {
       const target = event.target;
-
-      // Check if it's a form submission button
+      
+      // Priority 1: Form submission buttons -> CRUD sound
       if (this.isFormSubmissionButton(target)) {
         console.log('🔊 Form submission button detected, playing CRUD sound');
         this.playSound('crud');
         return;
       }
 
-      // Check for API-related buttons
+      // Priority 2: API-related buttons -> CRUD sound
       if (this.isApiButton(target)) {
         console.log('🔊 API button detected, playing CRUD sound');
         this.playSound('crud');
         return;
       }
 
-      // Regular button click
-      if (target.tagName === 'BUTTON' || target.closest('button')) {
-        console.log('🔊 Regular button click detected');
+      // Priority 3: Any clickable element -> click sound
+      if (this.isClickableElement(target)) {
+        console.log('🔊 Clickable element detected, playing click sound');
         this.playSound('click');
       }
     }, true);
 
     // Enhanced mutation observer for dynamic buttons
     this.observeFormElements();
+  }
+
+  isClickableElement(element) {
+    if (!element) return false;
+
+    const clickableElements = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'];
+    const clickableRoles = ['button', 'link', 'tab', 'menuitem'];
+    
+    // Check tag name
+    if (clickableElements.includes(element.tagName)) {
+      return true;
+    }
+
+    // Check parent elements
+    const parent = element.closest('button, a, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [onclick], [data-click]');
+    if (parent) {
+      return true;
+    }
+
+    // Check role attribute
+    if (clickableRoles.includes(element.getAttribute('role'))) {
+      return true;
+    }
+
+    // Check for click handlers
+    if (element.onclick || element.getAttribute('onClick')) {
+      return true;
+    }
+
+    // Check for cursor pointer style
+    const computedStyle = window.getComputedStyle(element);
+    if (computedStyle.cursor === 'pointer') {
+      return true;
+    }
+
+    return false;
   }
 
   isFormSubmissionButton(element) {
