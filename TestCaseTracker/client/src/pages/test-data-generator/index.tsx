@@ -71,6 +71,95 @@ export default function TestDataGeneratorPage() {
     { id: "lorem", name: "Lorem Text", type: "lorem.paragraph", enabled: false }
   ]);
 
+  const dataTypes = {
+    'United States': [
+      'SSN', 'Driver License', 'Passport', 'Tax ID', 'Phone', 'ZIP Code', 'Credit Card', 'Bank Account'
+    ],
+    'United Kingdom': [
+      'National Insurance Number', 'Passport', 'Phone', 'Postcode', 'VAT Number', 'Sort Code', 'IBAN'
+    ],
+    'Canada': [
+      'SIN', 'Health Card', 'Passport', 'Phone', 'Postal Code', 'Bank Transit Number'
+    ],
+    'Australia': [
+      'TFN', 'Medicare', 'Passport', 'Phone', 'Postcode', 'ABN', 'BSB Number'
+    ],
+    'Germany': [
+      'Tax ID', 'Passport', 'Phone', 'Postcode', 'VAT Number', 'IBAN', 'BIC'
+    ],
+    'India': [
+      'PAN Number', 'Aadhaar Number', 'GST Number', 'Passport', 'Driving License', 
+      'Voter ID', 'Phone', 'PIN Code', 'IFSC Code', 'Bank Account', 'UPI ID',
+      'EPF Number', 'ESI Number', 'TAN Number', 'CIN Number', 'FSSAI License'
+    ],
+    'France': [
+      'INSEE Number', 'Passport', 'Phone', 'Postal Code', 'VAT Number', 'IBAN', 'SIRET'
+    ],
+    'Japan': [
+      'My Number', 'Passport', 'Phone', 'Postal Code', 'Bank Account', 'Residence Card'
+    ],
+    'China': [
+      'National ID', 'Passport', 'Phone', 'Postal Code', 'Bank Account', 'UnionPay Card'
+    ],
+    'Brazil': [
+      'CPF', 'CNPJ', 'RG', 'Passport', 'Phone', 'CEP', 'Bank Account'
+    ],
+    'Mexico': [
+      'CURP', 'RFC', 'Passport', 'Phone', 'Postal Code', 'CLABE'
+    ]
+  };
+
+  const generateCountrySpecificData = (type: string, index: number) => {
+    switch (type) {
+      // India specific
+      case 'PAN Number':
+        return `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
+      case 'Aadhaar Number':
+        return `${Math.floor(Math.random() * 9000) + 1000} ${Math.floor(Math.random() * 9000) + 1000} ${Math.floor(Math.random() * 9000) + 1000}`;
+      case 'GST Number':
+        return `${Math.floor(Math.random() * 90) + 10}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10)}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10)}`;
+      case 'IFSC Code':
+        return `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}0${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
+      case 'UPI ID':
+        return `user${index + 1}@paytm`;
+      case 'PIN Code':
+        return `${Math.floor(Math.random() * 900000) + 100000}`;
+      case 'EPF Number':
+        return `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}/${Math.floor(Math.random() * 90000) + 10000}/${Math.floor(Math.random() * 9000000) + 1000000}`;
+
+      // US specific
+      case 'SSN':
+        return `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
+      case 'Driver License':
+        return `DL${Math.floor(Math.random() * 90000000) + 10000000}`;
+      case 'Tax ID':
+        return `${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000000) + 1000000}`;
+      case 'ZIP Code':
+        return `${Math.floor(Math.random() * 90000) + 10000}`;
+
+      // UK specific
+      case 'National Insurance Number':
+        return `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 90) + 10}${Math.floor(Math.random() * 90) + 10}${Math.floor(Math.random() * 90) + 10}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
+      case 'Postcode':
+        return `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10)} ${Math.floor(Math.random() * 10)}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
+      case 'VAT Number':
+        return `GB${Math.floor(Math.random() * 900000000) + 100000000}`;
+
+      // Generic
+      case 'Passport':
+        return `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 90000000) + 10000000}`;
+      case 'Phone':
+        return `+${Math.floor(Math.random() * 90) + 10}${Math.floor(Math.random() * 9000000000) + 1000000000}`;
+      case 'Bank Account':
+        return `${Math.floor(Math.random() * 900000000000) + 100000000000}`;
+      case 'Credit Card':
+        return `4${Math.floor(Math.random() * 1000000000000000).toString().padStart(15, '0')}`;
+
+      default:
+        return `${type}_${index + 1}`;
+    }
+  };
+
   const generateTestData = async () => {
     setIsGenerating(true);
     try {
@@ -144,6 +233,15 @@ export default function TestDataGeneratorPage() {
               default:
                 record[field.id] = generateFakeDataByCountry("text", selectedCountry);
             }
+          }
+        });
+
+        // Add country-specific fields
+        Object.keys(dataTypes).forEach(country => {
+          if (selectedCountry === country) {
+            dataTypes[country].forEach(dataType => {
+              record[dataType.replace(/\s+/g, '')] = generateCountrySpecificData(dataType, index);
+            });
           }
         });
 

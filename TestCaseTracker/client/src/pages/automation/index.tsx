@@ -58,6 +58,8 @@ export default function AutomationPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingScript, setRecordingScript] = useState<string>('');
   const [editingScript, setEditingScript] = useState<AutomationScript | null>(null);
+  const [availableModules, setAvailableModules] = useState([]);
+  const [availableTestCases, setAvailableTestCases] = useState([]);
 
   // Fetch projects with modules and test cases
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
@@ -70,6 +72,31 @@ export default function AutomationPage() {
       return data;
     }
   });
+
+    // Fetch modules when project changes
+    useEffect(() => {
+      if (selectedProject) {
+        fetch(`/api/modules?projectId=${selectedProject}`)
+          .then(res => res.json())
+          .then(data => setAvailableModules(data))
+          .catch(err => console.error('Failed to fetch modules:', err));
+      } else {
+        setAvailableModules([]);
+      }
+      setSelectedModule('');
+    }, [selectedProject]);
+  
+    // Fetch test cases when module changes
+    useEffect(() => {
+      if (selectedModule) {
+        fetch(`/api/test-cases?moduleId=${selectedModule}`)
+          .then(res => res.json())
+          .then(data => setAvailableTestCases(data))
+          .catch(err => console.error('Failed to fetch test cases:', err));
+      } else {
+        setAvailableTestCases([]);
+      }
+    }, [selectedModule]);
 
   // Fetch automation scripts
   const { data: scripts = [], isLoading: isScriptsLoading, refetch: refetchScripts } = useQuery<AutomationScript[]>({
@@ -178,7 +205,7 @@ export default function AutomationPage() {
 
   const selectedProjectData = projects.find(p => p.id === selectedProject);
   const selectedModuleData = selectedProjectData?.modules.find(m => m.id === selectedModule);
-  const availableTestCases = selectedModuleData?.testCases || [];
+  const availableTestCases1 = selectedModuleData?.testCases || [];
 
   const handleStartRecording = () => {
     if (!selectedProject || !selectedModule || selectedTestCases.length === 0) {
@@ -213,6 +240,23 @@ export default function AutomationPage() {
     }
   };
 
+    const startRecording = () => {
+      if (!selectedProject) {
+        toast({
+          title: "Error",
+          description: "Please select a project first.",
+          variant: "destructive"
+        });
+        return;
+      }
+  
+      setIsRecording(true);
+      toast({
+        title: "Recording Started",
+        description: `Recording browser actions for project: ${projects.find(p => p.id.toString() === selectedProject)?.name || 'Unknown'}`
+      });
+    };
+
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
@@ -231,108 +275,82 @@ export default function AutomationPage() {
           </TabsList>
 
           <TabsContent value="record" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Record New Automation Script</CardTitle>
-                <CardDescription>
-                  Select project, module, and test cases to record automated interactions
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="project">Project</Label>
-                    {projectsLoading ? (
-                      <div className="flex items-center justify-center p-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                        <span className="ml-2">Loading projects...</span>
-                      </div>
-                    ) : projects.length === 0 ? (
-                      <div className="p-4 text-center text-muted-foreground">
+                      <Card>
+          <CardHeader>
+            <CardTitle>Record New Automation Script</CardTitle>
+            <CardDescription>
+              Select project, module, and test cases to record automated interactions
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium">Project</label>
+                <Select value={selectedProject} onValueChange={setSelectedProject}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.length === 0 ? (
+                      <SelectItem value="no-projects" disabled>
                         No projects found. Please create a project first.
-                      </div>
+                      </SelectItem>
                     ) : (
-                      <select 
-                        value={selectedProject} 
-                        onChange={(e) => setSelectedProject(e.target.value)}
-                        className="w-full p-2 border rounded-md"
-                      >
-                        <option value="">Select project to automate</option>
-                        {projects.map((project: any) => (
-                          <option key={project.id} value={project.id}>
-                            {project.name} (ID: {project.id})
-                          </option>
-                        ))}
-                      </select>
+                      projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id.toString()}>
+                          {project.name}
+                        </SelectItem>
+                      ))
                     )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="module">Module</Label>
-                    <Select value={selectedModule} onValueChange={setSelectedModule} disabled={!selectedProject}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select module" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {selectedProjectData?.modules.map(module => (
-                          <SelectItem key={module.id} value={module.id}>
-                            {module.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Test Cases</Label>
-                  <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
-                    {availableTestCases.map(testCase => (
-                      <div key={testCase.id} className="flex items-center space-x-2 py-1">
-                        <input
-                          type="checkbox"
-                          id={testCase.id}
-                          checked={selectedTestCases.includes(testCase.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedTestCases([...selectedTestCases, testCase.id]);
-                            } else {
-                              setSelectedTestCases(selectedTestCases.filter(id => id !== testCase.id));
-                            }
-                          }}
-                        />
-                        <Label htmlFor={testCase.id} className="text-sm">
-                          {testCase.title}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  {!isRecording ? (
-                    <Button onClick={handleStartRecording} className="flex items-center gap-2">
-                      <Play className="w-4 h-4" />
-                      Start Recording
-                    </Button>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Module</label>
+                <Select 
+                  value={selectedModule} 
+                  onValueChange={setSelectedModule}
+                  disabled={!selectedProject}
+                >
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Select module" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableModules.length === 0 ? (
+                      <SelectItem value="no-modules" disabled>
+                        No modules available
+                      </SelectItem>
+                    ) : (
+                      availableModules.map((module) => (
+                        <SelectItem key={module.id} value={module.id.toString()}>
+                          {module.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Test Cases</label>
+                <div className="mt-2 p-2 border rounded text-sm">
+                  {availableTestCases.length === 0 ? (
+                    <span className="text-gray-500">No test cases available</span>
                   ) : (
-                    <Button onClick={handleStopRecording} variant="destructive" className="flex items-center gap-2">
-                      <Square className="w-4 h-4" />
-                      Stop Recording
-                    </Button>
+                    <span className="text-green-600">{availableTestCases.length} test cases available</span>
                   )}
                 </div>
-
-                {isRecording && (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-                    <p className="text-sm text-yellow-700">
-                      Recording in progress... Perform your test actions in the opened browser.
-                      Close the browser window to stop recording and save the script.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+            <Button 
+              onClick={startRecording}
+              disabled={isRecording || !selectedProject}
+              className="w-full"
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Start Recording
+            </Button>
+          </CardContent>
+        </Card>
           </TabsContent>
 
           <TabsContent value="scripts" className="space-y-4">

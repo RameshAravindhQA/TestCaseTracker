@@ -247,8 +247,6 @@ function AppContent() {
 }
 
 function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   // Initialize sound manager on app startup
   useEffect(() => {
@@ -298,42 +296,10 @@ function App() {
         <AppContent />
 
         {/* Welcome Dialog */}
-        {showWelcomeDialog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Welcome to TestCase Tracker!
-                </h2>
-                <p className="text-gray-600 dark:text-gray-300 mb-6">
-                  You've successfully logged in. Get started by creating your first project or exploring the dashboard.
-                </p>
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={() => {
-                      setShowWelcomeDialog(false);
-                      window.location.href = '/projects';
-                    }}
-                    className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
-                  >
-                    Create First Project
-                  </button>
-                  <button
-                    onClick={() => setShowWelcomeDialog(false)}
-                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    Explore Dashboard
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <WelcomeDialog 
+          open={showWelcomeDialog} 
+          onOpenChange={setShowWelcomeDialog}
+        />
       </SoundProvider>
     </QueryClientProvider>
   );

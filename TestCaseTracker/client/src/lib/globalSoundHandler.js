@@ -13,27 +13,27 @@ class GlobalSoundHandler {
     document.addEventListener('click', (event) => {
       const target = event.target;
 
-      // Only play sound for interactive elements
-      const interactiveElements = [
-        'button', 'a', 'input', 'select', 'textarea', 'label',
-        '[role="button"]', '[role="link"]', '[role="tab"]', '[role="menuitem"]',
-        '.btn', '.button', '.clickable', '[data-sound="click"]'
-      ];
+      // Only play sound for specific interactive elements
+      const isButton = target.tagName.toLowerCase() === 'button' || 
+                      target.getAttribute('role') === 'button' ||
+                      target.closest('button') !== null;
+      
+      const isLink = target.tagName.toLowerCase() === 'a' || 
+                    target.getAttribute('role') === 'link';
+      
+      const isInput = target.tagName.toLowerCase() === 'input' && 
+                     ['submit', 'button', 'reset'].includes(target.type);
 
-      const isInteractive = interactiveElements.some(selector => {
-        try {
-          return target.matches(selector) || target.closest(selector);
-        } catch (e) {
-          return false;
-        }
-      });
-
-      // Don't play sound for disabled elements
+      // Don't play sound for disabled elements or divs with selected state
       const isDisabled = target.disabled || target.closest('[disabled]') || 
                         target.classList.contains('disabled') || 
                         target.closest('.disabled');
 
-      if (isInteractive && !isDisabled && window.soundManager) {
+      // Don't play sound on divs or spans unless they have explicit button role
+      const isDivOrSpan = ['div', 'span'].includes(target.tagName.toLowerCase()) && 
+                         target.getAttribute('role') !== 'button';
+
+      if ((isButton || isLink || isInput) && !isDisabled && !isDivOrSpan && window.soundManager) {
         console.log('🔊 Global handler: Playing click sound for', target.tagName);
         window.soundManager.playClick();
       }
