@@ -1,449 +1,288 @@
-class SoundManager {
+export class SoundManager {
   constructor() {
-    this.sounds = new Map();
-    this.enabled = true;
+    this.audioCache = new Map();
+    this.isEnabled = true;
     this.volume = 0.5;
-    this.clickMuted = false;
-    this.loadSettings();
-    this.preloadSounds();
+    this.soundMappings = {
+      click: '/sounds/Mouse Click Sound.mp3',
+      crud: '/sounds/CRUD Operation Sounds.mp3',
+      success: '/sounds/happy-pop-2-185287.mp3',
+      error: '/sounds/error-011-352286.mp3',
+      message: '/sounds/message.mp3'
+    };
+    this.fallbackSounds = {
+      click: this.generateTone(800, 100),
+      crud: this.generateTone(600, 200),
+      success: this.generateTone(880, 150),
+      error: this.generateTone(300, 300),
+      message: this.generateTone(500, 120)
+    };
+    this.init();
   }
 
-  loadSettings() {
-    try {
-      const settings = localStorage.getItem('soundSettings');
-      if (settings) {
-        const parsed = JSON.parse(settings);
-        this.enabled = parsed.enabled !== false;
-        this.volume = parsed.volume || 0.5;
-      }
-    } catch (error) {
-      console.warn('Failed to load sound settings:', error);
-    }
-  }
-
-  saveSettings() {
-    try {
-      localStorage.setItem('soundSettings', JSON.stringify({
-        enabled: this.enabled,
-        volume: this.volume
-      }));
-    } catch (error) {
-      console.warn('Failed to save sound settings:', error);
-    }
-  }
-
-  // Create procedural sounds using Web Audio API
-  createSyntheticSound(type) {
-    try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      // Different frequencies and patterns for different sound types
-      switch (type) {
-        case 'click':
-          oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-          oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1);
-          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-          break;
-        case 'success':
-          oscillator.frequency.setValueAtTime(523, audioContext.currentTime); // C5
-          oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.1); // E5
-          oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.2); // G5
-          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-          break;
-        case 'error':
-          oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
-          oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.3);
-          gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-          break;
-        case 'crud':
-          oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
-          oscillator.frequency.setValueAtTime(550, audioContext.currentTime + 0.05);
-          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-          break;
-        case 'message':
-          oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
-          oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.1);
-          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-          break;
-        default:
-          oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
-          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-      }
-
-      oscillator.type = 'sine';
-
-      return new Promise((resolve) => {
-        oscillator.onended = () => {
-          audioContext.close();
-          resolve();
-        };
-
-        oscillator.start();
-
-        const duration = type === 'success' ? 0.3 : type === 'error' ? 0.3 : type === 'message' ? 0.2 : 0.1;
-        oscillator.stop(audioContext.currentTime + duration);
-      });
-    } catch (error) {
-      console.warn('Failed to create synthetic sound:', error);
-      return Promise.resolve();
-    }
-  }
-
-  createFallbackAudio() {
-    // Create a minimal working audio element
-    const audio = new Audio();
-    // Very short silent audio data URI
-    audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAAAQESWAkAfAAABAAEAZGF0YQAAAAA=';
-    audio.volume = this.volume;
-    return audio;
+  async init() {
+    console.log('🔊 Initializing Sound Manager...');
+    await this.preloadSounds();
+    this.setupGlobalEventListeners();
+    console.log('🔊 Sound Manager initialized successfully');
   }
 
   async preloadSounds() {
-    console.log('🔊 Starting sound preload...');
+    console.log('🔊 Preloading sounds...');
+    const loadPromises = Object.entries(this.soundMappings).map(([key, path]) => 
+      this.loadSound(key, path)
+    );
 
-    // Load custom sounds from localStorage if available
-    const customSounds = this.getCustomSounds();
+    await Promise.allSettled(loadPromises);
 
-    const soundFiles = {
-      click: customSounds.click || '/sounds/click.mp3',
-      crud: customSounds.crud || '/sounds/crud.mp3',
-      success: customSounds.success || '/sounds/success.mp3',
-      error: customSounds.error || '/sounds/error.mp3',
-      message: customSounds.message || '/sounds/message.mp3'
-    };
-
-    console.log('🔊 Sound files to preload:', soundFiles);
-
-    for (const [type, url] of Object.entries(soundFiles)) {
-      try {
-        console.log(`🔊 Preloading ${type} from ${url}...`);
-
-        // Try multiple formats
-        const formats = [url, url.replace('.mp3', '.wav'), url.replace('.mp3', '.ogg')];
-        let audioLoaded = false;
-
-        for (const formatUrl of formats) {
-          if (audioLoaded) break;
-
-          try {
-            const audio = new Audio();
-            audio.preload = 'auto';
-            audio.volume = this.volume;
-            audio.crossOrigin = 'anonymous';
-
-            const loadPromise = new Promise((resolve, reject) => {
-              // Set up timeout for loading
-              const timeout = setTimeout(() => {
-                console.log(`⏰ Audio load timeout for ${type} with ${formatUrl}`);
-                loadPromise.reject(new Error(`Timeout loading ${type} sound`));
-              }, 10000);
-
-              const onLoad = () => {
-                console.log(`✅ Sound ${type} loaded successfully from ${formatUrl}`);
-                clearTimeout(timeout);
-                audio.removeEventListener('canplaythrough', onLoad);
-                audio.removeEventListener('loadeddata', onLoad);
-                audio.removeEventListener('error', onError);
-                resolve(audio);
-              };
-
-              const onError = (e) => {
-                console.warn(`❌ Failed to preload sound: ${type} from ${formatUrl}`, e);
-                clearTimeout(timeout);
-                audio.removeEventListener('canplaythrough', onLoad);
-                audio.removeEventListener('loadeddata', onLoad);
-                audio.removeEventListener('error', onError);
-                reject(e);
-              };
-
-              audio.addEventListener('canplaythrough', onLoad, { once: true });
-              audio.addEventListener('loadeddata', onLoad, { once: true });
-              audio.addEventListener('error', onError, { once: true });
-            });
-
-            audio.src = formatUrl;
-
-            const loadedAudio = await loadPromise;
-            this.sounds.set(type, loadedAudio);
-            console.log(`✅ Sound ${type} added to collection from ${formatUrl}`);
-            audioLoaded = true;
-          } catch (error) {
-            console.warn(`❌ Error loading ${type} from ${formatUrl}:`, error);
-          }
-        }
-
-        // If no format worked, create synthetic sound
-        if (!audioLoaded) {
-          console.log(`🎵 Creating synthetic sound for ${type}`);
-          this.sounds.set(type, 'synthetic');
-        }
-      } catch (error) {
-        console.warn(`❌ Error preloading sound: ${type}`, error);
-        this.sounds.set(type, 'synthetic');
-      }
-    }
-
-    console.log(`🔊 Sound preload complete. Loaded ${this.sounds.size} sounds:`, Array.from(this.sounds.keys()));
+    const loadedSounds = Array.from(this.audioCache.keys());
+    console.log('🔊 Sound preload complete. Loaded sounds:', loadedSounds);
   }
 
-  async playSound(type) {
-    console.log(`🔊 Attempting to play sound: ${type}`);
+  async loadSound(key, path) {
+    try {
+      console.log(`🔊 Preloading ${key} from ${path}...`);
 
-    if (!this.enabled) {
-      console.log('🔇 Sound is disabled, skipping playback');
+      const audio = new Audio();
+
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          console.log(`⏰ Audio load timeout for ${key} with ${path}`);
+          reject(new Error(`Timeout loading ${key}`));
+        }, 5000);
+
+        audio.addEventListener('canplaythrough', () => {
+          clearTimeout(timeout);
+          console.log(`✅ Sound ${key} loaded successfully from ${path}`);
+          this.audioCache.set(key, audio);
+          resolve(audio);
+        }, { once: true });
+
+        audio.addEventListener('error', (e) => {
+          clearTimeout(timeout);
+          console.log(`❌ Error loading ${key} from ${path}:`, e);
+          reject(e);
+        }, { once: true });
+
+        audio.preload = 'auto';
+        audio.src = path;
+        audio.volume = this.volume;
+      });
+    } catch (error) {
+      console.log(`❌ Failed to preload sound: ${key} from ${path}`, error);
+      // Create synthetic sound as fallback
+      console.log(`🎵 Creating synthetic sound for ${key}`);
+      this.audioCache.set(key, this.fallbackSounds[key]);
+    }
+  }
+
+  generateTone(frequency, duration) {
+    return {
+      play: () => {
+        if (!this.isEnabled) return;
+        console.log(`🎵 Playing synthetic sound: ${frequency}Hz for ${duration}ms`);
+
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+        oscillator.type = 'sine';
+
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(this.volume * 0.3, audioContext.currentTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + duration / 1000);
+      }
+    };
+  }
+
+  setupGlobalEventListeners() {
+    // Enhanced form submission detection
+    document.addEventListener('submit', (event) => {
+      console.log('🔊 Form submission detected, playing CRUD sound');
+      this.playSound('crud');
+    }, true);
+
+    // Button click detection with form context
+    document.addEventListener('click', (event) => {
+      const target = event.target;
+
+      // Check if it's a form submission button
+      if (this.isFormSubmissionButton(target)) {
+        console.log('🔊 Form submission button detected, playing CRUD sound');
+        this.playSound('crud');
+        return;
+      }
+
+      // Check for API-related buttons
+      if (this.isApiButton(target)) {
+        console.log('🔊 API button detected, playing CRUD sound');
+        this.playSound('crud');
+        return;
+      }
+
+      // Regular button click
+      if (target.tagName === 'BUTTON' || target.closest('button')) {
+        console.log('🔊 Regular button click detected');
+        this.playSound('click');
+      }
+    }, true);
+
+    // Enhanced mutation observer for dynamic buttons
+    this.observeFormElements();
+  }
+
+  isFormSubmissionButton(element) {
+    if (!element) return false;
+
+    const button = element.tagName === 'BUTTON' ? element : element.closest('button');
+    if (!button) return false;
+
+    // Check button type
+    if (button.type === 'submit') return true;
+
+    // Check button text content for submission indicators
+    const text = button.textContent?.toLowerCase() || '';
+    const submissionKeywords = [
+      'save', 'submit', 'create', 'update', 'delete', 'remove', 
+      'add', 'edit', 'confirm', 'apply', 'send', 'post', 'put',
+      'upload', 'download', 'export', 'import', 'generate',
+      'register', 'login', 'sign in', 'sign up'
+    ];
+
+    if (submissionKeywords.some(keyword => text.includes(keyword))) {
+      return true;
+    }
+
+    // Check if button is inside a form
+    const form = button.closest('form');
+    if (form) return true;
+
+    // Check for React form handlers
+    if (button.onclick || button.getAttribute('onClick')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  isApiButton(element) {
+    if (!element) return false;
+
+    const button = element.tagName === 'BUTTON' ? element : element.closest('button');
+    if (!button) return false;
+
+    // Check for data attributes that suggest API calls
+    const apiAttributes = ['data-action', 'data-method', 'data-api', 'data-endpoint'];
+    if (apiAttributes.some(attr => button.hasAttribute(attr))) {
+      return true;
+    }
+
+    // Check class names for API-related patterns
+    const className = button.className.toLowerCase();
+    const apiClasses = ['api-', 'crud-', 'submit-', 'action-', 'mutate-'];
+    if (apiClasses.some(cls => className.includes(cls))) {
+      return true;
+    }
+
+    return false;
+  }
+
+  observeFormElements() {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            // Check for new form elements
+            const forms = node.querySelectorAll ? node.querySelectorAll('form') : [];
+            const buttons = node.querySelectorAll ? node.querySelectorAll('button[type="submit"]') : [];
+
+            if (forms.length > 0 || buttons.length > 0) {
+              console.log('🔊 New form elements detected, updating listeners');
+            }
+          }
+        });
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  async playSound(soundKey) {
+    if (!this.isEnabled) {
+      console.log(`🔊 Sound disabled, skipping: ${soundKey}`);
       return;
     }
 
-    // Skip click sounds if they are muted (during CRUD operations)
-    if (type === 'click' && this.clickMuted) {
-      console.log('🔇 Click sound is muted during CRUD operation');
-      return;
-    }
+    console.log(`🔊 Attempting to play sound: ${soundKey}`);
 
     try {
-      let audio = this.sounds.get(type);
-
-      if (!audio) {
-        console.warn(`❌ Sound not found: ${type}. Available sounds:`, Array.from(this.sounds.keys()));
-        // Create synthetic sound on-demand
-        await this.createSyntheticSound(type);
-        return;
-      }
-
-      if (audio === 'synthetic') {
-        console.log(`🎵 Playing synthetic sound: ${type}`);
-        await this.createSyntheticSound(type);
-        return;
-      }
-
-      console.log(`🔊 Playing sound: ${type} at volume ${this.volume}`);
-
-      // Clone the audio to allow multiple simultaneous plays
-      const clonedAudio = audio.cloneNode();
-      clonedAudio.volume = this.volume;
-      clonedAudio.currentTime = 0;
-
-      // Handle different audio states
-      if (clonedAudio.readyState >= 2) { // HAVE_CURRENT_DATA
-        const playPromise = clonedAudio.play();
-        if (playPromise !== undefined) {
-          await playPromise;
-          console.log(`✅ Sound ${type} played successfully`);
+      const audio = this.audioCache.get(soundKey);
+      if (audio) {
+        if (audio.play) {
+          audio.currentTime = 0;
+          await audio.play();
+          console.log(`🎵 Successfully played sound: ${soundKey}`);
+        } else {
+          // Synthetic sound
+          audio.play();
+          console.log(`🎵 Playing synthetic sound: ${soundKey}`);
         }
       } else {
-        console.log(`🎵 Audio not ready, falling back to synthetic sound for ${type}`);
-        await this.createSyntheticSound(type);
+        console.warn(`⚠️ Sound not found: ${soundKey}`);
+        // Try to load and play immediately
+        const path = this.soundMappings[soundKey];
+        if (path) {
+          const audio = new Audio(path);
+          audio.volume = this.volume;
+          await audio.play();
+        }
       }
     } catch (error) {
-      console.warn(`❌ Failed to play sound: ${type}`, error);
+      console.error(`❌ Error playing sound ${soundKey}:`, error);
       // Fallback to synthetic sound
-      console.log(`🎵 Falling back to synthetic sound for ${type}`);
-      await this.createSyntheticSound(type);
+      const fallback = this.fallbackSounds[soundKey];
+      if (fallback) {
+        fallback.play();
+      }
     }
-  }
-
-  // Convenience methods
-  playClick() { return this.playSound('click'); }
-  playCrud() { return this.playSound('crud'); }
-  playSuccess() { return this.playSound('success'); }
-  playError() { return this.playSound('error'); }
-  playMessage() { return this.playSound('message'); }
-
-  setEnabled(enabled) {
-    this.enabled = enabled;
-    this.saveSettings();
   }
 
   setVolume(volume) {
     this.volume = Math.max(0, Math.min(1, volume));
-    this.sounds.forEach(audio => {
-      if (audio !== 'synthetic' && audio.volume !== undefined) {
+    this.audioCache.forEach((audio) => {
+      if (audio.volume !== undefined) {
         audio.volume = this.volume;
       }
     });
-    this.saveSettings();
+    console.log(`🔊 Volume set to: ${this.volume}`);
   }
 
-  getSettings() {
-    return {
-      enabled: this.enabled,
-      volume: this.volume
-    };
+  setEnabled(enabled) {
+    this.isEnabled = enabled;
+    console.log(`🔊 Sound ${enabled ? 'enabled' : 'disabled'}`);
   }
 
-  setClickMuted(muted) {
-    this.clickMuted = muted;
-    console.log(`🔇 Click sounds ${muted ? 'muted' : 'unmuted'}`);
-  }
-
-  // Import/Export functionality
-  getCustomSounds() {
-    try {
-      const stored = localStorage.getItem('customSounds');
-      return stored ? JSON.parse(stored) : {};
-    } catch (error) {
-      console.warn('Failed to load custom sounds:', error);
-      return {};
-    }
-  }
-
-  setCustomSound(type, audioFile) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          console.log(`🔊 Processing custom sound: ${type}`);
-
-          const customSounds = this.getCustomSounds();
-          customSounds[type] = e.target.result;
-          localStorage.setItem('customSounds', JSON.stringify(customSounds));
-
-          // Create audio element for the custom sound
-          const audio = new Audio(e.target.result);
-          audio.volume = this.volume;
-          audio.preload = 'auto';
-
-          // Immediate update for testing
-          this.sounds.set(type, audio);
-          console.log(`✅ Custom sound ${type} immediately available for testing`);
-
-          // Wait for audio to fully load
-          const onLoad = () => {
-            console.log(`✅ Custom sound ${type} fully loaded and ready`);
-            audio.removeEventListener('canplaythrough', onLoad);
-            audio.removeEventListener('loadeddata', onLoad);
-            audio.removeEventListener('error', onError);
-            resolve();
-          };
-
-          const onError = (error) => {
-            console.error(`❌ Failed to load custom sound ${type}:`, error);
-            audio.removeEventListener('canplaythrough', onLoad);
-            audio.removeEventListener('loadeddata', onLoad);
-            audio.removeEventListener('error', onError);
-            // Still resolve since we set it immediately above for basic functionality
-            resolve();
-          };
-
-          audio.addEventListener('canplaythrough', onLoad, { once: true });
-          audio.addEventListener('loadeddata', onLoad, { once: true });
-          audio.addEventListener('error', onError, { once: true });
-
-          // Fallback timeout
-          setTimeout(() => {
-            if (audio.readyState >= 2) {
-              onLoad();
-            } else {
-              console.warn(`⚠️ Custom sound ${type} taking longer to load, but available for use`);
-              resolve();
-            }
-          }, 1000);
-
-        } catch (error) {
-          console.error(`❌ Error processing custom sound ${type}:`, error);
-          reject(error);
-        }
-      };
-      reader.onerror = (error) => {
-        console.error(`❌ FileReader error for ${type}:`, error);
-        reject(error);
-      };
-      reader.readAsDataURL(audioFile);
-    });
-  }
-
-  exportSounds() {
-    const customSounds = this.getCustomSounds();
-    const settings = this.getSettings();
-
-    const exportData = {
-      sounds: customSounds,
-      settings: settings,
-      timestamp: new Date().toISOString()
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `sound-settings-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  importSounds(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const importData = JSON.parse(e.target.result);
-
-          if (importData.sounds) {
-            localStorage.setItem('customSounds', JSON.stringify(importData.sounds));
-          }
-
-          if (importData.settings) {
-            this.enabled = importData.settings.enabled !== false;
-            this.volume = importData.settings.volume || 0.5;
-            this.saveSettings();
-          }
-
-          // Reload sounds
-          this.preloadSounds();
-          resolve();
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsText(file);
-    });
-  }
-
-  resetToDefaults() {
-    localStorage.removeItem('customSounds');
-    localStorage.removeItem('soundSettings');
-    this.enabled = true;
-    this.volume = 0.5;
-    this.sounds.clear();
-    this.preloadSounds();
-  }
-
-  getCustomSounds() {
-    try {
-      const customSounds = localStorage.getItem('customSounds');
-      return customSounds ? JSON.parse(customSounds) : {};
-    } catch (error) {
-      console.warn('Failed to load custom sounds:', error);
-      return {};
-    }
-  }
-
-  async loadSound(soundName, customPath = null) {
-    if (this.sounds[soundName]) {
-      return;
-    }
-
-    // Only create synthetic sounds during initialization to avoid network requests
-    console.log(`🎵 Creating synthetic sound for ${soundName}`);
-    this.createSyntheticSound(soundName);
-  }
+  // Public API methods
+  playCrudSound() { this.playSound('crud'); }
+  playClickSound() { this.playSound('click'); }
+  playSuccessSound() { this.playSound('success'); }
+  playErrorSound() { this.playSound('error'); }
+  playMessageSound() { this.playSound('message'); }
 }
 
-// Create global instance
-window.soundManager = new SoundManager();
+// Global instance
+if (typeof window !== 'undefined') {
+  window.soundManager = window.soundManager || new SoundManager();
+}
 
-export default window.soundManager;
+export const soundManager = typeof window !== 'undefined' ? window.soundManager : null;

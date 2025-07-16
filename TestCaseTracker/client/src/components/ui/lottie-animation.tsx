@@ -48,105 +48,110 @@ export function LottieAnimation({
           }
         }
 
-        // Handle regular file paths - add cache busting
-        const cacheBustUrl = `${animationPath}?t=${Date.now()}`;
-        console.log(`📡 Fetching animation from: ${cacheBustUrl}`);
-        
-        const response = await fetch(cacheBustUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to load animation: ${response.status} ${response.statusText}`);
-        }
+        // Load from regular URL with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-        const text = await response.text();
-        console.log(`📄 Loaded animation text length: ${text.length}`);
-
-        // Try to parse JSON
-        let data;
         try {
-          data = JSON.parse(text);
-          console.log('✅ Successfully parsed JSON on first attempt');
-        } catch (parseError) {
-          console.error('❌ JSON parse error:', parseError);
-          console.log('🔧 Attempting JSON repair...');
+          const response = await fetch(animationPath, { 
+            signal: controller.signal,
+            headers: {
+              'Accept': 'application/json',
+              'Cache-Control': 'no-cache'
+            }
+          });
 
-          // Attempt JSON repair
-          let cleanedText = text.trim();
-          cleanedText = attemptJSONRepair(cleanedText);
+          clearTimeout(timeoutId);
 
-          try {
-            data = JSON.parse(cleanedText);
-            console.log('✅ Successfully parsed JSON after repair');
-          } catch (repairError) {
-            console.error('❌ JSON parse error after repair:', repairError);
-            console.log('📄 First 500 chars of problematic text:', text.substring(0, 500));
-            throw new Error('Invalid JSON format in animation file, even after attempting repair');
+          console.log(`📡 Fetch response for ${animationPath}:`, {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+            contentType: response.headers.get('content-type')
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
+
+          const text = await response.text();
+          console.log(`📄 Received response, length: ${text.length}`);
+
+          // Check if response is HTML (404/error page)
+          if (text.trim().startsWith('<')) {
+            throw new Error('Received HTML instead of JSON - file may not exist');
+          }
+
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (parseError) {
+            console.error(`❌ JSON parse error for ${animationPath}:`, parseError);
+            // Try to repair the JSON
+            try {
+              const repairedText = repairJSON(text);
+              data = JSON.parse(repairedText);
+              console.log(`🔧 Successfully repaired JSON for ${animationPath}`);
+            } catch (repairError) {
+              throw new Error(`Invalid JSON: ${parseError.message}`);
+            }
+          }
+
+          // Validate basic Lottie structure
+          if (!data.v && !data.version) {
+            console.warn(`⚠️ No version found in ${animationPath}, but proceeding...`);
+          }
+
+          if (!data.layers) {
+            throw new Error('Invalid Lottie format: missing layers');
+          }
+
+          console.log(`✅ Successfully loaded Lottie: ${animationPath}`, {
+            version: data.v || data.version,
+            layerCount: data.layers?.length,
+            frameRate: data.fr,
+            dimensions: `${data.w}x${data.h}`
+          });
+
+          setAnimationData(data);
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          throw fetchError;
         }
-
-        // Basic Lottie validation - more lenient
-        if (!data || typeof data !== 'object') {
-          throw new Error('Animation data is not a valid object');
-        }
-
-        // Check for essential Lottie properties (more flexible)
-        if (!data.v && !data.version) {
-          console.warn('⚠️ Animation missing version property, but continuing...');
-        }
-
-        if (!data.layers && !data.assets) {
-          console.warn('⚠️ Animation missing layers and assets, but attempting to render...');
-        }
-
-        // Ensure required properties exist
-        if (!data.fr) data.fr = 30; // default frame rate
-        if (!data.w) data.w = 100; // default width
-        if (!data.h) data.h = 100; // default height
-        if (!data.ip) data.ip = 0; // default in point
-        if (!data.op) data.op = 60; // default out point
-
-        console.log(`✅ Successfully loaded Lottie animation: ${animationPath}`);
-        console.log(`📊 Animation details:`, {
-          version: data.v || data.version,
-          hasLayers: !!data.layers,
-          layerCount: data.layers?.length || 0,
-          hasAssets: !!data.assets,
-          frameRate: data.fr,
-          width: data.w,
-          height: data.h
-        });
-
-        setAnimationData(data);
-      } catch (err) {
-        console.error('❌ Error loading Lottie animation:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load animation';
-        console.error('❌ Full error details:', {
-          message: errorMessage,
-          animationPath,
-          error: err
-        });
-        setError(errorMessage);
+      } catch (error) {
+        console.error(`❌ Failed to load Lottie animation ${animationPath}:`, error);
+        setError(error instanceof Error ? error.message : 'Unknown error');
       } finally {
         setLoading(false);
       }
     };
 
-    // Helper function to attempt JSON repair
-    const attemptJSONRepair = (jsonString) => {
-      let repaired = jsonString;
+    // Try to repair malformed JSON
+    const repairJSON = (jsonString: string): string => {
+      let repaired = jsonString.trim();
 
-      // Remove any non-printable characters
-      repaired = repaired.replace(/[\x00-\x1F\x7F]/g, '');
+      // Remove any leading/trailing non-JSON characters
+      const firstBrace = repaired.indexOf('{');
+      const lastBrace = repaired.lastIndexOf('}');
 
-      // Fix common JSON issues
-      repaired = repaired.replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
-      repaired = repaired.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2":'); // Quote property names
-      repaired = repaired.replace(/:\s*'([^']*)'/g, ': "$1"'); // Convert single quotes to double quotes
+      if (firstBrace === -1 || lastBrace === -1) {
+        throw new Error('No valid JSON structure found');
+      }
 
-      // Ensure proper closing of objects/arrays
-      const openBraces = (repaired.match(/{/g) || []).length;
-      const closeBraces = (repaired.match(/}/g) || []).length;
-      const openBrackets = (repaired.match(/\[/g) || []).length;
-      const closeBrackets = (repaired.match(/]/g) || []).length;
+      repaired = repaired.substring(firstBrace, lastBrace + 1);
+
+      // Count braces and brackets to ensure they're balanced
+      let openBraces = 0;
+      let closeBraces = 0;
+      let openBrackets = 0;
+      let closeBrackets = 0;
+
+      for (const char of repaired) {
+        if (char === '{') openBraces++;
+        else if (char === '}') closeBraces++;
+        else if (char === '[') openBrackets++;
+        else if (char === ']') closeBrackets++;
+      }
 
       // Add missing closing braces
       for (let i = 0; i < openBraces - closeBraces; i++) {

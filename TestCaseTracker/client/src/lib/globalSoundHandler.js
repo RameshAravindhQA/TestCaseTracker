@@ -136,6 +136,143 @@ class GlobalSoundHandler {
   }
 }
 
+// Global Sound Handler for API Integrations
+class GlobalSoundHandler {
+  constructor() {
+    this.isInitialized = false;
+    this.soundManager = null;
+    this.requestCount = 0;
+    this.init();
+  }
+
+  async init() {
+    console.log('🔊 Initializing global sound handler...');
+
+    // Wait for sound manager to be available
+    let attempts = 0;
+    while (!window.soundManager && attempts < 10) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+
+    if (window.soundManager) {
+      this.soundManager = window.soundManager;
+      this.setupApiInterceptors();
+      this.setupQueryClientIntegration();
+      this.isInitialized = true;
+      console.log('🔊 Global sound handler initialized successfully');
+    } else {
+      console.warn('⚠️ Sound manager not available after waiting');
+    }
+  }
+
+  setupApiInterceptors() {
+    // Intercept fetch calls
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const [url, options] = args;
+      const method = options?.method || 'GET';
+
+      console.log(`🔊 API call intercepted: ${method} ${url}`);
+
+      try {
+        const response = await originalFetch(...args);
+
+        if (this.shouldPlaySound(method, url, response.status)) {
+          if (response.ok) {
+            if (this.isCrudOperation(method, url)) {
+              console.log('🔊 Playing CRUD success sound');
+              this.soundManager?.playCrudSound();
+            } else {
+              console.log('🔊 Playing success sound');
+              this.soundManager?.playSuccessSound();
+            }
+          } else {
+            console.log('🔊 Playing error sound for HTTP error');
+            this.soundManager?.playErrorSound();
+          }
+        }
+
+        return response;
+      } catch (error) {
+        console.log('🔊 Playing error sound for network error');
+        this.soundManager?.playErrorSound();
+        throw error;
+      }
+    };
+  }
+
+  setupQueryClientIntegration() {
+    // Enhanced TanStack Query integration
+    if (typeof window !== 'undefined') {
+      // Listen for mutation events
+      document.addEventListener('tanstack-query-mutation-start', () => {
+        console.log('🔊 TanStack Query mutation started');
+      });
+
+      document.addEventListener('tanstack-query-mutation-success', () => {
+        console.log('🔊 TanStack Query mutation succeeded, playing CRUD sound');
+        this.soundManager?.playCrudSound();
+      });
+
+      document.addEventListener('tanstack-query-mutation-error', () => {
+        console.log('🔊 TanStack Query mutation failed, playing error sound');
+        this.soundManager?.playErrorSound();
+      });
+    }
+  }
+
+  isCrudOperation(method, url = '') {
+    const crudMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+    if (!crudMethods.includes(method?.toUpperCase())) {
+      return false;
+    }
+
+    // Enhanced URL pattern matching for CRUD operations
+    const crudPatterns = [
+      '/api/auth/login',
+      '/api/auth/register', 
+      '/api/auth/logout',
+      '/api/user/',
+      '/api/projects',
+      '/api/test-cases',
+      '/api/bugs',
+      '/api/modules',
+      '/api/reports',
+      '/api/documents',
+      '/api/timesheets',
+      '/api/notebooks',
+      '/api/github/integrations',
+      'upload',
+      'create',
+      'update',
+      'delete'
+    ];
+
+    return crudPatterns.some(pattern => url.includes(pattern));
+  }
+
+  shouldPlaySound(method, url, status) {
+    // Don't play sounds for polling or health check endpoints
+    const silentEndpoints = ['/health', '/ping', '/status', '/heartbeat', '/socket.io'];
+    if (silentEndpoints.some(endpoint => url?.includes(endpoint))) {
+      return false;
+    }
+
+    // Don't play sounds for asset requests
+    if (url?.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|mp3|wav|ogg|json)$/)) {
+      return false;
+    }
+
+    // Don't play sounds for WebSocket connections
+    if (url?.includes('socket.io') || url?.includes('ws://') || url?.includes('wss://')) {
+      return false;
+    }
+
+    return true;
+  }
+}
+
 // Create global instance
 const globalSoundHandler = new GlobalSoundHandler();
 
