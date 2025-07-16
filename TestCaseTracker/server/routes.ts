@@ -1362,6 +1362,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Automation API routes
+  apiRouter.get("/automation/scripts", isAuthenticated, async (req, res) => {
+    try {
+      // Return empty array for now since automation service is not fully implemented
+      res.json([]);
+    } catch (error) {
+      console.error("Get automation scripts error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/automation/scripts", isAuthenticated, async (req, res) => {
+    try {
+      // Mock script creation for now
+      const script = {
+        id: `script_${Date.now()}`,
+        name: req.body.name || 'New Script',
+        description: req.body.description || '',
+        projectId: req.body.projectId,
+        moduleId: req.body.moduleId,
+        testCaseIds: req.body.testCaseIds || [],
+        script: '',
+        status: 'draft',
+        createdAt: new Date().toISOString()
+      };
+      
+      res.status(201).json(script);
+    } catch (error) {
+      console.error("Create automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/automation/start-recording", isAuthenticated, async (req, res) => {
+    try {
+      // Mock recording start
+      const recordingId = `recording_${Date.now()}`;
+      res.json({ recordingId, message: "Recording started" });
+    } catch (error) {
+      console.error("Start recording error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/automation/stop-recording", isAuthenticated, async (req, res) => {
+    try {
+      // Mock recording stop
+      const script = {
+        id: `script_${Date.now()}`,
+        name: `Recorded Script - ${new Date().toLocaleDateString()}`,
+        description: 'Automatically recorded script',
+        status: 'ready',
+        script: '// Generated automation script\nconsole.log("Script executed");'
+      };
+      
+      res.json(script);
+    } catch (error) {
+      console.error("Stop recording error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/automation/scripts/:id", isAuthenticated, async (req, res) => {
+    try {
+      // Mock script deletion
+      res.json({ message: "Script deleted successfully" });
+    } catch (error) {
+      console.error("Delete automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // AI Chat endpoint
   // Chat file upload endpoint
   apiRouter.post("/chat/upload", isAuthenticated, 
