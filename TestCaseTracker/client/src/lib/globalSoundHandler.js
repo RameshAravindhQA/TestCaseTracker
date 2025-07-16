@@ -1,4 +1,3 @@
-
 // Global sound event handler
 class GlobalSoundHandler {
   constructor() {
@@ -42,22 +41,34 @@ class GlobalSoundHandler {
   }
 
   shouldPlayClickSound(element) {
-    if (!element) return false;
-    
-    const tagName = element.tagName?.toLowerCase();
-    const role = element.getAttribute('role');
-    const type = element.getAttribute('type');
-    
-    return (
-      tagName === 'button' ||
-      tagName === 'a' ||
-      type === 'submit' ||
-      type === 'button' ||
-      role === 'button' ||
-      element.classList.contains('clickable') ||
-      element.closest('button') ||
-      element.closest('[role="button"]')
-    );
+    // Only play sound for actual buttons and button-like elements
+    const tagName = element.tagName.toLowerCase();
+
+    // Check if it's a button
+    if (tagName === 'button') {
+      return true;
+    }
+
+    // Check if it's an element with button role
+    if (element.getAttribute('role') === 'button') {
+      return true;
+    }
+
+    // Check if it's a clickable input (submit, button, etc.)
+    if (tagName === 'input' && ['submit', 'button', 'reset'].includes(element.type)) {
+      return true;
+    }
+
+    // Check if it has specific button classes (common UI library patterns)
+    if (element.className && (
+      element.className.includes('btn') ||
+      element.className.includes('button') ||
+      element.className.includes('Button') // React components
+    )) {
+      return true;
+    }
+
+    return false;
   }
 
   async playClickSound() {

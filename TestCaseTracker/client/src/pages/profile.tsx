@@ -59,15 +59,7 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedLottie, setSelectedLottie] = useState<LottieAnimation | null>(null);
-  const [lottieAnimations, setLottieAnimations] = useState<LottieAnimation[]>([
-    { id: 'female-avatar', name: 'Female Avatar', path: '/lottie/female-avatar.json' },
-    { id: 'male-avatar', name: 'Male Avatar', path: '/lottie/male-avatar.json' },
-    { id: 'businessman-rocket', name: 'Businessman Rocket', path: '/lottie/businessman-rocket.json' },
-    { id: 'software-dev', name: 'Software Developer', path: '/lottie/software-dev.json' },
-    { id: 'rocket', name: 'Rocket Animation', path: '/lottie/rocket.json' },
-    { id: 'office-team', name: 'Office Team', path: '/lottie/office-team.json' },
-    { id: 'business-team', name: 'Business Team', path: '/lottie/business-team.json' }
-  ]);
+  const [lottieAnimations, setLottieAnimations] = useState<LottieAnimation[]>([]);
   const [playingAnimations, setPlayingAnimations] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -359,17 +351,17 @@ export default function ProfilePage() {
     if (file) {
       // Check if it's a Lottie file
       const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
-      
+
       // Handle Lottie file upload
       if (isLottieFile) {
         handleLottieFileUpload(file);
         return;
       }
-      
+
       // Check file size (limit to 2MB for images, 20MB for lottie)
       const maxSize = isLottieFile ? 20 * 1024 * 1024 : 2 * 1024 * 1024;
       const maxSizeText = isLottieFile ? '20MB' : '2MB';
-      
+
       if (file.size > maxSize) {
         toast({
           title: "File too large",
@@ -455,28 +447,28 @@ export default function ProfilePage() {
     }
 
     setUploading(true);
-    
+
     try {
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
           const jsonData = JSON.parse(e.target?.result as string);
-          
+
           // Validate basic Lottie structure
           if (!jsonData.v || !jsonData.layers) {
             throw new Error("Invalid Lottie animation format");
           }
-          
+
           const newAnimation: LottieAnimation = {
             id: `custom-${Date.now()}`,
             name: file.name.replace('.json', ''),
             path: URL.createObjectURL(file),
             preview: jsonData
           };
-          
+
           // Add to animations list immediately for UI feedback
           setLottieAnimations(prev => [...prev, newAnimation]);
-          
+
           // Save to backend
           const formData = new FormData();
           formData.append('lottieFile', file);
@@ -484,17 +476,17 @@ export default function ProfilePage() {
             id: newAnimation.id,
             name: newAnimation.name
           }));
-          
+
           try {
             const response = await apiRequest("POST", "/api/users/upload-lottie", formData, { isFormData: true });
-            
+
             if (response.ok) {
               const result = await response.json();
               toast({
                 title: "Success",
                 description: "Lottie animation uploaded successfully!",
               });
-              
+
               // Update the animation with server path
               setLottieAnimations(prev => prev.map(anim => 
                 anim.id === newAnimation.id ? { ...anim, path: result.path } : anim
@@ -513,12 +505,12 @@ export default function ProfilePage() {
             description: "Invalid Lottie JSON file format",
             variant: "destructive",
           });
-          
+
           // Remove from animations list if parse failed
           setLottieAnimations(prev => prev.filter(anim => anim.id !== `custom-${Date.now()}`));
         }
       };
-      
+
       reader.onerror = () => {
         toast({
           title: "Error",
@@ -526,7 +518,7 @@ export default function ProfilePage() {
           variant: "destructive",
         });
       };
-      
+
       reader.readAsText(file);
     } catch (error) {
       toast({
@@ -884,7 +876,7 @@ export default function ProfilePage() {
                         Upload Lottie
                       </Button>
                     </div>
-                    
+
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
                       {lottieAnimations.map((animation) => (
                         <motion.div

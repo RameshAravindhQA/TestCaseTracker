@@ -1,4 +1,3 @@
-
 class SoundManager {
   constructor() {
     this.sounds = new Map();
@@ -111,13 +110,16 @@ class SoundManager {
 
   async preloadSounds() {
     console.log('🔊 Starting sound preload...');
-    
+
+    // Load custom sounds from localStorage if available
+    const customSounds = this.getCustomSounds();
+
     const soundFiles = {
-      click: '/sounds/click.mp3',
-      crud: '/sounds/crud.mp3',
-      success: '/sounds/success.mp3',
-      error: '/sounds/error.mp3',
-      message: '/sounds/message.mp3'
+      click: customSounds.click || '/sounds/click.mp3',
+      crud: customSounds.crud || '/sounds/crud.mp3',
+      success: customSounds.success || '/sounds/success.mp3',
+      error: customSounds.error || '/sounds/error.mp3',
+      message: customSounds.message || '/sounds/message.mp3'
     };
 
     console.log('🔊 Sound files to preload:', soundFiles);
@@ -270,6 +272,110 @@ class SoundManager {
       enabled: this.enabled,
       volume: this.volume
     };
+  }
+
+  // Import/Export functionality
+  getCustomSounds() {
+    try {
+      const stored = localStorage.getItem('customSounds');
+      return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+      console.warn('Failed to load custom sounds:', error);
+      return {};
+    }
+  }
+
+  setCustomSound(type, audioFile) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const customSounds = this.getCustomSounds();
+          customSounds[type] = e.target.result;
+          localStorage.setItem('customSounds', JSON.stringify(customSounds));
+          
+          // Create audio element for the custom sound
+          const audio = new Audio(e.target.result);
+          audio.volume = this.volume;
+          this.sounds.set(type, audio);
+          
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(audioFile);
+    });
+  }
+
+  exportSounds() {
+    const customSounds = this.getCustomSounds();
+    const settings = this.getSettings();
+    
+    const exportData = {
+      sounds: customSounds,
+      settings: settings,
+      timestamp: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sound-settings-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  importSounds(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const importData = JSON.parse(e.target.result);
+          
+          if (importData.sounds) {
+            localStorage.setItem('customSounds', JSON.stringify(importData.sounds));
+          }
+          
+          if (importData.settings) {
+            this.enabled = importData.settings.enabled !== false;
+            this.volume = importData.settings.volume || 0.5;
+            this.saveSettings();
+          }
+          
+          // Reload sounds
+          this.preloadSounds();
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsText(file);
+    });
+  }
+
+  resetToDefaults() {
+    localStorage.removeItem('customSounds');
+    localStorage.removeItem('soundSettings');
+    this.enabled = true;
+    this.volume = 0.5;
+    this.sounds.clear();
+    this.preloadSounds();
+  }
+
+  getCustomSounds() {
+    try {
+      const customSounds = localStorage.getItem('customSounds');
+      return customSounds ? JSON.parse(customSounds) : {};
+    } catch (error) {
+      console.warn('Failed to load custom sounds:', error);
+      return {};
+    }
   }
 }
 

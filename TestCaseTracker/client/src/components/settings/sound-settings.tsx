@@ -1,177 +1,289 @@
 
-import { useState, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { useSound, SoundType } from "@/hooks/use-sound";
-import { useToast } from "@/hooks/use-toast";
-import { Upload, Play, Volume2 } from "lucide-react";
+<old_str>import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
+import { Volume2, VolumeX } from 'lucide-react';
 
 export function SoundSettings() {
-  const { getSoundSettings, setSoundSettings, playSound, uploadSound } = useSound();
+  const [enabled, setEnabled] = useState(true);
+  const [volume, setVolume] = useState(50);
+
+  const handleEnabledChange = (checked: boolean) => {
+    setEnabled(checked);
+    if (window.soundManager) {
+      window.soundManager.setEnabled(checked);
+    }
+  };
+
+  const handleVolumeChange = (value: number[]) => {
+    const newVolume = value[0];
+    setVolume(newVolume);
+    if (window.soundManager) {
+      window.soundManager.setVolume(newVolume / 100);
+    }
+  };
+
+  const testSound = () => {
+    if (window.soundManager) {
+      window.soundManager.playClick();
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Sound Settings</CardTitle>
+        <CardDescription>Configure sound effects and volume</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="sound-enabled">Enable Sound Effects</Label>
+          <Switch
+            id="sound-enabled"
+            checked={enabled}
+            onCheckedChange={handleEnabledChange}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label>Volume</Label>
+          <div className="flex items-center space-x-2">
+            <VolumeX className="h-4 w-4" />
+            <Slider
+              value={[volume]}
+              onValueChange={handleVolumeChange}
+              max={100}
+              step={1}
+              className="flex-1"
+            />
+            <Volume2 className="h-4 w-4" />
+          </div>
+        </div>
+        
+        <Button onClick={testSound} variant="outline" className="w-full">
+          Test Sound
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}</old_str>
+<new_str>import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Volume2, VolumeX, Upload, Download, RotateCcw } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+export function SoundSettings() {
+  const [enabled, setEnabled] = useState(true);
+  const [volume, setVolume] = useState(50);
   const { toast } = useToast();
-  const [settings, setSettings] = useState(getSoundSettings());
-  const fileInputRefs = useRef<{ [key in SoundType]?: HTMLInputElement }>({});
 
-  const handleToggle = (enabled: boolean) => {
-    const newSettings = { ...settings, enabled };
-    setSettings(newSettings);
-    setSoundSettings(newSettings);
+  useEffect(() => {
+    if (window.soundManager) {
+      const settings = window.soundManager.getSettings();
+      setEnabled(settings.enabled);
+      setVolume(settings.volume * 100);
+    }
+  }, []);
+
+  const handleEnabledChange = (checked: boolean) => {
+    setEnabled(checked);
+    if (window.soundManager) {
+      window.soundManager.setEnabled(checked);
+    }
   };
 
-  const handleVolumeChange = (volume: number[]) => {
-    const newSettings = { ...settings, volume: volume[0] };
-    setSettings(newSettings);
-    setSoundSettings(newSettings);
+  const handleVolumeChange = (value: number[]) => {
+    const newVolume = value[0];
+    setVolume(newVolume);
+    if (window.soundManager) {
+      window.soundManager.setVolume(newVolume / 100);
+    }
   };
 
-  const handleSoundUpload = async (type: SoundType, file: File) => {
+  const testSound = (type: string) => {
+    if (window.soundManager) {
+      window.soundManager.playSound(type);
+    }
+  };
+
+  const handleSoundUpload = async (type: string, file: File) => {
     try {
-      if (!file.type.startsWith('audio/')) {
+      if (window.soundManager) {
+        await window.soundManager.setCustomSound(type, file);
         toast({
-          title: "Invalid file type",
-          description: "Please select an audio file",
-          variant: "destructive"
+          title: "Success",
+          description: `${type} sound updated successfully`
         });
-        return;
       }
-
-      await uploadSound(type, file);
-      setSettings(getSoundSettings());
-      toast({
-        title: "Sound uploaded",
-        description: `${type} sound has been updated successfully`
-      });
     } catch (error) {
       toast({
-        title: "Upload failed",
+        title: "Error",
         description: "Failed to upload sound file",
         variant: "destructive"
       });
     }
   };
 
-  const soundTypes: { key: SoundType; label: string; description: string }[] = [
-    { key: 'click', label: 'Click Sound', description: 'Played when clicking buttons and links' },
-    { key: 'crud', label: 'CRUD Operations', description: 'Played during create, read, update, delete operations' },
-    { key: 'error', label: 'Error Sound', description: 'Played when errors occur' },
-    { key: 'success', label: 'Success Sound', description: 'Played on successful operations' },
-    { key: 'message', label: 'Message Sound', description: 'Played for notifications and messages' }
+  const exportSounds = () => {
+    if (window.soundManager) {
+      window.soundManager.exportSounds();
+      toast({
+        title: "Success",
+        description: "Sound settings exported successfully"
+      });
+    }
+  };
+
+  const importSounds = (file: File) => {
+    if (window.soundManager) {
+      window.soundManager.importSounds(file)
+        .then(() => {
+          toast({
+            title: "Success",
+            description: "Sound settings imported successfully"
+          });
+          // Refresh settings display
+          const settings = window.soundManager.getSettings();
+          setEnabled(settings.enabled);
+          setVolume(settings.volume * 100);
+        })
+        .catch(() => {
+          toast({
+            title: "Error",
+            description: "Failed to import sound settings",
+            variant: "destructive"
+          });
+        });
+    }
+  };
+
+  const resetToDefaults = () => {
+    if (window.soundManager) {
+      window.soundManager.resetToDefaults();
+      setEnabled(true);
+      setVolume(50);
+      toast({
+        title: "Success",
+        description: "Sound settings reset to defaults"
+      });
+    }
+  };
+
+  const soundTypes = [
+    { key: 'click', name: 'Click Sound', description: 'Button click feedback' },
+    { key: 'crud', name: 'CRUD Sound', description: 'Data operations' },
+    { key: 'success', name: 'Success Sound', description: 'Success notifications' },
+    { key: 'error', name: 'Error Sound', description: 'Error notifications' },
+    { key: 'message', name: 'Message Sound', description: 'Message notifications' }
   ];
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Volume2 className="h-5 w-5" />
-            Sound Settings
-          </CardTitle>
-          <CardDescription>
-            Configure system sounds and upload custom audio files
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Master Toggle */}
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-base font-medium">Enable Sounds</Label>
-              <p className="text-sm text-muted-foreground">
-                Turn system sounds on or off
-              </p>
-            </div>
-            <Switch
-              checked={settings.enabled}
-              onCheckedChange={handleToggle}
+    <Card>
+      <CardHeader>
+        <CardTitle>Sound Settings</CardTitle>
+        <CardDescription>Configure sound effects and volume</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="sound-enabled">Enable Sound Effects</Label>
+          <Switch
+            id="sound-enabled"
+            checked={enabled}
+            onCheckedChange={handleEnabledChange}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label>Volume</Label>
+          <div className="flex items-center space-x-2">
+            <VolumeX className="h-4 w-4" />
+            <Slider
+              value={[volume]}
+              onValueChange={handleVolumeChange}
+              max={100}
+              step={1}
+              className="flex-1"
             />
+            <Volume2 className="h-4 w-4" />
           </div>
+        </div>
 
-          {/* Volume Control */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium">Volume</Label>
-            <div className="px-3">
-              <Slider
-                value={[settings.volume]}
-                onValueChange={handleVolumeChange}
-                max={1}
-                min={0}
-                step={0.1}
-                disabled={!settings.enabled}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>0%</span>
-                <span>{Math.round(settings.volume * 100)}%</span>
-                <span>100%</span>
+        <div className="space-y-4">
+          <Label>Custom Sound Files</Label>
+          <div className="text-sm text-muted-foreground">
+            Upload custom sound files (MP3, WAV, OGG supported)
+          </div>
+          
+          {soundTypes.map((soundType) => (
+            <div key={soundType.key} className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <div className="font-medium">{soundType.name}</div>
+                <div className="text-sm text-muted-foreground">{soundType.description}</div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => testSound(soundType.key)}
+                >
+                  Test
+                </Button>
+                <Input
+                  type="file"
+                  accept=".mp3,.wav,.ogg"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleSoundUpload(soundType.key, file);
+                    }
+                  }}
+                  className="w-24"
+                />
               </div>
             </div>
-          </div>
+          ))}
+        </div>
 
-          {/* Sound Configuration */}
-          <div className="space-y-4">
-            <Label className="text-base font-medium">Sound Configuration</Label>
-            <div className="grid gap-4">
-              {soundTypes.map(({ key, label, description }) => (
-                <Card key={key} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-medium">{label}</h4>
-                      <p className="text-sm text-muted-foreground">{description}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => playSound(key)}
-                        disabled={!settings.enabled}
-                      >
-                        <Play className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRefs.current[key]?.click()}
-                      >
-                        <Upload className="h-4 w-4" />
-                      </Button>
-                      <Input
-                        ref={(el) => el && (fileInputRefs.current[key] = el)}
-                        type="file"
-                        accept="audio/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handleSoundUpload(key, file);
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
+        <div className="flex space-x-2">
+          <Button onClick={exportSounds} variant="outline" className="flex-1">
+            <Download className="h-4 w-4 mr-2" />
+            Export Settings
+          </Button>
+          <Input
+            type="file"
+            accept=".json"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                importSounds(file);
+              }
+            }}
+            className="hidden"
+            id="import-sounds"
+          />
+          <Button
+            onClick={() => document.getElementById('import-sounds')?.click()}
+            variant="outline"
+            className="flex-1"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Import Settings
+          </Button>
+        </div>
 
-          {/* Test All Sounds */}
-          <div className="pt-4 border-t">
-            <Button
-              onClick={() => {
-                soundTypes.forEach(({ key }, index) => {
-                  setTimeout(() => playSound(key), index * 500);
-                });
-              }}
-              disabled={!settings.enabled}
-              className="w-full"
-            >
-              Test All Sounds
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        <Button onClick={resetToDefaults} variant="outline" className="w-full">
+          <RotateCcw className="h-4 w-4 mr-2" />
+          Reset to Defaults
+        </Button>
+      </CardContent>
+    </Card>
   );
-}
+}</new_str>

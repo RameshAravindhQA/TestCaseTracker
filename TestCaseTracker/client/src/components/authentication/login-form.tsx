@@ -281,11 +281,6 @@ export function LoginForm() {
           </div>
         </CardFooter>
       </Card>
-
-      {/* Sound Debug Panel - Development Only */}
-      <div className="mt-4">
-        <SoundDebug />
-      </div>
     </>
   );
 }
