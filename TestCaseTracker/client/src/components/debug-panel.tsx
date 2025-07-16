@@ -60,10 +60,10 @@ export function DebugPanel() {
           <h3 className="font-semibold mb-2">Lottie Testing</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { name: 'Rocket', path: './lottie/rocket.json' },
-              { name: 'Business', path: './lottie/businessman-rocket.json' },
-              { name: 'Team', path: './lottie/business-team.json' },
-              { name: 'Software', path: './lottie/software-dev.json' }
+              { name: 'Rocket', path: '/lottie/rocket.json' },
+              { name: 'Business', path: '/lottie/businessman-rocket.json' },
+              { name: 'Team', path: '/lottie/business-team.json' },
+              { name: 'Software', path: '/lottie/software-dev.json' }
             ].map(lottie => (
               <div key={lottie.name} className="text-center">
                 <LottieAnimation

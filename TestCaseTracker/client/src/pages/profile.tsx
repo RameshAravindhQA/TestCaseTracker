@@ -60,13 +60,13 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [selectedLottie, setSelectedLottie] = useState<LottieAnimation | null>(null);
   const [lottieAnimations, setLottieAnimations] = useState<LottieAnimation[]>([
-    { id: 'rocket', name: 'Rocket', path: './lottie/rocket.json' },
-    { id: 'businessman-rocket', name: 'Business Rocket', path: './lottie/businessman-rocket.json' },
-    { id: 'male-avatar', name: 'Male Avatar', path: './lottie/male-avatar.json' },
-    { id: 'female-avatar', name: 'Female Avatar', path: './lottie/female-avatar.json' },
-    { id: 'business-team', name: 'Business Team', path: './lottie/business-team.json' },
-    { id: 'office-team', name: 'Office Team', path: './lottie/office-team.json' },
-    { id: 'software-dev', name: 'Software Dev', path: './lottie/software-dev.json' }
+    { id: 'rocket', name: 'Rocket', path: '/lottie/rocket.json' },
+    { id: 'businessman-rocket', name: 'Business Rocket', path: '/lottie/businessman-rocket.json' },
+    { id: 'male-avatar', name: 'Male Avatar', path: '/lottie/male-avatar.json' },
+    { id: 'female-avatar', name: 'Female Avatar', path: '/lottie/female-avatar.json' },
+    { id: 'business-team', name: 'Business Team', path: '/lottie/business-team.json' },
+    { id: 'office-team', name: 'Office Team', path: '/lottie/office-team.json' },
+    { id: 'software-dev', name: 'Software Dev', path: '/lottie/software-dev.json' }
   ]);
   const [playingAnimations, setPlayingAnimations] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
@@ -76,12 +76,12 @@ export default function ProfilePage() {
     // Load lottie animations with comprehensive error handling and debugging
     const loadAnimations = async () => {
       console.log(`🎬 Starting to load ${lottieAnimations.length} Lottie animations...`);
-      
+
       const loaded = await Promise.all(
         lottieAnimations.map(async (animation) => {
           try {
             console.log(`🎬 Loading Lottie: ${animation.name} from ${animation.path}`);
-            
+
             // Check if file exists first
             const response = await fetch(animation.path);
             console.log(`📡 Fetch response for ${animation.name}:`, {
@@ -90,11 +90,11 @@ export default function ProfilePage() {
               ok: response.ok,
               contentType: response.headers.get('content-type')
             });
-            
+
             if (response.ok) {
               const text = await response.text();
               console.log(`📄 Received text for ${animation.name}, length: ${text.length}`);
-              
+
               try {
                 const data = JSON.parse(text);
                 console.log(`✅ Successfully parsed JSON for ${animation.name}:`, {
@@ -121,7 +121,7 @@ export default function ProfilePage() {
           }
         })
       );
-      
+
       console.log(`📊 Animation loading complete. Loaded: ${loaded.filter(a => a.preview).length}/${loaded.length}`);
       setLottieAnimations(loaded);
     };
@@ -133,7 +133,7 @@ export default function ProfilePage() {
       needsLoading,
       animationsWithPreview: lottieAnimations.filter(a => a.preview).length
     });
-    
+
     if (lottieAnimations.length > 0 && needsLoading) {
       loadAnimations();
     }
@@ -949,8 +949,7 @@ export default function ProfilePage() {
                             <div className="relative">
                               <div className="w-full h-24 flex items-center justify-center">
                                 {animation.preview ? (
-                                  <Lottie
-                                    animationData={animation.preview}
+                                  <Lottie                                    animationData={animation.preview}
                                     loop={true}
                                     autoplay={playingAnimations.has(animation.id)}
                                     style={{ height: 80, width: 80 }}
