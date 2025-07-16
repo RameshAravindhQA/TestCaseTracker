@@ -859,7 +859,7 @@ export default function SettingsPage() {
                                   <SelectItem value="local">Local Storage</SelectItem>
                                   <SelectItem value="s3">Amazon S3</SelectItem>
                                   <SelectItem value="gcs">Google Cloud Storage</SelectItem>
-                                  <SelectItem value`azure">Azure Blob Storage</SelectItem>
+                                  <SelectItem value="azure">Azure Blob Storage</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />

@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 
 export type SoundType = 'click' | 'crud' | 'error' | 'success' | 'message';
@@ -11,15 +10,26 @@ interface SoundSettings {
   };
 }
 
+const SOUND_FILES = {
+  click: '/sounds/click.mp3',
+  create: '/sounds/crud.mp3',
+  update: '/sounds/crud.mp3',
+  delete: '/sounds/crud.mp3',
+  success: '/sounds/success.mp3',
+  error: '/sounds/error.mp3',
+  navigation: '/sounds/click.mp3',
+  message: '/sounds/success.mp3'
+};
+
 const defaultSoundSettings: SoundSettings = {
   enabled: true,
   volume: 0.5,
   sounds: {
-    click: '/sounds/click.mp3',
-    crud: '/sounds/crud.mp3',
-    error: '/sounds/error.mp3',
-    success: '/sounds/success.mp3',
-    message: '/sounds/success.mp3'
+    click: SOUND_FILES.click,
+    crud: SOUND_FILES.create,
+    error: SOUND_FILES.error,
+    success: SOUND_FILES.success,
+    message: SOUND_FILES.message
   }
 };
 
@@ -43,7 +53,7 @@ export const useSound = () => {
       const audio = new Audio(settings.sounds[type]);
       audio.volume = settings.volume;
       audio.preload = 'auto';
-      
+
       // Handle audio play promise
       const playPromise = audio.play();
       if (playPromise !== undefined) {
