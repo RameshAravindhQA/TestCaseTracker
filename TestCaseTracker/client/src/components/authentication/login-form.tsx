@@ -72,7 +72,7 @@ export function LoginForm() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
       // Set flag to show welcome dialog
-      localStorage.setItem('showWelcomeDialog', 'true');
+      sessionStorage.setItem('showWelcomeDialog', 'true');
 
       // Navigate directly to dashboard
       console.log("Login successful, navigating to dashboard...");
