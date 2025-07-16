@@ -1,76 +1,4 @@
-
-<old_str>import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
-import { Volume2, VolumeX } from 'lucide-react';
-
-export function SoundSettings() {
-  const [enabled, setEnabled] = useState(true);
-  const [volume, setVolume] = useState(50);
-
-  const handleEnabledChange = (checked: boolean) => {
-    setEnabled(checked);
-    if (window.soundManager) {
-      window.soundManager.setEnabled(checked);
-    }
-  };
-
-  const handleVolumeChange = (value: number[]) => {
-    const newVolume = value[0];
-    setVolume(newVolume);
-    if (window.soundManager) {
-      window.soundManager.setVolume(newVolume / 100);
-    }
-  };
-
-  const testSound = () => {
-    if (window.soundManager) {
-      window.soundManager.playClick();
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Sound Settings</CardTitle>
-        <CardDescription>Configure sound effects and volume</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="sound-enabled">Enable Sound Effects</Label>
-          <Switch
-            id="sound-enabled"
-            checked={enabled}
-            onCheckedChange={handleEnabledChange}
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label>Volume</Label>
-          <div className="flex items-center space-x-2">
-            <VolumeX className="h-4 w-4" />
-            <Slider
-              value={[volume]}
-              onValueChange={handleVolumeChange}
-              max={100}
-              step={1}
-              className="flex-1"
-            />
-            <Volume2 className="h-4 w-4" />
-          </div>
-        </div>
-        
-        <Button onClick={testSound} variant="outline" className="w-full">
-          Test Sound
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}</old_str>
-<new_str>import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -200,7 +128,7 @@ export function SoundSettings() {
             onCheckedChange={handleEnabledChange}
           />
         </div>
-        
+
         <div className="space-y-2">
           <Label>Volume</Label>
           <div className="flex items-center space-x-2">
@@ -221,7 +149,7 @@ export function SoundSettings() {
           <div className="text-sm text-muted-foreground">
             Upload custom sound files (MP3, WAV, OGG supported)
           </div>
-          
+
           {soundTypes.map((soundType) => (
             <div key={soundType.key} className="flex items-center justify-between p-3 border rounded-lg">
               <div>
@@ -286,4 +214,4 @@ export function SoundSettings() {
       </CardContent>
     </Card>
   );
-}</new_str>
+}
