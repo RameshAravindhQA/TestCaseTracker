@@ -22,6 +22,7 @@ import { useColorTheme } from "@/components/theme/theme-provider";
 import { Loader2, Upload, Play, Pause, Camera } from "lucide-react";
 import { motion } from "framer-motion";
 import Lottie from "lottie-react";
+import { Player } from "@lottiefiles/react-lottie-player";
 import { useAuth } from "@/hooks/use-auth";
 
 // Form schema for profile data
@@ -59,7 +60,15 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedLottie, setSelectedLottie] = useState<LottieAnimation | null>(null);
-  const [lottieAnimations, setLottieAnimations] = useState<LottieAnimation[]>([]);
+  const [lottieAnimations, setLottieAnimations] = useState<LottieAnimation[]>([
+    { id: 'rocket', name: 'Rocket', path: '/lottie/rocket.json' },
+    { id: 'businessman-rocket', name: 'Business Rocket', path: '/lottie/businessman-rocket.json' },
+    { id: 'male-avatar', name: 'Male Avatar', path: '/lottie/male-avatar.json' },
+    { id: 'female-avatar', name: 'Female Avatar', path: '/lottie/female-avatar.json' },
+    { id: 'business-team', name: 'Business Team', path: '/lottie/business-team.json' },
+    { id: 'office-team', name: 'Office Team', path: '/lottie/office-team.json' },
+    { id: 'software-dev', name: 'Software Dev', path: '/lottie/software-dev.json' }
+  ]);
   const [playingAnimations, setPlayingAnimations] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,10 +82,13 @@ export default function ProfilePage() {
             const response = await fetch(animation.path);
             if (response.ok) {
               const data = await response.json();
+              console.log(`✅ Loaded Lottie animation: ${animation.name}`);
               return { ...animation, preview: data };
+            } else {
+              console.warn(`❌ Failed to load ${animation.name}: ${response.status}`);
             }
           } catch (error) {
-            console.error(`Failed to load ${animation.name}:`, error);
+            console.error(`❌ Failed to load ${animation.name}:`, error);
           }
           return animation;
         })
@@ -84,7 +96,9 @@ export default function ProfilePage() {
       setLottieAnimations(loaded);
     };
 
-    loadAnimations();
+    if (lottieAnimations.length > 0) {
+      loadAnimations();
+    }
   }, []);
 
   // Fetch current user data
@@ -456,43 +470,52 @@ export default function ProfilePage() {
 
           // Validate basic Lottie structure
           if (!jsonData.v || !jsonData.layers) {
-            throw new Error("Invalid Lottie animation format");
+            throw new Error("Invalid Lottie animation format - missing version or layers");
           }
 
+          const animationId = `custom-${Date.now()}`;
           const newAnimation: LottieAnimation = {
-            id: `custom-${Date.now()}`,
+            id: animationId,
             name: file.name.replace('.json', ''),
             path: URL.createObjectURL(file),
             preview: jsonData
           };
 
+          console.log('📁 Created Lottie animation:', newAnimation);
+
           // Add to animations list immediately for UI feedback
           setLottieAnimations(prev => [...prev, newAnimation]);
 
-          // Save to backend
-          const formData = new FormData();
-          formData.append('lottieFile', file);
-          formData.append('animationData', JSON.stringify({
-            id: newAnimation.id,
-            name: newAnimation.name
-          }));
+          toast({
+            title: "Success",
+            description: "Lottie animation loaded successfully!",
+          });
 
+          // Try to save to backend (optional)
           try {
-            const response = await apiRequest("POST", "/api/users/upload-lottie", formData, { isFormData: true });
+            const formData = new FormData();
+            formData.append('lottieFile', file);
+            formData.append('animationData', JSON.stringify({
+              id: newAnimation.id,
+              name: newAnimation.name
+            }));
+
+            const response = await fetch("/api/users/upload-lottie", {
+              method: "POST",
+              body: formData,
+              credentials: 'include'
+            });
 
             if (response.ok) {
               const result = await response.json();
-              toast({
-                title: "Success",
-                description: "Lottie animation uploaded successfully!",
-              });
-
+              console.log('✅ Backend upload successful:', result);
+              
               // Update the animation with server path
               setLottieAnimations(prev => prev.map(anim => 
                 anim.id === newAnimation.id ? { ...anim, path: result.path } : anim
               ));
             } else {
-              throw new Error("Upload failed");
+              console.warn('⚠️ Backend upload failed, keeping local version');
             }
           } catch (uploadError) {
             console.warn("Backend upload failed, keeping local version:", uploadError);
@@ -505,9 +528,6 @@ export default function ProfilePage() {
             description: "Invalid Lottie JSON file format",
             variant: "destructive",
           });
-
-          // Remove from animations list if parse failed
-          setLottieAnimations(prev => prev.filter(anim => anim.id !== `custom-${Date.now()}`));
         }
       };
 
@@ -521,6 +541,7 @@ export default function ProfilePage() {
 
       reader.readAsText(file);
     } catch (error) {
+      console.error("File upload error:", error);
       toast({
         title: "Error",
         description: "Failed to process Lottie file",
@@ -889,10 +910,10 @@ export default function ProfilePage() {
                           {animation.preview ? (
                             <div className="relative">
                               <div className="w-full h-24 flex items-center justify-center">
-                                <Lottie
-                                  animationData={animation.preview}
-                                  loop
+                                <Player
                                   autoplay={playingAnimations.has(animation.id)}
+                                  loop
+                                  src={animation.preview}
                                   style={{ height: 80, width: 80 }}
                                 />
                               </div>
@@ -916,7 +937,10 @@ export default function ProfilePage() {
                             </div>
                           ) : (
                             <div className="w-full h-24 flex items-center justify-center bg-muted rounded">
-                              <p className="text-xs text-muted-foreground">Loading...</p>
+                              <div className="flex flex-col items-center space-y-1">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                <p className="text-xs text-muted-foreground">Loading...</p>
+                              </div>
                             </div>
                           )}
                           <p className="text-sm text-center mt-2 font-medium">{animation.name}</p>

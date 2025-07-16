@@ -54,6 +54,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { RolePermissions } from "@/components/settings/role-permissions";
 import { MarkerManagement } from "@/components/settings/marker-management";
+import { SoundSettings } from "@/components/settings/sound-settings";
 import { SoundTest } from '@/components/sound-test';
 
 // Types
@@ -1254,6 +1255,23 @@ export default function SettingsPage() {
               <MarkerManagement />
             </CardContent>
           </Card>
+          {/* Sound Settings */}
+          {activeTab === "sound" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Sound Settings</CardTitle>
+                <CardDescription>
+                  Configure application sound settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <SoundSettings />
+                  <SoundTest />
+                </div>
+              </CardContent>
+            </Card>
+          )}
           </div>
         </div>
       </div>

@@ -68,6 +68,15 @@ class GlobalSoundHandler {
       return true;
     }
 
+    // Check if it's inside a button element (for nested elements)
+    let parent = element.parentElement;
+    while (parent) {
+      if (parent.tagName.toLowerCase() === 'button' || parent.getAttribute('role') === 'button') {
+        return true;
+      }
+      parent = parent.parentElement;
+    }
+
     return false;
   }
 
