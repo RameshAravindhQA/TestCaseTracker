@@ -54,6 +54,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { RolePermissions } from "@/components/settings/role-permissions";
 import { MarkerManagement } from "@/components/settings/marker-management";
+import { SoundTest } from '@/components/sound-test';
 
 // Types
 interface SystemSettings {
@@ -858,7 +859,7 @@ export default function SettingsPage() {
                                   <SelectItem value="local">Local Storage</SelectItem>
                                   <SelectItem value="s3">Amazon S3</SelectItem>
                                   <SelectItem value="gcs">Google Cloud Storage</SelectItem>
-                                  <SelectItem value="azure">Azure Blob Storage</SelectItem>
+                                  <SelectItem value`azure">Azure Blob Storage</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />

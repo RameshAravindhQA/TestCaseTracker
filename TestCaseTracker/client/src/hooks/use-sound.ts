@@ -42,9 +42,17 @@ export const useSound = () => {
     try {
       const audio = new Audio(settings.sounds[type]);
       audio.volume = settings.volume;
-      audio.play().catch(console.error);
+      audio.preload = 'auto';
+      
+      // Handle audio play promise
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.warn(`Failed to play sound: ${type}`, error);
+        });
+      }
     } catch (error) {
-      console.error('Error playing sound:', error);
+      console.warn(`Error loading sound: ${type}`, error);
     }
   }, [getSoundSettings]);
 

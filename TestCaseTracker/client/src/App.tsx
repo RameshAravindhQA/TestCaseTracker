@@ -5,7 +5,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme/theme-provider";
-import { ProtectedRoute } from "@/lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 import { GitHubIssueReporter } from "@/components/ui/github-issue-reporter";
 
@@ -37,6 +36,12 @@ import TodosPage from "./pages/todos";
 import TestDataGeneratorPage from "./pages/test-data-generator";
 // Removing duplicate import
 // import { Toaster } from "./components/ui/toaster";
+import { useEffect } from 'react';
+// import { initializeSoundIntegration } from '@/lib/sound-api-integration';
+// import { setupQuerySounds } from '@/lib/sound-query-integration';
+// import { useSoundPlayer } from '@/hooks/use-sound-provider';
+import { SoundProvider } from '@/hooks/use-sound-provider';
+
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -66,6 +71,21 @@ const ProtectedLazyComponent = ({ Component }: { Component: ComponentType }) => 
     </Suspense>
   </ProtectedRoute>
 );
+
+// Component to initialize sound integration
+function SoundIntegrationSetup() {
+  // const soundPlayer = useSoundPlayer();
+
+  useEffect(() => {
+    // Initialize sound integration
+    // initializeSoundIntegration(soundPlayer);
+
+    // Setup query sounds
+    // setupQuerySounds(queryClient);
+  }, []);
+
+  return null;
+}
 
 function Router() {
   return (
@@ -175,12 +195,14 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" defaultColorTheme="blue">
         <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-            <GitHubIssueReporter />
-
-          </TooltipProvider>
+          <SoundProvider>
+            <TooltipProvider>
+              <Toaster />
+              <SoundIntegrationSetup />
+              <Router />
+              <GitHubIssueReporter />
+            </TooltipProvider>
+          </SoundProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
