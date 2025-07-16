@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -126,21 +125,25 @@ export function SoundSettings() {
                       <p className="text-sm text-muted-foreground">{description}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => playSound(key)}
-                        disabled={!settings.enabled}
-                      >
-                        <Play className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRefs.current[key]?.click()}
-                      >
-                        <Upload className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          onClick={() => playSound(key)}
+                          size="sm"
+                          variant="outline"
+                          disabled={!settings.enabled}
+                          title={`Test ${label} sound`}
+                        >
+                          <Play className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={() => fileInputRefs.current[key]?.click()}
+                          size="sm"
+                          variant="outline"
+                          title={`Upload custom ${label} sound`}
+                        >
+                          <Upload className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <Input
                         ref={(el) => el && (fileInputRefs.current[key] = el)}
                         type="file"

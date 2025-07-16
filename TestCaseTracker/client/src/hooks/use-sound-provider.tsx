@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useCallback, ReactNode } from 'react';
-import { useSound, SoundType } from './use-sound';
-import { useToast } from './use-toast';
+
+import React, { createContext, useContext, useCallback, ReactNode, useEffect } from 'react';
+import { useSound, SoundType, globalSoundPlayer } from './use-sound';
 
 interface SoundContextType {
   playSound: (type: SoundType) => void;
@@ -18,8 +18,11 @@ interface SoundProviderProps {
 }
 
 export const SoundProvider: React.FC<SoundProviderProps> = ({ children }) => {
-  const { playSound } = useSound();
-  const { toast } = useToast();
+  const { playSound: playSoundHook } = useSound();
+
+  const playSound = useCallback((type: SoundType) => {
+    playSoundHook(type);
+  }, [playSoundHook]);
 
   const playCrudSound = useCallback((operation: 'create' | 'update' | 'delete') => {
     switch (operation) {
@@ -53,22 +56,45 @@ export const SoundProvider: React.FC<SoundProviderProps> = ({ children }) => {
     playSound('navigation');
   }, [playSound]);
 
-  // Setup global error and success handlers
-  React.useEffect(() => {
-    const originalToast = toast;
+  // Global click handler with improved detection
+  useEffect(() => {
+    const handleGlobalClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      
+      // Check if it's a clickable element
+      const clickableElement = target.closest('button, a, [role="button"], .cursor-pointer, [data-clickable], input[type="submit"], input[type="button"]');
+      
+      if (clickableElement) {
+        const elementText = clickableElement.textContent?.toLowerCase() || '';
+        const classList = clickableElement.className.toLowerCase();
+        const dataAction = clickableElement.getAttribute('data-action')?.toLowerCase() || '';
 
-    // Override toast to play sounds
-    const enhancedToast = (options: any) => {
-      if (options.variant === 'destructive') {
-        playErrorSound();
-      } else {
-        playSuccessSound();
+        // Determine sound based on element properties
+        if (elementText.includes('delete') || classList.includes('destructive') || dataAction.includes('delete')) {
+          globalSoundPlayer.playSound('delete');
+        } else if (elementText.includes('save') || elementText.includes('create') || elementText.includes('add') || dataAction.includes('create')) {
+          globalSoundPlayer.playSound('create');
+        } else if (elementText.includes('update') || elementText.includes('edit') || dataAction.includes('update')) {
+          globalSoundPlayer.playSound('update');
+        } else if (elementText.includes('nav') || classList.includes('nav') || dataAction.includes('navigate')) {
+          globalSoundPlayer.playSound('navigation');
+        } else {
+          globalSoundPlayer.playSound('click');
+        }
       }
-      return originalToast(options);
     };
 
-    // Listen for API responses
-    const handleApiResponse = (event: any) => {
+    // Use capture phase to ensure we catch all clicks
+    document.addEventListener('click', handleGlobalClick, true);
+    
+    return () => {
+      document.removeEventListener('click', handleGlobalClick, true);
+    };
+  }, []);
+
+  // Listen for API responses and form submissions
+  useEffect(() => {
+    const handleApiResponse = (event: CustomEvent) => {
       if (event.detail?.type === 'success') {
         playSuccessSound();
       } else if (event.detail?.type === 'error') {
@@ -76,41 +102,41 @@ export const SoundProvider: React.FC<SoundProviderProps> = ({ children }) => {
       }
     };
 
-    window.addEventListener('api-response', handleApiResponse);
-
-    return () => {
-      window.removeEventListener('api-response', handleApiResponse);
-    };
-  }, [playErrorSound, playSuccessSound, toast]);
-
-  React.useEffect(() => {
-    const handleClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
+    const handleFormSubmit = (event: SubmitEvent) => {
+      const form = event.target as HTMLFormElement;
+      const action = form.getAttribute('data-action')?.toLowerCase() || '';
       
-      // Check if the clicked element or its parent is clickable
-      const clickableElement = target.closest('button, a, [role="button"], .cursor-pointer');
-      
-      if (clickableElement) {
-        // Check for specific button types
-        const elementText = clickableElement.textContent?.toLowerCase() || '';
-        const classList = clickableElement.className.toLowerCase();
-
-        if (elementText.includes('delete') || classList.includes('destructive')) {
-          playSound('delete');
-        } else if (elementText.includes('save') || elementText.includes('create') || elementText.includes('add')) {
-          playSound('create');
-        } else if (elementText.includes('update') || elementText.includes('edit')) {
-          playSound('update');
-        } else {
-          playSound('click');
-        }
+      if (action.includes('delete')) {
+        globalSoundPlayer.playSound('delete');
+      } else if (action.includes('create')) {
+        globalSoundPlayer.playSound('create');
+      } else if (action.includes('update')) {
+        globalSoundPlayer.playSound('update');
+      } else {
+        globalSoundPlayer.playSound('click');
       }
     };
 
-    // Use capture phase to ensure we catch all clicks
-    document.addEventListener('click', handleClick, true);
-    return () => document.removeEventListener('click', handleClick, true);
-  }, [playSound]);
+    // Listen for toast notifications
+    const handleToast = (event: CustomEvent) => {
+      const toastType = event.detail?.variant || event.detail?.type;
+      if (toastType === 'destructive' || toastType === 'error') {
+        playErrorSound();
+      } else {
+        playSuccessSound();
+      }
+    };
+
+    window.addEventListener('api-response', handleApiResponse as EventListener);
+    window.addEventListener('toast-notification', handleToast as EventListener);
+    document.addEventListener('submit', handleFormSubmit);
+
+    return () => {
+      window.removeEventListener('api-response', handleApiResponse as EventListener);
+      window.removeEventListener('toast-notification', handleToast as EventListener);
+      document.removeEventListener('submit', handleFormSubmit);
+    };
+  }, [playErrorSound, playSuccessSound]);
 
   const value: SoundContextType = {
     playSound,

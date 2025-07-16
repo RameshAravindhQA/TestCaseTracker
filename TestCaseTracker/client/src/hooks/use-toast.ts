@@ -1,4 +1,6 @@
+
 import * as React from "react"
+import { globalSoundPlayer } from './use-sound'
 
 import type {
   ToastActionElement,
@@ -142,22 +144,6 @@ type Toast = Omit<ToasterToast, "id">
 function toast({ ...props }: Toast) {
   const id = genId()
 
-  // Play sound based on toast variant
-  try {
-    const soundSettings = JSON.parse(localStorage.getItem('soundSettings') || '{}');
-    if (soundSettings.enabled !== false) {
-      const audio = new Audio(
-        props.variant === 'destructive' 
-          ? soundSettings.sounds?.error || '/sounds/error.mp3'
-          : soundSettings.sounds?.success || '/sounds/success.mp3'
-      );
-      audio.volume = soundSettings.volume || 0.5;
-      audio.play().catch(console.error);
-    }
-  } catch (error) {
-    console.error('Error playing toast sound:', error);
-  }
-
   const update = (props: ToasterToast) =>
     dispatch({
       type: "UPDATE_TOAST",
@@ -176,6 +162,18 @@ function toast({ ...props }: Toast) {
       },
     },
   })
+
+  // Play sound based on toast variant
+  if (props.variant === 'destructive') {
+    globalSoundPlayer.playSound('error');
+  } else {
+    globalSoundPlayer.playSound('success');
+  }
+
+  // Dispatch custom event for sound integration
+  window.dispatchEvent(new CustomEvent('toast-notification', {
+    detail: { variant: props.variant, type: props.variant === 'destructive' ? 'error' : 'success' }
+  }));
 
   return {
     id: id,

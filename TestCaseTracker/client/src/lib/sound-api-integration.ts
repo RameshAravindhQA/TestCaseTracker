@@ -1,5 +1,5 @@
 
-import { SoundType } from '@/hooks/use-sound';
+import { SoundType, globalSoundPlayer } from '@/hooks/use-sound';
 
 interface ApiSoundConfig {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -11,60 +11,30 @@ const apiSoundMap: Record<string, ApiSoundConfig> = {
   'PUT': { method: 'PUT', soundType: 'update' },
   'PATCH': { method: 'PATCH', soundType: 'update' },
   'DELETE': { method: 'DELETE', soundType: 'delete' },
+  'GET': { method: 'GET', soundType: 'navigation' },
 };
 
 export const playApiSound = (method: string, success: boolean = true) => {
   try {
-    const soundSettings = JSON.parse(localStorage.getItem('soundSettings') || '{}');
-    if (soundSettings.enabled === false) return;
-
-    let soundType: SoundType;
-    
     if (!success) {
-      soundType = 'error';
-    } else {
-      const config = apiSoundMap[method.toUpperCase()];
-      soundType = config ? config.soundType : 'success';
+      globalSoundPlayer.playSound('error');
+      return;
     }
 
-    const audio = new Audio(soundSettings.sounds?.[soundType] || `/sounds/${soundType}.mp3`);
-    audio.volume = soundSettings.volume || 0.5;
-    audio.play().catch(console.error);
+    const config = apiSoundMap[method.toUpperCase()];
+    const soundType = config ? config.soundType : 'success';
+    globalSoundPlayer.playSound(soundType);
+
+    // Dispatch event for other listeners
+    window.dispatchEvent(new CustomEvent('api-response', {
+      detail: { method, success, type: success ? 'success' : 'error' }
+    }));
   } catch (error) {
     console.error('Error playing API sound:', error);
   }
 };
 
-// Axios interceptor setup
-export const setupApiSoundInterceptors = (axiosInstance: any) => {
-  // Request interceptor
-  axiosInstance.interceptors.request.use(
-    (config: any) => {
-      config.metadata = { startTime: new Date() };
-      return config;
-    },
-    (error: any) => {
-      playApiSound('ERROR', false);
-      return Promise.reject(error);
-    }
-  );
-
-  // Response interceptor
-  axiosInstance.interceptors.response.use(
-    (response: any) => {
-      const method = response.config.method?.toUpperCase();
-      playApiSound(method, true);
-      return response;
-    },
-    (error: any) => {
-      const method = error.config?.method?.toUpperCase();
-      playApiSound(method, false);
-      return Promise.reject(error);
-    }
-  );
-};
-
-// Fetch wrapper with sound integration
+// Enhanced fetch wrapper with sound integration
 export const soundFetch = async (url: string, options: RequestInit = {}) => {
   const method = options.method || 'GET';
   
@@ -82,4 +52,34 @@ export const soundFetch = async (url: string, options: RequestInit = {}) => {
     playApiSound(method, false);
     throw error;
   }
+};
+
+// Global fetch interceptor
+export const setupGlobalFetchInterceptor = () => {
+  const originalFetch = window.fetch;
+  
+  window.fetch = async (...args) => {
+    const [url, options = {}] = args;
+    const method = options.method || 'GET';
+    
+    try {
+      const response = await originalFetch(url, options);
+      
+      // Only play sounds for API calls
+      if (typeof url === 'string' && url.includes('/api/')) {
+        if (response.ok) {
+          playApiSound(method, true);
+        } else {
+          playApiSound(method, false);
+        }
+      }
+      
+      return response;
+    } catch (error) {
+      if (typeof url === 'string' && url.includes('/api/')) {
+        playApiSound(method, false);
+      }
+      throw error;
+    }
+  };
 };
