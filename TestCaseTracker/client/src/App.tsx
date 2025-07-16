@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { GitHubIssueReporter } from "@/components/ui/github-issue-reporter";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
