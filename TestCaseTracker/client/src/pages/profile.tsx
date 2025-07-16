@@ -919,7 +919,7 @@ export default function ProfilePage() {
                   </Form>
                 </TabsContent>
                  {/* Avatar Animation Tab */}
-                 <TabsContent value="avatar">
+                <TabsContent value="avatar">
                   <div className="space-y-4 pt-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -940,30 +940,35 @@ export default function ProfilePage() {
                       {lottieAnimations.map((animation) => (
                         <motion.div
                           key={animation.id}
-                          className={`relative rounded-md border p-4 cursor-pointer hover:shadow-md transition-all duration-300 ${selectedLottie?.id === animation.id ? 'border-primary border-2 shadow-lg' : 'border-muted hover:border-primary/50'}`}
+                          className={`relative rounded-md border p-4 cursor-pointer hover:shadow-md transition-all duration-300 ${
+                            selectedLottie?.id === animation.id 
+                              ? 'border-primary border-2 shadow-lg' 
+                              : 'border-muted hover:border-primary/50'
+                          }`}
                           onClick={() => handleLottieSelect(animation)}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          {animation.preview ? (
-                            <div className="relative">
-                              <div className="w-full h-24 flex items-center justify-center{
-                                animation.preview ? (
-                                  <Lottie                                    animationData={animation.preview}
-                                    loop={true}
-                                    autoplay={playingAnimations.has(animation.id)}
-                                    style={{ height: 80, width: 80 }}
-                                    onError={(error) => {
-                                      console.error(`❌ Lottie render error for ${animation.name}:`, error);
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="flex flex-col items-center space-y-1">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                                    <p className="text-xs text-muted-foreground">Loading...</p>
-                                  </div>
-                                )}
-                              </div>
+                          <div className="relative">
+                            <div className="w-full h-24 flex items-center justify-center">
+                              {animation.preview ? (
+                                <Lottie
+                                  animationData={animation.preview}
+                                  loop={true}
+                                  autoplay={playingAnimations.has(animation.id)}
+                                  style={{ height: 80, width: 80 }}
+                                  onError={(error) => {
+                                    console.error(`❌ Lottie render error for ${animation.name}:`, error);
+                                  }}
+                                />
+                              ) : (
+                                <div className="flex flex-col items-center space-y-1">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                  <p className="text-xs text-muted-foreground">Loading...</p>
+                                </div>
+                              )}
+                            </div>
+                            {animation.preview && (
                               <div className="absolute top-0 right-0 p-1">
                                 <Button
                                   size="icon"
@@ -981,15 +986,8 @@ export default function ProfilePage() {
                                   )}
                                 </Button>
                               </div>
-                            </div>
-                          ) : (
-                            <div className="w-full h-24 flex items-center justify-center bg-muted rounded">
-                              <div className="flex flex-col items-center space-y-1">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                                <p className="text-xs text-muted-foreground">Loading...</p>
-                              </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                           <p className="text-sm text-center mt-2 font-medium">{animation.name}</p>
                           {selectedLottie?.id === animation.id && (
                             <div className="absolute inset-0 bg-primary/10 rounded-md flex items-center justify-center">
