@@ -9,7 +9,7 @@ export default function Login() {
   const [hasChecked, setHasChecked] = useState(false);
   
   // Check if already logged in via API
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading, error } = useQuery({
     queryKey: ["/api/auth/user"],
     retry: false,
     throwOnError: false,
@@ -27,6 +27,12 @@ export default function Login() {
       if (user && isAuthenticatedInLocalStorage) {
         console.log("User already authenticated, redirecting to dashboard");
         navigate("/dashboard");
+      } else {
+        console.log("Not authenticated, showing login form");
+        // Clear any stale authentication data
+        if (!user) {
+          localStorage.removeItem('isAuthenticated');
+        }
       }
       setHasChecked(true);
     }

@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { TagFilter } from "@/components/test-cases/tag-filter";
 import { TestCaseTags } from "@/components/test-cases/test-case-tags";
 import { useState } from "react";
@@ -61,6 +61,7 @@ function StatusDropdown({ currentStatus, statusOptions, onStatusChange }: Status
 }
 
 export function BugTable({ bugs, onEdit, onDelete, onView }: BugTableProps) {
+  const { toast } = useToast();
   const [selectedTags, setSelectedTags] = useState<any[]>([]);
   const [showTagFilter, setShowTagFilter] = useState(false);
 
