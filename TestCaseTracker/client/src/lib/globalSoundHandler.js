@@ -46,15 +46,19 @@ class GlobalSoundHandler {
       if (this.userHasInteracted && !this.isNetworkError(event.reason)) {
         console.log('🔊 Global handler: Playing error sound for unhandled rejection');
         this.playSound('error');
+      } else {
+        console.log('🔊 Skipping error sound - network/connection error detected');
       }
     });
 
     // Handle general errors
     window.addEventListener('error', (event) => {
       // Only play sound if user has interacted AND it's not a network/resource error
-      if (this.userHasInteracted && !this.isResourceError(event)) {
+      if (this.userHasInteracted && !this.isResourceError(event) && !this.isNetworkError(event.message)) {
         console.log('🔊 Global handler: Playing error sound for general error');
         this.playSound('error');
+      } else {
+        console.log('🔊 Skipping error sound - resource/network error detected');
       }
     });
   }
@@ -77,7 +81,11 @@ class GlobalSoundHandler {
            errorString.includes('fetch') || 
            errorString.includes('connection') ||
            errorString.includes('timeout') ||
-           errorString.includes('err_connection');
+           errorString.includes('err_connection') ||
+           errorString.includes('err_connection_timed_out') ||
+           errorString.includes('net::err_connection_timed_out') ||
+           errorString.includes('websocket') ||
+           errorString.includes('socket');
   }
 
   // Check if error is resource-related (shouldn't trigger sounds)

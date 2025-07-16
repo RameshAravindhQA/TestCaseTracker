@@ -36,16 +36,52 @@ export function SoundSettings() {
     }
   };
 
-  const testSound = (type: string) => {
-    if (window.soundManager) {
-      window.soundManager.playSound(type);
+  const testSound = async (type: string) => {
+    try {
+      if (window.soundManager) {
+        await window.soundManager.playSound(type);
+        toast({
+          title: "Sound Test",
+          description: `Playing ${type} sound`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to play ${type} sound`,
+        variant: "destructive"
+      });
     }
   };
 
   const handleSoundUpload = async (type: string, file: File) => {
     try {
       if (window.soundManager) {
+        // Validate file type
+        if (!file.type.startsWith('audio/')) {
+          toast({
+            title: "Error",
+            description: "Please select a valid audio file (MP3, WAV, OGG)",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast({
+            title: "Error",
+            description: "Audio file must be under 5MB",
+            variant: "destructive",
+          });
+          return;
+        }
+
         await window.soundManager.setCustomSound(type, file);
+
+        // Force reload the sounds
+        await window.soundManager.preloadSounds();
+
         toast({
           title: "Success",
           description: `${type} sound updated successfully`

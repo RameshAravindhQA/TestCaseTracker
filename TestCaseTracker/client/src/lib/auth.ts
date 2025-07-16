@@ -50,17 +50,17 @@ export const resetPassword = async (data: ResetPasswordData) => {
 export const fetchCurrentUser = async () => {
   // Try endpoints in order of preference
   const endpoints = ["/api/auth/user", "/api/user/current"];
-  
+
   for (const endpoint of endpoints) {
     try {
       const res = await fetch(endpoint, {
         credentials: "include",
       });
-      
+
       if (res.status === 401) {
         return null;
       }
-      
+
       if (res.ok) {
         return res.json();
       }
@@ -69,7 +69,7 @@ export const fetchCurrentUser = async () => {
       // Continue to next endpoint
     }
   }
-  
+
   throw new Error("Failed to fetch user data from any endpoint");
 };
 
@@ -83,3 +83,9 @@ export const useAuth = () => {
     fetchCurrentUser,
   };
 };
+
+// Export the apiRequest function for use in other modules
+export { apiRequest };
+
+// Also provide a default export for backwards compatibility
+export default apiRequest;

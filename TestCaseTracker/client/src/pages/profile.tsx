@@ -61,13 +61,13 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [selectedLottie, setSelectedLottie] = useState<LottieAnimation | null>(null);
   const [lottieAnimations, setLottieAnimations] = useState<LottieAnimation[]>([
-    { id: 'rocket', name: 'Rocket', path: '/lottie/rocket.json' },
-    { id: 'businessman-rocket', name: 'Business Rocket', path: '/lottie/businessman-rocket.json' },
-    { id: 'male-avatar', name: 'Male Avatar', path: '/lottie/male-avatar.json' },
-    { id: 'female-avatar', name: 'Female Avatar', path: '/lottie/female-avatar.json' },
-    { id: 'business-team', name: 'Business Team', path: '/lottie/business-team.json' },
-    { id: 'office-team', name: 'Office Team', path: '/lottie/office-team.json' },
-    { id: 'software-dev', name: 'Software Dev', path: '/lottie/software-dev.json' }
+    { id: 'rocket', name: 'Rocket', path: './lottie/rocket.json' },
+    { id: 'businessman-rocket', name: 'Business Rocket', path: './lottie/businessman-rocket.json' },
+    { id: 'male-avatar', name: 'Male Avatar', path: './lottie/male-avatar.json' },
+    { id: 'female-avatar', name: 'Female Avatar', path: './lottie/female-avatar.json' },
+    { id: 'business-team', name: 'Business Team', path: './lottie/business-team.json' },
+    { id: 'office-team', name: 'Office Team', path: './lottie/office-team.json' },
+    { id: 'software-dev', name: 'Software Dev', path: './lottie/software-dev.json' }
   ]);
   const [playingAnimations, setPlayingAnimations] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
@@ -514,7 +514,7 @@ export default function ProfilePage() {
             if (response.ok) {
               const result = await response.json();
               console.log('✅ Backend upload successful:', result);
-              
+
               // Update the animation with server path
               setLottieAnimations(prev => prev.map(anim => 
                 anim.id === newAnimation.id ? { ...anim, path: result.path } : anim

@@ -297,9 +297,26 @@ class SoundManager {
           // Create audio element for the custom sound
           const audio = new Audio(e.target.result);
           audio.volume = this.volume;
-          this.sounds.set(type, audio);
+          audio.preload = 'auto';
+          
+          // Wait for audio to load before updating the sound map
+          const onLoad = () => {
+            this.sounds.set(type, audio);
+            console.log(`✅ Custom sound ${type} loaded and updated`);
+            audio.removeEventListener('canplaythrough', onLoad);
+            audio.removeEventListener('error', onError);
+            resolve();
+          };
 
-          resolve();
+          const onError = (error) => {
+            console.error(`❌ Failed to load custom sound ${type}:`, error);
+            audio.removeEventListener('canplaythrough', onLoad);
+            audio.removeEventListener('error', onError);
+            reject(new Error(`Failed to load custom sound: ${type}`));
+          };
+
+          audio.addEventListener('canplaythrough', onLoad, { once: true });
+          audio.addEventListener('error', onError, { once: true });
         } catch (error) {
           reject(error);
         }
