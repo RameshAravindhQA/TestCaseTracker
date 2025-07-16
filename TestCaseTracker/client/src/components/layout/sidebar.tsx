@@ -189,6 +189,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       href: "/test-data-generator",
       icon: <FileText className="h-5 w-5" />,
     },
+    {
+      name: "Test Automation",
+      href: "/automation",
+      icon: <Play className="h-5 w-5" />,
+    },
   ], []);
 
   const adminItems: NavItem[] = useMemo(() => [

@@ -35,7 +35,8 @@ import TimesheetsPage from "@/pages/timesheets/index";
 import NotebooksPage from "@/pages/notebooks/index";
 import TodosPage from "./pages/todos";
 import TestDataGeneratorPage from "./pages/test-data-generator";
-import { Toaster } from "./components/ui/toaster";
+// Removing duplicate import
+// import { Toaster } from "./components/ui/toaster";
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -153,6 +154,12 @@ function Router() {
       </Route>
       <Route path="/github">
         <ProtectedLazyComponent Component={lazy(() => import("./pages/github"))} />
+      </Route>
+      <Route path="/test-data-generator">
+        <ProtectedLazyComponent Component={lazy(() => import("./pages/test-data-generator"))} />
+      </Route>
+      <Route path="/automation">
+        <ProtectedLazyComponent Component={lazy(() => import("./pages/automation"))} />
       </Route>
 
       {/* Catch-all 404 route - make sure this is last */}

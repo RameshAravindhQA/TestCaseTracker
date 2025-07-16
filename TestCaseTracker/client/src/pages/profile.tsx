@@ -357,21 +357,31 @@ export default function ProfilePage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Check file size (limit to 2MB)
-      if (file.size > 2 * 1024 * 1024) {
+      // Handle Lottie file upload
+      if (file.type === 'application/json' || file.name.endsWith('.json')) {
+        handleLottieFileUpload(file);
+        return;
+      }
+      // Check file size (limit to 2MB for images, 20MB for lottie)
+      const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
+      const maxSize = isLottieFile ? 20 * 1024 * 1024 : 2 * 1024 * 1024;
+      const maxSizeText = isLottieFile ? '20MB' : '2MB';
+      
+      if (file.size > maxSize) {
         toast({
           title: "File too large",
-          description: "Please select an image under 2MB.",
+          description: `Please select a file under ${maxSizeText}.`,
           variant: "destructive",
         });
         return;
       }
 
       // Check file type
-      if (!file.type.startsWith('image/')) {
+      const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
+      if (!file.type.startsWith('image/') && !isLottieFile) {
         toast({
           title: "Invalid file type",
-          description: "Please select an image file.",
+          description: "Please select an image file or Lottie JSON file.",
           variant: "destructive",
         });
         return;
@@ -432,6 +442,59 @@ export default function ProfilePage() {
     }
   };
 
+  const handleLottieFileUpload = async (file: File) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const jsonData = JSON.parse(e.target?.result as string);
+          const newAnimation: LottieAnimation = {
+            id: `custom-${Date.now()}`,
+            name: file.name.replace('.json', ''),
+            path: URL.createObjectURL(file),
+            preview: jsonData
+          };
+          
+          // Add to animations list
+          setLottieAnimations(prev => [...prev, newAnimation]);
+          
+          // Save to backend
+          const formData = new FormData();
+          formData.append('lottieFile', file);
+          formData.append('animationData', JSON.stringify(newAnimation));
+          
+          const response = await apiRequest("POST", "/api/users/upload-lottie", formData, { isFormData: true });
+          
+          if (response.ok) {
+            const result = await response.json();
+            toast({
+              title: "Success",
+              description: "Lottie animation uploaded successfully!",
+            });
+            
+            // Update the animation with server path
+            setLottieAnimations(prev => prev.map(anim => 
+              anim.id === newAnimation.id ? { ...anim, path: result.path } : anim
+            ));
+          }
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Invalid Lottie JSON file",
+            variant: "destructive",
+          });
+        }
+      };
+      reader.readAsText(file);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process Lottie file",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Determine the avatar source - using our tracked URL with cache busting
   const avatarSrc = profilePictureUrl || null; // Use null to trigger the fallback
 
@@ -487,12 +550,12 @@ export default function ProfilePage() {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                accept="image/jpeg,image/png,image/gif,image/webp"
+                accept="image/jpeg,image/png,image/gif,image/webp,application/json,.json"
                 className="hidden"
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                Supported formats: JPEG, PNG, GIF, WebP<br />
-                Max file size: 2MB
+                Supported formats: JPEG, PNG, GIF, WebP, Lottie JSON<br />
+                Max file size: 2MB (images), 20MB (Lottie)
               </p>
               <Button 
                 variant="outline"
