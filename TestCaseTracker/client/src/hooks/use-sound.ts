@@ -1,184 +1,119 @@
+import { useCallback, useRef, useEffect } from 'react';
 
-import { useCallback, useEffect, useRef } from 'react';
+export type SoundType = 'navigation' | 'message' | 'create' | 'update' | 'delete' | 'click' | 'success' | 'error' | 'crud';
 
-export type SoundType = 'click' | 'crud' | 'error' | 'success' | 'message' | 'navigation' | 'delete' | 'update' | 'create';
-
-interface SoundSettings {
-  enabled: boolean;
-  volume: number;
-  sounds: {
-    [key in SoundType]: string;
-  };
+interface SoundConfig {
+  volume?: number;
+  enabled?: boolean;
 }
 
-const defaultSoundSettings: SoundSettings = {
-  enabled: true,
-  volume: 0.5,
-  sounds: {
-    click: '/sounds/click.mp3',
-    crud: '/sounds/crud.mp3',
-    error: '/sounds/error.mp3',
-    success: '/sounds/success.mp3',
-    message: '/sounds/message.mp3',
-    navigation: '/sounds/navigation.mp3',
-    delete: '/sounds/delete.mp3',
-    update: '/sounds/update.mp3',
-    create: '/sounds/create.mp3'
-  }
-};
+class SoundManager {
+  private audioCache = new Map<SoundType, HTMLAudioElement>();
+  private config: SoundConfig = { volume: 0.5, enabled: true };
 
-// Global audio cache to prevent loading same sound multiple times
-const audioCache = new Map<string, HTMLAudioElement>();
-
-// Preload audio files
-const preloadAudio = (soundUrl: string): HTMLAudioElement => {
-  if (audioCache.has(soundUrl)) {
-    return audioCache.get(soundUrl)!;
+  constructor() {
+    this.preloadSounds();
   }
 
-  const audio = new Audio();
-  audio.preload = 'auto';
-  audio.volume = 0.5;
-  
-  // Handle loading with fallback
-  audio.addEventListener('canplaythrough', () => {
-    console.log(`Sound preloaded: ${soundUrl}`);
-  });
-  
-  audio.addEventListener('error', (e) => {
-    console.warn(`Failed to preload sound: ${soundUrl}`, e);
-  });
-  
-  audio.src = soundUrl;
-  audioCache.set(soundUrl, audio);
-  
-  return audio;
-};
+  private preloadSounds() {
+    const soundTypes: SoundType[] = ['navigation', 'message', 'create', 'update', 'delete', 'click', 'success', 'error', 'crud'];
 
-export const useSound = () => {
-  const soundSettingsRef = useRef<SoundSettings>(defaultSoundSettings);
+    soundTypes.forEach(type => {
+      try {
+        const audio = new Audio(`/sounds/${type}.mp3`);
+        audio.preload = 'auto';
+        audio.volume = this.config.volume || 0.5;
 
-  const getSoundSettings = useCallback((): SoundSettings => {
+        // Handle loading errors gracefully
+        audio.addEventListener('error', () => {
+          console.warn(`Failed to load sound: ${type}.mp3`);
+        });
+
+        audio.addEventListener('canplaythrough', () => {
+          console.log(`Sound loaded successfully: ${type}.mp3`);
+        });
+
+        this.audioCache.set(type, audio);
+      } catch (error) {
+        console.warn(`Error creating audio element for ${type}:`, error);
+      }
+    });
+  }
+
+  setConfig(newConfig: Partial<SoundConfig>) {
+    this.config = { ...this.config, ...newConfig };
+
+    // Update volume for all cached audio elements
+    this.audioCache.forEach(audio => {
+      audio.volume = this.config.volume || 0.5;
+    });
+  }
+
+  async playSound(type: SoundType): Promise<void> {
+    if (!this.config.enabled) return;
+
     try {
-      const stored = localStorage.getItem('soundSettings');
-      const settings = stored ? { ...defaultSoundSettings, ...JSON.parse(stored) } : defaultSoundSettings;
-      soundSettingsRef.current = settings;
-      return settings;
-    } catch (error) {
-      console.error('Error getting sound settings:', error);
-      return defaultSoundSettings;
-    }
-  }, []);
-
-  const setSoundSettings = useCallback((settings: Partial<SoundSettings>) => {
-    try {
-      const current = getSoundSettings();
-      const updated = { ...current, ...settings };
-      soundSettingsRef.current = updated;
-      localStorage.setItem('soundSettings', JSON.stringify(updated));
-    } catch (error) {
-      console.error('Error setting sound settings:', error);
-    }
-  }, [getSoundSettings]);
-
-  const playSound = useCallback((soundType: SoundType) => {
-    try {
-      const settings = soundSettingsRef.current;
-      if (!settings.enabled) return;
-
-      const soundUrl = settings.sounds[soundType];
-      if (!soundUrl) return;
-
-      // Get or create audio element
-      let audio = audioCache.get(soundUrl);
+      const audio = this.audioCache.get(type);
       if (!audio) {
-        audio = preloadAudio(soundUrl);
+        console.warn(`Sound not found: ${type}`);
+        return;
       }
 
-      // Clone audio for overlapping sounds
-      const audioClone = audio.cloneNode() as HTMLAudioElement;
-      audioClone.volume = settings.volume;
+      // Reset audio to beginning
+      audio.currentTime = 0;
 
       // Play with promise handling
-      const playPromise = audioClone.play();
+      const playPromise = audio.play();
       if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-          if (error.name !== 'NotAllowedError') {
-            console.warn(`Failed to play sound: ${soundUrl}`, error);
-          }
-        });
+        await playPromise;
       }
     } catch (error) {
-      console.error('Error playing sound:', error);
+      console.warn(`Error playing sound ${type}:`, error);
     }
+  }
+
+  isEnabled(): boolean {
+    return this.config.enabled || false;
+  }
+
+  setEnabled(enabled: boolean) {
+    this.config.enabled = enabled;
+  }
+
+  setVolume(volume: number) {
+    this.config.volume = Math.max(0, Math.min(1, volume));
+    this.audioCache.forEach(audio => {
+      audio.volume = this.config.volume || 0.5;
+    });
+  }
+}
+
+// Global sound manager instance
+const soundManager = new SoundManager();
+
+export const useSound = () => {
+  const playSound = useCallback(async (type: SoundType) => {
+    await soundManager.playSound(type);
   }, []);
 
-  const uploadSound = useCallback((type: SoundType, file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const settings = getSoundSettings();
-        setSoundSettings({
-          sounds: {
-            ...settings.sounds,
-            [type]: dataUrl
-          }
-        });
-        // Clear cache for this sound type
-        const oldUrl = settings.sounds[type];
-        if (audioCache.has(oldUrl)) {
-          audioCache.delete(oldUrl);
-        }
-        // Preload new sound
-        preloadAudio(dataUrl);
-        resolve(dataUrl);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }, [getSoundSettings, setSoundSettings]);
+  const setEnabled = useCallback((enabled: boolean) => {
+    soundManager.setEnabled(enabled);
+  }, []);
 
-  // Initialize sound settings on mount
-  useEffect(() => {
-    getSoundSettings();
-    
-    // Preload all default sounds
-    Object.values(defaultSoundSettings.sounds).forEach(soundUrl => {
-      preloadAudio(soundUrl);
-    });
-  }, [getSoundSettings]);
+  const setVolume = useCallback((volume: number) => {
+    soundManager.setVolume(volume);
+  }, []);
+
+  const isEnabled = useCallback(() => {
+    return soundManager.isEnabled();
+  }, []);
 
   return {
     playSound,
-    getSoundSettings,
-    setSoundSettings,
-    uploadSound
+    setEnabled,
+    setVolume,
+    isEnabled
   };
 };
 
-// Global sound instance for direct use
-export const globalSoundPlayer = {
-  playSound: (soundType: SoundType) => {
-    try {
-      const stored = localStorage.getItem('soundSettings');
-      const settings = stored ? { ...defaultSoundSettings, ...JSON.parse(stored) } : defaultSoundSettings;
-      
-      if (!settings.enabled) return;
-
-      const soundUrl = settings.sounds[soundType];
-      if (!soundUrl) return;
-
-      let audio = audioCache.get(soundUrl);
-      if (!audio) {
-        audio = preloadAudio(soundUrl);
-      }
-
-      const audioClone = audio.cloneNode() as HTMLAudioElement;
-      audioClone.volume = settings.volume;
-      audioClone.play().catch(() => {});
-    } catch (error) {
-      console.error('Error playing global sound:', error);
-    }
-  }
-};
+export default useSound;

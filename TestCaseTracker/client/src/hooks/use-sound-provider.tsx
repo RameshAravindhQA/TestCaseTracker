@@ -1,14 +1,12 @@
-
-import React, { createContext, useContext, useCallback, ReactNode, useEffect } from 'react';
-import { useSound, SoundType, globalSoundPlayer } from './use-sound';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useSound, SoundType } from './use-sound';
 
 interface SoundContextType {
-  playSound: (type: SoundType) => void;
-  playCrudSound: (operation: 'create' | 'update' | 'delete') => void;
-  playErrorSound: () => void;
-  playSuccessSound: () => void;
-  playMessageSound: () => void;
-  playNavigationSound: () => void;
+  isEnabled: boolean;
+  volume: number;
+  playSound: (type: SoundType) => Promise<void>;
+  toggleSound: () => void;
+  setVolume: (volume: number) => void;
 }
 
 const SoundContext = createContext<SoundContextType | undefined>(undefined);
@@ -18,137 +16,78 @@ interface SoundProviderProps {
 }
 
 export const SoundProvider: React.FC<SoundProviderProps> = ({ children }) => {
-  const { playSound: playSoundHook } = useSound();
+  const [isEnabled, setIsEnabled] = useState(true);
+  const [volume, setVolumeState] = useState(0.5);
+  const { playSound: playSoundHook, setEnabled, setVolume: setSoundVolume } = useSound();
 
-  const playSound = useCallback((type: SoundType) => {
-    playSoundHook(type);
-  }, [playSoundHook]);
-
-  const playCrudSound = useCallback((operation: 'create' | 'update' | 'delete') => {
-    switch (operation) {
-      case 'create':
-        playSound('create');
-        break;
-      case 'update':
-        playSound('update');
-        break;
-      case 'delete':
-        playSound('delete');
-        break;
-      default:
-        playSound('crud');
-    }
-  }, [playSound]);
-
-  const playErrorSound = useCallback(() => {
-    playSound('error');
-  }, [playSound]);
-
-  const playSuccessSound = useCallback(() => {
-    playSound('success');
-  }, [playSound]);
-
-  const playMessageSound = useCallback(() => {
-    playSound('message');
-  }, [playSound]);
-
-  const playNavigationSound = useCallback(() => {
-    playSound('navigation');
-  }, [playSound]);
-
-  // Global click handler with improved detection
+  // Load settings from localStorage on mount
   useEffect(() => {
-    const handleGlobalClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      
-      // Check if it's a clickable element
-      const clickableElement = target.closest('button, a, [role="button"], .cursor-pointer, [data-clickable], input[type="submit"], input[type="button"]');
-      
-      if (clickableElement) {
-        const elementText = clickableElement.textContent?.toLowerCase() || '';
-        const classList = clickableElement.className.toLowerCase();
-        const dataAction = clickableElement.getAttribute('data-action')?.toLowerCase() || '';
+    try {
+      const savedEnabled = localStorage.getItem('sound-enabled');
+      const savedVolume = localStorage.getItem('sound-volume');
 
-        // Determine sound based on element properties
-        if (elementText.includes('delete') || classList.includes('destructive') || dataAction.includes('delete')) {
-          globalSoundPlayer.playSound('delete');
-        } else if (elementText.includes('save') || elementText.includes('create') || elementText.includes('add') || dataAction.includes('create')) {
-          globalSoundPlayer.playSound('create');
-        } else if (elementText.includes('update') || elementText.includes('edit') || dataAction.includes('update')) {
-          globalSoundPlayer.playSound('update');
-        } else if (elementText.includes('nav') || classList.includes('nav') || dataAction.includes('navigate')) {
-          globalSoundPlayer.playSound('navigation');
-        } else {
-          globalSoundPlayer.playSound('click');
+      if (savedEnabled !== null) {
+        const enabled = savedEnabled === 'true';
+        setIsEnabled(enabled);
+        setEnabled(enabled);
+      }
+
+      if (savedVolume !== null) {
+        const vol = parseFloat(savedVolume);
+        if (!isNaN(vol) && vol >= 0 && vol <= 1) {
+          setVolumeState(vol);
+          setSoundVolume(vol);
         }
       }
-    };
+    } catch (error) {
+      console.warn('Error loading sound settings:', error);
+    }
+  }, [setEnabled, setSoundVolume]);
 
-    // Use capture phase to ensure we catch all clicks
-    document.addEventListener('click', handleGlobalClick, true);
-    
-    return () => {
-      document.removeEventListener('click', handleGlobalClick, true);
-    };
-  }, []);
-
-  // Listen for API responses and form submissions
-  useEffect(() => {
-    const handleApiResponse = (event: CustomEvent) => {
-      if (event.detail?.type === 'success') {
-        playSuccessSound();
-      } else if (event.detail?.type === 'error') {
-        playErrorSound();
+  const playSound = async (type: SoundType) => {
+    if (isEnabled) {
+      try {
+        await playSoundHook(type);
+      } catch (error) {
+        console.warn('Error playing sound:', error);
       }
-    };
+    }
+  };
 
-    const handleFormSubmit = (event: SubmitEvent) => {
-      const form = event.target as HTMLFormElement;
-      const action = form.getAttribute('data-action')?.toLowerCase() || '';
-      
-      if (action.includes('delete')) {
-        globalSoundPlayer.playSound('delete');
-      } else if (action.includes('create')) {
-        globalSoundPlayer.playSound('create');
-      } else if (action.includes('update')) {
-        globalSoundPlayer.playSound('update');
-      } else {
-        globalSoundPlayer.playSound('click');
-      }
-    };
+  const toggleSound = () => {
+    const newEnabled = !isEnabled;
+    setIsEnabled(newEnabled);
+    setEnabled(newEnabled);
 
-    // Listen for toast notifications
-    const handleToast = (event: CustomEvent) => {
-      const toastType = event.detail?.variant || event.detail?.type;
-      if (toastType === 'destructive' || toastType === 'error') {
-        playErrorSound();
-      } else {
-        playSuccessSound();
-      }
-    };
+    try {
+      localStorage.setItem('sound-enabled', newEnabled.toString());
+    } catch (error) {
+      console.warn('Error saving sound enabled state:', error);
+    }
+  };
 
-    window.addEventListener('api-response', handleApiResponse as EventListener);
-    window.addEventListener('toast-notification', handleToast as EventListener);
-    document.addEventListener('submit', handleFormSubmit);
+  const setVolume = (newVolume: number) => {
+    const clampedVolume = Math.max(0, Math.min(1, newVolume));
+    setVolumeState(clampedVolume);
+    setSoundVolume(clampedVolume);
 
-    return () => {
-      window.removeEventListener('api-response', handleApiResponse as EventListener);
-      window.removeEventListener('toast-notification', handleToast as EventListener);
-      document.removeEventListener('submit', handleFormSubmit);
-    };
-  }, [playErrorSound, playSuccessSound]);
+    try {
+      localStorage.setItem('sound-volume', clampedVolume.toString());
+    } catch (error) {
+      console.warn('Error saving sound volume:', error);
+    }
+  };
 
-  const value: SoundContextType = {
+  const contextValue: SoundContextType = {
+    isEnabled,
+    volume,
     playSound,
-    playCrudSound,
-    playErrorSound,
-    playSuccessSound,
-    playMessageSound,
-    playNavigationSound
+    toggleSound,
+    setVolume
   };
 
   return (
-    <SoundContext.Provider value={value}>
+    <SoundContext.Provider value={contextValue}>
       {children}
     </SoundContext.Provider>
   );
@@ -161,3 +100,5 @@ export const useSoundContext = (): SoundContextType => {
   }
   return context;
 };
+
+export default SoundProvider;

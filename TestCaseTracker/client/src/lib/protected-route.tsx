@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { Navigate } from 'wouter';
+import { Redirect } from 'wouter';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -22,11 +22,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Redirect to="/login" replace />;
   }
 
   if (requiredRole && user.role !== requiredRole && user.role !== 'admin') {
-    return <Navigate to="/dashboard" replace />;
+    return <Redirect to="/dashboard" replace />;
   }
 
   return <>{children}</>;

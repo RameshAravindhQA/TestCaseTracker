@@ -2,28 +2,33 @@
 import React from 'react';
 import { Button, ButtonProps } from './button';
 import { useSoundContext } from '@/hooks/use-sound-provider';
+import { SoundType } from '@/hooks/use-sound';
 
 interface SoundEnhancedButtonProps extends ButtonProps {
-  soundType?: 'click' | 'create' | 'update' | 'delete' | 'navigation';
-  crudOperation?: 'create' | 'update' | 'delete';
+  soundType?: SoundType;
+  enableSound?: boolean;
 }
 
 export const SoundEnhancedButton: React.FC<SoundEnhancedButtonProps> = ({
-  soundType = 'click',
-  crudOperation,
   onClick,
+  soundType = 'click',
+  enableSound = true,
   children,
   ...props
 }) => {
-  const { playSound, playCrudSound } = useSoundContext();
+  const { playSound } = useSoundContext();
 
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    if (crudOperation) {
-      playCrudSound(crudOperation);
-    } else {
-      playSound(soundType);
+  const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    // Play sound effect
+    if (enableSound) {
+      try {
+        await playSound(soundType);
+      } catch (error) {
+        console.warn('Error playing button sound:', error);
+      }
     }
-    
+
+    // Call original onClick handler
     if (onClick) {
       onClick(event);
     }
@@ -35,3 +40,5 @@ export const SoundEnhancedButton: React.FC<SoundEnhancedButtonProps> = ({
     </Button>
   );
 };
+
+export default SoundEnhancedButton;
