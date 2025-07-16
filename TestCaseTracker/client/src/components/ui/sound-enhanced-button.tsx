@@ -1,27 +1,35 @@
-
 import React from 'react';
-import { Button, ButtonProps } from './button';
-import { useSoundPlayer } from '@/hooks/use-sound-provider';
+import { Button } from './button';
+import { useSound } from '@/hooks/use-sound';
 
-interface SoundEnhancedButtonProps extends ButtonProps {
-  soundType?: 'click' | 'crud' | 'success';
-  disableSound?: boolean;
+interface SoundEnhancedButtonProps extends React.ComponentProps<typeof Button> {
+  soundType?: 'click' | 'crud' | 'error' | 'success' | 'message';
+  children: React.ReactNode;
 }
 
-export const SoundEnhancedButton = React.forwardRef<
-  HTMLButtonElement,
-  SoundEnhancedButtonProps
->(({ soundType = 'click', disableSound = false, onClick, ...props }, ref) => {
-  const { playSound } = useSoundPlayer();
+export function SoundEnhancedButton({ 
+  soundType = 'click', 
+  onClick, 
+  children, 
+  ...props 
+}: SoundEnhancedButtonProps) {
+  const { playSound } = useSound();
 
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    if (!disableSound) {
-      playSound(soundType);
+  const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    try {
+      await playSound(soundType);
+    } catch (error) {
+      console.warn('Failed to play sound:', error);
     }
-    onClick?.(event);
+
+    if (onClick) {
+      onClick(e);
+    }
   };
 
-  return <Button ref={ref} onClick={handleClick} {...props} />;
-});
-
-SoundEnhancedButton.displayName = 'SoundEnhancedButton';
+  return (
+    <Button onClick={handleClick} {...props}>
+      {children}
+    </Button>
+  );
+}

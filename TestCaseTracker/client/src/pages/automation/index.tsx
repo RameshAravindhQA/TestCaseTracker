@@ -1,5 +1,3 @@
-<replit_final_file>
-</replit_final_file>
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/main-layout';
@@ -244,14 +242,24 @@ export default function AutomationPage() {
                     <Label htmlFor="project">Project</Label>
                     <Select value={selectedProject} onValueChange={setSelectedProject}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select project" />
+                        <SelectValue placeholder={isProjectsLoading ? "Loading projects..." : projects.length > 0 ? "Select a project" : "No projects available"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {projects.map(project => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.name}
+                        {isProjectsLoading ? (
+                          <SelectItem value="loading" disabled>
+                            Loading projects...
                           </SelectItem>
-                        ))}
+                        ) : projects.length > 0 ? (
+                          projects.map((project: any) => (
+                            <SelectItem key={project.id} value={project.id.toString()}>
+                              {project.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-projects" disabled>
+                            No projects available
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

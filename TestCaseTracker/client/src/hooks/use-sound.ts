@@ -45,7 +45,7 @@ export const useSound = () => {
     localStorage.setItem('soundSettings', JSON.stringify(updated));
   }, [getSoundSettings]);
 
-  const playSound = useCallback((type: SoundType) => {
+  const playSound = useCallback(async (type: SoundType) => {
     const settings = getSoundSettings();
     if (!settings.enabled) return;
 
@@ -53,11 +53,18 @@ export const useSound = () => {
       const audio = new Audio(settings.sounds[type]);
       audio.volume = settings.volume;
       audio.preload = 'auto';
+      
+      // Wait for the audio to be loaded before playing
+      await new Promise((resolve, reject) => {
+        audio.addEventListener('canplaythrough', resolve, { once: true });
+        audio.addEventListener('error', reject, { once: true });
+        audio.load();
+      });
 
       // Handle audio play promise
       const playPromise = audio.play();
       if (playPromise !== undefined) {
-        playPromise.catch(error => {
+        await playPromise.catch(error => {
           console.warn(`Failed to play sound: ${type}`, error);
         });
       }

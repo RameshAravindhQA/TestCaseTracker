@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,7 +77,7 @@ export default function TestDataGeneratorPage() {
       // Simulate data generation using faker.js patterns
       const data = Array.from({ length: recordCount }, (_, index) => {
         const record: any = { id: index + 1 };
-        
+
         dataFields.forEach(field => {
           if (field.enabled) {
             switch (field.type) {
@@ -326,6 +325,305 @@ export default function TestDataGeneratorPage() {
     );
   };
 
+  const INDIAN_DATA = {
+    firstName: ["Arjun", "Priya", "Vikram", "Sneha", "Rajesh", "Kavya", "Sanjay", "Pooja", "Amit", "Divya", "Rahul", "Anita", "Suresh", "Meera", "Kiran", "Ravi", "Sunita", "Manoj", "Deepika", "Arun"],
+    lastName: ["Sharma", "Patel", "Kumar", "Singh", "Gupta", "Reddy", "Iyer", "Nair", "Joshi", "Mehta", "Agarwal", "Verma", "Mishra", "Rao", "Sinha", "Bansal", "Malhotra", "Chopra", "Kapoor", "Saxena"],
+    email: ["gmail.com", "yahoo.co.in", "hotmail.com", "rediffmail.com", "outlook.com", "protonmail.com", "zoho.com"],
+    phone: () => `+91 ${Math.floor(Math.random() * 9000000000) + 1000000000}`,
+    address: ["Mumbai", "Delhi", "Bangalore", "Chennai", "Kolkata", "Hyderabad", "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Surat", "Kanpur", "Nagpur", "Indore", "Thane", "Bhopal", "Visakhapatnam", "Patna", "Vadodara", "Ghaziabad"],
+    pincode: () => Math.floor(Math.random() * 900000) + 100000,
+    panNumber: () => {
+      const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const digits = "0123456789";
+      return `${letters.charAt(Math.floor(Math.random() * 26))}${letters.charAt(Math.floor(Math.random() * 26))}${letters.charAt(Math.floor(Math.random() * 26))}${letters.charAt(Math.floor(Math.random() * 26))}${letters.charAt(Math.floor(Math.random() * 26))}${digits.charAt(Math.floor(Math.random() * 10))}${digits.charAt(Math.floor(Math.random() * 10))}${digits.charAt(Math.floor(Math.random() * 10))}${digits.charAt(Math.floor(Math.random() * 10))}${letters.charAt(Math.floor(Math.random() * 26))}`;
+    },
+    gstNumber: () => {
+      const stateCode = Math.floor(Math.random() * 37) + 1;
+      const panLike = "ABCDE1234F";
+      const entityNumber = Math.floor(Math.random() * 10);
+      const checkDigit = Math.floor(Math.random() * 10);
+      return `${stateCode.toString().padStart(2, '0')}${panLike}${entityNumber}Z${checkDigit}`;
+    },
+    aadharNumber: () => {
+      const digits = Math.floor(Math.random() * 900000000000) + 100000000000;
+      return digits.toString().replace(/(.{4})(.{4})(.{4})/, '$1 $2 $3');
+    },
+    ifscCode: () => {
+      const bankCodes = ["SBIN", "HDFC", "ICIC", "AXIS", "KOTAK", "YESB", "INDB", "PUNB", "BARB", "CANB"];
+      const bankCode = bankCodes[Math.floor(Math.random() * bankCodes.length)];
+      const branchCode = Math.floor(Math.random() * 900000) + 100000;
+      return `${bankCode}0${branchCode.toString().substring(0, 6)}`;
+    },
+    accountNumber: () => {
+      return Math.floor(Math.random() * 90000000000000) + 10000000000000;
+    },
+    vehicleNumber: () => {
+      const stateCodes = ["MH", "DL", "KA", "TN", "WB", "AP", "RJ", "UP", "GJ", "MP"];
+      const stateCode = stateCodes[Math.floor(Math.random() * stateCodes.length)];
+      const districtCode = Math.floor(Math.random() * 99) + 1;
+      const seriesCode = String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      const number = Math.floor(Math.random() * 9000) + 1000;
+      return `${stateCode} ${districtCode.toString().padStart(2, '0')} ${seriesCode} ${number}`;
+    },
+    company: () => {
+      const companies = ["TCS", "Infosys", "Wipro", "HCL", "Tech Mahindra", "Cognizant", "Accenture", "IBM India", "Microsoft India", "Google India", "Amazon India", "Flipkart", "Paytm", "Zomato", "Swiggy", "Ola", "Uber India", "BYJU'S", "Unacademy", "PhonePe"];
+      return companies[Math.floor(Math.random() * companies.length)];
+    },
+    designation: () => {
+      const designations = ["Software Engineer", "Senior Software Engineer", "Team Lead", "Project Manager", "Business Analyst", "Quality Analyst", "DevOps Engineer", "Data Scientist", "Product Manager", "UI/UX Designer", "Full Stack Developer", "Backend Developer", "Frontend Developer", "Mobile App Developer", "Database Administrator", "System Administrator", "Technical Architect", "Scrum Master", "Technical Writer", "Sales Executive"];
+      return designations[Math.floor(Math.random() * designations.length)];
+    },
+    salary: () => {
+      const salaryRanges = [
+        { min: 300000, max: 500000 },   // 3-5 LPA
+        { min: 500000, max: 800000 },   // 5-8 LPA
+        { min: 800000, max: 1200000 },  // 8-12 LPA
+        { min: 1200000, max: 1800000 }, // 12-18 LPA
+        { min: 1800000, max: 2500000 }, // 18-25 LPA
+        { min: 2500000, max: 4000000 }  // 25-40 LPA
+      ];
+      const range = salaryRanges[Math.floor(Math.random() * salaryRanges.length)];
+      return Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+    },
+    dateOfBirth: () => {
+      const start = new Date(1970, 0, 1);
+      const end = new Date(2005, 11, 31);
+      const date = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+      return date.toISOString().split('T')[0];
+    },
+    education: () => {
+      const degrees = ["B.Tech", "B.E.", "B.Sc", "M.Tech", "M.E.", "M.Sc", "MBA", "MCA", "BCA", "B.Com", "M.Com", "CA", "CS", "PhD"];
+      return degrees[Math.floor(Math.random() * degrees.length)];
+    },
+    city: () => {
+      const cities = ["Mumbai", "Delhi", "Bangalore", "Chennai", "Kolkata", "Hyderabad", "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Surat", "Kanpur", "Nagpur", "Indore", "Thane", "Bhopal", "Visakhapatnam", "Patna", "Vadodara", "Ghaziabad", "Ludhiana", "Agra", "Nashik", "Faridabad", "Meerut", "Rajkot", "Kalyan-Dombivali", "Vasai-Virar", "Varanasi", "Srinagar"];
+      return cities[Math.floor(Math.random() * cities.length)];
+    },
+    state: () => {
+      const states = ["Maharashtra", "Tamil Nadu", "Karnataka", "Gujarat", "Rajasthan", "West Bengal", "Madhya Pradesh", "Uttar Pradesh", "Delhi", "Punjab", "Haryana", "Kerala", "Odisha", "Telangana", "Andhra Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Himachal Pradesh", "Jharkhand", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Sikkim", "Tripura", "Uttarakhand", "Jammu and Kashmir", "Ladakh"];
+      return states[Math.floor(Math.random() * states.length)];
+    }
+  };
+
+  const getIndiaData = () => {
+    return {
+      'Name': () => `${INDIAN_DATA.firstName[Math.floor(Math.random() * INDIAN_DATA.firstName.length)]} ${INDIAN_DATA.lastName[Math.floor(Math.random() * INDIAN_DATA.lastName.length)]}`,
+      'First Name': () => INDIAN_DATA.firstName[Math.floor(Math.random() * INDIAN_DATA.firstName.length)],
+      'Last Name': () => INDIAN_DATA.lastName[Math.floor(Math.random() * INDIAN_DATA.lastName.length)],
+      'Email': () => `${INDIAN_DATA.firstName[Math.floor(Math.random() * INDIAN_DATA.firstName.length)].toLowerCase()}@${INDIAN_DATA.email[Math.floor(Math.random() * INDIAN_DATA.email.length)]}`,
+      'Phone': INDIAN_DATA.phone,
+      'Address': () => INDIAN_DATA.address[Math.floor(Math.random() * INDIAN_DATA.address.length)],
+      'City': INDIAN_DATA.city,
+      'State': INDIAN_DATA.state,
+      'Pincode': INDIAN_DATA.pincode,
+      'PAN Number': INDIAN_DATA.panNumber,
+      'GST Number': INDIAN_DATA.gstNumber,
+      'Aadhar Number': INDIAN_DATA.aadharNumber,
+      'IFSC Code': INDIAN_DATA.ifscCode,
+      'Account Number': INDIAN_DATA.accountNumber,
+      'Vehicle Number': INDIAN_DATA.vehicleNumber,
+      'Company': INDIAN_DATA.company,
+      'Designation': INDIAN_DATA.designation,
+      'Salary (INR)': INDIAN_DATA.salary,
+      'Date of Birth': INDIAN_DATA.dateOfBirth,
+      'Education': INDIAN_DATA.education
+    };
+  };
+
+  const generateFakeData = (type: string, country: string): string => {
+    if (country === 'India') {
+      const indiaDataGenerators = getIndiaData();
+      switch (type) {
+        case 'firstName':
+          return indiaDataGenerators['First Name']();
+        case 'lastName':
+          return indiaDataGenerators['Last Name']();
+        case 'email':
+          return indiaDataGenerators['Email']();
+        case 'phone':
+          return indiaDataGenerators['Phone']();
+        case 'address':
+          return indiaDataGenerators['Address']();
+        case 'city':
+          return indiaDataGenerators['City']();
+        case 'state':
+          return indiaDataGenerators['State']();
+        case 'zipCode':
+          return indiaDataGenerators['Pincode']();
+        case 'panNumber':
+          return indiaDataGenerators['PAN Number']();
+        case 'gstNumber':
+          return indiaDataGenerators['GST Number']();
+        case 'aadharNumber':
+          return indiaDataGenerators['Aadhar Number']();
+        case 'ifscCode':
+          return indiaDataGenerators['IFSC Code']();
+        case 'accountNumber':
+          return indiaDataGenerators['Account Number']();
+        case 'vehicleNumber':
+          return indiaDataGenerators['Vehicle Number']();
+        case 'company':
+          return indiaDataGenerators['Company']();
+        case 'jobTitle':
+          return indiaDataGenerators['Designation']();
+        case 'salary':
+          return indiaDataGenerators['Salary (INR)']();
+        case 'dateOfBirth':
+          return indiaDataGenerators['Date of Birth']();
+        case 'education':
+          return indiaDataGenerators['Education']();
+        default:
+          return "Sample Text";
+      }
+    }
+    // Simple fake data generation based on country
+    const countryData: { [key: string]: { [key: string]: string[] } } = {
+      US: {
+        firstName: ["John", "Jane", "Michael", "Sarah", "David", "Lisa", "Robert", "Mary"],
+        lastName: ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis"],
+        city: ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego"],
+        company: ["Apple Inc", "Microsoft", "Google", "Amazon", "Facebook", "Tesla", "Netflix", "Twitter"]
+      },
+      GB: {
+        firstName: ["James", "Oliver", "William", "Henry", "Emma", "Olivia", "Sophia", "Charlotte"],
+        lastName: ["Smith", "Jones", "Taylor", "Williams", "Brown", "Davies", "Evans", "Wilson"],
+        city: ["London", "Birmingham", "Manchester", "Glasgow", "Liverpool", "Leeds", "Sheffield", "Edinburgh"],
+        company: ["BP", "Vodafone", "HSBC", "Shell", "British Airways", "Tesco", "Barclays", "BT Group"]
+      },
+      // Add more countries as needed
+    };
+
+    const currentCountryData = countryData[country] || countryData.US;
+
+    switch (type) {
+      case "firstName":
+        return getRandomFromArray(currentCountryData.firstName || countryData.US.firstName);
+      case "lastName":
+        return getRandomFromArray(currentCountryData.lastName || countryData.US.lastName);
+      case "email":
+        const firstName = getRandomFromArray(currentCountryData.firstName || countryData.US.firstName);
+        const lastName = getRandomFromArray(currentCountryData.lastName || countryData.US.lastName);
+        return `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`;
+      case "phone":
+        return country === "US" ? `+1-${Math.floor(Math.random() * 900 + 100)}-${Math.floor(Math.random() * 900 + 100)}-${Math.floor(Math.random() * 9000 + 1000)}` :
+               `+44-${Math.floor(Math.random() * 9000 + 1000)}-${Math.floor(Math.random() * 900000 + 100000)}`;
+      case "address":
+        return `${Math.floor(Math.random() * 9999 + 1)} ${getRandomFromArray(["Main St", "Oak Ave", "Pine Rd", "Maple Dr", "Cedar Ln"])}`;
+      case "city":
+        return getRandomFromArray(currentCountryData.city || countryData.US.city);
+      case "zipCode":
+        return country === "US" ? Math.floor(Math.random() * 90000 + 10000).toString() :
+               `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10)} ${Math.floor(Math.random() * 10)}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
+      case "company":
+        return getRandomFromArray(currentCountryData.company || countryData.US.company);
+      case "jobTitle":
+        return getRandomFromArray(["Software Engineer", "Product Manager", "Designer", "Data Analyst", "Marketing Manager", "Sales Representative"]);
+      case "dateOfBirth":
+        const year = Math.floor(Math.random() * 50 + 1950);
+        const month = Math.floor(Math.random() * 12 + 1);
+        const day = Math.floor(Math.random * 28 + 1);
+        return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      case "website":
+        return `https://www.${getRandomFromArray(["example", "demo", "test", "sample"])}.com`;
+      case "username":
+        return `user${Math.floor(Math.random() * 10000)}`;
+      case "creditCard":
+        return `4${Math.floor(Math.random() * 1000000000000000).toString().padStart(15, '0')}`;
+      case "iban":
+        return `${country}${Math.floor(Math.random() * 100).toString().padStart(2, '0')}${Math.floor(Math.random() * 10000000000000000000).toString().padStart(18, '0')}`;
+      case "product":
+        return getRandomFromArray(["Laptop", "Smartphone", "Tablet", "Headphones", "Camera", "Watch", "Keyboard", "Mouse"]);
+      case "lorem":
+        return "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+      default:
+        return "Sample Text";
+    }
+  };
+
+  const getRandomFromArray = (array: string[]): string => {
+    return array[Math.floor(Math.random() * array.length)];
+  };
+
+  const generateUUID = (): string => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
+  const exportData = () => {
+    if (generatedData.length === 0) {
+      toast({
+        title: "No Data",
+        description: "Generate some data first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    let content = "";
+    let filename = "";
+    let mimeType = "";
+
+    switch (outputFormat) {
+      case "json":
+        content = JSON.stringify(generatedData, null, 2);
+        filename = "test-data.json";
+        mimeType = "application/json";
+        break;
+      case "csv":
+        const headers = Object.keys(generatedData[0]).join(",");
+        const rows = generatedData.map(row => Object.values(row).map(val => `"${val}"`).join(","));
+        content = [headers, ...rows].join("\n");
+        filename = "test-data.csv";
+        mimeType = "text/csv";
+        break;
+      case "xml":
+        content = `<?xml version="1.0" encoding="UTF-8"?>\n<data>\n${generatedData.map(item => 
+          `  <record>\n${Object.entries(item).map(([key, value]) => 
+            `    <${key}>${value}</${key}>`
+          ).join('\n')}\n  </record>`
+        ).join('\n')}\n</data>`;
+        filename = "test-data.xml";
+        mimeType = "application/xml";
+        break;
+      case "sql":
+        const tableName = "test_data";
+        const columns = Object.keys(generatedData[0]);
+        const values = generatedData.map(row => 
+          `(${Object.values(row).map(val => `'${val}'`).join(", ")})`
+        ).join(",\n");
+        content = `INSERT INTO ${tableName} (${columns.join(", ")}) VALUES\n${values};`;
+        filename = "test-data.sql";
+        mimeType = "text/sql";
+        break;
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export Complete",
+      description: `Data exported as ${filename}`
+    });
+  };
+
+  const toggleField = (fieldId: string) => {
+    setDataFields(fields => 
+      fields.map(field => 
+        field.id === fieldId ? { ...field, enabled: !field.enabled } : field
+      )
+    );
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -456,7 +754,7 @@ export default function TestDataGeneratorPage() {
                   </>
                 )}
               </Button>
-              
+
               {generatedData.length > 0 && (
                 <Button onClick={exportData} variant="outline">
                   <Download className="mr-2 h-4 w-4" />
