@@ -1,0 +1,92 @@
+NotSupportedError: Failed to load because no supported source was found.Understand this error
+main.tsx:17 Global error: ReferenceError: ProtectedRoute is not defined
+    at ProtectedComponent (App.tsx:56:4)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=174804f9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=174804f9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=174804f9:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=174804f9:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=174804f9:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=174804f9:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=174804f9:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=174804f9:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=174804f9:19137:13)
+(anonymous) @ main.tsx:17Understand this error
+App.tsx:56 Uncaught ReferenceError: ProtectedRoute is not defined
+    at ProtectedComponent (App.tsx:56:4)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=174804f9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=174804f9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=174804f9:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=174804f9:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=174804f9:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=174804f9:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=174804f9:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=174804f9:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=174804f9:19137:13)Understand this error
+main.tsx:17 Global error: ReferenceError: ProtectedRoute is not defined
+    at ProtectedComponent (App.tsx:56:4)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=174804f9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=174804f9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=174804f9:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=174804f9:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=174804f9:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=174804f9:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=174804f9:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=174804f9:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=174804f9:19137:13)
+(anonymous) @ main.tsx:17Understand this error
+App.tsx:56 Uncaught ReferenceError: ProtectedRoute is not defined
+    at ProtectedComponent (App.tsx:56:4)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=174804f9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=174804f9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=174804f9:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=174804f9:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=174804f9:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=174804f9:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=174804f9:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=174804f9:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=174804f9:19137:13)Understand this error
+chunk-RPCDYKBN.js?v=174804f9:14032 The above error occurred in the <ProtectedComponent> component:
+
+    at ProtectedComponent (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/App.tsx?v=wkvlxVnC7ET5xc_2aYMLw:77:31)
+    at Route (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/wouter.js?v=174804f9:206:16)
+    at Switch (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/wouter.js?v=174804f9:262:17)
+    at Router
+    at Provider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=174804f9:38:15)
+    at TooltipProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=174804f9:65:5)
+    at SoundProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/hooks/use-sound-provider.tsx:22:33)
+    at AuthProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/hooks/use-auth.tsx:26:32)
+    at V (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/next-themes.js?v=174804f9:44:25)
+    at J (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/next-themes.js?v=174804f9:42:18)
+    at ThemeProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/components/theme/theme-provider.tsx:31:3)
+    at QueryClientProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/@tanstack_react-query.js?v=174804f9:2933:3)
+    at App
+    at AuthProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/hooks/use-auth.tsx?v=wkvlxVnC7ET5xc_2aYMLw:26:32)
+    at QueryClientProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/@tanstack_react-query.js?v=174804f9:2933:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-RPCDYKBN.js?v=174804f9:14032Understand this error
+main.tsx:17 Global error: ReferenceError: ProtectedRoute is not defined
+    at ProtectedComponent (App.tsx:56:4)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=174804f9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=174804f9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=174804f9:15914:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=174804f9:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=174804f9:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=174804f9:19137:13)
+    at renderRootSync (chunk-RPCDYKBN.js?v=174804f9:19116:15)
+    at recoverFromConcurrentError (chunk-RPCDYKBN.js?v=174804f9:18736:28)
+    at performSyncWorkOnRoot (chunk-RPCDYKBN.js?v=174804f9:18879:28)
+(anonymous) @ main.tsx:17Understand this error
+chunk-RPCDYKBN.js?v=174804f9:9129 Uncaught ReferenceError: ProtectedRoute is not defined
+    at ProtectedComponent (App.tsx:56:4)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=174804f9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=174804f9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=174804f9:15914:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=174804f9:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=174804f9:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=174804f9:19137:13)
+    at renderRootSync (chunk-RPCDYKBN.js?v=174804f9:19116:15)
+    at recoverFromConcurrentError (chunk-RPCDYKBN.js?v=174804f9:18736:28)
+    at performSyncWorkOnRoot (chunk-RPCDYKBN.js?v=174804f9:18879:28)Understand this error
+content-script.js:194 Content Script re-injected or page loaded
