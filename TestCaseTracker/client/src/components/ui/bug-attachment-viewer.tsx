@@ -4,7 +4,7 @@ import { FileAttachment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Download, X, ExternalLink, FileText, Image as ImageIcon, Video, ClipboardCopy } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 interface BugAttachmentViewerProps {
   attachment: FileAttachment | null;
@@ -13,8 +13,6 @@ interface BugAttachmentViewerProps {
 }
 
 export function BugAttachmentViewer({ attachment, open, onOpenChange }: BugAttachmentViewerProps) {
-  const { toast } = useToast();
-  
   if (!attachment) return null;
   
   const isImage = 

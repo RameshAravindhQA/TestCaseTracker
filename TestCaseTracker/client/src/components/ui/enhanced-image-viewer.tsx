@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog';
 import { Button } from './button';
 import { X, ZoomIn, ZoomOut, RotateCw, Download, Maximize2 } from 'lucide-react';
-import { useToast } from '../../hooks/use-toast';
+import { toast } from '../../hooks/use-toast';
 
 interface EnhancedImageViewerProps {
   isOpen: boolean;
@@ -19,7 +20,6 @@ export const EnhancedImageViewer: React.FC<EnhancedImageViewerProps> = ({
   fileName,
   fileSize
 }) => {
-  const { toast } = useToast();
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -73,7 +73,7 @@ export const EnhancedImageViewer: React.FC<EnhancedImageViewerProps> = ({
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
+      
       toast({
         title: 'Success',
         description: 'Image downloaded successfully'
@@ -128,14 +128,14 @@ export const EnhancedImageViewer: React.FC<EnhancedImageViewerProps> = ({
             </div>
           </div>
         </DialogHeader>
-
+        
         <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 relative">
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
           )}
-
+          
           {error && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
@@ -150,7 +150,7 @@ export const EnhancedImageViewer: React.FC<EnhancedImageViewerProps> = ({
               </div>
             </div>
           )}
-
+          
           <div className="flex items-center justify-center min-h-full p-4">
             <img
               src={imageUrl}

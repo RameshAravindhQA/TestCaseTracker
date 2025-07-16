@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import Papa from "papaparse";
 import { format } from "date-fns";
@@ -52,7 +52,6 @@ export function BugImport({ projectId, moduleId, onSuccess }: BugImportProps) {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   // Import bugs mutation
   const importBugsMutation = useMutation({

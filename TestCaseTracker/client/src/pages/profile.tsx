@@ -12,11 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { Loader2, Upload, Play, Pause, Camera } from "lucide-react";
@@ -82,8 +82,6 @@ export default function ProfilePage() {
             if (response.ok) {
               const data = await response.json();
               return { ...animation, preview: data };
-            } else {
-              console.warn(`Failed to load ${animation.name}: HTTP ${response.status}`);
             }
           } catch (error) {
             console.error(`Failed to load ${animation.name}:`, error);
@@ -95,7 +93,7 @@ export default function ProfilePage() {
     };
 
     loadAnimations();
-  }, [lottieAnimations.length]);
+  }, []);
 
   // Fetch current user data
   const { data: currentUser, isLoading: isUserLoading } = useQuery<User>({
@@ -359,16 +357,13 @@ export default function ProfilePage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Check if it's a Lottie file
-      const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
-      
       // Handle Lottie file upload
-      if (isLottieFile) {
+      if (file.type === 'application/json' || file.name.endsWith('.json')) {
         handleLottieFileUpload(file);
         return;
       }
-      
       // Check file size (limit to 2MB for images, 20MB for lottie)
+      const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
       const maxSize = isLottieFile ? 20 * 1024 * 1024 : 2 * 1024 * 1024;
       const maxSizeText = isLottieFile ? '20MB' : '2MB';
       
@@ -382,6 +377,7 @@ export default function ProfilePage() {
       }
 
       // Check file type
+      const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
       if (!file.type.startsWith('image/') && !isLottieFile) {
         toast({
           title: "Invalid file type",
@@ -829,63 +825,47 @@ export default function ProfilePage() {
                 </TabsContent>
                  {/* Avatar Animation Tab */}
                  <TabsContent value="avatar">
-                  <div className="pt-4">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold">Select Avatar Animation</h3>
-                      <p className="text-sm text-muted-foreground">Choose a Lottie animation for your avatar</p>
-                    </div>
-                    <div className="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
-                      {lottieAnimations.map((animation) => (
-                        <motion.div
-                          key={animation.id}
-                          className={`relative rounded-md border p-3 cursor-pointer hover:shadow-md transition-all duration-300 ${selectedLottie?.id === animation.id ? 'border-primary border-2 bg-primary/5' : 'border-muted hover:border-primary/50'}`}
-                          onClick={() => handleLottieSelect(animation)}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          {animation.preview ? (
-                            <div className="relative">
-                              <div className="flex justify-center">
-                                <Lottie
-                                  animationData={animation.preview}
-                                  loop
-                                  autoplay={playingAnimations.has(animation.id)}
-                                  style={{ height: 80, width: 80 }}
-                                />
-                              </div>
-                              <div className="absolute top-0 right-0 p-1">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-6 w-6"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleAnimation(animation.id);
-                                  }}
-                                >
-                                  {playingAnimations.has(animation.id) ? (
-                                    <Pause className="h-3 w-3" />
-                                  ) : (
-                                    <Play className="h-3 w-3" />
-                                  )}
-                                </Button>
-                              </div>
+                  <CardHeader>
+                    <CardTitle>Select Avatar Animation</CardTitle>
+                    <CardDescription>Choose a Lottie animation for your avatar</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
+                    {lottieAnimations.map((animation) => (
+                      <motion.div
+                        key={animation.id}
+                        className={`relative rounded-md border p-2 cursor-pointer hover:shadow-md transition-shadow duration-300 ${selectedLottie?.id === animation.id ? 'border-primary border-2' : 'border-muted'}`}
+                        onClick={() => handleLottieSelect(animation)}
+                      >
+                        {animation.preview && (
+                          <div className="relative">
+                            <Lottie
+                              animationData={animation.preview}
+                              loop
+                              autoplay={playingAnimations.has(animation.id)}
+                              style={{ height: 100, width: 100 }}
+                            />
+                            <div className="absolute top-0 right-0 p-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent animation selection
+                                  toggleAnimation(animation.id);
+                                }}
+                              >
+                                {playingAnimations.has(animation.id) ? (
+                                  <Pause className="h-4 w-4" />
+                                ) : (
+                                  <Play className="h-4 w-4" />
+                                )}
+                              </Button>
                             </div>
-                          ) : (
-                            <div className="flex items-center justify-center h-20 w-20 mx-auto bg-muted rounded">
-                              <Camera className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                          )}
-                          <p className="text-xs text-center mt-2 font-medium">{animation.name}</p>
-                          {selectedLottie?.id === animation.id && (
-                            <div className="absolute top-1 left-1 bg-primary rounded-full p-1">
-                              <div className="h-2 w-2 bg-white rounded-full" />
-                            </div>
-                          )}
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
+                          </div>
+                        )}
+                        <p className="text-sm text-muted-foreground text-center mt-2">{animation.name}</p>
+                      </motion.div>
+                    ))}
+                  </CardContent>
                 </TabsContent>
               </Tabs>
             </CardContent>

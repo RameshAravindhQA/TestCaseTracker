@@ -5,7 +5,7 @@ import { FileAttachment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Download, X, ExternalLink, FileText, Image as ImageIcon, Video, ClipboardCopy, ZoomIn, ZoomOut, RotateCw, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 
 interface AttachmentViewerProps {
@@ -22,7 +22,6 @@ export function AttachmentViewer({ attachment }: AttachmentViewerProps) {
   const [currentTime, setCurrentTime] = React.useState(0);
   const [duration, setDuration] = React.useState(0);
   const videoRef = React.useRef<HTMLVideoElement>(null);
-  const { toast } = useToast();
 
   React.useEffect(() => {
     if (attachment) {

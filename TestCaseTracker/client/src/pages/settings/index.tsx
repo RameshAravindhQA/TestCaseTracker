@@ -42,8 +42,7 @@ import {
   FileArchive,
   Database,
   Tag,
-  NotebookPen,
-  Volume2
+  NotebookPen
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -55,8 +54,6 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { RolePermissions } from "@/components/settings/role-permissions";
 import { MarkerManagement } from "@/components/settings/marker-management";
-import { SoundSettings } from "@/components/settings/sound-settings";
-import { SoundTest } from '@/components/sound-test';
 
 // Types
 interface SystemSettings {
@@ -489,7 +486,6 @@ export default function SettingsPage() {
     { id: "security", label: "Security", icon: <Shield className="h-4 w-4 mr-2" /> },
     { id: "test-case", label: "Test Cases", icon: <NotebookPen className="h-4 w-4 mr-2" /> },
     { id: "permissions", label: "Permissions", icon: <Users2 className="h-4 w-4 mr-2" /> },
-    { id: "sounds", label: "Sounds", icon: <Volume2 className="h-4 w-4 mr-2" /> },
   ];
 
   return (
@@ -858,13 +854,13 @@ export default function SettingsPage() {
                                     <SelectValue placeholder="Select location" />
                                   </SelectTrigger>
                                 </FormControl>
-                               ```text
-                                  <SelectContent>
+                                <SelectContent>
                                   <SelectItem value="local">Local Storage</SelectItem>
                                   <SelectItem value="s3">Amazon S3</SelectItem>
                                   <SelectItem value="gcs">Google Cloud Storage</SelectItem>
                                   <SelectItem value="azure">Azure Blob Storage</SelectItem>
-                                </SelectContent>
+                                </```tool_code
+SelectContent>
                               </Select>
                               <FormMessage />
                             </FormItem>
@@ -1223,23 +1219,7 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
-             {activeTab === "sounds" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Volume2 className="h-5 w-5 mr-2" />
-                    Sound Settings
-                  </CardTitle>
-                  <CardDescription>
-                    Configure application sound settings and defaults
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <SoundSettings />
-                  <SoundTest />
-                </CardContent>
-              </Card>
-            )}
+
             {/* Permissions Settings */}
             {activeTab === "permissions" && (
               <Card>
