@@ -77,17 +77,20 @@ export function SoundSettings() {
           return;
         }
 
+        console.log(`🔊 Uploading custom sound: ${type}`, file);
+        
+        // Set custom sound and wait for it to load
         await window.soundManager.setCustomSound(type, file);
-
-        // Force reload the sounds
-        await window.soundManager.preloadSounds();
+        
+        console.log(`✅ Custom sound ${type} uploaded and set successfully`);
 
         toast({
           title: "Success",
-          description: `${type} sound updated successfully`
+          description: `${type} sound updated successfully. Test it below!`
         });
       }
     } catch (error) {
+      console.error("Sound upload error:", error);
       toast({
         title: "Error",
         description: "Failed to upload sound file",

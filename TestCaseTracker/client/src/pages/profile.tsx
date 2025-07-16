@@ -22,7 +22,6 @@ import { useColorTheme } from "@/components/theme/theme-provider";
 import { Loader2, Upload, Play, Pause, Camera } from "lucide-react";
 import { motion } from "framer-motion";
 import Lottie from "lottie-react";
-import { Player } from "@lottiefiles/react-lottie-player";
 import { useAuth } from "@/hooks/use-auth";
 
 // Form schema for profile data
@@ -74,33 +73,67 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Load lottie animations with better error handling
+    // Load lottie animations with comprehensive error handling and debugging
     const loadAnimations = async () => {
+      console.log(`🎬 Starting to load ${lottieAnimations.length} Lottie animations...`);
+      
       const loaded = await Promise.all(
         lottieAnimations.map(async (animation) => {
           try {
             console.log(`🎬 Loading Lottie: ${animation.name} from ${animation.path}`);
+            
+            // Check if file exists first
             const response = await fetch(animation.path);
+            console.log(`📡 Fetch response for ${animation.name}:`, {
+              status: response.status,
+              statusText: response.statusText,
+              ok: response.ok,
+              contentType: response.headers.get('content-type')
+            });
+            
             if (response.ok) {
               const text = await response.text();
-              const data = JSON.parse(text);
-              console.log(`✅ Loaded Lottie animation: ${animation.name}`);
-              return { ...animation, preview: data };
+              console.log(`📄 Received text for ${animation.name}, length: ${text.length}`);
+              
+              try {
+                const data = JSON.parse(text);
+                console.log(`✅ Successfully parsed JSON for ${animation.name}:`, {
+                  version: data.v,
+                  hasLayers: !!data.layers,
+                  layerCount: data.layers?.length || 0,
+                  frameRate: data.fr,
+                  width: data.w,
+                  height: data.h
+                });
+                return { ...animation, preview: data };
+              } catch (parseError) {
+                console.error(`❌ JSON parse error for ${animation.name}:`, parseError);
+                console.error(`📄 Raw text content (first 200 chars):`, text.substring(0, 200));
+                return animation;
+              }
             } else {
-              console.warn(`❌ Failed to load ${animation.name}: ${response.status}`);
+              console.warn(`❌ Failed to load ${animation.name}: ${response.status} ${response.statusText}`);
               return animation;
             }
           } catch (error) {
-            console.error(`❌ Failed to load ${animation.name}:`, error);
+            console.error(`❌ Network error loading ${animation.name}:`, error);
             return animation;
           }
         })
       );
+      
+      console.log(`📊 Animation loading complete. Loaded: ${loaded.filter(a => a.preview).length}/${loaded.length}`);
       setLottieAnimations(loaded);
     };
 
     // Only load if we have animations and haven't loaded them yet
     const needsLoading = lottieAnimations.some(anim => !anim.preview);
+    console.log(`🔍 Animation loading check:`, {
+      totalAnimations: lottieAnimations.length,
+      needsLoading,
+      animationsWithPreview: lottieAnimations.filter(a => a.preview).length
+    });
+    
     if (lottieAnimations.length > 0 && needsLoading) {
       loadAnimations();
     }
@@ -915,12 +948,22 @@ export default function ProfilePage() {
                           {animation.preview ? (
                             <div className="relative">
                               <div className="w-full h-24 flex items-center justify-center">
-                                <Player
-                                  autoplay={playingAnimations.has(animation.id)}
-                                  loop
-                                  src={animation.preview}
-                                  style={{ height: 80, width: 80 }}
-                                />
+                                {animation.preview ? (
+                                  <Lottie
+                                    animationData={animation.preview}
+                                    loop={true}
+                                    autoplay={playingAnimations.has(animation.id)}
+                                    style={{ height: 80, width: 80 }}
+                                    onError={(error) => {
+                                      console.error(`❌ Lottie render error for ${animation.name}:`, error);
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="flex flex-col items-center space-y-1">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                    <p className="text-xs text-muted-foreground">Loading...</p>
+                                  </div>
+                                )}
                               </div>
                               <div className="absolute top-0 right-0 p-1">
                                 <Button

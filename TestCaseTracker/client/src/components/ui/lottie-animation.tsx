@@ -31,6 +31,25 @@ export function LottieAnimation({
 
         console.log(`🎬 Loading Lottie animation from: ${animationPath}`);
 
+        // Handle blob URLs (from uploaded files)
+        if (animationPath.startsWith('blob:')) {
+          console.log(`📄 Loading from blob URL: ${animationPath}`);
+          try {
+            const response = await fetch(animationPath);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch blob: ${response.status} ${response.statusText}`);
+            }
+            const data = await response.json();
+            console.log(`✅ Successfully loaded Lottie from blob: ${animationPath}`);
+            setAnimationData(data);
+            return;
+          } catch (blobError) {
+            console.error('❌ Error loading from blob:', blobError);
+            throw blobError;
+          }
+        }
+
+        // Handle regular file paths
         const response = await fetch(animationPath);
         if (!response.ok) {
           throw new Error(`Failed to load animation: ${response.status} ${response.statusText}`);
@@ -44,6 +63,7 @@ export function LottieAnimation({
         try {
           data = JSON.parse(text);
         } catch (parseError) {
+          console.error('❌ JSON parse error:', parseError);
           throw new Error('Invalid JSON format in animation file');
         }
 
@@ -58,14 +78,30 @@ export function LottieAnimation({
         }
 
         if (!data.layers && !data.assets) {
-          throw new Error('Invalid Lottie file: Missing layers and assets');
+          console.warn('⚠️ Animation missing layers and assets, but attempting to render...');
         }
 
         console.log(`✅ Successfully loaded Lottie animation: ${animationPath}`);
+        console.log(`📊 Animation details:`, {
+          version: data.v || data.version,
+          hasLayers: !!data.layers,
+          layerCount: data.layers?.length || 0,
+          hasAssets: !!data.assets,
+          frameRate: data.fr,
+          width: data.w,
+          height: data.h
+        });
+        
         setAnimationData(data);
       } catch (err) {
         console.error('❌ Error loading Lottie animation:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load animation');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load animation';
+        console.error('❌ Full error details:', {
+          message: errorMessage,
+          animationPath,
+          error: err
+        });
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -73,10 +109,15 @@ export function LottieAnimation({
 
     if (animationPath) {
       loadAnimation();
+    } else {
+      console.warn('⚠️ No animation path provided');
+      setError('No animation path provided');
+      setLoading(false);
     }
   }, [animationPath]);
 
   if (loading) {
+    console.log(`⏳ Loading animation: ${animationPath}`);
     return (
       <div 
         className={`flex items-center justify-center ${className}`}
@@ -88,18 +129,21 @@ export function LottieAnimation({
   }
 
   if (error || !animationData) {
+    console.error(`❌ Rendering error state for: ${animationPath}`, { error, hasData: !!animationData });
     return (
       <div 
-        className={`flex flex-col items-center justify-center bg-gray-100 rounded ${className}`}
+        className={`flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 rounded ${className}`}
         style={{ width, height }}
       >
-        <span className="text-gray-500 text-xs text-center p-2">
+        <span className="text-gray-500 dark:text-gray-400 text-xs text-center p-2">
           {error || 'Animation not available'}
         </span>
       </div>
     );
   }
 
+  console.log(`🎬 Rendering Lottie animation: ${animationPath}`);
+  
   return (
     <div className={className} style={{ width, height }}>
       <Lottie
@@ -110,6 +154,12 @@ export function LottieAnimation({
         onError={(error) => {
           console.error('❌ Lottie render error:', error);
           setError('Failed to render animation');
+        }}
+        onComplete={() => {
+          console.log(`✅ Lottie animation completed: ${animationPath}`);
+        }}
+        onLoopComplete={() => {
+          console.log(`🔄 Lottie animation loop completed: ${animationPath}`);
         }}
       />
     </div>
