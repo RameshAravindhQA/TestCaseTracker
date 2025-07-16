@@ -54,7 +54,6 @@ import { z } from "zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { RolePermissions } from "@/components/settings/role-permissions";
-import { MarkerManagement } from "@/components/settings/marker-management";
 import { SoundSettings } from "@/components/settings/sound-settings";
 import { SoundTest } from '@/components/sound-test';
 
@@ -855,10 +854,10 @@ export default function SettingsPage() {
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    The code has been modified to include a Sound settings tab in the settings page, import the Volume2 icon and SoundSettings component, and add the Sound settings content to the tab rendering.                                  <SelectValue placeholder="Select location" />
+                                    <SelectValue placeholder="Select location" />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
+                               <SelectContent>
                                   <SelectItem value="local">Local Storage</SelectItem>
                                   <SelectItem value="s3">Amazon S3</SelectItem>
                                   <SelectItem value="gcs">Google Cloud Storage</SelectItem>
@@ -1245,18 +1244,6 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
-{/* Marker Management */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Marker Management</CardTitle>
-              <CardDescription>
-                Create and manage custom markers for traceability matrices
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <MarkerManagement />
-            </CardContent>
-          </Card>
           {/* Sound Settings */}
           {activeTab === "sound" && (
             <Card>

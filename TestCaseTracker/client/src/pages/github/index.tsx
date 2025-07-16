@@ -11,8 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { Plus, Settings, ExternalLink, Edit, Trash2, Github, Users, GitBranch } from "lucide-react";
+import { Plus, Settings, ExternalLink, Edit, Trash2, Github, Users, GitBranch, Eye, TestTube, CheckCircle, AlertCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 interface GitHubIntegration {
   id: number;
@@ -26,64 +26,76 @@ interface GitHubIntegration {
   repo: string;
   createdAt: string;
   updatedAt: string;
+  project?: {
+    id: number;
+    name: string;
+  };
 }
 
-interface GitHubIssue {
+interface Project {
   id: number;
-  number: number;
-  title: string;
-  body: string;
-  state: string;
-  labels: Array<{
-    name: string;
-    color: string;
-  }>;
-  assignees: Array<{
-    login: string;
-    avatar_url: string;
-  }>;
-  created_at: string;
-  updated_at: string;
-  html_url: string;
+  name: string;
+  description?: string;
 }
 
 export default function GitHubIntegrationPage() {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [isAddingIntegration, setIsAddingIntegration] = useState(false);
   const [editingIntegration, setEditingIntegration] = useState<GitHubIntegration | null>(null);
-  const [newIntegration, setNewIntegration] = useState({
+  const [formData, setFormData] = useState({
+    projectId: "",
     repositoryUrl: "",
     accessToken: "",
-    webhookUrl: ""
+    webhookUrl: "",
+    isActive: true
   });
-
-  // Fetch projects
-  const { data: projects = [] } = useQuery({
-    queryKey: ['/api/projects'],
-    queryFn: () => apiRequest('GET', '/api/projects').then(res => res.json())
-  });
+  const [testingConnection, setTestingConnection] = useState<number | null>(null);
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch GitHub integrations
   const { data: integrations = [], isLoading: integrationsLoading } = useQuery({
     queryKey: ['/api/github/integrations'],
-    queryFn: () => apiRequest('GET', '/api/github/integrations').then(res => res.json())
+    queryFn: async () => {
+      const response = await fetch('/api/github/integrations');
+      if (!response.ok) {
+        throw new Error('Failed to fetch GitHub integrations');
+      }
+      return response.json();
+    },
   });
 
-  // Fetch GitHub issues for selected project
-  const { data: githubIssues = [], isLoading: issuesLoading } = useQuery({
-    queryKey: ['/api/github/issues', selectedProjectId],
-    queryFn: () => selectedProjectId ? 
-      apiRequest('GET', `/api/github/issues?projectId=${selectedProjectId}`).then(res => res.json()) : 
-      Promise.resolve([]),
-    enabled: !!selectedProjectId
+  // Fetch projects for the dropdown
+  const { data: projects = [] } = useQuery({
+    queryKey: ['/api/projects'],
+    queryFn: async () => {
+      const response = await fetch('/api/projects');
+      if (!response.ok) {
+        throw new Error('Failed to fetch projects');
+      }
+      return response.json();
+    },
   });
 
   // Create integration mutation
   const createIntegrationMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/github/integrations', data);
+      if (window.soundManager) {
+        await window.soundManager.playSound('crud');
+      }
+      
+      const response = await fetch('/api/github/integrations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create integration');
+      }
+      
       return response.json();
     },
     onSuccess: () => {
@@ -92,7 +104,7 @@ export default function GitHubIntegrationPage() {
         description: "GitHub integration created successfully"
       });
       setIsAddingIntegration(false);
-      setNewIntegration({ repositoryUrl: "", accessToken: "", webhookUrl: "" });
+      resetForm();
       queryClient.invalidateQueries({ queryKey: ['/api/github/integrations'] });
     },
     onError: (error: any) => {
@@ -107,7 +119,22 @@ export default function GitHubIntegrationPage() {
   // Update integration mutation
   const updateIntegrationMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('PUT', `/api/github/integrations/${data.id}`, data);
+      if (window.soundManager) {
+        await window.soundManager.playSound('crud');
+      }
+      
+      const response = await fetch(`/api/github/integrations/${data.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update integration');
+      }
+      
       return response.json();
     },
     onSuccess: () => {
@@ -116,6 +143,7 @@ export default function GitHubIntegrationPage() {
         description: "GitHub integration updated successfully"
       });
       setEditingIntegration(null);
+      resetForm();
       queryClient.invalidateQueries({ queryKey: ['/api/github/integrations'] });
     },
     onError: (error: any) => {
@@ -130,7 +158,17 @@ export default function GitHubIntegrationPage() {
   // Delete integration mutation
   const deleteIntegrationMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/github/integrations/${id}`);
+      if (window.soundManager) {
+        await window.soundManager.playSound('crud');
+      }
+      
+      const response = await fetch(`/api/github/integrations/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete integration');
+      }
     },
     onSuccess: () => {
       toast({
@@ -148,262 +186,275 @@ export default function GitHubIntegrationPage() {
     }
   });
 
-  // Sync issues mutation
-  const syncIssuesMutation = useMutation({
-    mutationFn: async (integrationId: number) => {
-      const response = await apiRequest('POST', `/api/github/integrations/${integrationId}/sync`);
+  // Test connection mutation
+  const testConnectionMutation = useMutation({
+    mutationFn: async (integration: GitHubIntegration) => {
+      const response = await fetch('/api/github/test-connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          repositoryUrl: integration.repositoryUrl,
+          accessToken: integration.accessToken,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Connection test failed');
+      }
+      
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Success",
-        description: "GitHub issues synchronized successfully"
+        title: "Connection Test",
+        description: "GitHub connection is working correctly",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/github/issues'] });
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to sync issues",
+        title: "Connection Failed",
+        description: error.message,
         variant: "destructive"
       });
     }
   });
 
-  const handleCreateIntegration = () => {
-    if (!selectedProjectId || !newIntegration.repositoryUrl || !newIntegration.accessToken) {
+  const resetForm = () => {
+    setFormData({
+      projectId: "",
+      repositoryUrl: "",
+      accessToken: "",
+      webhookUrl: "",
+      isActive: true
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.projectId || !formData.repositoryUrl || !formData.accessToken) {
       toast({
-        title: "Error",
+        title: "Validation Error",
         description: "Please fill in all required fields",
         variant: "destructive"
       });
       return;
     }
 
-    createIntegrationMutation.mutate({
-      projectId: selectedProjectId,
-      ...newIntegration
+    const submitData = {
+      ...formData,
+      projectId: parseInt(formData.projectId),
+    };
+
+    if (editingIntegration) {
+      updateIntegrationMutation.mutate({ ...submitData, id: editingIntegration.id });
+    } else {
+      createIntegrationMutation.mutate(submitData);
+    }
+  };
+
+  const handleEdit = (integration: GitHubIntegration) => {
+    setEditingIntegration(integration);
+    setFormData({
+      projectId: integration.projectId.toString(),
+      repositoryUrl: integration.repositoryUrl,
+      accessToken: integration.accessToken,
+      webhookUrl: integration.webhookUrl || "",
+      isActive: integration.isActive
     });
+    setIsAddingIntegration(true);
   };
 
-  const handleUpdateIntegration = (integration: GitHubIntegration) => {
-    updateIntegrationMutation.mutate(integration);
-  };
-
-  const handleDeleteIntegration = (id: number) => {
-    if (confirm("Are you sure you want to delete this GitHub integration?")) {
+  const handleDelete = (id: number) => {
+    if (window.confirm('Are you sure you want to delete this GitHub integration?')) {
       deleteIntegrationMutation.mutate(id);
     }
   };
 
-  const handleSyncIssues = (integrationId: number) => {
-    syncIssuesMutation.mutate(integrationId);
+  const handleTestConnection = (integration: GitHubIntegration) => {
+    setTestingConnection(integration.id);
+    testConnectionMutation.mutate(integration);
+    setTimeout(() => setTestingConnection(null), 3000);
   };
 
-  const getProjectIntegrations = (projectId: number) => {
-    return integrations.filter(integration => integration.projectId === projectId);
+  const parseRepoUrl = (url: string) => {
+    const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+    return match ? { owner: match[1], repo: match[2].replace('.git', '') } : null;
   };
 
   return (
     <MainLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">GitHub Integration</h1>
-            <p className="text-muted-foreground">
-              Connect your projects to GitHub repositories for seamless issue tracking
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+              <Github className="h-8 w-8" />
+              GitHub Integration
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Connect your projects to GitHub repositories for seamless issue tracking and automation
             </p>
           </div>
-          <Button onClick={() => setIsAddingIntegration(true)}>
+          <Button onClick={() => setIsAddingIntegration(true)} className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
             <Plus className="mr-2 h-4 w-4" />
             Add Integration
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Project Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Github className="h-5 w-5" />
-                Select Project
-              </CardTitle>
-              <CardDescription>
-                Choose a project to view GitHub integrations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Select value={selectedProjectId?.toString()} onValueChange={(value) => setSelectedProjectId(parseInt(value))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project: any) => (
-                    <SelectItem key={project.id} value={project.id.toString()}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-
-          {/* GitHub Integrations */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <GitBranch className="h-5 w-5" />
-                GitHub Integrations
-                {selectedProjectId && (
-                  <Badge variant="secondary">
-                    {getProjectIntegrations(selectedProjectId).length}
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Active GitHub repository connections
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {selectedProjectId ? (
-                <div className="space-y-3">
-                  {getProjectIntegrations(selectedProjectId).map((integration) => (
-                    <div key={integration.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium">{integration.owner}/{integration.repo}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {integration.isActive ? (
-                            <Badge variant="default">Active</Badge>
-                          ) : (
-                            <Badge variant="secondary">Inactive</Badge>
-                          )}
+        {/* GitHub Integrations Grid */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {integrationsLoading ? (
+            <div className="col-span-full flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : integrations.length === 0 ? (
+            <div className="col-span-full">
+              <Card className="border-dashed border-2 border-gray-300 dark:border-gray-700">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Github className="h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No GitHub Integrations</h3>
+                  <p className="text-muted-foreground text-center mb-4">
+                    Get started by connecting your first GitHub repository
+                  </p>
+                  <Button onClick={() => setIsAddingIntegration(true)} variant="outline">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Integration
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            integrations.map((integration: GitHubIntegration) => {
+              const repoInfo = parseRepoUrl(integration.repositoryUrl);
+              return (
+                <Card key={integration.id} className="hover:shadow-lg transition-shadow duration-200">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Github className="h-5 w-5 text-gray-600" />
+                        <div>
+                          <CardTitle className="text-lg">{repoInfo?.repo || 'Repository'}</CardTitle>
+                          <CardDescription className="text-sm">
+                            {repoInfo?.owner}/{repoInfo?.repo}
+                          </CardDescription>
                         </div>
                       </div>
+                      <Badge variant={integration.isActive ? "default" : "secondary"}>
+                        {integration.isActive ? (
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                        ) : (
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                        )}
+                        {integration.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Project</Label>
+                        <p className="font-medium">{integration.project?.name || 'Unknown'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Last Sync</Label>
+                        <p className="font-medium">
+                          {integration.lastSync ? new Date(integration.lastSync).toLocaleDateString() : 'Never'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground">Repository URL</Label>
                       <div className="flex items-center gap-2">
-                        <Button
+                        <Input 
+                          value={integration.repositoryUrl} 
+                          readOnly 
+                          className="text-xs"
+                        />
+                        <Button 
+                          size="sm" 
                           variant="outline"
-                          size="sm"
-                          onClick={() => handleSyncIssues(integration.id)}
-                          disabled={syncIssuesMutation.isPending}
+                          onClick={() => window.open(integration.repositoryUrl, '_blank')}
                         >
-                          Sync
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingIntegration(integration)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteIntegration(integration.id)}
-                          disabled={deleteIntegrationMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
+                          <ExternalLink className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
-                  ))}
-                  {getProjectIntegrations(selectedProjectId).length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No GitHub integrations found for this project
+                    
+                    {integration.webhookUrl && (
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground">Webhook URL</Label>
+                        <Input 
+                          value={integration.webhookUrl} 
+                          readOnly 
+                          className="text-xs"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-2 pt-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleTestConnection(integration)}
+                        disabled={testingConnection === integration.id}
+                        className="flex-1"
+                      >
+                        <TestTube className="h-3 w-3 mr-1" />
+                        {testingConnection === integration.id ? 'Testing...' : 'Test'}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleEdit(integration)}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleDelete(integration.id)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  Select a project to view integrations
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
         </div>
 
-        {/* GitHub Issues */}
-        {selectedProjectId && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                GitHub Issues
-                <Badge variant="secondary">{githubIssues.length}</Badge>
-              </CardTitle>
-              <CardDescription>
-                Issues from connected GitHub repositories
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {issuesLoading ? (
-                <div className="text-center py-8">Loading issues...</div>
-              ) : githubIssues.length > 0 ? (
-                <div className="space-y-4">
-                  {githubIssues.map((issue: GitHubIssue) => (
-                    <div key={issue.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-medium">#{issue.number} {issue.title}</h3>
-                            <Badge variant={issue.state === 'open' ? 'default' : 'secondary'}>
-                              {issue.state}
-                            </Badge>
-                          </div>
-                          {issue.body && (
-                            <p className="text-sm text-muted-foreground mb-2">
-                              {issue.body.substring(0, 200)}...
-                            </p>
-                          )}
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>Created: {new Date(issue.created_at).toLocaleDateString()}</span>
-                            <span>Updated: {new Date(issue.updated_at).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {issue.labels.map((label) => (
-                            <Badge key={label.name} variant="outline" style={{ backgroundColor: `#${label.color}20` }}>
-                              {label.name}
-                            </Badge>
-                          ))}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(issue.html_url, '_blank')}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No GitHub issues found
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Add Integration Dialog */}
+        {/* Add/Edit Integration Dialog */}
         <Dialog open={isAddingIntegration} onOpenChange={setIsAddingIntegration}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Add GitHub Integration</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Github className="h-5 w-5" />
+                {editingIntegration ? 'Edit GitHub Integration' : 'Add GitHub Integration'}
+              </DialogTitle>
               <DialogDescription>
-                Connect a GitHub repository to this project
+                Connect a GitHub repository to your project for automated issue tracking
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="project">Project</Label>
-                <Select value={selectedProjectId?.toString()} onValueChange={(value) => setSelectedProjectId(parseInt(value))}>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="project">Project *</Label>
+                <Select
+                  value={formData.projectId}
+                  onValueChange={(value) => setFormData({ ...formData, projectId: value })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a project" />
                   </SelectTrigger>
                   <SelectContent>
-                    {projects.map((project: any) => (
+                    {projects.map((project: Project) => (
                       <SelectItem key={project.id} value={project.id.toString()}>
                         {project.name}
                       </SelectItem>
@@ -411,92 +462,74 @@ export default function GitHubIntegrationPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="repositoryUrl">Repository URL</Label>
+
+              <div className="space-y-2">
+                <Label htmlFor="repositoryUrl">Repository URL *</Label>
                 <Input
                   id="repositoryUrl"
-                  placeholder="https://github.com/owner/repo"
-                  value={newIntegration.repositoryUrl}
-                  onChange={(e) => setNewIntegration({ ...newIntegration, repositoryUrl: e.target.value })}
+                  value={formData.repositoryUrl}
+                  onChange={(e) => setFormData({ ...formData, repositoryUrl: e.target.value })}
+                  placeholder="https://github.com/username/repository"
+                  required
                 />
               </div>
-              <div>
-                <Label htmlFor="accessToken">Access Token</Label>
+
+              <div className="space-y-2">
+                <Label htmlFor="accessToken">Access Token *</Label>
                 <Input
                   id="accessToken"
                   type="password"
-                  placeholder="GitHub personal access token"
-                  value={newIntegration.accessToken}
-                  onChange={(e) => setNewIntegration({ ...newIntegration, accessToken: e.target.value })}
+                  value={formData.accessToken}
+                  onChange={(e) => setFormData({ ...formData, accessToken: e.target.value })}
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  required
                 />
+                <p className="text-xs text-muted-foreground">
+                  Personal access token with repository access permissions
+                </p>
               </div>
-              <div>
+
+              <div className="space-y-2">
                 <Label htmlFor="webhookUrl">Webhook URL (Optional)</Label>
                 <Input
                   id="webhookUrl"
+                  value={formData.webhookUrl}
+                  onChange={(e) => setFormData({ ...formData, webhookUrl: e.target.value })}
                   placeholder="https://your-app.com/webhook"
-                  value={newIntegration.webhookUrl}
-                  onChange={(e) => setNewIntegration({ ...newIntegration, webhookUrl: e.target.value })}
                 />
               </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddingIntegration(false)}>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="isActive">Enable Integration</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow creating GitHub issues from bugs
+                  </p>
+                </div>
+                <Switch
+                  id="isActive"
+                  checked={formData.isActive}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => {
+                  setIsAddingIntegration(false);
+                  setEditingIntegration(null);
+                  resetForm();
+                }} className="flex-1">
                   Cancel
                 </Button>
-                <Button onClick={handleCreateIntegration} disabled={createIntegrationMutation.isPending}>
-                  {createIntegrationMutation.isPending ? "Creating..." : "Create Integration"}
+                <Button 
+                  type="submit" 
+                  disabled={createIntegrationMutation.isPending || updateIntegrationMutation.isPending}
+                  className="flex-1"
+                >
+                  {editingIntegration ? 'Update' : 'Create'} Integration
                 </Button>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Integration Dialog */}
-        <Dialog open={!!editingIntegration} onOpenChange={(open) => !open && setEditingIntegration(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit GitHub Integration</DialogTitle>
-              <DialogDescription>
-                Update GitHub integration settings
-              </DialogDescription>
-            </DialogHeader>
-            {editingIntegration && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="editRepositoryUrl">Repository URL</Label>
-                  <Input
-                    id="editRepositoryUrl"
-                    value={editingIntegration.repositoryUrl}
-                    onChange={(e) => setEditingIntegration({ ...editingIntegration, repositoryUrl: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="editAccessToken">Access Token</Label>
-                  <Input
-                    id="editAccessToken"
-                    type="password"
-                    value={editingIntegration.accessToken}
-                    onChange={(e) => setEditingIntegration({ ...editingIntegration, accessToken: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="editWebhookUrl">Webhook URL</Label>
-                  <Input
-                    id="editWebhookUrl"
-                    value={editingIntegration.webhookUrl || ''}
-                    onChange={(e) => setEditingIntegration({ ...editingIntegration, webhookUrl: e.target.value })}
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setEditingIntegration(null)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={() => handleUpdateIntegration(editingIntegration)} disabled={updateIntegrationMutation.isPending}>
-                    {updateIntegrationMutation.isPending ? "Updating..." : "Update Integration"}
-                  </Button>
-                </div>
-              </div>
-            )}
+            </form>
           </DialogContent>
         </Dialog>
       </div>

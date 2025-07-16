@@ -143,10 +143,11 @@ class SoundManager {
             audio.crossOrigin = 'anonymous';
 
             const loadPromise = new Promise((resolve, reject) => {
+              // Set up timeout for loading
               const timeout = setTimeout(() => {
-                console.warn(`⏰ Audio load timeout for ${type} with ${formatUrl}`);
-                reject(new Error('Timeout'));
-              }, 2000);
+                console.log(`⏰ Audio load timeout for ${type} with ${formatUrl}`);
+                loadPromise.reject(new Error(`Timeout loading ${type} sound`));
+              }, 10000);
 
               const onLoad = () => {
                 console.log(`✅ Sound ${type} loaded successfully from ${formatUrl}`);
@@ -303,7 +304,7 @@ class SoundManager {
       reader.onload = (e) => {
         try {
           console.log(`🔊 Processing custom sound: ${type}`);
-          
+
           const customSounds = this.getCustomSounds();
           customSounds[type] = e.target.result;
           localStorage.setItem('customSounds', JSON.stringify(customSounds));
@@ -312,11 +313,11 @@ class SoundManager {
           const audio = new Audio(e.target.result);
           audio.volume = this.volume;
           audio.preload = 'auto';
-          
+
           // Immediate update for testing
           this.sounds.set(type, audio);
           console.log(`✅ Custom sound ${type} immediately available for testing`);
-          
+
           // Wait for audio to fully load
           const onLoad = () => {
             console.log(`✅ Custom sound ${type} fully loaded and ready`);
@@ -338,7 +339,7 @@ class SoundManager {
           audio.addEventListener('canplaythrough', onLoad, { once: true });
           audio.addEventListener('loadeddata', onLoad, { once: true });
           audio.addEventListener('error', onError, { once: true });
-          
+
           // Fallback timeout
           setTimeout(() => {
             if (audio.readyState >= 2) {
@@ -348,7 +349,7 @@ class SoundManager {
               resolve();
             }
           }, 1000);
-          
+
         } catch (error) {
           console.error(`❌ Error processing custom sound ${type}:`, error);
           reject(error);

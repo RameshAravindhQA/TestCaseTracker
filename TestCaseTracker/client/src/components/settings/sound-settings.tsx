@@ -79,10 +79,24 @@ export function SoundSettings() {
 
         console.log(`🔊 Uploading custom sound: ${type}`, file);
         
+        // Create blob URL for the file
+        const blobUrl = URL.createObjectURL(file);
+        console.log(`📄 Created blob URL for ${type}: ${blobUrl}`);
+        
         // Set custom sound and wait for it to load
         await window.soundManager.setCustomSound(type, file);
         
         console.log(`✅ Custom sound ${type} uploaded and set successfully`);
+
+        // Play the uploaded sound immediately to test
+        setTimeout(async () => {
+          try {
+            await window.soundManager.playSound(type);
+            console.log(`🎵 Test play of uploaded ${type} sound successful`);
+          } catch (playError) {
+            console.error(`❌ Test play of uploaded ${type} sound failed:`, playError);
+          }
+        }, 500);
 
         toast({
           title: "Success",

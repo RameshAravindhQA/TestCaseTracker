@@ -284,7 +284,7 @@ function AppContent() {
           <SoundIntegrationSetup />
           <Router />
           <GitHubIssueReporter />
-          
+
           {/* Welcome Dialog - now inside AuthProvider */}
           <WelcomeDialog 
             open={showWelcomeDialog} 
@@ -297,6 +297,50 @@ function AppContent() {
 }
 
 function App() {
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+
+  useEffect(() => {
+    console.log('🚀 App starting up...');
+
+    // Load sound manager
+    const loadSoundManager = async () => {
+      console.log('🔊 Loading sound manager...');
+      try {
+        await import('./lib/soundManager.js');
+        console.log('✅ Sound manager loaded successfully');
+      } catch (error) {
+        console.error('❌ Failed to load sound manager:', error);
+      }
+    };
+
+    loadSoundManager();
+
+    // Check for welcome dialog trigger
+    const checkWelcomeDialog = () => {
+      const shouldShowWelcome = sessionStorage.getItem('showWelcomeDialog');
+      if (shouldShowWelcome === 'true') {
+        setShowWelcomeDialog(true);
+        sessionStorage.removeItem('showWelcomeDialog');
+      }
+    };
+
+    checkWelcomeDialog();
+
+    // Listen for storage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'showWelcomeDialog' && e.newValue === 'true') {
+        setShowWelcomeDialog(true);
+        sessionStorage.removeItem('showWelcomeDialog');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <SoundProvider>

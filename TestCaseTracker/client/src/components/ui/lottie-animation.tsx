@@ -48,8 +48,11 @@ export function LottieAnimation({
           }
         }
 
-        // Handle regular file paths
-        const response = await fetch(animationPath);
+        // Handle regular file paths - add cache busting
+        const cacheBustUrl = `${animationPath}?t=${Date.now()}`;
+        console.log(`📡 Fetching animation from: ${cacheBustUrl}`);
+        
+        const response = await fetch(cacheBustUrl);
         if (!response.ok) {
           throw new Error(`Failed to load animation: ${response.status} ${response.statusText}`);
         }
@@ -61,8 +64,10 @@ export function LottieAnimation({
         let data;
         try {
           data = JSON.parse(text);
+          console.log('✅ Successfully parsed JSON on first attempt');
         } catch (parseError) {
           console.error('❌ JSON parse error:', parseError);
+          console.log('🔧 Attempting JSON repair...');
 
           // Attempt JSON repair
           let cleanedText = text.trim();
@@ -73,6 +78,7 @@ export function LottieAnimation({
             console.log('✅ Successfully parsed JSON after repair');
           } catch (repairError) {
             console.error('❌ JSON parse error after repair:', repairError);
+            console.log('📄 First 500 chars of problematic text:', text.substring(0, 500));
             throw new Error('Invalid JSON format in animation file, even after attempting repair');
           }
         }
@@ -90,6 +96,13 @@ export function LottieAnimation({
         if (!data.layers && !data.assets) {
           console.warn('⚠️ Animation missing layers and assets, but attempting to render...');
         }
+
+        // Ensure required properties exist
+        if (!data.fr) data.fr = 30; // default frame rate
+        if (!data.w) data.w = 100; // default width
+        if (!data.h) data.h = 100; // default height
+        if (!data.ip) data.ip = 0; // default in point
+        if (!data.op) data.op = 60; // default out point
 
         console.log(`✅ Successfully loaded Lottie animation: ${animationPath}`);
         console.log(`📊 Animation details:`, {
