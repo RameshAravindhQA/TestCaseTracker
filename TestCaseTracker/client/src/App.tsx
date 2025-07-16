@@ -1,4 +1,5 @@
-import React, { lazy, ComponentType, Suspense } from 'react';
+
+import React, { lazy, ComponentType, Suspense, useEffect } from 'react';
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { GitHubIssueReporter } from "@/components/ui/github-issue-reporter";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { SoundProvider } from '@/hooks/use-sound-provider';
 
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
@@ -35,14 +37,6 @@ import TimesheetsPage from "@/pages/timesheets/index";
 import NotebooksPage from "@/pages/notebooks/index";
 import TodosPage from "./pages/todos";
 import TestDataGeneratorPage from "./pages/test-data-generator";
-// Removing duplicate import
-// import { Toaster } from "./components/ui/toaster";
-import { useEffect } from 'react';
-// import { initializeSoundIntegration } from '@/lib/sound-api-integration';
-// import { setupQuerySounds } from '@/lib/sound-query-integration';
-// import { useSoundPlayer } from '@/hooks/use-sound-provider';
-import { SoundProvider } from '@/hooks/use-sound-provider';
-
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -50,6 +44,7 @@ const LoadingSpinner = () => (
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
   </div>
 );
+
 const LoadingComponent = () => (
   <div className="flex flex-col items-center justify-center min-h-screen">
     <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
@@ -73,16 +68,60 @@ const ProtectedLazyComponent = ({ Component }: { Component: ComponentType }) => 
   </ProtectedRoute>
 );
 
-// Component to initialize sound integration
+// Sound Integration Setup Component
 function SoundIntegrationSetup() {
-  // const soundPlayer = useSoundPlayer();
-
   useEffect(() => {
-    // Initialize sound integration
-    // initializeSoundIntegration(soundPlayer);
+    console.log('🔊 Initializing sound integration...');
+    
+    // Check if sound manager is available
+    if (window.soundManager) {
+      console.log('✅ Sound manager is available');
+      console.log('🔊 Sound settings:', window.soundManager.getSettings());
+    } else {
+      console.warn('⚠️ Sound manager not available, attempting to initialize...');
+      
+      // Try to dynamically import and initialize sound manager
+      import('./lib/soundManager.js').then(() => {
+        console.log('✅ Sound manager imported');
+        if (window.soundManager) {
+          console.log('🔊 Sound manager initialized with settings:', window.soundManager.getSettings());
+        }
+      }).catch(error => {
+        console.error('❌ Failed to import sound manager:', error);
+      });
+    }
 
-    // Setup query sounds
-    // setupQuerySounds(queryClient);
+    // Initialize global sound handler
+    if (window.globalSoundHandler) {
+      console.log('✅ Global sound handler is available');
+    } else {
+      console.warn('⚠️ Global sound handler not available, attempting to initialize...');
+      
+      import('./lib/globalSoundHandler.js').then(() => {
+        console.log('✅ Global sound handler imported');
+      }).catch(error => {
+        console.error('❌ Failed to import global sound handler:', error);
+      });
+    }
+
+    // Add debug event listeners
+    const debugClickHandler = (event: Event) => {
+      console.log('🖱️ Click detected on:', event.target);
+      if (window.soundManager) {
+        window.soundManager.playClick().then(() => {
+          console.log('🔊 Click sound played');
+        }).catch(error => {
+          console.error('❌ Failed to play click sound:', error);
+        });
+      }
+    };
+
+    // Add temporary debug listener
+    document.addEventListener('click', debugClickHandler);
+
+    return () => {
+      document.removeEventListener('click', debugClickHandler);
+    };
   }, []);
 
   return null;
@@ -191,28 +230,62 @@ function Router() {
   );
 }
 
-function App() {
-  // Initialize sound manager
-  React.useEffect(() => {
-    if (window.soundManager) {
-      console.log('Sound manager initialized');
-    }
-  }, []);
-
+// Main App Content (everything that needs AuthProvider)
+function AppContent() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <SoundProvider>
+    <AuthProvider>
+      <ThemeProvider>
         <TooltipProvider>
           <Toaster />
           <SoundIntegrationSetup />
           <Router />
           <GitHubIssueReporter />
         </TooltipProvider>
+      </ThemeProvider>
+    </AuthProvider>
+  );
+}
+
+function App() {
+  // Initialize sound manager on app startup
+  useEffect(() => {
+    console.log('🚀 App starting up...');
+    
+    // Load sound manager script
+    const loadSoundManager = async () => {
+      try {
+        console.log('🔊 Loading sound manager...');
+        await import('./lib/soundManager.js');
+        console.log('✅ Sound manager loaded');
+        
+        console.log('🔊 Loading global sound handler...');
+        await import('./lib/globalSoundHandler.js');
+        console.log('✅ Global sound handler loaded');
+        
+        // Wait a bit for initialization
+        setTimeout(() => {
+          if (window.soundManager) {
+            console.log('🔊 Sound system ready with settings:', window.soundManager.getSettings());
+          } else {
+            console.warn('⚠️ Sound manager still not available after initialization');
+          }
+        }, 100);
+        
+      } catch (error) {
+        console.error('❌ Failed to load sound system:', error);
+      }
+    };
+
+    loadSoundManager();
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SoundProvider>
+        <AppContent />
       </SoundProvider>
     </QueryClientProvider>
   );
 }
-
-
 
 export default App;

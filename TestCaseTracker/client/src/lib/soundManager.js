@@ -33,6 +33,8 @@ class SoundManager {
   }
 
   async preloadSounds() {
+    console.log('🔊 Starting sound preload...');
+    
     const soundFiles = {
       click: '/sounds/click.mp3',
       crud: '/sounds/crud.mp3',
@@ -41,8 +43,11 @@ class SoundManager {
       message: '/sounds/success.mp3'
     };
 
+    console.log('🔊 Sound files to preload:', soundFiles);
+
     for (const [type, url] of Object.entries(soundFiles)) {
       try {
+        console.log(`🔊 Preloading ${type} from ${url}...`);
         const audio = new Audio(url);
         audio.preload = 'auto';
         audio.volume = this.volume;
@@ -50,17 +55,19 @@ class SoundManager {
         // Wait for the audio to be ready
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(() => {
+            console.warn(`⏰ Audio load timeout for ${type}`);
             reject(new Error('Audio load timeout'));
           }, 5000);
 
           audio.addEventListener('canplaythrough', () => {
+            console.log(`✅ Sound ${type} loaded successfully`);
             clearTimeout(timeout);
             resolve();
           }, { once: true });
 
           audio.addEventListener('error', (e) => {
+            console.warn(`❌ Failed to preload sound: ${type}`, e);
             clearTimeout(timeout);
-            console.warn(`Failed to preload sound: ${type}`, e);
             resolve(); // Don't reject, just continue
           }, { once: true });
 
@@ -68,23 +75,33 @@ class SoundManager {
         });
 
         this.sounds.set(type, audio);
+        console.log(`✅ Sound ${type} added to collection`);
       } catch (error) {
-        console.warn(`Error preloading sound: ${type}`, error);
+        console.warn(`❌ Error preloading sound: ${type}`, error);
       }
     }
+    
+    console.log(`🔊 Sound preload complete. Loaded ${this.sounds.size} sounds:`, Array.from(this.sounds.keys()));
   }
 
   async playSound(type) {
-    if (!this.enabled) return;
+    console.log(`🔊 Attempting to play sound: ${type}`);
+    
+    if (!this.enabled) {
+      console.log('🔇 Sound is disabled, skipping playback');
+      return;
+    }
 
     try {
       let audio = this.sounds.get(type);
       
       if (!audio) {
-        console.warn(`Sound not found: ${type}`);
+        console.warn(`❌ Sound not found: ${type}. Available sounds:`, Array.from(this.sounds.keys()));
         return;
       }
 
+      console.log(`🔊 Playing sound: ${type} at volume ${this.volume}`);
+      
       // Clone the audio to allow multiple simultaneous plays
       audio = audio.cloneNode();
       audio.volume = this.volume;
@@ -92,9 +109,10 @@ class SoundManager {
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         await playPromise;
+        console.log(`✅ Sound ${type} played successfully`);
       }
     } catch (error) {
-      console.warn(`Failed to play sound: ${type}`, error);
+      console.warn(`❌ Failed to play sound: ${type}`, error);
     }
   }
 

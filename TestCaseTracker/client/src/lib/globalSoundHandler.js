@@ -2,16 +2,24 @@
 // Global sound event handler
 class GlobalSoundHandler {
   constructor() {
+    console.log('🔊 Initializing Global Sound Handler...');
     this.setupGlobalListeners();
+    console.log('✅ Global Sound Handler initialized');
   }
 
   setupGlobalListeners() {
+    console.log('🔊 Setting up global sound listeners...');
+    
     // Add click sound to all buttons and interactive elements
     document.addEventListener('click', (event) => {
       const target = event.target;
+      console.log('🖱️ Click detected on:', target.tagName, target.className);
       
       if (this.shouldPlayClickSound(target)) {
+        console.log('🔊 Playing click sound for:', target.tagName);
         this.playClickSound();
+      } else {
+        console.log('🔇 Click sound not triggered for:', target.tagName);
       }
     });
 
@@ -53,26 +61,38 @@ class GlobalSoundHandler {
   }
 
   async playClickSound() {
+    console.log('🔊 Global handler: Playing click sound');
     if (window.soundManager) {
       await window.soundManager.playClick();
+    } else {
+      console.warn('⚠️ Sound manager not available for click sound');
     }
   }
 
   async playCrudSound() {
+    console.log('🔊 Global handler: Playing CRUD sound');
     if (window.soundManager) {
       await window.soundManager.playCrud();
+    } else {
+      console.warn('⚠️ Sound manager not available for CRUD sound');
     }
   }
 
   async playSuccessSound() {
+    console.log('🔊 Global handler: Playing success sound');
     if (window.soundManager) {
       await window.soundManager.playSuccess();
+    } else {
+      console.warn('⚠️ Sound manager not available for success sound');
     }
   }
 
   async playErrorSound() {
+    console.log('🔊 Global handler: Playing error sound');
     if (window.soundManager) {
       await window.soundManager.playError();
+    } else {
+      console.warn('⚠️ Sound manager not available for error sound');
     }
   }
 
