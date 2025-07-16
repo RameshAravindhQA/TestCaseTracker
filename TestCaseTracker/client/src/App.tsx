@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Router, Route, Switch } from 'wouter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -5,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { SoundProvider } from '@/hooks/use-sound-provider';
+import { AuthProvider } from '@/hooks/use-auth';
 import { setupGlobalFetchInterceptor } from '@/lib/sound-api-integration';
 import ProtectedRoute from '@/lib/protected-route';
 
@@ -94,206 +96,208 @@ const App: React.FC = () => {
   return (
     <ThemeProvider defaultTheme="light" storageKey="app-theme">
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <SoundProvider>
-            <Router>
-              <Switch>
-                {/* Public Routes */}
-                <Route path="/login" component={LoginPage} />
-                <Route path="/register" component={RegisterPage} />
-                <Route path="/forgot-password" component={ForgotPasswordPage} />
-                <Route path="/reset-password" component={ResetPasswordPage} />
+        <AuthProvider>
+          <TooltipProvider>
+            <SoundProvider>
+              <Router>
+                <Switch>
+                  {/* Public Routes */}
+                  <Route path="/login" component={LoginPage} />
+                  <Route path="/register" component={RegisterPage} />
+                  <Route path="/forgot-password" component={ForgotPasswordPage} />
+                  <Route path="/reset-password" component={ResetPasswordPage} />
 
-                {/* Protected Routes */}
-                <Route path="/">
-                  <ProtectedComponent>
-                    <DashboardPage />
-                  </ProtectedComponent>
-                </Route>
-
-                <Route path="/dashboard">
-                  <ProtectedComponent>
-                    <DashboardPage />
-                  </ProtectedComponent>
-                </Route>
-
-                <Route path="/profile">
-                  <ProtectedComponent>
-                    <ProfilePage />
-                  </ProtectedComponent>
-                </Route>
-
-                <Route path="/projects">
-                  <ProtectedComponent>
-                    <ProjectsPage />
-                  </ProtectedComponent>
-                </Route>
-
-                <Route path="/projects/:id">
-                  {(params) => (
+                  {/* Protected Routes */}
+                  <Route path="/">
                     <ProtectedComponent>
-                      <ProjectDetailPage />
+                      <DashboardPage />
                     </ProtectedComponent>
-                  )}
-                </Route>
+                  </Route>
 
-                <Route path="/projects/edit/:id">
-                  {(params) => (
+                  <Route path="/dashboard">
                     <ProtectedComponent>
-                      <ProjectEditPage />
+                      <DashboardPage />
                     </ProtectedComponent>
-                  )}
-                </Route>
+                  </Route>
 
-                <Route path="/test-cases">
-                  <ProtectedComponent>
-                    <TestCasesPage />
-                  </ProtectedComponent>
-                </Route>
-
-                <Route path="/bugs">
-                  <ProtectedComponent>
-                    <BugsPage />
-                  </ProtectedComponent>
-                </Route>
-
-                <Route path="/bugs/:id">
-                  {(params) => (
+                  <Route path="/profile">
                     <ProtectedComponent>
-                      <BugDetailPage />
+                      <ProfilePage />
                     </ProtectedComponent>
-                  )}
-                </Route>
+                  </Route>
 
-                <Route path="/reports">
-                  <ProtectedComponent>
-                    <ReportsPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/projects">
+                    <ProtectedComponent>
+                      <ProjectsPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/reports/consolidated">
-                  <ProtectedComponent>
-                    <ConsolidatedReportsPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/projects/:id">
+                    {(params) => (
+                      <ProtectedComponent>
+                        <ProjectDetailPage />
+                      </ProtectedComponent>
+                    )}
+                  </Route>
 
-                <Route path="/settings">
-                  <ProtectedComponent>
-                    <SettingsPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/projects/edit/:id">
+                    {(params) => (
+                      <ProtectedComponent>
+                        <ProjectEditPage />
+                      </ProtectedComponent>
+                    )}
+                  </Route>
 
-                <Route path="/users">
-                  <ProtectedComponent requiredRole="admin">
-                    <UsersPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/test-cases">
+                    <ProtectedComponent>
+                      <TestCasesPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/modules">
-                  <ProtectedComponent>
-                    <ModulesPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/bugs">
+                    <ProtectedComponent>
+                      <BugsPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/documents">
-                  <ProtectedComponent>
-                    <DocumentsPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/bugs/:id">
+                    {(params) => (
+                      <ProtectedComponent>
+                        <BugDetailPage />
+                      </ProtectedComponent>
+                    )}
+                  </Route>
 
-                <Route path="/notebooks">
-                  <ProtectedComponent>
-                    <NotebooksPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/reports">
+                    <ProtectedComponent>
+                      <ReportsPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/test-sheets">
-                  <ProtectedComponent>
-                    <TestSheetsPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/reports/consolidated">
+                    <ProtectedComponent>
+                      <ConsolidatedReportsPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/timesheets">
-                  <ProtectedComponent>
-                    <TimesheetsPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/settings">
+                    <ProtectedComponent>
+                      <SettingsPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/todos">
-                  <ProtectedComponent>
-                    <TodosPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/users">
+                    <ProtectedComponent requiredRole="admin">
+                      <UsersPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/permissions">
-                  <ProtectedComponent requiredRole="admin">
-                    <PermissionsPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/modules">
+                    <ProtectedComponent>
+                      <ModulesPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/kanban">
-                  <ProtectedComponent>
-                    <KanbanPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/documents">
+                    <ProtectedComponent>
+                      <DocumentsPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/messenger">
-                  <ProtectedComponent>
-                    <MessengerPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/notebooks">
+                    <ProtectedComponent>
+                      <NotebooksPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/functional-flow">
-                  <ProtectedComponent>
-                    <FunctionalFlowPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/test-sheets">
+                    <ProtectedComponent>
+                      <TestSheetsPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/traceability-matrix">
-                  <ProtectedComponent>
-                    <TraceabilityMatrixPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/timesheets">
+                    <ProtectedComponent>
+                      <TimesheetsPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/test-data-generator">
-                  <ProtectedComponent>
-                    <TestDataGeneratorPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/todos">
+                    <ProtectedComponent>
+                      <TodosPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/automation">
-                  <ProtectedComponent>
-                    <AutomationPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/permissions">
+                    <ProtectedComponent requiredRole="admin">
+                      <PermissionsPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/automation/record-playback">
-                  <ProtectedComponent>
-                    <RecordPlaybackPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/kanban">
+                    <ProtectedComponent>
+                      <KanbanPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/github">
-                  <ProtectedComponent>
-                    <GithubPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/messenger">
+                    <ProtectedComponent>
+                      <MessengerPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                <Route path="/admin/notifications">
-                  <ProtectedComponent requiredRole="admin">
-                    <AdminNotificationsPage />
-                  </ProtectedComponent>
-                </Route>
+                  <Route path="/functional-flow">
+                    <ProtectedComponent>
+                      <FunctionalFlowPage />
+                    </ProtectedComponent>
+                  </Route>
 
-                {/* 404 Route */}
-                <Route>
-                  <NotFoundPage />
-                </Route>
-              </Switch>
-            </Router>
-            <Toaster />
-          </SoundProvider>
-        </TooltipProvider>
+                  <Route path="/traceability-matrix">
+                    <ProtectedComponent>
+                      <TraceabilityMatrixPage />
+                    </ProtectedComponent>
+                  </Route>
+
+                  <Route path="/test-data-generator">
+                    <ProtectedComponent>
+                      <TestDataGeneratorPage />
+                    </ProtectedComponent>
+                  </Route>
+
+                  <Route path="/automation">
+                    <ProtectedComponent>
+                      <AutomationPage />
+                    </ProtectedComponent>
+                  </Route>
+
+                  <Route path="/automation/record-playback">
+                    <ProtectedComponent>
+                      <RecordPlaybackPage />
+                    </ProtectedComponent>
+                  </Route>
+
+                  <Route path="/github">
+                    <ProtectedComponent>
+                      <GithubPage />
+                    </ProtectedComponent>
+                  </Route>
+
+                  <Route path="/admin/notifications">
+                    <ProtectedComponent requiredRole="admin">
+                      <AdminNotificationsPage />
+                    </ProtectedComponent>
+                  </Route>
+
+                  {/* 404 Route */}
+                  <Route>
+                    <NotFoundPage />
+                  </Route>
+                </Switch>
+              </Router>
+              <Toaster />
+            </SoundProvider>
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

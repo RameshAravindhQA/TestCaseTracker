@@ -136,5 +136,12 @@ export function useAuth() {
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context;
+  return {
+    user: context.user,
+    loading: context.isLoading,
+    error: context.error,
+    loginMutation: context.loginMutation,
+    logoutMutation: context.logoutMutation,
+    registerMutation: context.registerMutation,
+  };
 }
