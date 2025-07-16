@@ -232,23 +232,9 @@ function Router() {
 
 // Main App Content (everything that needs AuthProvider)
 function AppContent() {
-  return (
-    <AuthProvider>
-      <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <SoundIntegrationSetup />
-          <Router />
-          <GitHubIssueReporter />
-        </TooltipProvider>
-      </ThemeProvider>
-    </AuthProvider>
-  );
-}
-
-function App() {
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
-  // Initialize sound manager on app startup
+
+  // Initialize sound manager and check for welcome dialog
   useEffect(() => {
     console.log('🚀 App starting up...');
 
@@ -291,15 +277,30 @@ function App() {
   }, []);
 
   return (
+    <AuthProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <SoundIntegrationSetup />
+          <Router />
+          <GitHubIssueReporter />
+          
+          {/* Welcome Dialog - now inside AuthProvider */}
+          <WelcomeDialog 
+            open={showWelcomeDialog} 
+            onOpenChange={setShowWelcomeDialog}
+          />
+        </TooltipProvider>
+      </ThemeProvider>
+    </AuthProvider>
+  );
+}
+
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <SoundProvider>
         <AppContent />
-
-        {/* Welcome Dialog */}
-        <WelcomeDialog 
-          open={showWelcomeDialog} 
-          onOpenChange={setShowWelcomeDialog}
-        />
       </SoundProvider>
     </QueryClientProvider>
   );

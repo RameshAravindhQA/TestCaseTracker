@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ interface WelcomeDialogProps {
 }
 
 export function WelcomeDialog({ open, onOpenChange }: WelcomeDialogProps) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [motivationalQuote, setMotivationalQuote] = useState('');
 
@@ -68,6 +67,20 @@ export function WelcomeDialog({ open, onOpenChange }: WelcomeDialogProps) {
     window.location.href = '/test-cases';
   };
 
+  if (isLoading) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Loading...
+            </DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -102,7 +115,7 @@ export function WelcomeDialog({ open, onOpenChange }: WelcomeDialogProps) {
                     <p className="font-medium">{formatLoginTime()}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-3">
                   <Calendar className="h-5 w-5 text-purple-500" />
                   <div>
