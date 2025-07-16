@@ -57,9 +57,13 @@ export function SoundSettings() {
   const soundTypes: { key: SoundType; label: string; description: string }[] = [
     { key: 'click', label: 'Click Sound', description: 'Played when clicking buttons and links' },
     { key: 'crud', label: 'CRUD Operations', description: 'Played during create, read, update, delete operations' },
+    { key: 'create', label: 'Create Sound', description: 'Played when creating new items' },
+    { key: 'update', label: 'Update Sound', description: 'Played when updating existing items' },
+    { key: 'delete', label: 'Delete Sound', description: 'Played when deleting items' },
     { key: 'error', label: 'Error Sound', description: 'Played when errors occur' },
     { key: 'success', label: 'Success Sound', description: 'Played on successful operations' },
-    { key: 'message', label: 'Message Sound', description: 'Played for notifications and messages' }
+    { key: 'message', label: 'Message Sound', description: 'Played for notifications and messages' },
+    { key: 'navigation', label: 'Navigation Sound', description: 'Played when navigating between pages' }
   ];
 
   return (

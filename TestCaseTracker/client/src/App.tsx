@@ -5,9 +5,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme/theme-provider";
-import { ProtectedRoute } from "@/lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 import { GitHubIssueReporter } from "@/components/ui/github-issue-reporter";
+import { SoundProvider } from './hooks/use-sound-provider';
 
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
@@ -175,12 +175,14 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" defaultColorTheme="blue">
         <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
+          <SoundProvider>
+            <TooltipProvider>
+              <Toaster />
             <Router />
             <GitHubIssueReporter />
 
-          </TooltipProvider>
+            </TooltipProvider>
+          </SoundProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
