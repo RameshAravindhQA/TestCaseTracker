@@ -1,0 +1,94 @@
+ Click detected on: <div data-replit-metadata=​"client/​src/​pages/​login.tsx:​55:​4" data-component-name=​"div" class=​"min-h-screen flex items-center justify-center bg-white">​…​</div>​flex
+soundManager.js:88 🔊 Attempting to play sound: click
+soundManager.js:103 🔊 Playing sound: click at volume 0.5
+globalSoundHandler.js:16 🖱️ Click detected on: DIV min-h-screen flex items-center justify-center bg-white
+globalSoundHandler.js:22 🔇 Click sound not triggered for: DIV
+soundManager.js:115 ❌ Failed to play sound: click NotSupportedError: Failed to load because no supported source was found.
+playSound @ soundManager.js:115
+await in playSound
+playClick @ soundManager.js:120
+debugClickHandler @ App.tsx:111Understand this warning
+App.tsx:112 🔊 Click sound played
+contentScript.js:138 Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'sentence')
+    at record (contentScript.js:138:481)
+record @ contentScript.js:138
+await in record
+(anonymous) @ contentScript.js:193Understand this error
+App.tsx:109 🖱️ Click detected on: <a data-replit-metadata=​"client/​src/​components/​authentication/​login-form.tsx:​295:​12" data-component-name=​"Link" href=​"/​register" class=​"text-primary hover:​underline">​Register​</a>​
+soundManager.js:88 🔊 Attempting to play sound: click
+soundManager.js:103 🔊 Playing sound: click at volume 0.5
+globalSoundHandler.js:16 🖱️ Click detected on: A text-primary hover:underline
+globalSoundHandler.js:19 🔊 Playing click sound for: A
+globalSoundHandler.js:64 🔊 Global handler: Playing click sound
+soundManager.js:88 🔊 Attempting to play sound: click
+soundManager.js:103 🔊 Playing sound: click at volume 0.5
+content-script.js:194 Content Script re-injected or page loaded
+soundManager.js:115 ❌ Failed to play sound: click NotSupportedError: Failed to load because no supported source was found.
+playSound @ soundManager.js:115
+await in playSound
+playClick @ soundManager.js:120
+debugClickHandler @ App.tsx:111Understand this warning
+App.tsx:112 🔊 Click sound played
+soundManager.js:115 ❌ Failed to play sound: click NotSupportedError: Failed to load because no supported source was found.
+playSound @ soundManager.js:115
+await in playSound
+playClick @ soundManager.js:120
+playClickSound @ globalSoundHandler.js:66
+(anonymous) @ globalSoundHandler.js:20Understand this warning
+globalSoundHandler.js:104  GET https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/api/auth/user 401 (Unauthorized)
+window.fetch @ globalSoundHandler.js:104
+(anonymous) @ queryClient.ts:58
+fetchFn @ @tanstack_react-query.js?v=174804f9:881
+run @ @tanstack_react-query.js?v=174804f9:513
+start @ @tanstack_react-query.js?v=174804f9:555
+fetch @ @tanstack_react-query.js?v=174804f9:969
+executeFetch_fn @ @tanstack_react-query.js?v=174804f9:2279
+onSubscribe @ @tanstack_react-query.js?v=174804f9:1983
+subscribe @ @tanstack_react-query.js?v=174804f9:24
+(anonymous) @ @tanstack_react-query.js?v=174804f9:3146
+subscribeToStore @ chunk-RPCDYKBN.js?v=174804f9:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=174804f9:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=174804f9:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=174804f9:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=174804f9:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=174804f9:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=174804f9:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=174804f9:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=174804f9:19416
+commitRoot @ chunk-RPCDYKBN.js?v=174804f9:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=174804f9:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=174804f9:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=174804f9:18627Understand this error
+globalSoundHandler.js:91 🔊 Global handler: Playing error sound
+soundManager.js:88 🔊 Attempting to play sound: error
+soundManager.js:103 🔊 Playing sound: error at volume 0.5
+soundManager.js:115 ❌ Failed to play sound: error NotSupportedError: Failed to load because no supported source was found.
+playSound @ soundManager.js:115
+await in playSound
+playError @ soundManager.js:123
+playErrorSound @ globalSoundHandler.js:93
+window.fetch @ globalSoundHandler.js:124
+await in window.fetch
+(anonymous) @ queryClient.ts:58
+fetchFn @ @tanstack_react-query.js?v=174804f9:881
+run @ @tanstack_react-query.js?v=174804f9:513
+start @ @tanstack_react-query.js?v=174804f9:555
+fetch @ @tanstack_react-query.js?v=174804f9:969
+executeFetch_fn @ @tanstack_react-query.js?v=174804f9:2279
+onSubscribe @ @tanstack_react-query.js?v=174804f9:1983
+subscribe @ @tanstack_react-query.js?v=174804f9:24
+(anonymous) @ @tanstack_react-query.js?v=174804f9:3146
+subscribeToStore @ chunk-RPCDYKBN.js?v=174804f9:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=174804f9:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=174804f9:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=174804f9:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=174804f9:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=174804f9:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=174804f9:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=174804f9:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=174804f9:19416
+commitRoot @ chunk-RPCDYKBN.js?v=174804f9:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=174804f9:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=174804f9:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=174804f9:18627Understand this warning
+globalSoundHandler.js:64 🔊 Global handler: Playing click sound
