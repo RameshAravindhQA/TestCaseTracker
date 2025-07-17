@@ -366,3 +366,50 @@ export const animationPresets = {
     transition: { duration: 0.3 }
   }
 };
+
+// Page variants for main layout
+export const pageVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" }
+  },
+  exit: { 
+    opacity: 0, 
+    y: -20,
+    transition: { duration: 0.3, ease: "easeIn" }
+  }
+};
+
+// Sidebar variants for mobile menu
+export const sidebarVariants = {
+  hidden: { x: "-100%", opacity: 0 },
+  visible: {
+    x: 0,
+    opacity: 1,
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 30
+    }
+  },
+  exit: {
+    x: "-100%",
+    opacity: 0,
+    transition: { duration: 0.3, ease: "easeInOut" }
+  }
+};
+
+// Backdrop variants for overlay
+export const backdropVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { duration: 0.3 }
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.3 }
+  }
+};
