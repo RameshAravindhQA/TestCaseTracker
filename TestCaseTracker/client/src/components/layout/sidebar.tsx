@@ -250,7 +250,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "fixed top-0 left-0 bottom-0 w-60 flex flex-col border-r border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-800",
+        "fixed top-0 left-0 bottom-0 w-60 flex flex-col border-r border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-800 z-30",
         className
       )}
     >

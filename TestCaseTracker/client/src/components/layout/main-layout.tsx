@@ -63,7 +63,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
       {/* Sidebar for desktop - kept simple with no special key */}
       {!isMobile && <Sidebar />}
 
@@ -126,7 +126,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       )}
 
       {/* Main content */}
-      <main className="md:pl-64 min-h-screen bg-gray-50">
+      <main className={cn(
+        "flex-1 min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-200",
+        !isMobile ? "ml-60" : "pt-16"
+      )}>
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -134,6 +137,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="w-full h-full"
           >
             {children}
           </motion.div>
