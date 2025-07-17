@@ -4,6 +4,7 @@ import { useLocation, Link } from "wouter";
 import { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
+import { loginHeaderVariants } from "@/lib/animations";
 
 function ForgotPassword() {
   const [, navigate] = useLocation();
@@ -67,7 +68,7 @@ function ForgotPassword() {
                     <stop offset="100%" stopColor="#059669" />
                   </linearGradient>
                 </defs>
-                
+
                 {/* Main circle background */}
                 <circle
                   cx="40"
@@ -77,14 +78,14 @@ function ForgotPassword() {
                   stroke="#ffffff"
                   strokeWidth="2"
                 />
-                
+
                 {/* Letter 'N' stylized */}
                 <path
                   d="M20 25 L20 55 L25 55 L25 35 L35 55 L40 55 L40 25 L35 25 L35 45 L25 25 Z"
                   fill="white"
                   fontWeight="bold"
                 />
-                
+
                 {/* Decorative leaf/branch element */}
                 <path
                   d="M50 30 Q55 25 60 30 Q55 35 50 30 Z"
@@ -94,7 +95,7 @@ function ForgotPassword() {
                   d="M52 32 Q57 37 62 32 Q57 42 52 37 Z"
                   fill="url(#leafGradient)"
                 />
-                
+
                 {/* Small dots for tech feel */}
                 <circle cx="48" cy="48" r="2" fill="white" opacity="0.8"/>
                 <circle cx="54" cy="52" r="1.5" fill="white" opacity="0.6"/>

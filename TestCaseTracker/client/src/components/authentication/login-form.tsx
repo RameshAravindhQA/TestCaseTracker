@@ -1,6 +1,7 @@
 import { z } from "zod";
 // No longer using useState for password visibility
 import { useForm } from "react-hook-form";
+import { motion } from "framer-motion";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
