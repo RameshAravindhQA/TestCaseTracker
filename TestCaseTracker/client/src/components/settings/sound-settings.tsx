@@ -9,50 +9,84 @@ import { Volume2, VolumeX, Upload, Download, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export function SoundSettings() {
-  const [enabled, setEnabled] = useState(true);
-  const [volume, setVolume] = useState(50);
-  const { toast } = useToast();
+  const [settings, setSettings] = useState({
+    enabled: true,
+    volume: 0.5,
+    theme: 'default',
+    effects: {
+      click: true,
+      crud: true,
+      success: true,
+      error: true,
+      message: true
+    }
+  });
 
   useEffect(() => {
+    // Load current settings
     if (window.soundManager) {
-      const settings = window.soundManager.getSettings();
-      setEnabled(settings.enabled);
-      setVolume(settings.volume * 100);
+      if (typeof window.soundManager.getSettings === 'function') {
+        const currentSettings = window.soundManager.getSettings();
+        setSettings(currentSettings);
+      } else {
+        // Fallback to basic settings if getSettings doesn't exist
+        setSettings({
+          enabled: window.soundManager.isEnabled || true,
+          volume: window.soundManager.volume || 0.5,
+          theme: window.soundManager.currentTheme || 'default',
+          effects: {
+            click: true,
+            crud: true,
+            success: true,
+            error: true,
+            message: true
+          }
+        });
+      }
     }
   }, []);
 
-  const handleEnabledChange = (checked: boolean) => {
-    setEnabled(checked);
+  const updateSettings = (newSettings: Partial<typeof settings>) => {
+    const updatedSettings = { ...settings, ...newSettings };
+    setSettings(updatedSettings);
+
     if (window.soundManager) {
-      window.soundManager.setEnabled(checked);
+      if (typeof window.soundManager.updateSettings === 'function') {
+        window.soundManager.updateSettings(updatedSettings);
+      } else {
+        // Fallback to direct property updates
+        if (newSettings.enabled !== undefined) {
+          window.soundManager.isEnabled = newSettings.enabled;
+        }
+        if (newSettings.volume !== undefined) {
+          window.soundManager.volume = newSettings.volume;
+        }
+        if (newSettings.theme !== undefined) {
+          window.soundManager.currentTheme = newSettings.theme;
+        }
+      }
     }
+  };
+
+  const handleEnabledChange = (checked: boolean) => {
+    updateSettings({ enabled: checked });
   };
 
   const handleVolumeChange = (value: number[]) => {
-    const newVolume = value[0];
-    setVolume(newVolume);
-    if (window.soundManager) {
-      window.soundManager.setVolume(newVolume / 100);
-    }
+    updateSettings({ volume: value[0] / 100 });
   };
 
-  const testSound = async (type: string) => {
-    try {
-      if (window.soundManager) {
-        await window.soundManager.playSound(type);
-        toast({
-          title: "Sound Test",
-          description: `Playing ${type} sound`,
-        });
+  const testSound = (soundName: string) => {
+    if (window.soundManager) {
+      if (typeof window.soundManager.testSound === 'function') {
+        window.soundManager.testSound(soundName);
+      } else if (typeof window.soundManager.playSound === 'function') {
+        // Fallback to playSound if testSound doesn't exist
+        window.soundManager.playSound(soundName);
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to play ${type} sound`,
-        variant: "destructive"
-      });
     }
   };
+  const { toast } = useToast();
 
   const handleSoundUpload = async (type: string, file: File) => {
     try {
@@ -78,14 +112,14 @@ export function SoundSettings() {
         }
 
         console.log(`🔊 Uploading custom sound: ${type}`, file);
-        
+
         // Create blob URL for the file
         const blobUrl = URL.createObjectURL(file);
         console.log(`📄 Created blob URL for ${type}: ${blobUrl}`);
-        
+
         // Set custom sound and wait for it to load
         await window.soundManager.setCustomSound(type, file);
-        
+
         console.log(`✅ Custom sound ${type} uploaded and set successfully`);
 
         // Play the uploaded sound immediately to test
@@ -177,7 +211,7 @@ export function SoundSettings() {
           <Label htmlFor="sound-enabled">Enable Sound Effects</Label>
           <Switch
             id="sound-enabled"
-            checked={enabled}
+            checked={settings.enabled}
             onCheckedChange={handleEnabledChange}
           />
         </div>
@@ -187,7 +221,7 @@ export function SoundSettings() {
           <div className="flex items-center space-x-2">
             <VolumeX className="h-4 w-4" />
             <Slider
-              value={[volume]}
+              value={[settings.volume * 100]}
               onValueChange={handleVolumeChange}
               max={100}
               step={1}

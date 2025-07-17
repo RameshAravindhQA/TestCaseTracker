@@ -68,15 +68,15 @@ export function TestCaseForm({ testCase, projectId, module, modules, onSuccess }
   const isEditing = !!testCase;
   const [isTagCreatorOpen, setIsTagCreatorOpen] = useState(false);
   const [newTags, setNewTags] = useState<Tag[]>([]);
-  
+
   // Listen for tag creator events
   useEffect(() => {
     const handleOpenTagCreator = () => {
       setIsTagCreatorOpen(true);
     };
-    
+
     window.addEventListener('openTagCreator', handleOpenTagCreator);
-    
+
     return () => {
       window.removeEventListener('openTagCreator', handleOpenTagCreator);
     };
@@ -347,7 +347,7 @@ export function TestCaseForm({ testCase, projectId, module, modules, onSuccess }
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="priority"
@@ -437,7 +437,7 @@ export function TestCaseForm({ testCase, projectId, module, modules, onSuccess }
         </DialogFooter>
       </form>
     </Form>
-    
+
     <Dialog open={isTagCreatorOpen} onOpenChange={setIsTagCreatorOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -468,7 +468,7 @@ export function TestCaseForm({ testCase, projectId, module, modules, onSuccess }
                       name: tag.name,
                       color: tag.color
                     }));
-                    
+
                     const response = await fetch(
                       `/api/projects/${projectId}/tags`,
                       {
@@ -479,31 +479,31 @@ export function TestCaseForm({ testCase, projectId, module, modules, onSuccess }
                         body: JSON.stringify(validTags)
                       }
                     );
-                    
+
                     if (response.ok) {
                       const savedTags = await response.json();
-                      
+
                       // Update form with new tags
                       const currentTags = form.getValues("tags") || [];
                       form.setValue("tags", [...currentTags, ...savedTags]);
-                      
+
                       // Invalidate tags cache
                       queryClient.invalidateQueries({ 
                         queryKey: [`/api/projects/${projectId}/tags`]
                       });
-                      
+
                       // Reset new tags
                       setNewTags([]);
-                      
+
                       // Close dialog
                       setIsTagCreatorOpen(false);
-                      
+
                       // Show success message
                       toast({
                         title: "Tags created",
                         description: `${savedTags.length} ${savedTags.length === 1 ? 'tag has' : 'tags have'} been created successfully.`,
                       });
-                      
+
                       // Dispatch event to notify other components that tags were updated
                       window.dispatchEvent(new Event('tagsUpdated'));
                     } else {
@@ -517,7 +517,7 @@ export function TestCaseForm({ testCase, projectId, module, modules, onSuccess }
                     });
                   }
                 };
-                
+
                 createTagsMutation();
               } else {
                 setIsTagCreatorOpen(false);

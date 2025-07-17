@@ -266,14 +266,10 @@ export async function deleteGitHubIntegration(req: any, res: any) {
 
 export async function testGitHubConnection(req: any, res: any) {
   try {
-    // Set proper content type for JSON response
-    res.setHeader('Content-Type', 'application/json');
-
     const { repoUrl, accessToken } = req.body;
 
     if (!repoUrl || !accessToken) {
       return res.status(400).json({ 
-        success: false,
         message: "Missing required fields: repoUrl, accessToken" 
       });
     }
@@ -282,44 +278,53 @@ export async function testGitHubConnection(req: any, res: any) {
     const repoMatch = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
     if (!repoMatch) {
       return res.status(400).json({ 
-        success: false,
         message: "Invalid GitHub repository URL format" 
       });
     }
 
     const [, repoOwner, repoName] = repoMatch;
-    const config = {
-      repoOwner,
-      repoName: repoName.replace(/\.git$/, ''),
-      accessToken
-    };
+    const cleanRepoName = repoName.replace(/\.git$/, '');
 
+    // Test connection to GitHub API
     try {
-      const isValid = await githubService.validateConnection(config);
+      const response = await fetch(`https://api.github.com/repos/${repoOwner}/${cleanRepoName}`, {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'User-Agent': 'TestCaseTracker'
+        }
+      });
 
-      if (isValid) {
+      if (response.ok) {
         res.json({
           success: true,
           message: 'Connection successful',
-          repository: `${repoOwner}/${repoName.replace(/\.git$/, '')}`
+          repository: `${repoOwner}/${cleanRepoName}`
         });
       } else {
+        const errorData = await response.json().catch(() => ({}));
+        let errorMessage = 'Connection failed';
+
+        if (response.status === 401) {
+          errorMessage = 'Invalid access token or insufficient permissions';
+        } else if (response.status === 404) {
+          errorMessage = 'Repository not found or access denied';
+        } else if (response.status === 403) {
+          errorMessage = 'Access forbidden. Check token permissions';
+        }
+
         res.status(400).json({
-          success: false,
-          message: 'Connection failed. Please check your access token and repository URL.'
+          message: errorMessage
         });
       }
-    } catch (validationError) {
-      logger.error('GitHub validation error:', validationError);
+    } catch (networkError) {
+      logger.error('GitHub API network error:', networkError);
       res.status(400).json({
-        success: false,
-        message: 'Failed to validate GitHub connection. Please check your credentials.'
+        message: 'Network error connecting to GitHub'
       });
     }
   } catch (error) {
     logger.error('GitHub connection test failed:', error);
     res.status(500).json({
-      success: false,
       message: error instanceof Error ? error.message : 'Connection test failed'
     });
   }

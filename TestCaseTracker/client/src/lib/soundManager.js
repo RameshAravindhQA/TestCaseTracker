@@ -18,6 +18,18 @@ export class SoundManager {
       message: this.generateTone(500, 120)
     };
     this.init();
+    this.settings = {
+      enabled: true,
+      volume: 0.5,
+      theme: 'default',
+      effects: {
+        click: true,
+        crud: true,
+        success: true,
+        error: true,
+        message: true
+      }
+    };
   }
 
   async init() {
@@ -348,11 +360,119 @@ export class SoundManager {
            errorString.includes('warning') ||
            errorString.includes('validatedomnesting');
   }
+    // Get current settings
+  getSettings() {
+    return {
+      ...this.settings,
+      volume: this.volume,
+      enabled: this.isEnabled,
+      theme: this.currentTheme
+    };
+  }
+
+  // Update settings
+  updateSettings(newSettings) {
+    if (newSettings.enabled !== undefined) {
+      this.isEnabled = newSettings.enabled;
+      this.settings.enabled = newSettings.enabled;
+    }
+
+    if (newSettings.volume !== undefined) {
+      this.volume = Math.max(0, Math.min(1, newSettings.volume));
+      this.settings.volume = this.volume;
+    }
+
+    if (newSettings.theme !== undefined) {
+      this.currentTheme = newSettings.theme;
+      this.settings.theme = newSettings.theme;
+    }
+
+    if (newSettings.effects !== undefined) {
+      this.settings.effects = { ...this.settings.effects, ...newSettings.effects };
+    }
+
+    // Save to localStorage
+    try {
+      localStorage.setItem('soundSettings', JSON.stringify(this.settings));
+    } catch (e) {
+      console.warn('Failed to save sound settings to localStorage:', e);
+    }
+
+    console.log('🔊 Sound settings updated:', this.settings);
+    return this.settings;
+  }
+
+  // Test a specific sound
+  testSound(soundName) {
+    if (!this.isEnabled) {
+      console.log(`🔇 Sound testing disabled`);
+      return false;
+    }
+
+    const audio = this.audioCache.get(soundName);
+    if (!sound || !sound.audio) {
+      console.warn(`🔊 Test sound not found: ${soundName}`);
+      return false;
+    }
+
+    try {
+      sound.audio.currentTime = 0;
+      sound.audio.volume = this.volume;
+      const playPromise = sound.audio.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log(`🔊 Test sound played successfully: ${soundName}`);
+          })
+          .catch(error => {
+            console.error(`🔊 Test sound play failed: ${soundName}`, error);
+          });
+      }
+      return true;
+    } catch (error) {
+      console.error(`🔊 Error testing sound ${soundName}:`, error);
+      return false;
+    }
+  }
+
+  // Get available sounds list
+  getAvailableSounds() {
+    return Array.from(this.audioCache.keys());
+  }
+
+  // Load settings from localStorage
+  loadSettings() {
+    try {
+      const saved = localStorage.getItem('soundSettings');
+      if (saved) {
+        const settings = JSON.parse(saved);
+        this.updateSettings(settings);
+        console.log('🔊 Loaded sound settings from localStorage:', settings);
+      }
+    } catch (e) {
+      console.warn('Failed to load sound settings from localStorage:', e);
+    }
+  }
+
+  // Clean up resources
+  destroy() {
+    this.audioCache.forEach(audio => {
+      if (audio) {
+        audio.pause();
+        audio.src = '';
+      }
+    });
+    this.audioCache.clear();
+  }
 }
 
-// Global instance
+// Initialize sound manager when this module is imported
 if (typeof window !== 'undefined') {
-  window.soundManager = window.soundManager || new SoundManager();
+  window.soundManager = new SoundManager();
+  // Load saved settings
+  window.soundManager.loadSettings();
+  console.log('🔊 Sound manager initialized successfully');
 }
 
 export const soundManager = typeof window !== 'undefined' ? window.soundManager : null;

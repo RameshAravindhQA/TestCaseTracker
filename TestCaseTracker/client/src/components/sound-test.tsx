@@ -8,7 +8,23 @@ export function SoundTest() {
 
   React.useEffect(() => {
     if (window.soundManager) {
-      setSettings(window.soundManager.getSettings());
+      if (typeof window.soundManager.getSettings === 'function') {
+        const settings = window.soundManager.getSettings();
+        setSettings(settings);
+      } else {
+        // Fallback settings
+        setSettings({
+          enabled: window.soundManager.isEnabled || true,
+          volume: window.soundManager.volume || 0.5,
+          effects: {
+            click: true,
+            crud: true,
+            success: true,
+            error: true,
+            message: true
+          }
+        });
+      }
     }
   }, []);
 
@@ -23,6 +39,20 @@ export function SoundTest() {
   const playSound = (type: string) => {
     if (window.soundManager) {
       window.soundManager.playSound(type);
+    }
+  };
+
+  const testSound = (soundName: string) => {
+    if (window.soundManager) {
+      if (typeof window.soundManager.testSound === 'function') {
+        window.soundManager.testSound(soundName);
+      } else if (typeof window.soundManager.playSound === 'function') {
+        window.soundManager.playSound(soundName);
+      } else {
+        console.log(`Testing sound: ${soundName} (no sound manager method available)`);
+      }
+    } else {
+      console.log(`Testing sound: ${soundName} (no sound manager)`);
     }
   };
 
