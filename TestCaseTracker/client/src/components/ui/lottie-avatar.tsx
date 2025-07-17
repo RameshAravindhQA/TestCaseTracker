@@ -45,8 +45,8 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
   const [isPlaying, setIsPlaying] = useState(autoplay);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [animationKey, setAnimationKey] = useState(0); // Force re-render key
   const { toast } = useToast();
 
   // Validate animation data
@@ -56,21 +56,20 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
       return false;
     }
 
-    // More lenient validation for Lottie files
     const hasVersion = data.v || data.version;
-    const hasLayers = data.layers;
+    const hasLayers = data.layers && Array.isArray(data.layers);
 
     if (!hasVersion) {
       setErrorMessage('Invalid Lottie: missing version');
       return false;
     }
 
-    if (!hasLayers) {
-      setErrorMessage('Invalid Lottie: missing layers');
+    if (!hasLayers || data.layers.length === 0) {
+      setErrorMessage('Invalid Lottie: missing or empty layers');
       return false;
     }
 
-    // Set default values if missing
+    // Ensure required properties exist
     if (!data.w && !data.width) data.w = width || 100;
     if (!data.h && !data.height) data.h = height || 100;
     if (!data.fr && !data.frameRate) data.fr = 30;
@@ -87,7 +86,6 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
     if (animationData) {
       setHasError(false);
       setErrorMessage('');
-      setLoadingProgress(0);
       
       const isValid = validateAnimationData(animationData);
       if (!isValid) {
@@ -97,9 +95,10 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
       }
       
       setIsLoaded(true);
-      setLoadingProgress(100);
+      setAnimationKey(prev => prev + 1); // Force re-render
+      console.log(`✅ Lottie animation "${name}" loaded successfully`);
     }
-  }, [animationData, validateAnimationData, errorMessage, onAnimationError]);
+  }, [animationData, validateAnimationData, errorMessage, onAnimationError, name]);
 
   // Animation event handlers
   const handleAnimationComplete = useCallback(() => {
@@ -147,22 +146,18 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
     }
   }, [handleAnimationError]);
 
-  const handleSelect = useCallback(() => {
+  const handleSelect = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (onSelect) {
       onSelect();
-      toast({
-        title: "Animation Selected",
-        description: `"${name}" has been selected as your avatar.`,
-      });
+      console.log(`🎭 Selected animation: ${name}`);
     }
-  }, [onSelect, name, toast]);
+  }, [onSelect, name]);
 
   // Render loading state
   if (!animationData) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+      <div
         className={`flex items-center justify-center bg-muted rounded-lg ${className}`}
         style={{ width, height, ...style }}
       >
@@ -170,22 +165,20 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
           <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
           <p className="text-xs text-muted-foreground">Loading...</p>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
   // Render error state
   if (hasError) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+      <div
         className={`flex items-center justify-center bg-destructive/10 border border-destructive/20 rounded-lg ${className}`}
         style={{ width, height, ...style }}
       >
         <div className="text-center p-2">
           <AlertCircle className="h-6 w-6 text-destructive mx-auto mb-2" />
-          <p className="text-xs text-destructive">{errorMessage}</p>
+          <p className="text-xs text-destructive break-words">{errorMessage}</p>
           {controls && (
             <Button
               variant="outline"
@@ -193,6 +186,7 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
               onClick={() => {
                 setHasError(false);
                 setErrorMessage('');
+                setAnimationKey(prev => prev + 1);
               }}
               className="mt-2"
             >
@@ -200,33 +194,32 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
             </Button>
           )}
         </div>
-      </motion.div>
+      </div>
     );
   }
 
   // Main render
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.2 }}
+    <div
+      key={animationKey}
       className={`relative ${className}`}
       style={style}
     >
       {/* Preview mode wrapper */}
       {previewMode ? (
         <motion.div
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className={`cursor-pointer border-2 rounded-lg p-2 transition-all ${
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className={`cursor-pointer border-2 rounded-lg p-2 transition-all duration-200 ${
             selected 
-              ? 'border-primary bg-primary/5 shadow-md' 
-              : 'border-border hover:border-primary/50'
+              ? 'border-primary bg-primary/5 shadow-md ring-2 ring-primary/20' 
+              : 'border-border hover:border-primary/50 hover:bg-muted/30'
           }`}
           onClick={handleSelect}
         >
-          <div className="relative">
+          <div className="relative bg-white rounded overflow-hidden">
             <Lottie
+              key={`${animationKey}-${name}`}
               lottieRef={lottieRef}
               animationData={animationData}
               style={{ width, height }}
@@ -234,14 +227,20 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
               autoplay={autoplay && isPlaying}
               onComplete={handleAnimationComplete}
               onError={handleAnimationError}
+              rendererSettings={{
+                preserveAspectRatio: 'xMidYMid meet',
+                clearCanvas: false,
+                progressiveLoad: false,
+                hideOnTransparent: true
+              }}
             />
             {selected && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full">
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
                 <CheckCircle className="h-3 w-3 text-white" />
               </div>
             )}
           </div>
-          <p className="text-xs text-center mt-1 truncate" title={name}>
+          <p className="text-xs text-center mt-1 truncate font-medium" title={name}>
             {name}
           </p>
         </motion.div>
@@ -249,6 +248,7 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
         /* Normal mode */
         <div className="relative">
           <Lottie
+            key={`${animationKey}-${name}`}
             lottieRef={lottieRef}
             animationData={animationData}
             style={{ width, height }}
@@ -256,6 +256,12 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
             autoplay={autoplay && isPlaying}
             onComplete={handleAnimationComplete}
             onError={handleAnimationError}
+            rendererSettings={{
+              preserveAspectRatio: 'xMidYMid meet',
+              clearCanvas: false,
+              progressiveLoad: false,
+              hideOnTransparent: true
+            }}
           />
           
           {/* Controls overlay */}
@@ -290,7 +296,7 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
           </AnimatePresence>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 };
 

@@ -417,6 +417,14 @@ export default function ProfilePage() {
       console.log('🔄 Updating avatar with Lottie data:', lottieData);
 
       try {
+        // Create a stable data object without blob URLs
+        const stableAvatarData = {
+          id: lottieData.id,
+          name: lottieData.name,
+          path: lottieData.path,
+          preview: lottieData.preview
+        };
+
         const response = await fetch('/api/users/update-avatar', {
           method: 'PUT',
           headers: {
@@ -424,9 +432,9 @@ export default function ProfilePage() {
           },
           credentials: 'include',
           body: JSON.stringify({
-            profilePicture: lottieData.path,
+            profilePicture: `lottie:${lottieData.id}`,
             avatarType: 'lottie',
-            avatarData: lottieData
+            avatarData: stableAvatarData
           })
         });
 
@@ -562,8 +570,16 @@ export default function ProfilePage() {
   const handleLottieSelect = (animation: LottieAnimation) => {
     console.log('🎭 Selecting Lottie animation:', animation);
 
+    // Prevent multiple rapid selections
+    if (updateLottieAvatarMutation.isPending) {
+      return;
+    }
+
     // Set the selected animation immediately for UI feedback
-    setSelectedLottie(animation);
+    setSelectedLottie(prev => {
+      console.log('Previous selection:', prev?.id, 'New selection:', animation.id);
+      return animation;
+    });
 
     // Show loading toast
     toast({

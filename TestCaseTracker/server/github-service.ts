@@ -455,6 +455,10 @@ ${bug.comments || 'No additional comments.'}
     }
   }
 
+  async validateConnection(config: GitHubConfig): Promise<{ success: boolean; message: string }> {
+    return this.testConnection(config);
+  }
+
   async testConnection(config: GitHubConfig): Promise<{ success: boolean; message: string }> {
     try {
       console.log('Testing GitHub connection with config:', {
