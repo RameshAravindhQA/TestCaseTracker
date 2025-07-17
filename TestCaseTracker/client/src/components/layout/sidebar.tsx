@@ -35,7 +35,7 @@ import {
   Home,
   FileTextIcon,
   GitMerge,
-  FlowChart,
+  
   Users2,
   Settings2,
   Network,
@@ -76,7 +76,7 @@ const navigationItems = [
     items: [
       { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard", badge: null },
       { icon: BarChart3, label: "Reports", href: "/reports", badge: null },
-      { icon: FlowChart, label: "Functional Flow", href: "/functional-flow", badge: "Beta" },
+      { icon: GitBranch, label: "Functional Flow", href: "/functional-flow", badge: "Beta" },
     ]
   },
   {
