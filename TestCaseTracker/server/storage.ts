@@ -1295,14 +1295,27 @@ class MemStorage implements IStorage {
       .filter(project => project.createdById === userId);
 
     // Get projects where user is a member
-    const memberProjects = Array.from(this.projectMembers.values())
+    const membershipProjects = Array.from(this.projectMembers.values())
       .filter(member => member.userId === userId)
       .map(member => this.projects.get(member.projectId))
-      .filter(project => project && project.createdById !== userId); // Avoid duplicates
+      .filter(project => project !== undefined) as Project[];
 
-    const allAccessibleProjects = [...createdProjects, ...memberProjects];
+    // Combine and remove duplicates
+    const projectMap = new Map<number, Project>();
+    
+    // Add created projects
+    createdProjects.forEach(project => {
+      projectMap.set(project.id, project);
+    });
+    
+    // Add member projects
+    membershipProjects.forEach(project => {
+      projectMap.set(project.id, project);
+    });
 
-    console.log(`Storage: getProjectsByUserId(${userId}) returning ${allAccessibleProjects.length} projects (${createdProjects.length} created, ${memberProjects.length} as member)`);
+    const allAccessibleProjects = Array.from(projectMap.values());
+
+    console.log(`Storage: getProjectsByUserId(${userId}) returning ${allAccessibleProjects.length} projects (${createdProjects.length} created, ${membershipProjects.length} as member)`);
 
     return allAccessibleProjects;
   }

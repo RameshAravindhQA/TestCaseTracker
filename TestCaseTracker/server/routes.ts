@@ -2258,13 +2258,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       
       const project = await storage.createProject(projectData);
       
-      // Add creator as a project member with admin role if addProjectMember exists
+      // Add creator as a project member with admin role
       try {
-        await (storage as any).addProjectMember({
+        await storage.addProjectMember({
           projectId: project.id,
           userId: req.session.userId!,
           role: "Admin",
         });
+        console.log(`Added project creator ${req.session.userId} as admin member of project ${project.id}`);
       } catch (memberError) {
         console.warn("Could not add project member:", memberError);
       }
@@ -2930,6 +2931,39 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   });
   
   // Test cases routes
+  apiRouter.get("/test-cases", isAuthenticated, async (req, res) => {
+    try {
+      // Get all test cases for user's accessible projects
+      let testCases;
+      if (req.session.userRole === "Admin") {
+        testCases = await storage.getTestCases();
+      } else {
+        // Get projects user has access to
+        const userProjects = await storage.getProjectsByUserId(req.session.userId!);
+        const projectIds = userProjects.map(p => p.id);
+        
+        // Get test cases for these projects
+        testCases = [];
+        for (const projectId of projectIds) {
+          const projectTestCases = await storage.getTestCasesByProject(projectId);
+          testCases.push(...projectTestCases);
+        }
+      }
+      
+      console.log(`[API] Returning ${testCases.length} test cases for user ${req.session.userId}`);
+      
+      // Add cache headers for real-time data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
+      res.json(testCases);
+    } catch (error) {
+      console.error("Get test cases error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   apiRouter.get("/projects/:projectId/test-cases", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
@@ -3201,6 +3235,39 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   });
   
   // Bug routes
+  apiRouter.get("/bugs", isAuthenticated, async (req, res) => {
+    try {
+      // Get all bugs for user's accessible projects
+      let bugs;
+      if (req.session.userRole === "Admin") {
+        bugs = await storage.getBugs();
+      } else {
+        // Get projects user has access to
+        const userProjects = await storage.getProjectsByUserId(req.session.userId!);
+        const projectIds = userProjects.map(p => p.id);
+        
+        // Get bugs for these projects
+        bugs = [];
+        for (const projectId of projectIds) {
+          const projectBugs = await storage.getBugsByProject(projectId);
+          bugs.push(...projectBugs);
+        }
+      }
+      
+      console.log(`[API] Returning ${bugs.length} bugs for user ${req.session.userId}`);
+      
+      // Add cache headers for real-time data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
+      res.json(bugs);
+    } catch (error) {
+      console.error("Get bugs error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   apiRouter.get("/projects/:projectId/bugs", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
