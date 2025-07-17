@@ -1,0 +1,57 @@
+Starting profile picture upload
+  POST https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/api/user/upload-profile-picture 400 (Bad Request)
+apiRequest @ src/lib/queryClient.ts:20
+mutationFn @ src/pages/profile.tsx:460
+fn @ @fs/home/runner/work….js?v=7e213408:1236
+run @ @fs/home/runner/work…y.js?v=7e213408:513
+start @ @fs/home/runner/work…y.js?v=7e213408:555
+execute @ @fs/home/runner/work….js?v=7e213408:1272
+await in execute
+mutate @ @fs/home/runner/work….js?v=7e213408:2691
+(anonymous) @ @fs/home/runner/work….js?v=7e213408:3414
+handleImageUpload @ src/pages/profile.tsx:580
+handleFileChange @ src/pages/profile.tsx:546
+callCallback2 @ @fs/home/runner/work….js?v=7e213408:3674
+invokeGuardedCallbackDev @ @fs/home/runner/work….js?v=7e213408:3699
+invokeGuardedCallback @ @fs/home/runner/work….js?v=7e213408:3733
+invokeGuardedCallbackAndCatchFirstError @ @fs/home/runner/work….js?v=7e213408:3736
+executeDispatch @ @fs/home/runner/work….js?v=7e213408:7014
+processDispatchQueueItemsInOrder @ @fs/home/runner/work….js?v=7e213408:7034
+processDispatchQueue @ @fs/home/runner/work….js?v=7e213408:7043
+dispatchEventsForPlugins @ @fs/home/runner/work….js?v=7e213408:7051
+(anonymous) @ @fs/home/runner/work….js?v=7e213408:7174
+batchedUpdates$1 @ @fs/home/runner/work…js?v=7e213408:18913
+batchedUpdates @ @fs/home/runner/work….js?v=7e213408:3579
+dispatchEventForPluginEventSystem @ @fs/home/runner/work….js?v=7e213408:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ @fs/home/runner/work….js?v=7e213408:5478
+dispatchEvent @ @fs/home/runner/work….js?v=7e213408:5472
+dispatchDiscreteEvent @ @fs/home/runner/work….js?v=7e213408:5449Understand this error
+ API request failed: POST /api/user/upload-profile-picture {status: 400, statusText: 'Bad Request'}
+apiRequest @ src/lib/queryClient.ts:29
+await in apiRequest
+mutationFn @ src/pages/profile.tsx:460
+fn @ @fs/home/runner/work….js?v=7e213408:1236
+run @ @fs/home/runner/work…y.js?v=7e213408:513
+start @ @fs/home/runner/work…y.js?v=7e213408:555
+execute @ @fs/home/runner/work….js?v=7e213408:1272
+await in execute
+mutate @ @fs/home/runner/work….js?v=7e213408:2691
+(anonymous) @ @fs/home/runner/work….js?v=7e213408:3414
+handleImageUpload @ src/pages/profile.tsx:580
+handleFileChange @ src/pages/profile.tsx:546
+callCallback2 @ @fs/home/runner/work….js?v=7e213408:3674
+invokeGuardedCallbackDev @ @fs/home/runner/work….js?v=7e213408:3699
+invokeGuardedCallback @ @fs/home/runner/work….js?v=7e213408:3733
+invokeGuardedCallbackAndCatchFirstError @ @fs/home/runner/work….js?v=7e213408:3736
+executeDispatch @ @fs/home/runner/work….js?v=7e213408:7014
+processDispatchQueueItemsInOrder @ @fs/home/runner/work….js?v=7e213408:7034
+processDispatchQueue @ @fs/home/runner/work….js?v=7e213408:7043
+dispatchEventsForPlugins @ @fs/home/runner/work….js?v=7e213408:7051
+(anonymous) @ @fs/home/runner/work….js?v=7e213408:7174
+batchedUpdates$1 @ @fs/home/runner/work…js?v=7e213408:18913
+batchedUpdates @ @fs/home/runner/work….js?v=7e213408:3579
+dispatchEventForPluginEventSystem @ @fs/home/runner/work….js?v=7e213408:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ @fs/home/runner/work….js?v=7e213408:5478
+dispatchEvent @ @fs/home/runner/work….js?v=7e213408:5472
+dispatchDiscreteEvent @ @fs/home/runner/work….js?v=7e213408:5449Understand this error
+ Upload response: {message: 'No file uploaded'}
