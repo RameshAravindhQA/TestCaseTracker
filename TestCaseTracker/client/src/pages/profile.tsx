@@ -1097,11 +1097,27 @@ export default function ProfilePage() {
                       onTestResults={(results) => {
                         console.log('🧪 Debug results:', results);
                         const validFiles = results.filter(r => r.status === 'VALID_LOTTIE');
+                        
+                        // Update the available animations based on debug results
+                        const loadedAnimations = validFiles.map(result => ({
+                          id: result.file.replace('/lottie/', '').replace('.json', ''),
+                          name: result.file.replace('/lottie/', '').replace('.json', '').replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                          path: result.file,
+                          preview: result.data
+                        }));
+                        
+                        setLottieAnimations(loadedAnimations);
+                        
                         if (validFiles.length === 0) {
                           toast({
                             title: "No Valid Lottie Files Found",
                             description: "All Lottie files failed to load. Check the debug panel for details.",
                             variant: "destructive",
+                          });
+                        } else {
+                          toast({
+                            title: "Lottie Files Loaded",
+                            description: `Successfully loaded ${validFiles.length} Lottie animations.`,
                           });
                         }
                       }}
