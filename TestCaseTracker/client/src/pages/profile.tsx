@@ -75,7 +75,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const loadAnimations = async () => {
       try {
-        // Load only working animations
+        // Load only working animations with correct paths
         const animationsToLoad = [
           { id: 'rocket', name: 'Rocket', path: '/lottie/rocket.json' },
           { id: 'businessman-rocket', name: 'Business Rocket', path: '/lottie/businessman-rocket.json' },
@@ -88,20 +88,47 @@ export default function ProfilePage() {
             try {
               console.log(`🎬 Loading animation: ${animation.name} from ${animation.path}`);
               const response = await fetch(animation.path);
-              if (response.ok) {
-                const text = await response.text();
-                // Check if we got HTML instead of JSON
-                if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-                  console.error(`❌ Received HTML instead of JSON for ${animation.name}`);
-                  return { ...animation, preview: null };
-                }
-                const data = JSON.parse(text);
-                console.log(`✅ Successfully loaded ${animation.name}`);
-                return { ...animation, preview: data };
-              } else {
+              if (!response.ok) {
                 console.error(`❌ Failed to load ${animation.name} animation: ${response.status}`);
                 return { ...animation, preview: null };
               }
+
+              const text = await response.text();
+              
+              // Check if we got HTML instead of JSON
+              if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                console.error(`❌ Received HTML instead of JSON for ${animation.name}`);
+                return { ...animation, preview: null };
+              }
+
+              // Clean and validate JSON
+              const cleanedText = text.trim();
+              let data;
+              
+              try {
+                data = JSON.parse(cleanedText);
+              } catch (parseError) {
+                console.error(`❌ JSON parse error for ${animation.name}:`, parseError);
+                console.log('Raw text preview:', cleanedText.substring(0, 200));
+                return { ...animation, preview: null };
+              }
+
+              // Validate Lottie structure
+              if (!data || typeof data !== 'object') {
+                console.error(`❌ Invalid data structure for ${animation.name}`);
+                return { ...animation, preview: null };
+              }
+
+              // Check for required Lottie properties
+              if (!data.v && !data.layers && !data.fr) {
+                console.error(`❌ Missing required Lottie properties for ${animation.name}`);
+                console.log('Data keys:', Object.keys(data));
+                return { ...animation, preview: null };
+              }
+
+              console.log(`✅ Successfully loaded and validated ${animation.name}`);
+              return { ...animation, preview: data };
+
             } catch (error) {
               console.error(`❌ Error loading ${animation.name} animation:`, error);
               return { ...animation, preview: null };
@@ -109,7 +136,11 @@ export default function ProfilePage() {
           })
         );
 
-        setLottieAnimations(loadedAnimations);
+        // Filter out failed animations and set the working ones
+        const workingAnimations = loadedAnimations.filter(anim => anim.preview !== null);
+        console.log(`📊 Loaded ${workingAnimations.length} working animations out of ${animationsToLoad.length}`);
+        
+        setLottieAnimations(workingAnimations);
 
       } catch (error) {
         console.error('Error loading animations:', error);
@@ -940,11 +971,15 @@ export default function ProfilePage() {
                                   onError={(error) => {
                                     console.error(`❌ Lottie render error for ${animation.name}:`, error);
                                   }}
+                                  onLoad={() => {
+                                    console.log(`✅ Lottie animation rendered: ${animation.name}`);
+                                  }}
+                                  renderer="svg"
                                 />
                               ) : (
-                                <div className="flex flex-col items-center space-y-1">
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                                  <p className="text-xs text-muted-foreground">Loading...</p>
+                                <div className="flex flex-col items-center space-y-1 bg-gray-100 rounded p-2">
+                                  <div className="text-gray-400 text-xs">Failed to load</div>
+                                  <p className="text-xs text-muted-foreground">{animation.name}</p>
                                 </div>
                               )}
                             </div>
