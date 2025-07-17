@@ -11,6 +11,7 @@ import { AnimatedContainer } from "@/components/ui/animated-container";
 import { motion, AnimatePresence } from "framer-motion";
 import { GlobalChatbot } from "@/components/chat/global-chatbot";
 import { TodoToggleButton } from "@/components/todo/todo-toggle-button";
+import { pageVariants, sidebarVariants, backdropVariants } from "@/lib/animations";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -97,46 +98,58 @@ export function MainLayout({ children }: MainLayoutProps) {
       )}
 
       {/* Mobile sidebar */}
-      {isMobile && menuOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/30 transition-opacity"
-          onClick={() => setMenuOpen(false)}
-        >
-          <div
-            className={cn(
-              "fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 shadow-xl transform transition-transform dark:shadow-gray-900/80",
-              menuOpen ? "translate-x-0" : "-translate-x-full"
-            )}
-            onClick={(e) => e.stopPropagation()}
+      <AnimatePresence>
+        {isMobile && menuOpen && (
+          <motion.div
+            variants={backdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="fixed inset-0 z-50 bg-black/30"
+            onClick={() => setMenuOpen(false)}
           >
-            <div className="flex justify-end p-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setMenuOpen(false)}
-                className="dark:text-gray-300"
-              >
-                <X className="h-6 w-6 text-gray-500 dark:text-gray-400" />
-                <span className="sr-only">Close menu</span>
-              </Button>
-            </div>
-            <Sidebar />
-          </div>
-        </div>
-      )}
+            <motion.div
+              variants={sidebarVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 shadow-xl dark:shadow-gray-900/80"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-end p-4">
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setMenuOpen(false)}
+                    className="dark:text-gray-300"
+                  >
+                    <X className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+                    <span className="sr-only">Close menu</span>
+                  </Button>
+                </motion.div>
+              </div>
+              <Sidebar />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main content */}
       <main className={cn(
-        "flex-1 min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-200",
+        "flex-1 min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300",
         !isMobile ? "ml-60" : "pt-16"
       )}>
         <AnimatePresence mode="wait">
           <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
+            key={location}
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
             className="w-full h-full"
           >
             {children}

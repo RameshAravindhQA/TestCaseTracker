@@ -194,7 +194,7 @@ export function DashboardPage() {
           initial="hidden"
           animate="visible"
         >
-          <motion.div variants={cardVariants}>
+           
             <Dialog open={projectsDialogOpen} onOpenChange={setProjectsDialogOpen}>
               <DialogTrigger asChild>
                 <Card className="cursor-pointer hover:shadow-lg transition-shadow">
@@ -250,8 +250,8 @@ export function DashboardPage() {
                 </div>
               </DialogContent>
             </Dialog>
-          </motion.div>
-          <motion.div variants={cardVariants}>
+           
+           
             <Dialog open={testCasesDialogOpen} onOpenChange={setTestCasesDialogOpen}>
               <DialogTrigger asChild>
                 <Card className="cursor-pointer hover:shadow-lg transition-shadow">
@@ -310,8 +310,8 @@ export function DashboardPage() {
                 </div>
               </DialogContent>
             </Dialog>
-          </motion.div>
-          <motion.div variants={cardVariants}>
+           
+           
             <Dialog open={bugsDialogOpen} onOpenChange={setBugsDialogOpen}>
               <DialogTrigger asChild>
                 <Card className="cursor-pointer hover:shadow-lg transition-shadow">
@@ -370,8 +370,8 @@ export function DashboardPage() {
                 </div>
               </DialogContent>
             </Dialog>
-          </motion.div>
-          <motion.div variants={cardVariants}>
+           
+           
             <Dialog open={passRateDialogOpen} onOpenChange={setPassRateDialogOpen}>
               <DialogTrigger asChild>
                 <Card className="cursor-pointer hover:shadow-lg transition-shadow">
@@ -435,112 +435,120 @@ export function DashboardPage() {
                 </div>
               </DialogContent>
             </Dialog>
-          </motion.div>
+           
         </motion.div>
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Real-time Project Health
-              </CardTitle>
-              <CardDescription>Last updated: {new Date().toLocaleTimeString()}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {testExecutionData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={testExecutionData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="pass" stroke="#10b981" strokeWidth={2} name="Passed" />
-                    <Line type="monotone" dataKey="fail" stroke="#ef4444" strokeWidth={2} name="Failed" />
-                    <Line type="monotone" dataKey="blocked" stroke="#f59e0b" strokeWidth={2} name="Blocked" />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                  No test execution data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
+           
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Real-time Project Health
+                </CardTitle>
+                <CardDescription>Last updated: {new Date().toLocaleTimeString()}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {testExecutionData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={testExecutionData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="pass" stroke="#10b981" strokeWidth={2} name="Passed" />
+                      <Line type="monotone" dataKey="fail" stroke="#ef4444" strokeWidth={2} name="Failed" />
+                      <Line type="monotone" dataKey="blocked" stroke="#f59e0b" strokeWidth={2} name="Blocked" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                    No test execution data available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+           
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bug className="h-5 w-5" />
-                Bug Discovery & Resolution
-              </CardTitle>
-              <CardDescription>Combined test and bug metrics</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {bugTrendData.length > 0 && bugTrendData.some(d => d.discovered > 0 || d.resolved > 0) ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={bugTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="discovered" stroke="#ef4444" strokeWidth={2} name="Discovered" />
-                    <Line type="monotone" dataKey="resolved" stroke="#10b981" strokeWidth={2} name="Resolved" />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                  No bug data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
+           
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bug className="h-5 w-5" />
+                  Bug Discovery & Resolution
+                </CardTitle>
+                <CardDescription>Combined test and bug metrics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {bugTrendData.length > 0 && bugTrendData.some(d => d.discovered > 0 || d.resolved > 0) ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={bugTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="discovered" stroke="#ef4444" strokeWidth={2} name="Discovered" />
+                      <Line type="monotone" dataKey="resolved" stroke="#10b981" strokeWidth={2} name="Resolved" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                    No bug data available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+           
         </div>
 
         {/* Status Overview Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Test Status Overview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {testStatusData.map((status) => (
-                  <div key={status.name} className="text-center">
-                    <div className="text-2xl font-bold mb-1" style={{ color: status.color }}>
-                      {status.value}
+           
+            <Card>
+              <CardHeader>
+                <CardTitle>Test Status Overview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {testStatusData.map((status) => (
+                    <div key={status.name} className="text-center">
+                      <div className="text-2xl font-bold mb-1" style={{ color: status.color }}>
+                        {status.value}
+                      </div>
+                      <div className="text-sm text-gray-600">{status.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {totalTestCases > 0 ? Math.round((status.value / totalTestCases) * 100) : 0}%
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600">{status.name}</div>
-                    <div className="text-xs text-gray-500">
-                      {totalTestCases > 0 ? Math.round((status.value / totalTestCases) * 100) : 0}%
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+           
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Bug Severity Distribution</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {bugSeverityData.map((severity) => (
-                  <div key={severity.name} className="text-center">
-                    <div className="text-2xl font-bold mb-1" style={{ color: severity.color }}>
-                      {severity.value}
+           
+            <Card>
+              <CardHeader>
+                <CardTitle>Bug Severity Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {bugSeverityData.map((severity) => (
+                    <div key={severity.name} className="text-center">
+                      <div className="text-2xl font-bold mb-1" style={{ color: severity.color }}>
+                        {severity.value}
+                      </div>
+                      <div className="text-sm text-gray-600">{severity.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {bugs && bugs.length > 0 ? Math.round((severity.value / bugs.length) * 100) : 0}%
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600">{severity.name}</div>
-                    <div className="text-xs text-gray-500">
-                      {bugs && bugs.length > 0 ? Math.round((severity.value / bugs.length) * 100) : 0}%
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+           
         </div>
       </div>
     </MainLayout>
