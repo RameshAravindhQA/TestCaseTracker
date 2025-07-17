@@ -26,23 +26,30 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     if (hasCheckedAuth || isLoading) return;
 
     const isLocallyAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    const isAuthenticated = user || isLocallyAuthenticated;
-
-    // Only redirect if we're not on login page and not authenticated
-    if (!isAuthenticated && location !== "/login") {
+    
+    // If we have a 401 error or no user and no local auth, redirect to login
+    if (error?.message === "Not authenticated" || (!user && !isLocallyAuthenticated)) {
       console.log("Not authenticated, redirecting to login");
       // Clear any problematic localStorage data that might cause issues
+      localStorage.removeItem('isAuthenticated');
       localStorage.removeItem('hasSeenWelcome');
       localStorage.removeItem('hasCompletedOnboarding');
       localStorage.removeItem('showMotivationDialog');
-      navigate("/login");
-    } else if (isAuthenticated) {
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('loginTime');
+      
+      if (location !== "/login") {
+        navigate("/login");
+      }
+    } else if (user || isLocallyAuthenticated) {
       console.log("User authenticated:", user?.firstName || "User");
     }
 
     setHasCheckedAuth(true);
     setIsCheckingAuth(false);
-  }, [user, isLoading, location, navigate, hasCheckedAuth]);
+  }, [user, isLoading, error, location, navigate, hasCheckedAuth]);
 
   if (isCheckingAuth || isLoading) {
     return <div className="flex items-center justify-center min-h-screen">
@@ -59,7 +66,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // For other pages, check if user is authenticated
-  if (!user) {
+  const isLocallyAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  if (!user && !isLocallyAuthenticated) {
     return null; // This should not happen due to redirect logic above
   }
 
