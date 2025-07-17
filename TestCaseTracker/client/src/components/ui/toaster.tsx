@@ -29,22 +29,7 @@ export function Toaster() {
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
-          <Toast
-          key={id}
-          {...props}
-          className={cn(
-            "group pointer-events-auto relative w-[360px] overflow-hidden rounded-md border p-4 pr-8 shadow-lg transition-all data-[swipe:ended]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe:cancel]:translate-x-0 data-[swipe:move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe:active]:cursor-grab",
-            props.className,
-            // Add dark green background for positive toasts
-            !props.variant || props.variant === 'default' ? 'bg-green-700 border-green-600 text-white' : '',
-            props.variant === "destructive" ? "ring-red-500/50 data-[state=open]:ring-2" : "ring-green-500/50 data-[state=open]:ring-2"
-          )}
-          onOpenChange={(open) => {
-            if (!open && dismiss) {
-              dismiss(id)
-            }
-          }}
-        >
+          <Toast key={id} {...props} className="z-[9999]">
             <div className="grid gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && (
@@ -56,7 +41,7 @@ export function Toaster() {
           </Toast>
         )
       })}
-      <ToastViewport />
+      <ToastViewport className="z-[9999]" />
     </ToastProvider>
   )
 }

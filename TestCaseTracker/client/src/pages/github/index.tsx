@@ -185,60 +185,130 @@ export default function GitHubIntegrationPage() {
         <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {isLoading ? (
             <Card className="col-span-3">
-              <CardContent>Loading integrations...</CardContent>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-2">Loading integrations...</span>
+                </div>
+              </CardContent>
             </Card>
           ) : integrations?.length === 0 ? (
             <Card className="col-span-3">
-              <CardContent>No GitHub integrations found.</CardContent>
+              <CardContent className="p-6">
+                <div className="text-center text-muted-foreground">
+                  <Github className="mx-auto h-12 w-12 mb-4" />
+                  <p>No GitHub integrations found.</p>
+                  <p className="text-sm mt-2">Click "Add Integration" to create your first GitHub connection.</p>
+                </div>
+              </CardContent>
             </Card>
           ) : (
             integrations?.map((integration) => (
-              <Card key={integration.id}>
-                <CardHeader>
-                  <CardTitle>{integration.projectName}</CardTitle>
-                  <CardDescription>{integration.repoUrl}</CardDescription>
+              <Card key={integration.id} className="relative">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Github className="h-5 w-5" />
+                        {integration.projectName}
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        {integration.repoUrl}
+                      </CardDescription>
+                    </div>
+                    <Badge 
+                      variant={integration.isEnabled ? "default" : "secondary"}
+                      className="ml-2"
+                    >
+                      {integration.isEnabled ? "Active" : "Disabled"}
+                    </Badge>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => testConnectionMutation.mutate(integration)}
-                          disabled={testConnectionMutation.isPending}
-                        >
-                          {testConnectionMutation.isPending ? (
-                            <>
-                              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-                              Testing...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Test Connection
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingIntegration(integration);
-                            setShowAddForm(true);
-                          }}
-                        >
-                          <Settings className="mr-2 h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteIntegrationMutation.mutate(integration.id)}
-                          disabled={deleteIntegrationMutation.isPending}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </Button>
-                      </div>
+                <CardContent className="space-y-4">
+                  {/* Connection Status */}
+                  <div className="flex items-center gap-2">
+                    <div className={`h-2 w-2 rounded-full ${
+                      integration.connectionStatus === 'connected' 
+                        ? 'bg-green-500' 
+                        : integration.connectionStatus === 'error'
+                        ? 'bg-red-500'
+                        : 'bg-yellow-500'
+                    }`} />
+                    <span className="text-sm text-muted-foreground">
+                      {integration.connectionStatus === 'connected' 
+                        ? 'Connected' 
+                        : integration.connectionStatus === 'error'
+                        ? 'Connection Error'
+                        : 'Status Unknown'}
+                    </span>
+                  </div>
+
+                  {/* Integration Details */}
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Token:</span>
+                      <span className="font-mono text-xs">{integration.accessToken}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Webhook:</span>
+                      <span className="text-xs">{integration.webhookUrl || 'Not configured'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Created:</span>
+                      <span className="text-xs">{new Date(integration.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => testConnectionMutation.mutate(integration)}
+                      disabled={testConnectionMutation.isPending}
+                      className="flex-1"
+                    >
+                      {testConnectionMutation.isPending ? (
+                        <>
+                          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                          Testing...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Test
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingIntegration(integration);
+                        setShowAddForm(true);
+                      }}
+                      className="flex-1"
+                    >
+                      <Settings className="mr-2 h-4 w-4" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteIntegrationMutation.mutate(integration.id)}
+                      disabled={deleteIntegrationMutation.isPending}
+                      className="flex-1"
+                    >
+                      {deleteIntegrationMutation.isPending ? (
+                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        <Trash2 className="mr-2 h-4 w-4" />
+                      )}
+                      Delete
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))

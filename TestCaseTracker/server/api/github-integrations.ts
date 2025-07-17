@@ -52,12 +52,19 @@ export async function createGitHubIntegration(req: any, res: any) {
       });
     }
 
-    // Check if integration already exists for this project
-    const existingConfig = await storage.getGitHubConfig(projectId);
-    if (existingConfig && existingConfig.isActive) {
+    // Check if integration already exists for this project and repository
+    const existingConfigs = await storage.getAllGitHubConfigs();
+    const duplicateConfig = existingConfigs.find(config => 
+      config.projectId === parseInt(projectId) && 
+      config.repoOwner === repoOwner && 
+      config.repoName === cleanRepoName &&
+      config.isActive
+    );
+    
+    if (duplicateConfig) {
       return res.status(409).json({ 
         success: false,
-        message: "GitHub integration already exists for this project" 
+        message: "GitHub integration already exists for this project and repository" 
       });
     }
 
