@@ -138,6 +138,7 @@ export default function ProjectDetailPage() {
       toast({
         title: "Module deleted",
         description: "Module has been deleted successfully",
+        style: { backgroundColor: 'darkgreen', color: 'white' },
       });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/modules`] });
       setDeleteModuleDialogOpen(false);
@@ -160,6 +161,7 @@ export default function ProjectDetailPage() {
       toast({
         title: "Test case deleted",
         description: "Test case has been deleted successfully",
+        style: { backgroundColor: 'darkgreen', color: 'white' },
       });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/test-cases`] });
       setDeleteTestCaseDialogOpen(false);
@@ -182,6 +184,7 @@ export default function ProjectDetailPage() {
       toast({
         title: "Bug deleted",
         description: "Bug has been deleted successfully",
+        style: { backgroundColor: 'darkgreen', color: 'white' },
       });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/bugs`] });
       setDeleteBugDialogOpen(false);
@@ -208,6 +211,7 @@ export default function ProjectDetailPage() {
       toast({
         title: "Test cases deleted",
         description: `${variables.length} test case(s) have been deleted successfully`,
+        style: { backgroundColor: 'darkgreen', color: 'white' },
       });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/test-cases`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/activities`] });
@@ -426,11 +430,13 @@ export default function ProjectDetailPage() {
         toast({
           title: "No Bugs to Sync",
           description: data.message || "No bugs found in this project",
+          style: { backgroundColor: 'darkgreen', color: 'white' },
         });
       } else {
         toast({
           title: "GitHub Sync Complete",
           description: `Synchronized ${data.successful} out of ${data.total} bugs with GitHub${data.errors?.length ? `. ${data.errors.length} errors occurred.` : ''}`,
+          style: { backgroundColor: 'darkgreen', color: 'white' },
         });
       }
     },
@@ -460,6 +466,7 @@ export default function ProjectDetailPage() {
       toast({
         title: "Sync from GitHub to System",
         description: data.message || "Sync from GitHub to System initiated",
+        style: { backgroundColor: 'darkgreen', color: 'white' },
       });
     },
     onError: (error: any) => {
@@ -484,6 +491,7 @@ export default function ProjectDetailPage() {
       toast({
         title: "Test case created",
         description: "Test case has been created successfully",
+        style: { backgroundColor: 'darkgreen', color: 'white' },
       });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/test-cases`] });
     },

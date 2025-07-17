@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Users, FileText, Bug, BarChart3 } from 'lucide-react';
+import { CheckCircle, Users, FileText, Bug, BarChart3, ExternalLink } from 'lucide-react';
 
 interface WelcomeDialogProps {
   isOpen?: boolean;
@@ -104,6 +104,27 @@ export const WelcomeDialog: React.FC<WelcomeDialogProps> = ({
                   <li>• Generate reports to monitor progress</li>
                 </ul>
               </div>
+            </div>
+          </div>
+
+          <div className="bg-green-50 p-4 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ExternalLink className="h-5 w-5 text-green-500" />
+                <div>
+                  <h4 className="font-semibold text-green-900">QA Updates</h4>
+                  <p className="text-sm text-green-800">Stay updated with latest features and improvements</p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="border-green-500 text-green-700 hover:bg-green-100"
+                onClick={() => window.open('/qa-updates', '_blank')}
+              >
+                <ExternalLink className="h-4 w-4 mr-1" />
+                View Updates
+              </Button>
             </div>
           </div>
 
