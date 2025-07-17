@@ -56,9 +56,9 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
       return false;
     }
 
+    // More lenient validation for Lottie files
     const hasVersion = data.v || data.version;
-    const hasLayers = Array.isArray(data.layers) && data.layers.length > 0;
-    const hasFrameRate = data.fr || data.frameRate;
+    const hasLayers = data.layers;
 
     if (!hasVersion) {
       setErrorMessage('Invalid Lottie: missing version');
@@ -66,22 +66,17 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
     }
 
     if (!hasLayers) {
-      setErrorMessage('Invalid Lottie: missing or empty layers');
+      setErrorMessage('Invalid Lottie: missing layers');
       return false;
     }
 
-    if (!hasFrameRate) {
-      setErrorMessage('Invalid Lottie: missing frame rate');
-      return false;
-    }
-
-    // Ensure required properties exist
-    if (!data.w && !data.width) data.w = width;
-    if (!data.h && !data.height) data.h = height;
+    // Set default values if missing
+    if (!data.w && !data.width) data.w = width || 100;
+    if (!data.h && !data.height) data.h = height || 100;
     if (!data.fr && !data.frameRate) data.fr = 30;
-    if (!data.ip) data.ip = 0;
-    if (!data.op) data.op = data.frames || 60;
-    if (!data.ddd) data.ddd = 0;
+    if (data.ip === undefined) data.ip = 0;
+    if (data.op === undefined) data.op = data.frames || 60;
+    if (data.ddd === undefined) data.ddd = 0;
     if (!data.assets) data.assets = [];
 
     return true;

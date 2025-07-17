@@ -1,89 +1,82 @@
 // Enhanced Animation Library for Test Case Tracker
 import { Variants } from "framer-motion";
 
-// Page Transition Variants - Lightweight for better performance
+// Page Transition Variants - Ultra-lightweight for performance
 export const pageTransitions = {
-  // Fade transitions
+  // Simple fade transitions
   fade: {
     initial: { opacity: 0 },
     animate: { opacity: 1 },
     exit: { opacity: 0 },
-    transition: { duration: 0.15, ease: "easeInOut" }
+    transition: { duration: 0.1 }
   },
 
-  // Slide transitions - Lightweight
+  // Simple slide transitions
   slideLeft: {
-    initial: { x: -20, opacity: 0 },
+    initial: { x: -10, opacity: 0 },
     animate: { x: 0, opacity: 1 },
-    exit: { x: 20, opacity: 0 },
-    transition: { duration: 0.2, ease: "easeInOut" }
+    exit: { x: 10, opacity: 0 },
+    transition: { duration: 0.1 }
   },
 
   slideRight: {
-    initial: { x: 20, opacity: 0 },
+    initial: { x: 10, opacity: 0 },
     animate: { x: 0, opacity: 1 },
-    exit: { x: -20, opacity: 0 },
-    transition: { duration: 0.2, ease: "easeInOut" }
+    exit: { x: -10, opacity: 0 },
+    transition: { duration: 0.1 }
   },
 
   slideUp: {
-    initial: { y: 20, opacity: 0 },
+    initial: { y: 10, opacity: 0 },
     animate: { y: 0, opacity: 1 },
-    exit: { y: -20, opacity: 0 },
-    transition: { duration: 0.2, ease: "easeInOut" }
+    exit: { y: -10, opacity: 0 },
+    transition: { duration: 0.1 }
   },
 
   slideDown: {
-    initial: { y: -20, opacity: 0 },
+    initial: { y: -10, opacity: 0 },
     animate: { y: 0, opacity: 1 },
-    exit: { y: 20, opacity: 0 },
-    transition: { duration: 0.2, ease: "easeInOut" }
+    exit: { y: 10, opacity: 0 },
+    transition: { duration: 0.1 }
   },
 
-  // Zoom transitions
+  // Minimal zoom
   zoomIn: {
-    initial: { scale: 0.8, opacity: 0 },
+    initial: { scale: 0.95, opacity: 0 },
     animate: { scale: 1, opacity: 1 },
-    exit: { scale: 1.2, opacity: 0 },
-    transition: { duration: 0.4, ease: "easeInOut" }
+    exit: { scale: 1.05, opacity: 0 },
+    transition: { duration: 0.15 }
   },
 
   zoomOut: {
-    initial: { scale: 1.2, opacity: 0 },
+    initial: { scale: 1.05, opacity: 0 },
     animate: { scale: 1, opacity: 1 },
-    exit: { scale: 0.8, opacity: 0 },
-    transition: { duration: 0.4, ease: "easeInOut" }
+    exit: { scale: 0.95, opacity: 0 },
+    transition: { duration: 0.15 }
   },
 
-  // Bounce transition
+  // No bounce for performance
   bounce: {
-    initial: { scale: 0.3, opacity: 0 },
-    animate: { 
-      scale: 1, 
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 10
-      }
-    },
-    exit: { scale: 0.3, opacity: 0 },
+    initial: { scale: 0.95, opacity: 0 },
+    animate: { scale: 1, opacity: 1 },
+    exit: { scale: 0.95, opacity: 0 },
+    transition: { duration: 0.1 }
   },
 
-  // Blur transition
+  // No blur for performance
   blur: {
-    initial: { filter: "blur(10px)", opacity: 0, scale: 0.95 },
-    animate: { filter: "blur(0px)", opacity: 1, scale: 1 },
-    exit: { filter: "blur(5px)", opacity: 0, scale: 1.05 },
-    transition: { duration: 0.5, ease: "easeInOut" }
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    exit: { opacity: 0 },
+    transition: { duration: 0.1 }
   },
 
-  // Stagger children animation
+  // Minimal stagger
   stagger: {
     animate: {
       transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2
+        staggerChildren: 0.02,
+        delayChildren: 0.05
       }
     }
   }
@@ -451,91 +444,57 @@ export const backdropVariants = {
   }
 };
 
-// Login page specific animations
+// Login page specific animations - simplified
 export const loginPageVariants = {
-  initial: { 
-    opacity: 0,
-    scale: 0.95,
-    y: 20 
-  },
+  initial: { opacity: 0 },
   animate: { 
-    opacity: 1, 
-    scale: 1,
-    y: 0,
-    transition: { 
-      duration: 0.3, 
-      ease: "easeOut",
-      staggerChildren: 0.05,
-      delayChildren: 0.1
-    }
-  },
-  exit: { 
-    opacity: 0, 
-    scale: 0.95,
-    y: -20,
-    transition: { duration: 0.2, ease: "easeIn" }
-  }
-};
-
-// Login form animations
-export const loginFormVariants = {
-  initial: { opacity: 0, y: 30, scale: 0.95 },
-  animate: { 
-    opacity: 1, 
-    y: 0, 
-    scale: 1,
-    transition: { 
-      duration: 0.3, 
-      ease: "easeOut",
-      delay: 0.1
-    }
-  },
-  exit: { 
-    opacity: 0, 
-    y: 30, 
-    scale: 0.95,
-    transition: { duration: 0.2 }
-  }
-};
-
-// Login header animations
-export const loginHeaderVariants = {
-  initial: { opacity: 0, y: -20 },
-  animate: { 
-    opacity: 1, 
-    y: 0,
-    transition: { 
-      duration: 0.3, 
-      ease: "easeOut",
-      staggerChildren: 0.1
-    }
-  },
-  exit: { 
-    opacity: 0, 
-    y: -20,
-    transition: { duration: 0.2 }
-  }
-};
-
-// Curtain reveal effect
-export const curtainRevealVariants = {
-  initial: { 
-    clipPath: "polygon(0 0, 0 0, 0 100%, 0% 100%)",
-    opacity: 0 
-  },
-  animate: { 
-    clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)",
     opacity: 1,
-    transition: { 
-      duration: 1.2, 
-      ease: "easeInOut",
-      delay: 0.1
-    }
+    transition: { duration: 0.15 }
   },
   exit: { 
-    clipPath: "polygon(100% 0, 100% 0, 100% 100%, 100% 100%)",
     opacity: 0,
-    transition: { duration: 0.8, ease: "easeInOut" }
+    transition: { duration: 0.1 }
+  }
+};
+
+// Login form animations - simplified
+export const loginFormVariants = {
+  initial: { opacity: 0, y: 10 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.15 }
+  },
+  exit: { 
+    opacity: 0, 
+    y: 10,
+    transition: { duration: 0.1 }
+  }
+};
+
+// Login header animations - simplified
+export const loginHeaderVariants = {
+  initial: { opacity: 0 },
+  animate: { 
+    opacity: 1,
+    transition: { duration: 0.15 }
+  },
+  exit: { 
+    opacity: 0,
+    transition: { duration: 0.1 }
+  }
+};
+
+// Curtain reveal effect - simplified
+export const curtainRevealVariants = {
+  initial: { opacity: 0 },
+  animate: { 
+    opacity: 1,
+    transition: { duration: 0.2 }
+  },
+  exit: { 
+    opacity: 0,
+    transition: { duration: 0.15 }
   }
 };
 

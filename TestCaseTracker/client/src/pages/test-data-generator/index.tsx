@@ -151,7 +151,7 @@ const countryData = {
       const states = ['NY', 'CA', 'IL', 'TX', 'AZ', 'PA', 'TX', 'CA', 'TX', 'CA'];
       const street = streets[Math.floor(Math.random() * streets.length)];
       const city = cities[Math.floor(Math.random() * cities.length)];
-      const state = states[Math.floor(Math.random() * states.length)];
+      const state = states[Math.floor(Math.random() * cities.length)];
       const zipCode = Math.floor(Math.random() * 90000) + 10000;
       return `${streetNumbers} ${street}, ${city}, ${state} ${zipCode}`;
     },
@@ -813,7 +813,8 @@ const countryData = {
 
 const dataTypes = {
   personal: ['name', 'email', 'phone', 'address'],
-  indian: ['pan', 'aadhaar', 'gst', 'ifsc', 'upi', 'drivingLicense', 'passport', 'vehicleNumber'],
+  indian: ['pan', 'aadhaar', 'gst', 'ifsc', 'upi', 'drivingLicense', 'passport',```python
+'vehicleNumber'],
   usa: ['ssn'],
   uk: ['postcode'],
   canada: ['postalCode'],
