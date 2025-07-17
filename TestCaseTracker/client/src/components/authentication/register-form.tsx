@@ -11,6 +11,7 @@ import { Link, useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { register as registerUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
 // Eye and EyeOff icons are now part of the PasswordInput component
 import { 
   Select,
@@ -71,16 +72,35 @@ export function RegisterForm() {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>Create an Account</CardTitle>
-        <CardDescription>
-          Fill in your details to create your TestTrack account
-        </CardDescription>
+    <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-2xl">
+      <CardHeader className="space-y-1">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 1, duration: 0.5 }}
+        >
+          <CardTitle className="text-2xl font-semibold text-center">
+            Create Account
+          </CardTitle>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 1.1, duration: 0.5 }}
+        >
+          <CardDescription className="text-center">
+            Sign up to get started with TestCaseTracker
+          </CardDescription>
+        </motion.div>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2, duration: 0.6 }}
+        >
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="firstName"
@@ -183,15 +203,29 @@ export function RegisterForm() {
             >
               {registerMutation.isPending ? "Creating account..." : "Register"}
             </Button>
-          </form>
-        </Form>
+            </form>
+          </Form>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5, duration: 0.5 }}
+          className="mt-6 text-center"
+        >
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Already have an account?{" "}
+            <Link href="/login">
+              <motion.span
+                whileHover={{ scale: 1.05 }}
+                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 font-medium cursor-pointer"
+              >
+                Sign in
+              </motion.span>
+            </Link>
+          </div>
+        </motion.div>
       </CardContent>
-      <CardFooter className="flex justify-center">
-        <div className="text-sm text-center">
-          Already have an account?{" "}
-          <Link href="/login" className="text-primary hover:underline">Login</Link>
-        </div>
-      </CardFooter>
     </Card>
   );
 }

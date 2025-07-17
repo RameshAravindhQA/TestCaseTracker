@@ -79,13 +79,63 @@ function LoginPage() {
               stiffness: 200,
               damping: 15 
             }}
-            className="flex justify-center mb-4"
+            className="flex justify-center mb-6"
           >
-            <img 
-              src="/images/navadhiti-logo-tree.jpg" 
-              alt="NavaDhiti Logo" 
-              className="h-16 w-16 rounded-xl shadow-lg" 
-            />
+            {/* Custom NavaDhiti Logo */}
+            <div className="relative">
+              <svg
+                width="80"
+                height="80"
+                viewBox="0 0 80 80"
+                xmlns="http://www.w3.org/2000/svg"
+                className="drop-shadow-lg"
+              >
+                {/* Background circle with gradient */}
+                <defs>
+                  <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#3B82F6" />
+                    <stop offset="50%" stopColor="#1D4ED8" />
+                    <stop offset="100%" stopColor="#1E40AF" />
+                  </linearGradient>
+                  <linearGradient id="leafGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#10B981" />
+                    <stop offset="100%" stopColor="#059669" />
+                  </linearGradient>
+                </defs>
+                
+                {/* Main circle background */}
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="38"
+                  fill="url(#logoGradient)"
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                />
+                
+                {/* Letter 'N' stylized */}
+                <path
+                  d="M20 25 L20 55 L25 55 L25 35 L35 55 L40 55 L40 25 L35 25 L35 45 L25 25 Z"
+                  fill="white"
+                  fontWeight="bold"
+                />
+                
+                {/* Decorative leaf/branch element */}
+                <path
+                  d="M50 30 Q55 25 60 30 Q55 35 50 30 Z"
+                  fill="url(#leafGradient)"
+                />
+                <path
+                  d="M52 32 Q57 37 62 32 Q57 42 52 37 Z"
+                  fill="url(#leafGradient)"
+                />
+                
+                {/* Small dots for tech feel */}
+                <circle cx="48" cy="48" r="2" fill="white" opacity="0.8"/>
+                <circle cx="54" cy="52" r="1.5" fill="white" opacity="0.6"/>
+                <circle cx="58" cy="46" r="1" fill="white" opacity="0.4"/>
+              </svg>
+            </div>
           </motion.div>
 
           <motion.h1
@@ -107,71 +157,12 @@ function LoginPage() {
           </motion.p>
         </motion.div>
 
-        {/* Login Form with Advanced Animation */}
+        {/* Single Login Form */}
         <motion.div
           variants={loginFormVariants}
           className="relative"
         >
-          <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-2xl">
-            <CardHeader className="space-y-1">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 1, duration: 0.5 }}
-              >
-                <CardTitle className="text-2xl font-semibold text-center">
-                  Welcome Back
-                </CardTitle>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 1.1, duration: 0.5 }}
-              >
-                <CardDescription className="text-center">
-                  Sign in to your account to continue
-                </CardDescription>
-              </motion.div>
-            </CardHeader>
-
-            <CardContent>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.2, duration: 0.6 }}
-              >
-                <LoginForm />
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.5, duration: 0.5 }}
-                className="mt-6 text-center space-y-2"
-              >
-                <Link href="/forgot-password">
-                  <motion.span
-                    whileHover={{ scale: 1.05, color: "#3B82F6" }}
-                    className="text-sm text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 cursor-pointer transition-colors"
-                  >
-                    Forgot your password?
-                  </motion.span>
-                </Link>
-
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Don't have an account?{" "}
-                  <Link href="/register">
-                    <motion.span
-                      whileHover={{ scale: 1.05 }}
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 font-medium cursor-pointer"
-                    >
-                      Sign up
-                    </motion.span>
-                  </Link>
-                </div>
-              </motion.div>
-            </CardContent>
-          </Card>
+          <LoginForm />
         </motion.div>
       </motion.div>
     </motion.div>
