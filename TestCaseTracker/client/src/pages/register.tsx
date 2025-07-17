@@ -1,4 +1,5 @@
 import { RegisterForm } from "@/components/authentication/register-form";
+import { NavaDhitiLogo } from "@/components/ui/navadhiti-logo";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { useEffect } from "react";
@@ -80,13 +81,9 @@ function Register() {
             }}
             className="flex justify-center mb-6"
           >
-            {/* NavaDhiti Logo */}
-            <div className="relative">
-              <img
-                src="/images/navadhiti-logo-tree.jpg"
-                alt="NavaDhiti Logo"
-                className="h-32 w-32 rounded-full shadow-lg border-4 border-white dark:border-gray-800"
-              />
+            {/* NavaDhiti SVG Logo */}
+            <div className="relative p-4 bg-white dark:bg-gray-800 rounded-full shadow-lg border-4 border-white dark:border-gray-800">
+              <NavaDhitiLogo className="h-24 w-24" animate={true} />
             </div>
           </motion.div>
 
