@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { Loader2, Github, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Trash2, Edit, Plus } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -26,13 +27,17 @@ interface GitHubIntegration {
 }
 
 interface GitHubConfigFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  projectId: number;
+  config?: any;
   editingIntegration?: GitHubIntegration | null;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
-export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFormProps) {
+export function GitHubConfigForm({ open, onOpenChange, projectId, config, editingIntegration, onClose }: GitHubConfigFormProps) {
   const [formData, setFormData] = useState({
-    projectId: '',
+    projectId: projectId?.toString() || '',
     username: '',
     repository: '',
     accessToken: '',
@@ -166,7 +171,17 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>
+            {editingIntegration ? 'Edit GitHub Integration' : 'Setup GitHub Integration'}
+          </DialogTitle>
+          <DialogDescription>
+            Configure GitHub integration for this project to enable issue tracking.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-6">
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
@@ -352,5 +367,7 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
         </Button>
       </div>
     </form>
+      </DialogContent>
+    </Dialog>
   );
 }

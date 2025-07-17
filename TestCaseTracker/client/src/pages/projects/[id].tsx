@@ -1264,12 +1264,14 @@ export default function ProjectDetailPage() {
           />
         </DialogContent>
       </Dialog>
-      <GitHubConfigForm
-        open={showGitHubConfig}
-        onOpenChange={setShowGitHubConfig}
-        projectId={projectId}
-        config={githubConfig}
-      />
+      {showGitHubConfig && (
+        <GitHubConfigForm
+          open={showGitHubConfig}
+          onOpenChange={setShowGitHubConfig}
+          projectId={projectId}
+          config={githubConfig}
+        />
+      )}
 
       {/* Floating Team Chat */}
       <ProjectChat projectId={projectId} currentUser={currentUser} />
