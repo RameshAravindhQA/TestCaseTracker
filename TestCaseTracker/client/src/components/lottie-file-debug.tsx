@@ -70,6 +70,65 @@ export const LottieFileDebug: React.FC<LottieFileDebugProps> = ({ onTestResults 
         }
 
         console.log(`✅ HTTP OK for ${file}`);
+        
+        const text = await response.text();
+        console.log(`📄 Response length: ${text.length} chars for ${file}`);
+
+        // Check if we got HTML instead of JSON
+        if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+          console.error(`❌ HTML response for ${file}`);
+          result.status = 'HTML_ERROR';
+          result.error = 'Received HTML page instead of JSON';
+          testResults.push(result);
+          continue;
+        }
+
+        // Parse JSON
+        let jsonData;
+        try {
+          jsonData = JSON.parse(text);
+          console.log(`✅ JSON parsed successfully for ${file}`);
+        } catch (parseError) {
+          console.error(`❌ JSON parse error for ${file}:`, parseError);
+          result.status = 'PARSE_ERROR';
+          result.error = `JSON parse error: ${parseError.message}`;
+          testResults.push(result);
+          continue;
+        }
+
+        // Validate Lottie format
+        const hasVersion = jsonData.v || jsonData.version;
+        const hasLayers = Array.isArray(jsonData.layers) && jsonData.layers.length > 0;
+        const hasFrameRate = jsonData.fr || jsonData.frameRate;
+
+        if (!hasVersion || !hasLayers || !hasFrameRate) {
+          console.error(`❌ Invalid Lottie format for ${file}:`, {
+            hasVersion,
+            hasLayers,
+            hasFrameRate,
+            version: jsonData.v || jsonData.version,
+            layersCount: jsonData.layers?.length || 0,
+            frameRate: jsonData.fr || jsonData.frameRate
+          });
+          result.status = 'FORMAT_ERROR';
+          result.error = 'Invalid Lottie animation format';
+          testResults.push(result);
+          continue;
+        }
+
+        // Success - valid Lottie
+        result.status = 'VALID_LOTTIE';
+        result.data = jsonData;
+        result.details = {
+          version: jsonData.v || jsonData.version,
+          layers: jsonData.layers?.length || 0,
+          frameRate: jsonData.fr || jsonData.frameRate || 30,
+          width: jsonData.w || jsonData.width || 500,
+          height: jsonData.h || jsonData.height || 500,
+          duration: jsonData.op ? (jsonData.op - (jsonData.ip || 0)) / (jsonData.fr || 30) : 0
+        };
+
+        console.log(`✅ Valid Lottie for ${file}`);
 
         // Get response text
         const text = await response.text();

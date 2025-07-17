@@ -1,3 +1,4 @@
+typescript
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -152,19 +153,38 @@ export default function ProfilePage() {
               // Validate Lottie structure
               const hasVersion = data.v || data.version;
               const hasLayers = Array.isArray(data.layers) && data.layers.length > 0;
+              const hasFrameRate = data.fr || data.frameRate;
+              const hasWidth = data.w || data.width;
+              const hasHeight = data.h || data.height;
 
-              if (hasVersion && hasLayers) {
-                console.log(`✅ Valid Lottie: ${animation.name} (v${data.v}, ${data.layers.length} layers)`);
+              if (hasVersion && hasLayers && hasFrameRate) {
+                // Ensure required Lottie properties
+                const sanitizedData = {
+                  ...data,
+                  fr: data.fr || data.frameRate || 30,
+                  w: data.w || data.width || 500,
+                  h: data.h || data.height || 500,
+                  ip: data.ip || 0,
+                  op: data.op || data.frames || 60,
+                  ddd: data.ddd || 0,
+                  assets: data.assets || [],
+                  layers: data.layers || []
+                };
+
+                console.log(`✅ Valid Lottie: ${animation.name} (v${data.v}, ${data.layers.length} layers, ${sanitizedData.fr}fps)`);
                 return { 
                   ...animation, 
                   path: workingPath, 
-                  preview: data, 
+                  preview: sanitizedData, 
                   isValid: true 
                 };
               } else {
                 console.warn(`⚠️ Invalid Lottie structure for ${animation.name}:`, {
                   hasVersion,
                   hasLayers,
+                  hasFrameRate,
+                  hasWidth,
+                  hasHeight,
                   layersCount: data.layers?.length || 0
                 });
               }
@@ -210,7 +230,7 @@ export default function ProfilePage() {
           const userAnimationData = typeof currentUser.avatarData === 'string' 
             ? JSON.parse(currentUser.avatarData) 
             : currentUser.avatarData;
-          
+
           const userAnimation = workingAnimations.find(anim => anim.id === userAnimationData?.id);
           if (userAnimation) {
             setSelectedLottie(userAnimation);
@@ -413,7 +433,7 @@ export default function ProfilePage() {
 
         if (!response.ok) {
           let errorMessage = `Update failed with status ${response.status}`;
-          
+
           try {
             const errorData = await response.json();
             errorMessage = errorData.message || errorMessage;
@@ -430,7 +450,7 @@ export default function ProfilePage() {
               console.error('Failed to parse error response:', textError);
             }
           }
-          
+
           throw new Error(errorMessage);
         }
 
@@ -886,7 +906,8 @@ export default function ProfilePage() {
               >
                 Change Picture
               </Button>
-              <p className="text-xs text-gray-500 mt-2 text-center">
+              <```text
+p className="text-xs text-gray-500 mt-2 text-center">
                 Click the button or image to upload a new profile picture.
               </p>
             </CardContent>
