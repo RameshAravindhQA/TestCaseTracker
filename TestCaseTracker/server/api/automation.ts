@@ -1,4 +1,3 @@
-
 import express from 'express';
 import { spawn } from 'child_process';
 import path from 'path';
@@ -24,7 +23,7 @@ const activeSessions = new Map<string, RecordingSession>();
 router.post('/start-recording', async (req, res) => {
   try {
     const { url, projectId, moduleId, testCaseId } = req.body;
-    
+
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
@@ -88,6 +87,39 @@ router.post('/start-recording', async (req, res) => {
         session.status = 'error';
       }
     });
+    
+    try {
+    // Generate unique filename for this recording session
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `${projectId}-${moduleId || 'general'}-${timestamp}.spec.ts`;
+    const outputPath = path.join(__dirname, '../../recordings', filename);
+
+    // Ensure recordings directory exists
+    const recordingsDir = path.join(__dirname, '../../recordings');
+    if (!fs.existsSync(recordingsDir)) {
+      fs.mkdirSync(recordingsDir, { recursive: true });
+    }
+
+    // Set proper JSON content type
+    res.setHeader('Content-Type', 'application/json');
+
+    // For now, return success - actual Playwright integration would go here
+    res.status(200).json({
+      success: true,
+      message: 'Recording started successfully',
+      sessionId: `session-${Date.now()}`,
+      outputPath: filename
+    });
+
+  } catch (error) {
+    console.error('❌ Error starting recording:', error);
+    res.setHeader('Content-Type', 'application/json');
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start recording',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 
     res.json({
       success: true,
@@ -109,23 +141,23 @@ router.post('/start-recording', async (req, res) => {
 router.post('/stop-recording', async (req, res) => {
   try {
     const { sessionId } = req.body;
-    
+
     if (!sessionId || !activeSessions.has(sessionId)) {
       return res.status(404).json({ error: 'Recording session not found' });
     }
 
     const session = activeSessions.get(sessionId)!;
-    
+
     if (session.process && session.status === 'recording') {
       session.process.kill('SIGTERM');
       session.status = 'stopped';
-      
+
       // Wait a bit for the process to finish writing the file
       setTimeout(async () => {
         try {
           const outputPath = path.join(process.cwd(), 'recordings', session.filename);
           const fileExists = await fs.access(outputPath).then(() => true).catch(() => false);
-          
+
           res.json({
             success: true,
             message: 'Recording stopped successfully',
@@ -140,7 +172,7 @@ router.post('/stop-recording', async (req, res) => {
             fileExists: false
           });
         }
-        
+
         activeSessions.delete(sessionId);
       }, 2000);
     } else {
@@ -159,13 +191,13 @@ router.post('/stop-recording', async (req, res) => {
 // Get recording status
 router.get('/recording-status/:sessionId', (req, res) => {
   const { sessionId } = req.params;
-  
+
   if (!activeSessions.has(sessionId)) {
     return res.status(404).json({ error: 'Recording session not found' });
   }
 
   const session = activeSessions.get(sessionId)!;
-  
+
   res.json({
     sessionId: session.id,
     status: session.status,
@@ -181,7 +213,7 @@ router.get('/recording-status/:sessionId', (req, res) => {
 router.get('/recordings', async (req, res) => {
   try {
     const recordingsDir = path.join(process.cwd(), 'recordings');
-    
+
     try {
       const files = await fs.readdir(recordingsDir);
       const recordings = await Promise.all(
@@ -197,7 +229,7 @@ router.get('/recordings', async (req, res) => {
             };
           })
       );
-      
+
       res.json(recordings.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
     } catch (error) {
       // Directory doesn't exist or is empty
@@ -214,7 +246,7 @@ router.get('/recordings/:filename', async (req, res) => {
   try {
     const { filename } = req.params;
     const filePath = path.join(process.cwd(), 'recordings', filename);
-    
+
     const content = await fs.readFile(filePath, 'utf-8');
     res.json({ filename, content });
   } catch (error) {

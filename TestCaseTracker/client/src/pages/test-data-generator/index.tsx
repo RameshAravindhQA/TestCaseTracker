@@ -1453,7 +1453,7 @@ export default function TestDataGeneratorPage() {
                   </div>
                 )}
 
-                  {/* Other Data Types */}
+                  {/* Financial Data Types */}
                   <div>
                     <Label className="text-sm font-medium text-orange-600">Financial</Label>
                     <div className="space-y-2 mt-1">
@@ -1596,6 +1596,9 @@ export default function TestDataGeneratorPage() {
                   Select data types and click "Generate Data" to create test data
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
             </CardContent>
           </Card>
         </div>

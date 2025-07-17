@@ -98,7 +98,13 @@ class GlobalSoundHandler {
            errorString.includes('warning') ||
            errorString.includes('validatedomnesting') ||
            errorString.includes('the above error occurred') ||
-           errorString.includes('consider adding an error boundary');
+           errorString.includes('consider adding an error boundary') ||
+           errorString.includes('err_connection_timed_out') ||
+           errorString.includes('failed to load resource') ||
+           errorString.includes('net::err_connection') ||
+           errorString.includes('ping') ||
+           errorString.includes('waitforsuccessfulping') ||
+           errorString.includes('replit.dev:24678');
   }
 
   // Check if error is resource-related (shouldn't trigger sounds)
@@ -242,6 +248,19 @@ class GlobalSoundHandler {
   isCrudOperation(method, url = '') {
     const crudMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
     if (!crudMethods.includes(method?.toUpperCase())) {
+      return false;
+    }
+
+    // Exclude dropdown/select operations - use click sound instead
+    const dropdownPatterns = [
+      'dropdown',
+      'select',
+      'option',
+      'filter',
+      'sort'
+    ];
+
+    if (dropdownPatterns.some(pattern => url.toLowerCase().includes(pattern))) {
       return false;
     }
 

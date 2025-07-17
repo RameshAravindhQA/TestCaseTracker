@@ -401,9 +401,9 @@ export default function FunctionalFlowPage() {
         </Card>
 
         {/* Flow Diagram Canvas */}
-        <Card className="h-[600px]">
-          <CardContent className="p-0 h-full">
-            <div ref={reactFlowRef} className="h-full w-full">
+        <Card className="min-h-[600px] flex-1">
+          <CardContent className="p-4 h-full">
+            <div ref={reactFlowRef} className="h-[550px] w-full border rounded-lg">
               <ReactFlow
                 nodes={nodes}
                 edges={edges}

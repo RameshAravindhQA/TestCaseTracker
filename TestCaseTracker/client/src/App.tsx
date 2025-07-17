@@ -214,48 +214,33 @@ function Router() {
 function AppContent() {
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
 
-  // Initialize sound manager and check for welcome dialog
+  // Listen for login success to show welcome dialog
   useEffect(() => {
-    console.log('🚀 App starting up...');
-
-    // Load sound manager script
-    const loadSoundManager = async () => {
-      try {
-        console.log('🔊 Loading sound manager...');
-        await import('./lib/soundManager.js');
-        console.log('✅ Sound manager loaded');
-
-        console.log('🔊 Loading global sound handler...');
-        await import('./lib/globalSoundHandler.js');
-        console.log('✅ Global sound handler loaded');
-
-        // Wait a bit for initialization
+    const handleLoginSuccess = () => {
+      const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
+      if (!hasSeenWelcome) {
         setTimeout(() => {
-          if (window.soundManager) {
-            console.log('🔊 Sound system ready with settings:', window.soundManager?.getSettings());
-
-            // Check if user just logged in and show welcome dialog
-            const showWelcome = sessionStorage.getItem('showWelcomeDialog');
-            const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
-            
-            if (showWelcome === 'true' && !hasSeenWelcome) {
-              sessionStorage.removeItem('showWelcomeDialog');
-              // Show welcome dialog after a short delay
-              setTimeout(() => {
-                setShowWelcomeDialog(true);
-              }, 1500);
-            }
-          } else {
-            console.warn('⚠️ Sound manager still not available after initialization');
-          }
-        }, 100);
-
-      } catch (error) {
-        console.error('❌ Failed to load sound system:', error);
+          setShowWelcomeDialog(true);
+        }, 1000); // Delay to ensure components are mounted
       }
     };
 
-    loadSoundManager();
+    window.addEventListener('login-success', handleLoginSuccess);
+
+    // Also check on auth state change
+    const checkForWelcome = () => {
+      const user = localStorage.getItem('auth-user');
+      const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
+      if (user && !hasSeenWelcome) {
+        setTimeout(() => {
+          setShowWelcomeDialog(true);
+        }, 1500);
+      }
+    };
+
+    checkForWelcome();
+
+    return () => window.removeEventListener('login-success', handleLoginSuccess);
   }, []);
 
   return (
