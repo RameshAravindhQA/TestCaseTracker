@@ -1,36 +1,63 @@
+
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "@/components/authentication/login-form";
-import { LottieAnimation } from "@/components/ui/lottie-animation";
 import { motion } from "framer-motion";
-import { loginPageVariants, loginFormVariants, loginHeaderVariants, curtainRevealVariants, pageTransitions, pageVariants } from "@/lib/animations";
+import { loginPageVariants, loginFormVariants, loginHeaderVariants, curtainRevealVariants } from "@/lib/animations";
+import { useQuery } from "@tanstack/react-query";
 
 function LoginPage() {
-  const [, setLocation] = useLocation();
-  const [showContent, setShowContent] = useState(false);
+  const [, navigate] = useLocation();
 
+  // Check if already logged in
+  const { data: user, isLoading } = useQuery({
+    queryKey: ["/api/auth/user"],
+    retry: false,
+    throwOnError: false,
+  });
+
+  // Redirect to dashboard if already logged in
   useEffect(() => {
-    // Trigger content animation after component mount
-    const timer = setTimeout(() => setShowContent(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!isLoading && user) {
+      navigate("/dashboard");
+    }
+  }, [user, isLoading, navigate]);
 
   return (
-    <motion.div 
-      variants={pageVariants}
+    <motion.div
+      variants={loginPageVariants}
       initial="initial"
       animate="animate"
       exit="exit"
-      className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4"
+      className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 relative overflow-hidden"
     >
-      {/* Background Animation Elements */}
+      {/* Floating Animation Elements */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 0.1, scale: 1 }}
-        transition={{ duration: 2, ease: "easeOut" }}
-        className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full filter blur-3xl"
-        style={{ transform: "translate(-20%, -20%)" }}
+        animate={{
+          y: [-10, 10, -10],
+          opacity: [0.3, 0.6, 0.3],
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="absolute top-10 right-10 w-20 h-20 bg-blue-400/20 rounded-full blur-xl"
+      />
+
+      <motion.div
+        animate={{
+          y: [10, -10, 10],
+          opacity: [0.2, 0.5, 0.2],
+        }}
+        transition={{
+          duration: 5,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 1,
+        }}
+        className="absolute bottom-10 left-10 w-16 h-16 bg-purple-400/20 rounded-full blur-xl"
       />
 
       <motion.div
@@ -52,16 +79,13 @@ function LoginPage() {
               stiffness: 200,
               damping: 15 
             }}
-            className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-4 shadow-lg"
+            className="flex justify-center mb-4"
           >
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              className="text-white font-bold text-xl"
-            >
-              TC
-            </motion.span>
+            <img 
+              src="/images/navadhiti-logo-tree.jpg" 
+              alt="NavaDhiti Logo" 
+              className="h-16 w-16 rounded-xl shadow-lg" 
+            />
           </motion.div>
 
           <motion.h1
@@ -149,34 +173,6 @@ function LoginPage() {
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Floating Animation Elements */}
-        <motion.div
-          animate={{
-            y: [-10, 10, -10],
-            opacity: [0.3, 0.6, 0.3],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="absolute top-10 right-10 w-20 h-20 bg-blue-400/20 rounded-full blur-xl"
-        />
-
-        <motion.div
-          animate={{
-            y: [10, -10, 10],
-            opacity: [0.2, 0.5, 0.2],
-          }}
-          transition={{
-            duration: 5,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 1,
-          }}
-          className="absolute bottom-10 left-10 w-16 h-16 bg-purple-400/20 rounded-full blur-xl"
-        />
       </motion.div>
     </motion.div>
   );

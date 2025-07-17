@@ -9,6 +9,7 @@ import { logout } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/types";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -211,6 +212,48 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     },
   ], []);
 
+  // Animation variants for sidebar items
+  const sidebarItemVariants = {
+    hidden: { 
+      opacity: 0, 
+      x: -20,
+      scale: 0.95
+    },
+    visible: (index: number) => ({
+      opacity: 1,
+      x: 0,
+      scale: 1,
+      transition: {
+        delay: index * 0.05,
+        duration: 0.3,
+        ease: "easeOut"
+      }
+    }),
+    hover: {
+      x: 5,
+      scale: 1.02,
+      transition: { 
+        duration: 0.2,
+        ease: "easeInOut"
+      }
+    },
+    tap: {
+      scale: 0.98,
+      transition: { duration: 0.1 }
+    }
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.03,
+        delayChildren: 0.1
+      }
+    }
+  };
+
   const userItems: NavItem[] = useMemo(() => [
     {
       name: "My Profile",
@@ -280,33 +323,54 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       </div>
 
       <nav className="flex-1 overflow-y-auto" ref={sidebarRef}>
-        <div className="px-2 py-4 space-y-1">
+        <motion.div 
+          className="px-2 py-4 space-y-1"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {useMemo(() => 
-            navItems.map((item) => {
+            navItems.map((item, index) => {
               const isActive = location.startsWith(item.href);
               return (
               <div key={item.href}>
-                <Link 
-                  href={item.href}
-                  className={cn(
-                    "flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md group",
-                    isActive
-                      ? "text-white bg-primary"
-                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
-                  )}
+                <motion.div
+                  variants={sidebarItemVariants}
+                  custom={index}
+                  whileHover="hover"
+                  whileTap="tap"
                 >
-                  <div className="flex items-center">
-                    <span className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}>
-                      {item.icon}
-                    </span>
-                    {item.name}
-                  </div>
-                  {item.badge && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
+                  <Link 
+                    href={item.href}
+                    className={cn(
+                      "flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md group transition-all duration-200",
+                      isActive
+                        ? "text-white bg-primary shadow-md"
+                        : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                    )}
+                  >
+                    <div className="flex items-center">
+                      <motion.span 
+                        className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}
+                        whileHover={{ scale: 1.1 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {item.icon}
+                      </motion.span>
+                      {item.name}
+                    </div>
+                    {item.badge && (
+                      <motion.span 
+                        className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: index * 0.05 + 0.3 }}
+                      >
+                        {item.badge}
+                      </motion.span>
+                    )}
+                  </Link>
+                </motion.div>
 
                 {/* Render submenu if item has children */}
                 {item.children && item.children.length > 0 && (
@@ -336,87 +400,156 @@ const SidebarComponent = ({ className }: SidebarProps) => {
 
         {/* User account section */}
         <>
-          <div className="px-3 py-3">
+          <motion.div 
+            className="px-3 py-3"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: navItems.length * 0.05 + 0.1 }}
+          >
             <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
               Account
             </h3>
-          </div>
+          </motion.div>
 
-          <div className="px-2 space-y-1">
+          <motion.div 
+            className="px-2 space-y-1"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {useMemo(() => 
-              userItems.map((item) => {
+              userItems.map((item, index) => {
                 const isActive = location.startsWith(item.href);
                 return (
-                <Link 
-                  key={item.href} 
-                  href={item.href}
-                  ref={isActive ? activeItemRef : null}
-                  className={cn(
-                    "flex items-center px-2 py-2 text-sm font-medium rounded-md group",
-                    isActive
-                      ? "text-white bg-primary"
-                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
-                  )}
+                <motion.div
+                  key={item.href}
+                  variants={sidebarItemVariants}
+                  custom={navItems.length + index}
+                  whileHover="hover"
+                  whileTap="tap"
                 >
-                  <span className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}>
-                    {item.icon}
-                  </span>
-                  {item.name}
-                </Link>
-              )}), [userItems, location])}
-          </div>
-        </>
-
-        {/* Admin section */}
-        {user?.role === "Admin" && (
-          <>
-            <div className="px-3 py-3">
-              <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                Admin
-              </h3>
-            </div>
-
-            <div className="px-2 space-y-1">
-              {useMemo(() => 
-                adminItems.map((item) => {
-                  const isActive = location.startsWith(item.href);
-                  return (
                   <Link 
-                    key={item.href} 
                     href={item.href}
+                    ref={isActive ? activeItemRef : null}
                     className={cn(
-                      "flex items-center px-2 py-2 text-sm font-medium rounded-md group",
+                      "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-all duration-200",
                       isActive
-                        ? "text-white bg-primary"
+                        ? "text-white bg-primary shadow-md"
                         : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
                     )}
                   >
-                    <span className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}>
+                    <motion.span 
+                      className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}
+                      whileHover={{ scale: 1.1 }}
+                      transition={{ duration: 0.15 }}
+                    >
                       {item.icon}
-                    </span>
+                    </motion.span>
                     {item.name}
                   </Link>
-                )}), [adminItems, location])}
-            </div>
-          </>
-        )}
+                </motion.div>
+              )}), [userItems, location, navItems.length])}
+          </motion.div>
+        </>
+
+        {/* Admin section */}
+        <AnimatePresence>
+          {user?.role === "Admin" && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <motion.div 
+                className="px-3 py-3"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: (navItems.length + userItems.length) * 0.05 + 0.2 }}
+              >
+                <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                  Admin
+                </h3>
+              </motion.div>
+
+              <motion.div 
+                className="px-2 space-y-1"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                {useMemo(() => 
+                  adminItems.map((item, index) => {
+                    const isActive = location.startsWith(item.href);
+                    return (
+                    <motion.div
+                      key={item.href}
+                      variants={sidebarItemVariants}
+                      custom={navItems.length + userItems.length + index}
+                      whileHover="hover"
+                      whileTap="tap"
+                    >
+                      <Link 
+                        href={item.href}
+                        className={cn(
+                          "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-all duration-200",
+                          isActive
+                            ? "text-white bg-primary shadow-md"
+                            : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                        )}
+                      >
+                        <motion.span 
+                          className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}
+                          whileHover={{ scale: 1.1 }}
+                          transition={{ duration: 0.15 }}
+                        >
+                          {item.icon}
+                        </motion.span>
+                        {item.name}
+                      </Link>
+                    </motion.div>
+                  )}), [adminItems, location, navItems.length, userItems.length])}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
-        <div className="flex items-center justify-between mb-2">
+      <motion.div 
+        className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-2"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: (navItems.length + userItems.length + (user?.role === "Admin" ? adminItems.length : 0)) * 0.05 + 0.3 }}
+      >
+        <motion.div 
+          className="flex items-center justify-between mb-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
           <span className="text-sm text-gray-700 dark:text-gray-300">Theme</span>
           <ThemeToggle />
-        </div>
-        <Button
-          variant="outline"
-          className="flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 rounded-md transition-colors"
-          onClick={handleLogout}
-          disabled={logoutMutation.isPending}
+        </motion.div>
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
         >
-          <LogOut className="h-5 w-5 mr-3 text-gray-600 dark:text-gray-300" />
-          {logoutMutation.isPending ? "Logging out..." : "Logout"}
-        </Button>
-      </div>
+          <Button
+            variant="outline"
+            className="flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 rounded-md transition-all duration-200"
+            onClick={handleLogout}
+            disabled={logoutMutation.isPending}
+          >
+            <motion.div
+              animate={logoutMutation.isPending ? { rotate: 360 } : {}}
+              transition={{ duration: 1, repeat: logoutMutation.isPending ? Infinity : 0 }}
+            >
+              <LogOut className="h-5 w-5 mr-3 text-gray-600 dark:text-gray-300" />
+            </motion.div>
+            {logoutMutation.isPending ? "Logging out..." : "Logout"}
+          </Button>
+        </motion.div>
+      </motion.div>
 
       {/* Logout Confirmation Dialog */}
       <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
