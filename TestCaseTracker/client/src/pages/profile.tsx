@@ -95,73 +95,97 @@ export default function ProfilePage() {
     try {
       console.log('🎬 Starting to load Lottie animations...');
 
-      // Define animations to load with fallback paths
+      // Define animations to load with multiple path attempts
       const animationsToLoad = [
-        { id: 'rocket', name: 'Rocket', path: '/lottie/rocket.json' },
-        { id: 'businessman-rocket', name: 'Business Rocket', path: '/lottie/businessman-rocket.json' },
-        { id: 'male-avatar', name: 'Male Avatar', path: '/lottie/male-avatar.json' },
-        { id: 'female-avatar', name: 'Female Avatar', path: '/lottie/female-avatar.json' },
-        { id: 'business-team', name: 'Business Team', path: '/lottie/business-team.json' },
-        { id: 'office-team', name: 'Office Team', path: '/lottie/office-team.json' },
-        { id: 'software-dev', name: 'Software Dev', path: '/lottie/software-dev.json' }
+        { id: 'rocket', name: 'Rocket', paths: ['/lottie/rocket.json', '/TestCaseTracker/client/public/lottie/rocket.json'] },
+        { id: 'businessman-rocket', name: 'Business Rocket', paths: ['/lottie/businessman-rocket.json', '/TestCaseTracker/client/public/lottie/businessman-rocket.json'] },
+        { id: 'male-avatar', name: 'Male Avatar', paths: ['/lottie/male-avatar.json', '/TestCaseTracker/client/public/lottie/male-avatar.json'] },
+        { id: 'female-avatar', name: 'Female Avatar', paths: ['/lottie/female-avatar.json', '/TestCaseTracker/client/public/lottie/female-avatar.json'] },
+        { id: 'business-team', name: 'Business Team', paths: ['/lottie/business-team.json', '/TestCaseTracker/client/public/lottie/business-team.json'] },
+        { id: 'office-team', name: 'Office Team', paths: ['/lottie/office-team.json', '/TestCaseTracker/client/public/lottie/office-team.json'] },
+        { id: 'software-dev', name: 'Software Dev', paths: ['/lottie/software-dev.json', '/TestCaseTracker/client/public/lottie/software-dev.json'] }
       ];
 
       const loadedAnimations = await Promise.all(
         animationsToLoad.map(async (animation) => {
           try {
-            console.log(`🎬 Loading animation: ${animation.name} from ${animation.path}`);
+            console.log(`🎬 Loading animation: ${animation.name}`);
 
-            // Try direct fetch first
-            let response;
             let data = null;
+            let workingPath = null;
 
-            try {
-              response = await fetch(animation.path);
+            // Try each path until one works
+            for (const path of animation.paths) {
+              try {
+                console.log(`🔄 Trying path: ${path}`);
+                const response = await fetch(path);
 
-              if (response.ok) {
-                const text = await response.text();
+                if (response.ok) {
+                  const text = await response.text();
 
-                // Check if we got HTML instead of JSON (404 page)
-                if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-                  console.warn(`⚠️ Received HTML (likely 404) for ${animation.name}`);
-                  throw new Error('File not found');
-                }
-
-                // Parse JSON
-                data = JSON.parse(text);
-
-                // Validate Lottie structure more thoroughly
-                if (data && typeof data === 'object') {
-                  // Check for essential Lottie properties
-                  const hasVersion = data.v || data.version;
-                  const hasLayers = Array.isArray(data.layers) && data.layers.length > 0;
-                  const hasFrameRate = data.fr || data.frameRate;
-
-                  if (hasVersion && hasLayers) {
-                    console.log(`✅ Valid Lottie: ${animation.name} (v${data.v}, ${data.layers.length} layers)`);
-                    return { ...animation, preview: data, isValid: true };
-                  } else {
-                    console.warn(`⚠️ Invalid Lottie structure for ${animation.name}:`, {
-                      hasVersion,
-                      hasLayers,
-                      hasFrameRate,
-                      layersCount: data.layers?.length || 0
-                    });
+                  // Check if we got HTML instead of JSON (404 page)
+                  if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                    console.warn(`⚠️ Received HTML (likely 404) for ${path}`);
+                    continue;
                   }
+
+                  // Parse JSON
+                  try {
+                    data = JSON.parse(text);
+                    workingPath = path;
+                    console.log(`✅ Successfully loaded from: ${path}`);
+                    break;
+                  } catch (parseError) {
+                    console.error(`❌ JSON parse error for ${path}:`, parseError);
+                    continue;
+                  }
+                } else {
+                  console.warn(`⚠️ HTTP ${response.status} for ${path}`);
                 }
-              } else {
-                console.warn(`⚠️ HTTP ${response.status} for ${animation.name}`);
+              } catch (fetchError) {
+                console.error(`❌ Fetch error for ${path}:`, fetchError);
               }
-            } catch (fetchError) {
-              console.error(`❌ Fetch/Parse error for ${animation.name}:`, fetchError);
             }
 
-            // Return failed animation with null preview
-            return { ...animation, preview: null, isValid: false };
+            // If we found valid data, validate it
+            if (data && workingPath) {
+              // Validate Lottie structure
+              const hasVersion = data.v || data.version;
+              const hasLayers = Array.isArray(data.layers) && data.layers.length > 0;
+
+              if (hasVersion && hasLayers) {
+                console.log(`✅ Valid Lottie: ${animation.name} (v${data.v}, ${data.layers.length} layers)`);
+                return { 
+                  ...animation, 
+                  path: workingPath, 
+                  preview: data, 
+                  isValid: true 
+                };
+              } else {
+                console.warn(`⚠️ Invalid Lottie structure for ${animation.name}:`, {
+                  hasVersion,
+                  hasLayers,
+                  layersCount: data.layers?.length || 0
+                });
+              }
+            }
+
+            // Return failed animation
+            return { 
+              ...animation, 
+              path: animation.paths[0], 
+              preview: null, 
+              isValid: false 
+            };
 
           } catch (error) {
             console.error(`❌ Error loading ${animation.name} animation:`, error);
-            return { ...animation, preview: null, isValid: false };
+            return { 
+              ...animation, 
+              path: animation.paths[0], 
+              preview: null, 
+              isValid: false 
+            };
           }
         })
       );
@@ -182,9 +206,17 @@ export default function ProfilePage() {
 
       // Set a default selected animation if user has one
       if (currentUser?.avatarData && workingAnimations.length > 0) {
-        const userAnimation = workingAnimations.find(anim => anim.id === currentUser.avatarData?.id);
-        if (userAnimation) {
-          setSelectedLottie(userAnimation);
+        try {
+          const userAnimationData = typeof currentUser.avatarData === 'string' 
+            ? JSON.parse(currentUser.avatarData) 
+            : currentUser.avatarData;
+          
+          const userAnimation = workingAnimations.find(anim => anim.id === userAnimationData?.id);
+          if (userAnimation) {
+            setSelectedLottie(userAnimation);
+          }
+        } catch (error) {
+          console.error('❌ Error parsing user avatar data:', error);
         }
       }
 
@@ -200,12 +232,15 @@ export default function ProfilePage() {
           title: "Partial Load",
           description: `Loaded ${workingAnimations.length} animations. ${failedAnimations.length} failed to load.`,
         });
+      } else {
+        toast({
+          title: "Animations Loaded",
+          description: `Successfully loaded ${workingAnimations.length} Lottie animations.`,
+        });
       }
 
       // Auto-play all valid animations
-      const validIds = loadedAnimations
-        .filter(anim => anim.preview !== null && anim.isValid)
-        .map(anim => anim.id);
+      const validIds = workingAnimations.map(anim => anim.id);
       setPlayingAnimations(new Set(validIds));
 
     } catch (error) {
@@ -1205,16 +1240,14 @@ export default function ProfilePage() {
                             <div className="relative">
                               <div className="w-full h-24 flex items-center justify-center mb-2 border border-dashed border-gray-300 rounded">
                                 {animation.preview ? (
-                                  <div className="relative w-20 h-20">
+                                  <div className="relative w-20 h-20 flex items-center justify-center">
                                     <Lottie
                                       animationData={animation.preview}
                                       loop={true}
                                       autoplay={playingAnimations.has(animation.id)}
                                       style={{ 
-                                        height: '100%', 
-                                        width: '100%',
-                                        maxHeight: '80px',
-                                        maxWidth: '80px'
+                                        height: '80px', 
+                                        width: '80px'
                                       }}
                                       onError={(error) => {
                                         console.error(`❌ Lottie render error for ${animation.name}:`, error);
@@ -1225,9 +1258,8 @@ export default function ProfilePage() {
                                       onLoopComplete={() => {
                                         console.log(`🔁 Lottie loop completed: ${animation.name}`);
                                       }}
-                                      onEnterFrame={() => {
-                                        // Uncomment for frame-by-frame debugging
-                                        // console.log(`🎬 Frame rendered for: ${animation.name}`);
+                                      onDataReady={() => {
+                                        console.log(`✅ Lottie data ready for: ${animation.name}`);
                                       }}
                                       renderer="svg"
                                       rendererSettings={{
@@ -1237,15 +1269,16 @@ export default function ProfilePage() {
                                         hideOnTransparent: true
                                       }}
                                     />
-                                    {/* Debug overlay to show if component is rendered */}
-                                    <div className="absolute top-0 right-0 w-2 h-2 bg-green-500 rounded-full opacity-50" title="Animation loaded"></div>
+                                    {/* Success indicator */}
+                                    <div className="absolute top-0 right-0 w-2 h-2 bg-green-500 rounded-full opacity-75" title="Animation loaded"></div>
                                   </div>
                                 ) : (
                                   <div className="flex flex-col items-center space-y-1 bg-red-50 rounded p-2 w-20 h-20 justify-center">
                                     <div className="text-red-500 text-xs">❌</div>
                                     <div className="text-red-600 text-xs font-medium">Failed</div>
+                                    <div className="text-red-500 text-xs">to Load</div>
                                   </div>
-                                )}
+                                )}</div>
                               </div>
 
                               {/* Play/Pause Button */}
