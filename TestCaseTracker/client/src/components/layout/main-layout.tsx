@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect } from "react";
 import { useLocation, useRouter } from "wouter";
-import { Sidebar } from "@/components/layout/sidebar";
+import { SidebarComponent } from "@/components/layout/sidebar";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Menu, X } from "lucide-react";
 import { FrozenAvatar } from "@/components/ui/frozen-avatar";
@@ -65,7 +65,15 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar for desktop - kept simple with no special key */}
-      {!isMobile && <Sidebar />}
+      {!isMobile && (
+        <SidebarComponent
+          isCollapsed={false}
+          onToggle={() => {}}
+          isMobile={false}
+          isOpen={false}
+          onClose={() => {}}
+        />
+      )}
 
       {/* Mobile header */}
       {isMobile && (
@@ -120,7 +128,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <span className="sr-only">Close menu</span>
               </Button>
             </div>
-            <Sidebar />
+            <SidebarComponent
+              isCollapsed={false}
+              onToggle={() => {}}
+              isMobile={true}
+              isOpen={menuOpen}
+              onClose={() => setMenuOpen(false)}
+            />
           </div>
         </div>
       )}
