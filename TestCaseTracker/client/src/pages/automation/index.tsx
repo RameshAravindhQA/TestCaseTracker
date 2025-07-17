@@ -133,9 +133,28 @@ export default function AutomationPage() {
   // Start recording mutation
   const startRecordingMutation = useMutation({
     mutationFn: async (data: { projectId: string; moduleId: string; testCaseIds: string[] }) => {
-      const response = await apiRequest('POST', '/api/automation/start-recording', data);
-      if (!response.ok) throw new Error('Failed to start recording');
-      return response.json();
+      try {
+        const response = await apiRequest('POST', '/api/automation/start-recording', data);
+        if (!response.ok) {
+          const text = await response.text();
+          if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+            throw new Error('Server returned HTML instead of JSON - check API endpoint');
+          }
+          throw new Error(`HTTP ${response.status}: ${text}`);
+        }
+
+        const text = await response.text();
+        if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+          throw new Error('Server returned HTML instead of JSON - API endpoint not found');
+        }
+
+        return JSON.parse(text);
+      } catch (error) {
+        if (error instanceof SyntaxError) {
+          throw new Error('Invalid JSON response from server');
+        }
+        throw error;
+      }
     },
     onSuccess: (data) => {
       setIsRecording(true);
@@ -146,9 +165,10 @@ export default function AutomationPage() {
       });
     },
     onError: (error) => {
+      console.error('Recording error:', error);
       toast({
         title: 'Error',
-        description: `Failed to start recording: ${error}`,
+        description: `Failed to start recording: ${error.message}`,
         variant: 'destructive',
       });
     }

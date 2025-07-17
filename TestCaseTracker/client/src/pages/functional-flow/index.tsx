@@ -82,7 +82,7 @@ export default function FunctionalFlowPage() {
 
   // Fetch projects
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
-    queryKey: ['projects'],
+    queryKey: ['/api/projects'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/projects');
       if (!response.ok) throw new Error('Failed to fetch projects');

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Copy, Download, RefreshCw, Globe } from 'lucide-react';
+import { Copy, Download, RefreshCw, Globe, Database } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 
@@ -193,6 +193,620 @@ const countryData = {
       return `${houseNumbers} ${street}, ${city} ${postcode}`;
     },
   },
+  Canada: {
+    name: () => {
+      const firstNames = ['Liam', 'William', 'Lucas', 'Noah', 'Ethan', 'Nathan', 'Alexander', 'James', 'Benjamin', 'Daniel', 'Emma', 'Olivia', 'Sophia', 'Chloe', 'Isabella', 'Abigail', 'Mia', 'Emily', 'Madison', 'Ella'];
+      const lastNames = ['Tremblay', 'Gagnon', 'Roy', 'Bouchard', 'Gauthier', 'Lavoie', 'Fortin', 'Ouellet', 'Côté', 'Leclerc', 'Smith', 'Brown', 'Williams', 'Miller', 'Wilson', 'Taylor', 'Anderson', 'Moore', 'Martin', 'Jackson'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: (name: string) => {
+      const domains = ['gmail.com', 'yahoo.ca', 'outlook.com', 'hotmail.ca', 'sympatico.ca'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const areaCode = Math.floor(Math.random() * 800) + 200;
+      const exchange = Math.floor(Math.random() * 800) + 200;
+      const number = Math.floor(Math.random() * 9000) + 1000;
+      return `+1 (${areaCode}) ${exchange}-${number}`;
+    },
+    postalCode: () => {
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const numbers = '0123456789';
+      let postalCode = '';
+      postalCode += letters[Math.floor(Math.random() * letters.length)];
+      postalCode += numbers[Math.floor(Math.random() * numbers.length)];
+      postalCode += letters[Math.floor(Math.random() * letters.length)];
+      postalCode += ' ';
+      postalCode += numbers[Math.floor(Math.random() * numbers.length)];
+      postalCode += letters[Math.floor(Math.random() * letters.length)];
+      postalCode += numbers[Math.floor(Math.random() * numbers.length)];
+      return postalCode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 999) + 1;
+      const streets = ['Main Street', 'Queen Street', 'Elm Avenue', 'Maple Avenue', 'Park Avenue', 'Victoria Street', 'Albert Street', 'Church Street', 'King Street', 'First Street'];
+      const cities = ['Toronto', 'Montreal', 'Calgary', 'Ottawa', 'Edmonton', 'Winnipeg', 'Vancouver', 'Quebec City', 'Hamilton', 'Kitchener'];
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postalCode = countryData.Canada.postalCode();
+      return `${houseNumbers} ${street}, ${city}, ON ${postalCode}`;
+    },
+  },
+  Australia: {
+    name: () => {
+      const firstNames = ['Oliver', 'Jack', 'William', 'Noah', 'Thomas', 'James', 'Charlie', 'Henry', 'Oscar', 'Leo', 'Olivia', 'Charlotte', 'Mia', 'Amelia', 'Isla', 'Ava', 'Sophie', 'Emily', 'Grace', 'Chloe'];
+      const lastNames = ['Smith', 'Jones', 'Williams', 'Brown', 'Wilson', 'Taylor', 'Anderson', 'White', 'Martin', 'Jackson', 'Thompson', 'Nguyen', 'Garcia', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Perez', 'Sanchez'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: (name: string) => {
+      const domains = ['gmail.com', 'yahoo.com.au', 'outlook.com', 'hotmail.com', 'bigpond.com'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const areaCode = Math.floor(Math.random() * 90) + 2;
+      const number = Math.floor(Math.random() * 90000000) + 10000000;
+      return `+61 ${areaCode} ${number.toString().slice(0, 4)} ${number.toString().slice(4)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 4; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 999) + 1;
+      const streets = ['Main Street', 'High Street', 'Park Avenue', 'George Street', 'Elizabeth Street', 'Victoria Street', 'Queen Street', 'Church Street', 'King Street', 'Albert Street'];
+      const cities = ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Canberra', 'Newcastle', 'Wollongong', 'Geelong'];
+      const states = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'QLD', 'ACT', 'NSW', 'NSW', 'VIC'];
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const state = states[Math.floor(Math.random() * states.length)];
+      const postcode = countryData.Australia.postcode();
+      return `${houseNumbers} ${street}, ${city} ${state} ${postcode}`;
+    },
+  },
+  Germany: {
+    name: () => {
+      const firstNames = ['Emilia', 'Hannah', 'Mia', 'Emma', 'Sophia', 'Lena', 'Lea', 'Marie', 'Anna', 'Luisa', 'Ben', 'Paul', 'Leon', 'Finn', 'Jonas', 'Elias', 'Felix', 'Maximilian', 'Luis', 'Luca'];
+      const lastNames = ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker', 'Schulz', 'Hoffmann', 'Schäfer', 'Koch', 'Bauer', 'Richter', 'Klein', 'Wolf', 'Schröder', 'Neumann', 'Schwarz', 'Zimmermann'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: (name: string) => {
+      const domains = ['gmail.com', 'yahoo.de', 'outlook.de', 'web.de', 'gmx.de'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const areaCode = Math.floor(Math.random() * 9999) + 100;
+      const number = Math.floor(Math.random() * 9000000) + 1000000;
+      return `+49 ${areaCode} ${number.toString().slice(0, 3)} ${number.toString().slice(3)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 5; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 999) + 1;
+      const streets = ['Hauptstraße', 'Bahnhofstraße', 'Dorfstraße', 'Schulstraße', 'Gartenstraße', 'Goethestraße', 'Lessingstraße', 'Beethovenstraße', 'Rosenstraße', 'Lindenstraße'];
+      const cities = ['Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt', 'Stuttgart', 'Düsseldorf', 'Dortmund', 'Essen', 'Leipzig'];
+      const postcode = countryData.Germany.postcode();
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+
+      return `${street} ${houseNumbers}, ${postcode} ${city}`;
+    },
+  },
+  France: {
+    name: () => {
+      const firstNames = ['Emma', 'Louise', 'Jade', 'Alice', 'Chloé', 'Léa', 'Manon', 'Inès', 'Camille', 'Sarah', 'Gabriel', 'Raphaël', 'Louis', 'Lucas', 'Arthur', 'Hugo', 'Jules', 'Adam', 'Théo', 'Nathan'];
+      const lastNames = ['Martin', 'Bernard', 'Thomas', 'Petit', 'Robert', 'Richard', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Lefebvre', 'Michel', 'Garcia', 'David', 'Bertrand', 'Roux', 'Vincent', 'Fournier', 'Morel'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: (name: string) => {
+      const domains = ['gmail.com', 'yahoo.fr', 'outlook.fr', 'orange.fr', 'sfr.fr'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const number = Math.floor(Math.random() * 900000000) + 100000000;
+      return `+33 ${number.toString().slice(0, 1)} ${number.toString().slice(1, 3)} ${number.toString().slice(3, 5)} ${number.toString().slice(5, 7)} ${number.toString().slice(7, 9)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 5; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 999) + 1;
+      const streets = ['Rue de la République', 'Rue du General de Gaulle', 'Rue Victor Hugo', 'Rue de la Mairie', 'Rue des Écoles', 'Rue Pasteur', 'Rue de la Gare', 'Rue Jean Jaurès', 'Rue du 8 Mai 1945', 'Rue des Lilas'];
+      const cities = ['Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier', 'Bordeaux', 'Lille'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.France.postcode();
+      return `${houseNumbers} ${street}, ${postcode} ${city}`;
+    },
+  },
+  Japan: {
+    name: () => {
+      const firstNames = ['Haruto', 'Minato', 'Sora', 'Aoi', 'Itsuki', 'Hinata', 'Riku', 'Asahi', 'Yuto', 'Yuma', 'Yuna', 'Hina', 'Sakura', 'Akari', 'Rin', 'Aoi', 'Himari', 'Mei', 'Mio', 'Kokona'];
+      const lastNames = ['Sato', 'Suzuki', 'Takahashi', 'Tanaka', 'Watanabe', 'Ito', 'Yamamoto', 'Nakamura', 'Kobayashi', 'Kato', 'Yoshida', 'Yamada', 'Sasaki', 'Yamaguchi', 'Matsumoto', 'Inoue', 'Kimura', 'Hayashi', 'Shimizu', 'Yamazaki'];
+      return `${lastNames[Math.floor(Math.random() * lastNames.length)]} ${firstNames[Math.floor(Math.random() * firstNames.length)]}`;
+    },
+    email: (name: string) => {
+      const domains = ['gmail.com', 'yahoo.co.jp', 'outlook.jp', 'softbank.ne.jp', 'docomo.ne.jp'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const number = Math.floor(Math.random() * 900000000) + 100000000;
+      return `+81 0${number.toString().slice(0, 2)}-${number.toString().slice(2, 6)}-${number.toString().slice(6, 10)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 3; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      postcode += '-';
+      for (let i = 0; i < 4; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 99) + 1;
+      const streets = ['Chuo-dori', 'Omotesando', 'Ginza', 'Shibuya', 'Harajuku', 'Roppongi', 'Akihabara', 'Ueno', 'Asakusa', 'Shinjuku'];
+      const cities = ['Tokyo', 'Yokohama', 'Osaka', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kawasaki', 'Kyoto', 'Saitama', 'Hiroshima'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.Japan.postcode();
+      return `${city}, ${street}, ${houseNumbers}, ${postcode}`;
+    },
+  },
+  China: {
+    name: () => {
+      const firstNames = ['Wei', 'Li', 'Jie', 'Ming', 'Yan', 'Fang', 'Shu', 'Juan', 'Hong', 'Ying', 'Tao', 'Jun', 'Hui', 'Ping', 'Lei', 'Na', 'Lin', 'Ke', 'Qing', 'Xiao'];
+      const lastNames = ['Wang', 'Li', 'Zhang', 'Liu', 'Chen', 'Yang', 'Zhao', 'Huang', 'Zhou', 'Wu', 'Xu', 'Sun', 'Hu', 'Zhu', 'Gao', 'Lin', 'He', 'Guo', 'Ma', 'Luo'];
+      return `${lastNames[Math.floor(Math.random() * lastNames.length)]} ${firstNames[Math.floor(Math.random() * firstNames.length)]}`;
+    },
+    email: (name: string) => {
+      const domains = ['gmail.com', 'yahoo.com.cn', '163.com', 'qq.com', 'sina.com'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const number = Math.floor(Math.random() * 9000000000) + 1000000000;
+      return `+86 1${number.toString().slice(0, 2)} ${number.toString().slice(2, 6)} ${number.toString().slice(6, 10)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 6; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 99) + 1;
+      const streets = ['Jiefang Road', 'Zhongshan Road', 'Renmin Road', 'Xinhua Road', 'Changjiang Road', 'Beijing Road', 'Shanghai Road', 'Guangzhou Road', 'Shenzhen Road', 'Nanjing Road'];
+      const cities = ['Beijing', 'Shanghai', 'Guangzhou', 'Shenzhen', 'Chengdu', 'Hangzhou', 'Wuhan', 'Chongqing', 'Tianjin', 'Nanjing'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.China.postcode();
+      return `${city}, ${street}, ${houseNumbers}, ${postcode}`;
+    },
+  },
+  Brazil: {
+    name: () => {
+      const firstNames = ['Maria', 'Ana', 'Francisca', 'Antônia', 'Adriana', 'Juliana', 'Márcia', 'Fernanda', 'Patrícia', 'Aline', 'José', 'João', 'Antônio', 'Francisco', 'Carlos', 'Paulo', 'Marcos', 'Luiz', 'Fernando', 'Ricardo'];
+      const lastNames = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes', 'Costa', 'Carvalho', 'Andrade', 'Machado', 'Nascimento', 'Martins', 'Campos', 'Rocha', 'Correia', 'Cardoso'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: (name: string) => {
+      const domains = ['gmail.com', 'yahoo.com.br', 'outlook.com.br', 'uol.com.br', 'terra.com.br'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const ddd = ['11', '21', '31', '41', '51', '61', '71', '81', '91', '27'];
+      const number = Math.floor(Math.random() * 90000000) + 10000000;
+      return `+55 (${ddd[Math.floor(Math.random() * ddd.length)]}) 9${number.toString().slice(0, 4)}-${number.toString().slice(4, 8)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 5; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      postcode += '-';
+      for (let i = 0; i < 3; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 999) + 1;
+      const streets = ['Avenida Paulista', 'Rua Augusta', 'Avenida Brasil', 'Rua da Consolação', 'Avenida Ipiranga', 'Rua 25 de Março', 'Avenida Faria Lima', 'Rua Teodoro Sampaio', 'Avenida Rebouças', 'Rua Oscar Freire'];
+      const cities = ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza', 'Belo Horizonte', 'Manaus', 'Curitiba', 'Recife', 'Porto Alegre'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.Brazil.postcode();
+      return `${street}, ${houseNumbers} - ${city}, ${postcode}`;
+    },
+  },
+  Mexico: {
+    name: () => {
+      const firstNames = ['Sofia', 'Valentina', 'Isabella', 'Ximena', 'Camila', 'María', 'Daniela', 'Valeria', 'Renata', 'Victoria', 'Santiago', 'Mateo', 'Sebastián', 'Matías', 'Nicolás', 'Alejandro', 'Diego', 'Samuel', 'Daniel', 'Gabriel'];
+      const lastNames = ['Hernández', 'García', 'Martínez', 'López', 'González', 'Rodríguez', 'Pérez', 'Sánchez', 'Ramírez', 'Flores', 'Jiménez', 'Moreno', 'Díaz', 'Reyes', 'Torres', 'Gutiérrez', 'Vargas', 'Mendoza', 'Ruiz', 'Castillo'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: (name: string) => {
+      const domains = ['gmail.com', 'yahoo.com.mx', 'hotmail.com', 'live.com.mx', 'prodigy.net.mx'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const lada = ['55', '81', '33', '664', '999', '777', '656', '993', '442', '844'];
+      const number = Math.floor(Math.random() * 90000000) + 10000000;
+      return `+52 ${lada[Math.floor(Math.random() * lada.length)]} ${number.toString().slice(0, 4)}-${number.toString().slice(4, 8)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 5; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 999) + 1;
+      const streets = ['Avenida Insurgentes', 'Paseo de la Reforma', 'Avenida Juárez', 'Avenida Universidad', 'Avenida Chapultepec', 'Avenida Constituyentes', 'Avenida Revolución', 'Avenida División del Norte', 'Avenida Cuauhtémoc', 'Avenida Miguel Ángel de Quevedo'];
+      const cities = ['Ciudad de México', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana', 'León', 'Ciudad Juárez', 'Zapopan', 'Guadalupe', 'Nezahualcóyotl'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.Mexico.postcode();
+      return `${street}, ${houseNumbers} - ${city}, ${postcode}`;
+    },
+  },
+  Italy: {
+    name: () => {
+      const firstNames = ['Sofia', 'Aurora', 'Giulia', 'Alice', 'Emma', 'Giorgia', 'Beatrice', 'Greta', 'Martina', 'Anna', 'Leonardo', 'Alessandro', 'Tommaso', 'Lorenzo', 'Mattia', 'Andrea', 'Gabriele', 'Riccardo', 'Francesco', 'Edoardo'];
+      const lastNames = ['Rossi', 'Ferrari', 'Russo', 'Bianchi', 'Romano', 'Colombo', 'Ricci', 'Marino', 'Greco', 'Bruno', 'Gallo', 'Conti', 'De Luca', 'Costa', 'Giordano', 'Mancini', 'Rizzo', 'Lombardi', 'Moretti', 'Barbieri'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: (name: string) => {
+      const domains = ['gmail.com', 'yahoo.it', 'libero.it', 'hotmail.it', 'tiscali.it'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const number = Math.floor(Math.random() * 900000000) + 100000000;
+      return `+39 3${number.toString().slice(0, 2)} ${number.toString().slice(2, 5)} ${number.toString().slice(5, 8)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 5; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 999) + 1;
+      const streets = ['Via Roma', 'Corso Italia', 'Via Garibaldi', 'Viale Dante', 'Via Mazzini', 'Via Cavour', 'Via Veneto', 'Corso Vittorio Emanuele', 'Via Montenapoleone', 'Via dei Fori Imperiali'];
+      const cities = ['Roma', 'Milano', 'Napoli', 'Torino', 'Palermo', 'Genova', 'Bologna', 'Firenze', 'Bari', 'Catania'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.Italy.postcode();
+      return `${street}, ${houseNumbers} - ${city}, ${postcode}`;
+    },
+  },
+  Spain: {
+    name: () => {
+      const firstNames = ['Lucía', 'Sofía', 'Martina', 'María', 'Paula', 'Daniela', 'Valeria', 'Alba', 'Noa', 'Sara', 'Hugo', 'Martín', 'Daniel', 'Pablo', 'Alejandro', 'Álvaro', 'David', 'Adrián', 'Mario', 'Enzo'];
+      const lastNames = ['García', 'Rodríguez', 'González', 'Fernández', 'López', 'Martínez', 'Sánchez', 'Pérez', 'Gómez', 'Ruiz', 'Díaz', 'Jiménez', 'Álvarez', 'Moreno', 'Muñoz', 'Romero', 'Navarro', 'Torres', 'Domínguez', 'Vázquez'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: () => {
+      const domains = ['gmail.com', 'yahoo.es', 'hotmail.es', 'outlook.es', 'telefonica.net'];
+      const name = countryData.Spain.name();
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const number = Math.floor(Math.random() * 900000000) + 100000000;
+      return `+34 6${number.toString().slice(0, 2)} ${number.toString().slice(2, 5)} ${number.toString().slice(5, 8)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 5; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 999) + 1;
+      const streets = ['Gran Vía', 'Calle Alcalá', 'Paseo de Gracia', 'Calle Preciados', 'Calle Serrano', 'Rambla de Catalunya', 'Calle Mayor', 'Calle Fuencarral', 'Avenida Diagonal', 'Calle Princesa'];
+      const cities = ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Bilbao', 'Málaga', 'Alicante', 'Córdoba', 'Valladolid', 'Vigo'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.Spain.postcode();
+      return `${street}, ${houseNumbers} - ${city}, ${postcode}`;
+    },
+  },
+  Russia: {
+    name: () => {
+      const firstNames = ['Александр', 'Михаил', 'Иван', 'Дмитрий', 'Максим', 'Андрей', 'Сергей', 'Артём', 'Никита', 'Владимир', 'Анастасия', 'Елена', 'Ольга', 'Наталья', 'Татьяна', 'Ирина', 'Юлия', 'Светлана', 'Мария', 'Екатерина'];
+      const lastNames = ['Иванов', 'Смирнов', 'Кузнецов', 'Попов', 'Васильев', 'Петров', 'Соколов', 'Михайлов', 'Новиков', 'Фёдоров', 'Морозов', 'Волков', 'Алексеев', 'Лебедев', 'Семёнов', 'Егоров', 'Павлов', 'Козлов', 'Степанов', 'Николаев'];
+      return `${lastNames[Math.floor(Math.random() * lastNames.length)]} ${firstNames[Math.floor(Math.random() * firstNames.length)]}`;
+    },
+    email: () => {
+      const domains = ['gmail.com', 'yandex.ru', 'mail.ru', 'rambler.ru', 'outlook.com'];
+      const name = countryData.Russia.name();
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const number = Math.floor(Math.random() * 9000000000) + 1000000000;
+      return `+7 9${number.toString().slice(0, 2)} ${number.toString().slice(2, 5)}-${number.toString().slice(5, 7)}-${number.toString().slice(7, 9)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 6; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 999) + 1;
+      const streets = ['Тверская улица', 'Арбат', 'Невский проспект', 'Садовое кольцо', 'Ленинский проспект', 'Кутузовский проспект', 'Варшавское шоссе', 'Рублевское шоссе', 'Дмитровское шоссе', 'Ярославское шоссе'];
+      const cities = ['Москва', 'Санкт-Петербург', 'Новосибирск', 'Екатеринбург', 'Казань', 'Нижний Новгород', 'Челябинск', 'Самара', 'Омск', 'Ростов-на-Дону'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.Russia.postcode();
+      return `${street}, ${houseNumbers} - ${city}, ${postcode}`;
+    },
+  },
+  'South Korea': {
+    name: () => {
+      const firstNames = ['민준', '서준', '도윤', '시우', '주원', '하준', '지훈', '현우', '건우', '유준', '서연', '하윤', '서아', '지우', '아윤', '채원', '수아', '지민', '예나', '다은'];
+      const lastNames = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', '황', '안', '송', '유', '홍'];
+      return `${lastNames[Math.floor(Math.random() * lastNames.length)]} ${firstNames[Math.floor(Math.random() * firstNames.length)]}`;
+    },
+    email: () => {
+      const domains = ['gmail.com', 'naver.com', 'daum.net', 'hanmail.net', 'nate.com'];
+      const name = countryData['South Korea'].name();
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const number = Math.floor(Math.random() * 90000000) + 10000000;
+      return `+82 10-${number.toString().slice(0, 4)}-${number.toString().slice(4, 8)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 5; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 99) + 1;
+      const streets = ['테헤란로', '강남대로', '세종대로', '을지로', '종로', '충무로', '서초대로', '압구정로', '청담동', '명동'];
+      const cities = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '수원', '창원', '성남'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData['South Korea'].postcode();
+      return `${city}, ${street}, ${houseNumbers}, ${postcode}`;
+    },
+  },
+  Netherlands: {
+    name: () => {
+      const firstNames = ['Emma', 'Julia', 'Mila', 'Sophie', 'Tess', 'Liv', 'Noa', 'Saar', 'Lotte', 'Evi', 'Sem', 'Noah', 'Lucas', 'Finn', 'Liam', 'Daan', 'Luuk', 'Jesse', 'Milan', 'Thomas'];
+      const lastNames = ['de Jong', 'Jansen', 'de Vries', 'van den Berg', 'van Dijk', 'Bakker', 'Janssen', 'Visser', 'Smit', 'Meijer', 'de Boer', 'Mulder', 'de Groot', 'Bosch', 'Vos', 'Peters', 'Hendriks', 'Dekker', 'van Leeuwen', 'de Graaf'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: () => {
+      const domains = ['gmail.com', 'yahoo.nl', 'hotmail.com', 'outlook.com', 'ziggo.nl'];
+      const name = countryData.Netherlands.name();
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const number = Math.floor(Math.random() * 90000000) + 10000000;
+      return `+31 6${number.toString().slice(0, 2)} ${number.toString().slice(2, 4)} ${number.toString().slice(4, 6)} ${number.toString().slice(6, 8)}`;
+    },
+    postcode: () => {
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const numbers = '0123456789';
+      let postcode = '';
+      postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      postcode += ' ';
+      postcode += letters[Math.floor(Math.random() * letters.length)];
+      postcode += letters[Math.floor(Math.random() * letters.length)];
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 999) + 1;
+      const streets = ['Herengracht', 'Keizersgracht', 'Prinsengracht', 'Leidsestraat', 'Kalverstraat', 'Utrechtsestraat', 'Nieuwendijk', 'Damrak', 'Reguliersbreestraat', 'Rembrandtplein'];
+      const cities = ['Amsterdam', 'Rotterdam', 'Den Haag', 'Utrecht', 'Eindhoven', 'Tilburg', 'Groningen', 'Almere', 'Breda', 'Nijmegen'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.Netherlands.postcode();
+      return `${street} ${houseNumbers}, ${postcode} ${city}`;
+    },
+  },
+  Sweden: {
+    name: () => {
+      const firstNames = ['Alice', 'Ella', 'Maja', 'Olivia', 'Ebba', 'William', 'Lucas', 'Liam', 'Oscar', 'Hugo'];
+      const lastNames = ['Andersson', 'Johansson', 'Karlsson', 'Nilsson', 'Eriksson', 'Larsson', 'Olsson', 'Svensson', 'Persson', 'Pettersson'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: () => {
+      const domains = ['gmail.com', 'yahoo.se', 'hotmail.com', 'outlook.com', 'spray.se'];
+      const name = countryData.Sweden.name();
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const number = Math.floor(Math.random() * 90000000) + 10000000;
+      return `+46 7${number.toString().slice(0, 1)} ${number.toString().slice(1, 4)} ${number.toString().slice(4, 6)} ${number.toString().slice(6, 8)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 3; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      postcode += ' ';
+      for (let i = 0; i < 2; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 99) + 1;
+      const streets = ['Drottninggatan', 'Kungsgatan', 'Vasagatan', 'Sveavägen', 'Storgatan', 'Östermalmsgatan', 'Götgatan', 'Hornsgatan', 'Odengatan', 'Valhallavägen'];
+      const cities = ['Stockholm', 'Göteborg', 'Malmö', 'Uppsala', 'Linköping', 'Örebro', 'Västerås', 'Helsingborg', 'Jönköping', 'Norrköping'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.Sweden.postcode();
+      return `${street} ${houseNumbers}, ${postcode} ${city}`;
+    },
+  },
+  Norway: {
+    name: () => {
+      const firstNames = ['Emma', 'Nora', 'Olivia', 'Sofia', 'Ingrid', 'Jakob', 'Lucas', 'Oliver', 'Noah', 'William'];
+      const lastNames = ['Hansen', 'Johansen', 'Olsen', 'Larsen', 'Andersen', 'Nilsen', 'Pedersen', 'Kristiansen', 'Jensen', 'Karlsen'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: () => {
+      const domains = ['gmail.com', 'yahoo.no', 'hotmail.com', 'outlook.com', 'online.no'];
+      const name = countryData.Norway.name();
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const number = Math.floor(Math.random() * 90000000) + 10000000;
+      return `+47 ${number.toString().slice(0, 3)} ${number.toString().slice(3, 5)} ${number.toString().slice(5, 8)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 4; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 99) + 1;
+      const streets = ['Storgata', 'Karl Johans gate', 'Bogstadveien', 'Frognerveien', 'Pilestredet', 'Grønland', 'Thorvald Meyers gate', 'Markveien', 'Akersgata', 'Bygdøy allé'];
+      const cities = ['Oslo', 'Bergen', 'Trondheim', 'Stavanger', 'Kristiansand', 'Drammen', 'Fredrikstad', 'Skien', 'Bodø', 'Tromsø'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.Norway.postcode();
+      return `${street} ${houseNumbers}, ${postcode} ${city}`;
+    },
+  },
+  Denmark: {
+    name: () => {
+      const firstNames = ['Ida', 'Emma', 'Sofia', 'Clara', 'Ella', 'William', 'Noah', 'Oliver', 'Oscar', 'Lucas'];
+      const lastNames = ['Jensen', 'Nielsen', 'Hansen', 'Andersen', 'Pedersen', 'Larsen', 'Sørensen', 'Rasmussen', 'Jørgensen', 'Olsen'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: () => {
+      const domains = ['gmail.com', 'yahoo.dk', 'hotmail.com', 'outlook.com', 'tdc.dk'];
+      const name = countryData.Denmark.name();
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const number = Math.floor(Math.random() * 90000000) + 10000000;
+      return `+45 ${number.toString().slice(0, 2)} ${number.toString().slice(2, 4)} ${number.toString().slice(4, 6)} ${number.toString().slice(6, 8)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 4; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 99) + 1;
+      const streets = ['Vesterbrogade', 'Nørrebrogade', 'Østerbrogade', 'Amagerbrogade', 'Frederiksberg Allé', 'Strøget', 'Jægersborggade', 'Istedgade', 'Gothersgade', 'Nyhavn'];
+      const cities = ['København', 'Aarhus', 'Odense', 'Aalborg', 'Esbjerg', 'Vejle', 'Randers', 'Kolding', 'Horsens', 'Roskilde'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.Denmark.postcode();
+      return `${street} ${houseNumbers}, ${postcode} ${city}`;
+    },
+  },
+  Finland: {
+    name: () => {
+      const firstNames = ['Aino', 'Eevi', 'Helmi', 'Sofia', 'Emma', 'Leevi', 'Elias', 'Oliver', 'Leo', 'Eino'];
+      const lastNames = ['Korhonen', 'Virtanen', 'Mäkinen', 'Nieminen', 'Mäkelä', 'Hämäläinen', 'Laine', 'Heikkinen', 'Koskinen', 'Järvinen'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: () => {
+      const domains = ['gmail.com', 'yahoo.fi', 'hotmail.com', 'outlook.com', 'netti.fi'];
+      const name = countryData.Finland.name();
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const number = Math.floor(Math.random() * 90000000) + 10000000;
+      return `+358 4${number.toString().slice(0, 1)} ${number.toString().slice(1, 4)} ${number.toString().slice(4, 6)} ${number.toString().slice(6, 8)}`;
+    },
+    postcode: () => {
+      const numbers = '0123456789';
+      let postcode = '';
+      for (let i = 0; i < 5; i++) {
+        postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      }
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 99) + 1;
+      const streets = ['Aleksanterinkatu', 'Mannerheimintie', 'Esplanadi', 'Hämeenkatu', 'Kauppakatu', 'Lönnrotinkatu', 'Bulevardi', 'Eerikinkatu', 'Uudenmaankatu', 'Annankatu'];
+      const cities = ['Helsinki', 'Espoo', 'Tampere', 'Vantaa', 'Turku', 'Oulu', 'Lahti', 'Kuopio', 'Jyväskylä', 'Pori'];
+
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.Finland.postcode();
+      return `${street} ${houseNumbers}, ${postcode} ${city}`;
+    },
+  },
 };
 
 const dataTypes = {
@@ -200,12 +814,52 @@ const dataTypes = {
   indian: ['pan', 'aadhaar', 'gst', 'ifsc', 'upi', 'drivingLicense', 'passport', 'vehicleNumber'],
   usa: ['ssn'],
   uk: ['postcode'],
+  canada: ['postalCode'],
+  australia: ['postcode'],
+  germany: ['postcode'],
+  france: ['postcode'],
+  japan: ['postcode'],
+  china: ['postcode'],
+  brazil: ['postcode'],
+  mexico: ['postcode'],
+  italy: ['postcode'],
+  spain: ['postcode'],
+  russia: ['postcode'],
+  'south korea': ['postcode'],
+  netherlands: ['postcode'],
+  sweden: ['postcode'],
+  norway: ['postcode'],
+  denmark: ['postcode'],
+  finland: ['postcode'],
   financial: ['creditCard', 'bankAccount'],
   internet: ['username', 'password', 'ipAddress', 'macAddress'],
   datetime: ['date', 'time', 'timestamp'],
   business: ['company', 'jobTitle', 'department'],
   lorem: ['sentence', 'paragraph', 'word'],
 };
+
+const countries = [
+  { code: 'IN', name: 'India', flag: '🇮🇳' },
+  { code: 'US', name: 'USA', flag: '🇺🇸' },
+  { code: 'GB', name: 'UK', flag: '🇬🇧' },
+  { code: 'CA', name: 'Canada', flag: '🇨🇦' },
+  { code: 'AU', name: 'Australia', flag: '🇦🇺' },
+  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
+  { code: 'FR', name: 'France', flag: '🇫🇷' },
+  { code: 'JP', name: 'Japan', flag: '🇯🇵' },
+  { code: 'CN', name: 'China', flag: '🇨🇳' },
+  { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
+  { code: 'MX', name: 'Mexico', flag: '🇲🇽' },
+  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
+  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
+  { code: 'RU', name: 'Russia', flag: '🇷🇺' },
+  { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
+  { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
+  { code: 'SE', name: 'Sweden', flag: '🇸🇪' },
+  { code: 'NO', name: 'Norway', flag: '🇳🇴' },
+  { code: 'DK', name: 'Denmark', flag: '🇩🇰' },
+  { code: 'FI', name: 'Finland', flag: '🇫🇮' },
+];
 
 export default function TestDataGeneratorPage() {
   const [selectedCountry, setSelectedCountry] = useState<string>('India');
@@ -387,9 +1041,13 @@ export default function TestDataGeneratorPage() {
     <MainLayout>
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
+          <div className="mb-6 flex items-center gap-4">
+          <div className="p-2 bg-gradient-to-br from-blue-500 via-purple-600 to-pink-500 rounded-xl shadow-lg">
+            <Database className="h-8 w-8 text-white" />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold">Test Data Generator</h1>
-            <p className="text-muted-foreground">Generate realistic test data for various countries and use cases</p>
+            <h1 className="text-3xl font-bold tracking-tight">Test Data Generator</h1>
+            <p className="text-muted-foreground mt-1">Generate realistic test data for various countries and use cases</p>
           </div>
         </div>
 
@@ -410,9 +1068,11 @@ export default function TestDataGeneratorPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="India">🇮🇳 India</SelectItem>
-                    <SelectItem value="USA">🇺🇸 USA</SelectItem>
-                    <SelectItem value="UK">🇬🇧 UK</SelectItem>
+                    {countries.map(country => (
+                      <SelectItem key={country.code} value={country.name}>
+                        {country.flag} {country.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -503,6 +1163,295 @@ export default function TestDataGeneratorPage() {
                       </div>
                     </div>
                   )}
+                  {selectedCountry === 'Canada' && (
+                    <div>
+                      <Label className="text-sm font-medium text-orange-600">Canada Specific</Label>
+                      <div className="space-y-2 mt-1">
+                        {dataTypes.canada.map(type => (
+                          <div key={type} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={type}
+                              checked={selectedDataTypes.includes(type)}
+                              onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                            />
+                            <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedCountry === 'Australia' && (
+                    <div>
+                      <Label className="text-sm font-medium text-yellow-600">Australia Specific</Label>
+                      <div className="space-y-2 mt-1">
+                        {dataTypes.australia.map(type => (
+                          <div key={type} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={type}
+                              checked={selectedDataTypes.includes(type)}
+                              onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                            />
+                            <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedCountry === 'Germany' && (
+                    <div>
+                      <Label className="text-sm font-medium text-lime-600">Germany Specific</Label>
+                      <div className="space-y-2 mt-1">
+                        {dataTypes.germany.map(type => (
+                          <div key={type} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={type}
+                              checked={selectedDataTypes.includes(type)}
+                              onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                            />
+                            <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedCountry === 'France' && (
+                    <div>
+                      <Label className="text-sm font-medium text-fuchsia-600">France Specific</Label>
+                      <div className="space-y-2 mt-1">
+                        {dataTypes.france.map(type => (
+                          <div key={type} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={type}
+                              checked={selectedDataTypes.includes(type)}
+                              onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'Japan' && (
+                  <div>
+                    <Label className="text-sm font-medium text-emerald-600">Japan Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.japan.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'China' && (
+                  <div>
+                    <Label className="text-sm font-medium text-rose-600">China Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.china.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'Brazil' && (
+                  <div>
+                    <Label className="text-sm font-medium text-amber-600">Brazil Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.brazil.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'Mexico' && (
+                  <div>
+                    <Label className="text-sm font-medium text-teal-600">Mexico Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.mexico.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'Italy' && (
+                  <div>
+                    <Label className="text-sm font-medium text-violet-600">Italy Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.italy.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'Spain' && (
+                  <div>
+                    <Label className="text-sm font-medium text-indigo-600">Spain Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.spain.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'Russia' && (
+                  <div>
+                    <Label className="text-sm font-medium text-lime-800">Russia Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.russia.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'South Korea' && (
+                  <div>
+                    <Label className="text-sm font-medium text-pink-800">South Korea Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes['south korea'].map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'Netherlands' && (
+                  <div>
+                    <Label className="text-sm font-medium text-stone-800">Netherlands Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.netherlands.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'Sweden' && (
+                  <div>
+                    <Label className="text-sm font-medium text-sky-800">Sweden Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.sweden.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'Norway' && (
+                  <div>
+                    <Label className="text-sm font-medium text-zinc-800">Norway Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.norway.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'Denmark' && (
+                  <div>
+                    <Label className="text-sm font-medium text-slate-800">Denmark Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.denmark.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedCountry === 'Finland' && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-800">Finland Specific</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.finland.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                   {/* Other Data Types */}
                   <div>
@@ -624,7 +1573,7 @@ export default function TestDataGeneratorPage() {
             <CardContent>
               {generatedData.length > 0 ? (
                 <Textarea
-                  value={outputFormat === 'json' ? JSON.stringify(generatedData, null, 2) : 
+                  value={outputFormat === 'json' ? JSON.stringify(generatedData, null, 2) :
                          outputFormat === 'csv' ? (() => {
                            const headers = Object.keys(generatedData[0]).join(',');
                            const rows = generatedData.map(row => Object.values(row).join(',')).join('\n');
