@@ -32,15 +32,21 @@ export function MainLayout({ children }: MainLayoutProps) {
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
-    // Redirect to login if not authenticated
-    if (!isLoading && !user && !isAuthenticated && 
+    // Redirect to login if not authenticated or if we have an error
+    if (!isLoading && (!user || error?.message === "Not authenticated") && !isAuthenticated && 
         location !== "/login" && 
         location !== "/register" && 
         location !== "/forgot-password") {
       console.log("User not authenticated, redirecting to login");
+      // Clear invalid auth state
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('loginTime');
       navigate("/login");
     }
-  }, [user, isLoading, location, navigate]);
+  }, [user, isLoading, error, location, navigate]);
 
   // Show loading state if checking auth
   if (isLoading && location !== "/login" && location !== "/register" && location !== "/forgot-password") {

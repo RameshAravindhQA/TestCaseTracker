@@ -1,4 +1,3 @@
-typescript
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -906,8 +905,7 @@ export default function ProfilePage() {
               >
                 Change Picture
               </Button>
-              <```text
-p className="text-xs text-gray-500 mt-2 text-center">
+              <p className="text-xs text-gray-500 mt-2 text-center">
                 Click the button or image to upload a new profile picture.
               </p>
             </CardContent>

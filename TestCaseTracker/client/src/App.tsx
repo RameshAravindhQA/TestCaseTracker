@@ -94,13 +94,7 @@ function SoundIntegrationSetup() {
     if (window.globalSoundHandler) {
       console.log('✅ Global sound handler is available');
     } else {
-      console.warn('⚠️ Global sound handler not available, attempting to initialize...');
-
-      import('./lib/globalSoundHandler.js').then(() => {
-        console.log('✅ Global sound handler imported');
-      }).catch(error => {
-        console.error('❌ Failed to import global sound handler:', error);
-      });
+      console.warn('⚠️ Global sound handler not available, will be initialized by sound manager');
     }
   }, []);
 
