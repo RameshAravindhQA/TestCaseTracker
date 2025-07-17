@@ -24,6 +24,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { LottieFileDebug } from "@/components/lottie-file-debug";
 import { LottieAvatar, LottieAvatarGrid } from "@/components/ui/lottie-avatar";
+import { useMemo } from "react";
 
 // Form schema for profile data
 const profileFormSchema = z.object({
@@ -633,66 +634,62 @@ export default function ProfilePage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    console.log("📁 File selected:", file.name, file.type, file.size);
+    console.log("File selected:", file.name, file.type, file.size);
 
-    // Check if it's a Lottie file
-    const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
-
-    // Handle Lottie file upload
-    if (isLottieFile) {
-      console.log("🎭 Processing as Lottie file");
+    // Check file type
+    if (file.type.startsWith('image/')) {
+      handleImageUpload(file);
+    } else if (file.type === 'application/json' || file.name.endsWith('.json')) {
       handleLottieFileUpload(file);
-      return;
+    } else {
+      toast({
+        title: "Unsupported file type",
+        description: "Please upload an image (JPEG, PNG, GIF, WebP) or Lottie JSON file.",
+        variant: "destructive",
+      });
     }
 
-    // Check file size for images (limit to 5MB for better compatibility)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
+    // Clear the input value to allow re-upload of the same file
+    event.target.value = '';
+  };
+
+  const handleImageUpload = async (file: File) => {
+    console.log("🖼️ Starting image upload:", file.name, file.size);
+
+    // Validate file size (2MB limit)
+    if (file.size > 2 * 1024 * 1024) {
       toast({
         title: "File too large",
-        description: "Please select an image under 5MB.",
+        description: "Image must be under 2MB",
         variant: "destructive",
       });
       return;
     }
 
-    // Check file type for images
-    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!validImageTypes.includes(file.type)) {
-      toast({
-        title: "Invalid file type", 
-        description: "Please select a valid image file (JPEG, PNG, GIF, WebP).",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    console.log("🖼️ Processing as image file");
     setUploading(true);
 
     try {
-      // Create a new FormData instance with proper field name
       const formData = new FormData();
       formData.append('profilePicture', file, file.name);
 
-      console.log("📤 Uploading image:", file.name, file.type, file.size);
+      console.log("📤 Uploading image FormData:", formData);
       console.log("📤 FormData entries:", Array.from(formData.entries()));
+      console.log("📤 File details:", {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+      });
 
-      // Reset the file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-
-      // Upload the image
       uploadProfilePictureMutation.mutate(formData);
     } catch (error) {
-      console.error("❌ Error preparing image upload:", error);
+      console.error("❌ Image upload error:", error);
+      setUploading(false);
       toast({
-        title: "Upload Error",
-        description: "Failed to prepare the image for upload.",
+        title: "Upload failed",
+        description: "Failed to upload image. Please try again.",
         variant: "destructive",
       });
-      setUploading(false);
     }
   };
 
@@ -871,8 +868,24 @@ export default function ProfilePage() {
     }
   };
 
-  // Determine the avatar source - using our tracked URL with cache busting
-  const avatarSrc = profilePictureUrl || null; // Use null to trigger the fallback
+    // Compute avatar source with better cache busting
+  const avatarSrc = useMemo(() => {
+    if (!fetchedCurrentUser) return undefined;
+
+    // Handle Lottie animations
+    if (fetchedCurrentUser.avatarType === 'lottie' && fetchedCurrentUser.avatarData) {
+      return fetchedCurrentUser.profilePicture;
+    }
+
+    // Handle regular profile pictures
+    if (fetchedCurrentUser.profilePicture) {
+      // Add cache busting timestamp
+      const separator = fetchedCurrentUser.profilePicture.includes('?') ? '&' : '?';
+      return `${fetchedCurrentUser.profilePicture}${separator}t=${avatarKey}&v=${Date.now()}`;
+    }
+
+    return undefined;
+  }, [fetchedCurrentUser, avatarKey]);
 
   return (
     <MainLayout>
@@ -892,7 +905,8 @@ export default function ProfilePage() {
             <CardContent className="flex flex-col items-center space-y-4">
               <motion.div
                 whileHover={{ scale: 1.05 }}
-                className="relative cursor-pointer"
+                ```text
+className="relative cursor-pointer"
                 onClick={handleProfilePictureClick}
               >
                 <Avatar className="h-24 w-24 border-2 border-primary/20">
@@ -921,7 +935,7 @@ export default function ProfilePage() {
                   </motion.div>
                 )}
               </motion.div>
-              
+
               <Button 
                 variant="outline"
                 size="sm"
@@ -932,19 +946,19 @@ export default function ProfilePage() {
                 <Upload className="h-4 w-4 mr-2" />
                 Upload Picture
               </Button>
-              
+
               <p className="text-xs text-muted-foreground text-center">
                 JPEG, PNG, GIF, WebP, Lottie JSON<br />
                 Max: 2MB (images), 20MB (Lottie)
               </p>
-              
+
               <input
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,application/json,.json"
                 className="hidden"
-                multiple={false}
+                key={avatarKey} // Force re-render to clear previous selection
               />
             </CardContent>
           </Card>

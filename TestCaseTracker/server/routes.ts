@@ -1146,24 +1146,45 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   
   apiRouter.post("/user/upload-profile-picture", isAuthenticated, (req, res, next) => {
     console.log("Processing profile picture upload request");
+    console.log("Request headers:", req.headers);
+    console.log("Request content-type:", req.headers['content-type']);
+    
     profilePictureUpload.single('profilePicture')(req, res, (err) => {
       if (err) {
         console.error("Multer processing error:", err);
         if (err instanceof multer.MulterError) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({ message: "File too large. Maximum size is 2MB." });
+          }
           return res.status(400).json({ message: `Upload error: ${err.message}` });
         } else {
           return res.status(400).json({ message: `File upload error: ${err.message}` });
         }
       }
+      console.log("Multer processing completed successfully");
       next();
     });
   }, async (req, res) => {
     try {
       console.log("Multer processed request, file:", req.file);
+      console.log("Request body:", req.body);
+      console.log("Request files:", req.files);
       
       if (!req.file) {
+        console.error("No file in request");
         return res.status(400).json({ message: "No file uploaded" });
       }
+      
+      console.log("File details:", {
+        fieldname: req.file.fieldname,
+        originalname: req.file.originalname,
+        encoding: req.file.encoding,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        destination: req.file.destination,
+        filename: req.file.filename,
+        path: req.file.path
+      });
       
       // Get file path relative to the server root for serving in the browser
       const fileName = path.basename(req.file.path);
