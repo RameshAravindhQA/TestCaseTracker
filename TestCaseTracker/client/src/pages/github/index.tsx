@@ -318,24 +318,21 @@ export default function GitHubIntegrationPage() {
         </div>
 
         {/* Add/Edit GitHub Integration Form */}
-        {showAddForm && (
-          <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50">
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
-                <h2 className="text-2xl font-bold mb-4">
-                  {editingIntegration ? 'Edit GitHub Integration' : 'Add GitHub Integration'}
-                </h2>
-                <GitHubConfigForm
-                  editingIntegration={editingIntegration}
-                  onClose={() => {
-                    setShowAddForm(false);
-                    setEditingIntegration(null);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        <GitHubConfigForm
+          open={showAddForm}
+          onOpenChange={(open) => {
+            setShowAddForm(open);
+            if (!open) {
+              setEditingIntegration(null);
+            }
+          }}
+          projectId={1}
+          editingIntegration={editingIntegration}
+          onClose={() => {
+            setShowAddForm(false);
+            setEditingIntegration(null);
+          }}
+        />
       </div>
     </MainLayout>
   );

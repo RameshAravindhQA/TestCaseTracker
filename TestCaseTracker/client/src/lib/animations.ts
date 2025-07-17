@@ -463,17 +463,17 @@ export const loginPageVariants = {
     scale: 1,
     y: 0,
     transition: { 
-      duration: 0.6, 
+      duration: 0.3, 
       ease: "easeOut",
-      staggerChildren: 0.1,
-      delayChildren: 0.2
+      staggerChildren: 0.05,
+      delayChildren: 0.1
     }
   },
   exit: { 
     opacity: 0, 
     scale: 0.95,
     y: -20,
-    transition: { duration: 0.4, ease: "easeIn" }
+    transition: { duration: 0.2, ease: "easeIn" }
   }
 };
 
@@ -485,16 +485,16 @@ export const loginFormVariants = {
     y: 0, 
     scale: 1,
     transition: { 
-      duration: 0.5, 
+      duration: 0.3, 
       ease: "easeOut",
-      delay: 0.3
+      delay: 0.1
     }
   },
   exit: { 
     opacity: 0, 
     y: 30, 
     scale: 0.95,
-    transition: { duration: 0.3 }
+    transition: { duration: 0.2 }
   }
 };
 
@@ -505,15 +505,15 @@ export const loginHeaderVariants = {
     opacity: 1, 
     y: 0,
     transition: { 
-      duration: 0.6, 
+      duration: 0.3, 
       ease: "easeOut",
-      staggerChildren: 0.2
+      staggerChildren: 0.1
     }
   },
   exit: { 
     opacity: 0, 
     y: -20,
-    transition: { duration: 0.3 }
+    transition: { duration: 0.2 }
   }
 };
 

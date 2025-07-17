@@ -162,29 +162,41 @@ export default function AutomationPage() {
           throw new Error("Please fix validation errors");
         }
       try {
-        const response = await apiRequest('POST', '/api/automation/start-recording', {
-          url: url.trim(),
-          projectId: projectId || undefined,
-          moduleId: moduleId || undefined,
-          testCaseId: testCaseId || undefined
+        const response = await fetch('/api/automation/start-recording', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            url: url.trim(),
+            projectId: projectId || undefined,
+            moduleId: moduleId || undefined,
+            testCaseId: testCaseId || undefined
+          })
         });
+
         if (!response.ok) {
           const text = await response.text();
           if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-            throw new Error('Server returned HTML instead of JSON - check API endpoint');
+            throw new Error('API endpoint not found - server returned HTML page');
           }
-          throw new Error(`HTTP ${response.status}: ${text}`);
+          
+          let errorData;
+          try {
+            errorData = JSON.parse(text);
+          } catch (parseError) {
+            throw new Error(`Server error: ${response.status} - ${text}`);
+          }
+          
+          throw new Error(errorData.message || `HTTP ${response.status}: ${text}`);
         }
 
-        const text = await response.text();
-        if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-          throw new Error('Server returned HTML instead of JSON - API endpoint not found');
-        }
-
-        return JSON.parse(text);
+        const result = await response.json();
+        return result;
       } catch (error) {
-        if (error instanceof SyntaxError) {
-          throw new Error('Invalid JSON response from server');
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+          throw new Error('Network error - unable to connect to server');
         }
         throw error;
       }

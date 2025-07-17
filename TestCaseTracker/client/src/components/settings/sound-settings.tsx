@@ -251,6 +251,76 @@ export function SoundSettings() {
     event.target.value = '';
   };
 
+  const handleBulkUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    let uploadedCount = 0;
+    const validTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3'];
+
+    Array.from(files).forEach((file) => {
+      if (!validTypes.includes(file.type)) {
+        toast({
+          title: "Invalid File Type",
+          description: `${file.name} is not a valid audio file`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Try to match filename to sound type
+      const fileName = file.name.toLowerCase();
+      let soundType = null;
+
+      soundTypes.forEach(({ key, name }) => {
+        if (fileName.includes(key) || fileName.includes(name.toLowerCase().replace(' ', '-'))) {
+          soundType = key;
+        }
+      });
+
+      if (!soundType) {
+        // If no match found, use filename as custom sound type
+        soundType = fileName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9]/g, '');
+      }
+
+      // Create URL for the file
+      const fileURL = URL.createObjectURL(file);
+      
+      // Save to custom sounds
+      const newCustomSounds = {
+        ...customSounds,
+        [soundType]: {
+          name: file.name,
+          url: fileURL,
+          uploaded: new Date().toISOString()
+        }
+      };
+      
+      setCustomSounds(newCustomSounds);
+      localStorage.setItem('customSounds', JSON.stringify(newCustomSounds));
+
+      // Update sound manager
+      if (window.soundManager && window.soundManager.soundMappings) {
+        window.soundManager.soundMappings[soundType] = fileURL;
+        if (typeof window.soundManager.loadSound === 'function') {
+          window.soundManager.loadSound(soundType, fileURL);
+        }
+      }
+
+      uploadedCount++;
+    });
+
+    if (uploadedCount > 0) {
+      toast({
+        title: "Bulk Upload Complete",
+        description: `Successfully uploaded ${uploadedCount} sound files`,
+      });
+    }
+
+    // Reset file input
+    event.target.value = '';
+  };
+
   const resetToDefaults = () => {
     const defaultSettings = {
       enabled: true,
@@ -261,7 +331,10 @@ export function SoundSettings() {
         crud: true,
         success: true,
         error: true,
-        message: true
+        message: true,
+        notification: true,
+        warning: true,
+        info: true
       }
     };
 
@@ -288,7 +361,10 @@ export function SoundSettings() {
     { key: 'crud', name: 'CRUD Sound', description: 'Data operations' },
     { key: 'success', name: 'Success Sound', description: 'Success notifications' },
     { key: 'error', name: 'Error Sound', description: 'Error notifications' },
-    { key: 'message', name: 'Message Sound', description: 'Message notifications' }
+    { key: 'message', name: 'Message Sound', description: 'Message notifications' },
+    { key: 'notification', name: 'Notification Sound', description: 'General notifications' },
+    { key: 'warning', name: 'Warning Sound', description: 'Warning alerts' },
+    { key: 'info', name: 'Info Sound', description: 'Information alerts' }
   ];
 
   return (
@@ -354,6 +430,17 @@ export function SoundSettings() {
                 Import Settings
               </Button>
             </motion.div>
+
+            <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
+              <Button 
+                onClick={() => document.getElementById('bulk-upload')?.click()} 
+                variant="outline" 
+                size="sm"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Bulk Upload Sounds
+              </Button>
+            </motion.div>
             
             <motion.div variants={buttonVariants} whileHover="hover" whileTap="tap">
               <Button onClick={resetToDefaults} variant="outline" size="sm">
@@ -368,6 +455,15 @@ export function SoundSettings() {
             type="file"
             accept=".json"
             onChange={importSettings}
+            style={{ display: 'none' }}
+          />
+          
+          <input
+            id="bulk-upload"
+            type="file"
+            accept="audio/*"
+            multiple
+            onChange={handleBulkUpload}
             style={{ display: 'none' }}
           />
         </CardContent>

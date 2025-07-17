@@ -148,7 +148,7 @@ export function LoginForm() {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 1, duration: 0.5 }}
+            transition={{ delay: 0.2, duration: 0.3 }}
           >
             <CardTitle className="text-2xl font-semibold text-center">
               Welcome Back
@@ -157,7 +157,7 @@ export function LoginForm() {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 1.1, duration: 0.5 }}
+            transition={{ delay: 0.3, duration: 0.3 }}
           >
             <CardDescription className="text-center">
               Sign in to your account to continue
@@ -168,7 +168,7 @@ export function LoginForm() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2, duration: 0.6 }}
+            transition={{ delay: 0.4, duration: 0.4 }}
           >
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -299,7 +299,7 @@ export function LoginForm() {
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1.5, duration: 0.5 }}
+            transition={{ delay: 0.6, duration: 0.3 }}
             className="mt-6 text-center space-y-2"
           >
             <Link href="/forgot-password">

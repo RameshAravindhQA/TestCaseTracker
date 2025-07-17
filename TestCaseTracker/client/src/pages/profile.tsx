@@ -841,13 +841,13 @@ export default function ProfilePage() {
 
   return (
     <MainLayout>
-      <div className="py-6 px-4 sm:px-6 lg:px-8">
+      <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Profile</h1>
           <p className="text-gray-500 dark:text-gray-400">Manage your account settings and preferences</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-full overflow-hidden">
           {/* Profile picture card */}
           <Card className="md:col-span-1">
             <CardHeader>

@@ -463,6 +463,43 @@ export class SoundManager {
     });
     this.audioCache.clear();
   }
+
+  playSound(type, options = {}) {
+    if (!this.isEnabled || !this.sounds[type]) {
+      return;
+    }
+
+    // Don't play error sounds for connection timeout or console errors
+    if (type === 'error' && (
+      (options.source && (options.source.includes('ERR_CONNECTION_TIMED_OUT') || 
+                         options.source.includes('replit.dev:24678'))) ||
+      (typeof options.isConsoleError !== 'undefined' && options.isConsoleError)
+    )) {
+      return;
+    }
+
+    try {
+      const sound = this.sounds[type];
+      if (sound && sound.readyState >= 2) { // HAVE_CURRENT_DATA
+        sound.currentTime = 0;
+        sound.volume = this.volume * (options.volume || 1);
+
+        const playPromise = sound.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            // Don't log play errors for connection timeouts
+            if (!error.message.includes('ERR_CONNECTION_TIMED_OUT')) {
+              console.warn(`Sound play failed for ${type}:`, error);
+            }
+          });
+        }
+      }
+    } catch (error) {
+      if (!error.message.includes('ERR_CONNECTION_TIMED_OUT')) {
+        console.warn(`Error playing sound ${type}:`, error);
+      }
+    }
+  }
 }
 
 // Initialize sound manager when this module is imported
