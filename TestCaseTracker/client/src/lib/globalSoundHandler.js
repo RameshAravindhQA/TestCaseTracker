@@ -40,15 +40,15 @@ class GlobalSoundHandler {
   }
 
   setupGlobalErrorHandling() {
-    // Only handle toast/UI errors, not console errors
-    document.addEventListener('toast:error', (event) => {
-      if (this.userHasInteracted) {
-        console.log('🔊 Global handler: Playing error sound for toast');
+    // Only handle explicit application errors through custom events
+    document.addEventListener('app:error', (event) => {
+      if (this.userHasInteracted && !this.isNetworkError(event) && !this.isDevelopmentError(event)) {
+        console.log('🔊 Global handler: Playing error sound for app error');
         this.playSound('error');
       }
     });
 
-    // Listen for toast success events
+    // Listen for toast success events only
     document.addEventListener('toast:success', (event) => {
       if (this.userHasInteracted) {
         console.log('🔊 Global handler: Playing success sound for toast');
@@ -56,25 +56,8 @@ class GlobalSoundHandler {
       }
     });
 
-    // Prevent sound effects for console messages
-    const originalConsoleError = console.error;
-    const originalConsoleWarn = console.warn;
-    const originalConsoleLog = console.log;
-
-    console.error = (...args) => {
-      originalConsoleError.apply(console, args);
-      // Do not trigger sound for console errors
-    };
-
-    console.warn = (...args) => {
-      originalConsoleWarn.apply(console, args);
-      // Do not trigger sound for console warnings
-    };
-
-    console.log = (...args) => {
-      originalConsoleLog.apply(console, args);
-      // Do not trigger sound for console logs
-    };
+    // Disable all automatic console error handling
+    // No longer intercept console methods to prevent unwanted sounds
   }
 
   setupGlobalSuccessHandling() {
@@ -100,7 +83,16 @@ class GlobalSoundHandler {
            errorString.includes('net::err_connection_timed_out') ||
            errorString.includes('websocket') ||
            errorString.includes('socket') ||
-           errorString.includes('failed to load resource');
+           errorString.includes('failed to load resource') ||
+           errorString.includes('err_connection_timeout') ||
+           errorString.includes('connection_timed_out') ||
+           errorString.includes('vite') ||
+           errorString.includes('polling') ||
+           errorString.includes('server connection lost') ||
+           errorString.includes('unhandled promise rejection') ||
+           errorString.includes('loading') ||
+           errorString.includes('preload') ||
+           errorString.includes('resource');
   }
 
   // Check if error is development-related (shouldn't trigger sounds)
@@ -127,7 +119,17 @@ class GlobalSoundHandler {
            errorString.includes('waitforsuccessfulping') ||
            errorString.includes('replit.dev') ||
            errorString.includes('unhandled promise rejection') ||
-           errorString.includes('unhandledrejection');
+           errorString.includes('unhandledrejection') ||
+           errorString.includes('connection_timed_out') ||
+           errorString.includes('polling') ||
+           errorString.includes('server connection lost') ||
+           errorString.includes('loading') ||
+           errorString.includes('preload') ||
+           errorString.includes('import') ||
+           errorString.includes('module') ||
+           errorString.includes('sound') ||
+           errorString.includes('audio') ||
+           errorString.includes('global');
   }
 
   // Check if error is resource-related (shouldn't trigger sounds)
@@ -234,9 +236,9 @@ class GlobalSoundHandler {
               this.soundManager?.playSuccessSound();
             }
           } else {
-            // Only play error sound for user-facing errors, not network/dev errors
-            if (!this.isNetworkError(response.statusText) && !this.isDevelopmentError(response.statusText)) {
-              console.log('🔊 Playing error sound for HTTP error');
+            // Only play error sound for explicit user actions that fail
+            if (response.status >= 400 && response.status < 500 && this.isCrudOperation(method, url)) {
+              console.log('🔊 Playing error sound for user action failure');
               this.soundManager?.playErrorSound();
             }
           }
@@ -244,9 +246,9 @@ class GlobalSoundHandler {
 
         return response;
       } catch (error) {
-        // Only play error sound for user-facing errors, not network/dev errors
-        if (!this.isNetworkError(error) && !this.isDevelopmentError(error)) {
-          console.log('🔊 Playing error sound for network error');
+        // Only play error sound for explicit user actions that fail
+        if (this.isCrudOperation(method, url) && !this.isNetworkError(error) && !this.isDevelopmentError(error)) {
+          console.log('🔊 Playing error sound for user action failure');
           this.soundManager?.playErrorSound();
         }
         throw error;
@@ -357,7 +359,16 @@ class GlobalSoundHandler {
   }
 }
 
-// Console monitoring disabled to prevent sound spam
+// Disable all global error monitoring to prevent console error sounds
+window.addEventListener('error', (event) => {
+  // Do not play sounds for any global errors
+  event.stopPropagation();
+}, true);
+
+window.addEventListener('unhandledrejection', (event) => {
+  // Do not play sounds for unhandled promise rejections
+  event.stopPropagation();
+}, true);
 
 // Create global instance
 const globalSoundHandler = new GlobalSoundHandler();
