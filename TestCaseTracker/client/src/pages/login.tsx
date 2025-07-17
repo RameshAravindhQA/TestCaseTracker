@@ -82,9 +82,7 @@ function LoginPage() {
             className="flex justify-center mb-6"
           >
             {/* NavaDhiti SVG Logo */}
-            <div className="relative p-4 bg-white dark:bg-gray-800 rounded-full shadow-lg border-4 border-white dark:border-gray-800">
-              <NavaDhitiLogo className="h-24 w-24" animate={true} />
-            </div>
+            <NavaDhitiLogo className="h-24 w-24" animate={true} />
           </motion.div>
 
           <motion.h1
