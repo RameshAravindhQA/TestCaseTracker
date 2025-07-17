@@ -472,15 +472,62 @@ export const loginFormVariants = {
   }
 };
 
-// Login header animations - simplified
+// Login header animations - enhanced with fall/drop effects
 export const loginHeaderVariants = {
-  initial: { opacity: 0 },
+  initial: { opacity: 0, y: -100, scale: 0.8, rotateZ: -10 },
   animate: { 
     opacity: 1,
-    transition: { duration: 0.15 }
+    y: 0,
+    scale: 1,
+    rotateZ: 0,
+    transition: { 
+      duration: 0.8,
+      ease: "easeOut",
+      type: "spring",
+      stiffness: 200,
+      damping: 15
+    }
   },
   exit: { 
     opacity: 0,
+    y: -50,
+    scale: 0.9,
+    transition: { duration: 0.3 }
+  }
+};
+
+// Logo specific animations with bounce effect
+export const logoVariants = {
+  initial: { 
+    opacity: 0, 
+    y: -150, 
+    scale: 0.3, 
+    rotateZ: 15,
+    rotateX: 45
+  },
+  animate: { 
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    rotateZ: 0,
+    rotateX: 0,
+    transition: { 
+      duration: 1.2,
+      ease: "easeOut",
+      type: "spring",
+      stiffness: 150,
+      damping: 12,
+      delay: 0.2
+    }
+  },
+  hover: {
+    scale: 1.1,
+    rotateZ: 5,
+    transition: { duration: 0.3 }
+  },
+  tap: {
+    scale: 0.95,
+    rotateZ: -2,
     transition: { duration: 0.1 }
   }
 };

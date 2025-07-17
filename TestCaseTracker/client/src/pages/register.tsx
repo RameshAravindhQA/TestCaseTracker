@@ -17,12 +17,25 @@ export default function RegisterPage() {
           variants={loginHeaderVariants}
           className="text-center"
         >
-          <div className="flex justify-center mb-6">
-            <NavadhitiLogo />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Test Case Management System
-          </h2>
+          <motion.div 
+            className="flex justify-center mb-6"
+            variants={logoVariants}
+            whileHover="hover"
+            whileTap="tap"
+          >
+            <NavadhitiLogo size="xl" />
+          </motion.div>
+          <motion.h2 
+            className="text-3xl font-bold text-gray-900 dark:text-white"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ 
+              opacity: 1, 
+              y: 0,
+              transition: { delay: 0.6, duration: 0.5 }
+            }}
+          >
+            Create Your Account
+          </motion.h2>
         </motion.div>
 
         <RegisterForm />

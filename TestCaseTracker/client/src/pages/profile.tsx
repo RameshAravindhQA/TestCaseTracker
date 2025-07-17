@@ -976,12 +976,12 @@ export default function ProfilePage() {
                 className="relative cursor-pointer"
                 onClick={handleProfilePictureClick}
               >
-                <div className="h-24 w-24 border-2 border-primary/20 rounded-full overflow-hidden bg-white flex items-center justify-center">
+                <div className="h-32 w-32 border-2 border-primary/20 rounded-full overflow-hidden bg-white flex items-center justify-center">
                   {avatarLottieData ? (
                     <LottieAvatar
                       animationData={avatarLottieData}
-                      width={88}
-                      height={88}
+                      width={120}
+                      height={120}
                       autoplay={true}
                       loop={true}
                       name={fetchedCurrentUser?.firstName || 'User'}

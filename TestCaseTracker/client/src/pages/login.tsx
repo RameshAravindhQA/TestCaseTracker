@@ -1,7 +1,7 @@
 import { LoginForm } from "@/components/authentication/login-form";
 import { NavadhitiLogo } from "@/components/ui/navadhiti-logo";
 import { motion } from "framer-motion";
-import { loginPageVariants, loginHeaderVariants } from "@/lib/animations";
+import { loginPageVariants, loginHeaderVariants, logoVariants } from "@/lib/animations";
 
 export default function LoginPage() {
   return (
@@ -17,12 +17,25 @@ export default function LoginPage() {
           variants={loginHeaderVariants}
           className="text-center"
         >
-          <div className="flex justify-center mb-6">
+          <motion.div 
+            className="flex justify-center mb-6"
+            variants={logoVariants}
+            whileHover="hover"
+            whileTap="tap"
+          >
             <NavadhitiLogo size="xl" />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+          </motion.div>
+          <motion.h2 
+            className="text-3xl font-bold text-gray-900 dark:text-white"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ 
+              opacity: 1, 
+              y: 0,
+              transition: { delay: 0.6, duration: 0.5 }
+            }}
+          >
             Test Case Management System
-          </h2>
+          </motion.h2>
         </motion.div>
 
         <LoginForm />
