@@ -538,3 +538,140 @@ export const curtainRevealVariants = {
     transition: { duration: 0.8, ease: "easeInOut" }
   }
 };
+
+// Button variants - commonly used for interactive elements
+export const buttonVariants = {
+  initial: { scale: 1 },
+  hover: { 
+    scale: 1.05,
+    transition: { duration: 0.2, ease: "easeInOut" }
+  },
+  tap: { scale: 0.95 },
+  disabled: { opacity: 0.6, scale: 0.98 }
+};
+
+// Card variants - for card components
+export const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.4,
+      ease: "easeOut"
+    }
+  },
+  hover: {
+    y: -5,
+    scale: 1.02,
+    transition: { duration: 0.2 }
+  },
+  tap: { scale: 0.98 }
+};
+
+// Container variants for staggered animations
+export const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+};
+
+// Item variants for staggered children
+export const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4 }
+  }
+};
+
+// Dialog/Modal variants
+export const dialogVariants = {
+  hidden: { opacity: 0, scale: 0.75, y: 50 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      duration: 0.5,
+      stiffness: 300,
+      damping: 30
+    }
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.75,
+    y: 50,
+    transition: { duration: 0.3 }
+  }
+};
+
+// Table row variants
+export const tableRowVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: i * 0.05,
+      duration: 0.3
+    }
+  }),
+  hover: {
+    backgroundColor: "rgba(59, 130, 246, 0.05)",
+    transition: { duration: 0.2 }
+  }
+};
+
+// Navigation variants
+export const navVariants = {
+  hidden: { opacity: 0, y: -20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      staggerChildren: 0.1
+    }
+  }
+};
+
+// Content fade variants
+export const fadeVariants = {
+  hidden: { opacity: 0 },
+  visible: { 
+    opacity: 1,
+    transition: { duration: 0.3 }
+  },
+  exit: { 
+    opacity: 0,
+    transition: { duration: 0.2 }
+  }
+};
+
+// Scale variants
+export const scaleVariants = {
+  hidden: { scale: 0, opacity: 0 },
+  visible: { 
+    scale: 1, 
+    opacity: 1,
+    transition: { 
+      type: "spring", 
+      stiffness: 300, 
+      damping: 30 
+    }
+  },
+  exit: { 
+    scale: 0, 
+    opacity: 0,
+    transition: { duration: 0.2 }
+  }
+};
