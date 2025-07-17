@@ -391,11 +391,8 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       </div>
 
       <div className="flex items-center p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        {/* Using the FrozenAvatar component that "freezes" on first render */}
-
-        {/* Sidebar Profile Section */}
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="h-10 w-10 rounded-full overflow-hidden bg-white border-2 border-primary/20 flex items-center justify-center">
+        <div className="flex items-center space-x-3 w-full">
+          <div className="h-10 w-10 rounded-full overflow-hidden bg-white border-2 border-primary/20 flex items-center justify-center flex-shrink-0">
             {avatarLottieData ? (
               <LottieAvatar
                 animationData={avatarLottieData}
@@ -424,24 +421,14 @@ const SidebarComponent = ({ className }: SidebarProps) => {
             )}
           </div>
           <div className="flex flex-col min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground truncate">
-              {user?.name || "User"}
+            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+              {user?.name || (user?.firstName ? `${user?.firstName} ${user?.lastName || ''}`.trim() : "Guest User")}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              {user?.role || "User"}
             </p>
           </div>
         </div>
-
-        {/*  <FrozenAvatar 
-          user={user} 
-          className="h-8 w-8 ring-2 ring-gray-200 dark:ring-gray-700"
-          fallbackClassName="bg-gradient-to-br from-primary/80 to-primary/40"
-        /> */}
-        {useMemo(() => (
-          <div className="ml-3">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              {user?.name || (user?.firstName ? `${user?.firstName} ${user?.lastName || ''}`.trim() : "Guest User")}
-            </p>
-          </div>
-        ), [user?.name, user?.firstName, user?.lastName])}
       </div>
 
       <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400" ref={sidebarRef}>

@@ -229,19 +229,26 @@ export function DashboardPage() {
 
             <Dialog open={projectsDialogOpen} onOpenChange={setProjectsDialogOpen}>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
-                    <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{totalProjects}</div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Eye className="h-3 w-3" />
-                      Click to view details
-                    </p>
-                  </CardContent>
-                </Card>
+                <motion.div
+                  variants={cardVariants}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="cursor-pointer"
+                >
+                  <Card className="cursor-pointer hover:shadow-lg hover:bg-gray-50 transition-all duration-200 border-2 hover:border-blue-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
+                      <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{totalProjects}</div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        Click to view details
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </DialogTrigger>
               <DialogContent className="max-w-4xl">
                 <DialogHeader>
@@ -282,19 +289,26 @@ export function DashboardPage() {
 
             <Dialog open={testCasesDialogOpen} onOpenChange={setTestCasesDialogOpen}>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Test Cases</CardTitle>
-                    <TestTube className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{totalTestCases}</div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Eye className="h-3 w-3" />
-                      Click to view details
-                    </p>
-                  </CardContent>
-                </Card>
+                <motion.div
+                  variants={cardVariants}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="cursor-pointer"
+                >
+                  <Card className="cursor-pointer hover:shadow-lg hover:bg-gray-50 transition-all duration-200 border-2 hover:border-blue-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Test Cases</CardTitle>
+                      <TestTube className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{totalTestCases}</div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        Click to view details
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </DialogTrigger>
               <DialogContent className="max-w-4xl">
                 <DialogHeader>
@@ -350,19 +364,26 @@ export function DashboardPage() {
 
             <Dialog open={bugsDialogOpen} onOpenChange={setBugsDialogOpen}>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Open Bugs</CardTitle>
-                    <Bug className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{openBugs}</div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Eye className="h-3 w-3" />
-                      Click to view details
-                    </p>
-                  </CardContent>
-                </Card>
+                <motion.div
+                  variants={cardVariants}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="cursor-pointer"
+                >
+                  <Card className="cursor-pointer hover:shadow-lg hover:bg-gray-50 transition-all duration-200 border-2 hover:border-blue-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Open Bugs</CardTitle>
+                      <Bug className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{openBugs}</div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        Click to view details
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </DialogTrigger>
               <DialogContent className="max-w-4xl">
                 <DialogHeader>
@@ -426,19 +447,26 @@ export function DashboardPage() {
 
             <Dialog open={passRateDialogOpen} onOpenChange={setPassRateDialogOpen}>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Pass Rate</CardTitle>
-                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{passRate}%</div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Eye className="h-3 w-3" />
-                      Click to view details
-                    </p>
-                  </CardContent>
-                </Card>
+                <motion.div
+                  variants={cardVariants}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="cursor-pointer"
+                >
+                  <Card className="cursor-pointer hover:shadow-lg hover:bg-gray-50 transition-all duration-200 border-2 hover:border-blue-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Pass Rate</CardTitle>
+                      <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{passRate}%</div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        Click to view details
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </DialogTrigger>
               <DialogContent className="max-w-4xl">
                 <DialogHeader>
