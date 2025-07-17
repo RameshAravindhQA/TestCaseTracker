@@ -367,6 +367,43 @@ export const animationPresets = {
   }
 };
 
+// Form animations
+export const formVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  },
+  exit: {
+    opacity: 0,
+    y: -20,
+    transition: { duration: 0.3 }
+  }
+};
+
+// Input field animations
+export const inputVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.4, ease: "easeOut" }
+  },
+  focus: {
+    scale: 1.02,
+    transition: { duration: 0.2 }
+  },
+  tap: {
+    scale: 0.98,
+    transition: { duration: 0.1 }
+  }
+};
+
 // Page variants for main layout
 export const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -411,5 +448,93 @@ export const backdropVariants = {
   exit: {
     opacity: 0,
     transition: { duration: 0.3 }
+  }
+};
+
+// Login page specific animations
+export const loginPageVariants = {
+  initial: { 
+    opacity: 0,
+    scale: 0.95,
+    y: 20 
+  },
+  animate: { 
+    opacity: 1, 
+    scale: 1,
+    y: 0,
+    transition: { 
+      duration: 0.6, 
+      ease: "easeOut",
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  },
+  exit: { 
+    opacity: 0, 
+    scale: 0.95,
+    y: -20,
+    transition: { duration: 0.4, ease: "easeIn" }
+  }
+};
+
+// Login form animations
+export const loginFormVariants = {
+  initial: { opacity: 0, y: 30, scale: 0.95 },
+  animate: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { 
+      duration: 0.5, 
+      ease: "easeOut",
+      delay: 0.3
+    }
+  },
+  exit: { 
+    opacity: 0, 
+    y: 30, 
+    scale: 0.95,
+    transition: { duration: 0.3 }
+  }
+};
+
+// Login header animations
+export const loginHeaderVariants = {
+  initial: { opacity: 0, y: -20 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: { 
+      duration: 0.6, 
+      ease: "easeOut",
+      staggerChildren: 0.2
+    }
+  },
+  exit: { 
+    opacity: 0, 
+    y: -20,
+    transition: { duration: 0.3 }
+  }
+};
+
+// Curtain reveal effect
+export const curtainRevealVariants = {
+  initial: { 
+    clipPath: "polygon(0 0, 0 0, 0 100%, 0% 100%)",
+    opacity: 0 
+  },
+  animate: { 
+    clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)",
+    opacity: 1,
+    transition: { 
+      duration: 1.2, 
+      ease: "easeInOut",
+      delay: 0.1
+    }
+  },
+  exit: { 
+    clipPath: "polygon(100% 0, 100% 0, 100% 100%, 100% 100%)",
+    opacity: 0,
+    transition: { duration: 0.8, ease: "easeInOut" }
   }
 };
