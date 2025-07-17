@@ -612,67 +612,67 @@ export default function ProfilePage() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      // Check if it's a Lottie file
-      const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
+    if (!file) return;
 
-      // Handle Lottie file upload
-      if (isLottieFile) {
-        handleLottieFileUpload(file);
-        return;
+    console.log("📁 File selected:", file.name, file.type, file.size);
+
+    // Check if it's a Lottie file
+    const isLottieFile = file.type === 'application/json' || file.name.endsWith('.json');
+
+    // Handle Lottie file upload
+    if (isLottieFile) {
+      console.log("🎭 Processing as Lottie file");
+      handleLottieFileUpload(file);
+      return;
+    }
+
+    // Check file size for images (limit to 5MB for better compatibility)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "Please select an image under 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file type for images
+    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validImageTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type", 
+        description: "Please select a valid image file (JPEG, PNG, GIF, WebP).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log("🖼️ Processing as image file");
+    setUploading(true);
+
+    try {
+      // Create a new FormData instance
+      const formData = new FormData();
+      formData.append('profilePicture', file);
+
+      console.log("📤 Uploading image:", file.name, file.type, file.size);
+
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
 
-      // Check file size (limit to 2MB for images, 20MB for lottie)
-      const maxSize = isLottieFile ? 20 * 1024 * 1024 : 2 * 1024 * 1024;
-      const maxSizeText = isLottieFile ? '20MB' : '2MB';
-
-      if (file.size > maxSize) {
-        toast({
-          title: "File too large",
-          description: `Please select a file under ${maxSizeText}.`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Check file type
-      if (!file.type.startsWith('image/') && !isLottieFile) {
-        toast({
-          title: "Invalid file type",
-          description: "Please select an image file or Lottie JSON file.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setUploading(true);
-
-      try {
-        // Create a new FormData instance
-        const formData = new FormData();
-
-        // Append the file with the correct field name
-        formData.append('profilePicture', file);
-
-        // Log what we're uploading
-        console.log("Uploading file:", file.name, file.type, file.size);
-
-        // Reset the file input to allow selecting the same file again if needed
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-
-        // Mutate with the form data
-        uploadProfilePictureMutation.mutate(formData);
-      } catch (error) {
-        console.error("Error preparing file upload:", error);
-        toast({
-          title: "Upload Error",
-          description: "Failed to prepare the file for upload.",
-          variant: "destructive",
-        });
-        setUploading(false);
-      }
+      // Upload the image
+      uploadProfilePictureMutation.mutate(formData);
+    } catch (error) {
+      console.error("❌ Error preparing image upload:", error);
+      toast({
+        title: "Upload Error",
+        description: "Failed to prepare the image for upload.",
+        variant: "destructive",
+      });
+      setUploading(false);
     }
   };
 
@@ -701,11 +701,13 @@ export default function ProfilePage() {
   };
 
   const handleLottieFileUpload = async (file: File) => {
+    console.log("🎭 Starting Lottie file upload:", file.name, file.size);
+
     // Validate file size
-    if (file.size > 20 * 1024 * 1024) { // 20MB limit
+    if (file.size > 10 * 1024 * 1024) { // Reduced to 10MB for better performance
       toast({
         title: "File too large",
-        description: "Lottie file must be under 20MB",
+        description: "Lottie file must be under 10MB",
         variant: "destructive",
       });
       return;
@@ -724,127 +726,124 @@ export default function ProfilePage() {
     setUploading(true);
 
     try {
-      const reader = new FileReader();
+      console.log("📖 Reading Lottie file...");
+      const text = await file.text();
 
-      reader.onload = async (e) => {
-        try {
-          const jsonContent = e.target?.result as string;
+      // Parse JSON with better error handling
+      let jsonData;
+      try {
+        jsonData = JSON.parse(text);
+        console.log("✅ JSON parsed successfully");
+      } catch (parseError) {
+        console.error("❌ JSON parse error:", parseError);
+        throw new Error(`Invalid JSON format: ${parseError.message}`);
+      }
 
-          // Parse JSON with better error handling
-          let jsonData;
-          try {
-            jsonData = JSON.parse(jsonContent);
-          } catch (parseError) {
-            throw new Error(`Invalid JSON format: ${parseError.message}`);
-          }
+      // Comprehensive Lottie validation
+      if (!jsonData || typeof jsonData !== 'object') {
+        throw new Error("Invalid Lottie file - not a valid JSON object");
+      }
 
-          // Comprehensive Lottie validation
-          if (!jsonData || typeof jsonData !== 'object') {
-            throw new Error("Invalid Lottie file - not a valid JSON object");
-          }
+      if (!jsonData.v && !jsonData.version) {
+        throw new Error("Invalid Lottie file - missing version information");
+      }
 
-          if (!jsonData.v && !jsonData.version) {
-            throw new Error("Invalid Lottie file - missing version information");
-          }
+      if (!jsonData.layers || !Array.isArray(jsonData.layers)) {
+        throw new Error("Invalid Lottie file - missing or invalid layers");
+      }
 
-          if (!jsonData.layers || !Array.isArray(jsonData.layers)) {
-            throw new Error("Invalid Lottie file - missing or invalid layers");
-          }
+      if (jsonData.layers.length === 0) {
+        throw new Error("Invalid Lottie file - no animation layers found");
+      }
 
-          if (jsonData.layers.length === 0) {
-            throw new Error("Invalid Lottie file - no animation layers found");
-          }
+      // Ensure required properties for playback
+      const sanitizedData = {
+        ...jsonData,
+        fr: jsonData.fr || jsonData.frameRate || 30,
+        w: jsonData.w || jsonData.width || 500,
+        h: jsonData.h || jsonData.height || 500,
+        ip: jsonData.ip || 0,
+        op: jsonData.op || jsonData.frames || 60,
+        ddd: jsonData.ddd || 0,
+        assets: jsonData.assets || []
+      };
 
-          // Create animation object
-          const animationId = `custom-${Date.now()}`;
-          const fileName = file.name.replace(/\.json$/i, '');
-          const newAnimation: LottieAnimation = {
-            id: animationId,
-            name: fileName,
-            path: URL.createObjectURL(file),
-            preview: jsonData
-          };
+      console.log("✅ Lottie validation passed:", {
+        version: sanitizedData.v,
+        layers: sanitizedData.layers.length,
+        frameRate: sanitizedData.fr,
+        width: sanitizedData.w,
+        height: sanitizedData.h
+      });
 
-          console.log('📁 Created Lottie animation:', newAnimation);
+      // Create animation object
+      const animationId = `custom-${Date.now()}`;
+      const fileName = file.name.replace(/\.json$/i, '');
+      const newAnimation: LottieAnimation = {
+        id: animationId,
+        name: fileName,
+        path: URL.createObjectURL(file),
+        preview: sanitizedData
+      };
 
-          // Add to animations list immediately for UI feedback
-          setLottieAnimations(prev => {
-            // Check if an animation with the same name already exists
-            const existingIndex = prev.findIndex(anim => anim.name === fileName);
-            if (existingIndex >= 0) {
-              // Replace existing animation
-              const newAnimations = [...prev];
-              newAnimations[existingIndex] = newAnimation;
-              return newAnimations;
-            } else {
-              // Add new animation
-              return [...prev, newAnimation];
-            }
-          });
+      console.log('🎭 Created Lottie animation:', newAnimation);
 
-          // Auto-select the newly uploaded animation
-          setSelectedLottie(newAnimation);
-
-          toast({
-            title: "Success",
-            description: `Lottie animation "${fileName}" loaded successfully!`,
-          });
-
-          // Try to save to backend (optional)
-          try {
-            const formData = new FormData();
-            formData.append('lottieFile', file);
-            formData.append('animationData', JSON.stringify({
-              id: newAnimation.id,
-              name: newAnimation.name
-            }));
-
-            const response = await fetch("/api/users/upload-lottie", {
-              method: "POST",
-              body: formData,
-              credentials: 'include'
-            });
-
-            if (response.ok) {
-              const result = await response.json();
-              console.log('✅ Backend upload successful:', result);
-
-              // Update the animation with server path
-              setLottieAnimations(prev => prev.map(anim => 
-                anim.id === newAnimation.id ? { ...anim, path: result.path } : anim
-              ));
-            } else {
-              console.warn('⚠️ Backend upload failed, keeping local version');
-            }
-          } catch (uploadError) {
-            console.warn("Backend upload failed, keeping local version:", uploadError);
-            // Keep the local version even if backend fails
-          }
-
-        } catch (parseError) {
-          console.error("Parse error:", parseError);
-          toast({
-            title: "Upload Error",
-            description: parseError.message || "Invalid Lottie JSON file format",
-            variant: "destructive",
-          });
+      // Add to animations list immediately for UI feedback
+      setLottieAnimations(prev => {
+        const existingIndex = prev.findIndex(anim => anim.name === fileName);
+        if (existingIndex >= 0) {
+          const newAnimations = [...prev];
+          newAnimations[existingIndex] = newAnimation;
+          return newAnimations;
+        } else {
+          return [...prev, newAnimation];
         }
-      };
+      });
 
-      reader.onerror = () => {
-        toast({
-          title: "File Read Error",
-          description: "Failed to read the uploaded file",
-          variant: "destructive",
-        });
-      };
+      // Auto-select the newly uploaded animation
+      setSelectedLottie(newAnimation);
 
-      reader.readAsText(file);
-    } catch (error) {
-      console.error("File upload error:", error);
       toast({
-        title: "Upload Error",
-        description: "Failed to process Lottie file",
+        title: "Lottie Upload Success",
+        description: `Animation "${fileName}" loaded successfully! Click to set as avatar.`,
+      });
+
+      // Try to save to backend
+      try {
+        console.log("💾 Saving to backend...");
+        const formData = new FormData();
+        formData.append('lottieFile', file);
+        formData.append('animationData', JSON.stringify({
+          id: newAnimation.id,
+          name: newAnimation.name
+        }));
+
+        const response = await fetch("/api/users/upload-lottie", {
+          method: "POST",
+          body: formData,
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ Backend upload successful:', result);
+
+          // Update the animation with server path
+          setLottieAnimations(prev => prev.map(anim => 
+            anim.id === newAnimation.id ? { ...anim, path: result.path || anim.path } : anim
+          ));
+        } else {
+          console.warn('⚠️ Backend upload failed, keeping local version');
+        }
+      } catch (uploadError) {
+        console.warn("Backend upload failed, keeping local version:", uploadError);
+      }
+
+    } catch (error) {
+      console.error("❌ Lottie upload error:", error);
+      toast({
+        title: "Lottie Upload Error",
+        description: error.message || "Failed to process Lottie file",
         variant: "destructive",
       });
     } finally {
@@ -923,8 +922,9 @@ export default function ProfilePage() {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                accept="image/jpeg,image/png,image/gif,image/webp,application/json,.json"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,application/json,.json"
                 className="hidden"
+                multiple={false}
               />
             </CardContent>
           </Card>

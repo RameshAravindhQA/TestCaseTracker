@@ -112,19 +112,46 @@ export const WelcomeDialog: React.FC<WelcomeDialogProps> = ({
               <div className="flex items-center gap-3">
                 <ExternalLink className="h-5 w-5 text-green-500" />
                 <div>
-                  <h4 className="font-semibold text-green-900">QA Updates</h4>
-                  <p className="text-sm text-green-800">Stay updated with latest features and improvements</p>
+                  <h4 className="font-semibold text-green-900">Latest QA Updates</h4>
+                  <p className="text-sm text-green-800">New features: Lottie Avatars, Enhanced Reports, Real-time Chat</p>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="border-green-500 text-green-700 hover:bg-green-100"
-                onClick={() => window.open('/qa-updates', '_blank')}
-              >
-                <ExternalLink className="h-4 w-4 mr-1" />
-                View Updates
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="border-green-500 text-green-700 hover:bg-green-100"
+                  onClick={() => window.open('/qa-updates', '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  View All
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="border-blue-500 text-blue-700 hover:bg-blue-100"
+                  onClick={() => {
+                    handleClose();
+                    setTimeout(() => window.location.href = '/profile', 100);
+                  }}
+                >
+                  Try Lottie Avatars
+                </Button>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+              <div className="bg-white p-2 rounded border-l-2 border-green-400">
+                <span className="font-medium text-green-800">🎭 Lottie Avatars</span>
+                <p className="text-green-700">Animated profile pictures</p>
+              </div>
+              <div className="bg-white p-2 rounded border-l-2 border-blue-400">
+                <span className="font-medium text-blue-800">📊 Enhanced Reports</span>
+                <p className="text-blue-700">Advanced analytics & charts</p>
+              </div>
+              <div className="bg-white p-2 rounded border-l-2 border-purple-400">
+                <span className="font-medium text-purple-800">💬 Real-time Chat</span>
+                <p className="text-purple-700">Live team collaboration</p>
+              </div>
             </div>
           </div>
 

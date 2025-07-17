@@ -160,8 +160,8 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
         className={`flex items-center justify-center bg-muted rounded-lg ${className}`}
         style={{ width, height, ...style }}
       >
-        <div className="text-center">
-          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+        <div className="text-center p-2">
+          <Loader2 className="h-4 w-4 animate-spin mx-auto mb-1" />
           <p className="text-xs text-muted-foreground">Loading...</p>
         </div>
       </div>
