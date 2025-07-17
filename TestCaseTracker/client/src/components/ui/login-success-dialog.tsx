@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, User, Quote, News, Sparkles } from 'lucide-react';
+import { Clock, User, Quote, Newspaper, Sparkles } from 'lucide-react';
 
 interface LoginSuccessDialogProps {
   isOpen: boolean;
@@ -145,7 +145,7 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
           <Card className="border-l-4 border-l-green-500">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <News className="h-5 w-5 text-green-500" />
+                <Newspaper className="h-5 w-5 text-green-500" />
                 Daily QA Updates
               </CardTitle>
             </CardHeader>
