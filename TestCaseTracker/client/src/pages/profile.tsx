@@ -522,14 +522,26 @@ export default function ProfilePage() {
   const uploadProfilePictureMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       console.log("Starting profile picture upload");
+      console.log("FormData contents:", Array.from(formData.entries()));
+      
       try {
-        const res = await apiRequest(
-          "POST",
-          `/api/user/upload-profile-picture`,
-          formData,
-          { isFormData: true }
-        );
-        const jsonData = await res.json();
+        // Use fetch directly to ensure proper FormData handling
+        const response = await fetch('/api/user/upload-profile-picture', {
+          method: 'POST',
+          body: formData, // Don't set Content-Type header, let browser set it
+          credentials: 'include'
+        });
+
+        console.log("Upload response status:", response.status);
+        console.log("Upload response headers:", response.headers);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Upload error response:", errorText);
+          throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+        }
+
+        const jsonData = await response.json();
         console.log("Upload response:", jsonData);
         return jsonData;
       } catch (error) {
@@ -679,6 +691,12 @@ export default function ProfilePage() {
         size: file.size,
         type: file.type,
         lastModified: file.lastModified
+      });
+
+      // Show uploading toast
+      toast({
+        title: "Uploading...",
+        description: "Your profile picture is being uploaded.",
       });
 
       uploadProfilePictureMutation.mutate(formData);

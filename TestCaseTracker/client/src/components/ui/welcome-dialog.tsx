@@ -121,10 +121,13 @@ export const WelcomeDialog: React.FC<WelcomeDialogProps> = ({
                   variant="outline" 
                   size="sm"
                   className="border-green-500 text-green-700 hover:bg-green-100"
-                  onClick={() => window.open('/qa-updates', '_blank')}
+                  onClick={() => {
+                    handleClose();
+                    window.open('/qa-updates', '_blank');
+                  }}
                 >
                   <ExternalLink className="h-4 w-4 mr-1" />
-                  View All
+                  View All Updates
                 </Button>
                 <Button 
                   variant="outline" 
@@ -151,6 +154,26 @@ export const WelcomeDialog: React.FC<WelcomeDialogProps> = ({
               <div className="bg-white p-2 rounded border-l-2 border-purple-400">
                 <span className="font-medium text-purple-800">💬 Real-time Chat</span>
                 <p className="text-purple-700">Live team collaboration</p>
+              </div>
+            </div>
+            
+            {/* Additional QA Updates Link */}
+            <div className="mt-3 pt-3 border-t border-green-200">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-green-700">
+                  Stay updated with our latest QA improvements and features
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-green-700 hover:text-green-900 hover:bg-green-100 h-6 px-2 text-xs"
+                  onClick={() => {
+                    handleClose();
+                    window.open('/qa-updates', '_blank');
+                  }}
+                >
+                  📝 View Release Notes
+                </Button>
               </div>
             </div>
           </div>

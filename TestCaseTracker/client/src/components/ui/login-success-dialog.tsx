@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, User, Quote, Newspaper, Sparkles, CheckCircle, TrendingUp, Coffee } from 'lucide-react';
+import { Clock, User, Quote, Newspaper, Sparkles, CheckCircle, TrendingUp, Coffee, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface LoginSuccessDialogProps {
@@ -194,6 +194,45 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
             />
           </motion.div>
 
+          {/* QA Latest Updates Section */}
+          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Zap className="h-5 w-5 text-green-500" />
+                <div>
+                  <h4 className="font-semibold text-green-900">🚀 Latest QA Updates</h4>
+                  <p className="text-sm text-green-800">New features: Lottie Avatars, Enhanced Reports, Real-time Chat</p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="border-green-500 text-green-700 hover:bg-green-100"
+                onClick={() => {
+                  onClose();
+                  window.open('/qa-updates', '_blank');
+                }}
+              >
+                📝 View Updates
+              </Button>
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+              <div className="bg-white p-2 rounded border-l-2 border-green-400">
+                <span className="font-medium text-green-800">🎭 Lottie Avatars</span>
+                <p className="text-green-700">Animated profile pictures</p>
+              </div>
+              <div className="bg-white p-2 rounded border-l-2 border-blue-400">
+                <span className="font-medium text-blue-800">📊 Enhanced Reports</span>
+                <p className="text-blue-700">Advanced analytics & charts</p>
+              </div>
+              <div className="bg-white p-2 rounded border-l-2 border-purple-400">
+                <span className="font-medium text-purple-800">💬 Real-time Chat</span>
+                <p className="text-purple-700">Live team collaboration</p>
+              </div>
+            </div>
+          </div>
+
           {/* Enhanced Daily Quote */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -221,7 +260,7 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
             </Card>
           </motion.div>
 
-          
+
 
           {/* Enhanced Quick Tips */}
           <motion.div 

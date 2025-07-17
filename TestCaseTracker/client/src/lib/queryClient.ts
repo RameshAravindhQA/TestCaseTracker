@@ -11,42 +11,43 @@ interface ApiRequestOptions {
   isFormData?: boolean;
 }
 
-export async function apiRequest(method: string, url: string, data?: any): Promise<Response> {
-  const options: RequestInit = {
+export async function apiRequest(
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
+  url: string,
+  body?: any,
+  options?: { isFormData?: boolean }
+): Promise<Response> {
+  const config: RequestInit = {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
+    credentials: "include",
   };
 
-  if (data) {
-    options.body = JSON.stringify(data);
+  if (body !== undefined) {
+    if (options?.isFormData || body instanceof FormData) {
+      // For FormData, don't set Content-Type header (let browser set it with boundary)
+      config.body = body;
+      console.log(`FormData upload to ${url}:`, Array.from(body.entries()));
+    } else {
+      config.headers = {
+        "Content-Type": "application/json",
+      };
+      config.body = JSON.stringify(body);
+    }
   }
 
-  try {
-    const response = await fetch(url, options);
+  console.log(`Starting ${method} request to ${url}`);
 
-    if (response.status === 401) {
-      console.log("Unauthorized request, clearing auth and redirecting to login");
-      localStorage.removeItem('isAuthenticated');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-      throw new Error('Unauthorized');
-    }
+  const response = await fetch(url, config);
 
-    if (!response.ok) {
-      console.error(`API request failed: ${method} ${url}`, {
-        status: response.status,
-        statusText: response.statusText
-      });
-    }
-
-    return response;
-  } catch (error) {
-    console.error(`Network error for ${method} ${url}:`, error);
-    throw error;
+  if (!response.ok) {
+    console.error(`API request failed: ${method} ${url}`, {
+      status: response.status,
+      statusText: response.statusText
+    });
+    throw new Error(`API request failed: ${method} ${url} {status: ${response.status}, statusText: '${response.statusText}'}`);
   }
+
+  return response;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
