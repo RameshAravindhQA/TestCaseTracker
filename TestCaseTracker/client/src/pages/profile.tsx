@@ -24,7 +24,7 @@ import { motion } from "framer-motion";
 import Lottie from "lottie-react";
 import { useAuth } from "@/hooks/use-auth";
 import { LottieFileDebug } from "@/components/lottie-file-debug";
-import LottieFromPublic from "@/components/ui/lottie-from-public";
+import { SimpleLottie } from '@/components/ui/simple-lottie';
 
 // Form schema for profile data
 const profileFormSchema = z.object({
@@ -419,7 +419,7 @@ export default function ProfilePage() {
     updateLottieAvatarMutation.mutate(animation);
   };
 
-  
+
 
   // Handle profile picture upload
   const handleProfilePictureClick = () => {
@@ -966,7 +966,7 @@ export default function ProfilePage() {
                         control={passwordForm.control}
                         name="confirmPassword"
                         render={({ field }) => (
-                          <FormItem>
+                          <FormItem>```text
                             <FormLabel>Confirm New Password</FormLabel>
                             <FormControl>
                               <PasswordInput 
@@ -1050,7 +1050,7 @@ export default function ProfilePage() {
                         <h4 className="font-medium mb-2">Current Selection</h4>
                         <div className="flex items-center space-x-4">
                           <div className="w-16 h-16 flex items-center justify-center border rounded">
-                            <LottieFromPublic
+                            <SimpleLottie
                               animationPath={selectedLottie.path}
                               width={60}
                               height={60}
@@ -1082,7 +1082,7 @@ export default function ProfilePage() {
                         >
                           <div className="relative">
                             <div className="w-full h-24 flex items-center justify-center mb-2">
-                              <LottieFromPublic
+                              <SimpleLottie
                                 animationPath={animation.path}
                                 width={80}
                                 height={80}

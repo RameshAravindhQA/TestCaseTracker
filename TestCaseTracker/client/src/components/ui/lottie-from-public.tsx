@@ -35,12 +35,11 @@ const LottieFromPublic: React.FC<LottieFromPublicProps> = ({
         
         console.log(`🎬 Loading Lottie from: ${animationPath}`);
         
-        // Try multiple potential paths
+        // Try multiple potential paths - public files are served from root
         const pathsToTry = [
-          animationPath,
-          animationPath.startsWith('/') ? animationPath : `/${animationPath}`,
-          animationPath.replace('/lottie/', '/public/lottie/'),
-          `./public${animationPath}`,
+          animationPath.startsWith('/lottie/') ? animationPath : `/lottie/${animationPath.replace(/^\/+/, '')}`,
+          animationPath.replace('/public/lottie/', '/lottie/'),
+          `/lottie/${animationPath.split('/').pop()}`, // Just filename
         ];
         
         let response;
@@ -53,7 +52,9 @@ const LottieFromPublic: React.FC<LottieFromPublicProps> = ({
               cache: 'no-cache',
               headers: {
                 'Accept': 'application/json',
-              }
+                'Content-Type': 'application/json',
+              },
+              method: 'GET'
             });
             
             if (response.ok) {
