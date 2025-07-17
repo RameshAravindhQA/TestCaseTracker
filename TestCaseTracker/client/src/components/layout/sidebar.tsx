@@ -443,9 +443,8 @@ const SidebarComponent = ({ className }: SidebarProps) => {
             <p className="text-sm font-medium text-gray-900 dark:text-white">
               {user?.name || (user?.firstName ? `${user?.firstName} ${user?.lastName || ''}`.trim() : "Guest User")}
             </p>
-            <p className="text-xs text-gray-600 dark:text-gray-400">{user?.role || "User"}</p>
           </div>
-        ), [user?.name, user?.firstName, user?.lastName, user?.role])}
+        ), [user?.name, user?.firstName, user?.lastName])}
       </div>
 
       <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400" ref={sidebarRef}>
