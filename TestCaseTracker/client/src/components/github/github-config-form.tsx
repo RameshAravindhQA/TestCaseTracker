@@ -138,14 +138,69 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!formData.projectId || !formData.repoUrl || !formData.accessToken) {
+      toast({
+        title: "Missing Fields",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
       return;
     }
 
-    saveMutation.mutate(formData);
+    try {
+      setIsSubmitting(true);
+
+      const response = await fetch('/api/github/integrations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response. Please check server logs.');
+      }
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast({
+          title: "Success",
+          description: result.message || "GitHub integration created successfully",
+        });
+
+        // Reset form
+        setFormData({
+          projectId: 0,
+          repoUrl: '',
+          accessToken: '',
+          webhookSecret: '',
+        });
+
+        // Refresh the integrations list
+        queryClient.invalidateQueries({ queryKey: ['github-integrations'] });
+
+        onSubmitSuccess?.(result);
+      } else {
+        throw new Error(result.message || 'Failed to create integration');
+      }
+    } catch (error) {
+      console.error('Integration creation error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create GitHub integration",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {

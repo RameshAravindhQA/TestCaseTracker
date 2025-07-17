@@ -5,10 +5,14 @@ import type { InsertGitHubConfig } from "@shared/github-types";
 
 export async function createGitHubIntegration(req: any, res: any) {
   try {
+    // Set proper content type for JSON response
+    res.setHeader('Content-Type', 'application/json');
+    
     const { projectId, repoUrl, accessToken, webhookSecret } = req.body;
 
     if (!projectId || !repoUrl || !accessToken) {
       return res.status(400).json({ 
+        success: false,
         message: "Missing required fields: projectId, repoUrl, accessToken" 
       });
     }
@@ -17,6 +21,7 @@ export async function createGitHubIntegration(req: any, res: any) {
     const repoMatch = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
     if (!repoMatch) {
       return res.status(400).json({ 
+        success: false,
         message: "Invalid GitHub repository URL format" 
       });
     }
@@ -31,17 +36,27 @@ export async function createGitHubIntegration(req: any, res: any) {
       accessToken
     };
 
-    const isValid = await githubService.validateConnection(config);
-    if (!isValid) {
+    try {
+      const isValid = await githubService.validateConnection(config);
+      if (!isValid) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Failed to connect to GitHub repository. Please check your access token and repository URL." 
+        });
+      }
+    } catch (validationError) {
+      logger.error('GitHub validation error:', validationError);
       return res.status(400).json({ 
-        message: "Failed to connect to GitHub repository. Please check your access token and repository URL." 
+        success: false,
+        message: "Invalid GitHub credentials or repository access denied." 
       });
     }
 
     // Check if integration already exists for this project
     const existingConfig = await storage.getGitHubConfig(projectId);
-    if (existingConfig) {
+    if (existingConfig && existingConfig.isActive) {
       return res.status(409).json({ 
+        success: false,
         message: "GitHub integration already exists for this project" 
       });
     }
@@ -54,18 +69,21 @@ export async function createGitHubIntegration(req: any, res: any) {
       accessToken,
       webhookSecret,
       isActive: true,
-      createdById: req.user.id
+      createdById: req.user?.id || 1
     };
 
     const integration = await storage.createGitHubConfig(integrationData);
 
     logger.info(`GitHub integration created for project ${projectId}`);
 
-    res.json({
+    res.status(201).json({
       success: true,
+      message: "GitHub integration created successfully",
       integration: {
         id: integration.id,
         projectId: integration.projectId,
+        repoOwner: integration.repoOwner,
+        repoName: integration.repoName,
         repoUrl,
         isEnabled: integration.isActive,
         createdAt: integration.createdAt
@@ -74,6 +92,7 @@ export async function createGitHubIntegration(req: any, res: any) {
   } catch (error) {
     logger.error('Failed to create GitHub integration:', error);
     res.status(500).json({ 
+      success: false,
       message: error instanceof Error ? error.message : 'Internal server error' 
     });
   }
@@ -235,10 +254,14 @@ export async function deleteGitHubIntegration(req: any, res: any) {
 
 export async function testGitHubConnection(req: any, res: any) {
   try {
+    // Set proper content type for JSON response
+    res.setHeader('Content-Type', 'application/json');
+    
     const { repoUrl, accessToken } = req.body;
 
     if (!repoUrl || !accessToken) {
       return res.status(400).json({ 
+        success: false,
         message: "Missing required fields: repoUrl, accessToken" 
       });
     }
@@ -247,6 +270,7 @@ export async function testGitHubConnection(req: any, res: any) {
     const repoMatch = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
     if (!repoMatch) {
       return res.status(400).json({ 
+        success: false,
         message: "Invalid GitHub repository URL format" 
       });
     }
@@ -258,23 +282,31 @@ export async function testGitHubConnection(req: any, res: any) {
       accessToken
     };
 
-    const isValid = await githubService.validateConnection(config);
+    try {
+      const isValid = await githubService.validateConnection(config);
 
-    if (isValid) {
-      res.json({
-        success: true,
-        message: 'Connection successful',
-        repository: `${repoOwner}/${repoName.replace(/\.git$/, '')}`
-      });
-    } else {
+      if (isValid) {
+        res.json({
+          success: true,
+          message: 'Connection successful',
+          repository: `${repoOwner}/${repoName.replace(/\.git$/, '')}`
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: 'Connection failed. Please check your access token and repository URL.'
+        });
+      }
+    } catch (validationError) {
+      logger.error('GitHub validation error:', validationError);
       res.status(400).json({
         success: false,
-        message: 'Connection failed. Please check your access token and repository URL.'
+        message: 'Failed to validate GitHub connection. Please check your credentials.'
       });
     }
   } catch (error) {
     logger.error('GitHub connection test failed:', error);
-    res.status(400).json({
+    res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Connection test failed'
     });
