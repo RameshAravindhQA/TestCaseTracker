@@ -236,12 +236,14 @@ function AppContent() {
 
             // Check if user just logged in and show welcome dialog
             const showWelcome = sessionStorage.getItem('showWelcomeDialog');
-            if (showWelcome === 'true') {
+            const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
+            
+            if (showWelcome === 'true' && !hasSeenWelcome) {
               sessionStorage.removeItem('showWelcomeDialog');
               // Show welcome dialog after a short delay
               setTimeout(() => {
                 setShowWelcomeDialog(true);
-              }, 2000);
+              }, 1500);
             }
           } else {
             console.warn('⚠️ Sound manager still not available after initialization');
@@ -267,7 +269,7 @@ function AppContent() {
 
           {/* Welcome Dialog - triggered after login */}
           <WelcomeDialog 
-            open={showWelcomeDialog} 
+            isOpen={showWelcomeDialog} 
             onClose={() => setShowWelcomeDialog(false)}
           />
         </TooltipProvider>

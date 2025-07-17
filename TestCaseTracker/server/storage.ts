@@ -800,7 +800,8 @@ class MemStorage implements IStorage {
     return Array.from(this.customers.values());
   }
 
-  async getCustomerById(id: number): Promise<Customer | null> {
+  ```tool_code
+async getCustomerById(id: number): Promise<Customer | null> {
     return this.customers< Map<number, any>();
   }
 
@@ -1707,10 +1708,10 @@ class MemStorage implements IStorage {
   // Matrix cell operations with proper storage
   async createMatrixCell(data: any): Promise<MatrixCell> {
     const key = `${data.rowModuleId}-${data.colModuleId}-${data.projectId}`;
-    
+
     // Check if cell already exists, if so update it
     const existingCell = this.matrixCells.get(key);
-    
+
     if (existingCell) {
       const updatedCell: MatrixCell = {
         ...existingCell,
@@ -1932,14 +1933,13 @@ class MemStorage implements IStorage {
     return this.githubConfigs.find(config => config.projectId === projectId);
   }
 
-  async createGitHubConfig(data: any): Promise<any> {    const config = {
-      id: this.githubConfigs.length + 1,
-      ...data,
-      createdAt: new Date().toISOString(),
-    };
-    this.githubConfigs.push(config);
+  async getAllGitHubConfigs(userId: number): Promise<GitHubConfig[]> {
+    return this.githubConfigs.filter(config => config.createdById === userId);
+  }
 
-    return config;
+  async getGitHubConfigById(id: number): Promise<any | null> {
+      const config = this.githubConfigs.find(config => config.id === id);
+      return config || null;
   }
 
   async updateGitHubConfig(id: number, data: any): Promise<any | null> {
@@ -1952,6 +1952,20 @@ class MemStorage implements IStorage {
       updatedAt: new Date().toISOString(),
     };
     return this.githubConfigs[index];
+  }
+
+  async deleteGitHubConfig(id: number): Promise<void> {
+     this.githubConfigs = this.githubConfigs.filter(config => config.id !== id);
+  }
+
+  async createGitHubConfig(data: any): Promise<any> {    const config = {
+      id: this.githubConfigs.length + 1,
+      ...data,
+      createdAt: new Date().toISOString(),
+    };
+    this.githubConfigs.push(config);
+
+    return config;
   }
 
   async createGitHubIssue(data: any): Promise<any> {
@@ -2097,10 +2111,10 @@ class MemStorage implements IStorage {
   async getUserConversations(userId: number): Promise<any[]> {
     const conversationMap = new Map();
     const allMessages = Array.from(this.chatMessages.values());
-    
+
     // Group messages by conversation and create unique conversations
     const conversationMessages = new Map();
-    
+
     for (const message of allMessages) {
       const convId = message.conversationId;
       if (!conversationMessages.has(convId)) {
@@ -2113,13 +2127,13 @@ class MemStorage implements IStorage {
     for (const [convId, messages] of conversationMessages.entries()) {
       // Find other participants (not current user)
       const otherUserIds = [...new Set(messages.map(m => m.userId).filter(id => id !== userId))];
-      
+
       if (otherUserIds.length > 0) {
         const otherUser = await this.getUser(otherUserIds[0]);
         if (otherUser) {
           const sortedMessages = messages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
           const lastMessage = sortedMessages[0];
-          
+
           conversationMap.set(convId, {
             id: convId,
             name: `${otherUser.firstName} ${otherUser.lastName || ''}`.trim(),
@@ -2168,7 +2182,7 @@ class MemStorage implements IStorage {
     try {
       const user1 = await this.getUser(userId1);
       const user2 = await this.getUser(userId2);
-      
+
       if (!user1 || !user2) {
         throw new Error('One or both users not found');
       }
@@ -2197,7 +2211,7 @@ class MemStorage implements IStorage {
 
       // Store the conversation
       this.conversations.set(conversationId, conversation);
-      
+
       // Initialize empty message array for this conversation
       this.conversationMessages.set(conversationId, []);
 
@@ -2380,7 +2394,7 @@ class MemStorage implements IStorage {
 
     // Create a unique key for the cell
     const key = `${cellData.rowModuleId}-${cellData.colModuleId}-${cellData.projectId}`;
-    
+
     // If value is empty or 'no-marker', delete the cell
     if (!cellData.value || cellData.value === 'no-marker' || cellData.value === '') {
       const deleted = this.matrixCells.delete(key);
@@ -2389,7 +2403,7 @@ class MemStorage implements IStorage {
       }
       return null;
     }
-    
+
     // Check if cell already exists
     const existingCell = this.matrixCells.get(key);
 
@@ -2425,7 +2439,7 @@ class MemStorage implements IStorage {
 
     const key = `${rowModuleId}-${colModuleId}-${projectId}`;
     const cell = this.matrixCells.get(key);
-    
+
     console.log(`Storage: Retrieved matrix cell ${key}:`, cell ? `marker ${cell.markerId}` : 'not found');
     return cell || null;
   }
@@ -2437,13 +2451,13 @@ class MemStorage implements IStorage {
 
     const key = `${rowModuleId}-${colModuleId}-${projectId}`;
     const deleted = this.matrixCells.delete(key);
-    
+
     if (deleted) {
       console.log(`Storage: Deleted matrix cell ${key} for project ${projectId}`);
     } else {
       console.log(`Storage: Matrix cell ${key} not found for deletion`);
     }
-    
+
     return deleted;
   }
 

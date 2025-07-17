@@ -1,352 +1,267 @@
-
-import React from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import React, { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Loader2, TestTube } from "lucide-react";
+import { queryClient } from "@/lib/queryClient";
+import { Loader2, Github, AlertCircle } from "lucide-react";
 
-const githubConfigSchema = z.object({
-  projectId: z.number().min(1, "Please select a project"),
-  repoOwner: z.string().min(1, "Repository owner is required"),
-  repoName: z.string().min(1, "Repository name is required"),
-  accessToken: z.string().min(1, "GitHub access token is required"),
-  webhookSecret: z.string().optional(),
-  isActive: z.boolean().default(true),
-});
-
-type GitHubConfigFormData = z.infer<typeof githubConfigSchema>;
-
-interface GitHubConfigFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  projectId?: number;
-  config?: any;
+interface GitHubIntegration {
+  id: number;
+  projectId: number;
+  projectName: string;
+  repoUrl: string;
+  accessToken: string;
+  webhookUrl?: string;
+  isEnabled: boolean;
+  createdAt: string;
 }
 
-export function GitHubConfigForm({ open, onOpenChange, projectId, config }: GitHubConfigFormProps) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+interface GitHubConfigFormProps {
+  editingIntegration?: GitHubIntegration | null;
+  onClose: () => void;
+}
 
-  const form = useForm<GitHubConfigFormData>({
-    resolver: zodResolver(githubConfigSchema),
-    defaultValues: {
-      projectId: projectId || config?.projectId || 0,
-      repoOwner: config?.repoOwner || "",
-      repoName: config?.repoName || "",
-      accessToken: config?.accessToken || "",
-      webhookSecret: config?.webhookSecret || "",
-      isActive: config?.isActive !== undefined ? config.isActive : true,
-    },
+export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFormProps) {
+  const [formData, setFormData] = useState({
+    projectId: '',
+    repoUrl: '',
+    accessToken: '',
+    webhookSecret: '',
+    isActive: true
   });
 
-  // Fetch projects for the dropdown
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const { toast } = useToast();
+
+  // Fetch projects for dropdown
   const { data: projects } = useQuery({
     queryKey: ['/api/projects'],
     queryFn: async () => {
-      const response = await fetch('/api/projects');
+      const response = await fetch('/api/projects', {
+        credentials: 'include',
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch projects');
       }
       return response.json();
-    },
+    }
   });
 
-  // Test connection mutation
-  const testConnectionMutation = useMutation({
-    mutationFn: async (data: Partial<GitHubConfigFormData>) => {
-      const response = await fetch('/api/github/test-connection', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          repoOwner: data.repoOwner,
-          repoName: data.repoName,
-          accessToken: data.accessToken,
-        }),
+  // Set form data when editing
+  useEffect(() => {
+    if (editingIntegration) {
+      setFormData({
+        projectId: editingIntegration.projectId.toString(),
+        repoUrl: editingIntegration.repoUrl,
+        accessToken: '', // Don't prefill token for security
+        webhookSecret: '',
+        isActive: editingIntegration.isEnabled
       });
+    }
+  }, [editingIntegration]);
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || 'Connection test failed');
-      }
+  // Create/Update mutation
+  const saveMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const url = editingIntegration 
+        ? `/api/github/integrations/${editingIntegration.id}`
+        : '/api/github/integrations';
 
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Connection Successful",
-        description: "GitHub repository connection is working correctly",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Connection Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Save configuration mutation
-  const saveConfigMutation = useMutation({
-    mutationFn: async (data: GitHubConfigFormData) => {
-      const url = config ? `/api/github/config/${config.id}` : '/api/github/config';
-      const method = config ? 'PATCH' : 'POST';
+      const method = editingIntegration ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        credentials: 'include',
+        body: JSON.stringify({
+          projectId: parseInt(data.projectId),
+          repoUrl: data.repoUrl,
+          accessToken: data.accessToken,
+          webhookSecret: data.webhookSecret || undefined,
+          isActive: data.isActive
+        }),
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || 'Failed to save configuration');
+        const errorData = await response.text();
+        throw new Error(errorData || 'Failed to save GitHub integration');
       }
 
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: config ? "Configuration Updated" : "Configuration Created",
-        description: config ? "GitHub integration updated successfully" : "GitHub integration created successfully",
+        title: "Success",
+        description: `GitHub integration ${editingIntegration ? 'updated' : 'created'} successfully`,
       });
-      queryClient.invalidateQueries({ queryKey: ['github-configs'] });
-      onOpenChange(false);
-      form.reset();
+      queryClient.invalidateQueries({ queryKey: ['/api/github/integrations'] });
+      onClose();
     },
     onError: (error: Error) => {
       toast({
-        title: "Save Failed",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const onSubmit = (data: GitHubConfigFormData) => {
-    saveConfigMutation.mutate(data);
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.projectId) {
+      newErrors.projectId = 'Project is required';
+    }
+
+    if (!formData.repoUrl) {
+      newErrors.repoUrl = 'Repository URL is required';
+    } else if (!formData.repoUrl.match(/github\.com\/[^\/]+\/[^\/]+/)) {
+      newErrors.repoUrl = 'Invalid GitHub repository URL format';
+    }
+
+    if (!formData.accessToken && !editingIntegration) {
+      newErrors.accessToken = 'Access token is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleTestConnection = () => {
-    const formData = form.getValues();
-    if (!formData.repoOwner || !formData.repoName || !formData.accessToken) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in repository owner, name, and access token before testing",
-        variant: "destructive",
-      });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
       return;
     }
-    testConnectionMutation.mutate(formData);
+
+    saveMutation.mutate(formData);
   };
 
-  // Reset form when dialog opens/closes or config changes
-  React.useEffect(() => {
-    if (open) {
-      form.reset({
-        projectId: projectId || config?.projectId || 0,
-        repoOwner: config?.repoOwner || "",
-        repoName: config?.repoName || "",
-        accessToken: config?.accessToken || "",
-        webhookSecret: config?.webhookSecret || "",
-        isActive: config?.isActive !== undefined ? config.isActive : true,
-      });
+  const handleInputChange = (field: string, value: string | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
-  }, [open, config, projectId, form]);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>
-            {config ? "Edit GitHub Integration" : "Setup GitHub Integration"}
-          </DialogTitle>
-        </DialogHeader>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          You'll need a GitHub Personal Access Token with repository and issues permissions. 
+          <a 
+            href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline ml-1"
+          >
+            Learn how to create one →
+          </a>
+        </AlertDescription>
+      </Alert>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="projectId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project</FormLabel>
-                  <Select
-                    value={field.value.toString()}
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a project" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {projects?.map((project: any) => (
-                        <SelectItem key={project.id} value={project.id.toString()}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="projectId">Project *</Label>
+          <Select 
+            value={formData.projectId} 
+            onValueChange={(value) => handleInputChange('projectId', value)}
+            disabled={!!editingIntegration}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a project" />
+            </SelectTrigger>
+            <SelectContent>
+              {projects?.map((project: any) => (
+                <SelectItem key={project.id} value={project.id.toString()}>
+                  {project.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.projectId && (
+            <p className="text-sm text-red-600 mt-1">{errors.projectId}</p>
+          )}
+        </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="repoOwner"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Repository Owner</FormLabel>
-                    <FormControl>
-                      <Input placeholder="username or organization" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <div>
+          <Label htmlFor="repoUrl">GitHub Repository URL *</Label>
+          <Input
+            id="repoUrl"
+            type="url"
+            placeholder="https://github.com/username/repository"
+            value={formData.repoUrl}
+            onChange={(e) => handleInputChange('repoUrl', e.target.value)}
+          />
+          {errors.repoUrl && (
+            <p className="text-sm text-red-600 mt-1">{errors.repoUrl}</p>
+          )}
+        </div>
 
-              <FormField
-                control={form.control}
-                name="repoName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Repository Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="repository-name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+        <div>
+          <Label htmlFor="accessToken">
+            Personal Access Token {editingIntegration ? '(leave empty to keep current)' : '*'}
+          </Label>
+          <Input
+            id="accessToken"
+            type="password"
+            placeholder={editingIntegration ? "Enter new token or leave empty" : "ghp_xxxxxxxxxxxxxxxxxxxx"}
+            value={formData.accessToken}
+            onChange={(e) => handleInputChange('accessToken', e.target.value)}
+          />
+          {errors.accessToken && (
+            <p className="text-sm text-red-600 mt-1">{errors.accessToken}</p>
+          )}
+        </div>
 
-            <FormField
-              control={form.control}
-              name="accessToken"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>GitHub Access Token</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="password" 
-                      placeholder="ghp_xxxxxxxxxxxx" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Personal access token with repository access permissions
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <div>
+          <Label htmlFor="webhookSecret">Webhook Secret (Optional)</Label>
+          <Input
+            id="webhookSecret"
+            type="password"
+            placeholder="Optional webhook secret for secure communication"
+            value={formData.webhookSecret}
+            onChange={(e) => handleInputChange('webhookSecret', e.target.value)}
+          />
+        </div>
 
-            <FormField
-              control={form.control}
-              name="webhookSecret"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Webhook Secret (Optional)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="password" 
-                      placeholder="Webhook secret for security" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Optional secret for webhook validation
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="isActive"
+            checked={formData.isActive}
+            onCheckedChange={(checked) => handleInputChange('isActive', checked)}
+          />
+          <Label htmlFor="isActive">Enable Integration</Label>
+        </div>
+      </div>
 
-            <FormField
-              control={form.control}
-              name="isActive"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <FormLabel>Enable Integration</FormLabel>
-                    <FormDescription>
-                      Allow creating GitHub issues from bugs
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleTestConnection}
-                disabled={testConnectionMutation.isPending}
-                className="flex-1"
-              >
-                {testConnectionMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <TestTube className="h-4 w-4 mr-2" />
-                )}
-                Test Connection
-              </Button>
-              
-              <Button
-                type="submit"
-                disabled={saveConfigMutation.isPending}
-                className="flex-1"
-              >
-                {saveConfigMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : null}
-                {config ? "Update" : "Create"} Integration
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button 
+          type="submit" 
+          disabled={saveMutation.isPending}
+          className="flex items-center gap-2"
+        >
+          {saveMutation.isPending && (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          )}
+          <Github className="h-4 w-4" />
+          {editingIntegration ? 'Update Integration' : 'Create Integration'}
+        </Button>
+      </div>
+    </form>
   );
 }

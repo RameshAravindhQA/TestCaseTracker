@@ -18,7 +18,15 @@ export const WelcomeDialog: React.FC<WelcomeDialogProps> = ({
 
   // Use external state if provided, otherwise use internal state
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
-  const onClose = externalOnClose || (() => setInternalIsOpen(false));
+  
+  const handleClose = () => {
+    localStorage.setItem('hasSeenWelcome', 'true');
+    if (externalOnClose) {
+      externalOnClose();
+    } else {
+      setInternalIsOpen(false);
+    }
+  };
 
   useEffect(() => {
     // Auto-show welcome dialog for new users
