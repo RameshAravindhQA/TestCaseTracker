@@ -1,109 +1,106 @@
-import express from 'express';
-import { IStorage } from '../../storage';
-import { logger } from '../../logger';
 
-// Create router for flow diagrams API
-export default function createFlowDiagramsRouter(storage: IStorage) {
-  const router = express.Router();
+import { Request, Response, Router } from 'express';
+import { storage } from '../../storage';
 
-  // Get all flow diagrams
-  router.get('/', async (req, res) => {
-    try {
-      const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
-      const diagrams = await storage.getFlowDiagrams(projectId);
-      res.json(diagrams);
-    } catch (error) {
-      logger.error('Error fetching flow diagrams:', error);
-      res.status(500).json({ error: 'Failed to fetch flow diagrams' });
+const router = Router();
+
+// Get all flow diagrams for a project
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.query;
+    
+    if (!projectId) {
+      return res.status(400).json({ message: 'Project ID is required' });
     }
-  });
 
-  // Get flow diagram by id
-  router.get('/:id', async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      const diagram = await storage.getFlowDiagram(id);
-      
-      if (!diagram) {
-        return res.status(404).json({ error: 'Flow diagram not found' });
-      }
-      
-      res.json(diagram);
-    } catch (error) {
-      logger.error(`Error fetching flow diagram ${req.params.id}:`, error);
-      res.status(500).json({ error: 'Failed to fetch flow diagram' });
+    const diagrams = await storage.getFlowDiagramsByProject(projectId as string);
+    res.json(diagrams);
+  } catch (error) {
+    console.error('Error fetching flow diagrams:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get a specific flow diagram
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const diagram = await storage.getFlowDiagram(id);
+    
+    if (!diagram) {
+      return res.status(404).json({ message: 'Flow diagram not found' });
     }
-  });
 
-  // Create flow diagram
-  router.post('/', async (req, res) => {
-    try {
-      if (!req.session?.userId) {
-        return res.status(401).json({ error: 'User not authenticated' });
-      }
+    res.json(diagram);
+  } catch (error) {
+    console.error('Error fetching flow diagram:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
-      // Add user ID to the diagram data
-      const diagramData = {
-        ...req.body,
-        createdById: req.session.userId
-      };
+// Create a new flow diagram
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const { name, description, projectId, nodes, edges } = req.body;
 
-      // Save the flow diagram
-      const newDiagram = await storage.createFlowDiagram(diagramData);
-      res.status(201).json(newDiagram);
-    } catch (error) {
-      logger.error('Error creating flow diagram:', error);
-      res.status(500).json({ error: 'Failed to create flow diagram' });
+    if (!name || !projectId) {
+      return res.status(400).json({ message: 'Name and project ID are required' });
     }
-  });
 
-  // Update flow diagram
-  router.put('/:id', async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      
-      if (!req.session?.userId) {
-        return res.status(401).json({ error: 'User not authenticated' });
-      }
+    const diagram = await storage.createFlowDiagram({
+      name,
+      description,
+      projectId,
+      nodes: nodes || [],
+      edges: edges || [],
+    });
 
-      // Get the existing diagram to check permissions
-      const existingDiagram = await storage.getFlowDiagram(id);
-      if (!existingDiagram) {
-        return res.status(404).json({ error: 'Flow diagram not found' });
-      }
+    res.status(201).json(diagram);
+  } catch (error) {
+    console.error('Error creating flow diagram:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
-      // Update the flow diagram
-      const updatedDiagram = await storage.updateFlowDiagram(id, req.body);
-      res.json(updatedDiagram);
-    } catch (error) {
-      logger.error(`Error updating flow diagram ${req.params.id}:`, error);
-      res.status(500).json({ error: 'Failed to update flow diagram' });
+// Update a flow diagram
+router.put('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description, nodes, edges } = req.body;
+
+    const diagram = await storage.updateFlowDiagram(id, {
+      name,
+      description,
+      nodes,
+      edges,
+    });
+
+    if (!diagram) {
+      return res.status(404).json({ message: 'Flow diagram not found' });
     }
-  });
 
-  // Delete flow diagram
-  router.delete('/:id', async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      
-      if (!req.session?.userId) {
-        return res.status(401).json({ error: 'User not authenticated' });
-      }
+    res.json(diagram);
+  } catch (error) {
+    console.error('Error updating flow diagram:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
-      // Get the existing diagram to check permissions
-      const existingDiagram = await storage.getFlowDiagram(id);
-      if (!existingDiagram) {
-        return res.status(404).json({ error: 'Flow diagram not found' });
-      }
+// Delete a flow diagram
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const deleted = await storage.deleteFlowDiagram(id);
 
-      // Delete the flow diagram
-      await storage.deleteFlowDiagram(id);
-      res.status(204).end();
-    } catch (error) {
-      logger.error(`Error deleting flow diagram ${req.params.id}:`, error);
-      res.status(500).json({ error: 'Failed to delete flow diagram' });
+    if (!deleted) {
+      return res.status(404).json({ message: 'Flow diagram not found' });
     }
-  });
 
-  return router;
-}
+    res.json({ message: 'Flow diagram deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting flow diagram:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+export default router;

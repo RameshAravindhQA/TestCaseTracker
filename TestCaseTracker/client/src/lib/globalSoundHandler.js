@@ -47,7 +47,7 @@ class GlobalSoundHandler {
         this.playSound('error');
       }
     });
-    
+
     // Listen for toast success events
     document.addEventListener('toast:success', (event) => {
       if (this.userHasInteracted) {
@@ -289,6 +289,8 @@ class GlobalSoundHandler {
     return true;
   }
 }
+
+// Console monitoring disabled to prevent sound spam
 
 // Create global instance
 const globalSoundHandler = new GlobalSoundHandler();

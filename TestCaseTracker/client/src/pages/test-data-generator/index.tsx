@@ -1,800 +1,654 @@
-import { useState } from "react";
-import { MainLayout } from "@/components/layout/main-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { Download, FileText, RefreshCw, Database } from "lucide-react";
+import React, { useState, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Copy, Download, RefreshCw, Globe } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { MainLayout } from '@/components/layout/main-layout';
 
-interface DataField {
-  id: string;
-  name: string;
-  type: string;
-  enabled: boolean;
-  customFormat?: string;
+interface GeneratedData {
+  [key: string]: string | number;
 }
 
-interface Country {
-  code: string;
-  name: string;
-  locale: string;
-}
+const countryData = {
+  India: {
+    name: () => {
+      const firstNames = ['Aarav', 'Vivaan', 'Aditya', 'Vihaan', 'Arjun', 'Sai', 'Reyansh', 'Ayaan', 'Krishna', 'Ishaan', 'Ananya', 'Fatima', 'Aadhya', 'Vaani', 'Aanya', 'Kiara', 'Diya', 'Pihu', 'Prisha', 'Kavya'];
+      const lastNames = ['Sharma', 'Verma', 'Singh', 'Kumar', 'Gupta', 'Patel', 'Agarwal', 'Jain', 'Bansal', 'Agrawal', 'Yadav', 'Mishra', 'Tiwari', 'Srivastava', 'Dubey', 'Pandey', 'Saxena', 'Joshi', 'Chopra', 'Malhotra'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: (name: string) => {
+      const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'rediffmail.com'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const prefixes = ['9', '8', '7', '6'];
+      const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+      const remaining = Math.floor(Math.random() * 900000000) + 100000000;
+      return `+91 ${prefix}${remaining.toString().slice(0, 9)}`;
+    },
+    pan: () => {
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const numbers = '0123456789';
+      let pan = '';
+      // Format: AAAAA9999A
+      for (let i = 0; i < 5; i++) pan += letters[Math.floor(Math.random() * letters.length)];
+      for (let i = 0; i < 4; i++) pan += numbers[Math.floor(Math.random() * numbers.length)];
+      pan += letters[Math.floor(Math.random() * letters.length)];
+      return pan;
+    },
+    aadhaar: () => {
+      // Generate 12-digit Aadhaar number
+      let aadhaar = '';
+      for (let i = 0; i < 12; i++) {
+        aadhaar += Math.floor(Math.random() * 10);
+      }
+      return aadhaar.replace(/(.{4})(.{4})(.{4})/, '$1 $2 $3');
+    },
+    gst: () => {
+      // Format: 99AAAAA9999A9A9
+      const states = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37'];
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const numbers = '0123456789';
+
+      let gst = states[Math.floor(Math.random() * states.length)];
+      for (let i = 0; i < 5; i++) gst += letters[Math.floor(Math.random() * letters.length)];
+      for (let i = 0; i < 4; i++) gst += numbers[Math.floor(Math.random() * numbers.length)];
+      gst += letters[Math.floor(Math.random() * letters.length)];
+      gst += numbers[Math.floor(Math.random() * numbers.length)];
+      gst += letters[Math.floor(Math.random() * letters.length)];
+      return gst;
+    },
+    ifsc: () => {
+      const bankCodes = ['SBIN', 'HDFC', 'ICIC', 'AXIS', 'PUNB', 'CNRB', 'UBIN', 'BARB', 'MAHB', 'IOBA'];
+      const bankCode = bankCodes[Math.floor(Math.random() * bankCodes.length)];
+      const branchCode = Math.floor(Math.random() * 900000) + 100000;
+      return `${bankCode}0${branchCode.toString().slice(0, 6)}`;
+    },
+    address: () => {
+      const streets = ['MG Road', 'Park Street', 'Main Road', 'Gandhi Road', 'Nehru Street', 'Residency Road', 'Commercial Street', 'Brigade Road', 'Richmond Road', 'Cunningham Road'];
+      const areas = ['Koramangala', 'Whitefield', 'Electronic City', 'Marathahalli', 'Indiranagar', 'JP Nagar', 'BTM Layout', 'HSR Layout', 'Sarjapur Road', 'Bannerghatta Road'];
+      const cities = ['Bangalore', 'Mumbai', 'Delhi', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Ahmedabad', 'Jaipur', 'Lucknow'];
+      const states = ['Karnataka', 'Maharashtra', 'Delhi', 'Tamil Nadu', 'Telangana', 'Maharashtra', 'West Bengal', 'Gujarat', 'Rajasthan', 'Uttar Pradesh'];
+
+      const houseNo = Math.floor(Math.random() * 999) + 1;
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const area = areas[Math.floor(Math.random() * areas.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const state = states[Math.floor(Math.random() * states.length)];
+      const pincode = Math.floor(Math.random() * 900000) + 100000;
+
+      return `${houseNo}, ${street}, ${area}, ${city}, ${state} - ${pincode}`;
+    },
+    upi: (name: string) => {
+      const providers = ['@paytm', '@googlepay', '@phonepe', '@ybl', '@okaxis', '@okhdfcbank', '@oksbi'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '');
+      const provider = providers[Math.floor(Math.random() * providers.length)];
+      return `${cleanName}${Math.floor(Math.random() * 1000)}${provider}`;
+    },
+    drivingLicense: () => {
+      const stateCodes = ['KA', 'MH', 'DL', 'TN', 'UP', 'GJ', 'RJ', 'WB', 'AP', 'TS'];
+      const stateCode = stateCodes[Math.floor(Math.random() * stateCodes.length)];
+      const regionCode = Math.floor(Math.random() * 99) + 1;
+      const year = Math.floor(Math.random() * 30) + 1990;
+      const serialNo = Math.floor(Math.random() * 9000000) + 1000000;
+      return `${stateCode}${regionCode.toString().padStart(2, '0')}${year}${serialNo}`;
+    },
+    passport: () => {
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      let passport = '';
+      passport += letters[Math.floor(Math.random() * letters.length)];
+      for (let i = 0; i < 7; i++) {
+        passport += Math.floor(Math.random() * 10);
+      }
+      return passport;
+    },
+    vehicleNumber: () => {
+      const stateCodes = ['KA', 'MH', 'DL', 'TN', 'UP', 'GJ', 'RJ', 'WB', 'AP', 'TS'];
+      const stateCode = stateCodes[Math.floor(Math.random() * stateCodes.length)];
+      const districtCode = Math.floor(Math.random() * 99) + 1;
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const letter1 = letters[Math.floor(Math.random() * letters.length)];
+      const letter2 = letters[Math.floor(Math.random() * letters.length)];
+      const number = Math.floor(Math.random() * 9000) + 1000;
+      return `${stateCode} ${districtCode.toString().padStart(2, '0')} ${letter1}${letter2} ${number}`;
+    },
+  },
+  USA: {
+    name: () => {
+      const firstNames = ['James', 'John', 'Robert', 'Michael', 'William', 'David', 'Richard', 'Joseph', 'Thomas', 'Christopher', 'Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Barbara', 'Susan', 'Jessica', 'Sarah', 'Karen'];
+      const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: (name: string) => {
+      const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const areaCode = Math.floor(Math.random() * 800) + 200;
+      const exchange = Math.floor(Math.random() * 800) + 200;
+      const number = Math.floor(Math.random() * 9000) + 1000;
+      return `+1 (${areaCode}) ${exchange}-${number}`;
+    },
+    ssn: () => {
+      const area = Math.floor(Math.random() * 900) + 100;
+      const group = Math.floor(Math.random() * 90) + 10;
+      const serial = Math.floor(Math.random() * 9000) + 1000;
+      return `${area}-${group}-${serial}`;
+    },
+    address: () => {
+      const streetNumbers = Math.floor(Math.random() * 9999) + 1;
+      const streets = ['Main St', 'First St', 'Second St', 'Park Ave', 'Oak St', 'Maple Ave', 'Cedar St', 'Elm St', 'Washington St', 'Lincoln Ave'];
+      const cities = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'San Jose'];
+      const states = ['NY', 'CA', 'IL', 'TX', 'AZ', 'PA', 'TX', 'CA', 'TX', 'CA'];
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const state = states[Math.floor(Math.random() * states.length)];
+      const zipCode = Math.floor(Math.random() * 90000) + 10000;
+      return `${streetNumbers} ${street}, ${city}, ${state} ${zipCode}`;
+    },
+  },
+  UK: {
+    name: () => {
+      const firstNames = ['Oliver', 'George', 'Harry', 'Jack', 'Jacob', 'Noah', 'Charlie', 'Muhammad', 'Thomas', 'Oscar', 'Olivia', 'Amelia', 'Isla', 'Ava', 'Emily', 'Isabella', 'Mia', 'Poppy', 'Ella', 'Lily'];
+      const lastNames = ['Smith', 'Jones', 'Taylor', 'Williams', 'Brown', 'Davies', 'Evans', 'Wilson', 'Thomas', 'Roberts', 'Johnson', 'Lewis', 'Walker', 'Robinson', 'Wood', 'Thompson', 'White', 'Watson', 'Jackson', 'Wright'];
+      return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+    },
+    email: (name: string) => {
+      const domains = ['gmail.com', 'yahoo.co.uk', 'outlook.com', 'hotmail.co.uk', 'bt.com'];
+      const cleanName = name.toLowerCase().replace(/\s+/g, '.');
+      return `${cleanName}${Math.floor(Math.random() * 1000)}@${domains[Math.floor(Math.random() * domains.length)]}`;
+    },
+    phone: () => {
+      const areaCode = Math.floor(Math.random() * 900) + 100;
+      const number = Math.floor(Math.random() * 9000000) + 1000000;
+      return `+44 ${areaCode} ${number.toString().slice(0, 3)} ${number.toString().slice(3)}`;
+    },
+    postcode: () => {
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const numbers = '0123456789';
+      let postcode = '';
+      postcode += letters[Math.floor(Math.random() * letters.length)];
+      postcode += letters[Math.floor(Math.random() * letters.length)];
+      postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      postcode += ' ';
+      postcode += numbers[Math.floor(Math.random() * numbers.length)];
+      postcode += letters[Math.floor(Math.random() * letters.length)];
+      postcode += letters[Math.floor(Math.random() * letters.length)];
+      return postcode;
+    },
+    address: () => {
+      const houseNumbers = Math.floor(Math.random() * 999) + 1;
+      const streets = ['High Street', 'Church Lane', 'The Green', 'Mill Lane', 'Station Road', 'Victoria Road', 'Queen Street', 'King Street', 'New Road', 'School Lane'];
+      const cities = ['London', 'Birmingham', 'Manchester', 'Glasgow', 'Liverpool', 'Leeds', 'Sheffield', 'Edinburgh', 'Bristol', 'Cardiff'];
+      const street = streets[Math.floor(Math.random() * streets.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      const postcode = countryData.UK.postcode();
+      return `${houseNumbers} ${street}, ${city} ${postcode}`;
+    },
+  },
+};
+
+const dataTypes = {
+  personal: ['name', 'email', 'phone', 'address'],
+  indian: ['pan', 'aadhaar', 'gst', 'ifsc', 'upi', 'drivingLicense', 'passport', 'vehicleNumber'],
+  usa: ['ssn'],
+  uk: ['postcode'],
+  financial: ['creditCard', 'bankAccount'],
+  internet: ['username', 'password', 'ipAddress', 'macAddress'],
+  datetime: ['date', 'time', 'timestamp'],
+  business: ['company', 'jobTitle', 'department'],
+  lorem: ['sentence', 'paragraph', 'word'],
+};
 
 export default function TestDataGeneratorPage() {
+  const [selectedCountry, setSelectedCountry] = useState<string>('India');
+  const [selectedDataTypes, setSelectedDataTypes] = useState<string[]>(['name', 'email', 'phone']);
+  const [recordCount, setRecordCount] = useState<number>(10);
+  const [generatedData, setGeneratedData] = useState<GeneratedData[]>([]);
+  const [outputFormat, setOutputFormat] = useState<string>('json');
   const { toast } = useToast();
-  const [selectedCountry, setSelectedCountry] = useState<string>("US");
-  const [recordCount, setRecordCount] = useState<number>(100);
-  const [outputFormat, setOutputFormat] = useState<string>("json");
-  const [customFields, setCustomFields] = useState<string>("");
-  const [generatedData, setGeneratedData] = useState<any[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
 
-  const countries: Country[] = [
-    { code: "US", name: "United States", locale: "en_US" },
-    { code: "GB", name: "United Kingdom", locale: "en_GB" },
-    { code: "CA", name: "Canada", locale: "en_CA" },
-    { code: "AU", name: "Australia", locale: "en_AU" },
-    { code: "DE", name: "Germany", locale: "de_DE" },
-    { code: "FR", name: "France", locale: "fr_FR" },
-    { code: "ES", name: "Spain", locale: "es_ES" },
-    { code: "IT", name: "Italy", locale: "it_IT" },
-    { code: "JP", name: "Japan", locale: "ja_JP" },
-    { code: "CN", name: "China", locale: "zh_CN" },
-    { code: "IN", name: "India", locale: "hi_IN" },
-    { code: "BR", name: "Brazil", locale: "pt_BR" }
-  ];
+  const generateData = useCallback(() => {
+    const data: GeneratedData[] = [];
+    const countryGenerators = countryData[selectedCountry as keyof typeof countryData];
 
-  const [dataFields, setDataFields] = useState<DataField[]>([
-    { id: "firstName", name: "First Name", type: "name.firstName", enabled: true },
-    { id: "lastName", name: "Last Name", type: "name.lastName", enabled: true },
-    { id: "email", name: "Email", type: "internet.email", enabled: true },
-    { id: "phone", name: "Phone", type: "phone.number", enabled: true },
-    { id: "address", name: "Address", type: "location.streetAddress", enabled: false },
-    { id: "city", name: "City", type: "location.city", enabled: false },
-    { id: "country", name: "Country", type: "location.country", enabled: false },
-    { id: "zipCode", name: "Zip Code", type: "location.zipCode", enabled: false },
-    { id: "company", name: "Company", type: "company.name", enabled: false },
-    { id: "jobTitle", name: "Job Title", type: "person.jobTitle", enabled: false },
-    { id: "dateOfBirth", name: "Date of Birth", type: "date.birthdate", enabled: false },
-    { id: "avatar", name: "Avatar URL", type: "image.avatar", enabled: false },
-    { id: "website", name: "Website", type: "internet.url", enabled: false },
-    { id: "username", name: "Username", type: "internet.userName", enabled: false },
-    { id: "uuid", name: "UUID", type: "string.uuid", enabled: false },
-    { id: "creditCard", name: "Credit Card", type: "finance.creditCardNumber", enabled: false },
-    { id: "iban", name: "IBAN", type: "finance.iban", enabled: false },
-    { id: "price", name: "Price", type: "commerce.price", enabled: false },
-    { id: "product", name: "Product", type: "commerce.product", enabled: false },
-    { id: "lorem", name: "Lorem Text", type: "lorem.paragraph", enabled: false }
-  ]);
-
-  const dataTypes = {
-    'United States': [
-      'SSN', 'Driver License', 'Passport', 'Tax ID', 'Phone', 'ZIP Code', 'Credit Card', 'Bank Account'
-    ],
-    'United Kingdom': [
-      'National Insurance Number', 'Passport', 'Phone', 'Postcode', 'VAT Number', 'Sort Code', 'IBAN'
-    ],
-    'Canada': [
-      'SIN', 'Health Card', 'Passport', 'Phone', 'Postal Code', 'Bank Transit Number'
-    ],
-    'Australia': [
-      'TFN', 'Medicare', 'Passport', 'Phone', 'Postcode', 'ABN', 'BSB Number'
-    ],
-    'Germany': [
-      'Tax ID', 'Passport', 'Phone', 'Postcode', 'VAT Number', 'IBAN', 'BIC'
-    ],
-    'India': [
-      'PAN Number', 'Aadhaar Number', 'GST Number', 'Passport', 'Driving License', 
-      'Voter ID', 'Phone', 'PIN Code', 'IFSC Code', 'Bank Account', 'UPI ID',
-      'EPF Number', 'ESI Number', 'TAN Number', 'CIN Number', 'FSSAI License'
-    ],
-    'France': [
-      'INSEE Number', 'Passport', 'Phone', 'Postal Code', 'VAT Number', 'IBAN', 'SIRET'
-    ],
-    'Japan': [
-      'My Number', 'Passport', 'Phone', 'Postal Code', 'Bank Account', 'Residence Card'
-    ],
-    'China': [
-      'National ID', 'Passport', 'Phone', 'Postal Code', 'Bank Account', 'UnionPay Card'
-    ],
-    'Brazil': [
-      'CPF', 'CNPJ', 'RG', 'Passport', 'Phone', 'CEP', 'Bank Account'
-    ],
-    'Mexico': [
-      'CURP', 'RFC', 'Passport', 'Phone', 'Postal Code', 'CLABE'
-    ]
-  };
-
-  const generateCountrySpecificData = (type: string, index: number) => {
-    switch (type) {
-      // India specific
-      case 'PAN Number':
-        return `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
-      case 'Aadhaar Number':
-        return `${Math.floor(Math.random() * 9000) + 1000} ${Math.floor(Math.random() * 9000) + 1000} ${Math.floor(Math.random() * 9000) + 1000}`;
-      case 'GST Number':
-        return `${Math.floor(Math.random() * 90) + 10}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10)}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10)}`;
-      case 'IFSC Code':
-        return `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}0${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
-      case 'UPI ID':
-        return `user${index + 1}@paytm`;
-      case 'PIN Code':
-        return `${Math.floor(Math.random() * 900000) + 100000}`;
-      case 'EPF Number':
-        return `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}/${Math.floor(Math.random() * 90000) + 10000}/${Math.floor(Math.random() * 9000000) + 1000000}`;
-
-      // US specific
-      case 'SSN':
-        return `${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000) + 1000}`;
-      case 'Driver License':
-        return `DL${Math.floor(Math.random() * 90000000) + 10000000}`;
-      case 'Tax ID':
-        return `${Math.floor(Math.random() * 90) + 10}-${Math.floor(Math.random() * 9000000) + 1000000}`;
-      case 'ZIP Code':
-        return `${Math.floor(Math.random() * 90000) + 10000}`;
-
-      // UK specific
-      case 'National Insurance Number':
-        return `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 90) + 10}${Math.floor(Math.random() * 90) + 10}${Math.floor(Math.random() * 90) + 10}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
-      case 'Postcode':
-        return `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10)} ${Math.floor(Math.random() * 10)}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
-      case 'VAT Number':
-        return `GB${Math.floor(Math.random() * 900000000) + 100000000}`;
-
-      // Generic
-      case 'Passport':
-        return `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 90000000) + 10000000}`;
-      case 'Phone':
-        return `+${Math.floor(Math.random() * 90) + 10}${Math.floor(Math.random() * 9000000000) + 1000000000}`;
-      case 'Bank Account':
-        return `${Math.floor(Math.random() * 900000000000) + 100000000000}`;
-      case 'Credit Card':
-        return `4${Math.floor(Math.random() * 1000000000000000).toString().padStart(15, '0')}`;
-
-      default:
-        return `${type}_${index + 1}`;
-    }
-  };
-
-  const [selectedFields, setSelectedFields] = useState({
-    firstName: true,
-    lastName: true,
-    email: true,
-    phone: false,
-    address: false,
-    city: false,
-    zipCode: false,
-    country: false,
-    company: false,
-    jobTitle: false,
-    avatarUrl: false,
-    username: false,
-    dateOfBirth: false,
-    website: false,
-    uuid: false,
-    iban: false,
-    product: false,
-    price: false,
-    creditCard: false,
-    loremText: false,
-    // Country-specific fields
-    socialSecurityNumber: false,
-    nationalId: false,
-    passport: false,
-    bankAccount: false,
-    taxId: false,
-    drivingLicense: false,
-    healthInsurance: false,
-    postalCode: false,
-    region: false,
-    currency: false
-  });
-
-  const generateData = () => {
-    const data = [];
     for (let i = 0; i < recordCount; i++) {
-      const record = {};
+      const record: GeneratedData = {};
 
-      // Set locale based on selected country
-      //faker.setLocale(getLocaleForCountry(selectedCountry));
-
-      // if (selectedFields.firstName) record.firstName = faker.person.firstName();
-      // if (selectedFields.lastName) record.lastName = faker.person.lastName();
-      // if (selectedFields.email) record.email = faker.internet.email();
-      // if (selectedFields.phone) record.phone = getCountrySpecificPhone(selectedCountry);
-      // if (selectedFields.address) record.address = faker.location.streetAddress();
-      // if (selectedFields.city) record.city = faker.location.city();
-      // if (selectedFields.zipCode) record.zipCode = getCountrySpecificZipCode(selectedCountry);
-      // if (selectedFields.country) record.country = selectedCountry;
-      // if (selectedFields.company) record.company = faker.company.name();
-      // if (selectedFields.jobTitle) record.jobTitle = faker.person.jobTitle();
-      // if (selectedFields.avatarUrl) record.avatarUrl = faker.image.avatar();
-      // if (selectedFields.username) record.username = faker.internet.userName();
-      // if (selectedFields.dateOfBirth) record.dateOfBirth = faker.date.past({ years: 50 }).toISOString().split('T')[0];
-      // if (selectedFields.website) record.website = faker.internet.url();
-      // if (selectedFields.uuid) record.uuid = faker.string.uuid();
-      // if (selectedFields.iban) record.iban = getCountrySpecificIBAN(selectedCountry);
-      // if (selectedFields.product) record.product = faker.commerce.productName();
-      // if (selectedFields.price) record.price = faker.commerce.price({ symbol: getCurrencySymbol(selectedCountry) });
-      // if (selectedFields.creditCard) record.creditCard = faker.finance.creditCardNumber();
-      // if (selectedFields.loremText) record.loremText = faker.lorem.paragraph();
-
-      dataFields.forEach(field => {
-        if (field.enabled) {
-          switch (field.type) {
-            case "name.firstName":
-              record[field.id] = generateFakeDataByCountry("firstName", selectedCountry);
+      selectedDataTypes.forEach(dataType => {
+        if (countryGenerators && countryGenerators[dataType as keyof typeof countryGenerators]) {
+          const generator = countryGenerators[dataType as keyof typeof countryGenerators];
+          if (dataType === 'email' || dataType === 'upi') {
+            // These need the name as input
+            const name = record.name || countryGenerators.name();
+            record[dataType] = generator(name as string);
+          } else {
+            record[dataType] = generator();
+          }
+        } else {
+          // Generate generic data for types not specific to country
+          switch (dataType) {
+            case 'creditCard':
+              record[dataType] = Array.from({length: 16}, () => Math.floor(Math.random() * 10)).join('').replace(/(.{4})/g, '$1 ').trim();
               break;
-            case "name.lastName":
-              record[field.id] = generateFakeDataByCountry("lastName", selectedCountry);
+            case 'bankAccount':
+              record[dataType] = Math.floor(Math.random() * 9000000000) + 1000000000;
               break;
-            case "internet.email":
-              record[field.id] = generateFakeDataByCountry("email", selectedCountry);
+            case 'username':
+              record[dataType] = `user${Math.floor(Math.random() * 10000)}`;
               break;
-            case "phone.number":
-              record[field.id] = generateFakeDataByCountry("phone", selectedCountry);
+            case 'password':
+              record[dataType] = Math.random().toString(36).slice(-8) + Math.floor(Math.random() * 100);
               break;
-            case "location.streetAddress":
-              record[field.id] = generateFakeDataByCountry("address", selectedCountry);
+            case 'ipAddress':
+              record[dataType] = `${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}`;
               break;
-            case "location.city":
-              record[field.id] = generateFakeDataByCountry("city", selectedCountry);
+            case 'macAddress':
+              record[dataType] = Array.from({length: 6}, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join(':');
               break;
-            case "location.country":
-              record[field.id] = countries.find(c => c.code === selectedCountry)?.name || "United States";
+            case 'date':
+              const randomDate = new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000));
+              record[dataType] = randomDate.toISOString().split('T')[0];
               break;
-            case "location.zipCode":
-              record[field.id] = generateFakeDataByCountry("zipCode", selectedCountry);
+            case 'time':
+              record[dataType] = `${Math.floor(Math.random() * 24).toString().padStart(2, '0')}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`;
               break;
-            case "company.name":
-              record[field.id] = generateFakeDataByCountry("company", selectedCountry);
+            case 'timestamp':
+              record[dataType] = Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000);
               break;
-            case "person.jobTitle":
-              record[field.id] = generateFakeDataByCountry("jobTitle", selectedCountry);
+            case 'company':
+              const companies = ['TechCorp', 'DataSoft', 'InnovateLabs', 'GlobalTech', 'FutureSoft', 'DigitalEdge', 'SmartSolutions', 'NextGen', 'CloudWorks', 'InfoSystems'];
+              record[dataType] = companies[Math.floor(Math.random() * companies.length)];
               break;
-            case "date.birthdate":
-              record[field.id] = generateFakeDataByCountry("dateOfBirth", selectedCountry);
+            case 'jobTitle':
+              const titles = ['Software Engineer', 'Product Manager', 'Data Analyst', 'UX Designer', 'DevOps Engineer', 'QA Engineer', 'Business Analyst', 'Project Manager', 'Tech Lead', 'Sales Manager'];
+              record[dataType] = titles[Math.floor(Math.random() * titles.length)];
               break;
-            case "image.avatar":
-              record[field.id] = `https://i.pravatar.cc/150?img=${(i % 70) + 1}`;
+            case 'department':
+              const departments = ['Engineering', 'Product', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'Customer Support', 'Legal', 'Business Development'];
+              record[dataType] = departments[Math.floor(Math.random() * departments.length)];
               break;
-            case "internet.url":
-              record[field.id] = generateFakeDataByCountry("website", selectedCountry);
+            case 'word':
+              const words = ['lorem', 'ipsum', 'dolor', 'sit', 'amet', 'consectetur', 'adipiscing', 'elit', 'sed', 'do'];
+              record[dataType] = words[Math.floor(Math.random() * words.length)];
               break;
-            case "internet.userName":
-              record[field.id] = generateFakeDataByCountry("username", selectedCountry);
+            case 'sentence':
+              record[dataType] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.';
               break;
-            case "string.uuid":
-              record[field.id] = generateUUID();
+            case 'paragraph':
+              record[dataType] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.';
               break;
-            case "finance.creditCardNumber":
-              record[field.id] = generateFakeDataByCountry("creditCard", selectedCountry);
-              break;
-            case "finance.iban":
-              record[field.id] = generateFakeDataByCountry("iban", selectedCountry);
-              break;
-            case "commerce.price":
-              record[field.id] = (Math.random() * 1000).toFixed(2);
-              break;
-            case "commerce.product":
-              record[field.id] = generateFakeDataByCountry("product", selectedCountry);
-              break;
-            case "lorem.paragraph":
-              record[field.id] = generateFakeDataByCountry("lorem", selectedCountry);
-              break;
-            default:
-              record[field.id] = generateFakeDataByCountry("text", selectedCountry);
           }
         }
       });
 
-      // Country-specific fields
-      if (selectedFields.socialSecurityNumber) record.socialSecurityNumber = generateCountrySpecificData("SSN", i);
-      if (selectedFields.nationalId) record.nationalId = generateCountrySpecificData("National ID", i);
-      if (selectedFields.passport) record.passport = generateCountrySpecificData("Passport", i);
-      if (selectedFields.bankAccount) record.bankAccount = generateCountrySpecificData("Bank Account", i);
-      if (selectedFields.taxId) record.taxId = generateCountrySpecificData("Tax ID", i);
-      if (selectedFields.drivingLicense) record.drivingLicense = generateCountrySpecificData("Driving License", i);
-      //if (selectedFields.healthInsurance) record.healthInsurance = getCountrySpecificHealthInsurance(selectedCountry);
-      if (selectedFields.postalCode) record.postalCode = generateCountrySpecificData("Postal Code", i);
-      //if (selectedFields.region) record.region = getCountrySpecificRegion(selectedCountry);
-      //if (selectedFields.currency) record.currency = getCurrencyCode(selectedCountry);
       data.push(record);
     }
 
     setGeneratedData(data);
-  };
+    toast({
+      title: 'Success',
+      description: `Generated ${recordCount} records successfully`,
+    });
+  }, [selectedCountry, selectedDataTypes, recordCount, toast]);
 
-  // Helper functions for country-specific data
-  const getLocaleForCountry = (country: string) => {
-    const localeMap: { [key: string]: string } = {
-      'United States': 'en_US',
-      'United Kingdom': 'en_GB',
-      'India': 'en_IN',
-      'Germany': 'de',
-      'France': 'fr',
-      'Japan': 'ja',
-      'China': 'zh_CN',
-      'Brazil': 'pt_BR',
-      'Spain': 'es',
-      'Italy': 'it'
-    };
-    return localeMap[country] || 'en_US';
-  };
+  const copyToClipboard = (format: string) => {
+    let output = '';
 
-  const generateFakeDataByCountry = (type: string, country: string): string => {
-    // Simple fake data generation based on country
-    const countryData: { [key: string]: { [key: string]: string[] } } = {
-      US: {
-        firstName: ["John", "Jane", "Michael", "Sarah", "David", "Lisa", "Robert", "Mary"],
-        lastName: ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis"],
-        city: ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego"],
-        company: ["Apple Inc", "Microsoft", "Google", "Amazon", "Facebook", "Tesla", "Netflix", "Twitter"]
-      },
-      GB: {
-        firstName: ["James", "Oliver", "William", "Henry", "Emma", "Olivia", "Sophia", "Charlotte"],
-        lastName: ["Smith", "Jones", "Taylor", "Williams", "Brown", "Davies", "Evans", "Wilson"],
-        city: ["London", "Birmingham", "Manchester", "Glasgow", "Liverpool", "Leeds", "Sheffield", "Edinburgh"],
-        company: ["BP", "Vodafone", "HSBC", "Shell", "British Airways", "Tesco", "Barclays", "BT Group"]
-      },
-      // Add more countries as needed
-    };
-
-    const currentCountryData = countryData[country] || countryData.US;
-
-    switch (type) {
-      case "firstName":
-        return getRandomFromArray(currentCountryData.firstName || countryData.US.firstName);
-      case "lastName":
-        return getRandomFromArray(currentCountryData.lastName || countryData.US.lastName);
-      case "email":
-        const firstName = getRandomFromArray(currentCountryData.firstName || countryData.US.firstName);
-        const lastName = getRandomFromArray(currentCountryData.lastName || countryData.US.lastName);
-        return `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`;
-      case "phone":
-        return country === "US" ? `+1-${Math.floor(Math.random() * 900 + 100)}-${Math.floor(Math.random() * 900 + 100)}-${Math.floor(Math.random() * 9000 + 1000)}` :
-               `+44-${Math.floor(Math.random() * 9000 + 1000)}-${Math.floor(Math.random() * 900000 + 100000)}`;
-      case "address":
-        return `${Math.floor(Math.random() * 9999 + 1)} ${getRandomFromArray(["Main St", "Oak Ave", "Pine Rd", "Maple Dr", "Cedar Ln"])}`;
-      case "city":
-        return getRandomFromArray(currentCountryData.city || countryData.US.city);
-      case "zipCode":
-        return country === "US" ? Math.floor(Math.random() * 90000 + 10000).toString() :
-               `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 10)} ${Math.floor(Math.random() * 10)}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
-      case "company":
-        return getRandomFromArray(currentCountryData.company || countryData.US.company);
-      case "jobTitle":
-        return getRandomFromArray(["Software Engineer", "Product Manager", "Designer", "Data Analyst", "Marketing Manager", "Sales Representative"]);
-      case "dateOfBirth":
-        const year = Math.floor(Math.random() * 50 + 1950);
-        const month = Math.floor(Math.random() * 12 + 1);
-        const day = Math.floor(Math.random() * 28 + 1);
-        return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-      case "website":
-        return `https://www.${getRandomFromArray(["example", "demo", "test", "sample"])}.com`;
-      case "username":
-        return `user${Math.floor(Math.random() * 10000)}`;
-      case "creditCard":
-        return `4${Math.floor(Math.random() * 1000000000000000).toString().padStart(15, '0')}`;
-      case "iban":
-        return `${country}${Math.floor(Math.random() * 100).toString().padStart(2, '0')}${Math.floor(Math.random() * 10000000000000000000).toString().padStart(18, '0')}`;
-      case "product":
-        return getRandomFromArray(["Laptop", "Smartphone", "Tablet", "Headphones", "Camera", "Watch", "Keyboard", "Mouse"]);
-      case "lorem":
-        return "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
-      default:
-        return "Sample Text";
+    switch (format) {
+      case 'json':
+        output = JSON.stringify(generatedData, null, 2);
+        break;
+      case 'csv':
+        if (generatedData.length > 0) {
+          const headers = Object.keys(generatedData[0]).join(',');
+          const rows = generatedData.map(row => Object.values(row).join(',')).join('\n');
+          output = `${headers}\n${rows}`;
+        }
+        break;
+      case 'sql':
+        if (generatedData.length > 0) {
+          const tableName = 'test_data';
+          const columns = Object.keys(generatedData[0]);
+          const values = generatedData.map(row => 
+            `(${Object.values(row).map(v => typeof v === 'string' ? `'${v}'` : v).join(', ')})`
+          ).join(',\n  ');
+          output = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES\n  ${values};`;
+        }
+        break;
     }
-  };
 
-  const getCountrySpecificPhone = (country: string) => {
-    const phoneFormats: { [key: string]: string } = {
-      'US': '+1-###-###-####',
-      'GB': '+44-####-######',
-      'IN': '+91-#####-#####',
-      'DE': '+49-###-########',
-      'FR': '+33-#-##-##-##-##',
-      'JP': '+81-##-####-####',
-      'CN': '+86-###-####-####',
-      'BR': '+55-##-#####-####',
-      'ES': '+34-###-###-###',
-      'IT': '+39-###-###-####'
-    };
-    return phoneFormats[country] || '+1-###-###-####';
-  };
-
-  const getCountrySpecificZipCode = (country: string) => {
-    const zipFormats: { [key: string]: string } = {
-      'US': '#####',
-      'GB': '??# #??',
-      'IN': '######',
-      'DE': '#####',
-      'FR': '#####',
-      'JP': '###-####',
-      'CN': '######',
-      'BR': '#####-###',
-      'ES': '#####',
-      'IT': '#####'
-    };
-    return zipFormats[country] || '#####';
-  };
-
-  const getCurrencySymbol = (country: string) => {
-    const currencyMap: { [key: string]: string } = {
-      'US': '$',
-      'GB': '£',
-      'IN': '₹',
-      'DE': '€',
-      'FR': '€',
-      'JP': '¥',
-      'CN': '¥',
-      'BR': 'R$',
-      'ES': '€',
-      'IT': '€'
-    };
-    return currencyMap[country] || '$';
-  };
-
-  const getCountrySpecificIBAN = (country: string): string => {
-    const ibanFormats: { [key: string]: string } = {
-        'US': '############',
-        'GB': '########',
-        'IN': '###############',
-        'DE': '####################',
-        'FR': '#####################',
-        'JP': '#######',
-        'CN': '###############',
-        'BR': '########-#',
-        'ES': '####################',
-        'IT': '###########'
-    };
-    return ibanFormats[country] || '############';
-  };
-
-  const generateUUID = (): string => {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
+    navigator.clipboard.writeText(output);
+    toast({
+      title: 'Copied',
+      description: `Data copied to clipboard in ${format.toUpperCase()} format`,
     });
   };
 
-  const exportData = () => {
-    if (generatedData.length === 0) {
-      toast({
-        title: "No Data",
-        description: "Generate some data first",
-        variant: "destructive"
-      });
-      return;
-    }
+  const downloadData = (format: string) => {
+    let output = '';
+    let filename = '';
+    let mimeType = '';
 
-    let content = "";
-    let filename = "";
-    let mimeType = "";
-
-    switch (outputFormat) {
-      case "json":
-        content = JSON.stringify(generatedData, null, 2);
-        filename = "test-data.json";
-        mimeType = "application/json";
+    switch (format) {
+      case 'json':
+        output = JSON.stringify(generatedData, null, 2);
+        filename = 'test-data.json';
+        mimeType = 'application/json';
         break;
-      case "csv":
-        const headers = Object.keys(generatedData[0]).join(",");
-        const rows = generatedData.map(row => Object.values(row).map(val => `"${val}"`).join(","));
-        content = [headers, ...rows].join("\n");
-        filename = "test-data.csv";
-        mimeType = "text/csv";
+      case 'csv':
+        if (generatedData.length > 0) {
+          const headers = Object.keys(generatedData[0]).join(',');
+          const rows = generatedData.map(row => Object.values(row).join(',')).join('\n');
+          output = `${headers}\n${rows}`;
+        }
+        filename = 'test-data.csv';
+        mimeType = 'text/csv';
         break;
-      case "xml":
-        content = `<?xml version="1.0" encoding="UTF-8"?>\n<data>\n${generatedData.map(item => 
-          `  <record>\n${Object.entries(item).map(([key, value]) => 
-            `    <${key}>${value}</${key}>`
-          ).join('\n')}\n  </record>`
-        ).join('\n')}\n</data>`;
-        filename = "test-data.xml";
-        mimeType = "application/xml";
-        break;
-      case "sql":
-        const tableName = "test_data";
-        const columns = Object.keys(generatedData[0]);
-        const values = generatedData.map(row => 
-          `(${Object.values(row).map(val => `'${val}'`).join(", ")})`
-        ).join(",\n");
-        content = `INSERT INTO ${tableName} (${columns.join(", ")}) VALUES\n${values};`;
-        filename = "test-data.sql";
-        mimeType = "text/sql";
+      case 'sql':
+        if (generatedData.length > 0) {
+          const tableName = 'test_data';
+          const columns = Object.keys(generatedData[0]);
+          const values = generatedData.map(row => 
+            `(${Object.values(row).map(v => typeof v === 'string' ? `'${v}'` : v).join(', ')})`
+          ).join(',\n  ');
+          output = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES\n  ${values};`;
+        }
+        filename = 'test-data.sql';
+        mimeType = 'text/sql';
         break;
     }
 
-    const blob = new Blob([content], { type: mimeType });
+    const blob = new Blob([output], { type: mimeType });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
     a.download = filename;
-    document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
-    toast({
-      title: "Export Complete",
-      description: `Data exported as ${filename}`
-    });
   };
 
-  const toggleField = (fieldId: string) => {
-    setDataFields(fields => 
-      fields.map(field => 
-        field.id === fieldId ? { ...field, enabled: !field.enabled } : field
-      )
-    );
+  const handleDataTypeChange = (dataType: string, checked: boolean) => {
+    if (checked) {
+      setSelectedDataTypes(prev => [...prev, dataType]);
+    } else {
+      setSelectedDataTypes(prev => prev.filter(type => type !== dataType));
+    }
   };
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <Database className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold">Test Data Generator</h1>
-        </div>
-          <p className="text-muted-foreground">
-            Generate realistic test data with country-specific formats and custom fields
-          </p>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Test Data Generator</h1>
+            <p className="text-muted-foreground">Generate realistic test data for various countries and use cases</p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Configuration Panel */}
-          <div className="lg:col-span-1 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Configuration</CardTitle>
-                <CardDescription>
-                  Set up your data generation parameters
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="country">Country/Locale</Label>
-                  <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map(country => (
-                        <SelectItem key={country.code} value={country.code}>
-                          {country.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="recordCount">Number of Records</Label>
-                  <Input
-                    id="recordCount"
-                    type="number"
-                    min="1"
-                    max="10000"
-                    value={recordCount}
-                    onChange={(e) => setRecordCount(parseInt(e.target.value) || 100)}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="outputFormat">Output Format</Label>
-                  <Select value={outputFormat} onValueChange={setOutputFormat}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select format" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="json">JSON</SelectItem>
-                      <SelectItem value="csv">CSV</SelectItem>
-                      <SelectItem value="xml">XML</SelectItem>
-                      <SelectItem value="sql">SQL Insert</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Custom Fields</CardTitle>
-                <CardDescription>
-                  Add custom fields as JSON
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  placeholder='{"customField": "value", "status": "active"}'
-                  value={customFields}
-                  onChange={(e) => setCustomFields(e.target.value)}
-                  rows={4}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Fields Selection */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Data Fields</CardTitle>
-                <CardDescription>
-                  Select which fields to include in your test data
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {dataFields.map(field => (
-                    <div key={field.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={field.id}
-                        checked={field.enabled}
-                        onCheckedChange={() => toggleField(field.id)}
-                      />
-                      <Label htmlFor={field.id} className="text-sm font-medium">
-                        {field.name}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-             <Card>
-              <CardHeader>
-                <CardTitle>Data Fields</CardTitle>
-                <CardDescription>
-                  Select which fields to include in your test data
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFields.price}
-                    onChange={(e) => setSelectedFields({...selectedFields, price: e.target.checked})}
-                  />
-                  <span>Price</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFields.loremText}
-                    onChange={(e) => setSelectedFields({...selectedFields, loremText: e.target.checked})}
-                  />
-                  <span>Lorem Text</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFields.socialSecurityNumber}
-                    onChange={(e) => setSelectedFields({...selectedFields, socialSecurityNumber: e.target.checked})}
-                  />
-                  <span>Social Security</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFields.nationalId}
-                    onChange={(e) => setSelectedFields({...selectedFields, nationalId: e.target.checked})}
-                  />
-                  <span>National ID</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFields.passport}
-                    onChange={(e) => setSelectedFields({...selectedFields, passport: e.target.checked})}
-                  />
-                  <span>Passport</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFields.bankAccount}
-                    onChange={(e) => setSelectedFields({...selectedFields, bankAccount: e.target.checked})}
-                  />
-                  <span>Bank Account</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFields.taxId}
-                    onChange={(e) => setSelectedFields({...selectedFields, taxId: e.target.checked})}
-                  />
-                  <span>Tax ID</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFields.drivingLicense}
-                    onChange={(e) => setSelectedFields({...selectedFields, drivingLicense: e.target.checked})}
-                  />
-                  <span>Driving License</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFields.healthInsurance}
-                    onChange={(e) => setSelectedFields({...selectedFields, healthInsurance: e.target.checked})}
-                  />
-                  <span>Health Insurance</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFields.region}
-                    onChange={(e) => setSelectedFields({...selectedFields, region: e.target.checked})}
-                  />
-                  <span>Region/State</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFields.currency}
-                    onChange={(e) => setSelectedFields({...selectedFields, currency: e.target.checked})}
-                  />
-                  <span>Currency</span>
-                </label>
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                Configuration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="country">Country</Label>
+                <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="India">🇮🇳 India</SelectItem>
+                    <SelectItem value="USA">🇺🇸 USA</SelectItem>
+                    <SelectItem value="UK">🇬🇧 UK</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              </CardContent>
-            </Card>
 
-            {/* Generate Button */}
-            <div className="flex gap-4">
-              <Button
-                onClick={generateData}
-                disabled={isGenerating}
-                className="flex-1"
-              >
-                {isGenerating ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Generate Data
-                  </>
-                )}
+              <div>
+                <Label htmlFor="recordCount">Number of Records</Label>
+                <Input
+                  id="recordCount"
+                  type="number"
+                  min="1"
+                  max="1000"
+                  value={recordCount}
+                  onChange={(e) => setRecordCount(Number(e.target.value))}
+                />
+              </div>
+
+              <div>
+                <Label>Data Types</Label>
+                <div className="space-y-3 mt-2">
+                  {/* Personal Data */}
+                  <div>
+                    <Label className="text-sm font-medium text-blue-600">Personal</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.personal.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Country-specific Data */}
+                  {selectedCountry === 'India' && (
+                    <div>
+                      <Label className="text-sm font-medium text-green-600">Indian Specific</Label>
+                      <div className="space-y-2 mt-1">
+                        {dataTypes.indian.map(type => (
+                          <div key={type} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={type}
+                              checked={selectedDataTypes.includes(type)}
+                              onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                            />
+                            <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedCountry === 'USA' && (
+                    <div>
+                      <Label className="text-sm font-medium text-red-600">USA Specific</Label>
+                      <div className="space-y-2 mt-1">
+                        {dataTypes.usa.map(type => (
+                          <div key={type} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={type}
+                              checked={selectedDataTypes.includes(type)}
+                              onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                            />
+                            <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedCountry === 'UK' && (
+                    <div>
+                      <Label className="text-sm font-medium text-purple-600">UK Specific</Label>
+                      <div className="space-y-2 mt-1">
+                        {dataTypes.uk.map(type => (
+                          <div key={type} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={type}
+                              checked={selectedDataTypes.includes(type)}
+                              onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                            />
+                            <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Other Data Types */}
+                  <div>
+                    <Label className="text-sm font-medium text-orange-600">Financial</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.financial.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-cyan-600">Internet</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.internet.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-indigo-600">DateTime</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.datetime.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-pink-600">Business</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.business.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Lorem</Label>
+                    <div className="space-y-2 mt-1">
+                      {dataTypes.lorem.map(type => (
+                        <div key={type} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={type}
+                            checked={selectedDataTypes.includes(type)}
+                            onCheckedChange={(checked) => handleDataTypeChange(type, checked as boolean)}
+                          />
+                          <Label htmlFor={type} className="text-sm">{type.charAt(0).toUpperCase() + type.slice(1)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Button onClick={generateData} className="w-full" disabled={selectedDataTypes.length === 0}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Generate Data
               </Button>
+            </CardContent>
+          </Card>
 
-              {generatedData.length > 0 && (
-                <Button onClick={exportData} variant="outline">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
+          {/* Results Panel */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Generated Data ({generatedData.length} records)</CardTitle>
+                {generatedData.length > 0 && (
+                  <div className="flex gap-2">
+                    <Select value={outputFormat} onValueChange={setOutputFormat}>
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="json">JSON</SelectItem>
+                        <SelectItem value="csv">CSV</SelectItem>
+                        <SelectItem value="sql">SQL</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" onClick={() => copyToClipboard(outputFormat)}>
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <Button size="sm" onClick={() => downloadData(outputFormat)}>
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {generatedData.length > 0 ? (
+                <Textarea
+                  value={outputFormat === 'json' ? JSON.stringify(generatedData, null, 2) : 
+                         outputFormat === 'csv' ? (() => {
+                           const headers = Object.keys(generatedData[0]).join(',');
+                           const rows = generatedData.map(row => Object.values(row).join(',')).join('\n');
+                           return `${headers}\n${rows}`;
+                         })() :
+                         (() => {
+                           const tableName = 'test_data';
+                           const columns = Object.keys(generatedData[0]);
+                           const values = generatedData.map(row => 
+                             `(${Object.values(row).map(v => typeof v === 'string' ? `'${v}'` : v).join(', ')})`
+                           ).join(',\n  ');
+                           return `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES\n  ${values};`;
+                         })()
+                  }
+                  readOnly
+                  className="min-h-[400px] font-mono text-sm"
+                />
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  Select data types and click "Generate Data" to create test data
+                </div>
               )}
-            </div>
-
-            {/* Preview */}
-            {generatedData.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Preview ({generatedData.length} records)</CardTitle>
-                  <CardDescription>
-                    Showing first 5 records
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <pre className="text-xs bg-muted p-4 rounded-md overflow-auto max-h-96">
-                    {JSON.stringify(generatedData.slice(0, 5), null, 2)}
-                  </pre>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </MainLayout>

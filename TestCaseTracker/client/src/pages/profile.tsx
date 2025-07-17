@@ -73,70 +73,42 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Load lottie animations with comprehensive error handling and debugging
     const loadAnimations = async () => {
-      console.log(`🎬 Starting to load ${lottieAnimations.length} Lottie animations...`);
+      try {
+        // Load only working animations
+        const animationsToLoad = [
+          { id: 'rocket', name: 'Rocket', path: '/lottie/rocket.json' },
+          { id: 'businessman-rocket', name: 'Business Rocket', path: '/lottie/businessman-rocket.json' },
+          { id: 'male-avatar', name: 'Male Avatar', path: '/lottie/male-avatar.json' },
+          { id: 'female-avatar', name: 'Female Avatar', path: '/lottie/female-avatar.json' },
+        ];
 
-      const loaded = await Promise.all(
-        lottieAnimations.map(async (animation) => {
-          try {
-            console.log(`🎬 Loading Lottie: ${animation.name} from ${animation.path}`);
-
-            // Check if file exists first
-            const response = await fetch(animation.path);
-            console.log(`📡 Fetch response for ${animation.name}:`, {
-              status: response.status,
-              statusText: response.statusText,
-              ok: response.ok,
-              contentType: response.headers.get('content-type')
-            });
-
-            if (response.ok) {
-              const text = await response.text();
-              console.log(`📄 Received text for ${animation.name}, length: ${text.length}`);
-
-              try {
-                const data = JSON.parse(text);
-                console.log(`✅ Successfully parsed JSON for ${animation.name}:`, {
-                  version: data.v,
-                  hasLayers: !!data.layers,
-                  layerCount: data.layers?.length || 0,
-                  frameRate: data.fr,
-                  width: data.w,
-                  height: data.h
-                });
+        const loadedAnimations = await Promise.all(
+          animationsToLoad.map(async (animation) => {
+            try {
+              const response = await fetch(animation.path);
+              if (response.ok) {
+                const data = await response.json();
                 return { ...animation, preview: data };
-              } catch (parseError) {
-                console.error(`❌ JSON parse error for ${animation.name}:`, parseError);
-                console.error(`📄 Raw text content (first 200 chars):`, text.substring(0, 200));
-                return animation;
+              } else {
+                console.error(`Failed to load ${animation.name} animation:`, response.status);
+                return { ...animation, preview: null };
               }
-            } else {
-              console.warn(`❌ Failed to load ${animation.name}: ${response.status} ${response.statusText}`);
-              return animation;
+            } catch (error) {
+              console.error(`Error loading ${animation.name} animation:`, error);
+              return { ...animation, preview: null };
             }
-          } catch (error) {
-            console.error(`❌ Network error loading ${animation.name}:`, error);
-            return animation;
-          }
-        })
-      );
+          })
+        );
 
-      console.log(`📊 Animation loading complete. Loaded: ${loaded.filter(a => a.preview).length}/${loaded.length}`);
-      setLottieAnimations(loaded);
+        setLottieAnimations(loadedAnimations);
+
+      } catch (error) {
+        console.error('Error loading animations:', error);
+      }
     };
 
-    // Only load if we have animations and haven't loaded them yet
-    const needsLoading = lottieAnimations.some(anim => !anim.preview);
-    console.log(`🔍 Animation loading check:`, {
-      totalAnimations: lottieAnimations.length,
-      needsLoading,
-      animationsWithPreview: lottieAnimations.filter(a => a.preview).length
-    });
-
-    if (lottieAnimations.length > 0 && needsLoading) {
-      loadAnimations();
-    }
+    loadAnimations();
   }, []);
 
   // Fetch current user data
