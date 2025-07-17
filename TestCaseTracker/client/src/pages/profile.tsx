@@ -1278,8 +1278,9 @@ export default function ProfilePage() {
                                     <div className="text-red-600 text-xs font-medium">Failed</div>
                                     <div className="text-red-500 text-xs">to Load</div>
                                   </div>
-                                )}</div>
+                                )}
                               </div>
+                            </div>
 
                               {/* Play/Pause Button */}
                               {animation.preview && (
