@@ -939,7 +939,8 @@ export default function ProfilePage() {
                               }} 
                               defaultValue={field.value}
                             >
-                              <FormControl<SelectTrigger>
+                              <FormControl>
+                                <SelectTrigger>
                                   <SelectValue placeholder="Select a color theme" />
                                 </SelectTrigger>
                               </FormControl>
