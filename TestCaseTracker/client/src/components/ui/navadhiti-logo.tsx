@@ -17,7 +17,7 @@ export const NavaDhitiLogo: React.FC<NavaDhitiLogoProps> = ({
       scale: 1,
       opacity: 1,
       transition: {
-        delay: i * 0.05,
+        delay: i * 0.02,
         duration: 0.3,
         ease: "easeOut"
       }
@@ -42,48 +42,61 @@ export const NavaDhitiLogo: React.FC<NavaDhitiLogoProps> = ({
     }
   };
 
+  // Generate leaves in a natural tree pattern
+  const generateLeaves = () => {
+    const leaves = [];
+    const leafColors = ["#9ACD32", "#8FBC8F", "#7CB342", "#689F38", "#558B2F"];
+    
+    // Create a more natural leaf distribution
+    for (let layer = 0; layer < 8; layer++) {
+      const radius = 20 + (layer * 12);
+      const leafCount = Math.floor(8 + (layer * 2));
+      
+      for (let i = 0; i < leafCount; i++) {
+        const angle = (i / leafCount) * 2 * Math.PI + (layer * 0.3);
+        const x = 100 + Math.cos(angle) * radius * (0.8 + Math.random() * 0.4);
+        const y = 80 + Math.sin(angle) * radius * (0.6 + Math.random() * 0.3) - (layer * 2);
+        
+        const size = 4 + Math.random() * 8;
+        const rotation = (angle * 180 / Math.PI) + (Math.random() - 0.5) * 60;
+        
+        leaves.push({
+          x, y, size, rotation,
+          color: leafColors[Math.floor(Math.random() * leafColors.length)]
+        });
+      }
+    }
+    
+    return leaves;
+  };
+
+  const leaves = generateLeaves();
+
   return (
     <motion.div 
-      className={`flex flex-col items-center ${className}`}
+      className={`flex flex-col items-center justify-center ${className}`}
       initial={animate ? "initial" : "animate"}
       animate="animate"
     >
+      {/* Logo SVG */}
       <motion.svg
-        viewBox="0 0 200 160"
-        className="w-full h-full"
+        viewBox="0 0 200 140"
+        className="w-full h-auto"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Tree Trunk */}
+        {/* Tree Trunk - Main */}
         <motion.path
-          d="M95 120 Q95 130 95 140 Q95 150 105 150 Q115 150 115 140 Q115 130 115 120"
+          d="M95 110 Q95 115 95 125 Q95 130 100 130 Q105 130 105 125 Q105 115 105 110"
           stroke="#4A5568"
-          strokeWidth="8"
-          fill="none"
+          strokeWidth="6"
+          fill="#5D4037"
           strokeLinecap="round"
           variants={animate ? trunkVariants : {}}
         />
         
         {/* Main Branches */}
         <motion.path
-          d="M100 120 Q85 110 75 100 Q65 90 70 85"
-          stroke="#4A5568"
-          strokeWidth="6"
-          fill="none"
-          strokeLinecap="round"
-          variants={animate ? trunkVariants : {}}
-        />
-        
-        <motion.path
-          d="M105 120 Q120 110 130 100 Q140 90 135 85"
-          stroke="#4A5568"
-          strokeWidth="6"
-          fill="none"
-          strokeLinecap="round"
-          variants={animate ? trunkVariants : {}}
-        />
-        
-        <motion.path
-          d="M100 115 Q90 105 85 95 Q80 85 85 80"
+          d="M100 110 Q85 105 75 95 Q70 90 72 88"
           stroke="#4A5568"
           strokeWidth="4"
           fill="none"
@@ -92,84 +105,60 @@ export const NavaDhitiLogo: React.FC<NavaDhitiLogoProps> = ({
         />
         
         <motion.path
-          d="M105 115 Q115 105 120 95 Q125 85 120 80"
+          d="M100 110 Q115 105 125 95 Q130 90 128 88"
           stroke="#4A5568"
           strokeWidth="4"
+          fill="none"
+          strokeLinecap="round"
+          variants={animate ? trunkVariants : {}}
+        />
+        
+        <motion.path
+          d="M98 108 Q88 103 82 95 Q78 90 80 88"
+          stroke="#4A5568"
+          strokeWidth="3"
+          fill="none"
+          strokeLinecap="round"
+          variants={animate ? trunkVariants : {}}
+        />
+        
+        <motion.path
+          d="M102 108 Q112 103 118 95 Q122 90 120 88"
+          stroke="#4A5568"
+          strokeWidth="3"
           fill="none"
           strokeLinecap="round"
           variants={animate ? trunkVariants : {}}
         />
 
-        {/* Leaves arranged in a natural tree pattern */}
-        {[
-          // Top leaves
-          { x: 100, y: 30, size: 8, rotation: 0 },
-          { x: 95, y: 25, size: 6, rotation: 15 },
-          { x: 105, y: 25, size: 6, rotation: -15 },
-          { x: 90, y: 35, size: 7, rotation: 30 },
-          { x: 110, y: 35, size: 7, rotation: -30 },
-          
-          // Second layer
-          { x: 85, y: 45, size: 9, rotation: 45 },
-          { x: 115, y: 45, size: 9, rotation: -45 },
-          { x: 100, y: 40, size: 8, rotation: 0 },
-          { x: 78, y: 50, size: 7, rotation: 60 },
-          { x: 122, y: 50, size: 7, rotation: -60 },
-          
-          // Third layer
-          { x: 75, y: 60, size: 10, rotation: 75 },
-          { x: 125, y: 60, size: 10, rotation: -75 },
-          { x: 95, y: 55, size: 8, rotation: 20 },
-          { x: 105, y: 55, size: 8, rotation: -20 },
-          { x: 70, y: 65, size: 8, rotation: 90 },
-          { x: 130, y: 65, size: 8, rotation: -90 },
-          
-          // Fourth layer
-          { x: 65, y: 75, size: 11, rotation: 105 },
-          { x: 135, y: 75, size: 11, rotation: -105 },
-          { x: 85, y: 70, size: 9, rotation: 40 },
-          { x: 115, y: 70, size: 9, rotation: -40 },
-          { x: 100, y: 65, size: 7, rotation: 0 },
-          
-          // Fifth layer
-          { x: 60, y: 85, size: 12, rotation: 120 },
-          { x: 140, y: 85, size: 12, rotation: -120 },
-          { x: 75, y: 80, size: 10, rotation: 80 },
-          { x: 125, y: 80, size: 10, rotation: -80 },
-          { x: 90, y: 75, size: 8, rotation: 35 },
-          { x: 110, y: 75, size: 8, rotation: -35 },
-          
-          // Sixth layer
-          { x: 55, y: 95, size: 13, rotation: 135 },
-          { x: 145, y: 95, size: 13, rotation: -135 },
-          { x: 70, y: 90, size: 11, rotation: 100 },
-          { x: 130, y: 90, size: 11, rotation: -100 },
-          { x: 85, y: 85, size: 9, rotation: 50 },
-          { x: 115, y: 85, size: 9, rotation: -50 },
-          
-          // Bottom layer
-          { x: 50, y: 105, size: 14, rotation: 150 },
-          { x: 150, y: 105, size: 14, rotation: -150 },
-          { x: 65, y: 100, size: 12, rotation: 115 },
-          { x: 135, y: 100, size: 12, rotation: -115 },
-          { x: 80, y: 95, size: 10, rotation: 65 },
-          { x: 120, y: 95, size: 10, rotation: -65 },
-          
-          // Additional scattered leaves
-          { x: 88, y: 88, size: 6, rotation: 25 },
-          { x: 112, y: 88, size: 6, rotation: -25 },
-          { x: 77, y: 78, size: 7, rotation: 55 },
-          { x: 123, y: 78, size: 7, rotation: -55 },
-          { x: 92, y: 48, size: 5, rotation: 10 },
-          { x: 108, y: 48, size: 5, rotation: -10 },
-        ].map((leaf, i) => (
+        {/* Secondary Branches */}
+        <motion.path
+          d="M95 105 Q90 100 85 92"
+          stroke="#4A5568"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+          variants={animate ? trunkVariants : {}}
+        />
+        
+        <motion.path
+          d="M105 105 Q110 100 115 92"
+          stroke="#4A5568"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+          variants={animate ? trunkVariants : {}}
+        />
+
+        {/* Leaves - Dense canopy */}
+        {leaves.map((leaf, i) => (
           <motion.ellipse
             key={i}
             cx={leaf.x}
             cy={leaf.y}
             rx={leaf.size}
-            ry={leaf.size * 0.6}
-            fill="#9ACD32"
+            ry={leaf.size * 0.7}
+            fill={leaf.color}
             transform={`rotate(${leaf.rotation} ${leaf.x} ${leaf.y})`}
             variants={animate ? leafVariants : {}}
             custom={i}
@@ -178,41 +167,41 @@ export const NavaDhitiLogo: React.FC<NavaDhitiLogoProps> = ({
         
         {/* Roots */}
         <motion.path
-          d="M95 150 Q85 155 75 160"
-          stroke="#4A5568"
-          strokeWidth="4"
-          fill="none"
-          strokeLinecap="round"
-          variants={animate ? trunkVariants : {}}
-        />
-        
-        <motion.path
-          d="M115 150 Q125 155 135 160"
-          stroke="#4A5568"
-          strokeWidth="4"
-          fill="none"
-          strokeLinecap="round"
-          variants={animate ? trunkVariants : {}}
-        />
-        
-        <motion.path
-          d="M100 150 Q100 155 100 160"
+          d="M95 130 Q85 133 78 136"
           stroke="#4A5568"
           strokeWidth="3"
           fill="none"
           strokeLinecap="round"
           variants={animate ? trunkVariants : {}}
         />
+        
+        <motion.path
+          d="M105 130 Q115 133 122 136"
+          stroke="#4A5568"
+          strokeWidth="3"
+          fill="none"
+          strokeLinecap="round"
+          variants={animate ? trunkVariants : {}}
+        />
+        
+        <motion.path
+          d="M100 130 Q100 133 100 136"
+          stroke="#4A5568"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+          variants={animate ? trunkVariants : {}}
+        />
       </motion.svg>
       
-      {/* NavaDhiti Text */}
+      {/* NavaDhiti Text - Exact styling from reference */}
       <motion.div
-        className="mt-2 text-center"
+        className="mt-1 text-center"
         variants={animate ? textVariants : {}}
       >
-        <div className="text-2xl font-bold text-green-600">
-          <span className="text-green-500">nava</span>
-          <span className="text-gray-600">dhiti</span>
+        <div className="text-3xl font-bold leading-none">
+          <span className="text-[#9ACD32]" style={{ fontFamily: 'Arial, sans-serif' }}>nava</span>
+          <span className="text-[#4A5568]" style={{ fontFamily: 'Arial, sans-serif' }}>dhiti</span>
         </div>
       </motion.div>
     </motion.div>
