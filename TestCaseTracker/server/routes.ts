@@ -1210,6 +1210,67 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Upload Lottie files endpoint
+  apiRouter.post("/users/upload-lottie", isAuthenticated, bugAttachmentUpload.single('lottieFile'), async (req, res) => {
+    try {
+      console.log("Processing Lottie file upload request");
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "No Lottie file uploaded" });
+      }
+      
+      // Validate that it's a JSON file
+      if (!req.file.mimetype.includes('json') && !req.file.originalname.endsWith('.json')) {
+        return res.status(400).json({ message: "Only JSON files are supported for Lottie animations" });
+      }
+      
+      // Read and validate the Lottie JSON
+      try {
+        const fileContent = await fs.promises.readFile(req.file.path, 'utf-8');
+        const lottieData = JSON.parse(fileContent);
+        
+        // Basic Lottie validation
+        if (!lottieData.v && !lottieData.version) {
+          return res.status(400).json({ message: "Invalid Lottie file: missing version" });
+        }
+        
+        if (!lottieData.layers || !Array.isArray(lottieData.layers)) {
+          return res.status(400).json({ message: "Invalid Lottie file: missing or invalid layers" });
+        }
+        
+        // Generate file URL
+        const fileName = path.basename(req.file.path);
+        const fileUrl = `/uploads/bug-attachment/${fileName}`;
+        
+        // Parse animation data from request
+        let animationData = {};
+        if (req.body.animationData) {
+          try {
+            animationData = JSON.parse(req.body.animationData);
+          } catch (e) {
+            console.warn("Failed to parse animation data:", e);
+          }
+        }
+        
+        res.json({
+          success: true,
+          message: "Lottie file uploaded successfully",
+          path: fileUrl,
+          animationData: animationData,
+          lottieData: lottieData
+        });
+        
+      } catch (parseError) {
+        console.error("Failed to parse Lottie file:", parseError);
+        return res.status(400).json({ message: "Invalid JSON in Lottie file" });
+      }
+      
+    } catch (error) {
+      console.error("Lottie file upload error:", error);
+      res.status(500).json({ message: "Failed to upload Lottie file" });
+    }
+  });
+
   // Change password endpoint
   apiRouter.post("/user/change-password", isAuthenticated, async (req, res) => {
     try {

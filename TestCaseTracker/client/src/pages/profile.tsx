@@ -865,23 +865,45 @@ export default function ProfilePage() {
             const result = await response.json();
             console.log('✅ Backend upload successful:', result);
 
-            // Update the animation with server path
-            setLottieAnimations(prev => prev.map(anim => 
-              anim.id === newAnimation.id ? { ...anim, path: result.path || anim.path } : anim
-            ));
+            // Update the animation with server path if provided
+            if (result.path) {
+              setLottieAnimations(prev => prev.map(anim => 
+                anim.id === newAnimation.id ? { ...anim, path: result.path } : anim
+              ));
+            }
           } else {
             const text = await response.text();
-            console.warn('⚠️ Backend returned non-JSON response:', text.substring(0, 100));
-            console.warn('⚠️ Backend upload failed, keeping local version');
+            console.warn('⚠️ Backend returned non-JSON response:', text.substring(0, 200));
+            
+            // Check if it's an HTML error page
+            if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+              console.warn('⚠️ Received HTML error page from server');
+              toast({
+                title: "Upload Warning",
+                description: "Server returned an error page. Animation saved locally only.",
+                variant: "destructive",
+              });
+            } else {
+              console.warn('⚠️ Backend upload failed, keeping local version');
+            }
           }
         } else {
           const text = await response.text();
-          console.warn(`⚠️ Backend upload failed with status ${response.status}:`, text.substring(0, 100));
-          console.warn('⚠️ Keeping local version');
+          console.error(`❌ Backend upload failed with status ${response.status}:`, text.substring(0, 200));
+          
+          toast({
+            title: "Upload Failed",
+            description: `Server error (${response.status}). Animation saved locally only.`,
+            variant: "destructive",
+          });
         }
       } catch (uploadError) {
-        console.warn("Backend upload failed, keeping local version:", uploadError);
-        // Don't show this error to user since local version works fine
+        console.error("❌ Backend upload failed:", uploadError);
+        toast({
+          title: "Upload Error",
+          description: "Network error. Animation saved locally only.",
+          variant: "destructive",
+        });
       }
 
     } catch (error) {
