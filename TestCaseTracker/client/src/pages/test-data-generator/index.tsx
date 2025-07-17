@@ -1070,7 +1070,7 @@ export default function TestDataGeneratorPage() {
                 Configuration
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               <div>
                 <Label htmlFor="country">Country</Label>
                 <Select value={selectedCountry} onValueChange={setSelectedCountry}>
@@ -1101,7 +1101,7 @@ export default function TestDataGeneratorPage() {
 
               <div>
                 <Label>Data Types</Label>
-                <div className="space-y-3 mt-2">
+                <div className="space-y-3 mt-2 max-h-[400px] overflow-y-auto pr-2">
                   {/* Personal Data */}
                   <div>
                     <Label className="text-sm font-medium text-blue-600">Personal</Label>
@@ -1567,6 +1567,7 @@ export default function TestDataGeneratorPage() {
                       <SelectContent>
                         <SelectItem value="json">JSON</SelectItem>
                         <SelectItem value="csv">CSV</SelectItem>
+```python
                         <SelectItem value="sql">SQL</SelectItem>
                       </SelectContent>
                     </Select>

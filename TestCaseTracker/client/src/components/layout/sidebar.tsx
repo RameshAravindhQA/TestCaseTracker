@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, memo } from "react";
+import React, { useState, useEffect, useMemo, memo, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { FrozenAvatar } from "@/components/ui/frozen-avatar";
@@ -280,8 +280,8 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       );
 
       if (!isVisible) {
-        // Scroll to center the active item
-        const scrollTo = elementTop - (sidebarHeight / 2) + (elementHeight / 2);
+        // Scroll to center the active item with better calculation
+        const scrollTo = Math.max(0, elementTop - (sidebarHeight / 2) + (elementHeight / 2));
         sidebar.scrollTo({
           top: scrollTo,
           behavior: 'smooth'
@@ -289,6 +289,22 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       }
     }
   }, [location]);
+
+  // Add click handler for menu items to ensure proper scrolling
+  const handleMenuItemClick = useCallback((href: string) => {
+    // Small delay to allow navigation to complete before scrolling
+    setTimeout(() => {
+      if (sidebarRef.current) {
+        const targetElement = sidebarRef.current.querySelector(`[href="${href}"]`);
+        if (targetElement) {
+          targetElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }
+      }
+    }, 100);
+  }, []);
 
   return (
     <aside
@@ -322,7 +338,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
         ), [user?.name, user?.firstName, user?.lastName, user?.role])}
       </div>
 
-      <nav className="flex-1 overflow-y-auto" ref={sidebarRef}>
+      <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400" ref={sidebarRef}>
         <motion.div 
           className="px-2 py-4 space-y-1"
           variants={containerVariants}
@@ -342,6 +358,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                 >
                   <Link 
                     href={item.href}
+                    onClick={() => handleMenuItemClick(item.href)}
                     className={cn(
                       "flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md group transition-all duration-200",
                       isActive
@@ -431,6 +448,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                   <Link 
                     href={item.href}
                     ref={isActive ? activeItemRef : null}
+                    onClick={() => handleMenuItemClick(item.href)}
                     className={cn(
                       "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-all duration-200",
                       isActive
@@ -491,6 +509,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                     >
                       <Link 
                         href={item.href}
+                        onClick={() => handleMenuItemClick(item.href)}
                         className={cn(
                           "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-all duration-200",
                           isActive
