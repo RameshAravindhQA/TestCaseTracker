@@ -1,4 +1,3 @@
-
 /* Fix for dialog overlay issues */
 .dialog-overlay {
   position: fixed;
@@ -468,4 +467,19 @@ body.dialog-open {
 
 .matrix-container::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* Toast Success Background Color */
+.success {
+  background-color: #0d4a0d !important;
+}
+
+/* Animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

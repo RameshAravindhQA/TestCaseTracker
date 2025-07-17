@@ -33,7 +33,8 @@ interface GitHubConfigFormProps {
 export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFormProps) {
   const [formData, setFormData] = useState({
     projectId: '',
-    repoUrl: '',
+    username: '',
+    repository: '',
     accessToken: '',
     webhookSecret: '',
     isActive: true
@@ -59,9 +60,11 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
   // Set form data when editing
   useEffect(() => {
     if (editingIntegration) {
+      const urlParts = editingIntegration.repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
       setFormData({
         projectId: editingIntegration.projectId.toString(),
-        repoUrl: editingIntegration.repoUrl,
+        username: urlParts ? urlParts[1] : '',
+        repository: urlParts ? urlParts[2] : '',
         accessToken: '', // Don't prefill token for security
         webhookSecret: '',
         isActive: editingIntegration.isEnabled
@@ -86,7 +89,7 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
         credentials: 'include',
         body: JSON.stringify({
           projectId: parseInt(data.projectId),
-          repoUrl: data.repoUrl,
+          repoUrl: `https://github.com/${data.username}/${data.repository}`,
           accessToken: data.accessToken,
           webhookSecret: data.webhookSecret || undefined,
           isActive: data.isActive
@@ -125,10 +128,12 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
       newErrors.projectId = 'Project is required';
     }
 
-    if (!formData.repoUrl) {
-      newErrors.repoUrl = 'Repository URL is required';
-    } else if (!formData.repoUrl.match(/github\.com\/[^\/]+\/[^\/]+/)) {
-      newErrors.repoUrl = 'Invalid GitHub repository URL format';
+    if (!formData.username) {
+      newErrors.username = 'GitHub username is required';
+    }
+
+    if (!formData.repository) {
+      newErrors.repository = 'Repository name is required';
     }
 
     if (!formData.accessToken && !editingIntegration) {
@@ -201,18 +206,34 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
           )}
         </div>
 
-        <div>
-          <Label htmlFor="repoUrl">GitHub Repository URL *</Label>
-          <Input
-            id="repoUrl"
-            type="url"
-            placeholder="https://github.com/username/repository"
-            value={formData.repoUrl}
-            onChange={(e) => handleInputChange('repoUrl', e.target.value)}
-          />
-          {errors.repoUrl && (
-            <p className="text-sm text-red-600 mt-1">{errors.repoUrl}</p>
-          )}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="username">GitHub Username *</Label>
+            <Input
+              id="username"
+              type="text"
+              placeholder="username"
+              value={formData.username}
+              onChange={(e) => handleInputChange('username', e.target.value)}
+            />
+            {errors.username && (
+              <p className="text-sm text-red-600 mt-1">{errors.username}</p>
+            )}
+          </div>
+          
+          <div>
+            <Label htmlFor="repository">Repository Name *</Label>
+            <Input
+              id="repository"
+              type="text"
+              placeholder="repository-name"
+              value={formData.repository}
+              onChange={(e) => handleInputChange('repository', e.target.value)}
+            />
+            {errors.repository && (
+              <p className="text-sm text-red-600 mt-1">{errors.repository}</p>
+            )}
+          </div>
         </div>
 
         <div>

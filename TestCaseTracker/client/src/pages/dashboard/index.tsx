@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MainLayout } from "@/components/ui/main-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
@@ -16,7 +18,8 @@ import {
   TestTube,
   FolderOpen,
   Plus,
-  BarChart3
+  BarChart3,
+  Eye
 } from "lucide-react";
 import {
   LineChart,
@@ -38,6 +41,10 @@ import { SoundDebug } from '@/components/sound-debug'
 export function DashboardPage() {
   const { user } = useAuth();
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+  const [projectsDialogOpen, setProjectsDialogOpen] = useState(false);
+  const [testCasesDialogOpen, setTestCasesDialogOpen] = useState(false);
+  const [bugsDialogOpen, setBugsDialogOpen] = useState(false);
+  const [passRateDialogOpen, setPassRateDialogOpen] = useState(false);
   // Fetch projects with real-time updates
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -177,51 +184,245 @@ export function DashboardPage() {
         </Button>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics Cards with Interactive Dialogs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
-            <FolderOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalProjects}</div>
-            <p className="text-xs text-muted-foreground">Active testing projects</p>
-          </CardContent>
-        </Card>
+        <Dialog open={projectsDialogOpen} onOpenChange={setProjectsDialogOpen}>
+          <DialogTrigger asChild>
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
+                <FolderOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalProjects}</div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  Click to view details
+                </p>
+              </CardContent>
+            </Card>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Projects Overview</DialogTitle>
+              <DialogDescription>
+                Detailed view of all your testing projects
+              </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-96 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Project Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Test Cases</TableHead>
+                    <TableHead>Bugs</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {projects?.map((project) => (
+                    <TableRow key={project.id}>
+                      <TableCell className="font-medium">{project.name}</TableCell>
+                      <TableCell>{project.description || 'No description'}</TableCell>
+                      <TableCell>
+                        {testCases?.filter(tc => tc.projectId === project.id).length || 0}
+                      </TableCell>
+                      <TableCell>
+                        {bugs?.filter(bug => bug.projectId === project.id).length || 0}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="default">Active</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </DialogContent>
+        </Dialog>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Test Cases</CardTitle>
-            <TestTube className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalTestCases}</div>
-            <p className="text-xs text-muted-foreground">Total test cases created</p>
-          </CardContent>
-        </Card>
+        <Dialog open={testCasesDialogOpen} onOpenChange={setTestCasesDialogOpen}>
+          <DialogTrigger asChild>
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Test Cases</CardTitle>
+                <TestTube className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalTestCases}</div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  Click to view details
+                </p>
+              </CardContent>
+            </Card>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Test Cases Overview</DialogTitle>
+              <DialogDescription>
+                Detailed view of test cases by project
+              </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-96 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Project</TableHead>
+                    <TableHead>Test Case Title</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {testCases?.map((testCase) => {
+                    const project = projects?.find(p => p.id === testCase.projectId);
+                    return (
+                      <TableRow key={testCase.id}>
+                        <TableCell>{project?.name || 'Unknown'}</TableCell>
+                        <TableCell className="font-medium">{testCase.title}</TableCell>
+                        <TableCell>
+                          <Badge variant={testCase.status === 'Pass' ? 'default' : testCase.status === 'Fail' ? 'destructive' : 'secondary'}>
+                            {testCase.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{testCase.priority}</Badge>
+                        </TableCell>
+                        <TableCell>{new Date(testCase.createdAt).toLocaleDateString()}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </DialogContent>
+        </Dialog>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open Bugs</CardTitle>
-            <Bug className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{openBugs}</div>
-            <p className="text-xs text-muted-foreground">Unresolved issues</p>
-          </CardContent>
-        </Card>
+        <Dialog open={bugsDialogOpen} onOpenChange={setBugsDialogOpen}>
+          <DialogTrigger asChild>
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Open Bugs</CardTitle>
+                <Bug className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{openBugs}</div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  Click to view details
+                </p>
+              </CardContent>
+            </Card>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Open Bugs Overview</DialogTitle>
+              <DialogDescription>
+                Detailed view of all unresolved bugs
+              </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-96 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Project</TableHead>
+                    <TableHead>Bug Title</TableHead>
+                    <TableHead>Severity</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Reported</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bugs?.filter(bug => bug.status !== 'Resolved' && bug.status !== 'Closed').map((bug) => {
+                    const project = projects?.find(p => p.id === bug.projectId);
+                    return (
+                      <TableRow key={bug.id}>
+                        <TableCell>{project?.name || 'Unknown'}</TableCell>
+                        <TableCell className="font-medium">{bug.title}</TableCell>
+                        <TableCell>
+                          <Badge variant={bug.severity === 'Critical' ? 'destructive' : bug.severity === 'Major' ? 'destructive' : 'secondary'}>
+                            {bug.severity}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{bug.status}</Badge>
+                        </TableCell>
+                        <TableCell>{new Date(bug.dateReported).toLocaleDateString()}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </DialogContent>
+        </Dialog>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pass Rate</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{passRate}%</div>
-            <p className="text-xs text-muted-foreground">Test success rate</p>
-          </CardContent>
-        </Card>
+        <Dialog open={passRateDialogOpen} onOpenChange={setPassRateDialogOpen}>
+          <DialogTrigger asChild>
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pass Rate</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{passRate}%</div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  Click to view details
+                </p>
+              </CardContent>
+            </Card>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Test Pass Rate Details</DialogTitle>
+              <DialogDescription>
+                Breakdown of test execution results
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{passedTests}</div>
+                  <div className="text-sm text-green-700">Passed Tests</div>
+                </div>
+                <div className="text-center p-4 bg-red-50 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">
+                    {testCases?.filter(tc => tc.status === 'Fail').length || 0}
+                  </div>
+                  <div className="text-sm text-red-700">Failed Tests</div>
+                </div>
+                <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {testCases?.filter(tc => tc.status === 'Blocked').length || 0}
+                  </div>
+                  <div className="text-sm text-yellow-700">Blocked Tests</div>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-2xl font-bold text-gray-600">
+                    {testCases?.filter(tc => tc.status === 'Not Executed').length || 0}
+                  </div>
+                  <div className="text-sm text-gray-700">Not Executed</div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <div className="text-sm font-medium mb-2">Overall Progress</div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="bg-green-600 h-2.5 rounded-full" 
+                    style={{ width: `${passRate}%` }}
+                  ></div>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {passRate}% of tests are passing ({passedTests} out of {totalExecutedTests} executed)
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Charts Section */}

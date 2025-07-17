@@ -58,6 +58,7 @@ interface LottieAnimation {
 export default function ProfilePage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { colorTheme, setColorTheme } = useColorTheme(); // Move this up
   const [selectedLottie, setSelectedLottie] = useState<LottieAnimation | null>(null);
   const [lottieAnimations, setLottieAnimations] = useState<LottieAnimation[]>([
     { id: 'rocket', name: 'Rocket', path: '/lottie/rocket.json' },
@@ -237,8 +238,7 @@ export default function ProfilePage() {
     loadAnimations();
   }, [loadAnimations]);
 
-  // Get color theme from context
-  const { colorTheme, setColorTheme } = useColorTheme();
+  // Color theme is already declared above
 
   // Profile form setup - initialize with empty defaults first
   const profileForm = useForm<ProfileFormValues>({
