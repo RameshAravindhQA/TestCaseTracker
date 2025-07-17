@@ -1,4 +1,5 @@
 import { useToast } from "@/hooks/use-toast"
+import { useEffect } from "react"
 import {
   Toast,
   ToastClose,
@@ -10,6 +11,18 @@ import {
 
 export function Toaster() {
   const { toasts } = useToast()
+
+  useEffect(() => {
+    toasts.forEach((toast) => {
+      if (toast.variant === "destructive") {
+        // Dispatch custom event for error toasts
+        document.dispatchEvent(new CustomEvent('toast:error', { detail: toast }));
+      } else {
+        // Dispatch custom event for success toasts
+        document.dispatchEvent(new CustomEvent('toast:success', { detail: toast }));
+      }
+    });
+  }, [toasts]);
 
   return (
     <ToastProvider>

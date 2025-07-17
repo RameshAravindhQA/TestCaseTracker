@@ -31,8 +31,9 @@ export default function GitHubIntegrationPage() {
 
   // Fetch GitHub integrations
   const { data: integrations, isLoading } = useQuery(
-    ['/api/github/integrations'],
-    async () => {
+    {
+    queryKey: ['/api/github/integrations'],
+    queryFn: async () => {
       const response = await fetch('/api/github/integrations', {
         credentials: 'include',
       });
@@ -41,6 +42,7 @@ export default function GitHubIntegrationPage() {
       }
       return response.json();
     }
+  }
   );
 
   // Test connection mutation

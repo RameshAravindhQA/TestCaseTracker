@@ -40,14 +40,19 @@ class GlobalSoundHandler {
   }
 
   setupGlobalErrorHandling() {
-    // Only handle custom application errors, not console/development errors
-    document.addEventListener('app:error', (event) => {
-      if (this.userHasInteracted && 
-          !this.isNetworkError(event) && 
-          !this.isDevelopmentError(event) && 
-          !this.isResourceError(event)) {
-        console.log('🔊 Global handler: Playing error sound for app error');
+    // Only handle toast/UI errors, not console errors
+    document.addEventListener('toast:error', (event) => {
+      if (this.userHasInteracted) {
+        console.log('🔊 Global handler: Playing error sound for toast');
         this.playSound('error');
+      }
+    });
+    
+    // Listen for toast success events
+    document.addEventListener('toast:success', (event) => {
+      if (this.userHasInteracted) {
+        console.log('🔊 Global handler: Playing success sound for toast');
+        this.playSound('success');
       }
     });
   }
@@ -154,23 +159,27 @@ class GlobalSoundHandler {
   }
 
   async init() {
-    console.log('🔊 Initializing global sound handler...');
+    try {
+      console.log('🔊 Initializing global sound handler...');
 
-    // Wait for sound manager to be available
-    let attempts = 0;
-    while (!window.soundManager && attempts < 10) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-    }
+      // Wait for sound manager to be available
+      let attempts = 0;
+      while (!window.soundManager && attempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
 
-    if (window.soundManager) {
-      this.soundManager = window.soundManager;
-      this.setupApiInterceptors();
-      this.setupQueryClientIntegration();
-      this.isInitialized = true;
-      console.log('🔊 Global sound handler initialized successfully');
-    } else {
-      console.warn('⚠️ Sound manager not available after waiting');
+      if (window.soundManager) {
+        this.soundManager = window.soundManager;
+        this.setupApiInterceptors();
+        this.setupQueryClientIntegration();
+        this.isInitialized = true;
+        console.log('🔊 Global sound handler initialized successfully');
+      } else {
+        console.warn('⚠️ Sound manager not available after waiting');
+      }
+    } catch (error) {
+      console.error('🔊 Error initializing global sound handler:', error);
     }
   }
 
