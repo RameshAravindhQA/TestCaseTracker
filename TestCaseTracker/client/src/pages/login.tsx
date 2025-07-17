@@ -18,7 +18,7 @@ export default function LoginPage() {
           className="text-center"
         >
           <div className="flex justify-center mb-6">
-            <NavadhitiLogo />
+            <NavadhitiLogo size="xl" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
             Test Case Management System

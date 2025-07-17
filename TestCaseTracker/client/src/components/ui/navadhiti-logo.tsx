@@ -4,17 +4,19 @@ import { motion } from "framer-motion";
 
 interface NavadhitiLogoProps {
   className?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
 }
 
 export const NavadhitiLogo: React.FC<NavadhitiLogoProps> = ({ 
   className = "", 
-  size = "md" 
+  size = "lg" 
 }) => {
   const sizeClasses = {
-    sm: "h-12 w-12",
-    md: "h-20 w-20",
-    lg: "h-24 w-24"
+    sm: "h-16 w-16",
+    md: "h-24 w-24",
+    lg: "h-32 w-32",
+    xl: "h-40 w-40",
+    "2xl": "h-48 w-48"
   };
 
   return (
