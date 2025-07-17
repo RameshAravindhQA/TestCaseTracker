@@ -12,7 +12,7 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import { SoundProvider } from '@/hooks/use-sound-provider';
 
 import NotFound from "@/pages/not-found";
-import Dashboard from "@/pages/dashboard";
+import { DashboardPage } from "./pages/dashboard/index";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import ForgotPassword from "@/pages/forgot-password";
@@ -111,11 +111,9 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword}/>
 
       {/* Protected routes */}
-      <Route path="/dashboard">
-        <ProtectedComponent Component={Dashboard} />
-      </Route>
+      <Route path="/dashboard" component={DashboardPage} />
       <Route path="/">
-        <ProtectedComponent Component={Dashboard} />
+        <ProtectedComponent Component={DashboardPage} />
       </Route>
       <Route path="/projects">
         <ProtectedComponent Component={ProjectsPage} />
