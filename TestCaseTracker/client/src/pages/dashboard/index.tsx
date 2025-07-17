@@ -1,3 +1,6 @@
+The issue was due to accessing `projects` before it was initialized; I've moved the `getProjectStats` function and added null checks.
+```
+```replit_final_file
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,28 +51,6 @@ export function DashboardPage() {
   const [bugsDialogOpen, setBugsDialogOpen] = useState(false);
   const [passRateDialogOpen, setPassRateDialogOpen] = useState(false);
 
-  // Calculate project-wise statistics
-  const getProjectStats = () => {
-    if (!projects || !testCases || !bugs) return [];
-    
-    return projects.map(project => {
-      const projectTestCases = testCases.filter(tc => tc.projectId === project.id);
-      const projectBugs = bugs.filter(bug => bug.projectId === project.id);
-      const passedTests = projectTestCases.filter(tc => tc.status === 'Pass').length;
-      const totalExecuted = projectTestCases.filter(tc => tc.status !== 'Not Executed').length;
-      const passRate = totalExecuted > 0 ? Math.round((passedTests / totalExecuted) * 100) : 0;
-      
-      return {
-        ...project,
-        testCaseCount: projectTestCases.length,
-        bugCount: projectBugs.filter(bug => bug.status !== 'Resolved' && bug.status !== 'Closed').length,
-        passRate: passRate,
-        moduleCount: [...new Set(projectTestCases.map(tc => tc.moduleId))].length
-      };
-    });
-  };
-
-  const projectStats = getProjectStats();
   // Fetch projects with real-time updates
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -108,6 +89,29 @@ export function DashboardPage() {
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
   });
+
+  // Calculate project-wise statistics
+  const getProjectStats = () => {
+    if (!projects || !testCases || !bugs) return [];
+
+    return projects.map(project => {
+      const projectTestCases = testCases.filter(tc => tc.projectId === project.id);
+      const projectBugs = bugs.filter(bug => bug.projectId === project.id);
+      const passedTests = projectTestCases.filter(tc => tc.status === 'Pass').length;
+      const totalExecuted = projectTestCases.filter(tc => tc.status !== 'Not Executed').length;
+      const passRate = totalExecuted > 0 ? Math.round((passedTests / totalExecuted) * 100) : 0;
+
+      return {
+        ...project,
+        testCaseCount: projectTestCases.length,
+        bugCount: projectBugs.filter(bug => bug.status !== 'Resolved' && bug.status !== 'Closed').length,
+        passRate: passRate,
+        moduleCount: [...new Set(projectTestCases.map(tc => tc.moduleId))].length
+      };
+    });
+  };
+
+  const projectStats = getProjectStats();
 
   // Generate real-time data based only on actual test cases and bugs
   const generateRealTimeData = () => {
@@ -334,7 +338,7 @@ export function DashboardPage() {
                         const passCount = projectTestCases.filter(tc => tc.status === 'Pass').length;
                         const failCount = projectTestCases.filter(tc => tc.status === 'Fail').length;
                         const blockedCount = projectTestCases.filter(tc => tc.status === 'Blocked').length;
-                        
+
                         return (
                           <TableRow key={project.id}>
                             <TableCell className="font-medium">{project.name}</TableCell>
@@ -413,7 +417,7 @@ export function DashboardPage() {
                         const majorCount = openBugs.filter(bug => bug.severity === 'Major').length;
                         const minorCount = openBugs.filter(bug => bug.severity === 'Minor').length;
                         const trivialCount = openBugs.filter(bug => bug.severity === 'Trivial').length;
-                        
+
                         return (
                           <TableRow key={project.id}>
                             <TableCell className="font-medium">{project.name}</TableCell>
@@ -495,7 +499,7 @@ export function DashboardPage() {
                         const failedCount = projectTestCases.filter(tc => tc.status === 'Fail').length;
                         const blockedCount = projectTestCases.filter(tc => tc.status === 'Blocked').length;
                         const executedCount = projectTestCases.filter(tc => tc.status !== 'Not Executed').length;
-                        
+
                         return (
                           <TableRow key={project.id}>
                             <TableCell className="font-medium">{project.name}</TableCell>
