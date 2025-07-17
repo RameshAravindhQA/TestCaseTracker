@@ -107,7 +107,65 @@ export const WelcomeDialog: React.FC<WelcomeDialogProps> = ({
             </div>
           </div>
 
-          
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+            <div className="flex items-start gap-3">
+              <BarChart3 className="h-5 w-5 text-purple-500 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-purple-900">🚀 QA Latest Updates</h4>
+                <p className="text-sm text-purple-800 mt-1 mb-3">Stay updated with the latest in Quality Assurance and Testing</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <a 
+                    href="https://www.ministryoftesting.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-purple-700 hover:text-purple-900 hover:underline"
+                  >
+                    📚 Ministry of Testing
+                  </a>
+                  <a 
+                    href="https://testautomationu.applitools.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-purple-700 hover:text-purple-900 hover:underline"
+                  >
+                    🎓 Test Automation University
+                  </a>
+                  <a 
+                    href="https://www.softwaretestinghelp.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-purple-700 hover:text-purple-900 hover:underline"
+                  >
+                    💡 Software Testing Help
+                  </a>
+                  <a 
+                    href="https://www.lambdatest.com/blog/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-purple-700 hover:text-purple-900 hover:underline"
+                  >
+                    🔧 LambdaTest Blog
+                  </a>
+                  <a 
+                    href="https://testguild.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-purple-700 hover:text-purple-900 hover:underline"
+                  >
+                    🎙️ TestGuild Podcasts
+                  </a>
+                  <a 
+                    href="https://www.reddit.com/r/QualityAssurance/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-purple-700 hover:text-purple-900 hover:underline"
+                  >
+                    👥 QA Community
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="flex justify-center pt-4">
             <Button onClick={handleClose} size="lg" className="px-8">

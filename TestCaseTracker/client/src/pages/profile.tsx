@@ -860,18 +860,28 @@ export default function ProfilePage() {
         });
 
         if (response.ok) {
-          const result = await response.json();
-          console.log('✅ Backend upload successful:', result);
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const result = await response.json();
+            console.log('✅ Backend upload successful:', result);
 
-          // Update the animation with server path
-          setLottieAnimations(prev => prev.map(anim => 
-            anim.id === newAnimation.id ? { ...anim, path: result.path || anim.path } : anim
-          ));
+            // Update the animation with server path
+            setLottieAnimations(prev => prev.map(anim => 
+              anim.id === newAnimation.id ? { ...anim, path: result.path || anim.path } : anim
+            ));
+          } else {
+            const text = await response.text();
+            console.warn('⚠️ Backend returned non-JSON response:', text.substring(0, 100));
+            console.warn('⚠️ Backend upload failed, keeping local version');
+          }
         } else {
-          console.warn('⚠️ Backend upload failed, keeping local version');
+          const text = await response.text();
+          console.warn(`⚠️ Backend upload failed with status ${response.status}:`, text.substring(0, 100));
+          console.warn('⚠️ Keeping local version');
         }
       } catch (uploadError) {
         console.warn("Backend upload failed, keeping local version:", uploadError);
+        // Don't show this error to user since local version works fine
       }
 
     } catch (error) {

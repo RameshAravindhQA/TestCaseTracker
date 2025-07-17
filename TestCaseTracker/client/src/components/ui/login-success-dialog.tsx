@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, User, Quote, Newspaper, Sparkles, CheckCircle, TrendingUp, Coffee } from 'lucide-react';
+import { Clock, User, Quote, Newspaper, Sparkles, CheckCircle, TrendingUp, Coffee, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface LoginSuccessDialogProps {
@@ -194,7 +194,7 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
             />
           </motion.div>
 
-          
+
 
           {/* Enhanced Daily Quote */}
           <motion.div
@@ -265,18 +265,84 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
             </div>
           </motion.div>
 
-          {/* Enhanced Action Button */}
-          <motion.div 
-            className="flex justify-center pt-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.4, duration: 0.5 }}
-          >
-            <Button 
-              onClick={onClose} 
-              size="lg" 
-              className="px-12 py-4 text-lg font-semibold bg-gradient-to-r from-blue-500 via-purple-600 to-pink-600 hover:from-blue-600 hover:via-purple-700 hover:to-pink-700 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
-            >
+          
+          <div className="bg-green-50 p-4 rounded-lg">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-green-900">What's Next?</h4>
+                <ul className="text-sm text-green-800 mt-2 space-y-1">
+                  <li>• View your dashboard for project overview</li>
+                  <li>• Create or join projects</li>
+                  <li>• Start managing test cases and bugs</li>
+                  <li>• Explore collaboration features</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+            <div className="flex items-start gap-3">
+              <BarChart3 className="h-5 w-5 text-purple-500 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-purple-900">🚀 QA Latest Updates</h4>
+                <p className="text-sm text-purple-800 mt-1 mb-3">Stay updated with the latest in Quality Assurance and Testing</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <a 
+                    href="https://www.ministryoftesting.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-purple-700 hover:text-purple-900 hover:underline"
+                  >
+                    📚 Ministry of Testing
+                  </a>
+                  <a 
+                    href="https://testautomationu.applitools.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-purple-700 hover:text-purple-900 hover:underline"
+                  >
+                    🎓 Test Automation University
+                  </a>
+                  <a 
+                    href="https://www.softwaretestinghelp.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-purple-700 hover:text-purple-900 hover:underline"
+                  >
+                    💡 Software Testing Help
+                  </a>
+                  <a 
+                    href="https://www.lambdatest.com/blog/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-purple-700 hover:text-purple-900 hover:underline"
+                  >
+                    🔧 LambdaTest Blog
+                  </a>
+                  <a 
+                    href="https://testguild.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-purple-700 hover:text-purple-900 hover:underline"
+                  >
+                    🎙️ TestGuild Podcasts
+                  </a>
+                  <a 
+                    href="https://www.reddit.com/r/QualityAssurance/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-purple-700 hover:text-purple-900 hover:underline"
+                  >
+                    👥 QA Community
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-center pt-4">
+            <Button onClick={onClose} size="lg" className="px-12 py-4 text-lg font-semibold bg-gradient-to-r from-blue-500 via-purple-600 to-pink-600 hover:from-blue-600 hover:via-purple-700 hover:to-pink-700 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300">
               <motion.span
                 animate={{ x: [0, 5, 0] }}
                 transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
@@ -284,7 +350,7 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
                 Start Your Journey →
               </motion.span>
             </Button>
-          </motion.div>
+          </div>
         </motion.div>
       </DialogContent>
     </Dialog>
