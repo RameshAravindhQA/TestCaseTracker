@@ -7206,6 +7206,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GitHub Integration routes
+  apiRouter.get("/github/integrations", isAuthenticated, async (req, res) => {
+    try {
+      const { getGitHubIntegrations } = await import("./api/github-integrations");
+      await getGitHubIntegrations(req, res);
+    } catch (error) {
+      console.error("Get GitHub integrations error:", error);
+      res.status(500).json({ message: "Failed to fetch GitHub integrations" });
+    }
+  });
+
+  apiRouter.post("/github/integrations", isAuthenticated, async (req, res) => {
+    try {
+      const { createGitHubIntegration } = await import("./api/github-integrations");
+      await createGitHubIntegration(req, res);
+    } catch (error) {
+      console.error("Create GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to create GitHub integration" });
+    }
+  });
+
+  apiRouter.put("/github/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { updateGitHubIntegration } = await import("./api/github-integrations");
+      await updateGitHubIntegration(req, res);
+    } catch (error) {
+      console.error("Update GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to update GitHub integration" });
+    }
+  });
+
+  apiRouter.delete("/github/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { deleteGitHubIntegration } = await import("./api/github-integrations");
+      await deleteGitHubIntegration(req, res);
+    } catch (error) {
+      console.error("Delete GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to delete GitHub integration" });
+    }
+  });
+
+  apiRouter.post("/github/test-connection", isAuthenticated, async (req, res) => {
+    try {
+      const { testGitHubConnection } = await import("./api/github-integrations");
+      await testGitHubConnection(req, res);
+    } catch (error) {
+      console.error("Test GitHub connection error:", error);
+      res.status(500).json({ message: "Failed to test GitHub connection" });
+    }
+  });
+
   apiRouter.get("/github/configs", isAuthenticated, async (req, res) => {
     try {
       const configs = await storage.getAllGitHubConfigs();

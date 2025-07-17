@@ -8,7 +8,7 @@ export async function createGitHubIntegration(req: any, res: any) {
     // Set proper content type for JSON response
     res.setHeader('Content-Type', 'application/json');
 
-    const { projectId, repoUrl, accessToken, webhookSecret } = req.body;
+    const { projectId, repoUrl, accessToken, webhookSecret, isActive } = req.body;
 
     if (!projectId || !repoUrl || !accessToken) {
       return res.status(400).json({ 
@@ -63,12 +63,12 @@ export async function createGitHubIntegration(req: any, res: any) {
 
     // Create the integration
     const integrationData: InsertGitHubConfig = {
-      projectId,
+      projectId: parseInt(projectId),
       repoOwner,
       repoName: cleanRepoName,
       accessToken,
-      webhookSecret,
-      isActive: true,
+      webhookSecret: webhookSecret || null,
+      isActive: isActive !== undefined ? isActive : true,
       createdById: req.user?.id || 1
     };
 

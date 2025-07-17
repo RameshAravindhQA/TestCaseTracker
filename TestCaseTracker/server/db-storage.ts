@@ -43,6 +43,10 @@ import { eq, and, desc, asc } from 'drizzle-orm';
  * Complete PostgreSQL database storage implementation
  */
 export class DatabaseStorage implements IStorage {
+  private db: Database | null = null;
+  private isInitialized = false;
+  private githubConfigs: any[] = [];
+  private githubIssues: any[] = [];
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
@@ -862,7 +866,7 @@ export class DatabaseStorage implements IStorage {
     return newSprint;
   }
 
-  async updateSprint(id: number, sprintData: Partial<Sprint>): Promise<Sprint> {
+  async updateSprint(id: number, sprintData: PartialSprint>): Promise<Sprint> {
     const [updatedSprint] = await db.update(sprints)
       .set({ ...sprintData, updatedAt: new Date() })
       .where(eq(sprints.id, id))
@@ -1105,13 +1109,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // For now, return a simple config object
       // You can extend this to use a proper database table
-      return {
-        projectId,
-        isActive: true,
-        repoOwner: "RameshAravindh",
-        repoName: "TestCaseTracker",
-        accessToken: "your_github_token" // This should be stored securely
-      };
+      return this.githubConfigs.find(config => config.projectId === projectId) || null;
     } catch (error) {
       console.error("Error getting GitHub config:", error);
       return null;
@@ -1119,16 +1117,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveGitHubConfig(projectId: number, config: any): Promise<any> {
-    // For now, just return the config with project ID
-    // You can extend this to save to a proper database table
-    return { ...config, projectId, id: projectId };
+      const existingConfigIndex = this.githubConfigs.findIndex(c => c.projectId === projectId);
+
+      if (existingConfigIndex > -1) {
+          // Update existing config
+          this.githubConfigs[existingConfigIndex] = { ...config, projectId };
+      } else {
+          // Create new config
+          this.githubConfigs.push({ ...config, projectId });
+      }
+      return { ...config, projectId, id: projectId };
   }
 
   async getGitHubIssueByBugId(bugId: number): Promise<any> {
     try {
       // For now, return null since we don't have a proper table
       // You can extend this to use a proper database table
-      return null;
+      return this.githubIssues.find(issue => issue.bugId === bugId) || null;
     } catch (error) {
       console.error("Error getting GitHub issue:", error);
       return null;
@@ -1137,9 +1142,8 @@ export class DatabaseStorage implements IStorage {
 
   async saveGitHubIssue(issueData: any): Promise<any> {
     try {
-      // For now, just return the issue data
-      // You can extend this to save to a proper database table
-      return { ...issueData, id: Date.now() };
+        this.githubIssues.push(issueData);
+        return { ...issueData, id: Date.now() };
     } catch (error) {
       console.error("Error saving GitHub issue:", error);
       throw error;

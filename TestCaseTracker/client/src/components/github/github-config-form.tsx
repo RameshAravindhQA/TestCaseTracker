@@ -138,48 +138,16 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
     return Object.keys(newErrors).length === 0;
   };
 
-  const [isLoading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [onSubmitSuccess, setOnSuccess] = useState<(() => void) | undefined>(undefined);
-  const [onOpenChange, setOnOpenChange] = useState<((open: boolean) => void) | undefined>(undefined);
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await fetch('/api/github/integrations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create integration');
-      }
-
-      const result = await response.json();
-      toast({
-        title: 'Success',
-        description: 'GitHub integration created successfully',
-      });
-
-      setOnSuccess?.();
-      setOnOpenChange?.(false);
-    } catch (error) {
-      console.error('Error creating integration:', error);
-      setError(error instanceof Error ? error.message : 'An error occurred');
-      toast({
-        title: 'Error',
-        description: 'Failed to create GitHub integration',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
+    
+    if (!validateForm()) {
+      return;
     }
+
+    saveMutation.mutate(formData);
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {
