@@ -17,7 +17,7 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const isMobile = useMobile();
   const [menuOpen, setMenuOpen] = useState(false);
 
