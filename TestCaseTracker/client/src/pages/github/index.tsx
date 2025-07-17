@@ -6,10 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Info, AlertCircle, Github, ExternalLink, RefreshCw, Edit, Trash2 } from 'lucide-react';
+import { Plus, Info, AlertCircle, Github, ExternalLink, RefreshCw, Edit, Trash2, CheckCircle, Settings } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { MainLayout } from "@/components/layout/main-layout";
 import { GitHubConfigForm } from "@/components/github/github-config-form";
 
 interface GitHubIntegration {
