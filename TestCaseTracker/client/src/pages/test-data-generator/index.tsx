@@ -9,6 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Copy, Download, RefreshCw, Globe, Database } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
+import Lottie from 'lottie-react';
+import businessmanRocketData from '../../public/lottie/businessman-rocket.json';
 
 interface GeneratedData {
   [key: string]: string | number;
@@ -814,8 +816,7 @@ const dataTypes = {
   indian: ['pan', 'aadhaar', 'gst', 'ifsc', 'upi', 'drivingLicense', 'passport', 'vehicleNumber'],
   usa: ['ssn'],
   uk: ['postcode'],
-  canada:```text
-['postalCode'],
+  canada: ['postalCode'],
   australia: ['postcode'],
   germany: ['postcode'],
   france: ['postcode'],
@@ -1571,7 +1572,7 @@ export default function TestDataGeneratorPage() {
                 )}
               </div>
             </CardHeader>
-            <CardContent>
+<CardContent>
               {generatedData.length > 0 ? (
                 <Textarea
                   value={outputFormat === 'json' ? JSON.stringify(generatedData, null, 2) :

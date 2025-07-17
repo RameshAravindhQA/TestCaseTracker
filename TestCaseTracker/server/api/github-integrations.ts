@@ -7,7 +7,7 @@ export async function createGitHubIntegration(req: any, res: any) {
   try {
     // Set proper content type for JSON response
     res.setHeader('Content-Type', 'application/json');
-    
+
     const { projectId, repoUrl, accessToken, webhookSecret } = req.body;
 
     if (!projectId || !repoUrl || !accessToken) {
@@ -256,7 +256,7 @@ export async function testGitHubConnection(req: any, res: any) {
   try {
     // Set proper content type for JSON response
     res.setHeader('Content-Type', 'application/json');
-    
+
     const { repoUrl, accessToken } = req.body;
 
     if (!repoUrl || !accessToken) {
