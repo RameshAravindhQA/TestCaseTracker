@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -72,118 +72,131 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const loadAnimations = async () => {
-      try {
-        console.log('🎬 Starting to load Lottie animations...');
-        
-        // Define animations to load with fallback paths
-        const animationsToLoad = [
-          { id: 'rocket', name: 'Rocket', path: '/lottie/rocket.json' },
-          { id: 'businessman-rocket', name: 'Business Rocket', path: '/lottie/businessman-rocket.json' },
-          { id: 'male-avatar', name: 'Male Avatar', path: '/lottie/male-avatar.json' },
-          { id: 'female-avatar', name: 'Female Avatar', path: '/lottie/female-avatar.json' },
-          { id: 'business-team', name: 'Business Team', path: '/lottie/business-team.json' },
-          { id: 'office-team', name: 'Office Team', path: '/lottie/office-team.json' },
-          { id: 'software-dev', name: 'Software Dev', path: '/lottie/software-dev.json' }
-        ];
+  // Ensure user is available before proceeding
+  const currentUser = user;
 
-        const loadedAnimations = await Promise.all(
-          animationsToLoad.map(async (animation) => {
-            try {
-              console.log(`🎬 Loading animation: ${animation.name} from ${animation.path}`);
-              
-              // Try multiple path variations
-              const possiblePaths = [
-                animation.path,
-                animation.path.replace('/lottie/', '/public/lottie/'),
-                `${animation.path}?v=${Date.now()}` // Cache busting
-              ];
+  // Early return if user is not available
+  if (!currentUser) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold mb-2">Loading Profile...</h2>
+            <p className="text-muted-foreground">Please wait while we load your profile information.</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
-              let response = null;
-              let data = null;
+  const loadAnimations = useCallback(async () => {
+    try {
+      console.log('🎬 Starting to load Lottie animations...');
 
-              for (const tryPath of possiblePaths) {
-                try {
-                  console.log(`🔍 Trying path: ${tryPath}`);
-                  response = await fetch(tryPath);
-                  
-                  if (response.ok) {
-                    const text = await response.text();
-                    
-                    // Check if we got HTML instead of JSON
-                    if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-                      console.warn(`⚠️ Received HTML instead of JSON for ${animation.name} at ${tryPath}`);
-                      continue;
-                    }
+      // Define animations to load with fallback paths
+      const animationsToLoad = [
+        { id: 'rocket', name: 'Rocket', path: '/lottie/rocket.json' },
+        { id: 'businessman-rocket', name: 'Business Rocket', path: '/lottie/businessman-rocket.json' },
+        { id: 'male-avatar', name: 'Male Avatar', path: '/lottie/male-avatar.json' },
+        { id: 'female-avatar', name: 'Female Avatar', path: '/lottie/female-avatar.json' },
+        { id: 'business-team', name: 'Business Team', path: '/lottie/business-team.json' },
+        { id: 'office-team', name: 'Office Team', path: '/lottie/office-team.json' },
+        { id: 'software-dev', name: 'Software Dev', path: '/lottie/software-dev.json' }
+      ];
 
-                    // Try to parse JSON
-                    try {
-                      data = JSON.parse(text);
-                      
-                      // Validate Lottie structure
-                      if (data && typeof data === 'object' && (data.v || data.layers || data.fr)) {
-                        console.log(`✅ Successfully loaded ${animation.name} from ${tryPath}`);
-                        break;
-                      } else {
-                        console.warn(`⚠️ Invalid Lottie structure for ${animation.name} at ${tryPath}`);
-                        data = null;
-                      }
-                    } catch (parseError) {
-                      console.warn(`⚠️ JSON parse error for ${animation.name} at ${tryPath}:`, parseError);
-                      continue;
-                    }
-                  } else {
-                    console.warn(`⚠️ HTTP ${response.status} for ${animation.name} at ${tryPath}`);
+      const loadedAnimations = await Promise.all(
+        animationsToLoad.map(async (animation) => {
+          try {
+            console.log(`🎬 Loading animation: ${animation.name} from ${animation.path}`);
+
+            // Try multiple path variations
+            const possiblePaths = [
+              animation.path,
+              animation.path.replace('/lottie/', '/public/lottie/'),
+              `${animation.path}?v=${Date.now()}` // Cache busting
+            ];
+
+            let response = null;
+            let data = null;
+
+            for (const tryPath of possiblePaths) {
+              try {
+                console.log(`🔍 Trying path: ${tryPath}`);
+                response = await fetch(tryPath);
+
+                if (response.ok) {
+                  const text = await response.text();
+
+                  // Check if we got HTML instead of JSON
+                  if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                    console.warn(`⚠️ Received HTML instead of JSON for ${animation.name} at ${tryPath}`);
+                    continue;
                   }
-                } catch (fetchError) {
-                  console.warn(`⚠️ Fetch error for ${animation.name} at ${tryPath}:`, fetchError);
+
+                  // Try to parse JSON
+                  try {
+                    data = JSON.parse(text);
+
+                    // Validate Lottie structure
+                    if (data && typeof data === 'object' && (data.v || data.layers || data.fr)) {
+                      console.log(`✅ Successfully loaded ${animation.name} from ${tryPath}`);
+                      break;
+                    } else {
+                      console.warn(`⚠️ Invalid Lottie structure for ${animation.name} at ${tryPath}`);
+                      data = null;
+                    }
+                  } catch (parseError) {
+                    console.warn(`⚠️ JSON parse error for ${animation.name} at ${tryPath}:`, parseError);
+                    continue;
+                  }
+                } else {
+                  console.warn(`⚠️ HTTP ${response.status} for ${animation.name} at ${tryPath}`);
                 }
+              } catch (fetchError) {
+                console.warn(`⚠️ Fetch error for ${animation.name} at ${tryPath}:`, fetchError);
               }
+            }
 
-              if (data) {
-                return { ...animation, preview: data };
-              } else {
-                console.error(`❌ Failed to load ${animation.name} from any path`);
-                return { ...animation, preview: null };
-              }
-
-            } catch (error) {
-              console.error(`❌ Error loading ${animation.name} animation:`, error);
+            if (data) {
+              return { ...animation, preview: data };
+            } else {
+              console.error(`❌ Failed to load ${animation.name} from any path`);
               return { ...animation, preview: null };
             }
-          })
-        );
 
-        // Filter out failed animations and set the working ones
-        const workingAnimations = loadedAnimations.filter(anim => anim.preview !== null);
-        console.log(`📊 Loaded ${workingAnimations.length} working animations out of ${animationsToLoad.length}`);
-        
-        setLottieAnimations(workingAnimations);
-
-        // Set a default selected animation if user has one
-        if (currentUser?.avatarData && workingAnimations.length > 0) {
-          const userAnimation = workingAnimations.find(anim => anim.id === currentUser.avatarData?.id);
-          if (userAnimation) {
-            setSelectedLottie(userAnimation);
+          } catch (error) {
+            console.error(`❌ Error loading ${animation.name} animation:`, error);
+            return { ...animation, preview: null };
           }
+        })
+      );
+
+      // Filter out failed animations and set the working ones
+      const workingAnimations = loadedAnimations.filter(anim => anim.preview !== null);
+      console.log(`📊 Loaded ${workingAnimations.length} working animations out of ${animationsToLoad.length}`);
+
+      setLottieAnimations(workingAnimations);
+
+      // Set a default selected animation if user has one
+      if (currentUser?.avatarData && workingAnimations.length > 0) {
+        const userAnimation = workingAnimations.find(anim => anim.id === currentUser.avatarData?.id);
+        if (userAnimation) {
+          setSelectedLottie(userAnimation);
         }
-
-      } catch (error) {
-        console.error('❌ Error loading animations:', error);
-        toast({
-          title: "Animation Loading Error",
-          description: "Failed to load Lottie animations. Please try refreshing the page.",
-          variant: "destructive",
-        });
       }
-    };
 
-    loadAnimations();
+    } catch (error) {
+      console.error('❌ Error loading animations:', error);
+      toast({
+        title: "Animation Loading Error",
+        description: "Failed to load Lottie animations. Please try refreshing the page.",
+        variant: "destructive",
+      });
+    }
   }, [currentUser, toast]);
 
   // Fetch current user data
-  const { data: currentUser, isLoading: isUserLoading } = useQuery<User>({
+  const { data: fetchedCurrentUser, isLoading: isUserLoading } = useQuery<User>({
     queryKey: ['/api/user/current'],
     queryFn: async () => {
       // Try to get user data from either endpoint
@@ -202,8 +215,27 @@ export default function ProfilePage() {
         throw new Error('Failed to fetch user data');
       }
       return authResponse.json();
-    }
+    },
+    enabled: !!currentUser // Only fetch if currentUser is available
   });
+
+  useEffect(() => {
+    if (fetchedCurrentUser) {
+      // Update default values when user data loads
+      profileForm.reset({
+        firstName: fetchedCurrentUser.firstName || "",
+        lastName: fetchedCurrentUser.lastName || "",
+        email: fetchedCurrentUser.email,
+        role: fetchedCurrentUser.role,
+        theme: fetchedCurrentUser.theme || "default",
+        colorTheme: fetchedCurrentUser.colorTheme || colorTheme || "blue",
+      });
+    }
+  }, [fetchedCurrentUser, profileForm, colorTheme]);
+
+  useEffect(() => {
+    loadAnimations();
+  }, [loadAnimations]);
 
   // Get color theme from context
   const { colorTheme, setColorTheme } = useColorTheme();
@@ -212,31 +244,17 @@ export default function ProfilePage() {
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      firstName: currentUser?.firstName || "",
-      lastName: currentUser?.lastName || "",
-      email: currentUser?.email || "",
-      role: currentUser?.role || "",
-      theme: currentUser?.theme || "default",
+      firstName: fetchedCurrentUser?.firstName || "",
+      lastName: fetchedCurrentUser?.lastName || "",
+      email: fetchedCurrentUser?.email || "",
+      role: fetchedCurrentUser?.role || "",
+      theme: fetchedCurrentUser?.theme || "default",
       colorTheme: colorTheme || "blue",
     },
   });
 
   // Update profile form when user data is loaded
   const { isSubmitting: isProfileSubmitting } = profileForm.formState;
-
-  // Update default values when user data loads
-  React.useEffect(() => {
-    if (currentUser && !isProfileSubmitting) {
-      profileForm.reset({
-        firstName: currentUser.firstName || "",
-        lastName: currentUser.lastName || "",
-        email: currentUser.email,
-        role: currentUser.role,
-        theme: currentUser.theme || "default",
-        colorTheme: currentUser.colorTheme || colorTheme || "blue",
-      });
-    }
-  }, [currentUser, isProfileSubmitting, profileForm, colorTheme]);
 
   // Password form setup
   const passwordForm = useForm<PasswordFormValues>({
@@ -321,18 +339,18 @@ export default function ProfilePage() {
   const updateLottieAvatarMutation = useMutation({
     mutationFn: async (lottieData: LottieAnimation) => {
       console.log('🔄 Updating avatar with Lottie data:', lottieData);
-      
+
       const response = await apiRequest("PUT", "/api/users/update-avatar", {
         profilePicture: lottieData.path,
         avatarType: 'lottie',
         avatarData: lottieData
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to update avatar");
       }
-      
+
       const result = await response.json();
       console.log('✅ Avatar update successful:', result);
       return result;
@@ -342,11 +360,11 @@ export default function ProfilePage() {
         title: "Avatar Updated",
         description: `Your avatar has been updated to "${selectedLottie?.name}" successfully!`,
       });
-      
+
       // Invalidate queries to refresh user data
       queryClient.invalidateQueries({ queryKey: ["/api/user/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
+
       // Update the profile picture URL to show the new avatar
       if (data.profilePicture) {
         setProfilePictureUrl(`${data.profilePicture}?t=${Date.now()}`);
@@ -360,7 +378,7 @@ export default function ProfilePage() {
         description: error.message || "Failed to update avatar. Please try again.",
         variant: "destructive",
       });
-      
+
       // Reset selected animation on error
       setSelectedLottie(null);
     },
@@ -437,16 +455,16 @@ export default function ProfilePage() {
 
   const handleLottieSelect = (animation: LottieAnimation) => {
     console.log('🎭 Selecting Lottie animation:', animation);
-    
+
     // Set the selected animation immediately for UI feedback
     setSelectedLottie(animation);
-    
+
     // Show loading toast
     toast({
       title: "Updating Avatar",
       description: `Setting "${animation.name}" as your avatar...`,
     });
-    
+
     // Update the avatar
     updateLottieAvatarMutation.mutate(animation);
   };
@@ -544,10 +562,10 @@ export default function ProfilePage() {
 
   // Update profile picture URL when user data changes
   useEffect(() => {
-    if (currentUser?.profilePicture) {
-      setProfilePictureUrl(`${currentUser.profilePicture}?t=${Date.now()}`);
+    if (fetchedCurrentUser?.profilePicture) {
+      setProfilePictureUrl(`${fetchedCurrentUser.profilePicture}?t=${Date.now()}`);
     }
-  }, [currentUser]);
+  }, [fetchedCurrentUser]);
 
   // Refresh avatar key when the manual refresh is needed (like after upload)
   const refreshAvatar = () => {
@@ -555,8 +573,8 @@ export default function ProfilePage() {
     setAvatarKey(newKey);
 
     // Also update the URL with the new timestamp
-    if (currentUser?.profilePicture) {
-      setProfilePictureUrl(`${currentUser.profilePicture}?t=${newKey}`);
+    if (fetchedCurrentUser?.profilePicture) {
+      setProfilePictureUrl(`${fetchedCurrentUser.profilePicture}?t=${newKey}`);
     }
   };
 
@@ -585,11 +603,11 @@ export default function ProfilePage() {
 
     try {
       const reader = new FileReader();
-      
+
       reader.onload = async (e) => {
         try {
           const jsonContent = e.target?.result as string;
-          
+
           // Parse JSON with better error handling
           let jsonData;
           try {
@@ -747,7 +765,7 @@ export default function ProfilePage() {
                     }}
                   />
                   <AvatarFallback className="text-2xl bg-gradient-to-br from-primary/80 to-primary/40">
-                    {(currentUser?.firstName?.charAt(0)?.toUpperCase() || '') + (currentUser?.lastName?.charAt(0)?.toUpperCase() || '') || "U"}
+                    {(fetchedCurrentUser?.firstName?.charAt(0)?.toUpperCase() || '') + (fetchedCurrentUser?.lastName?.charAt(0)?.toUpperCase() || '') || "U"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full opacity-0 hover:opacity-100 transition-opacity">
@@ -921,8 +939,7 @@ export default function ProfilePage() {
                               }} 
                               defaultValue={field.value}
                             >
-                              <FormControl>
-                                <SelectTrigger>
+                              <FormControl<SelectTrigger>
                                   <SelectValue placeholder="Select a color theme" />
                                 </SelectTrigger>
                               </FormControl>
@@ -1118,7 +1135,7 @@ export default function ProfilePage() {
                                   </div>
                                 )}
                               </div>
-                              
+
                               {/* Play/Pause Button */}
                               {animation.preview && (
                                 <div className="absolute top-1 right-1">
@@ -1139,7 +1156,7 @@ export default function ProfilePage() {
                                   </Button>
                                 </div>
                               )}
-                              
+
                               {/* Selection Indicator */}
                               {selectedLottie?.id === animation.id && (
                                 <div className="absolute inset-0 bg-primary/10 rounded-lg flex items-center justify-center pointer-events-none">
@@ -1149,9 +1166,9 @@ export default function ProfilePage() {
                                 </div>
                               )}
                             </div>
-                            
+
                             <p className="text-sm text-center font-medium truncate">{animation.name}</p>
-                            
+
                             {/* Loading State */}
                             {updateLottieAvatarMutation.isPending && selectedLottie?.id === animation.id && (
                               <div className="absolute inset-0 bg-background/80 rounded-lg flex items-center justify-center">

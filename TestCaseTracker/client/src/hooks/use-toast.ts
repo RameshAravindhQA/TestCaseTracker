@@ -139,10 +139,21 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
+export type ToastProps = React.ComponentPropsWithoutRef<typeof import("@/components/ui/toast").Toast>
+
+export type ToastActionElement = React.ComponentPropsWithoutRef<typeof import("@/components/ui/toast").ToastAction>
+
+export interface ToastOptions {
+  title?: string;
+  description?: string;
+  action?: ToastActionElement;
+  variant?: "default" | "destructive" | "positive" | "success";
+}
+
+function toast({ ...props }: ToastOptions) {
   const id = genId()
 
-  const update = (props: ToasterToast) =>
+  const update = (props: ToastOptions) =>
     dispatch({
       type: "UPDATE_TOAST",
       toast: { ...props, id },
@@ -184,6 +195,12 @@ function useToast() {
   return {
     ...state,
     toast,
+    positive: (props: Omit<ToastOptions, 'variant'>) => {
+      return toast({ ...props, variant: "positive" });
+    },
+    success: (props: Omit<ToastOptions, 'variant'>) => {
+      return toast({ ...props, variant: "success" });
+    },
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
