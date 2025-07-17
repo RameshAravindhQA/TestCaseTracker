@@ -1280,7 +1280,6 @@ export default function ProfilePage() {
                                   </div>
                                 )}
                               </div>
-                            </div>
 
                               {/* Play/Pause Button */}
                               {animation.preview && (
