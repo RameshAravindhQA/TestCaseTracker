@@ -30,8 +30,7 @@ export default function GitHubIntegrationPage() {
   const { toast } = useToast();
 
   // Fetch GitHub integrations
-  const { data: integrations, isLoading } = useQuery(
-    {
+  const { data: integrations, isLoading } = useQuery({
     queryKey: ['/api/github/integrations'],
     queryFn: async () => {
       const response = await fetch('/api/github/integrations', {
@@ -42,8 +41,7 @@ export default function GitHubIntegrationPage() {
       }
       return response.json();
     }
-  }
-  );
+  });
 
   // Test connection mutation
   const testConnectionMutation = useMutation({

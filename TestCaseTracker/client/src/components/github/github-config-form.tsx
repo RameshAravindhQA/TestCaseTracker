@@ -42,7 +42,8 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
     repository: '',
     accessToken: '',
     webhookSecret: '',
-    isActive: true
+    isActive: true,
+    webhookUrl: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -72,7 +73,8 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
         repository: urlParts ? urlParts[2] : '',
         accessToken: '', // Don't prefill token for security
         webhookSecret: '',
-        isActive: editingIntegration.isEnabled
+        isActive: editingIntegration.isEnabled,
+        webhookUrl: editingIntegration.webhookUrl || ''
       });
     } else if (projectId) {
       // Reset form for new integration
@@ -82,7 +84,8 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
         repository: '',
         accessToken: '',
         webhookSecret: '',
-        isActive: true
+        isActive: true,
+        webhookUrl: ''
       });
     }
   }, [editingIntegration, projectId]);
@@ -107,7 +110,8 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
           repoUrl: `https://github.com/${data.username}/${data.repository}`,
           accessToken: data.accessToken,
           webhookSecret: data.webhookSecret || undefined,
-          isActive: data.isActive
+          isActive: data.isActive,
+          webhookUrl: data.webhookUrl
         }),
       });
 
@@ -290,43 +294,57 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
                     });
                     return;
                   }
-                  
+
                   try {
                     const response = await fetch('/api/github/test-connection', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       credentials: 'include',
                       body: JSON.stringify({
-                        repoUrl: `https://github.com/${formData.username}/${formData.repository}`,
-                        accessToken: formData.accessToken,
-                      }),
+                        username: formData.username,
+                        repository: formData.repository,
+                        accessToken: formData.accessToken
+                      })
                     });
-                    
+
                     if (response.ok) {
-                      toast({
-                        title: "Connection Successful",
-                        description: "GitHub connection test passed!",
-                        variant: "success",
-                      });
+                      const result = await response.json();
+                      if (result.success) {
+                        toast({
+                          title: "Connection Successful",
+                          description: result.message,
+                        });
+                      } else {
+                        toast({
+                          title: "Connection Failed",
+                          description: result.message,
+                          variant: "destructive",
+                        });
+                      }
                     } else {
-                      const error = await response.text();
+                      const error = await response.json();
                       toast({
                         title: "Connection Failed",
-                        description: error || "Failed to connect to GitHub",
+                        description: error.message || "Failed to test connection",
                         variant: "destructive",
                       });
                     }
                   } catch (error) {
+                    console.error('Connection test error:', error);
                     toast({
-                      title: "Test Failed",
-                      description: "Network error occurred",
+                      title: "Connection Failed",
+                      description: "Failed to test connection. Please try again.",
                       variant: "destructive",
                     });
                   }
                 }}
-                disabled={!formData.username || !formData.repository || !formData.accessToken}
+                disabled={testConnectionMutation.isPending}
               >
-                Test Connection
+                {testConnectionMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Test'
+                )}
               </Button>
             </div>
             {errors.accessToken && (
@@ -351,7 +369,7 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
           </div>
         </div>
 
-        
+
 
         <div className="flex items-center space-x-2">
           <Switch

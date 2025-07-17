@@ -905,8 +905,7 @@ export default function ProfilePage() {
             <CardContent className="flex flex-col items-center space-y-4">
               <motion.div
                 whileHover={{ scale: 1.05 }}
-                ```text
-className="relative cursor-pointer"
+                className="relative cursor-pointer"
                 onClick={handleProfilePictureClick}
               >
                 <Avatar className="h-24 w-24 border-2 border-primary/20">

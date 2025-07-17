@@ -140,6 +140,114 @@ const createUploadDirectories = () => {
   return { uploadsDir, profilePicturesDir, documentsDir, bugAttachmentsDir };
 };
 
+// Helper function to test GitHub connection
+async function testGitHubConnection(owner: string, repo: string, token: string) {
+  try {
+    console.log(`Testing GitHub connection for ${owner}/${repo}`);
+    
+    // Test 1: Verify token by getting user info
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'User-Agent': 'TestCaseTracker/1.0.0',
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+    
+    if (!userResponse.ok) {
+      const errorText = await userResponse.text();
+      console.error('GitHub user API error:', userResponse.status, errorText);
+      
+      if (userResponse.status === 401) {
+        return {
+          success: false,
+          message: 'Invalid GitHub token. Please check your Personal Access Token and ensure it has the correct permissions.'
+        };
+      }
+      
+      return {
+        success: false,
+        message: `GitHub API error: ${userResponse.status} ${userResponse.statusText}`
+      };
+    }
+    
+    const user = await userResponse.json();
+    console.log('GitHub user authenticated:', user.login);
+    
+    // Test 2: Check if repository exists and is accessible
+    const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'User-Agent': 'TestCaseTracker/1.0.0',
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+    
+    if (!repoResponse.ok) {
+      const errorText = await repoResponse.text();
+      console.error('GitHub repo API error:', repoResponse.status, errorText);
+      
+      if (repoResponse.status === 404) {
+        return {
+          success: false,
+          message: 'Repository not found. Please check the owner/repository name or ensure the repository exists and is accessible.'
+        };
+      }
+      
+      if (repoResponse.status === 403) {
+        return {
+          success: false,
+          message: 'Access forbidden. Your token may lack required permissions. Please generate a new token with "repo" scope.'
+        };
+      }
+      
+      return {
+        success: false,
+        message: `Failed to access repository: ${repoResponse.status} ${repoResponse.statusText}`
+      };
+    }
+    
+    const repoData = await repoResponse.json();
+    console.log('GitHub repository accessible:', repoData.full_name);
+    
+    // Test 3: Check if we can create issues (requires appropriate permissions)
+    const hasIssuesPermission = repoData.permissions?.admin || repoData.permissions?.push || repoData.permissions?.maintain;
+    
+    if (!hasIssuesPermission) {
+      return {
+        success: false,
+        message: 'Token does not have sufficient permissions to create issues. Please ensure the token has "repo" or "public_repo" scope.'
+      };
+    }
+    
+    return {
+      success: true,
+      message: 'GitHub connection successful! Repository is accessible and token has required permissions.',
+      data: {
+        user: user.login,
+        repo: repoData.full_name,
+        permissions: repoData.permissions,
+        hasIssues: repoData.has_issues
+      }
+    };
+    
+  } catch (error: any) {
+    console.error('GitHub connection test failed:', error);
+    
+    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+      return {
+        success: false,
+        message: 'Network error. Please check your internet connection and try again.'
+      };
+    }
+    
+    return {
+      success: false,
+      message: `GitHub API Error: ${error.message || 'Unknown error occurred'}`
+    };
+  }
+}
+
 // Configure multer for profile picture uploads
 const configureProfilePictureUpload = () => {
   const { profilePicturesDir } = createUploadDirectories();
@@ -1221,6 +1329,77 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
   
+  // GitHub Integration routes
+  apiRouter.get("/github/integrations", isAuthenticated, async (req, res) => {
+    try {
+      // Get GitHub integrations for all projects the user has access to
+      let projects;
+      if (req.session.userRole === "Admin") {
+        projects = await storage.getProjects();
+      } else {
+        projects = await storage.getProjectsByUserId(req.session.userId!);
+      }
+      
+      // For now, return empty array as GitHub integrations are not stored in database yet
+      // In a real implementation, you would fetch from a github_integrations table
+      const integrations: any[] = [];
+      
+      res.json(integrations);
+    } catch (error) {
+      console.error("Get GitHub integrations error:", error);
+      res.status(500).json({ message: "Failed to fetch GitHub integrations" });
+    }
+  });
+
+  apiRouter.post("/github/integrations", isAuthenticated, async (req, res) => {
+    try {
+      const { projectId, username, repository, accessToken, webhookUrl, isEnabled = true } = req.body;
+      
+      if (!projectId || !username || !repository || !accessToken) {
+        return res.status(400).json({ message: "Project ID, username, repository, and access token are required" });
+      }
+      
+      // Check if user has access to the project
+      const project = await storage.getProject(parseInt(projectId));
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(parseInt(projectId));
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+        
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+      
+      // Test the connection first
+      const testResult = await testGitHubConnection(username, repository, accessToken);
+      if (!testResult.success) {
+        return res.status(400).json({ message: testResult.message });
+      }
+      
+      // Create integration object (in real implementation, save to database)
+      const integration = {
+        id: Date.now(),
+        projectId: parseInt(projectId),
+        projectName: project.name,
+        repoUrl: `https://github.com/${username}/${repository}`,
+        accessToken: accessToken, // In production, encrypt this
+        webhookUrl: webhookUrl || null,
+        isEnabled,
+        createdAt: new Date().toISOString(),
+        connectionStatus: 'connected' as const
+      };
+      
+      res.status(201).json(integration);
+    } catch (error) {
+      console.error("Create GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to create GitHub integration" });
+    }
+  });
+
   // GitHub Configuration routes
   apiRouter.get("/github/configs", isAuthenticated, async (req, res) => {
     try {
@@ -1269,24 +1448,43 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
   apiRouter.post("/github/test-connection", isAuthenticated, async (req, res) => {
     try {
-      const { repoOwner, repoName, accessToken } = req.body;
+      const { repoUrl, accessToken, username, repository } = req.body;
       
-      // Simple test - try to access the repo
-      const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}`, {
-        headers: {
-          'Authorization': `token ${accessToken}`,
-          'User-Agent': 'TestCaseManager'
+      // Extract owner and repo from different possible formats
+      let repoOwner, repoName;
+      
+      if (repoUrl) {
+        // Parse from URL like https://github.com/owner/repo
+        const urlMatch = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+        if (urlMatch) {
+          repoOwner = urlMatch[1];
+          repoName = urlMatch[2].replace(/\.git$/, '');
         }
-      });
-
-      if (response.ok) {
-        res.json({ success: true, message: "Connection successful" });
+      } else if (username && repository) {
+        repoOwner = username;
+        repoName = repository;
+      }
+      
+      if (!repoOwner || !repoName || !accessToken) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Repository owner, name, and access token are required" 
+        });
+      }
+      
+      const testResult = await testGitHubConnection(repoOwner, repoName, accessToken);
+      
+      if (testResult.success) {
+        res.json(testResult);
       } else {
-        res.status(400).json({ message: "Failed to connect to repository" });
+        res.status(400).json(testResult);
       }
     } catch (error) {
       console.error("Test GitHub connection error:", error);
-      res.status(500).json({ message: "Connection test failed" });
+      res.status(500).json({ 
+        success: false,
+        message: "Connection test failed due to server error" 
+      });
     }
   });
 
