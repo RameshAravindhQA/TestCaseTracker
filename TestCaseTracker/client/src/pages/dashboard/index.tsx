@@ -172,6 +172,15 @@ export function DashboardPage() {
     { name: 'Trivial', value: bugs?.filter(bug => bug.severity === 'Trivial').length || 0, color: '#22c55e' }
   ];
 
+  useEffect(() => {
+    // Check if welcome dialog should be shown
+    const shouldShowWelcome = sessionStorage.getItem('showWelcomeDialog');
+    if (shouldShowWelcome === 'true') {
+      setShowWelcomeDialog(true);
+      sessionStorage.removeItem('showWelcomeDialog');
+    }
+  }, []);
+
   return (
     <MainLayout>
       <div className="w-full py-6 px-4 sm:px-6 lg:px-8">
@@ -194,7 +203,7 @@ export function DashboardPage() {
           initial="hidden"
           animate="visible"
         >
-           
+
             <Dialog open={projectsDialogOpen} onOpenChange={setProjectsDialogOpen}>
               <DialogTrigger asChild>
                 <Card className="cursor-pointer hover:shadow-lg transition-shadow">
@@ -250,8 +259,8 @@ export function DashboardPage() {
                 </div>
               </DialogContent>
             </Dialog>
-           
-           
+
+
             <Dialog open={testCasesDialogOpen} onOpenChange={setTestCasesDialogOpen}>
               <DialogTrigger asChild>
                 <Card className="cursor-pointer hover:shadow-lg transition-shadow">
@@ -310,8 +319,8 @@ export function DashboardPage() {
                 </div>
               </DialogContent>
             </Dialog>
-           
-           
+
+
             <Dialog open={bugsDialogOpen} onOpenChange={setBugsDialogOpen}>
               <DialogTrigger asChild>
                 <Card className="cursor-pointer hover:shadow-lg transition-shadow">
@@ -370,8 +379,8 @@ export function DashboardPage() {
                 </div>
               </DialogContent>
             </Dialog>
-           
-           
+
+
             <Dialog open={passRateDialogOpen} onOpenChange={setPassRateDialogOpen}>
               <DialogTrigger asChild>
                 <Card className="cursor-pointer hover:shadow-lg transition-shadow">
@@ -435,12 +444,12 @@ export function DashboardPage() {
                 </div>
               </DialogContent>
             </Dialog>
-           
+
         </motion.div>
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-           
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -469,9 +478,9 @@ export function DashboardPage() {
                 )}
               </CardContent>
             </Card>
-           
 
-           
+
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -499,12 +508,12 @@ export function DashboardPage() {
                 )}
               </CardContent>
             </Card>
-           
+
         </div>
 
         {/* Status Overview Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-           
+
             <Card>
               <CardHeader>
                 <CardTitle>Test Status Overview</CardTitle>
@@ -525,9 +534,9 @@ export function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-           
 
-           
+
+
             <Card>
               <CardHeader>
                 <CardTitle>Bug Severity Distribution</CardTitle>
@@ -548,8 +557,33 @@ export function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-           
+
         </div>
+      {/* Welcome Dialog */}
+      {showWelcomeDialog && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Welcome to the Dashboard!
+              </h3>
+              <div className="mt-2 px-7 py-3">
+                <p className="text-sm text-gray-500">
+                  This is a quick tour of the dashboard. You can see your projects, test cases, and bugs.
+                </p>
+              </div>
+              <div className="items-center px-4 py-3">
+                <button
+                  onClick={() => setShowWelcomeDialog(false)}
+                  className="px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-300"
+                >
+                  Okay!
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </MainLayout>
   );

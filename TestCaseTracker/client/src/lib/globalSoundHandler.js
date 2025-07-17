@@ -163,7 +163,13 @@ class GlobalSoundHandler {
     }
 
     try {
-      this.soundManager.playSound(soundName);
+      if (typeof this.soundManager.playSound === 'function') {
+        this.soundManager.playSound(soundName);
+      } else if (typeof this.soundManager.playSoundByKey === 'function') {
+        this.soundManager.playSoundByKey(soundName);
+      } else {
+        console.warn('🔊 No valid play method found in sound manager');
+      }
     } catch (error) {
       console.error('🔊 Error playing sound:', error);
     }

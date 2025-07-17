@@ -118,7 +118,7 @@ export class SoundManager {
     // Enhanced form submission detection
     document.addEventListener('submit', (event) => {
       console.log('🔊 Form submission detected, playing CRUD sound');
-      this.playSound('crud');
+      this.playSoundByKey('crud');
     }, true);
 
     // Global click detection with priority system
@@ -128,21 +128,21 @@ export class SoundManager {
       // Priority 1: Form submission buttons -> CRUD sound
       if (this.isFormSubmissionButton(target)) {
         console.log('🔊 Form submission button detected, playing CRUD sound');
-        this.playSound('crud');
+        this.playSoundByKey('crud');
         return;
       }
 
       // Priority 2: API-related buttons -> CRUD sound
       if (this.isApiButton(target)) {
         console.log('🔊 API button detected, playing CRUD sound');
-        this.playSound('crud');
+        this.playSoundByKey('crud');
         return;
       }
 
       // Priority 3: Any clickable element -> click sound
       if (this.isClickableElement(target)) {
         console.log('🔊 Clickable element detected, playing click sound');
-        this.playSound('click');
+        this.playSoundByKey('click');
       }
     }, true);
 
@@ -272,7 +272,7 @@ export class SoundManager {
     });
   }
 
-  async playSound(soundKey) {
+  async playSoundByKey(soundKey) {
     if (!this.isEnabled) {
       console.log(`🔊 Sound disabled, skipping: ${soundKey}`);
       return;
@@ -328,11 +328,11 @@ export class SoundManager {
   }
 
   // Public API methods
-  playCrudSound() { this.playSound('crud'); }
-  playClickSound() { this.playSound('click'); }
-  playSuccessSound() { this.playSound('success'); }
-  playErrorSound() { this.playSound('error'); }
-  playMessageSound() { this.playSound('message'); }
+  playCrudSound() { this.playSoundByKey('crud'); }
+  playClickSound() { this.playSoundByKey('click'); }
+  playSuccessSound() { this.playSoundByKey('success'); }
+  playErrorSound() { this.playSoundByKey('error'); }
+  playMessageSound() { this.playSoundByKey('message'); }
 
   setupGlobalErrorHandling() {
     // Only handle explicit UI errors triggered by user actions
@@ -464,41 +464,9 @@ export class SoundManager {
     this.audioCache.clear();
   }
 
+  // Main playSound method used by external components
   playSound(type, options = {}) {
-    if (!this.isEnabled || !this.sounds[type]) {
-      return;
-    }
-
-    // Don't play error sounds for connection timeout or console errors
-    if (type === 'error' && (
-      (options.source && (options.source.includes('ERR_CONNECTION_TIMED_OUT') || 
-                         options.source.includes('replit.dev:24678'))) ||
-      (typeof options.isConsoleError !== 'undefined' && options.isConsoleError)
-    )) {
-      return;
-    }
-
-    try {
-      const sound = this.sounds[type];
-      if (sound && sound.readyState >= 2) { // HAVE_CURRENT_DATA
-        sound.currentTime = 0;
-        sound.volume = this.volume * (options.volume || 1);
-
-        const playPromise = sound.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            // Don't log play errors for connection timeouts
-            if (!error.message.includes('ERR_CONNECTION_TIMED_OUT')) {
-              console.warn(`Sound play failed for ${type}:`, error);
-            }
-          });
-        }
-      }
-    } catch (error) {
-      if (!error.message.includes('ERR_CONNECTION_TIMED_OUT')) {
-        console.warn(`Error playing sound ${type}:`, error);
-      }
-    }
+    return this.playSoundByKey(type);
   }
 }
 

@@ -847,35 +847,34 @@ export default function ProfilePage() {
           <p className="text-gray-500 dark:text-gray-400">Manage your account settings and preferences</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-full overflow-hidden">
-          {/* Profile picture card */}
-          <Card className="md:col-span-1">
-            <CardHeader>
-              <CardTitle>Profile Picture</CardTitle>
-              <CardDescription>Update your profile picture</CardDescription>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Profile picture card - optimized width */}
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Profile Picture</CardTitle>
+              <CardDescription className="text-sm">Update your avatar</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center">
+            <CardContent className="flex flex-col items-center space-y-4">
               <motion.div
                 whileHover={{ scale: 1.05 }}
-                className="mb-4 relative cursor-pointer"
+                className="relative cursor-pointer"
                 onClick={handleProfilePictureClick}
               >
-                <Avatar className="h-32 w-32 border-2 border-primary/20">
+                <Avatar className="h-24 w-24 border-2 border-primary/20">
                   <AvatarImage 
                     src={avatarSrc} 
                     key={avatarKey}
                     onError={(e) => {
                       console.error("Avatar image failed to load:", e);
-                      // If image fails to load, force fallback by setting src to empty
                       (e.target as HTMLImageElement).src = '';
                     }}
                   />
-                  <AvatarFallback className="text-2xl bg-gradient-to-br from-primary/80 to-primary/40">
+                  <AvatarFallback className="text-xl bg-gradient-to-br from-primary/80 to-primary/40">
                     {(fetchedCurrentUser?.firstName?.charAt(0)?.toUpperCase() || '') + (fetchedCurrentUser?.lastName?.charAt(0)?.toUpperCase() || '') || "U"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full opacity-0 hover:opacity-100 transition-opacity">
-                  <Upload className="h-8 w-8 text-white" />
+                  <Camera className="h-6 w-6 text-white" />
                 </div>
                 {uploading && (
                   <motion.div 
@@ -883,10 +882,27 @@ export default function ProfilePage() {
                     animate={{ opacity: 1 }}
                     className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full"
                   >
-                    <Loader2 className="h-8 w-8 text-white animate-spin" />
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
                   </motion.div>
                 )}
               </motion.div>
+              
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={handleProfilePictureClick}
+                disabled={uploading}
+                className="w-full"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Picture
+              </Button>
+              
+              <p className="text-xs text-muted-foreground text-center">
+                JPEG, PNG, GIF, WebP, Lottie JSON<br />
+                Max: 2MB (images), 20MB (Lottie)
+              </p>
+              
               <input
                 type="file"
                 ref={fileInputRef}
@@ -894,25 +910,11 @@ export default function ProfilePage() {
                 accept="image/jpeg,image/png,image/gif,image/webp,application/json,.json"
                 className="hidden"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                Supported formats: JPEG, PNG, GIF, WebP, Lottie JSON<br />
-                Max file size: 2MB (images), 20MB (Lottie)
-              </p>
-              <Button 
-                variant="outline"
-                onClick={handleProfilePictureClick}
-                disabled={uploading}
-              >
-                Change Picture
-              </Button>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                Click the button or image to upload a new profile picture.
-              </p>
             </CardContent>
           </Card>
 
-          {/* Profile settings tabs */}
-          <Card className="md:col-span-2">
+          {/* Profile settings tabs - optimized width */}
+          <Card className="lg:col-span-3">
             <CardHeader>
               <CardTitle>Account Settings</CardTitle>
               <CardDescription>Manage your profile information and password</CardDescription>
@@ -1163,16 +1165,17 @@ export default function ProfilePage() {
                     </form>
                   </Form>
                 </TabsContent>
-                 {/* Avatar Animation Tab */}
+                 {/* Lottie Avatar Tab */}
                 <TabsContent value="avatar">
-                  <div className="space-y-6 pt-4">
+                  <div className="space-y-4 pt-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-medium">Select Avatar Animation</h3>
-                        <p className="text-sm text-muted-foreground">Choose a Lottie animation for your avatar</p>
+                        <h3 className="text-lg font-medium">Lottie Avatar</h3>
+                        <p className="text-sm text-muted-foreground">Upload and select Lottie animations</p>
                       </div>
                       <Button
                         variant="outline"
+                        size="sm"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploading}
                       >
@@ -1181,106 +1184,84 @@ export default function ProfilePage() {
                       </Button>
                     </div>
 
-                    {/* Debug Panel */}
-                    <LottieFileDebug 
-                      onTestResults={(testResults) => {
-                        console.log('🧪 Debug results:', testResults);
-                        const validFiles = testResults
-                          .filter(r => r.status === 'VALID_LOTTIE')
-                          .map(r => r.file);
-                        setPlayingAnimations(new Set(validFiles));
-
-                        // Update the available animations based on debug results
-                        const loadedAnimations = testResults.map(result => ({
-                          id: result.file.replace('/lottie/', '').replace('.json', ''),
-                          name: result.file.replace('/lottie/', '').replace('.json', '').replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                          path: result.file,
-                          preview: result.data
-                        }));
-
-                        setLottieAnimations(loadedAnimations);
-
-                        if (testResults.length === 0) {
-                          toast({
-                            title: "No Lottie Files Found",
-                            description: "No Lottie files were found. Check the debug panel for details.",
-                            variant: "destructive",
-                          });
-                        }
-                      }}
-                    />
-
-                    {/* Current Selection Display */}
+                    {/* Current Selection */}
                     {selectedLottie && (
-                      <div className="border rounded-lg p-4 bg-muted/50">
-                        <h4 className="font-medium mb-2">Current Selection</h4>
-                        <div className="flex items-center space-x-4">
-                          <LottieAvatar
-                            animationData={selectedLottie.preview}
-                            width={64}
-                            height={64}
-                            autoplay={true}
-                            loop={true}
-                            controls={true}
-                            className="border rounded"
-                          />
-                          <div>
-                            <p className="font-medium">{selectedLottie.name}</p>
-                            <p className="text-sm text-muted-foreground">Currently selected as your avatar</p>
+                      <div className="border rounded-lg p-3 bg-muted/30">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 border rounded overflow-hidden bg-white flex items-center justify-center">
+                            <LottieAvatar
+                              animationData={selectedLottie.preview}
+                              width={40}
+                              height={40}
+                              autoplay={true}
+                              loop={true}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{selectedLottie.name}</p>
+                            <p className="text-xs text-muted-foreground">Current avatar animation</p>
                           </div>
                         </div>
                       </div>
                     )}
 
                     {/* Animation Grid */}
-                    {uploading && (
-                      <div className="text-center py-8">
-                        <div className="flex items-center justify-center space-x-2">
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                          <span className="text-lg">Loading animations...</span>
-                        </div>
+                    {uploading ? (
+                      <div className="text-center py-6">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">Loading animations...</p>
                       </div>
-                    )}
-
-                    {!uploading && lottieAnimations.length > 0 ? (
-                      <LottieAvatarGrid
-                        animations={lottieAnimations.map((animation) => ({
-                          id: animation.id,
-                          name: animation.name,
-                          data: animation.preview,
-                          selected: selectedLottie?.id === animation.id,
-                          onSelect: () => handleLottieSelect(animation)
-                        }))}
-                        gridCols={4}
-                        itemWidth={120}
-                        itemHeight={120}
-                        showControls={true}
-                      />
-                    ) : !uploading && (
-                      <div className="text-center py-8">
-                        <div className="text-muted-foreground">
-                          <p className="mb-2">No Lottie animations loaded</p>
-                          <Button
-                            variant="outline"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploading}
+                    ) : lottieAnimations.length > 0 ? (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                        {lottieAnimations.map((animation) => (
+                          <motion.div
+                            key={animation.id}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className={`relative border-2 rounded-lg p-2 cursor-pointer transition-all ${
+                              selectedLottie?.id === animation.id 
+                                ? 'border-primary bg-primary/5' 
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                            onClick={() => handleLottieSelect(animation)}
                           >
-                            <Upload className="mr-2 h-4 w-4" />
-                            Upload Your First Animation
-                          </Button>
-                        </div>
+                            <div className="aspect-square bg-white rounded overflow-hidden flex items-center justify-center">
+                              <LottieAvatar
+                                animationData={animation.preview}
+                                width={60}
+                                height={60}
+                                autoplay={playingAnimations.has(animation.id)}
+                                loop={true}
+                              />
+                            </div>
+                            <p className="text-xs text-center mt-1 truncate" title={animation.name}>
+                              {animation.name}
+                            </p>
+                            {selectedLottie?.id === animation.id && (
+                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
+                            )}
+                          </motion.div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground mb-3">No Lottie animations available</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploading}
+                        >
+                          Upload First Animation
+                        </Button>
                       </div>
                     )}
 
-                    {/* Upload Instructions */}
-                    <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
-                      <h4 className="font-medium mb-2">Upload Instructions:</h4>
-                      <ul className="list-disc pl-5 space-y-1">
-                        <li>Upload Lottie JSON files (max 20MB)</li>
-                        <li>Ensure your JSON file contains valid Lottie animation data</li>
-                        <li>Animations will be automatically validated before upload</li>
-                        <li>Click on any animation to set it as your avatar</li>
-                      </ul>
+                    {/* Upload Info */}
+                    <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded">
+                      <p className="font-medium mb-1">Upload Requirements:</p>
+                      <p>• Valid Lottie JSON files only • Max size: 20MB • Click any animation to set as avatar</p>
                     </div>
                   </div>
                 </TabsContent>

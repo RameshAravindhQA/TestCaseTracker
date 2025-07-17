@@ -1,6 +1,7 @@
 import { logger } from "./logger";
 import { storage } from "./storage";
 import type { GitHubConfig, GitHubIssuePayload, InsertGitHubIssue } from "@shared/github-types";
+import { Octokit } from "octokit";
 
 export class GitHubService {
   private async makeGitHubRequest(
@@ -206,15 +207,7 @@ ${bug.comments || 'No additional comments.'}
     };
   }
 
-  async validateConnection(config: GitHubConfig): Promise<boolean> {
-    try {
-      await this.makeGitHubRequest(config, '');
-      return true;
-    } catch (error) {
-      logger.error(`GitHub connection validation failed:`, error);
-      return false;
-    }
-  }
+  
 
   async syncIssueStatus(config: GitHubConfig, issueNumber: number, bugId: number) {
     logger.info(`Syncing GitHub issue #${issueNumber} status with bug ${bugId}`);
@@ -462,59 +455,111 @@ ${bug.comments || 'No additional comments.'}
     }
   }
 
-  async testConnection(repoUrl: string, accessToken: string): Promise<{ success: boolean; error?: string }> {
+  async testConnection(config: GitHubConfig): Promise<{ success: boolean; message: string }> {
     try {
-      // Validate URL format
-      if (!repoUrl.includes('github.com')) {
-        return { success: false, error: 'Invalid GitHub repository URL' };
-      }
-
-      // Extract owner and repo from URL
-      const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-      if (!match) {
-        return { success: false, error: 'Could not parse repository URL. Expected format: https://github.com/owner/repo' };
-      }
-
-      const [, owner, repo] = match;
-      const cleanRepo = repo.replace('.git', '');
-
-      // Test API connection
-      const apiUrl = `https://api.github.com/repos/${owner}/${cleanRepo}`;
-      const response = await fetch(apiUrl, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'TestCaseTracker'
-        }
+      console.log('Testing GitHub connection with config:', {
+        ...config,
+        personalAccessToken: config.personalAccessToken ? '[REDACTED]' : 'NOT_PROVIDED'
       });
 
-      if (response.ok) {
-        const repoData = await response.json();
-        return { 
-          success: true, 
-          error: undefined 
+      if (!config.personalAccessToken || config.personalAccessToken.trim() === '') {
+        return {
+          success: false,
+          message: 'Personal Access Token is required for GitHub integration. Please generate a token from GitHub Settings > Developer settings > Personal access tokens.'
         };
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        let errorMessage = 'Connection failed';
+      }
 
-        if (response.status === 401) {
-          errorMessage = 'Invalid access token or insufficient permissions';
-        } else if (response.status === 404) {
-          errorMessage = 'Repository not found or access denied';
-        } else if (response.status === 403) {
-          errorMessage = 'Access forbidden. Check token permissions';
-        } else {
-          errorMessage = errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+      if (!config.githubUsername || config.githubUsername.trim() === '') {
+        return {
+          success: false,
+          message: 'GitHub Username is required. Please enter your GitHub username.'
+        };
+      }
+
+      if (!config.repositoryName || config.repositoryName.trim() === '') {
+        return {
+          success: false,
+          message: 'Repository Name is required. Please enter the repository name in format "owner/repo".'
+        };
+      }
+
+      const octokit = new Octokit({
+        auth: config.personalAccessToken.trim(),
+      });
+
+      // Test authentication by getting user info
+      const { data: user } = await octokit.rest.users.getAuthenticated();
+      console.log('GitHub authentication successful for user:', user.login);
+
+      // Verify the username matches
+      if (user.login.toLowerCase() !== config.githubUsername.toLowerCase()) {
+        return {
+          success: false,
+          message: `Token belongs to user "${user.login}" but you specified username "${config.githubUsername}". Please update the username or use the correct token.`
+        };
+      }
+
+      // Test access to repository
+      try {
+        const [owner, repo] = config.repositoryName.split('/');
+        if (!owner || !repo) {
+          return {
+            success: false,
+            message: 'Repository name must be in format "owner/repo" (e.g., "username/my-project")'
+          };
         }
 
-        return { success: false, error: errorMessage };
+        const { data: repository } = await octokit.rest.repos.get({
+          owner: owner.trim(),
+          repo: repo.trim(),
+        });
+        console.log('Repository access verified:', repository.full_name);
+      } catch (repoError: any) {
+        console.error('Repository access error:', repoError);
+        if (repoError.status === 404) {
+          return {
+            success: false,
+            message: `Repository "${config.repositoryName}" not found. Please check the repository name and ensure it exists.`
+          };
+        }
+        return {
+          success: false,
+          message: `Cannot access repository "${config.repositoryName}". Please check the repository name and permissions.`
+        };
       }
-    } catch (error) {
+
+      return {
+        success: true,
+        message: `Successfully connected to GitHub as ${user.login} with access to ${config.repositoryName}`
+      };
+
+    } catch (error: any) {
       console.error('GitHub connection test failed:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Network error occurred' 
+
+      if (error.status === 401) {
+        return {
+          success: false,
+          message: 'Invalid Personal Access Token. Please check your token and try again. Make sure the token has the required permissions (repo, issues).'
+        };
+      }
+
+      if (error.status === 403) {
+        return {
+          success: false,
+          message: 'Access forbidden. Your token may not have the required permissions. Please ensure it has "repo" and "issues" scopes.'
+        };
+      }
+
+      if (error.code === 'ENOTFOUND' || error.message.includes('network')) {
+        return {
+          success: false,
+          message: 'Network error: Unable to connect to GitHub. Please check your internet connection.'
+        };
+      }
+
+      return {
+        success: false,
+        message: `Connection failed: ${error.message || 'Unknown error occurred. Please check your configuration and try again.'}`
       };
     }
   }
