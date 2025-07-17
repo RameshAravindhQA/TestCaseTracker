@@ -426,6 +426,9 @@ export default function ProfilePage() {
           preview: lottieData.preview
         };
 
+        // Use a stable identifier that doesn't conflict with image URLs
+        const profilePictureValue = `lottie-avatar-${lottieData.id}`;
+
         // First try the users endpoint
         let response = await fetch('/api/users/update-avatar', {
           method: 'PUT',
@@ -434,7 +437,7 @@ export default function ProfilePage() {
           },
           credentials: 'include',
           body: JSON.stringify({
-            profilePicture: `lottie:${lottieData.id}`,
+            profilePicture: profilePictureValue,
             avatarType: 'lottie',
             avatarData: stableAvatarData
           })
@@ -450,7 +453,7 @@ export default function ProfilePage() {
             },
             credentials: 'include',
             body: JSON.stringify({
-              profilePicture: `lottie:${lottieData.id}`,
+              profilePicture: profilePictureValue,
               avatarType: 'lottie',
               avatarData: JSON.stringify(stableAvatarData)
             })
@@ -843,17 +846,13 @@ export default function ProfilePage() {
         description: `Animation "${fileName}" loaded successfully! Click to set as avatar.`,
       });
 
-      // Try to save to backend
+      // Try to save to backend using the bug attachment endpoint (which now supports JSON)
       try {
         console.log("💾 Saving to backend...");
         const formData = new FormData();
-        formData.append('lottieFile', file);
-        formData.append('animationData', JSON.stringify({
-          id: newAnimation.id,
-          name: newAnimation.name
-        }));
-
-        const response = await fetch("/api/users/upload-lottie", {
+        formData.append('file', file); // Use 'file' field name for bug attachment endpoint
+        
+        const response = await fetch("/api/uploads/bug-attachment", {
           method: "POST",
           body: formData,
           credentials: 'include'
@@ -866,9 +865,9 @@ export default function ProfilePage() {
             console.log('✅ Backend upload successful:', result);
 
             // Update the animation with server path if provided
-            if (result.path) {
+            if (result.fileUrl) {
               setLottieAnimations(prev => prev.map(anim => 
-                anim.id === newAnimation.id ? { ...anim, path: result.path } : anim
+                anim.id === newAnimation.id ? { ...anim, path: result.fileUrl } : anim
               ));
             }
           } else {
@@ -888,12 +887,12 @@ export default function ProfilePage() {
             }
           }
         } else {
-          const text = await response.text();
-          console.error(`❌ Backend upload failed with status ${response.status}:`, text.substring(0, 200));
+          const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+          console.error(`❌ Backend upload failed with status ${response.status}:`, errorData);
           
           toast({
             title: "Upload Failed",
-            description: `Server error (${response.status}). Animation saved locally only.`,
+            description: `Server error (${response.status}): ${errorData.message}. Animation saved locally only.`,
             variant: "destructive",
           });
         }
@@ -918,17 +917,18 @@ export default function ProfilePage() {
     }
   };
 
-    // Compute avatar source with better cache busting
+    // Compute avatar source with proper Lottie handling
   const avatarSrc = useMemo(() => {
     if (!fetchedCurrentUser) return undefined;
 
-    // Handle Lottie animations
+    // Handle Lottie animations - don't use profilePicture URL for Lottie
     if (fetchedCurrentUser.avatarType === 'lottie' && fetchedCurrentUser.avatarData) {
-      return fetchedCurrentUser.profilePicture;
+      // Return null for Lottie animations as they should be rendered by LottieAvatar component
+      return null;
     }
 
     // Handle regular profile pictures
-    if (fetchedCurrentUser.profilePicture) {
+    if (fetchedCurrentUser.profilePicture && !fetchedCurrentUser.profilePicture.startsWith('lottie:')) {
       // Add cache busting timestamp
       const separator = fetchedCurrentUser.profilePicture.includes('?') ? '&' : '?';
       return `${fetchedCurrentUser.profilePicture}${separator}t=${avatarKey}&v=${Date.now()}`;
@@ -936,6 +936,24 @@ export default function ProfilePage() {
 
     return undefined;
   }, [fetchedCurrentUser, avatarKey]);
+
+  // Get Lottie data for avatar display
+  const avatarLottieData = useMemo(() => {
+    if (!fetchedCurrentUser || fetchedCurrentUser.avatarType !== 'lottie' || !fetchedCurrentUser.avatarData) {
+      return null;
+    }
+
+    try {
+      const avatarData = typeof fetchedCurrentUser.avatarData === 'string' 
+        ? JSON.parse(fetchedCurrentUser.avatarData) 
+        : fetchedCurrentUser.avatarData;
+      
+      return avatarData?.preview || null;
+    } catch (error) {
+      console.error('❌ Error parsing avatar Lottie data:', error);
+      return null;
+    }
+  }, [fetchedCurrentUser]);
 
   return (
     <MainLayout>
@@ -958,19 +976,33 @@ export default function ProfilePage() {
                 className="relative cursor-pointer"
                 onClick={handleProfilePictureClick}
               >
-                <Avatar className="h-24 w-24 border-2 border-primary/20">
-                  <AvatarImage 
-                    src={avatarSrc} 
-                    key={avatarKey}
-                    onError={(e) => {
-                      console.error("Avatar image failed to load:", e);
-                      (e.target as HTMLImageElement).src = '';
-                    }}
-                  />
-                  <AvatarFallback className="text-xl bg-gradient-to-br from-primary/80 to-primary/40">
-                    {(fetchedCurrentUser?.firstName?.charAt(0)?.toUpperCase() || '') + (fetchedCurrentUser?.lastName?.charAt(0)?.toUpperCase() || '') || "U"}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="h-24 w-24 border-2 border-primary/20 rounded-full overflow-hidden bg-gradient-to-br from-primary/80 to-primary/40 flex items-center justify-center">
+                  {avatarLottieData ? (
+                    <LottieAvatar
+                      animationData={avatarLottieData}
+                      width={88}
+                      height={88}
+                      autoplay={true}
+                      loop={true}
+                      name={fetchedCurrentUser?.firstName || 'User'}
+                    />
+                  ) : avatarSrc ? (
+                    <img
+                      src={avatarSrc}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                      key={avatarKey}
+                      onError={(e) => {
+                        console.error("Avatar image failed to load:", e);
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <span className="text-xl text-white font-semibold">
+                      {(fetchedCurrentUser?.firstName?.charAt(0)?.toUpperCase() || '') + (fetchedCurrentUser?.lastName?.charAt(0)?.toUpperCase() || '') || "U"}
+                    </span>
+                  )}
+                </div>
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full opacity-0 hover:opacity-100 transition-opacity">
                   <Camera className="h-6 w-6 text-white" />
                 </div>
