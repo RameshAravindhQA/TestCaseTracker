@@ -236,123 +236,94 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
           </div>
         </div>
 
-        <div className="grid gap-4">
+        <div className="space-y-4">
           <div>
-            <Label htmlFor="repoUrl">Repository URL</Label>
-            <Input
-              id="repoUrl"
-              name="repoUrl"
-              placeholder="https://github.com/username/repository"
-              value={formData.repoUrl}
-              onChange={handleInputChange}
-              required
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Full GitHub repository URL (e.g., https://github.com/username/repo-name)
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="accessToken">GitHub Personal Access Token</Label>
-            <Input
-              id="accessToken"
-              name="accessToken"
-              type="password"
-              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-              value={formData.accessToken}
-              onChange={handleInputChange}
-              required
-            />
+            <Label htmlFor="accessToken">
+              Personal Access Token {editingIntegration ? '(leave empty to keep current)' : '*'}
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="accessToken"
+                type="password"
+                placeholder={editingIntegration ? "Enter new token or leave empty" : "ghp_xxxxxxxxxxxxxxxxxxxx"}
+                value={formData.accessToken}
+                onChange={(e) => handleInputChange('accessToken', e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  if (!formData.username || !formData.repository || !formData.accessToken) {
+                    toast({
+                      title: "Missing Information",
+                      description: "Please fill in username, repository, and access token before testing",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  try {
+                    const response = await fetch('/api/github/test-connection', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify({
+                        repoUrl: `https://github.com/${formData.username}/${formData.repository}`,
+                        accessToken: formData.accessToken,
+                      }),
+                    });
+                    
+                    if (response.ok) {
+                      toast({
+                        title: "Connection Successful",
+                        description: "GitHub connection test passed!",
+                        variant: "success",
+                      });
+                    } else {
+                      const error = await response.text();
+                      toast({
+                        title: "Connection Failed",
+                        description: error || "Failed to connect to GitHub",
+                        variant: "destructive",
+                      });
+                    }
+                  } catch (error) {
+                    toast({
+                      title: "Test Failed",
+                      description: "Network error occurred",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                disabled={!formData.username || !formData.repository || !formData.accessToken}
+              >
+                Test Connection
+              </Button>
+            </div>
+            {errors.accessToken && (
+              <p className="text-sm text-red-600 mt-1">{errors.accessToken}</p>
+            )}
             <p className="text-sm text-muted-foreground mt-1">
-              Generate a token at GitHub Settings → Developer settings → Personal access tokens
+              Generate at GitHub Settings → Developer settings → Personal access tokens
               <br />
               <strong>Required permissions:</strong> repo, issues, pull_requests
             </p>
           </div>
 
           <div>
-            <Label htmlFor="branch">Default Branch</Label>
+            <Label htmlFor="webhookSecret">Webhook Secret (Optional)</Label>
             <Input
-              id="branch"
-              name="branch"
-              placeholder="main"
-              value={formData.branch || 'main'}
-              onChange={handleInputChange}
+              id="webhookSecret"
+              type="password"
+              placeholder="Optional webhook secret for secure communication"
+              value={formData.webhookSecret}
+              onChange={(e) => handleInputChange('webhookSecret', e.target.value)}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Branch to create issues and PRs (default: main)
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="webhookUrl">Webhook URL (Optional)</Label>
-            <Input
-              id="webhookUrl"
-              name="webhookUrl"
-              placeholder="https://your-app.com/webhook/github"
-              value={formData.webhookUrl || ''}
-              onChange={handleInputChange}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              URL to receive GitHub webhook events
-            </p>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="autoCreateIssues"
-              name="autoCreateIssues"
-              checked={formData.autoCreateIssues || false}
-              onChange={(e) => setFormData(prev => ({ ...prev, autoCreateIssues: e.target.checked }))}
-              className="rounded"
-            />
-            <Label htmlFor="autoCreateIssues" className="text-sm">
-              Automatically create GitHub issues for bugs
-            </Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="syncLabels"
-              name="syncLabels"
-              checked={formData.syncLabels || false}
-              onChange={(e) => setFormData(prev => ({ ...prev, syncLabels: e.target.checked }))}
-              className="rounded"
-            />
-            <Label htmlFor="syncLabels" className="text-sm">
-              Sync labels with GitHub repository
-            </Label>
           </div>
         </div>
 
-        <div>
-          <Label htmlFor="accessToken">
-            Personal Access Token {editingIntegration ? '(leave empty to keep current)' : '*'}
-          </Label>
-          <Input
-            id="accessToken"
-            type="password"
-            placeholder={editingIntegration ? "Enter new token or leave empty" : "ghp_xxxxxxxxxxxxxxxxxxxx"}
-            value={formData.accessToken}
-            onChange={(e) => handleInputChange('accessToken', e.target.value)}
-          />
-          {errors.accessToken && (
-            <p className="text-sm text-red-600 mt-1">{errors.accessToken}</p>
-          )}
-        </div>
-
-        <div>
-          <Label htmlFor="webhookSecret">Webhook Secret (Optional)</Label>
-          <Input
-            id="webhookSecret"
-            type="password"
-            placeholder="Optional webhook secret for secure communication"
-            value={formData.webhookSecret}
-            onChange={(e) => handleInputChange('webhookSecret', e.target.value)}
-          />
-        </div>
+        
 
         <div className="flex items-center space-x-2">
           <Switch

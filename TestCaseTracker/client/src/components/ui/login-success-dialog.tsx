@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -102,12 +101,12 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
       setCurrentTime(new Date());
       setDailyQuote(getDailyQuote());
       setShowAnimation(true);
-      
+
       // Hide animation after 3 seconds
       const animationTimer = setTimeout(() => {
         setShowAnimation(false);
       }, 3000);
-      
+
       // Simulate loading news
       const newsTimer = setTimeout(() => {
         setNewsItems(mockNewsData);

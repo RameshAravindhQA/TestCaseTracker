@@ -82,6 +82,31 @@ export default function AutomationPage() {
   const [editingScript, setEditingScript] = useState<AutomationScript | null>(null);
   const [availableModules, setAvailableModules] = useState([]);
   const [availableTestCases, setAvailableTestCases] = useState([]);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Validate URL format
+  const validateUrl = (url: string): boolean => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Validate form inputs
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!url.trim()) {
+      errors.url = "Target URL is required";
+    } else if (!validateUrl(url)) {
+      errors.url = "Please enter a valid URL";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   // Fetch projects with modules and test cases
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
@@ -133,8 +158,16 @@ export default function AutomationPage() {
   // Start recording mutation
   const startRecordingMutation = useMutation({
     mutationFn: async (data: { projectId: string; moduleId: string; testCaseIds: string[] }) => {
+      if (!validateForm()) {
+          throw new Error("Please fix validation errors");
+        }
       try {
-        const response = await apiRequest('POST', '/api/automation/start-recording', data);
+        const response = await apiRequest('POST', '/api/automation/start-recording', {
+          url: url.trim(),
+          projectId: projectId || undefined,
+          moduleId: moduleId || undefined,
+          testCaseId: testCaseId || undefined
+        });
         if (!response.ok) {
           const text = await response.text();
           if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
@@ -159,6 +192,7 @@ export default function AutomationPage() {
     onSuccess: (data) => {
       setIsRecording(true);
       setRecordingScript(data.sessionId);
+      setValidationErrors({});
       toast({
         title: 'Recording Started',
         description: 'Browser opened for recording. Close the browser to stop recording.',
@@ -512,7 +546,11 @@ export default function AutomationPage() {
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://example.com"
                 disabled={!!currentSession}
+                className={validationErrors.url ? "border-red-500" : ""}
               />
+                {validationErrors.url && (
+                  <p className="text-sm text-red-600">{validationErrors.url}</p>
+                )}
             </div>
             <div>
               <Label htmlFor="projectId">Project ID</Label>
