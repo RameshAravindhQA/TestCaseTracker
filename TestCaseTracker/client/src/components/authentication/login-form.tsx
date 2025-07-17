@@ -17,7 +17,7 @@ import { useState } from "react";
 // LoginMotivationDialog removed to prevent blur screen issues
 import { SoundButton } from "@/components/ui/sound-button";
 import { SoundDebug } from '@/components/sound-debug';
-import { LoginSuccessDialog } from '@/components/login-success-dialog'; // Import the LoginSuccessDialog component
+import { LoginSuccessDialog } from '@/components/ui/login-success-dialog';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
