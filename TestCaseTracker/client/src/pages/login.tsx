@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "@/components/authentication/login-form";
 import { LottieAnimation } from "@/components/ui/lottie-animation";
 import { motion } from "framer-motion";
 import { loginPageVariants, loginFormVariants, loginHeaderVariants, curtainRevealVariants, pageTransitions, pageVariants } from "@/lib/animations";
 
-export function LoginPage() {
+function LoginPage() {
   const [, setLocation] = useLocation();
   const [showContent, setShowContent] = useState(false);
 
@@ -181,3 +181,5 @@ export function LoginPage() {
     </motion.div>
   );
 }
+
+export default LoginPage;
