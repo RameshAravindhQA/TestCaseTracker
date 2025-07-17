@@ -72,6 +72,7 @@ export default function ProfilePage() {
     { id: 'software-dev', name: 'Software Dev', path: '/lottie/software-dev.json' }
   ]);
   const [loadedAnimations, setLoadedAnimations] = useState<Set<string>>(new Set());
+  const [playingAnimations, setPlayingAnimations] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 

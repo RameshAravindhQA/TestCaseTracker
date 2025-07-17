@@ -35,10 +35,42 @@ const LottieFromPublic: React.FC<LottieFromPublicProps> = ({
         
         console.log(`🎬 Loading Lottie from: ${animationPath}`);
         
-        const response = await fetch(animationPath);
+        // Try multiple potential paths
+        const pathsToTry = [
+          animationPath,
+          animationPath.startsWith('/') ? animationPath : `/${animationPath}`,
+          animationPath.replace('/lottie/', '/public/lottie/'),
+          `./public${animationPath}`,
+        ];
         
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        let response;
+        let lastError;
+        
+        for (const pathToTry of pathsToTry) {
+          try {
+            console.log(`🔍 Trying path: ${pathToTry}`);
+            response = await fetch(pathToTry, {
+              cache: 'no-cache',
+              headers: {
+                'Accept': 'application/json',
+              }
+            });
+            
+            if (response.ok) {
+              console.log(`✅ Found Lottie at: ${pathToTry}`);
+              break;
+            } else {
+              console.log(`❌ Failed at ${pathToTry}: ${response.status}`);
+            }
+          } catch (fetchError) {
+            console.log(`❌ Fetch error for ${pathToTry}:`, fetchError);
+            lastError = fetchError;
+            continue;
+          }
+        }
+        
+        if (!response || !response.ok) {
+          throw new Error(`Failed to load from any path. Last error: ${lastError?.message || 'Unknown error'}`);
         }
 
         const text = await response.text();
