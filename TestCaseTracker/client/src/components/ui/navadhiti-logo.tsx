@@ -12,9 +12,9 @@ export const NavadhitiLogo: React.FC<NavadhitiLogoProps> = ({
   size = "md" 
 }) => {
   const sizeClasses = {
-    sm: "h-8 w-8",
-    md: "h-12 w-12",
-    lg: "h-16 w-16"
+    sm: "h-12 w-12",
+    md: "h-20 w-20",
+    lg: "h-24 w-24"
   };
 
   return (

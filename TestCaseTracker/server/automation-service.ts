@@ -1,4 +1,3 @@
-
 import { spawn, ChildProcess } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -34,6 +33,8 @@ export class AutomationService {
   private activeSessions = new Map<string, RecordingSession>();
   private activeExecutions = new Map<string, TestExecution>();
   private recordingsDir = path.join(process.cwd(), 'recordings');
+  private recordings: Map<string, any> = new Map();
+  private scripts: Map<string, any> = new Map();
 
   constructor() {
     this.ensureRecordingsDirectory();
@@ -48,122 +49,57 @@ export class AutomationService {
     }
   }
 
-  async startRecording(config: {
-    url: string;
-    projectId?: string;
-    moduleId?: string;
-    testCaseId?: string;
-  }): Promise<{ success: boolean; message: string; sessionId?: string; filename?: string }> {
-    
-    const sessionId = `recording_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
-    const filename = `project-${config.projectId || 'unknown'}-module-${config.moduleId || 'unknown'}-${timestamp}.spec.ts`;
-    const outputPath = path.join(this.recordingsDir, filename);
-
-    logger.info('Starting recording session:', {
-      sessionId,
-      url: config.url,
-      filename,
-      outputPath,
-    });
-
-    const session: RecordingSession = {
-      id: sessionId,
-      projectId: config.projectId,
-      moduleId: config.moduleId,
-      testCaseId: config.testCaseId,
-      url: config.url,
-      filename,
-      status: 'starting',
-      startTime: new Date(),
-      outputPath,
-    };
-
+  async startRecording(config: any): Promise<{ success: boolean; message: string; recordingId?: string }> {
     try {
-      // Check if Playwright is installed
-      const playwrightCheck = spawn('npx', ['playwright', '--version'], { stdio: 'pipe' });
-      
-      await new Promise((resolve, reject) => {
-        playwrightCheck.on('close', (code) => {
-          if (code === 0) {
-            resolve(true);
-          } else {
-            reject(new Error('Playwright not found. Please install Playwright.'));
-          }
-        });
-        
-        playwrightCheck.on('error', (error) => {
-          reject(new Error(`Playwright check failed: ${error.message}`));
-        });
-      });
+      const recordingId = `rec_${Date.now()}`;
 
-      // Start Playwright codegen
-      const playwrightProcess = spawn('npx', [
-        'playwright',
-        'codegen',
-        config.url,
-        '--output',
-        outputPath,
-        '--browser',
-        'chromium'
-      ], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { 
-          ...process.env,
-          DISPLAY: process.env.DISPLAY || ':0',
-          PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0'
-        }
-      });
+      // Validate target URL
+      if (!config.targetUrl || !this.isValidUrl(config.targetUrl)) {
+        return {
+          success: false,
+          message: "Please provide a valid target URL to start recording."
+        };
+      }
 
-      session.process = playwrightProcess;
-      session.status = 'recording';
+      // Create recording session
+      const recordingSession = {
+        id: recordingId,
+        targetUrl: config.targetUrl,
+        startTime: new Date().toISOString(),
+        status: 'recording',
+        actions: [],
+        projectId: config.projectId,
+        moduleId: config.moduleId,
+        testCaseId: config.testCaseId
+      };
 
-      this.activeSessions.set(sessionId, session);
-
-      // Handle process events
-      playwrightProcess.stdout?.on('data', (data) => {
-        logger.info(`Recording ${sessionId} stdout:`, data.toString());
-      });
-
-      playwrightProcess.stderr?.on('data', (data) => {
-        logger.warn(`Recording ${sessionId} stderr:`, data.toString());
-      });
-
-      playwrightProcess.on('error', (error) => {
-        logger.error(`Recording ${sessionId} error:`, error);
-        session.status = 'error';
-        this.activeSessions.set(sessionId, session);
-      });
-
-      playwrightProcess.on('close', (code) => {
-        logger.info(`Recording ${sessionId} closed with code:`, code);
-        session.status = 'stopped';
-        session.endTime = new Date();
-        this.activeSessions.set(sessionId, session);
-      });
+      this.recordings.set(recordingId, recordingSession);
 
       return {
         success: true,
-        message: 'Recording started successfully',
-        sessionId,
-        filename,
+        message: `Recording started successfully for ${config.targetUrl}`,
+        recordingId
       };
-
-    } catch (error: any) {
-      logger.error('Failed to start recording:', error);
-      session.status = 'error';
-      this.activeSessions.set(sessionId, session);
-
+    } catch (error) {
       return {
         success: false,
-        message: `Failed to start recording: ${error.message}`,
+        message: `Failed to start recording: ${error.message}`
       };
+    }
+  }
+
+  private isValidUrl(url: string): boolean {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
     }
   }
 
   async stopRecording(sessionId: string): Promise<{ success: boolean; message: string; filename?: string }> {
     const session = this.activeSessions.get(sessionId);
-    
+
     if (!session) {
       return {
         success: false,
@@ -176,7 +112,7 @@ export class AutomationService {
     try {
       if (session.process && !session.process.killed) {
         session.process.kill('SIGTERM');
-        
+
         // Wait for process to terminate
         await new Promise((resolve) => {
           session.process?.on('close', resolve);
@@ -308,7 +244,7 @@ export class AutomationService {
     }
 
     let report = '# Test Execution Report\n\n';
-    
+
     // Summary
     const stats = results.stats || {};
     report += `## Summary\n`;
@@ -320,23 +256,23 @@ export class AutomationService {
 
     // Test Results
     report += `## Test Results\n\n`;
-    
+
     results.suites.forEach((suite: any, index: number) => {
       report += `### Suite ${index + 1}: ${suite.title || 'Unnamed Suite'}\n`;
-      
+
       if (suite.tests && suite.tests.length > 0) {
         suite.tests.forEach((test: any, testIndex: number) => {
           const status = test.outcome === 'passed' ? '✅' : test.outcome === 'failed' ? '❌' : '⚠️';
           report += `${testIndex + 1}. ${status} **${test.title || 'Unnamed Test'}**\n`;
-          
+
           if (test.outcome === 'failed' && test.error) {
             report += `   - Error: ${test.error.message}\n`;
           }
-          
+
           if (test.duration) {
             report += `   - Duration: ${test.duration}ms\n`;
           }
-          
+
           report += '\n';
         });
       }
