@@ -813,8 +813,7 @@ const countryData = {
 
 const dataTypes = {
   personal: ['name', 'email', 'phone', 'address'],
-  indian: ['pan', 'aadhaar', 'gst', 'ifsc', 'upi', 'drivingLicense', 'passport',```python
-'vehicleNumber'],
+  indian: ['pan', 'aadhaar', 'gst', 'ifsc', 'upi', 'drivingLicense', 'passport','vehicleNumber'],
   usa: ['ssn'],
   uk: ['postcode'],
   canada: ['postalCode'],
@@ -941,6 +940,15 @@ export default function TestDataGeneratorPage() {
               break;
             case 'paragraph':
               record[dataType] = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.';
+              break;
+            //Fixing the malformed template literal
+            case 'postcode':
+              const numbers = '0123456789';
+              let postcode = '';
+              for (let i = 0; i < 5; i++) {
+                postcode += numbers[Math.floor(Math.random() * numbers.length)];
+              }
+              record[dataType] = postcode;
               break;
           }
         }
