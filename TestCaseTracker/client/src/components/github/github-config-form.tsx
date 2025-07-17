@@ -74,8 +74,18 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
         webhookSecret: '',
         isActive: editingIntegration.isEnabled
       });
+    } else if (projectId) {
+      // Reset form for new integration
+      setFormData({
+        projectId: projectId.toString(),
+        username: '',
+        repository: '',
+        accessToken: '',
+        webhookSecret: '',
+        isActive: true
+      });
     }
-  }, [editingIntegration]);
+  }, [editingIntegration, projectId]);
 
   // Create/Update mutation
   const saveMutation = useMutation({
@@ -115,7 +125,10 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
         variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/github/integrations'] });
-      onClose();
+      if (onClose) {
+        onClose();
+      }
+      onOpenChange(false);
     },
     onError: (error: Error) => {
       toast({
@@ -351,7 +364,7 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
       </div>
 
       <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onClose}>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
           Cancel
         </Button>
         <Button 

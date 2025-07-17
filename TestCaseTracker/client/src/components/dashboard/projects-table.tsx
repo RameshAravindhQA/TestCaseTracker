@@ -22,7 +22,7 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
     return projects.map(project => {
       // Calculate completion percentage based on project status
       let completionPercentage = 0;
-      
+
       if (project.status === "Completed") {
         completionPercentage = 100;
       } else if (project.status === "Active") {
@@ -34,14 +34,14 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
         // This is a random value between 30-60% for demo purposes
         completionPercentage = 30 + Math.floor(Math.random() * 30);
       }
-      
+
       return {
         ...project,
         completionPercentage
       };
     });
   }, [projects]);
-  
+
   return (
     <div className="overflow-hidden">
       <Table>

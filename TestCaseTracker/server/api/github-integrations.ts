@@ -60,7 +60,7 @@ export async function createGitHubIntegration(req: any, res: any) {
       config.repoName === cleanRepoName &&
       config.isActive
     );
-    
+
     if (duplicateConfig) {
       return res.status(409).json({ 
         success: false,
@@ -111,12 +111,12 @@ export async function getGitHubIntegrations(req: any, res: any) {
     if (!userId) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
-    
+
     const integrations = await storage.getAllGitHubConfigs(userId);
 
     const enrichedIntegrations = await Promise.all(
       integrations.map(async (integration) => {
-        const project = await storage.getProject(integration.projectId);
+        const project = await await storage.getProject(integration.projectId);
 
         // Test connection status
         let connectionStatus = 'unknown';
@@ -264,68 +264,118 @@ export async function deleteGitHubIntegration(req: any, res: any) {
   }
 }
 
-export async function testGitHubConnection(req: any, res: any) {
+export async function testGitHubConnection(req: Request, res: Response) {
   try {
     const { repoUrl, accessToken } = req.body;
 
+    logger.info('GitHub connection test request:', { 
+      repoUrl: repoUrl ? repoUrl.replace(/\/\/.*@/, '//***@') : 'missing', 
+      hasToken: !!accessToken,
+      tokenLength: accessToken ? accessToken.length : 0
+    });
+
     if (!repoUrl || !accessToken) {
-      return res.status(400).json({ 
-        message: "Missing required fields: repoUrl, accessToken" 
+      return res.status(400).json({
+        success: false,
+        message: 'Repository URL and access token are required'
       });
     }
 
-    // Parse repository URL
-    const repoMatch = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-    if (!repoMatch) {
-      return res.status(400).json({ 
-        message: "Invalid GitHub repository URL format" 
+    // Extract owner and repo from URL
+    const urlMatch = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+    if (!urlMatch) {
+      logger.error('Invalid GitHub URL format:', repoUrl);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid GitHub repository URL format. Expected: https://github.com/owner/repo'
       });
     }
 
-    const [, repoOwner, repoName] = repoMatch;
+    const [, repoOwner, repoName] = urlMatch;
     const cleanRepoName = repoName.replace(/\.git$/, '');
+
+    logger.info(`Testing GitHub connection for ${repoOwner}/${cleanRepoName}`);
 
     // Test connection to GitHub API
     try {
-      const response = await fetch(`https://api.github.com/repos/${repoOwner}/${cleanRepoName}`, {
+      const apiUrl = `https://api.github.com/repos/${repoOwner}/${cleanRepoName}`;
+      logger.info('Making request to GitHub API:', apiUrl);
+
+      const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `token ${accessToken}`,
-          'User-Agent': 'TestCaseTracker'
+          'User-Agent': 'TestCaseTracker',
+          'Accept': 'application/vnd.github.v3+json'
         }
       });
 
+      logger.info('GitHub API response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (response.ok) {
-        res.json({
+        const repoData = await response.json();
+        logger.info('Successfully connected to repository:', {
+          name: repoData.name,
+          fullName: repoData.full_name,
+          private: repoData.private
+        });
+
+        return res.json({
           success: true,
           message: 'Connection successful',
-          repository: `${repoOwner}/${cleanRepoName}`
+          repository: `${repoOwner}/${cleanRepoName}`,
+          repoData: {
+            name: repoData.name,
+            fullName: repoData.full_name,
+            private: repoData.private,
+            hasIssues: repoData.has_issues
+          }
         });
       } else {
         const errorData = await response.json().catch(() => ({}));
-        let errorMessage = 'Connection failed';
+        logger.error('GitHub API error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+
+        let errorMessage = `Failed to connect to repository (${response.status})`;
 
         if (response.status === 401) {
-          errorMessage = 'Invalid access token or insufficient permissions';
+          errorMessage = 'Invalid access token or token has expired. Please regenerate your token.';
         } else if (response.status === 404) {
-          errorMessage = 'Repository not found or access denied';
+          errorMessage = 'Repository not found or you do not have access. Check repository name and token permissions.';
         } else if (response.status === 403) {
-          errorMessage = 'Access forbidden. Check token permissions';
+          if (errorData.message && errorData.message.includes('rate limit')) {
+            errorMessage = 'GitHub API rate limit exceeded. Please try again later.';
+          } else {
+            errorMessage = 'Access forbidden. Ensure your token has "repo" permissions.';
+          }
         }
 
-        res.status(400).json({
-          message: errorMessage
+        return res.status(400).json({
+          success: false,
+          message: errorMessage,
+          details: errorData.message || 'No additional details'
         });
       }
     } catch (networkError) {
       logger.error('GitHub API network error:', networkError);
-      res.status(400).json({
-        message: 'Network error connecting to GitHub'
+      return res.status(400).json({
+        success: false,
+        message: 'Network error connecting to GitHub. Please check your internet connection.',
+        details: networkError instanceof Error ? networkError.message : 'Unknown network error'
       });
     }
   } catch (error) {
     logger.error('GitHub connection test failed:', error);
-    res.status(500).json({
-      message: error instanceof Error ? error.message : 'Connection test failed'
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error during connection test',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 }

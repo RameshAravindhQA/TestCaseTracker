@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile as useMobile } from "@/hooks/use-mobile";
 import { AnimatedContainer } from "@/components/ui/animated-container";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { GlobalChatbot } from "@/components/chat/global-chatbot";
 import { TodoToggleButton } from "@/components/todo/todo-toggle-button";
 
@@ -17,7 +17,7 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const [location, navigate] = useLocation();
+  const [location] = useLocation();
   const isMobile = useMobile();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -126,12 +126,18 @@ export function MainLayout({ children }: MainLayoutProps) {
       )}
 
       {/* Main content */}
-      <main className={cn(
-        "flex-1 bg-gray-50 dark:bg-gray-950 p-0 m-0 text-gray-900 dark:text-white overflow-auto",
-        isMobile ? "pt-20" : "ml-60" // Adjusted for the new 60px sidebar width
-      )}>
-        {children}
-        <TodoToggleButton />
+      <main className="md:pl-64 min-h-screen bg-gray-50">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Global Chatbot */}
