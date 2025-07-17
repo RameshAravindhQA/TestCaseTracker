@@ -49,7 +49,7 @@ export const LottieAnimation: React.FC<LottieAnimationProps> = ({
         // If we have a path, fetch the animation data
         if (path) {
           console.log('🎬 Loading Lottie animation from:', path);
-          
+
           // Construct proper path for Lottie files - try multiple paths
           const possiblePaths = [
             path, // Try original path first
@@ -57,10 +57,10 @@ export const LottieAnimation: React.FC<LottieAnimationProps> = ({
             path.startsWith('/public/lottie/') ? path.replace('/public', '') : `/lottie/${path.replace('/public/lottie/', '')}`,
             path.endsWith('.json') ? path : `${path}.json`
           ];
-          
+
           let response = null;
           let successfulPath = null;
-          
+
           for (const tryPath of possiblePaths) {
             try {
               console.log('🎬 Trying animation path:', tryPath);
@@ -76,12 +76,12 @@ export const LottieAnimation: React.FC<LottieAnimationProps> = ({
               console.log('🎬 Path failed:', tryPath, err instanceof Error ? err.message : 'Unknown error');
             }
           }
-          
+
           if (!response || !response.ok) {
             console.error(`❌ Failed to fetch animation from any path`);
             throw new Error(`Failed to load animation from any attempted path`);
           }
-          
+
           console.log('🎬 Successfully loaded from:', successfulPath);
 
           const contentType = response.headers.get('content-type');
@@ -96,17 +96,17 @@ export const LottieAnimation: React.FC<LottieAnimationProps> = ({
             // Try alternative path
             const altPath = `/public/lottie/${path.replace('/lottie/', '')}`;
             console.log('🔄 Trying alternative path:', altPath);
-            
+
             const altResponse = await fetch(altPath);
             if (!altResponse.ok) {
               throw new Error('Animation file not found in any location');
             }
-            
+
             const altText = await altResponse.text();
             if (altText.trim().startsWith('<!DOCTYPE') || altText.trim().startsWith('<html')) {
               throw new Error('Animation file not found - received HTML instead of JSON');
             }
-            
+
             // Use the alternative response
             const altJsonData = JSON.parse(altText);
             animationRef.current = lottie.loadAnimation({
@@ -141,7 +141,7 @@ export const LottieAnimation: React.FC<LottieAnimationProps> = ({
             autoplay,
             animationData: jsonData,
           });
-          
+
           console.log('🎬 Lottie animation loaded successfully');
           setIsLoading(false);
         }
