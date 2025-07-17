@@ -180,6 +180,16 @@ export class SoundManager {
     const button = element.tagName === 'BUTTON' ? element : element.closest('button');
     if (!button) return false;
 
+    // Exclude dropdown and select elements
+    if (button.closest('[role="option"]') || 
+        button.closest('[data-radix-select-item]') ||
+        button.closest('.select-item') ||
+        button.closest('select') ||
+        button.closest('[role="menuitem"]') ||
+        button.closest('.dropdown-menu')) {
+      return false;
+    }
+
     // Check button type
     if (button.type === 'submit') return true;
 
@@ -196,12 +206,9 @@ export class SoundManager {
       return true;
     }
 
-    // Check if button is inside a form
+    // Check if button is inside a form (but not in dropdown components)
     const form = button.closest('form');
-    if (form) return true;
-
-    // Check for React form handlers
-    if (button.onclick || button.getAttribute('onClick')) {
+    if (form && !button.closest('[role="combobox"]') && !button.closest('[data-radix-select-root]')) {
       return true;
     }
 

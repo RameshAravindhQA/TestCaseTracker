@@ -99,7 +99,8 @@ class GlobalSoundHandler {
            errorString.includes('err_connection_timed_out') ||
            errorString.includes('net::err_connection_timed_out') ||
            errorString.includes('websocket') ||
-           errorString.includes('socket');
+           errorString.includes('socket') ||
+           errorString.includes('failed to load resource');
   }
 
   // Check if error is development-related (shouldn't trigger sounds)
@@ -124,7 +125,9 @@ class GlobalSoundHandler {
            errorString.includes('net::err_connection') ||
            errorString.includes('ping') ||
            errorString.includes('waitforsuccessfulping') ||
-           errorString.includes('replit.dev:24678');
+           errorString.includes('replit.dev') ||
+           errorString.includes('unhandled promise rejection') ||
+           errorString.includes('unhandledrejection');
   }
 
   // Check if error is resource-related (shouldn't trigger sounds)
@@ -231,15 +234,21 @@ class GlobalSoundHandler {
               this.soundManager?.playSuccessSound();
             }
           } else {
-            console.log('🔊 Playing error sound for HTTP error');
-            this.soundManager?.playErrorSound();
+            // Only play error sound for user-facing errors, not network/dev errors
+            if (!this.isNetworkError(response.statusText) && !this.isDevelopmentError(response.statusText)) {
+              console.log('🔊 Playing error sound for HTTP error');
+              this.soundManager?.playErrorSound();
+            }
           }
         }
 
         return response;
       } catch (error) {
-        console.log('🔊 Playing error sound for network error');
-        this.soundManager?.playErrorSound();
+        // Only play error sound for user-facing errors, not network/dev errors
+        if (!this.isNetworkError(error) && !this.isDevelopmentError(error)) {
+          console.log('🔊 Playing error sound for network error');
+          this.soundManager?.playErrorSound();
+        }
         throw error;
       }
     };
@@ -286,7 +295,7 @@ class GlobalSoundHandler {
       return false;
     }
 
-    // Enhanced URL pattern matching for CRUD operations
+    // Only play CRUD sounds for actual form submissions and data operations
     const crudPatterns = [
       '/api/auth/login',
       '/api/auth/register', 
@@ -300,14 +309,21 @@ class GlobalSoundHandler {
       '/api/documents',
       '/api/timesheets',
       '/api/notebooks',
-      '/api/github/integrations',
-      'upload',
-      'create',
-      'update',
-      'delete'
+      '/api/github/integrations'
     ];
 
-    return crudPatterns.some(pattern => url.includes(pattern));
+    // Check for actual CRUD operations with specific endpoints
+    const hasFormSubmission = crudPatterns.some(pattern => url.includes(pattern));
+    
+    // Also check if this is a real form submission (not just a dropdown change)
+    const isFormSubmission = url.includes('/create') || 
+                             url.includes('/update') || 
+                             url.includes('/delete') || 
+                             url.includes('/upload') ||
+                             url.includes('/submit') ||
+                             url.includes('/save');
+
+    return hasFormSubmission || isFormSubmission;
   }
 
   shouldPlaySound(method, url, status) {
@@ -324,6 +340,16 @@ class GlobalSoundHandler {
 
     // Don't play sounds for WebSocket connections
     if (url?.includes('socket.io') || url?.includes('ws://') || url?.includes('wss://')) {
+      return false;
+    }
+
+    // Don't play sounds for development/console related requests
+    if (url?.includes('vite') || url?.includes('hmr') || url?.includes('@vite') || url?.includes('node_modules')) {
+      return false;
+    }
+
+    // Don't play sounds for connection timeout errors (status 0 usually means network timeout)
+    if (status === 0 || status === 408 || status === 504) {
       return false;
     }
 
@@ -361,9 +387,15 @@ document.addEventListener('click', (event) => {
         return;
       }
 
-    globalSoundHandler.playUserActionSound('click');
+    // Only play click sound for actual user interactions, not programmatic events
+    if (event.isTrusted) {
+      globalSoundHandler.playUserActionSound('click');
+    }
   }
 });
+
+// Disable global error listening to prevent console error sounds
+// Only handle application-specific errors through custom events
 
 // Export for use in other modules
 export default globalSoundHandler;
