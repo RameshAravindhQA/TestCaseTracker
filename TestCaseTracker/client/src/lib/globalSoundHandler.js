@@ -421,4 +421,3 @@ document.addEventListener('click', (event) => {
 
 // Export for use in other modules
 export default globalSoundHandler;
-```

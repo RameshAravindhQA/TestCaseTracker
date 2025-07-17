@@ -26,10 +26,10 @@ function Register() {
 
   return (
     <motion.div 
-      variants={loginPageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 relative overflow-hidden"
     >
       {/* Floating Animation Elements */}
