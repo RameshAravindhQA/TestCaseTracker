@@ -949,6 +949,3 @@ export default function AutomationPage() {
     </MainLayout>
   );
 }
-```
-
-The code has been updated to include robust test automation implementation with polling for session and execution statuses, and adding execute test function.

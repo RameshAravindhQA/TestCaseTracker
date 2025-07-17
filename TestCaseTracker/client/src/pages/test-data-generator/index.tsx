@@ -1575,7 +1575,8 @@ export default function TestDataGeneratorPage() {
 <CardContent>
               {generatedData.length > 0 ? (
                 <Textarea
-                  value={outputFormat === 'json' ? JSON.stringify(generatedData, null, 2) :
+                  value={outputFormat === 'json' ?```text
+ JSON.stringify(generatedData, null, 2) :
                          outputFormat === 'csv' ? (() => {
                            const headers = Object.keys(generatedData[0]).join(',');
                            const rows = generatedData.map(row => Object.values(row).join(',')).join('\n');
