@@ -451,69 +451,162 @@ export const backdropVariants = {
   }
 };
 
-// Login page specific animations
+// Modern login page animations with speed
 export const loginPageVariants = {
   initial: { 
     opacity: 0,
-    scale: 0.95,
-    y: 20 
+    scale: 0.9,
+    y: 40,
+    filter: "blur(10px)"
   },
   animate: { 
     opacity: 1, 
     scale: 1,
     y: 0,
+    filter: "blur(0px)",
+    transition: { 
+      duration: 0.4, 
+      ease: [0.25, 0.46, 0.45, 0.94],
+      staggerChildren: 0.03,
+      delayChildren: 0.05
+    }
+  },
+  exit: { 
+    opacity: 0, 
+    scale: 0.9,
+    y: -40,
+    filter: "blur(5px)",
+    transition: { 
+      duration: 0.2, 
+      ease: [0.4, 0, 0.6, 1]
+    }
+  }
+};
+
+// Enhanced login form animations
+export const loginFormVariants = {
+  initial: { 
+    opacity: 0, 
+    y: 50, 
+    scale: 0.9,
+    rotateX: -10,
+    filter: "blur(8px)"
+  },
+  animate: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    rotateX: 0,
+    filter: "blur(0px)",
+    transition: { 
+      duration: 0.4, 
+      ease: [0.25, 0.46, 0.45, 0.94],
+      delay: 0.1
+    }
+  },
+  exit: { 
+    opacity: 0, 
+    y: -50, 
+    scale: 0.9,
+    rotateX: 10,
+    filter: "blur(5px)",
+    transition: { 
+      duration: 0.2,
+      ease: [0.4, 0, 0.6, 1]
+    }
+  }
+};
+
+// Modern login header animations
+export const loginHeaderVariants = {
+  initial: { 
+    opacity: 0, 
+    y: -30,
+    scale: 0.95,
+    filter: "blur(5px)"
+  },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    scale: 1,
+    filter: "blur(0px)",
     transition: { 
       duration: 0.3, 
-      ease: "easeOut",
+      ease: [0.25, 0.46, 0.45, 0.94],
       staggerChildren: 0.05,
       delayChildren: 0.1
     }
   },
   exit: { 
     opacity: 0, 
+    y: -30,
     scale: 0.95,
-    y: -20,
-    transition: { duration: 0.2, ease: "easeIn" }
+    filter: "blur(5px)",
+    transition: { 
+      duration: 0.2,
+      ease: [0.4, 0, 0.6, 1]
+    }
   }
 };
 
-// Login form animations
-export const loginFormVariants = {
-  initial: { opacity: 0, y: 30, scale: 0.95 },
-  animate: { 
-    opacity: 1, 
-    y: 0, 
+// Modern slide-in animation for auth forms
+export const authFormSlideVariants = {
+  initial: {
+    x: 100,
+    opacity: 0,
+    scale: 0.95,
+    filter: "blur(10px)"
+  },
+  animate: {
+    x: 0,
+    opacity: 1,
     scale: 1,
-    transition: { 
-      duration: 0.3, 
-      ease: "easeOut",
-      delay: 0.1
+    filter: "blur(0px)",
+    transition: {
+      duration: 0.4,
+      ease: [0.25, 0.46, 0.45, 0.94],
+      staggerChildren: 0.05
     }
   },
-  exit: { 
-    opacity: 0, 
-    y: 30, 
+  exit: {
+    x: -100,
+    opacity: 0,
     scale: 0.95,
-    transition: { duration: 0.2 }
+    filter: "blur(5px)",
+    transition: {
+      duration: 0.2,
+      ease: [0.4, 0, 0.6, 1]
+    }
   }
 };
 
-// Login header animations
-export const loginHeaderVariants = {
-  initial: { opacity: 0, y: -20 },
-  animate: { 
-    opacity: 1, 
-    y: 0,
-    transition: { 
-      duration: 0.3, 
-      ease: "easeOut",
-      staggerChildren: 0.1
+// Glass morphism effect for auth pages
+export const glassVariants = {
+  initial: {
+    backdropFilter: "blur(0px)",
+    background: "rgba(255, 255, 255, 0)",
+    scale: 0.9,
+    opacity: 0
+  },
+  animate: {
+    backdropFilter: "blur(20px)",
+    background: "rgba(255, 255, 255, 0.1)",
+    scale: 1,
+    opacity: 1,
+    transition: {
+      duration: 0.4,
+      ease: [0.25, 0.46, 0.45, 0.94]
     }
   },
-  exit: { 
-    opacity: 0, 
-    y: -20,
-    transition: { duration: 0.2 }
+  exit: {
+    backdropFilter: "blur(0px)",
+    background: "rgba(255, 255, 255, 0)",
+    scale: 0.9,
+    opacity: 0,
+    transition: {
+      duration: 0.2,
+      ease: [0.4, 0, 0.6, 1]
+    }
   }
 };
 

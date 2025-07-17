@@ -371,45 +371,62 @@ document.addEventListener('click', (event) => {
     return;
   }
 
-  // Check for CRUD operations first (higher priority)
+  // Priority 1: Form submission buttons -> CRUD sound
   if (target.closest('form') && 
-      (target.tagName === 'BUTTON' && target.type === 'submit')) {
+      (target.tagName === 'BUTTON' && (target.type === 'submit' || target.type === 'button'))) {
     console.log('🔊 Global handler: Form submit button clicked, playing CRUD sound');
     globalSoundHandler.playUserActionSound('crud');
     return;
   }
 
-  // Check for CRUD buttons by text content
+  // Priority 2: CRUD buttons by text content or data attributes
   if (target.tagName === 'BUTTON' || target.closest('button')) {
     const button = target.tagName === 'BUTTON' ? target : target.closest('button');
     const text = button.textContent?.toLowerCase() || '';
+    const ariaLabel = button.getAttribute('aria-label')?.toLowerCase() || '';
+    const dataAction = button.getAttribute('data-action') || '';
     
-    if (text.includes('create') || text.includes('save') || text.includes('update') || 
-        text.includes('delete') || text.includes('submit') || text.includes('add') ||
-        text.includes('edit') || text.includes('remove')) {
+    // Check for CRUD keywords
+    const crudKeywords = ['create', 'save', 'update', 'delete', 'submit', 'add', 'edit', 'remove', 'register', 'login', 'sign in', 'sign up', 'upload', 'download'];
+    
+    if (crudKeywords.some(keyword => text.includes(keyword) || ariaLabel.includes(keyword)) ||
+        dataAction.includes('crud') || dataAction.includes('submit') ||
+        button.form || button.type === 'submit') {
       console.log('🔊 Global handler: CRUD button clicked, playing CRUD sound');
       globalSoundHandler.playUserActionSound('crud');
       return;
     }
   }
 
-  // Special handling for dropdown items - use click sound
+  // Priority 3: Special handling for dropdown items - use click sound
   if (target.closest('[role="menuitem"]') || 
       target.closest('.select-item') ||
       target.closest('[data-radix-select-item]') ||
       target.closest('[role="option"]') ||
       target.closest('select') ||
-      target.closest('.dropdown-menu')) {
+      target.closest('.dropdown-menu') ||
+      target.closest('[data-radix-dropdown-menu-item]') ||
+      target.closest('[data-radix-select-trigger]')) {
     console.log('🔊 Global handler: Dropdown item clicked, playing click sound');
     globalSoundHandler.playUserActionSound('click');
     return;
   }
 
-  // Default click sound for any clickable element
-  if (target.tagName === 'BUTTON' || target.tagName === 'A' || 
-      target.closest('button') || target.closest('a') ||
+  // Priority 4: Navigation items - use click sound
+  if (target.tagName === 'A' || target.closest('a') ||
+      target.closest('nav') || target.closest('[role="navigation"]') ||
+      target.closest('.nav-link') || target.closest('[data-nav]')) {
+    console.log('🔊 Global handler: Navigation item clicked, playing click sound');
+    globalSoundHandler.playUserActionSound('click');
+    return;
+  }
+
+  // Priority 5: Default click sound for any clickable element
+  if (target.tagName === 'BUTTON' || 
+      target.closest('button') ||
       target.getAttribute('role') === 'button' ||
       target.onclick || target.getAttribute('onClick') ||
+      target.closest('[onclick]') ||
       window.getComputedStyle(target).cursor === 'pointer') {
     console.log('🔊 Global handler: Clickable element clicked, playing click sound');
     globalSoundHandler.playUserActionSound('click');
@@ -421,4 +438,3 @@ document.addEventListener('click', (event) => {
 
 // Export for use in other modules
 export default globalSoundHandler;
-```
