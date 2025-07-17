@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +17,7 @@ export function LoginPage() {
   }, []);
 
   return (
-    <motion.div
+    <motion.div 
       variants={loginPageVariants}
       initial="initial"
       animate="animate"
@@ -64,7 +63,7 @@ export function LoginPage() {
               TC
             </motion.span>
           </motion.div>
-          
+
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -73,7 +72,7 @@ export function LoginPage() {
           >
             NavaDhiti
           </motion.h1>
-          
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -110,7 +109,7 @@ export function LoginPage() {
                 </CardDescription>
               </motion.div>
             </CardHeader>
-            
+
             <CardContent>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -119,7 +118,7 @@ export function LoginPage() {
               >
                 <LoginForm />
               </motion.div>
-              
+
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -134,7 +133,7 @@ export function LoginPage() {
                     Forgot your password?
                   </motion.span>
                 </Link>
-                
+
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   Don't have an account?{" "}
                   <Link href="/register">
@@ -164,7 +163,7 @@ export function LoginPage() {
           }}
           className="absolute top-10 right-10 w-20 h-20 bg-blue-400/20 rounded-full blur-xl"
         />
-        
+
         <motion.div
           animate={{
             y: [10, -10, 10],

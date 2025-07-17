@@ -342,7 +342,7 @@ export class SoundManager {
         this.playSound('error');
       }
     });
-    
+
     // Listen for form validation errors
     document.addEventListener('form:validation:error', (event) => {
       if (this.userHasInteracted) {

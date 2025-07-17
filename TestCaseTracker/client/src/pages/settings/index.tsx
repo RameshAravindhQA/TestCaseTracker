@@ -869,20 +869,19 @@ export default function SettingsPage() {
                               <SelectTrigger>
                                 <SelectValue placeholder="Select location" />
                               </SelectTrigger>
-                            </<previous_generation>```python
-FormControl>
-                                <SelectContent>
-                                  <SelectItem value="local">Local Storage</SelectItem>
-                                  <SelectItem value="s3">Amazon S3</SelectItem>
-                                  <SelectItem value="gcs">Google Cloud Storage</SelectItem>
-                                  <SelectItem value="azure">Azure Blob Storage</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="local">Local Storage</SelectItem>
+                              <SelectItem value="s3">Amazon S3</SelectItem>
+                              <SelectItem value="gcs">Google Cloud Storage</SelectItem>
+                              <SelectItem value="azure">Azure Blob Storage</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                       <FormField
                         control={backupForm.control}
@@ -1307,7 +1306,7 @@ FormControl>
               <CardHeader>
                 <CardTitle className="text-lg">Settings</CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
+              <CardContent className="p-0 max-h-[600px] overflow-y-auto">
               <nav className="space-y-1">
                 <AnimatePresence>
                   {settingSections.map((section, index) => (
