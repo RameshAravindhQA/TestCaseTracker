@@ -107,7 +107,12 @@ export async function createGitHubIntegration(req: any, res: any) {
 
 export async function getGitHubIntegrations(req: any, res: any) {
   try {
-    const integrations = await storage.getAllGitHubConfigs(req.user.id);
+    const userId = req.user?.id || req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+    
+    const integrations = await storage.getAllGitHubConfigs(userId);
 
     const enrichedIntegrations = await Promise.all(
       integrations.map(async (integration) => {

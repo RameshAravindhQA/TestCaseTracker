@@ -104,6 +104,7 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
       toast({
         title: "Success",
         description: `GitHub integration ${editingIntegration ? 'updated' : 'created'} successfully`,
+        variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/github/integrations'] });
       onClose();
@@ -138,11 +139,11 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
     return Object.keys(newErrors).length === 0;
   };
 
-  
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }

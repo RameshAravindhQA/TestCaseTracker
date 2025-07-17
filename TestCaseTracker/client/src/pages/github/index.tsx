@@ -71,6 +71,7 @@ export default function GitHubIntegrationPage() {
       toast({
         title: "Connection Test Successful",
         description: `Successfully connected to ${integration.repoUrl}`,
+        variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/github/integrations'] });
     },
@@ -102,6 +103,7 @@ export default function GitHubIntegrationPage() {
       toast({
         title: "Success",
         description: "GitHub integration deleted successfully",
+        variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/github/integrations'] });
     },
