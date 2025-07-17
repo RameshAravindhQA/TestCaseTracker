@@ -1,7 +1,7 @@
 import { ForgotPasswordForm } from "@/components/authentication/forgot-password-form";
 import { NavadhitiLogo } from "@/components/ui/navadhiti-logo";
 import { motion } from "framer-motion";
-import { loginPageVariants, loginHeaderVariants } from "@/lib/animations";
+import { loginPageVariants, loginHeaderVariants, logoVariants } from "@/lib/animations";
 
 export default function ForgotPasswordPage() {
   return (
@@ -19,6 +19,9 @@ export default function ForgotPasswordPage() {
         >
           <motion.div 
             className="flex justify-center mb-6"
+            variants={logoVariants}
+            whileHover="hover"
+            whileTap="tap"
           >
             <NavadhitiLogo size="xl" />
           </motion.div>

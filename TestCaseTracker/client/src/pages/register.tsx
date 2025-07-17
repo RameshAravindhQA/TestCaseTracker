@@ -1,7 +1,7 @@
 import { RegisterForm } from "@/components/authentication/register-form";
 import { NavadhitiLogo } from "@/components/ui/navadhiti-logo";
 import { motion } from "framer-motion";
-import { loginPageVariants, loginHeaderVariants } from "@/lib/animations";
+import { loginPageVariants, loginHeaderVariants, logoVariants } from "@/lib/animations";
 
 export default function RegisterPage() {
   return (

@@ -446,90 +446,28 @@ export const backdropVariants = {
 
 // Login page specific animations - simplified
 export const loginPageVariants = {
-  initial: { opacity: 0 },
-  animate: { 
-    opacity: 1,
-    transition: { duration: 0.15 }
-  },
-  exit: { 
-    opacity: 0,
-    transition: { duration: 0.1 }
-  }
-};
-
-// Login form animations - simplified
-export const loginFormVariants = {
-  initial: { opacity: 0, y: 10 },
+  initial: { opacity: 0, y: 20 },
   animate: { 
     opacity: 1, 
     y: 0,
-    transition: { duration: 0.15 }
+    transition: { duration: 0.5 }
   },
-  exit: { 
-    opacity: 0, 
-    y: 10,
-    transition: { duration: 0.1 }
-  }
+  exit: { opacity: 0, y: -20 }
 };
 
-// Login header animations - enhanced with fall/drop effects
+// Login header animations - simplified
 export const loginHeaderVariants = {
-  initial: { opacity: 0, y: -100, scale: 0.8, rotateZ: -10 },
+  initial: { opacity: 0, y: -20 },
   animate: { 
-    opacity: 1,
+    opacity: 1, 
     y: 0,
-    scale: 1,
-    rotateZ: 0,
-    transition: { 
-      duration: 0.8,
-      ease: "easeOut",
-      type: "spring",
-      stiffness: 200,
-      damping: 15
-    }
-  },
-  exit: { 
-    opacity: 0,
-    y: -50,
-    scale: 0.9,
-    transition: { duration: 0.3 }
+    transition: { delay: 0.2, duration: 0.5 }
   }
 };
 
-// Logo specific animations with bounce effect
 export const logoVariants = {
-  initial: { 
-    opacity: 0, 
-    y: -150, 
-    scale: 0.3, 
-    rotateZ: 15,
-    rotateX: 45
-  },
-  animate: { 
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    rotateZ: 0,
-    rotateX: 0,
-    transition: { 
-      duration: 1.2,
-      ease: "easeOut",
-      type: "spring",
-      stiffness: 150,
-      damping: 12,
-      delay: 0.2
-    }
-  },
-  hover: {
-    scale: 1.1,
-    rotateZ: 5,
-    transition: { duration: 0.3 }
-  },
-  tap: {
-    scale: 0.95,
-    rotateZ: -2,
-    transition: { duration: 0.1 }
-  }
+  hover: { scale: 1.1, rotate: 5 },
+  tap: { scale: 0.95 }
 };
 
 // Curtain reveal effect - simplified
