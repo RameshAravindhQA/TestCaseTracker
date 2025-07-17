@@ -814,7 +814,8 @@ const dataTypes = {
   indian: ['pan', 'aadhaar', 'gst', 'ifsc', 'upi', 'drivingLicense', 'passport', 'vehicleNumber'],
   usa: ['ssn'],
   uk: ['postcode'],
-  canada: ['postalCode'],
+  canada:```text
+['postalCode'],
   australia: ['postcode'],
   germany: ['postcode'],
   france: ['postcode'],
@@ -1598,9 +1599,7 @@ export default function TestDataGeneratorPage() {
               )}
             </CardContent>
           </Card>
+          </div>
         </div>
-      </Card>
       </div>
     </MainLayout>
-  );
-}
