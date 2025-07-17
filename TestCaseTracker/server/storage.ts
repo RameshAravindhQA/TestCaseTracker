@@ -802,7 +802,7 @@ class MemStorage implements IStorage {
 
   ```tool_code
 async getCustomerById(id: number): Promise<Customer | null> {
-    return this.customers< Map<number, any>();
+    return this.customers.get(id) || null;
   }
 
   async updateCustomer(id: number, data: Partial<Customer>): Promise<Customer | null> {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,7 @@ export const WelcomeDialog: React.FC<WelcomeDialogProps> = ({
 
   // Use external state if provided, otherwise use internal state
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
-  
+
   const handleClose = () => {
     localStorage.setItem('hasSeenWelcome', 'true');
     if (externalOnClose) {
@@ -35,11 +34,6 @@ export const WelcomeDialog: React.FC<WelcomeDialogProps> = ({
       setInternalIsOpen(true);
     }
   }, [externalIsOpen]);
-
-  const handleClose = () => {
-    localStorage.setItem('hasSeenWelcome', 'true');
-    onClose();
-  };
 
   const features = [
     {
@@ -72,7 +66,7 @@ export const WelcomeDialog: React.FC<WelcomeDialogProps> = ({
             Welcome to TestCase Tracker! 🎉
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6">
           <div className="text-center">
             <p className="text-lg text-muted-foreground">

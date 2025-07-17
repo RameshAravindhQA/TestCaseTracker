@@ -1,4 +1,3 @@
-
 import { logger } from "../logger";
 import { storage } from "../storage";
 import { githubService } from "../github-service";
@@ -7,7 +6,7 @@ import type { InsertGitHubConfig } from "@shared/github-types";
 export async function createGitHubIntegration(req: any, res: any) {
   try {
     const { projectId, repoUrl, accessToken, webhookSecret } = req.body;
-    
+
     if (!projectId || !repoUrl || !accessToken) {
       return res.status(400).json({ 
         message: "Missing required fields: projectId, repoUrl, accessToken" 
@@ -59,9 +58,9 @@ export async function createGitHubIntegration(req: any, res: any) {
     };
 
     const integration = await storage.createGitHubConfig(integrationData);
-    
+
     logger.info(`GitHub integration created for project ${projectId}`);
-    
+
     res.json({
       success: true,
       integration: {
@@ -83,11 +82,11 @@ export async function createGitHubIntegration(req: any, res: any) {
 export async function getGitHubIntegrations(req: any, res: any) {
   try {
     const integrations = await storage.getAllGitHubConfigs(req.user.id);
-    
+
     const enrichedIntegrations = await Promise.all(
       integrations.map(async (integration) => {
         const project = await storage.getProject(integration.projectId);
-        
+
         // Test connection status
         let connectionStatus = 'unknown';
         try {
@@ -188,9 +187,9 @@ export async function updateGitHubIntegration(req: any, res: any) {
     }
 
     const updatedIntegration = await storage.updateGitHubConfig(parseInt(id), updateData);
-    
+
     logger.info(`GitHub integration ${id} updated`);
-    
+
     res.json({
       success: true,
       integration: updatedIntegration
@@ -219,9 +218,9 @@ export async function deleteGitHubIntegration(req: any, res: any) {
     }
 
     await storage.deleteGitHubConfig(parseInt(id));
-    
+
     logger.info(`GitHub integration ${id} deleted`);
-    
+
     res.json({
       success: true,
       message: 'GitHub integration deleted successfully'
@@ -260,7 +259,7 @@ export async function testGitHubConnection(req: any, res: any) {
     };
 
     const isValid = await githubService.validateConnection(config);
-    
+
     if (isValid) {
       res.json({
         success: true,
