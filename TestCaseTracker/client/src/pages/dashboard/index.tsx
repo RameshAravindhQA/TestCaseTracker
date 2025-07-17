@@ -49,7 +49,7 @@ export function DashboardPage() {
   const [passRateDialogOpen, setPassRateDialogOpen] = useState(false);
 
   // Fetch projects with real-time updates
-  const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
+  const { data: projects, isLoading: isProjectsLoading, error: projectsError } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/projects");
@@ -62,7 +62,7 @@ export function DashboardPage() {
   });
 
   // Fetch test cases with real-time updates
-  const { data: testCases } = useQuery<TestCase[]>({
+  const { data: testCases, isLoading: isTestCasesLoading, error: testCasesError } = useQuery<TestCase[]>({
     queryKey: ["/api/test-cases"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/test-cases");
@@ -75,7 +75,7 @@ export function DashboardPage() {
   });
 
   // Fetch bugs with real-time updates
-  const { data: bugs } = useQuery<BugType[]>({
+  const { data: bugs, isLoading: isBugsLoading, error: bugsError } = useQuery<BugType[]>({
     queryKey: ["/api/bugs"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/bugs");
@@ -89,11 +89,20 @@ export function DashboardPage() {
 
   // Calculate project-wise statistics
   const getProjectStats = () => {
-    if (!projects || !testCases || !bugs) return [];
+    console.log('Dashboard Debug:', {
+      projects: projects?.length || 0,
+      testCases: testCases?.length || 0,
+      bugs: bugs?.length || 0,
+      projectsData: projects,
+      testCasesData: testCases,
+      bugsData: bugs
+    });
+
+    if (!projects) return [];
 
     return projects.map(project => {
-      const projectTestCases = testCases.filter(tc => tc.projectId === project.id);
-      const projectBugs = bugs.filter(bug => bug.projectId === project.id);
+      const projectTestCases = testCases?.filter(tc => tc.projectId === project.id) || [];
+      const projectBugs = bugs?.filter(bug => bug.projectId === project.id) || [];
       const passedTests = projectTestCases.filter(tc => tc.status === 'Pass').length;
       const totalExecuted = projectTestCases.filter(tc => tc.status !== 'Not Executed').length;
       const passRate = totalExecuted > 0 ? Math.round((passedTests / totalExecuted) * 100) : 0;
@@ -103,7 +112,7 @@ export function DashboardPage() {
         testCaseCount: projectTestCases.length,
         bugCount: projectBugs.filter(bug => bug.status !== 'Resolved' && bug.status !== 'Closed').length,
         passRate: passRate,
-        moduleCount: [...new Set(projectTestCases.map(tc => tc.moduleId))].length
+        moduleCount: [...new Set(projectTestCases.map(tc => tc.moduleId))].filter(Boolean).length
       };
     });
   };
@@ -251,7 +260,7 @@ export function DashboardPage() {
                   </Card>
                 </motion.div>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl">
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>Projects Overview</DialogTitle>
                   <DialogDescription>
@@ -259,30 +268,43 @@ export function DashboardPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="max-h-96 overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Project Name</TableHead>
-                        <TableHead>Created Date</TableHead>
-                        <TableHead>Owner</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {projectStats?.map((project) => (
-                        <TableRow key={project.id}>
-                          <TableCell className="font-medium">{project.name}</TableCell>
-                          <TableCell>{new Date(project.createdAt).toLocaleDateString()}</TableCell>
-                          <TableCell>{user?.firstName} {user?.lastName}</TableCell>
-                          <TableCell>{project.description || 'No description'}</TableCell>
-                          <TableCell>
-                            <Badge variant="default">Active</Badge>
-                          </TableCell>
+                  {projectStats && projectStats.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Project Name</TableHead>
+                          <TableHead>Created Date</TableHead>
+                          <TableHead>Owner</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Status</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {projectStats.map((project) => (
+                          <TableRow key={project.id}>
+                            <TableCell className="font-medium">{project.name}</TableCell>
+                            <TableCell>{new Date(project.createdAt).toLocaleDateString()}</TableCell>
+                            <TableCell>{user?.firstName} {user?.lastName}</TableCell>
+                            <TableCell>{project.description || 'No description'}</TableCell>
+                            <TableCell>
+                              <Badge variant="default">{project.status || 'Active'}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">
+                        {isProjectsLoading ? 'Loading projects...' : 'No projects found'}
+                      </p>
+                      {projectsError && (
+                        <p className="text-red-500 text-sm mt-2">
+                          Error: {projectsError.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </DialogContent>
             </Dialog>
@@ -311,7 +333,7 @@ export function DashboardPage() {
                   </Card>
                 </motion.div>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl">
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>Test Cases Overview</DialogTitle>
                   <DialogDescription>
@@ -319,45 +341,58 @@ export function DashboardPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="max-h-96 overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Project Name</TableHead>
-                        <TableHead>Module Count</TableHead>
-                        <TableHead>Total Test Cases</TableHead>
-                        <TableHead>Pass Rate</TableHead>
-                        <TableHead>Status Distribution</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {projectStats?.map((project) => {
-                        const projectTestCases = testCases?.filter(tc => tc.projectId === project.id) || [];
-                        const passCount = projectTestCases.filter(tc => tc.status === 'Pass').length;
-                        const failCount = projectTestCases.filter(tc => tc.status === 'Fail').length;
-                        const blockedCount = projectTestCases.filter(tc => tc.status === 'Blocked').length;
+                  {projectStats && projectStats.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Project Name</TableHead>
+                          <TableHead>Module Count</TableHead>
+                          <TableHead>Total Test Cases</TableHead>
+                          <TableHead>Pass Rate</TableHead>
+                          <TableHead>Status Distribution</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {projectStats.map((project) => {
+                          const projectTestCases = testCases?.filter(tc => tc.projectId === project.id) || [];
+                          const passCount = projectTestCases.filter(tc => tc.status === 'Pass').length;
+                          const failCount = projectTestCases.filter(tc => tc.status === 'Fail').length;
+                          const blockedCount = projectTestCases.filter(tc => tc.status === 'Blocked').length;
 
-                        return (
-                          <TableRow key={project.id}>
-                            <TableCell className="font-medium">{project.name}</TableCell>
-                            <TableCell>{project.moduleCount}</TableCell>
-                            <TableCell>{project.testCaseCount}</TableCell>
-                            <TableCell>
-                              <Badge variant={project.passRate >= 80 ? 'default' : project.passRate >= 60 ? 'secondary' : 'destructive'}>
-                                {project.passRate}%
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1 text-xs">
-                                <span className="text-green-600">P:{passCount}</span>
-                                <span className="text-red-600">F:{failCount}</span>
-                                <span className="text-yellow-600">B:{blockedCount}</span>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                          return (
+                            <TableRow key={project.id}>
+                              <TableCell className="font-medium">{project.name}</TableCell>
+                              <TableCell>{project.moduleCount}</TableCell>
+                              <TableCell>{project.testCaseCount}</TableCell>
+                              <TableCell>
+                                <Badge variant={project.passRate >= 80 ? 'default' : project.passRate >= 60 ? 'secondary' : 'destructive'}>
+                                  {project.passRate}%
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1 text-xs">
+                                  <span className="text-green-600">P:{passCount}</span>
+                                  <span className="text-red-600">F:{failCount}</span>
+                                  <span className="text-yellow-600">B:{blockedCount}</span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">
+                        {isTestCasesLoading ? 'Loading test cases...' : 'No test cases found'}
+                      </p>
+                      {testCasesError && (
+                        <p className="text-red-500 text-sm mt-2">
+                          Error: {testCasesError.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </DialogContent>
             </Dialog>
@@ -386,7 +421,7 @@ export function DashboardPage() {
                   </Card>
                 </motion.div>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl">
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>Open Bugs Overview</DialogTitle>
                   <DialogDescription>
@@ -469,7 +504,7 @@ export function DashboardPage() {
                   </Card>
                 </motion.div>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl">
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>Pass Rate by Project</DialogTitle>
                   <DialogDescription>
