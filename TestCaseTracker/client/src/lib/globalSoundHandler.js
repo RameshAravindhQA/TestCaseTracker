@@ -314,5 +314,31 @@ class GlobalSoundHandler {
 // Create global instance
 const globalSoundHandler = new GlobalSoundHandler();
 
+// Handle all clicks globally and play sound
+document.addEventListener('click', (event) => {
+  if (globalSoundHandler.isInitialized) {
+    // Handle all clicks but exclude certain elements
+      if (event.target.closest('.no-sound') || 
+          event.target.closest('[data-no-sound]') ||
+          event.target.closest('audio') ||
+          event.target.closest('video') ||
+          event.target.closest('[role="option"]') ||
+          event.target.closest('[data-radix-collection-item]') ||
+          event.target.closest('.dropdown-content')) {
+        return;
+      }
+
+      // Special handling for dropdown items - use click sound instead of CRUD
+      if (event.target.closest('[role="menuitem"]') || 
+          event.target.closest('.select-item') ||
+          event.target.closest('[data-radix-select-item]')) {
+        this.playClickSound();
+        return;
+      }
+
+    globalSoundHandler.playUserActionSound('click');
+  }
+});
+
 // Export for use in other modules
 export default globalSoundHandler;

@@ -50,8 +50,13 @@ export const LottieAnimation: React.FC<LottieAnimationProps> = ({
         if (path) {
           console.log('🎬 Loading Lottie animation from:', path);
           
-          const response = await fetch(path);
+          // Construct proper path for Lottie files
+          const fullPath = path.startsWith('/') ? path : `/lottie/${path}`;
+          console.log('🎬 Full animation path:', fullPath);
+          
+          const response = await fetch(fullPath);
           if (!response.ok) {
+            console.error(`❌ Failed to fetch animation: ${response.status} ${response.statusText}`);
             throw new Error(`Failed to load animation: ${response.status} ${response.statusText}`);
           }
 
@@ -64,7 +69,31 @@ export const LottieAnimation: React.FC<LottieAnimationProps> = ({
           // Check if response is HTML (error page)
           if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
             console.error('❌ Received HTML instead of JSON for Lottie animation');
-            throw new Error('Animation file not found - received HTML instead of JSON');
+            // Try alternative path
+            const altPath = `/public/lottie/${path.replace('/lottie/', '')}`;
+            console.log('🔄 Trying alternative path:', altPath);
+            
+            const altResponse = await fetch(altPath);
+            if (!altResponse.ok) {
+              throw new Error('Animation file not found in any location');
+            }
+            
+            const altText = await altResponse.text();
+            if (altText.trim().startsWith('<!DOCTYPE') || altText.trim().startsWith('<html')) {
+              throw new Error('Animation file not found - received HTML instead of JSON');
+            }
+            
+            // Use the alternative response
+            const altJsonData = JSON.parse(altText);
+            animationRef.current = lottie.loadAnimation({
+              container: containerRef.current!,
+              renderer: 'svg',
+              loop,
+              autoplay,
+              animationData: altJsonData,
+            });
+            setIsLoading(false);
+            return;
           }
 
           let jsonData;

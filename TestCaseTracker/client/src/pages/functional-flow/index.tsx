@@ -206,11 +206,29 @@ export default function FunctionalFlowPage() {
       const imgHeight = canvas.height;
       const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
       const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 30;
+      const imgY = 60; // Increased to make room for header
 
-      pdf.text(diagramName || 'Flow Diagram', pdfWidth / 2, 20, { align: 'center' });
+      // Get selected project name
+      const selectedProjectName = projects.find((p: Project) => p.id === selectedProject)?.name || 'Unknown Project';
+
+      // Add header with project details
+      pdf.setFontSize(16);
+      pdf.text('TestCaseTracker - Functional Flow Diagram', pdfWidth / 2, 15, { align: 'center' });
+      
+      pdf.setFontSize(12);
+      pdf.text(`Project: ${selectedProjectName}`, 20, 30);
+      pdf.text(`Diagram: ${diagramName || 'Untitled Flow'}`, 20, 40);
+      pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 50);
+      
+      if (diagramDescription) {
+        pdf.text(`Description: ${diagramDescription}`, 20, 55);
+      }
+
+      // Add a line separator
+      pdf.line(20, 58, pdfWidth - 20, 58);
+
       pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-      pdf.save(`flow-diagram-${Date.now()}.pdf`);
+      pdf.save(`${selectedProjectName}_${diagramName || 'flow-diagram'}_${Date.now()}.pdf`);
 
       toast({
         title: 'Success',

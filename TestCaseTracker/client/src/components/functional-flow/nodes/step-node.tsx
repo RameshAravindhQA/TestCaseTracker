@@ -2,6 +2,30 @@ import { Handle, NodeProps, Position } from 'reactflow';
 
 export function StepNode({ data }: NodeProps) {
   return (
+    <div className="px-6 py-3 rounded-lg bg-blue-400 text-white border-2 border-blue-500 min-w-[120px] text-center shadow-md">
+      <div className="font-medium">{data.label || 'Process Step'}</div>
+      
+      {/* Input handle */}
+      <Handle 
+        type="target" 
+        position={Position.Top} 
+        id="input" 
+        style={{ background: '#fff', width: '8px', height: '8px', border: '2px solid #3b82f6' }}
+      />
+      
+      {/* Output handle */}
+      <Handle 
+        type="source" 
+        position={Position.Bottom} 
+        id="output" 
+        style={{ background: '#fff', width: '8px', height: '8px', border: '2px solid #3b82f6' }}
+      />
+    </div>
+  );
+}
+
+export function StepNode({ data }: NodeProps) {
+  return (
     <div 
       className="px-4 py-2 rounded bg-blue-100 border-2 border-blue-300 min-w-[150px] shadow-md"
       style={{ backgroundColor: data.bgColor || '#dbeafe' }}

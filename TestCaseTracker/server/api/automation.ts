@@ -87,7 +87,7 @@ router.post('/start-recording', async (req, res) => {
         session.status = 'error';
       }
     });
-    
+
     try {
     // Generate unique filename for this recording session
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -254,5 +254,15 @@ router.get('/recordings/:filename', async (req, res) => {
     res.status(404).json({ error: 'Recording file not found' });
   }
 });
+
+router.get('/scripts', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.json([]);
+  });
+
+  router.get('/recordings', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.json([]);
+  });
 
 export default router;
