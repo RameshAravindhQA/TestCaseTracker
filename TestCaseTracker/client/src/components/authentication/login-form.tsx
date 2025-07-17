@@ -75,7 +75,10 @@ export function LoginForm() {
       // Invalidate queries to refresh user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
-      setShowWelcomeDialog(true);
+      // Show welcome dialog with a slight delay to ensure DOM is ready
+      setTimeout(() => {
+        setShowWelcomeDialog(true);
+      }, 100);
 
       // Don't navigate immediately, wait for welcome dialog to close
     },

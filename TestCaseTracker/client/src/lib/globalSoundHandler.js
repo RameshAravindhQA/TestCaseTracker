@@ -99,7 +99,11 @@ class GlobalSoundHandler {
            errorString.includes('unhandled promise rejection') ||
            errorString.includes('loading') ||
            errorString.includes('preload') ||
-           errorString.includes('resource');
+           errorString.includes('resource') ||
+           errorString.includes('sound') ||
+           errorString.includes('audio') ||
+           errorString.includes('lottie') ||
+           errorString.includes('animation');
   }
 
   // Check if error is development-related (shouldn't trigger sounds)

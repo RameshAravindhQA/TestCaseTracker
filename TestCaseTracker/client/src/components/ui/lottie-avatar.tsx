@@ -1,12 +1,12 @@
 
-import React, { useEffect, useRef, useState } from 'react';
-import Lottie, { LottieRefCurrentProps } from 'lottie-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import Lottie from 'lottie-react';
+import { Button } from './button';
+import { Card } from './card';
+import { Badge } from './badge';
 import { useToast } from '@/hooks/use-toast';
+import { Play, Pause, RotateCcw, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, RefreshCw, Check, X, Upload, Download } from 'lucide-react';
 
 interface LottieAvatarProps {
   animationData?: any;
@@ -41,262 +41,270 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
   name = "Animation",
   style = {}
 }) => {
-  const lottieRef = useRef<LottieRefCurrentProps>(null);
+  const lottieRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(autoplay);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const { toast } = useToast();
 
-  // Handle animation loading
+  // Validate animation data
+  const validateAnimationData = useCallback((data: any): boolean => {
+    if (!data || typeof data !== 'object') {
+      setErrorMessage('Invalid animation data: not an object');
+      return false;
+    }
+
+    const hasVersion = data.v || data.version;
+    const hasLayers = Array.isArray(data.layers) && data.layers.length > 0;
+    const hasFrameRate = data.fr || data.frameRate;
+
+    if (!hasVersion) {
+      setErrorMessage('Invalid Lottie: missing version');
+      return false;
+    }
+
+    if (!hasLayers) {
+      setErrorMessage('Invalid Lottie: missing or empty layers');
+      return false;
+    }
+
+    if (!hasFrameRate) {
+      setErrorMessage('Invalid Lottie: missing frame rate');
+      return false;
+    }
+
+    // Ensure required properties exist
+    if (!data.w && !data.width) data.w = width;
+    if (!data.h && !data.height) data.h = height;
+    if (!data.fr && !data.frameRate) data.fr = 30;
+    if (!data.ip) data.ip = 0;
+    if (!data.op) data.op = data.frames || 60;
+    if (!data.ddd) data.ddd = 0;
+    if (!data.assets) data.assets = [];
+
+    return true;
+  }, [width, height]);
+
+  // Handle animation data changes
   useEffect(() => {
-    if (animationData && lottieRef.current) {
-      try {
-        setIsLoaded(true);
-        setHasError(false);
-        setLoadingProgress(100);
-        
-        if (autoplay) {
-          lottieRef.current.play();
-          setIsPlaying(true);
-        }
-      } catch (error) {
-        console.error('Error loading Lottie animation:', error);
+    if (animationData) {
+      setHasError(false);
+      setErrorMessage('');
+      setLoadingProgress(0);
+      
+      const isValid = validateAnimationData(animationData);
+      if (!isValid) {
         setHasError(true);
-        setIsLoaded(false);
-        onAnimationError?.(error);
+        onAnimationError?.(new Error(errorMessage));
+        return;
+      }
+      
+      setIsLoaded(true);
+      setLoadingProgress(100);
+    }
+  }, [animationData, validateAnimationData, errorMessage, onAnimationError]);
+
+  // Animation event handlers
+  const handleAnimationComplete = useCallback(() => {
+    console.log(`🎬 Animation "${name}" completed`);
+    onAnimationComplete?.();
+  }, [name, onAnimationComplete]);
+
+  const handleAnimationError = useCallback((error: any) => {
+    console.error(`🎬 Animation "${name}" error:`, error);
+    setHasError(true);
+    setErrorMessage(error.message || 'Animation playback error');
+    onAnimationError?.(error);
+  }, [name, onAnimationError]);
+
+  const handlePlay = useCallback(() => {
+    if (lottieRef.current) {
+      try {
+        lottieRef.current.play();
+        setIsPlaying(true);
+      } catch (error) {
+        handleAnimationError(error);
       }
     }
-  }, [animationData, autoplay, onAnimationError]);
+  }, [handleAnimationError]);
 
-  // Control functions
-  const handlePlay = () => {
-    if (lottieRef.current && !isPlaying) {
-      lottieRef.current.play();
-      setIsPlaying(true);
-    }
-  };
-
-  const handlePause = () => {
-    if (lottieRef.current && isPlaying) {
-      lottieRef.current.pause();
-      setIsPlaying(false);
-    }
-  };
-
-  const handleStop = () => {
+  const handlePause = useCallback(() => {
     if (lottieRef.current) {
-      lottieRef.current.stop();
-      setIsPlaying(false);
+      try {
+        lottieRef.current.pause();
+        setIsPlaying(false);
+      } catch (error) {
+        handleAnimationError(error);
+      }
     }
-  };
+  }, [handleAnimationError]);
 
-  const handleRestart = () => {
+  const handleRestart = useCallback(() => {
     if (lottieRef.current) {
-      lottieRef.current.goToAndPlay(0);
-      setIsPlaying(true);
+      try {
+        lottieRef.current.goToAndPlay(0);
+        setIsPlaying(true);
+      } catch (error) {
+        handleAnimationError(error);
+      }
     }
-  };
+  }, [handleAnimationError]);
 
-  const togglePlayPause = () => {
-    if (isPlaying) {
-      handlePause();
-    } else {
-      handlePlay();
+  const handleSelect = useCallback(() => {
+    if (onSelect) {
+      onSelect();
+      toast({
+        title: "Animation Selected",
+        description: `"${name}" has been selected as your avatar.`,
+      });
     }
-  };
-
-  // Event handlers
-  const handleDataReady = () => {
-    console.log(`✅ Lottie data ready: ${name}`);
-    setIsLoaded(true);
-    setLoadingProgress(100);
-  };
-
-  const handleComplete = () => {
-    console.log(`🔄 Animation completed: ${name}`);
-    onAnimationComplete?.();
-    if (!loop) {
-      setIsPlaying(false);
-    }
-  };
-
-  const handleLoopComplete = () => {
-    console.log(`🔁 Loop completed: ${name}`);
-  };
-
-  const handleError = (error: any) => {
-    console.error(`❌ Lottie error for ${name}:`, error);
-    setHasError(true);
-    setIsLoaded(false);
-    onAnimationError?.(error);
-  };
-
-  // Render error state
-  if (hasError || !animationData) {
-    return (
-      <div 
-        className={`flex items-center justify-center border-2 border-dashed border-red-300 rounded-lg bg-red-50 ${className}`}
-        style={{ width, height, ...style }}
-      >
-        <div className="text-center p-2">
-          <X className="w-6 h-6 text-red-500 mx-auto mb-1" />
-          <p className="text-xs text-red-600">Failed to load</p>
-        </div>
-      </div>
-    );
-  }
+  }, [onSelect, name, toast]);
 
   // Render loading state
-  if (!isLoaded) {
+  if (!animationData) {
     return (
-      <div 
-        className={`flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 ${className}`}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={`flex items-center justify-center bg-muted rounded-lg ${className}`}
         style={{ width, height, ...style }}
       >
-        <div className="text-center p-2">
-          <RefreshCw className="w-6 h-6 text-gray-500 mx-auto mb-1 animate-spin" />
-          <p className="text-xs text-gray-600">Loading...</p>
-          {loadingProgress > 0 && (
-            <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
-              <div 
-                className="bg-blue-500 h-1 rounded-full transition-all duration-300"
-                style={{ width: `${loadingProgress}%` }}
-              />
-            </div>
-          )}
+        <div className="text-center">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+          <p className="text-xs text-muted-foreground">Loading...</p>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
-  // Preview mode rendering
-  if (previewMode) {
+  // Render error state
+  if (hasError) {
     return (
       <motion.div
-        className={`relative cursor-pointer rounded-lg border-2 transition-all duration-300 ${
-          selected 
-            ? 'border-primary bg-primary/5 shadow-lg' 
-            : 'border-gray-200 hover:border-primary/50 hover:shadow-md'
-        } ${className}`}
-        onClick={onSelect}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        style={style}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={`flex items-center justify-center bg-destructive/10 border border-destructive/20 rounded-lg ${className}`}
+        style={{ width, height, ...style }}
       >
-        <div className="p-4">
-          <div className="flex items-center justify-center mb-2" style={{ width, height }}>
-            <Lottie
-              lottieRef={lottieRef}
-              animationData={animationData}
-              autoplay={autoplay}
-              loop={loop}
-              style={{ width: '100%', height: '100%' }}
-              onDataReady={handleDataReady}
-              onComplete={handleComplete}
-              onLoopComplete={handleLoopComplete}
-              onError={handleError}
-              renderer="svg"
-              rendererSettings={{
-                preserveAspectRatio: 'xMidYMid meet',
-                clearCanvas: true,
-                progressiveLoad: false,
-                hideOnTransparent: true
-              }}
-            />
-          </div>
-          
-          <p className="text-sm font-medium text-center truncate">{name}</p>
-          
+        <div className="text-center p-2">
+          <AlertCircle className="h-6 w-6 text-destructive mx-auto mb-2" />
+          <p className="text-xs text-destructive">{errorMessage}</p>
           {controls && (
-            <div className="flex justify-center mt-2">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  togglePlayPause();
-                }}
-              >
-                {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-              </Button>
-            </div>
-          )}
-          
-          {selected && (
-            <div className="absolute top-2 right-2">
-              <Badge variant="default" className="bg-primary">
-                <Check className="w-3 h-3 mr-1" />
-                Selected
-              </Badge>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setHasError(false);
+                setErrorMessage('');
+              }}
+              className="mt-2"
+            >
+              Retry
+            </Button>
           )}
         </div>
       </motion.div>
     );
   }
 
-  // Regular mode rendering
+  // Main render
   return (
-    <div className={`relative ${className}`} style={style}>
-      <div style={{ width, height }}>
-        <Lottie
-          lottieRef={lottieRef}
-          animationData={animationData}
-          autoplay={autoplay}
-          loop={loop}
-          style={{ width: '100%', height: '100%' }}
-          onDataReady={handleDataReady}
-          onComplete={handleComplete}
-          onLoopComplete={handleLoopComplete}
-          onError={handleError}
-          renderer="svg"
-          rendererSettings={{
-            preserveAspectRatio: 'xMidYMid meet',
-            clearCanvas: true,
-            progressiveLoad: false,
-            hideOnTransparent: true
-          }}
-        />
-      </div>
-      
-      {controls && (
-        <div className="absolute bottom-0 left-0 right-0 bg-black/50 backdrop-blur-sm rounded-b-lg p-1">
-          <div className="flex justify-center space-x-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={togglePlayPause}
-              className="text-white hover:bg-white/20"
-            >
-              {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleRestart}
-              className="text-white hover:bg-white/20"
-            >
-              <RefreshCw className="w-3 h-3" />
-            </Button>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.2 }}
+      className={`relative ${className}`}
+      style={style}
+    >
+      {/* Preview mode wrapper */}
+      {previewMode ? (
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className={`cursor-pointer border-2 rounded-lg p-2 transition-all ${
+            selected 
+              ? 'border-primary bg-primary/5 shadow-md' 
+              : 'border-border hover:border-primary/50'
+          }`}
+          onClick={handleSelect}
+        >
+          <div className="relative">
+            <Lottie
+              lottieRef={lottieRef}
+              animationData={animationData}
+              style={{ width, height }}
+              loop={loop}
+              autoplay={autoplay && isPlaying}
+              onComplete={handleAnimationComplete}
+              onError={handleAnimationError}
+            />
+            {selected && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full">
+                <CheckCircle className="h-3 w-3 text-white" />
+              </div>
+            )}
           </div>
+          <p className="text-xs text-center mt-1 truncate" title={name}>
+            {name}
+          </p>
+        </motion.div>
+      ) : (
+        /* Normal mode */
+        <div className="relative">
+          <Lottie
+            lottieRef={lottieRef}
+            animationData={animationData}
+            style={{ width, height }}
+            loop={loop}
+            autoplay={autoplay && isPlaying}
+            onComplete={handleAnimationComplete}
+            onError={handleAnimationError}
+          />
+          
+          {/* Controls overlay */}
+          <AnimatePresence>
+            {controls && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute bottom-0 left-0 right-0 bg-black/50 rounded-b-lg p-1"
+              >
+                <div className="flex items-center justify-center space-x-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={isPlaying ? handlePause : handlePlay}
+                    className="h-6 w-6 p-0 text-white hover:bg-white/20"
+                  >
+                    {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRestart}
+                    className="h-6 w-6 p-0 text-white hover:bg-white/20"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
-      
-      {/* Status indicator */}
-      <div className="absolute top-1 right-1">
-        <div className={`w-2 h-2 rounded-full ${isLoaded ? 'bg-green-500' : 'bg-yellow-500'}`} />
-      </div>
-    </div>
+    </motion.div>
   );
 };
 
-// Export additional components for specific use cases
+// Grid component for displaying multiple animations
 export const LottieAvatarGrid: React.FC<{
   animations: Array<{
     id: string;
     name: string;
-    data: any;
+    preview: any;
     selected?: boolean;
     onSelect?: () => void;
   }>;
@@ -312,11 +320,11 @@ export const LottieAvatarGrid: React.FC<{
   showControls = true 
 }) => {
   return (
-    <div className={`grid gap-4 grid-cols-1 md:grid-cols-${Math.min(gridCols, 4)}`}>
+    <div className={`grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-${Math.min(gridCols, 6)}`}>
       {animations.map((animation) => (
         <LottieAvatar
           key={animation.id}
-          animationData={animation.data}
+          animationData={animation.preview}
           name={animation.name}
           width={itemWidth}
           height={itemHeight}
@@ -324,7 +332,7 @@ export const LottieAvatarGrid: React.FC<{
           selected={animation.selected}
           onSelect={animation.onSelect}
           controls={showControls}
-          className="transition-all duration-300"
+          className="transition-all duration-200"
         />
       ))}
     </div>

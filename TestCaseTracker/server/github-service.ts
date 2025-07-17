@@ -1,7 +1,7 @@
 import { logger } from "./logger";
 import { storage } from "./storage";
 import type { GitHubConfig, GitHubIssuePayload, InsertGitHubIssue } from "@shared/github-types";
-import { Octokit } from "octokit";
+import { Octokit } from "@octokit/rest";
 
 export class GitHubService {
   private async makeGitHubRequest(
@@ -485,6 +485,8 @@ ${bug.comments || 'No additional comments.'}
 
       const octokit = new Octokit({
         auth: config.personalAccessToken.trim(),
+        baseUrl: 'https://api.github.com',
+        userAgent: 'TestCaseTracker v1.0.0',
       });
 
       // Test authentication by getting user info

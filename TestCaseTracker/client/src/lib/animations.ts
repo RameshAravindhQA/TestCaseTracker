@@ -1,43 +1,43 @@
 // Enhanced Animation Library for Test Case Tracker
 import { Variants } from "framer-motion";
 
-// Page Transition Variants
+// Page Transition Variants - Lightweight for better performance
 export const pageTransitions = {
   // Fade transitions
   fade: {
     initial: { opacity: 0 },
     animate: { opacity: 1 },
     exit: { opacity: 0 },
-    transition: { duration: 0.3, ease: "easeInOut" }
+    transition: { duration: 0.15, ease: "easeInOut" }
   },
 
-  // Slide transitions
+  // Slide transitions - Lightweight
   slideLeft: {
-    initial: { x: -100, opacity: 0 },
+    initial: { x: -20, opacity: 0 },
     animate: { x: 0, opacity: 1 },
-    exit: { x: 100, opacity: 0 },
-    transition: { duration: 0.4, ease: "easeInOut" }
+    exit: { x: 20, opacity: 0 },
+    transition: { duration: 0.2, ease: "easeInOut" }
   },
 
   slideRight: {
-    initial: { x: 100, opacity: 0 },
+    initial: { x: 20, opacity: 0 },
     animate: { x: 0, opacity: 1 },
-    exit: { x: -100, opacity: 0 },
-    transition: { duration: 0.4, ease: "easeInOut" }
+    exit: { x: -20, opacity: 0 },
+    transition: { duration: 0.2, ease: "easeInOut" }
   },
 
   slideUp: {
-    initial: { y: 100, opacity: 0 },
+    initial: { y: 20, opacity: 0 },
     animate: { y: 0, opacity: 1 },
-    exit: { y: -100, opacity: 0 },
-    transition: { duration: 0.4, ease: "easeInOut" }
+    exit: { y: -20, opacity: 0 },
+    transition: { duration: 0.2, ease: "easeInOut" }
   },
 
   slideDown: {
-    initial: { y: -100, opacity: 0 },
+    initial: { y: -20, opacity: 0 },
     animate: { y: 0, opacity: 1 },
-    exit: { y: 100, opacity: 0 },
-    transition: { duration: 0.4, ease: "easeInOut" }
+    exit: { y: 20, opacity: 0 },
+    transition: { duration: 0.2, ease: "easeInOut" }
   },
 
   // Zoom transitions
