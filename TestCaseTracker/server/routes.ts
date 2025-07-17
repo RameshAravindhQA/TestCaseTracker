@@ -1004,15 +1004,15 @@ app.get('/api/automation/health', (req, res) => {
   res.json({ status: 'ok', message: 'Automation service is running' });
 });
 
-app.get('/api/automation/scripts', requireAuth, (req, res) => {
+app.get('/api/automation/scripts', isAuthenticated, (req, res) => {
   res.json([]);
 });
 
-app.get('/api/automation/recordings', requireAuth, (req, res) => {
+app.get('/api/automation/recordings', isAuthenticated, (req, res) => {
   res.json([]);
 });
 
-app.post('/api/automation/start-recording', requireAuth, (req, res) => {
+app.post('/api/automation/start-recording', isAuthenticated, (req, res) => {
   const { url, projectId, moduleId, testCaseId } = req.body;
   
   if (!url) {
@@ -1038,7 +1038,7 @@ app.post('/api/automation/start-recording', requireAuth, (req, res) => {
   });
 });
 
-app.post('/api/automation/stop-recording', requireAuth, (req, res) => {
+app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   const { sessionId } = req.body;
   
   res.json({
