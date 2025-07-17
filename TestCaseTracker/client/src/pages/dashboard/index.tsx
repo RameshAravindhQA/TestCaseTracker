@@ -67,7 +67,9 @@ export function DashboardPage() {
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/test-cases");
       if (!response.ok) throw new Error("Failed to fetch test cases");
-      return response.json();
+      const data = await response.json();
+      console.log('Dashboard - Fetched test cases:', data);
+      return Array.isArray(data) ? data : [];
     },
     staleTime: 0,
     refetchInterval: 5000,
@@ -185,6 +187,17 @@ export function DashboardPage() {
   const totalTestCases = testCases?.length || 0;
   const openBugs = bugs?.filter(bug => bug.status !== 'Resolved' && bug.status !== 'Closed').length || 0;
 
+  // Debug logging
+  console.log('Dashboard Debug - Data Summary:', {
+    totalProjects,
+    totalTestCases,
+    testCasesData: testCases,
+    projectsData: projects,
+    openBugs,
+    isTestCasesLoading,
+    testCasesError: testCasesError?.message
+  });
+
   const passedTests = testCases?.filter(tc => tc.status === 'Pass').length || 0;
   const totalExecutedTests = testCases?.filter(tc => tc.status !== 'Not Executed').length || 0;
   const passRate = totalExecutedTests > 0 ? Math.round((passedTests / totalExecutedTests) * 100) : 0;
@@ -260,14 +273,14 @@ export function DashboardPage() {
                   </Card>
                 </motion.div>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+              <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
                 <DialogHeader>
                   <DialogTitle>Projects Overview</DialogTitle>
                   <DialogDescription>
                     Detailed view of all your testing projects
                   </DialogDescription>
                 </DialogHeader>
-                <div className="max-h-96 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto pr-2">
                   {projectStats && projectStats.length > 0 ? (
                     <Table>
                       <TableHeader>
@@ -340,7 +353,7 @@ export function DashboardPage() {
                     Test cases breakdown by project with module count and detailed test case list
                   </DialogDescription>
                 </DialogHeader>
-                <div className="flex-1 overflow-y-auto space-y-6">
+                <div className="flex-1 overflow-y-auto space-y-6 pr-2">
                   {/* Project Summary Table */}
                   {projectStats && projectStats.length > 0 ? (
                     <div className="space-y-4">
@@ -392,17 +405,17 @@ export function DashboardPage() {
                       {/* Detailed Test Cases List */}
                       {testCases && testCases.length > 0 && (
                         <div className="space-y-2">
-                          <h3 className="text-lg font-semibold">All Test Cases</h3>
-                          <div className="max-h-64 overflow-y-auto border rounded-lg">
+                          <h3 className="text-lg font-semibold">All Test Cases ({testCases.length})</h3>
+                          <div className="max-h-96 overflow-y-auto border rounded-lg">
                             <Table>
-                              <TableHeader className="sticky top-0 bg-white">
+                              <TableHeader className="sticky top-0 bg-white z-10">
                                 <TableRow>
-                                  <TableHead>Test Case ID</TableHead>
-                                  <TableHead>Feature</TableHead>
-                                  <TableHead>Project</TableHead>
-                                  <TableHead>Status</TableHead>
-                                  <TableHead>Priority</TableHead>
-                                  <TableHead>Created</TableHead>
+                                  <TableHead className="min-w-[120px]">Test Case ID</TableHead>
+                                  <TableHead className="min-w-[150px]">Feature</TableHead>
+                                  <TableHead className="min-w-[120px]">Project</TableHead>
+                                  <TableHead className="min-w-[100px]">Status</TableHead>
+                                  <TableHead className="min-w-[100px]">Priority</TableHead>
+                                  <TableHead className="min-w-[100px]">Created</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -411,7 +424,9 @@ export function DashboardPage() {
                                   return (
                                     <TableRow key={testCase.id} className="hover:bg-gray-50">
                                       <TableCell className="font-mono text-sm">{testCase.testCaseId}</TableCell>
-                                      <TableCell>{testCase.feature || testCase.scenario || 'N/A'}</TableCell>
+                                      <TableCell className="max-w-[200px] truncate" title={testCase.feature || testCase.scenario || 'N/A'}>
+                                        {testCase.feature || testCase.scenario || 'N/A'}
+                                      </TableCell>
                                       <TableCell>{project?.name || 'Unknown'}</TableCell>
                                       <TableCell>
                                         <Badge variant={
@@ -483,14 +498,14 @@ export function DashboardPage() {
                   </Card>
                 </motion.div>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+              <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
                 <DialogHeader>
                   <DialogTitle>Open Bugs Overview</DialogTitle>
                   <DialogDescription>
                     Bug count breakdown by project
                   </DialogDescription>
                 </DialogHeader>
-                <div className="max-h-96 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto pr-2">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -566,14 +581,14 @@ export function DashboardPage() {
                   </Card>
                 </motion.div>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+              <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
                 <DialogHeader>
                   <DialogTitle>Pass Rate by Project</DialogTitle>
                   <DialogDescription>
                     Test pass percentage breakdown by project
                   </DialogDescription>
                 </DialogHeader>
-                <div className="max-h-96 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto pr-2">
                   <Table>
                     <TableHeader>
                       <TableRow>
