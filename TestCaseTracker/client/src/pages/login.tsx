@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { LoginForm } from "@/components/authentication/login-form";
 import { NavaDhitiLogo } from "@/components/ui/navadhiti-logo";
 import { motion } from "framer-motion";
-import { loginPageVariants, loginFormVariants, loginHeaderVariants, authFormSlideVariants, glassVariants } from "@/lib/animations";
+import { loginPageVariants, loginFormVariants, loginHeaderVariants, curtainRevealVariants } from "@/lib/animations";
 import { useQuery } from "@tanstack/react-query";
 
 function LoginPage() {
@@ -25,31 +25,13 @@ function LoginPage() {
   }, [user, isLoading, navigate]);
 
   return (
-    <motion.div 
-      className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 flex items-center justify-center p-4 relative overflow-hidden"
+    <motion.div
       variants={loginPageVariants}
       initial="initial"
       animate="animate"
       exit="exit"
+      className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 relative overflow-hidden"
     >
-      {/* Animated background elements */}
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-blue-400/20 via-indigo-400/20 to-purple-400/20"
-        animate={{
-          background: [
-            "radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%)",
-            "radial-gradient(circle at 80% 50%, rgba(147, 51, 234, 0.1) 0%, transparent 50%)",
-            "radial-gradient(circle at 50% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 50%)",
-            "radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%)",
-          ]
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: "linear"
-        }}
-      />
-
       {/* Floating Animation Elements */}
       <motion.div
         animate={{
@@ -79,52 +61,56 @@ function LoginPage() {
       />
 
       <motion.div
-        variants={glassVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        className="w-full max-w-md backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden"
+        variants={curtainRevealVariants}
+        className="w-full max-w-md"
       >
-        <Card className="w-full shadow-none border-0 bg-transparent">
+        {/* Logo/Header Animation */}
+        <motion.div
+          variants={loginHeaderVariants}
+          className="text-center mb-8"
+        >
           <motion.div
-            variants={loginHeaderVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ 
+              duration: 0.8, 
+              delay: 0.2,
+              type: "spring",
+              stiffness: 200,
+              damping: 15 
+            }}
+            className="flex justify-center mb-6"
           >
-            <CardHeader className="space-y-1 text-center pb-8">
-              <motion.div
-                initial={{ scale: 0, rotate: -180, filter: "blur(10px)" }}
-                animate={{ scale: 1, rotate: 0, filter: "blur(0px)" }}
-                transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
-                className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg"
-              >
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  className="text-white text-2xl font-bold"
-                >
-                  T
-                </motion.div>
-              </motion.div>
-              <CardTitle className="text-2xl font-bold text-gray-800">Welcome Back</CardTitle>
-              <CardDescription className="text-gray-600">
-                Sign in to your Test Case Tracker account
-              </CardDescription>
-            </CardHeader>
+            {/* NavaDhiti SVG Logo */}
+            <NavaDhitiLogo className="h-24 w-24" animate={true} />
           </motion.div>
 
-          <motion.div
-            variants={authFormSlideVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+            className="text-3xl font-bold text-gray-900 dark:text-white mb-2"
           >
-            <CardContent className="backdrop-blur-sm bg-white/5 rounded-xl">
-              <LoginForm />
-            </CardContent>
-          </motion.div>
-        </Card>
+            NavaDhiti
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.6 }}
+            className="text-gray-600 dark:text-gray-300 font-bold"
+          >
+            Test Case Management System
+          </motion.p>
+        </motion.div>
+
+        {/* Login Form */}
+        <motion.div
+          variants={loginFormVariants}
+          className="relative"
+        >
+          <LoginForm />
+        </motion.div>
       </motion.div>
     </motion.div>
   );
