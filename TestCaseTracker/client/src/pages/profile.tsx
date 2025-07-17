@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { User } from "@/types";
@@ -19,12 +19,13 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useColorTheme } from "@/components/theme/theme-provider";
-import { Loader2, Upload, Play, Pause, Camera } from "lucide-react";
+import { Loader2, Upload, Play, Pause, Camera, Edit3, Save, X, Shield, Clock, Settings, Mail, Phone, MapPin, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { LottieFileDebug } from "@/components/lottie-file-debug";
 import { LottieAvatar, LottieAvatarGrid } from "@/components/ui/lottie-avatar";
-import { useMemo } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 
 // Form schema for profile data
 const profileFormSchema = z.object({
@@ -57,6 +58,20 @@ interface LottieAnimation {
   preview?: any;
 }
 
+interface UserProfile {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  bio?: string;
+  location?: string;
+  role: string;
+  profilePicture?: string;
+  createdAt: string;
+  lastLoginAt?: string;
+}
+
 export default function ProfilePage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -74,6 +89,15 @@ export default function ProfilePage() {
   const [playingAnimations, setPlayingAnimations] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const queryClient = useQueryClient();
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    bio: "",
+    location: ""
+  });
 
   // Ensure user is available before proceeding
   const currentUser = user;
@@ -273,43 +297,37 @@ export default function ProfilePage() {
     }
   }, [currentUser, toast]);
 
-  // Fetch current user data
-  const { data: fetchedCurrentUser, isLoading: isUserLoading } = useQuery<User>({
-    queryKey: ['/api/user/current'],
+  // Fetch user profile
+  const { data: profile, isLoading } = useQuery<UserProfile>({
+    queryKey: ["/api/auth/profile"],
     queryFn: async () => {
-      // Try to get user data from either endpoint
-      try {
-        const response = await fetch('/api/user/current', { credentials: 'include' });
-        if (response.ok) {
-          return response.json();
-        }
-      } catch (err) {
-        console.error('Error fetching from /api/user/current:', err);
-      }
-
-      // Fall back to auth endpoint if needed
-      const authResponse = await fetch('/api/auth/user', { credentials: 'include' });
-      if (!authResponse.ok) {
-        throw new Error('Failed to fetch user data');
-      }
-      return authResponse.json();
+      const response = await apiRequest("GET", "/api/auth/profile");
+      if (!response.ok) throw new Error("Failed to fetch profile");
+      const data = await response.json();
+      setFormData({
+        firstName: data.firstName || "",
+        lastName: data.lastName || "",
+        phone: data.phone || "",
+        bio: data.bio || "",
+        location: data.location || ""
+      });
+      return data;
     },
     enabled: !!currentUser // Only fetch if currentUser is available
   });
 
   useEffect(() => {
-    if (fetchedCurrentUser) {
+    if (profile) {
       // Update form values when user data loads
-      profileForm.reset({
-        firstName: fetchedCurrentUser.firstName || "",
-        lastName: fetchedCurrentUser.lastName || "",
-        email: fetchedCurrentUser.email || "",
-        role: fetchedCurrentUser.role || "",
-        theme: fetchedCurrentUser.theme || "default",
-        colorTheme: fetchedCurrentUser.colorTheme || colorTheme || "blue",
+      setFormData({
+        firstName: profile.firstName || "",
+        lastName: profile.lastName || "",
+        phone: profile.phone || "",
+        bio: profile.bio || "",
+        location: profile.location || ""
       });
     }
-  }, [fetchedCurrentUser, colorTheme]);
+  }, [profile]);
 
   useEffect(() => {
     loadAnimations();
@@ -364,6 +382,31 @@ export default function ProfilePage() {
       toast({
         title: "Error",
         description: `Failed to update profile: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+    // Update profile mutation
+  const updateProfileMutation2 = useMutation({
+    mutationFn: async (data: Partial<UserProfile>) => {
+      const response = await apiRequest("PUT", "/api/auth/profile", data);
+      if (!response.ok) throw new Error("Failed to update profile");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/profile"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/current'] }); // Invalidate user query as well
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
         variant: "destructive",
       });
     },
@@ -521,6 +564,35 @@ export default function ProfilePage() {
     },
   });
 
+    // Upload profile picture mutation
+  const uploadPictureMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("profilePicture", file);
+
+      const response = await apiRequest("POST", "/api/auth/profile-picture", formData, {
+        skipContentType: true
+      });
+      if (!response.ok) throw new Error("Failed to upload picture");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Profile picture updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/profile"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/current'] }); // Also invalidate user query
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to upload profile picture",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Profile picture upload mutation
   const uploadProfilePictureMutation = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -598,6 +670,11 @@ export default function ProfilePage() {
     updateProfileMutation.mutate(data);
   };
 
+      const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateProfileMutation2.mutate(formData);
+  };
+
   const onPasswordSubmit = (data: PasswordFormValues) => {
     updatePasswordMutation.mutate(data);
   };
@@ -645,7 +722,14 @@ export default function ProfilePage() {
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadPictureMutation.mutate(file);
+    }
+  };
+
+  const handleFileChange2 = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -722,10 +806,10 @@ export default function ProfilePage() {
 
   // Update profile picture URL when user data changes
   useEffect(() => {
-    if (fetchedCurrentUser?.profilePicture) {
-      setProfilePictureUrl(`${fetchedCurrentUser.profilePicture}?t=${Date.now()}`);
+    if (profile?.profilePicture) {
+      setProfilePictureUrl(`${profile.profilePicture}?t=${Date.now()}`);
     }
-  }, [fetchedCurrentUser]);
+  }, [profile]);
 
   // Refresh avatar key when the manual refresh is needed (like after upload)
   const refreshAvatar = () => {
@@ -733,8 +817,8 @@ export default function ProfilePage() {
     setAvatarKey(newKey);
 
     // Also update the URL with the new timestamp
-    if (fetchedCurrentUser?.profilePicture) {
-      setProfilePictureUrl(`${fetchedCurrentUser.profilePicture}?t=${newKey}`);
+    if (profile?.profilePicture) {
+      setProfilePictureUrl(`${profile.profilePicture}?t=${newKey}`);
     }
   };
 
@@ -919,496 +1003,322 @@ export default function ProfilePage() {
 
     // Compute avatar source with proper Lottie handling
   const avatarSrc = useMemo(() => {
-    if (!fetchedCurrentUser) return undefined;
+    if (!profile) return undefined;
 
     // Handle Lottie animations - don't use profilePicture URL for Lottie
-    if (fetchedCurrentUser.avatarType === 'lottie' && fetchedCurrentUser.avatarData) {
+    if (profile.avatarType === 'lottie' && profile.avatarData) {
       // Return null for Lottie animations as they should be rendered by LottieAvatar component
       return null;
     }
 
     // Handle regular profile pictures
-    if (fetchedCurrentUser.profilePicture && !fetchedCurrentUser.profilePicture.startsWith('lottie:')) {
+    if (profile.profilePicture && !profile.profilePicture.startsWith('lottie:')) {
       // Add cache busting timestamp
-      const separator = fetchedCurrentUser.profilePicture.includes('?') ? '&' : '?';
-      return `${fetchedCurrentUser.profilePicture}${separator}t=${avatarKey}&v=${Date.now()}`;
+      const separator = profile.profilePicture.includes('?') ? '&' : '?';
+      return `${profile.profilePicture}${separator}t=${avatarKey}&v=${Date.now()}`;
     }
 
     return undefined;
-  }, [fetchedCurrentUser, avatarKey]);
+  }, [profile, avatarKey]);
 
   // Get Lottie data for avatar display
   const avatarLottieData = useMemo(() => {
-    if (!fetchedCurrentUser || fetchedCurrentUser.avatarType !== 'lottie' || !fetchedCurrentUser.avatarData) {
+    if (!profile || profile.avatarType !== 'lottie' || !profile.avatarData) {
       return null;
     }
 
     try {
-      const avatarData = typeof fetchedCurrentUser.avatarData === 'string' 
-        ? JSON.parse(fetchedCurrentUser.avatarData) 
-        : fetchedCurrentUser.avatarData;
+      const avatarData = typeof profile.avatarData === 'string' 
+        ? JSON.parse(profile.avatarData) 
+        : profile.avatarData;
       
       return avatarData?.preview || null;
     } catch (error) {
       console.error('❌ Error parsing avatar Lottie data:', error);
       return null;
     }
-  }, [fetchedCurrentUser]);
+  }, [profile]);
+
+  const getRoleColor = (role: string) => {
+    switch (role?.toLowerCase()) {
+      case 'admin': return 'bg-red-100 text-red-800 border-red-200';
+      case 'manager': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'tester': return 'bg-green-100 text-green-800 border-green-200';
+      case 'developer': return 'bg-purple-100 text-purple-800 border-purple-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.6,
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
-      <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Profile</h1>
-          <p className="text-gray-500 dark:text-gray-400">Manage your account settings and preferences</p>
-        </div>
+      <motion.div 
+        className="container max-w-4xl mx-auto py-6 px-4 space-y-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {/* Header */}
+        <motion.div 
+          className="flex items-center justify-between"
+          variants={cardVariants}
+        >
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
+            <p className="text-gray-600 mt-1">Manage your account information and preferences</p>
+          </div>
+          <Button
+            onClick={() => setIsEditing(!isEditing)}
+            variant={isEditing ? "outline" : "default"}
+            className="flex items-center gap-2"
+          >
+            {isEditing ? (
+              <>
+                <X className="h-4 w-4" />
+                Cancel
+              </>
+            ) : (
+              <>
+                <Edit3 className="h-4 w-4" />
+                Edit Profile
+              </>
+            )}
+          </Button>
+        </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Profile picture card - optimized width */}
-          <Card className="lg:col-span-1">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Profile Picture</CardTitle>
-              <CardDescription className="text-sm">Update your avatar</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center space-y-4">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="relative cursor-pointer"
-                onClick={handleProfilePictureClick}
-              >
-                <div className="h-32 w-32 border-2 border-primary/20 rounded-full overflow-hidden bg-white flex items-center justify-center">
-                  {avatarLottieData ? (
-                    <LottieAvatar
-                      animationData={avatarLottieData}
-                      width={120}
-                      height={120}
-                      autoplay={true}
-                      loop={true}
-                      name={fetchedCurrentUser?.firstName || 'User'}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Profile Picture & Basic Info Card */}
+          <motion.div variants={cardVariants}>
+            <Card className="lg:col-span-1">
+              <CardHeader className="text-center pb-4">
+                <div className="relative mx-auto">
+                  <Avatar className="h-24 w-24 mx-auto border-4 border-white shadow-lg">
+                    <AvatarImage 
+                      src={avatarSrc} 
+                      alt={`${profile?.firstName} ${profile?.lastName}`}
                     />
-                  ) : avatarSrc ? (
-                    <img
-                      src={avatarSrc}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                      key={avatarKey}
-                      onError={(e) => {
-                        console.error("Avatar image failed to load:", e);
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-primary/80 to-primary/40 flex items-center justify-center">
-                      <span className="text-xl text-white font-semibold">
-                        {(fetchedCurrentUser?.firstName?.charAt(0)?.toUpperCase() || '') + (fetchedCurrentUser?.lastName?.charAt(0)?.toUpperCase() || '') || "U"}
+                    <AvatarFallback className="text-xl font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                      {profile?.firstName?.[0]}{profile?.lastName?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="absolute -bottom-1 -right-1 rounded-full h-8 w-8 p-0 bg-white shadow-md"
+                    onClick={() => handleProfilePictureClick}
+                  >
+                    <Camera className="h-4 w-4" />
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange2}
+                    className="hidden"
+                  />
+                </div>
+                <div className="space-y-2 mt-4">
+                  <CardTitle className="text-xl">
+                    {profile?.firstName} {profile?.lastName}
+                  </CardTitle>
+                  <Badge className={`${getRoleColor(profile?.role || '')} border`}>
+                    <Shield className="h-3 w-3 mr-1" />
+                    {profile?.role}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <Mail className="h-4 w-4 text-gray-400" />
+                  <span className="truncate">{profile?.email}</span>
+                </div>
+                {profile?.phone && (
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <span>{profile.phone}</span>
+                  </div>
+                )}
+                {profile?.location && (
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <MapPin className="h-4 w-4 text-gray-400" />
+                    <span>{profile.location}</span>
+                  </div>
+                )}
+                <Separator />
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <span>
+                      Joined {new Date(profile?.createdAt || '').toLocaleDateString()}
+                    </span>
+                  </div>
+                  {profile?.lastLoginAt && (
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      <span>
+                        Last active {new Date(profile.lastLoginAt).toLocaleDateString()}
                       </span>
                     </div>
                   )}
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full opacity-0 hover:opacity-100 transition-opacity">
-                  <Camera className="h-6 w-6 text-white" />
-                </div>
-                {uploading && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full"
-                  >
-                    <Loader2 className="h-6 w-6 text-white animate-spin" />
-                  </motion.div>
-                )}
-              </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={handleProfilePictureClick}
-                disabled={uploading}
-                className="w-full"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Picture
-              </Button>
-
-              <p className="text-xs text-muted-foreground text-center">
-                JPEG, PNG, GIF, WebP, Lottie JSON<br />
-                Max: 2MB (images), 20MB (Lottie)
-              </p>
-
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,application/json,.json"
-                className="hidden"
-                key={avatarKey} // Force re-render to clear previous selection
-              />
-            </CardContent>
-          </Card>
-
-          {/* Profile settings tabs - optimized width */}
-          <Card className="lg:col-span-3">
-            <CardHeader>
-              <CardTitle>Account Settings</CardTitle>
-              <CardDescription>Manage your profile information and password</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="profile" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="profile">Profile</TabsTrigger>
-                  <TabsTrigger value="password">Password</TabsTrigger>
-                  <TabsTrigger value="avatar">Avatar Animation</TabsTrigger>
-                </TabsList>
-
-                {/* Profile Tab */}
-                <TabsContent value="profile">
-                  <Form {...profileForm}>
-                    <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4 pt-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={profileForm.control}
-                          name="firstName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>First Name</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="First name" 
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={profileForm.control}
-                          name="lastName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Last Name</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="Last name" 
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={profileForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Your email" 
-                                type="email" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+          {/* Profile Details Form */}
+          <motion.div variants={cardVariants} className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Profile Information
+                </CardTitle>
+                <CardDescription>
+                  Update your personal information and bio
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Name Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input
+                        id="firstName"
+                        value={formData.firstName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                        disabled={!isEditing}
+                        className={!isEditing ? "bg-gray-50" : ""}
                       />
-
-                      <FormField
-                        control={profileForm.control}
-                        name="role"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Role</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Your role" 
-                                {...field} 
-                                disabled 
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Your role determines your access level and cannot be changed here.
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={profileForm.control}
-                        name="theme"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Light/Dark Mode Preference</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                            ><FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a theme" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="default">System Default</SelectItem>
-                                <SelectItem value="dark">Dark Mode</SelectItem>
-                                <SelectItem value="light">Light Mode</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              Choose your preferred light/dark mode.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={profileForm.control}
-                        name="colorTheme"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Color Theme</FormLabel>
-                            <Select 
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                setColorTheme(value);
-                              }} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a color theme" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="blue">Blue</SelectItem>
-                                <SelectItem value="purple">Purple</SelectItem>
-                                <SelectItem value="teal">Teal</SelectItem>
-                                <SelectItem value="green">Green</SelectItem>
-                                <SelectItem value="red">Red</SelectItem>
-                                <SelectItem value="orange">Orange</SelectItem>
-                                <SelectItem value="pink">Pink</SelectItem>
-                                <SelectItem value="indigo">Indigo</SelectItem>
-                                <SelectItem value="amber">Amber</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              Choose your preferred color theme. Changes apply immediately.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="flex justify-end pt-2">
-                        <Button type="submit" disabled={isProfileSubmitting}>
-                          {isProfileSubmitting ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            "Save Changes"
-                          )}
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </TabsContent>
-
-                {/* Password Tab */}
-                <TabsContent value="password">
-                  <Form {...passwordForm}>
-                    <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4 pt-4">
-                      <FormField
-                        control={passwordForm.control}
-                        name="currentPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Current Password</FormLabel>
-                            <FormControl>
-                              <PasswordInput 
-                                placeholder="Enter your current password" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <Separator className="my-4" />
-
-                      <FormField
-                        control={passwordForm.control}
-                        name="newPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>New Password</FormLabel>
-                            <FormControl>
-                              <PasswordInput 
-                                placeholder="Enter your new password" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Password must be at least 6 characters.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={passwordForm.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Confirm New Password</FormLabel>
-                            <FormControl>
-                              <PasswordInput 
-                                placeholder="Confirm your new password" 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="flex justify-end pt-2">
-                        <Button 
-                          type="submit" 
-                          disabled={updatePasswordMutation.isPending}
-                        >
-                          {updatePasswordMutation.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Updating...
-                            </>
-                          ) : (
-                            "Change Password"
-                          )}
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </TabsContent>
-                 {/* Lottie Avatar Tab */}
-                <TabsContent value="avatar">
-                  <div className="space-y-4 pt-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-medium">Lottie Avatar</h3>
-                        <p className="text-sm text-muted-foreground">Upload and select Lottie animations</p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploading}
-                      >
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Lottie
-                      </Button>
                     </div>
-
-                    {/* Current Selection */}
-                    {selectedLottie && (
-                      <div className="border rounded-lg p-3 bg-muted/30">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 border rounded overflow-hidden bg-white flex items-center justify-center">
-                            <LottieAvatar
-                              animationData={selectedLottie.preview}
-                              width={40}
-                              height={40}
-                              autoplay={true}
-                              loop={true}
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{selectedLottie.name}</p>
-                            <p className="text-xs text-muted-foreground">Current avatar animation</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Animation Grid */}
-                    {uploading ? (
-                      <div className="text-center py-6">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">Loading animations...</p>
-                      </div>
-                    ) : lottieAnimations.length > 0 ? (
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                        {lottieAnimations.map((animation) => (
-                          <motion.div
-                            key={animation.id}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className={`relative border-2 rounded-lg p-2 cursor-pointer transition-all ${
-                              selectedLottie?.id === animation.id 
-                                ? 'border-primary bg-primary/5' 
-                                : 'border-border hover:border-primary/50'
-                            }`}
-                            onClick={() => handleLottieSelect(animation)}
-                          >
-                            <div className="aspect-square bg-white rounded overflow-hidden flex items-center justify-center min-h-[60px]">
-                              {animation.preview ? (
-                                <LottieAvatar
-                                  animationData={animation.preview}
-                                  width={60}
-                                  height={60}
-                                  autoplay={playingAnimations.has(animation.id)}
-                                  loop={true}
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                                  Loading...
-                                </div>
-                              )}
-                            </div>
-                            <p className="text-xs text-center mt-1 truncate" title={animation.name}>
-                              {animation.name}
-                            </p>
-                            {selectedLottie?.id === animation.id && (
-                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
-                            )}
-                          </motion.div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground mb-3">No Lottie animations available</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={uploading}
-                        >
-                          Upload First Animation
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Upload Info */}
-                    <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded">
-                      <p className="font-medium mb-1">Upload Requirements:</p>
-                      <p>• Valid Lottie JSON files only • Max size: 20MB • Click any animation to set as avatar</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        value={formData.lastName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                        disabled={!isEditing}
+                        className={!isEditing ? "bg-gray-50" : ""}
+                      />
                     </div>
                   </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+
+                  {/* Contact Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                        disabled={!isEditing}
+                        className={!isEditing ? "bg-gray-50" : ""}
+                        placeholder="Enter your phone number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="location">Location</Label>
+                      <Input
+                        id="location"
+                        value={formData.location}
+                        onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                        disabled={!isEditing}
+                        className={!isEditing ? "bg-gray-50" : ""}
+                        placeholder="City, Country"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bio Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Textarea
+                      id="bio"
+                      value={formData.bio}
+                      onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                      disabled={!isEditing}
+                      className={`min-h-[100px] resize-none ${!isEditing ? "bg-gray-50" : ""}`}
+                      placeholder="Tell us about yourself..."
+                    />
+                  </div>
+
+                  {/* Email (Read-only) */}
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={profile?.email || ""}
+                      disabled
+                      className="bg-gray-50"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Email cannot be changed. Contact support if needed.
+                    </p>
+                  </div>
+
+                  {/* Action Buttons */}
+                  {isEditing && (
+                    <div className="flex gap-3 pt-4 border-t">
+                      <Button
+                        type="submit"
+                        disabled={updateProfileMutation2.isPending}
+                        className="flex items-center gap-2"
+                      >
+                        <Save className="h-4 w-4" />
+                        {updateProfileMutation2.isPending ? "Saving..." : "Save Changes"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditing(false);
+                          setFormData({
+                            firstName: profile?.firstName || "",
+                            lastName: profile?.lastName || "",
+                            phone: profile?.phone || "",
+                            bio: profile?.bio || "",
+                            location: profile?.location || ""
+                          });
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </form>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </MainLayout>
   );
 }
