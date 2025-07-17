@@ -50,15 +50,36 @@ export const LottieAnimation: React.FC<LottieAnimationProps> = ({
         if (path) {
           console.log('🎬 Loading Lottie animation from:', path);
           
-          // Construct proper path for Lottie files
-          const fullPath = path.startsWith('/') ? path : `/lottie/${path}`;
-          console.log('🎬 Full animation path:', fullPath);
+          // Construct proper path for Lottie files - try multiple paths
+          const possiblePaths = [
+            path.startsWith('/') ? path : `/lottie/${path}`,
+            path.startsWith('/') ? path : `/public/lottie/${path}`,
+            path.replace('.json', '') + '.json',
+            path
+          ];
           
-          const response = await fetch(fullPath);
-          if (!response.ok) {
-            console.error(`❌ Failed to fetch animation: ${response.status} ${response.statusText}`);
-            throw new Error(`Failed to load animation: ${response.status} ${response.statusText}`);
+          let response = null;
+          let successfulPath = null;
+          
+          for (const tryPath of possiblePaths) {
+            try {
+              console.log('🎬 Trying animation path:', tryPath);
+              response = await fetch(tryPath);
+              if (response.ok) {
+                successfulPath = tryPath;
+                break;
+              }
+            } catch (err) {
+              console.log('🎬 Path failed:', tryPath, err.message);
+            }
           }
+          
+          if (!response || !response.ok) {
+            console.error(`❌ Failed to fetch animation from any path`);
+            throw new Error(`Failed to load animation from any attempted path`);
+          }
+          
+          console.log('🎬 Successfully loaded from:', successfulPath);
 
           const contentType = response.headers.get('content-type');
           console.log('📁 Response content type:', contentType);

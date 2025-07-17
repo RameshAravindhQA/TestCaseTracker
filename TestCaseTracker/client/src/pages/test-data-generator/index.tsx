@@ -1599,8 +1599,7 @@ export default function TestDataGeneratorPage() {
             </CardContent>
           </Card>
         </div>
-      </CardContent>
-    </Card>
+      </Card>
       </div>
     </MainLayout>
   );

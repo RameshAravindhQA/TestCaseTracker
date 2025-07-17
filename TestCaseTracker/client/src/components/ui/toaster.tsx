@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/utils"
 
 export function Toaster() {
-  const { toasts } = useToast()
+  const { toasts, dismiss } = useToast()
 
   useEffect(() => {
     toasts.forEach((toast) => {
@@ -33,14 +33,16 @@ export function Toaster() {
           key={id}
           {...props}
           className={cn(
-            "group pointer-events-auto relative w-[360px] overflow-hidden rounded-md border p-1 pr-4 shadow-lg transition-all data-[swipe:ended]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe:cancel]:translate-x-0 data-[swipe:move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe:active]:cursor-grab",
+            "group pointer-events-auto relative w-[360px] overflow-hidden rounded-md border p-4 pr-8 shadow-lg transition-all data-[swipe:ended]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe:cancel]:translate-x-0 data-[swipe:move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe:active]:cursor-grab",
             props.className,
-            // Add green background for positive toasts
-            !props.variant || props.variant === 'default' ? 'bg-green-50 border-green-200' : '',
-            props.variant === "destructive" ? "ring-red-500/50 data-[state=open]:ring-2" : "ring-gray-500/50 data-[state=open]:ring-2"
+            // Add dark green background for positive toasts
+            !props.variant || props.variant === 'default' ? 'bg-green-700 border-green-600 text-white' : '',
+            props.variant === "destructive" ? "ring-red-500/50 data-[state=open]:ring-2" : "ring-green-500/50 data-[state=open]:ring-2"
           )}
           onOpenChange={(open) => {
-            if (!open) dismiss()
+            if (!open && dismiss) {
+              dismiss(id)
+            }
           }}
         >
             <div className="grid gap-1">

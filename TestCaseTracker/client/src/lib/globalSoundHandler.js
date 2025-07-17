@@ -55,6 +55,26 @@ class GlobalSoundHandler {
         this.playSound('success');
       }
     });
+
+    // Prevent sound effects for console messages
+    const originalConsoleError = console.error;
+    const originalConsoleWarn = console.warn;
+    const originalConsoleLog = console.log;
+
+    console.error = (...args) => {
+      originalConsoleError.apply(console, args);
+      // Do not trigger sound for console errors
+    };
+
+    console.warn = (...args) => {
+      originalConsoleWarn.apply(console, args);
+      // Do not trigger sound for console warnings
+    };
+
+    console.log = (...args) => {
+      originalConsoleLog.apply(console, args);
+      // Do not trigger sound for console logs
+    };
   }
 
   setupGlobalSuccessHandling() {
@@ -257,7 +277,9 @@ class GlobalSoundHandler {
       'select',
       'option',
       'filter',
-      'sort'
+      'sort',
+      'menu',
+      'choice'
     ];
 
     if (dropdownPatterns.some(pattern => url.toLowerCase().includes(pattern))) {
@@ -331,8 +353,11 @@ document.addEventListener('click', (event) => {
       // Special handling for dropdown items - use click sound instead of CRUD
       if (event.target.closest('[role="menuitem"]') || 
           event.target.closest('.select-item') ||
-          event.target.closest('[data-radix-select-item]')) {
-        this.playClickSound();
+          event.target.closest('[data-radix-select-item]') ||
+          event.target.closest('[role="option"]') ||
+          event.target.closest('select') ||
+          event.target.closest('.dropdown-menu')) {
+        globalSoundHandler.playUserActionSound('click');
         return;
       }
 
