@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, User, Quote, Newspaper, Sparkles } from 'lucide-react';
+import { Clock, User, Quote, Newspaper, Sparkles, CheckCircle, TrendingUp, Coffee } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface LoginSuccessDialogProps {
   isOpen: boolean;
@@ -22,13 +23,11 @@ const motivationalQuotes = [
   "Quality is not an act, it is a habit. - Aristotle",
   "Testing leads to failure, and failure leads to understanding. - Burt Rutan",
   "The bitterness of poor quality remains long after the sweetness of low price is forgotten. - Benjamin Franklin",
-  "It is not the strongest of the species that survive, but the one most responsive to change. - Charles Darwin",
-  "Debugging is twice as hard as writing the code in the first place. - Brian Kernighan",
-  "The best way to find out if you can trust somebody is to trust them. - Ernest Hemingway",
+  "Innovation distinguishes between a leader and a follower. - Steve Jobs",
+  "The expert in anything was once a beginner. - Helen Hayes",
   "Quality is never an accident; it is always the result of high intention. - John Ruskin",
   "Testing can only prove the presence of bugs, not their absence. - Edsger Dijkstra",
-  "The expert in anything was once a beginner. - Helen Hayes",
-  "Innovation distinguishes between a leader and a follower. - Steve Jobs"
+  "Debugging is twice as hard as writing the code in the first place. - Brian Kernighan"
 ];
 
 export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({ 
@@ -40,6 +39,7 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
   const [dailyQuote, setDailyQuote] = useState('');
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [isLoadingNews, setIsLoadingNews] = useState(true);
+  const [showAnimation, setShowAnimation] = useState(true);
 
   // Capitalize first letter
   const capitalizeFirstLetter = (name: string) => {
@@ -54,6 +54,14 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
     return 'Good Evening';
   };
 
+  // Get greeting emoji
+  const getGreetingEmoji = () => {
+    const hour = currentTime.getHours();
+    if (hour < 12) return '🌅';
+    if (hour < 17) return '☀️';
+    return '🌆';
+  };
+
   // Get daily quote
   const getDailyQuote = () => {
     const today = new Date();
@@ -61,7 +69,7 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
     return motivationalQuotes[dayOfYear % motivationalQuotes.length];
   };
 
-  // Mock RSS feed data (in a real implementation, you'd fetch from the RSS feeds)
+  // Mock RSS feed data
   const mockNewsData: NewsItem[] = [
     {
       title: "Latest Testing Trends in 2024",
@@ -93,117 +101,248 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
     if (isOpen) {
       setCurrentTime(new Date());
       setDailyQuote(getDailyQuote());
+      setShowAnimation(true);
+      
+      // Hide animation after 3 seconds
+      const animationTimer = setTimeout(() => {
+        setShowAnimation(false);
+      }, 3000);
       
       // Simulate loading news
-      setTimeout(() => {
+      const newsTimer = setTimeout(() => {
         setNewsItems(mockNewsData);
         setIsLoadingNews(false);
-      }, 1000);
+      }, 1500);
+
+      return () => {
+        clearTimeout(animationTimer);
+        clearTimeout(newsTimer);
+      };
     }
   }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center text-blue-600">
-            Welcome Back! 🎉
-          </DialogTitle>
+      <DialogContent className="sm:max-w-[750px] max-h-[85vh] overflow-y-auto border-0 shadow-2xl">
+        <AnimatePresence>
+          {showAnimation && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.5 }}
+              className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-lg backdrop-blur-sm z-10 flex items-center justify-center"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: [0, 1.2, 1] }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="text-6xl"
+              >
+                🎉
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <DialogHeader className="text-center pb-2">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
+            <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Welcome Back! {getGreetingEmoji()}
+            </DialogTitle>
+          </motion.div>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Welcome Message */}
-          <div className="text-center bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <User className="h-6 w-6 text-blue-500" />
-              <h3 className="text-xl font-semibold text-gray-800">
+        <motion.div 
+          className="space-y-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+        >
+          {/* Enhanced Welcome Message */}
+          <motion.div 
+            className="text-center bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 p-8 rounded-xl border border-blue-200/50 shadow-lg"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 0.5, repeat: 2, delay: 0.5 }}
+              >
+                <User className="h-8 w-8 text-blue-500" />
+              </motion.div>
+              <h3 className="text-2xl font-bold text-gray-800">
                 {getGreeting()}, {capitalizeFirstLetter(userName)}!
               </h3>
+              <Coffee className="h-6 w-6 text-amber-600" />
             </div>
-            <div className="flex items-center justify-center gap-2 text-gray-600">
-              <Clock className="h-4 w-4" />
-              <span className="text-sm">
+            <div className="flex items-center justify-center gap-2 text-gray-600 mb-3">
+              <Clock className="h-5 w-5" />
+              <span className="text-sm font-medium">
                 Login Time: {currentTime.toLocaleString()}
               </span>
             </div>
-          </div>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: "100%" }}
+              transition={{ delay: 1, duration: 1 }}
+              className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
+            />
+          </motion.div>
 
-          {/* Daily Quote */}
-          <Card className="border-l-4 border-l-purple-500">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Quote className="h-5 w-5 text-purple-500" />
-                Quote of the Day
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-700 italic">"{dailyQuote}"</p>
-            </CardContent>
-          </Card>
+          {/* Enhanced Daily Quote */}
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
+          >
+            <Card className="border-l-4 border-l-purple-500 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-purple-50 to-indigo-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg text-purple-700">
+                  <Quote className="h-6 w-6 text-purple-500" />
+                  Quote of the Day
+                  <Sparkles className="h-4 w-4 text-yellow-500" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <motion.p 
+                  className="text-gray-700 italic text-lg leading-relaxed"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.8, duration: 0.5 }}
+                >
+                  "{dailyQuote}"
+                </motion.p>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          {/* Daily QA Updates */}
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Newspaper className="h-5 w-5 text-green-500" />
-                Daily QA Updates
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingNews ? (
-                <div className="flex items-center justify-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
-                  <span className="ml-2 text-gray-600">Loading latest updates...</span>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {newsItems.map((item, index) => (
-                    <div key={index} className="border-b border-gray-200 pb-2 last:border-b-0">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900 text-sm hover:text-blue-600 cursor-pointer">
-                            {item.title}
-                          </h4>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-blue-600 font-medium">{item.source}</span>
-                            <span className="text-xs text-gray-500">• {item.date}</span>
+          {/* Enhanced Daily QA Updates */}
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.8, duration: 0.5 }}
+          >
+            <Card className="border-l-4 border-l-green-500 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-green-50 to-emerald-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg text-green-700">
+                  <Newspaper className="h-6 w-6 text-green-500" />
+                  Daily QA Updates
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingNews ? (
+                  <div className="flex items-center justify-center py-6">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full"
+                    />
+                    <span className="ml-3 text-gray-600 font-medium">Loading latest updates...</span>
+                  </div>
+                ) : (
+                  <motion.div 
+                    className="space-y-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1, duration: 0.5 }}
+                  >
+                    {newsItems.map((item, index) => (
+                      <motion.div 
+                        key={index} 
+                        className="border-b border-gray-200 pb-3 last:border-b-0"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 1 + index * 0.1, duration: 0.3 }}
+                        whileHover={{ scale: 1.02, backgroundColor: "rgba(34, 197, 94, 0.05)" }}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 text-sm hover:text-green-600 cursor-pointer transition-colors duration-200">
+                              {item.title}
+                            </h4>
+                            <div className="flex items-center gap-2 mt-2">
+                              <CheckCircle className="h-3 w-3 text-green-500" />
+                              <span className="text-xs text-green-600 font-medium">{item.source}</span>
+                              <span className="text-xs text-gray-500">• {item.date}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          {/* Quick Tips */}
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Sparkles className="h-5 w-5 text-yellow-500 mt-0.5" />
+          {/* Enhanced Quick Tips */}
+          <motion.div 
+            className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-xl border border-yellow-200 shadow-lg"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1, duration: 0.5 }}
+            whileHover={{ scale: 1.01 }}
+          >
+            <div className="flex items-start gap-4">
+              <motion.div
+                animate={{ rotate: [0, 15, -15, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Sparkles className="h-6 w-6 text-yellow-500 mt-1" />
+              </motion.div>
               <div>
-                <h4 className="font-semibold text-yellow-900">Today's Testing Tips:</h4>
-                <ul className="text-sm text-yellow-800 mt-2 space-y-1">
-                  <li>• Start with your most critical test cases</li>
-                  <li>• Document issues as you find them</li>
-                  <li>• Review and update test cases regularly</li>
-                  <li>• Collaborate with your team for better coverage</li>
+                <h4 className="font-bold text-yellow-900 text-lg mb-2">Today's Testing Tips:</h4>
+                <ul className="text-sm text-yellow-800 space-y-2">
+                  {[
+                    "Start with your most critical test cases",
+                    "Document issues as you find them",
+                    "Review and update test cases regularly",
+                    "Collaborate with your team for better coverage"
+                  ].map((tip, index) => (
+                    <motion.li
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 1.2 + index * 0.1, duration: 0.3 }}
+                      className="flex items-center gap-2"
+                    >
+                      <CheckCircle className="h-3 w-3 text-yellow-600 flex-shrink-0" />
+                      {tip}
+                    </motion.li>
+                  ))}
                 </ul>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Action Button */}
-          <div className="flex justify-center pt-4">
+          {/* Enhanced Action Button */}
+          <motion.div 
+            className="flex justify-center pt-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.4, duration: 0.5 }}
+          >
             <Button 
               onClick={onClose} 
               size="lg" 
-              className="px-8 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+              className="px-12 py-4 text-lg font-semibold bg-gradient-to-r from-blue-500 via-purple-600 to-pink-600 hover:from-blue-600 hover:via-purple-700 hover:to-pink-700 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
             >
-              Start Proceeding
+              <motion.span
+                animate={{ x: [0, 5, 0] }}
+                transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+              >
+                Start Your Journey →
+              </motion.span>
             </Button>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </DialogContent>
     </Dialog>
   );

@@ -220,7 +220,7 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
               <p className="text-sm text-red-600 mt-1">{errors.username}</p>
             )}
           </div>
-          
+
           <div>
             <Label htmlFor="repository">Repository Name *</Label>
             <Input
@@ -233,6 +233,97 @@ export function GitHubConfigForm({ editingIntegration, onClose }: GitHubConfigFo
             {errors.repository && (
               <p className="text-sm text-red-600 mt-1">{errors.repository}</p>
             )}
+          </div>
+        </div>
+
+        <div className="grid gap-4">
+          <div>
+            <Label htmlFor="repoUrl">Repository URL</Label>
+            <Input
+              id="repoUrl"
+              name="repoUrl"
+              placeholder="https://github.com/username/repository"
+              value={formData.repoUrl}
+              onChange={handleInputChange}
+              required
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Full GitHub repository URL (e.g., https://github.com/username/repo-name)
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="accessToken">GitHub Personal Access Token</Label>
+            <Input
+              id="accessToken"
+              name="accessToken"
+              type="password"
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              value={formData.accessToken}
+              onChange={handleInputChange}
+              required
+            />
+            <p className="text-sm text-muted-foreground mt-1">
+              Generate a token at GitHub Settings → Developer settings → Personal access tokens
+              <br />
+              <strong>Required permissions:</strong> repo, issues, pull_requests
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="branch">Default Branch</Label>
+            <Input
+              id="branch"
+              name="branch"
+              placeholder="main"
+              value={formData.branch || 'main'}
+              onChange={handleInputChange}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Branch to create issues and PRs (default: main)
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="webhookUrl">Webhook URL (Optional)</Label>
+            <Input
+              id="webhookUrl"
+              name="webhookUrl"
+              placeholder="https://your-app.com/webhook/github"
+              value={formData.webhookUrl || ''}
+              onChange={handleInputChange}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              URL to receive GitHub webhook events
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="autoCreateIssues"
+              name="autoCreateIssues"
+              checked={formData.autoCreateIssues || false}
+              onChange={(e) => setFormData(prev => ({ ...prev, autoCreateIssues: e.target.checked }))}
+              className="rounded"
+            />
+            <Label htmlFor="autoCreateIssues" className="text-sm">
+              Automatically create GitHub issues for bugs
+            </Label>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="syncLabels"
+              name="syncLabels"
+              checked={formData.syncLabels || false}
+              onChange={(e) => setFormData(prev => ({ ...prev, syncLabels: e.target.checked }))}
+              className="rounded"
+            />
+            <Label htmlFor="syncLabels" className="text-sm">
+              Sync labels with GitHub repository
+            </Label>
           </div>
         </div>
 

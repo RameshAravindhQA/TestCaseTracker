@@ -271,7 +271,7 @@ ${bug.comments || 'No additional comments.'}
 
       // Get all GitHub issues
       const githubIssues = await this.getAllIssues(config);
-      
+
       let syncResults = {
         totalIssues: githubIssues.length,
         updatedBugs: 0,
@@ -283,7 +283,7 @@ ${bug.comments || 'No additional comments.'}
         try {
           // Check if we have a bug linked to this GitHub issue
           const existingGitHubIssue = await storage.getGitHubIssueByGitHubId(githubIssue.id);
-          
+
           if (existingGitHubIssue) {
             // Update existing bug
             const bug = await storage.getBug(existingGitHubIssue.bugId);
@@ -323,7 +323,7 @@ ${bug.comments || 'No additional comments.'}
             // Create new bug from GitHub issue if it doesn't exist
             const title = githubIssue.title.replace(/^\[.*?\]\s*/, '');
             const description = this.extractDescriptionFromGitHubBody(githubIssue.body);
-            
+
             let bugStatus = 'Open';
             if (githubIssue.state === 'closed') {
               bugStatus = 'Resolved';
@@ -338,7 +338,7 @@ ${bug.comments || 'No additional comments.'}
             // Determine severity and priority from labels
             let severity = 'Medium';
             let priority = 'Medium';
-            
+
             for (const label of githubIssue.labels) {
               if (label.startsWith('severity:')) {
                 severity = label.split(':')[1].charAt(0).toUpperCase() + label.split(':')[1].slice(1);
@@ -403,7 +403,7 @@ ${bug.comments || 'No additional comments.'}
     // If no formatted description found, return the first paragraph
     const lines = body.split('\n');
     const firstParagraph = [];
-    
+
     for (const line of lines) {
       if (line.trim() === '' && firstParagraph.length > 0) break;
       if (!line.startsWith('#') && !line.startsWith('**') && !line.startsWith('---')) {
@@ -459,6 +459,63 @@ ${bug.comments || 'No additional comments.'}
     } catch (error) {
       console.error(`Error syncing bug ${bugId} to GitHub:`, error);
       throw error;
+    }
+  }
+
+  async testConnection(repoUrl: string, accessToken: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Validate URL format
+      if (!repoUrl.includes('github.com')) {
+        return { success: false, error: 'Invalid GitHub repository URL' };
+      }
+
+      // Extract owner and repo from URL
+      const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+      if (!match) {
+        return { success: false, error: 'Could not parse repository URL. Expected format: https://github.com/owner/repo' };
+      }
+
+      const [, owner, repo] = match;
+      const cleanRepo = repo.replace('.git', '');
+
+      // Test API connection
+      const apiUrl = `https://api.github.com/repos/${owner}/${cleanRepo}`;
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'TestCaseTracker'
+        }
+      });
+
+      if (response.ok) {
+        const repoData = await response.json();
+        return { 
+          success: true, 
+          error: undefined 
+        };
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        let errorMessage = 'Connection failed';
+
+        if (response.status === 401) {
+          errorMessage = 'Invalid access token or insufficient permissions';
+        } else if (response.status === 404) {
+          errorMessage = 'Repository not found or access denied';
+        } else if (response.status === 403) {
+          errorMessage = 'Access forbidden. Check token permissions';
+        } else {
+          errorMessage = errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+        }
+
+        return { success: false, error: errorMessage };
+      }
+    } catch (error) {
+      console.error('GitHub connection test failed:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Network error occurred' 
+      };
     }
   }
 }
