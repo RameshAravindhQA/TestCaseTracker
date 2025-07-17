@@ -221,65 +221,7 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
             </Card>
           </motion.div>
 
-          {/* Enhanced Daily QA Updates */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.8, duration: 0.5 }}
-          >
-            <Card className="border-l-4 border-l-green-500 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-green-50 to-emerald-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg text-green-700">
-                  <Newspaper className="h-6 w-6 text-green-500" />
-                  Daily QA Updates
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoadingNews ? (
-                  <div className="flex items-center justify-center py-6">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full"
-                    />
-                    <span className="ml-3 text-gray-600 font-medium">Loading latest updates...</span>
-                  </div>
-                ) : (
-                  <motion.div 
-                    className="space-y-4"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1, duration: 0.5 }}
-                  >
-                    {newsItems.map((item, index) => (
-                      <motion.div 
-                        key={index} 
-                        className="border-b border-gray-200 pb-3 last:border-b-0"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 1 + index * 0.1, duration: 0.3 }}
-                        whileHover={{ scale: 1.02, backgroundColor: "rgba(34, 197, 94, 0.05)" }}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 text-sm hover:text-green-600 cursor-pointer transition-colors duration-200">
-                              {item.title}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-2">
-                              <CheckCircle className="h-3 w-3 text-green-500" />
-                              <span className="text-xs text-green-600 font-medium">{item.source}</span>
-                              <span className="text-xs text-gray-500">• {item.date}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
+          
 
           {/* Enhanced Quick Tips */}
           <motion.div 

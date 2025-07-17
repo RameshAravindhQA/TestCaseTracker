@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Lottie from 'lottie-react';
 import { Button } from './button';
@@ -86,14 +85,14 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
     if (animationData) {
       setHasError(false);
       setErrorMessage('');
-      
+
       const isValid = validateAnimationData(animationData);
       if (!isValid) {
         setHasError(true);
         onAnimationError?.(new Error(errorMessage));
         return;
       }
-      
+
       setIsLoaded(true);
       setAnimationKey(prev => prev + 1); // Force re-render
       console.log(`✅ Lottie animation "${name}" loaded successfully`);
@@ -263,7 +262,7 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
               hideOnTransparent: true
             }}
           />
-          
+
           {/* Controls overlay */}
           <AnimatePresence>
             {controls && (

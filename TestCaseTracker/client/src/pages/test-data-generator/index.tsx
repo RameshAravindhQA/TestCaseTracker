@@ -899,7 +899,7 @@ export default function TestDataGeneratorPage() {
               record[dataType] = Math.floor(Math.random() * 9000000000) + 1000000000;
               break;
             case 'username':
-              record[dataType] = `user${Math.floor(Math.random() * 10000)}`;
+              record[dataType] = 'user' + Math.floor(Math.random() * 10000);
               break;
             case 'password':
               record[dataType] = Math.random().toString(36).slice(-8) + Math.floor(Math.random() * 100);
