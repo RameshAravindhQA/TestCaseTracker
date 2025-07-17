@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -27,16 +26,16 @@ export const LottieFileDebug: React.FC<LottieFileDebugProps> = ({ onTestResults 
 
     for (const filePath of testFiles) {
       console.log(`🧪 Testing file: ${filePath}`);
-      
+
       try {
         const response = await fetch(filePath);
         const status = response.status;
         const contentType = response.headers.get('content-type') || 'unknown';
-        
+
         if (response.ok) {
           const text = await response.text();
           const isHTML = text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html');
-          
+
           if (isHTML) {
             results.push({
               path: filePath,
@@ -49,7 +48,7 @@ export const LottieFileDebug: React.FC<LottieFileDebugProps> = ({ onTestResults 
             try {
               const jsonData = JSON.parse(text);
               const isValidLottie = jsonData.v && jsonData.layers && Array.isArray(jsonData.layers);
-              
+
               results.push({
                 path: filePath,
                 status: isValidLottie ? 'VALID_LOTTIE' : 'INVALID_JSON',
@@ -133,7 +132,7 @@ export const LottieFileDebug: React.FC<LottieFileDebugProps> = ({ onTestResults 
                   {result.status}
                 </span>
               </div>
-              
+
               <div className="text-xs text-gray-600 space-y-1">
                 {result.httpStatus && <div>HTTP Status: {result.httpStatus}</div>}
                 {result.contentType && <div>Content-Type: {result.contentType}</div>}
@@ -146,7 +145,7 @@ export const LottieFileDebug: React.FC<LottieFileDebugProps> = ({ onTestResults 
             </div>
           ))}
         </div>
-        
+
         {testResults.length > 0 && (
           <div className="mt-4 p-3 bg-blue-50 rounded">
             <div className="text-sm font-medium text-blue-800">Summary:</div>
