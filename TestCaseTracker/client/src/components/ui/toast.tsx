@@ -33,7 +33,7 @@ const toastVariants = cva(
         positive:
           "positive group border-green-900 bg-green-900 text-white",
         success:
-          "success group border-[#0d4a0d] bg-[#0d4a0d] text-white",
+          "success group border-[#0d4a0d] !bg-[#0d4a0d] text-white",
       },
     },
     defaultVariant: {

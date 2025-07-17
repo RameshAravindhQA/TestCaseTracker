@@ -44,6 +44,13 @@ body.dialog-open {
 @tailwind components;
 @tailwind utilities;
 
+/* Custom success toast styling with !important */
+.success {
+  background-color: #0d4a0d !important;
+  border-color: #0d4a0d !important;
+  color: white !important;
+}
+
 @layer utilities {
   .custom-scrollbar {
     scrollbar-width: thin;

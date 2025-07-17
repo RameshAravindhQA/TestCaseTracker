@@ -221,17 +221,17 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (fetchedCurrentUser) {
-      // Update default values when user data loads
+      // Update form values when user data loads
       profileForm.reset({
         firstName: fetchedCurrentUser.firstName || "",
         lastName: fetchedCurrentUser.lastName || "",
-        email: fetchedCurrentUser.email,
-        role: fetchedCurrentUser.role,
+        email: fetchedCurrentUser.email || "",
+        role: fetchedCurrentUser.role || "",
         theme: fetchedCurrentUser.theme || "default",
         colorTheme: fetchedCurrentUser.colorTheme || colorTheme || "blue",
       });
     }
-  }, [fetchedCurrentUser, profileForm, colorTheme]);
+  }, [fetchedCurrentUser, colorTheme]);
 
   useEffect(() => {
     loadAnimations();
@@ -240,16 +240,16 @@ export default function ProfilePage() {
   // Get color theme from context
   const { colorTheme, setColorTheme } = useColorTheme();
 
-  // Profile form setup
+  // Profile form setup - initialize with empty defaults first
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      firstName: fetchedCurrentUser?.firstName || "",
-      lastName: fetchedCurrentUser?.lastName || "",
-      email: fetchedCurrentUser?.email || "",
-      role: fetchedCurrentUser?.role || "",
-      theme: fetchedCurrentUser?.theme || "default",
-      colorTheme: colorTheme || "blue",
+      firstName: "",
+      lastName: "",
+      email: "",
+      role: "",
+      theme: "default",
+      colorTheme: "blue",
     },
   });
 

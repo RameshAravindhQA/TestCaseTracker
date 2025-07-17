@@ -1042,8 +1042,7 @@ export default function TestDataGeneratorPage() {
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="mb-6 flex items-center gap-4">
+        <div className="flex items-center gap-4 mb-6">
           <div className="p-2 bg-gradient-to-br from-blue-500 via-purple-600 to-pink-500 rounded-xl shadow-lg">
             <Database className="h-8 w-8 text-white" />
           </div>
@@ -1053,9 +1052,9 @@ export default function TestDataGeneratorPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           {/* Configuration Panel */}
-          <Card className="lg:col-span-1">
+          <Card className="xl:col-span-1">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Globe className="w-5 h-5" />
@@ -1546,7 +1545,7 @@ export default function TestDataGeneratorPage() {
           </Card>
 
           {/* Results Panel */}
-          <Card className="lg:col-span-2">
+          <Card className="xl:col-span-3">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Generated Data ({generatedData.length} records)</CardTitle>
