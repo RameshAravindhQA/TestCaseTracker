@@ -1,6 +1,3 @@
-The issue was due to accessing `projects` before it was initialized; I've moved the `getProjectStats` function and added null checks.
-```
-```replit_final_file
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
