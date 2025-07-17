@@ -285,12 +285,20 @@ export const LottieFileDebug: React.FC<LottieFileDebugProps> = ({ onTestResults 
                     <div className="w-full h-24 border border-dashed rounded flex items-center justify-center bg-muted/30">
                       <div className="relative w-20 h-20">
                         <Lottie
+                          key={`lottie-${result.file}-${playingAnimations.has(result.file)}`}
                           animationData={result.data}
                           loop={true}
                           autoplay={playingAnimations.has(result.file)}
-                          style={{ width: '100%', height: '100%' }}
+                          style={{ 
+                            width: '100%', 
+                            height: '100%',
+                            pointerEvents: 'none'
+                          }}
                           onError={(error) => {
                             console.error(`❌ Lottie render error for ${result.file}:`, error);
+                          }}
+                          onDataReady={() => {
+                            console.log(`✅ Lottie data ready for ${result.file}`);
                           }}
                           onComplete={() => {
                             console.log(`🔄 Animation completed: ${result.file}`);
@@ -299,12 +307,6 @@ export const LottieFileDebug: React.FC<LottieFileDebugProps> = ({ onTestResults 
                             console.log(`🔁 Animation loop completed: ${result.file}`);
                           }}
                           renderer="svg"
-                          rendererSettings={{
-                            preserveAspectRatio: 'xMidYMid meet',
-                            clearCanvas: true,
-                            progressiveLoad: false,
-                            hideOnTransparent: true
-                          }}
                         />
                       </div>
                     </div>

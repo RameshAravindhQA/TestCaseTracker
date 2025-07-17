@@ -117,10 +117,10 @@ export default function ProfilePage() {
 
             try {
               response = await fetch(animation.path);
-              
+
               if (response.ok) {
                 const text = await response.text();
-                
+
                 // Check if we got HTML instead of JSON (404 page)
                 if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
                   console.warn(`⚠️ Received HTML (likely 404) for ${animation.name}`);
@@ -136,7 +136,7 @@ export default function ProfilePage() {
                   const hasVersion = data.v || data.version;
                   const hasLayers = Array.isArray(data.layers) && data.layers.length > 0;
                   const hasFrameRate = data.fr || data.frameRate;
-                  
+
                   if (hasVersion && hasLayers) {
                     console.log(`✅ Valid Lottie: ${animation.name} (v${data.v}, ${data.layers.length} layers)`);
                     return { ...animation, preview: data, isValid: true };
@@ -169,11 +169,11 @@ export default function ProfilePage() {
       // Filter and log results
       const workingAnimations = loadedAnimations.filter(anim => anim.preview !== null && anim.isValid);
       const failedAnimations = loadedAnimations.filter(anim => !anim.isValid);
-      
+
       console.log(`📊 Animation loading results:`);
       console.log(`✅ Working: ${workingAnimations.length}/${animationsToLoad.length}`);
       console.log(`❌ Failed: ${failedAnimations.length}/${animationsToLoad.length}`);
-      
+
       if (failedAnimations.length > 0) {
         console.log('❌ Failed animations:', failedAnimations.map(a => a.name));
       }
@@ -201,6 +201,12 @@ export default function ProfilePage() {
           description: `Loaded ${workingAnimations.length} animations. ${failedAnimations.length} failed to load.`,
         });
       }
+
+      // Auto-play all valid animations
+      const validIds = loadedAnimations
+        .filter(anim => anim.preview !== null && anim.isValid)
+        .map(anim => anim.id);
+      setPlayingAnimations(new Set(validIds));
 
     } catch (error) {
       console.error('❌ Error loading animations:', error);
@@ -922,8 +928,7 @@ export default function ProfilePage() {
                             <Select 
                               onValueChange={field.onChange} 
                               defaultValue={field.value}
-                            >
-                              <FormControl>
+                            ><FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select a theme" />
                                 </SelectTrigger>
@@ -1094,30 +1099,28 @@ export default function ProfilePage() {
 
                     {/* Debug Panel */}
                     <LottieFileDebug 
-                      onTestResults={(results) => {
-                        console.log('🧪 Debug results:', results);
-                        const validFiles = results.filter(r => r.status === 'VALID_LOTTIE');
-                        
+                      onTestResults={(testResults) => {
+                        console.log('🧪 Debug results:', testResults);
+                        const validFiles = testResults
+                          .filter(r => r.status === 'VALID_LOTTIE')
+                          .map(r => r.file);
+                        setPlayingAnimations(new Set(validFiles));
+
                         // Update the available animations based on debug results
-                        const loadedAnimations = validFiles.map(result => ({
+                        const loadedAnimations = testResults.map(result => ({
                           id: result.file.replace('/lottie/', '').replace('.json', ''),
                           name: result.file.replace('/lottie/', '').replace('.json', '').replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()),
                           path: result.file,
                           preview: result.data
                         }));
-                        
+
                         setLottieAnimations(loadedAnimations);
-                        
-                        if (validFiles.length === 0) {
+
+                        if (testResults.length === 0) {
                           toast({
-                            title: "No Valid Lottie Files Found",
-                            description: "All Lottie files failed to load. Check the debug panel for details.",
+                            title: "No Lottie Files Found",
+                            description: "No Lottie files were found. Check the debug panel for details.",
                             variant: "destructive",
-                          });
-                        } else {
-                          toast({
-                            title: "Lottie Files Loaded",
-                            description: `Successfully loaded ${validFiles.length} Lottie animations.`,
                           });
                         }
                       }}
@@ -1155,7 +1158,7 @@ export default function ProfilePage() {
                           </div>
                         </div>
                       )}
-                      
+
                       {!uploading && lottieAnimations.length > 0 ? (
                         lottieAnimations.map((animation) => (
                           <motion.div
