@@ -45,7 +45,7 @@ export function RegisterForm() {
       lastName: "",
       email: "",
       password: "",
-      role: "Tester",
+      role: "Tester", // Auto-populate with Tester as default
     },
   });
 
@@ -187,9 +187,9 @@ export function RegisterForm() {
                       <SelectItem value="Admin">Admin</SelectItem>
                     </SelectContent>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {field.value === "Tester" && "Basic testing access"}
-                      {field.value === "Developer" && "Code-related access and bug management"}
-                      {field.value === "Admin" && "Full system access and user management"}
+                      {field.value === "Tester" && "Basic testing access - Create and execute test cases"}
+                      {field.value === "Developer" && "Code-related access - Bug management and development tasks"}
+                      {field.value === "Admin" && "Full system access - User management and system administration"}
                     </p>
                   </Select>
                   <FormMessage />
