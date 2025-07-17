@@ -1,0 +1,16 @@
+| **Transition Name**               | **Description**                                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Slide-In + Staggered Entrance** | Items (fields/modules) slide in with slight delays (staggering) for a dynamic layout effect.       |
+| **Orchestrated Entrance**         | Multiple elements animate into place in a coordinated sequence.                                    |
+| **Motion Layout Reveal**          | The layout unfolds smoothly using animated layout shifts, often implemented with Framer Motion.    |
+| **Scene Load Animation**          | The entire scene (like a login page or dashboard) animates in together when the page loads.        |
+| **Sequential Reveal**             | Elements appear one after another in a cinematic, storytelling fashion.                            |
+| **Page Mount Transition**         | A transition that animates as soon as a page or component mounts (often used in SPAs).             |
+| **Zoom & Slide Reveal**           | Items slightly zoom in and slide from an edge (top, bottom, left, or right).                       |
+| **Intro Hero Transition**         | Often used on home/landing pages, where a "hero" section animates in first with key brand content. |
+| **Parallax Reveal**               | Background and foreground move at different speeds to create depth while revealing elements.       |
+| **Morphing UI Transition**        | One shape or component transforms into another smoothly (common in modals and toggles).            |
+| **Fade + Slide Combo**            | Combines fade-in with a directional slide for smoother attention-guiding entrance.                 |
+| **Elastic Drop-In**               | Elements drop in with bounce or elastic easing effect.                                             |
+| **Ripple Load Transition**        | Elements appear with a ripple-like or wave animation from the center or cursor.                    |
+| **Curtain Reveal**                | Simulates a curtain opening or section pulling in from top/bottom edges.                           |
