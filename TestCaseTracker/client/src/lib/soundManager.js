@@ -335,30 +335,28 @@ export class SoundManager {
   playMessageSound() { this.playSound('message'); }
 
   setupGlobalErrorHandling() {
-    // Only handle custom application errors, not console errors
-    document.addEventListener('app:error', (event) => {
-      if (this.userHasInteracted && !this.isDevelopmentError(event)) {
-        console.log('🔊 Global handler: Playing error sound for app error');
+    // Only handle explicit UI errors triggered by user actions
+    document.addEventListener('ui:error', (event) => {
+      if (this.userHasInteracted && event.detail && event.detail.playSound !== false) {
+        console.log('🔊 UI handler: Playing error sound for user interaction error');
+        this.playSound('error');
+      }
+    });
+    
+    // Listen for form validation errors
+    document.addEventListener('form:validation:error', (event) => {
+      if (this.userHasInteracted) {
+        console.log('🔊 Form validation: Playing error sound');
         this.playSound('error');
       }
     });
   }
 
-  // Check if error is development/console related (shouldn't trigger sounds)
-  isDevelopmentError(error) {
-    if (!error) return false;
-    const errorString = error.toString().toLowerCase();
-    return errorString.includes('uncaught referenceerror') || 
-           errorString.includes('syntaxerror') ||
-           errorString.includes('chunk-') ||
-           errorString.includes('vite') ||
-           errorString.includes('dev server') ||
-           errorString.includes('hmr') ||
-           errorString.includes('hot reload') ||
-           errorString.includes('useeffect is not defined') ||
-           errorString.includes('console') ||
-           errorString.includes('warning') ||
-           errorString.includes('validatedomnesting');
+  // Method to trigger UI error sound manually
+  triggerUIError() {
+    if (this.isEnabled) {
+      this.playSound('error');
+    }
   }
     // Get current settings
   getSettings() {

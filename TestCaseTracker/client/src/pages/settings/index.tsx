@@ -45,7 +45,7 @@ import {
   NotebookPen,
   Volume2
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -56,6 +56,7 @@ import { Badge } from "@/components/ui/badge";
 import { RolePermissions } from "@/components/settings/role-permissions";
 import { SoundSettings } from "@/components/settings/sound-settings";
 import { SoundTest } from '@/components/sound-test';
+import { cn } from "@/lib/utils";
 
 // Types
 interface SystemSettings {
@@ -254,6 +255,31 @@ const defaultPermissions: RolePermissions = {
     { module: "Timesheets", feature: "Time Tracking", view: true, create: true, update: true, delete: false },
     { module: "Notebooks", feature: "Note Management", view: true, create: true, update: true, delete: true },
   ],
+};
+
+// Animation variants
+const settingsContainerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      delayChildren: 0.3,
+      staggerChildren: 0.2,
+    },
+  },
+};
+
+const settingsCardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: "easeInOut",
+    },
+  },
 };
 
 export default function SettingsPage() {
@@ -491,373 +517,361 @@ export default function SettingsPage() {
     { id: "sound", label: "Sound", icon: <Volume2 className="h-4 w-4 mr-2" /> },
   ];
 
-  return (
-    <MainLayout>
-      <div className="py-6 px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">System Settings</h1>
-          <p className="mt-1 text-sm text-gray-600">Configure application settings and preferences</p>
-        </div>
+  // Define settings sections
+  const settingSections = [
+    { id: "general", label: "General", icon: Globe },
+    { id: "email", label: "Email", icon: Mail },
+    { id: "backup", label: "Backup", icon: FileArchive },
+    { id: "security", label: "Security", icon: Shield },
+    { id: "test-case", label: "Test Cases", icon: NotebookPen },
+        { id: "permissions", label: "Permissions", icon: Users2 },
+        { id: "sound", label: "Sound", icon: Volume2 },
+  ];
 
-        <div className="flex flex-col md:flex-row gap-6">
-          <Card className="md:w-64 flex-shrink-0">
-            <CardContent className="p-4">
-              <div className="space-y-1">
-                {tabs.map((tab) => (
-                  <Button
-                    key={tab.id}
-                    variant={activeTab === tab.id ? "default" : "ghost"}
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab(tab.id)}
-                  >
-                    {tab.icon}
-                    {tab.label}
-                  </Button>
-                ))}
-              </div>
+  const [activeSection, setActiveSection] = useState(settingSections[0].id);
+
+  const renderSettingsContent = () => {
+    switch (activeSection) {
+      case "general":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Globe className="h-5 w-5 mr-2" />
+                General Settings
+              </CardTitle>
+              <CardDescription>
+                Configure basic application information and appearance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...generalForm}>
+                <form onSubmit={generalForm.handleSubmit(handleSaveGeneralSettings)} className="space-y-6">
+                  <FormField
+                    control={generalForm.control}
+                    name="companyName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter company name" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          This will be displayed in the application header and emails
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={generalForm.control}
+                    name="companyLogo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Logo URL</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter logo URL" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          URL to your company logo image
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={generalForm.control}
+                      name="primaryColor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Primary Color</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <FormControl>
+                              <Input placeholder="#3b82f6" {...field} />
+                            </FormControl>
+                            <div
+                              className="w-8 h-8 rounded-full border"
+                              style={{ backgroundColor: field.value }}
+                            ></div>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={generalForm.control}
+                      name="secondaryColor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Secondary Color</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <FormControl>
+                              <Input placeholder="#10b981" {...field} />
+                            </FormControl>
+                            <div
+                              className="w-8 h-8 rounded-full border"
+                              style={{ backgroundColor: field.value }}
+                            ></div>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      className="flex items-center gap-2"
+                      disabled={saveSettingsMutation.isPending}
+                    >
+                      {saveSettingsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save Settings
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             </CardContent>
           </Card>
+        );
 
-          <div className="flex-1">
-            {/* General Settings */}
-            {activeTab === "general" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Globe className="h-5 w-5 mr-2" />
-                    General Settings
-                  </CardTitle>
-                  <CardDescription>
-                    Configure basic application information and appearance
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...generalForm}>
-                    <form onSubmit={generalForm.handleSubmit(handleSaveGeneralSettings)} className="space-y-6">
-                      <FormField
-                        control={generalForm.control}
-                        name="companyName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Company Name</FormLabel>
+      case "email":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Mail className="h-5 w-5 mr-2" />
+                Email Settings
+              </CardTitle>
+              <CardDescription>
+                Configure email server settings for notifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...emailForm}>
+                <form onSubmit={emailForm.handleSubmit(handleSaveEmailSettings)} className="space-y-6">
+                  <FormField
+                    control={emailForm.control}
+                    name="enableEmailNotifications"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Email Notifications</FormLabel>
+                          <FormDescription>
+                            Enable or disable email notifications
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={emailForm.control}
+                      name="smtpServer"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>SMTP Server</FormLabel>
+                          <FormControl>
+                            <Input placeholder="smtp.example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={emailForm.control}
+                      name="smtpPort"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>SMTP Port</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="587" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={emailForm.control}
+                      name="smtpUsername"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>SMTP Username</FormLabel>
+                          <FormControl>
+                            <Input placeholder="username" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={emailForm.control}
+                      name="smtpPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>SMTP Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={emailForm.control}
+                    name="senderEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sender Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="no-reply@example.com" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Email address that will appear as the sender
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex justify-between">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex items-center gap-2"
+                      onClick={() => testEmailMutation.mutate()}
+                      disabled={testEmailMutation.isPending}
+                    >
+                      {testEmailMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Mail className="h-4 w-4" />
+                      )}
+                      Test Configuration
+                    </Button>
+
+                    <Button
+                      type="submit"
+                      className="flex items-center gap-2"
+                      disabled={saveSettingsMutation.isPending}
+                    >
+                      {saveSettingsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save Settings
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        );
+
+      case "backup":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileArchive className="h-5 w-5 mr-2" />
+                Backup & Recovery
+              </CardTitle>
+              <CardDescription>
+                Configure automatic backup settings and manage data recovery
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...backupForm}>
+                <form onSubmit={backupForm.handleSubmit(handleSaveBackupSettings)} className="space-y-6">
+                  <FormField
+                    control={backupForm.control}
+                    name="enableAutomaticBackups"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Automatic Backups</FormLabel>
+                          <FormDescription>
+                            Enable or disable scheduled automatic backups
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={backupForm.control}
+                      name="backupFrequency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Backup Frequency</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
                             <FormControl>
-                              <Input placeholder="Enter company name" {...field} />
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select frequency" />
+                              </SelectTrigger>
                             </FormControl>
-                            <FormDescription>
-                              This will be displayed in the application header and emails
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                            <SelectContent>
+                              <SelectItem value="hourly">Hourly</SelectItem>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                      <FormField
-                        control={generalForm.control}
-                        name="companyLogo"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Company Logo URL</FormLabel>
+                    <FormField
+                      control={backupForm.control}
+                      name="backupLocation"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Backup Location</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
                             <FormControl>
-                              <Input placeholder="Enter logo URL" {...field} />
-                            </FormControl>
-                            <FormDescription>
-                              URL to your company logo image
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={generalForm.control}
-                          name="primaryColor"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Primary Color</FormLabel>
-                              <div className="flex items-center gap-2">
-                                <FormControl>
-                                  <Input placeholder="#3b82f6" {...field} />
-                                </FormControl>
-                                <div 
-                                  className="w-8 h-8 rounded-full border"
-                                  style={{ backgroundColor: field.value }}
-                                ></div>
-                              </div>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={generalForm.control}
-                          name="secondaryColor"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Secondary Color</FormLabel>
-                              <div className="flex items-center gap-2">
-                                <FormControl>
-                                  <Input placeholder="#10b981" {...field} />
-                                </FormControl>
-                                <div 
-                                  className="w-8 h-8 rounded-full border"
-                                  style={{ backgroundColor: field.value }}
-                                ></div>
-                              </div>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="flex justify-end">
-                        <Button 
-                          type="submit" 
-                          className="flex items-center gap-2"
-                          disabled={saveSettingsMutation.isPending}
-                        >
-                          {saveSettingsMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Save className="h-4 w-4" />
-                          )}
-                          Save Settings
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Email Settings */}
-            {activeTab === "email" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Mail className="h-5 w-5 mr-2" />
-                    Email Settings
-                  </CardTitle>
-                  <CardDescription>
-                    Configure email server settings for notifications
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...emailForm}>
-                    <form onSubmit={emailForm.handleSubmit(handleSaveEmailSettings)} className="space-y-6">
-                      <FormField
-                        control={emailForm.control}
-                        name="enableEmailNotifications"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Email Notifications</FormLabel>
-                              <FormDescription>
-                                Enable or disable email notifications
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={emailForm.control}
-                          name="smtpServer"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>SMTP Server</FormLabel>
-                              <FormControl>
-                                <Input placeholder="smtp.example.com" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={emailForm.control}
-                          name="smtpPort"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>SMTP Port</FormLabel>
-                              <FormControl>
-                                <Input type="number" placeholder="587" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={emailForm.control}
-                          name="smtpUsername"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>SMTP Username</FormLabel>
-                              <FormControl>
-                                <Input placeholder="username" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={emailForm.control}
-                          name="smtpPassword"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>SMTP Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="password" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={emailForm.control}
-                        name="senderEmail"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Sender Email</FormLabel>
-                            <FormControl>
-                              <Input placeholder="no-reply@example.com" {...field} />
-                            </FormControl>
-                            <FormDescription>
-                              Email address that will appear as the sender
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="flex justify-between">
-                        <Button 
-                          type="button" 
-                          variant="outline"
-                          className="flex items-center gap-2"
-                          onClick={() => testEmailMutation.mutate()}
-                          disabled={testEmailMutation.isPending}
-                        >
-                          {testEmailMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Mail className="h-4 w-4" />
-                          )}
-                          Test Configuration
-                        </Button>
-
-                        <Button 
-                          type="submit" 
-                          className="flex items-center gap-2"
-                          disabled={saveSettingsMutation.isPending}
-                        >
-                          {saveSettingsMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Save className="h-4 w-4" />
-                          )}
-                          Save Settings
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Backup Settings */}
-            {activeTab === "backup" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <FileArchive className="h-5 w-5 mr-2" />
-                    Backup & Recovery
-                  </CardTitle>
-                  <CardDescription>
-                    Configure automatic backup settings and manage data recovery
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...backupForm}>
-                    <form onSubmit={backupForm.handleSubmit(handleSaveBackupSettings)} className="space-y-6">
-                      <FormField
-                        control={backupForm.control}
-                        name="enableAutomaticBackups"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">Automatic Backups</FormLabel>
-                              <FormDescription>
-                                Enable or disable scheduled automatic backups
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={backupForm.control}
-                          name="backupFrequency"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Backup Frequency</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select frequency" />
-                                  </SelectTrigger>
-                                </FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select location" />
+                              </SelectTrigger>
+                            </<previous_generation>```python
+FormControl>
                                 <SelectContent>
-                                  <SelectItem value="hourly">Hourly</SelectItem>
-                                  <SelectItem value="daily">Daily</SelectItem>
-                                  <SelectItem value="weekly">Weekly</SelectItem>
-                                  <SelectItem value="monthly">Monthly</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={backupForm.control}
-                          name="backupLocation"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Backup Location</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select location" />
-                                  </SelectTrigger>
-                                </FormControl>
-                               <SelectContent>
                                   <SelectItem value="local">Local Storage</SelectItem>
                                   <SelectItem value="s3">Amazon S3</SelectItem>
                                   <SelectItem value="gcs">Google Cloud Storage</SelectItem>
@@ -888,8 +902,8 @@ export default function SettingsPage() {
                       />
 
                       <div className="flex justify-between">
-                        <Button 
-                          type="button" 
+                        <Button
+                          type="button"
                           variant="outline"
                           className="flex items-center gap-2"
                           onClick={() => createBackupMutation.mutate()}
@@ -903,8 +917,8 @@ export default function SettingsPage() {
                           Create Manual Backup
                         </Button>
 
-                        <Button 
-                          type="submit" 
+                        <Button
+                          type="submit"
                           className="flex items-center gap-2"
                           disabled={saveSettingsMutation.isPending}
                         >
@@ -920,349 +934,435 @@ export default function SettingsPage() {
                   </Form>
                 </CardContent>
               </Card>
-            )}
+            );
 
-            {/* Security Settings */}
-            {activeTab === "security" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Shield className="h-5 w-5 mr-2" />
-                    Security Settings
-                  </CardTitle>
-                  <CardDescription>
-                    Configure security policies and authentication settings
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...securityForm}>
-                    <form onSubmit={securityForm.handleSubmit(handleSaveSecuritySettings)} className="space-y-6">
-                      <div>
-                        <h3 className="text-md font-medium mb-2">Password Policy</h3>
-                        <div className="space-y-4 border rounded-md p-4">
-                          <FormField
-                            control={securityForm.control}
-                            name="passwordPolicy.minLength"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Minimum Password Length</FormLabel>
-                                <FormControl>
-                                  <Input type="number" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={securityForm.control}
-                              name="passwordPolicy.requireUppercase"
-                              render={({ field }) => (
-                                <FormItem className="flex items-center space-x-2">
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                  <FormLabel>Require uppercase letters</FormLabel>
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={securityForm.control}
-                              name="passwordPolicy.requireLowercase"
-                              render={({ field }) => (
-                                <FormItem className="flex items-center space-x-2">
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                  <FormLabel>Require lowercase letters</FormLabel>
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={securityForm.control}
-                              name="passwordPolicy.requireNumbers"
-                              render={({ field }) => (
-                                <FormItem className="flex items-center space-x-2">
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                  <FormLabel>Require numbers</FormLabel>
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={securityForm.control}
-                              name="passwordPolicy.requireSpecialChars"
-                              render={({ field }) => (
-                                <FormItem className="flex items-center space-x-2">
-                                  <FormControl>
-                                    <Switch
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                  <FormLabel>Require special characters</FormLabel>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <Separator />
+      case "security":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Shield className="h-5 w-5 mr-2" />
+                Security Settings
+              </CardTitle>
+              <CardDescription>
+                Configure security policies and authentication settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...securityForm}>
+                <form onSubmit={securityForm.handleSubmit(handleSaveSecuritySettings)} className="space-y-6">
+                  <div>
+                    <h3 className="text-md font-medium mb-2">Password Policy</h3>
+                    <div className="space-y-4 border rounded-md p-4">
+                      <FormField
+                        control={securityForm.control}
+                        name="passwordPolicy.minLength"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Minimum Password Length</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={securityForm.control}
-                          name="sessionTimeout"
+                          name="passwordPolicy.requireUppercase"
                           render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Session Timeout (minutes)</FormLabel>
+                            <FormItem className="flex items-center space-x-2">
                               <FormControl>
-                                <Input type="number" {...field} />
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
                               </FormControl>
-                              <FormDescription>
-                                Time before users are automatically logged out
-                              </FormDescription>
-                              <FormMessage />
+                              <FormLabel>Require uppercase letters</FormLabel>
                             </FormItem>
                           )}
                         />
 
                         <FormField
                           control={securityForm.control}
-                          name="enableTwoFactor"
+                          name="passwordPolicy.requireLowercase"
                           render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                              <FormLabel>Two-Factor Authentication</FormLabel>
-                              <div className="flex items-center gap-2">
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <span>
-                                  {field.value ? "Enabled" : "Disabled"}
-                                </span>
-                              </div>
-                              <FormDescription>
-                                Require two-factor authentication for all users
-                              </FormDescription>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="flex justify-end">
-                        <Button 
-                          type="submit" 
-                          className="flex items-center gap-2"
-                          disabled={saveSettingsMutation.isPending}
-                        >
-                          {saveSettingsMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Save className="h-4 w-4" />
-                          )}
-                          Save Settings
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Test Case Settings */}
-            {activeTab === "test-case" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <NotebookPen className="h-5 w-5 mr-2" />
-                    Test Case Settings
-                  </CardTitle>
-                  <CardDescription>
-                    Configure test case management settings and defaults
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...testCaseForm}>
-                    <form onSubmit={testCaseForm.handleSubmit(handleSaveTestCaseSettings)} className="space-y-6">
-                      <FormField
-                        control={testCaseForm.control}
-                        name="defaultStatusOptions"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Default Status Options</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Not Run, Pass, Fail, Blocked" 
-                                value={field.value.join(", ")}
-                                onChange={(e) => {
-                                  const values = e.target.value.split(",").map(v => v.trim()).filter(Boolean);
-                                  field.onChange(values);
-                                }}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Comma-separated list of test case status options
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={testCaseForm.control}
-                        name="defaultPriorityOptions"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Default Priority Options</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Low, Medium, High" 
-                                value={field.value.join(", ")}
-                                onChange={(e) => {
-                                  const values = e.target.value.split(",").map(v => v.trim()).filter(Boolean);
-                                  field.onChange(values);
-                                }}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Comma-separated list of test case priority options
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={testCaseForm.control}
-                          name="defaultView"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Default View</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select default view" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="list">List View</SelectItem>
-                                  <SelectItem value="grid">Grid View</SelectItem>
-                                  <SelectItem value="table">Table View</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel>Require lowercase letters</FormLabel>
                             </FormItem>
                           )}
                         />
 
                         <FormField
-                          control={testCaseForm.control}
-                          name="enableVersioning"
+                          control={securityForm.control}
+                          name="passwordPolicy.requireNumbers"
                           render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                              <FormLabel>Version Control</FormLabel>
-                              <div className="flex items-center gap-2">
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <span>
-                                  {field.value ? "Enabled" : "Disabled"}
-                                </span>
-                              </div>
-                              <FormDescription>
-                                Track test case version history
-                              </FormDescription>
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel>Require numbers</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={securityForm.control}
+                          name="passwordPolicy.requireSpecialChars"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel>Require special characters</FormLabel>
                             </FormItem>
                           )}
                         />
                       </div>
+                    </div>
+                  </div>
 
-                      <div className="flex justify-end">
-                        <Button 
-                          type="submit" 
-                          className="flex items-center gap-2"
-                          disabled={saveSettingsMutation.isPending}
-                        >
-                          {saveSettingsMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Save className="h-4 w-4" />
-                          )}
-                          Save Settings
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            )}
+                  <Separator />
 
-            {/* Permissions Settings */}
-            {activeTab === "permissions" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Users2 className="h-5 w-5 mr-2" />
-                    Role-Based Permissions
-                  </CardTitle>
-                  <CardDescription>
-                    Configure what actions each role can perform in the system
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <RolePermissions 
-                    rolePermissions={rolePermissions}
-                    setRolePermissions={setRolePermissions}
-                    selectedRole={selectedRole}
-                    setSelectedRole={setSelectedRole}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={securityForm.control}
+                      name="sessionTimeout"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Session Timeout (minutes)</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Time before users are automatically logged out
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={securityForm.control}
+                      name="enableTwoFactor"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Two-Factor Authentication</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <span>
+                              {field.value ? "Enabled" : "Disabled"}
+                            </span>
+                          </div>
+                          <FormDescription>
+                            Require two-factor authentication for all users
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      className="flex items-center gap-2"
+                      disabled={saveSettingsMutation.isPending}
+                    >
+                      {saveSettingsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save Settings
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        );
+
+      case "test-case":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <NotebookPen className="h-5 w-5 mr-2" />
+                Test Case Settings
+              </CardTitle>
+              <CardDescription>
+                Configure test case management settings and defaults
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...testCaseForm}>
+                <form onSubmit={testCaseForm.handleSubmit(handleSaveTestCaseSettings)} className="space-y-6">
+                  <FormField
+                    control={testCaseForm.control}
+                    name="defaultStatusOptions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Default Status Options</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Not Run, Pass, Fail, Blocked"
+                            value={field.value.join(", ")}
+                            onChange={(e) => {
+                              const values = e.target.value.split(",").map(v => v.trim()).filter(Boolean);
+                              field.onChange(values);
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Comma-separated list of test case status options
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </CardContent>
-              </Card>
-            )}
-          {/* Sound Settings */}
-          {activeTab === "sound" && (
+
+                  <FormField
+                    control={testCaseForm.control}
+                    name="defaultPriorityOptions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Default Priority Options</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Low, Medium, High"
+                            value={field.value.join(", ")}
+                            onChange={(e) => {
+                              const values = e.target.value.split(",").map(v => v.trim()).filter(Boolean);
+                              field.onChange(values);
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Comma-separated list of test case priority options
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={testCaseForm.control}
+                      name="defaultView"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Default View</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select default view" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="list">List View</SelectItem>
+                              <SelectItem value="grid">Grid View</SelectItem>
+                              <SelectItem value="table">Table View</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={testCaseForm.control}
+                      name="enableVersioning"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Version Control</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <span>
+                              {field.value ? "Enabled" : "Disabled"}
+                            </span>
+                          </div>
+                          <FormDescription>
+                            Track test case version history
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      className="flex items-center gap-2"
+                      disabled={saveSettingsMutation.isPending}
+                    >
+                      {saveSettingsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save Settings
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        );
+        case "permissions":
+          return (
             <Card>
               <CardHeader>
-                <CardTitle>Sound Settings</CardTitle>
+                <CardTitle className="flex items-center">
+                  <Users2 className="h-5 w-5 mr-2" />
+                  Role-Based Permissions
+                </CardTitle>
                 <CardDescription>
-                  Configure application sound settings
+                  Configure what actions each role can perform in the system
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  <SoundSettings />
-                  <SoundTest />
-                </div>
+                <RolePermissions
+                  rolePermissions={rolePermissions}
+                  setRolePermissions={setRolePermissions}
+                  selectedRole={selectedRole}
+                  setSelectedRole={setSelectedRole}
+                />
               </CardContent>
             </Card>
-          )}
+          );
+      case "sound":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sound Settings</CardTitle>
+              <CardDescription>
+                Configure application sound settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <SoundSettings />
+                <SoundTest />
+              </div>
+            </CardContent>
+          </Card>
+        );
+      default:
+        return <div>Select a settings category</div>;
+    }
+  };
+  
+  
+  
+
+  return (
+    <MainLayout>
+      <div className="w-full h-full overflow-hidden">
+        <div className="h-full overflow-y-auto py-6 px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">System Settings</h1>
+              <p className="text-gray-600">Configure application settings and preferences</p>
+            </div>
           </div>
-        </div>
+
+        {/* Settings Navigation and Content */}
+        <motion.div 
+          variants={settingsContainerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 lg:grid-cols-4 gap-6"
+        >
+          {/* Settings Navigation */}
+          <motion.div variants={settingsCardVariants}>
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="text-lg">Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+              <nav className="space-y-1">
+                <AnimatePresence>
+                  {settingSections.map((section, index) => (
+                    <motion.button
+                      key={section.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1, duration: 0.4 }}
+                      whileHover={{ 
+                        x: 5, 
+                        scale: 1.02,
+                        transition: { duration: 0.2 } 
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setActiveSection(section.id)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium rounded-lg transition-all duration-200",
+                        activeSection === section.id
+                          ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      )}
+                    >
+                      <motion.div
+                        animate={activeSection === section.id ? { rotate: 360 } : { rotate: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <section.icon className="h-4 w-4" />
+                      </motion.div>
+                      {section.label}
+                    </motion.button>
+                  ))}
+                </AnimatePresence>
+              </nav>
+</CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Settings Content */}
+          <motion.div 
+            variants={settingsCardVariants}
+            className="lg:col-span-3"
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSection}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
+              >
+                {renderSettingsContent()}
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+        </motion.div>
       </div>
     </MainLayout>
   );

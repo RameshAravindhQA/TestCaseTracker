@@ -140,7 +140,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Main content */}
       <main className={cn(
-        "flex-1 min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300",
+        "flex-1 min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300 overflow-hidden",
         !isMobile ? "ml-60" : "pt-16"
       )}>
         <AnimatePresence mode="wait">
@@ -150,9 +150,18 @@ export function MainLayout({ children }: MainLayoutProps) {
             initial="initial"
             animate="animate"
             exit="exit"
-            className="w-full h-full"
+            className="w-full h-full relative"
+            style={{ perspective: "1000px" }}
           >
-            {children}
+            <motion.div
+              initial={{ rotateY: -15, opacity: 0 }}
+              animate={{ rotateY: 0, opacity: 1 }}
+              exit={{ rotateY: 15, opacity: 0 }}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
+              className="w-full h-full"
+            >
+              {children}
+            </motion.div>
           </motion.div>
         </AnimatePresence>
       </main>
