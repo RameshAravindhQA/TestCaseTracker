@@ -333,54 +333,116 @@ export function DashboardPage() {
                   </Card>
                 </motion.div>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+              <DialogContent className="max-w-6xl max-h-[85vh] flex flex-col">
                 <DialogHeader>
                   <DialogTitle>Test Cases Overview</DialogTitle>
                   <DialogDescription>
-                    Test cases breakdown by project with module count
+                    Test cases breakdown by project with module count and detailed test case list
                   </DialogDescription>
                 </DialogHeader>
-                <div className="max-h-96 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto space-y-6">
+                  {/* Project Summary Table */}
                   {projectStats && projectStats.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Project Name</TableHead>
-                          <TableHead>Module Count</TableHead>
-                          <TableHead>Total Test Cases</TableHead>
-                          <TableHead>Pass Rate</TableHead>
-                          <TableHead>Status Distribution</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {projectStats.map((project) => {
-                          const projectTestCases = testCases?.filter(tc => tc.projectId === project.id) || [];
-                          const passCount = projectTestCases.filter(tc => tc.status === 'Pass').length;
-                          const failCount = projectTestCases.filter(tc => tc.status === 'Fail').length;
-                          const blockedCount = projectTestCases.filter(tc => tc.status === 'Blocked').length;
-
-                          return (
-                            <TableRow key={project.id}>
-                              <TableCell className="font-medium">{project.name}</TableCell>
-                              <TableCell>{project.moduleCount}</TableCell>
-                              <TableCell>{project.testCaseCount}</TableCell>
-                              <TableCell>
-                                <Badge variant={project.passRate >= 80 ? 'default' : project.passRate >= 60 ? 'secondary' : 'destructive'}>
-                                  {project.passRate}%
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex gap-1 text-xs">
-                                  <span className="text-green-600">P:{passCount}</span>
-                                  <span className="text-red-600">F:{failCount}</span>
-                                  <span className="text-yellow-600">B:{blockedCount}</span>
-                                </div>
-                              </TableCell>
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Project Summary</h3>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Project Name</TableHead>
+                              <TableHead>Module Count</TableHead>
+                              <TableHead>Total Test Cases</TableHead>
+                              <TableHead>Pass Rate</TableHead>
+                              <TableHead>Status Distribution</TableHead>
                             </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {projectStats.map((project) => {
+                              const projectTestCases = testCases?.filter(tc => tc.projectId === project.id) || [];
+                              const passCount = projectTestCases.filter(tc => tc.status === 'Pass').length;
+                              const failCount = projectTestCases.filter(tc => tc.status === 'Fail').length;
+                              const blockedCount = projectTestCases.filter(tc => tc.status === 'Blocked').length;
+                              const notExecutedCount = projectTestCases.filter(tc => tc.status === 'Not Executed').length;
+
+                              return (
+                                <TableRow key={project.id}>
+                                  <TableCell className="font-medium">{project.name}</TableCell>
+                                  <TableCell>{project.moduleCount}</TableCell>
+                                  <TableCell>{projectTestCases.length}</TableCell>
+                                  <TableCell>
+                                    <Badge variant={project.passRate >= 80 ? 'default' : project.passRate >= 60 ? 'secondary' : 'destructive'}>
+                                      {project.passRate}%
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-1 text-xs flex-wrap">
+                                      <span className="text-green-600">P:{passCount}</span>
+                                      <span className="text-red-600">F:{failCount}</span>
+                                      <span className="text-yellow-600">B:{blockedCount}</span>
+                                      <span className="text-gray-600">NE:{notExecutedCount}</span>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      {/* Detailed Test Cases List */}
+                      {testCases && testCases.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="text-lg font-semibold">All Test Cases</h3>
+                          <div className="max-h-64 overflow-y-auto border rounded-lg">
+                            <Table>
+                              <TableHeader className="sticky top-0 bg-white">
+                                <TableRow>
+                                  <TableHead>Test Case ID</TableHead>
+                                  <TableHead>Feature</TableHead>
+                                  <TableHead>Project</TableHead>
+                                  <TableHead>Status</TableHead>
+                                  <TableHead>Priority</TableHead>
+                                  <TableHead>Created</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {testCases.map((testCase) => {
+                                  const project = projectStats?.find(p => p.id === testCase.projectId);
+                                  return (
+                                    <TableRow key={testCase.id} className="hover:bg-gray-50">
+                                      <TableCell className="font-mono text-sm">{testCase.testCaseId}</TableCell>
+                                      <TableCell>{testCase.feature || testCase.scenario || 'N/A'}</TableCell>
+                                      <TableCell>{project?.name || 'Unknown'}</TableCell>
+                                      <TableCell>
+                                        <Badge variant={
+                                          testCase.status === 'Pass' ? 'default' :
+                                          testCase.status === 'Fail' ? 'destructive' :
+                                          testCase.status === 'Blocked' ? 'secondary' : 'outline'
+                                        }>
+                                          {testCase.status}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline" className={
+                                          testCase.priority === 'High' ? 'border-red-200 text-red-700' :
+                                          testCase.priority === 'Medium' ? 'border-yellow-200 text-yellow-700' :
+                                          'border-green-200 text-green-700'
+                                        }>
+                                          {testCase.priority}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="text-sm text-gray-600">
+                                        {new Date(testCase.createdAt).toLocaleDateString()}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="text-center py-8">
                       <p className="text-gray-500">
