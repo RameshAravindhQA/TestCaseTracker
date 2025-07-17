@@ -976,7 +976,7 @@ export default function ProfilePage() {
                 className="relative cursor-pointer"
                 onClick={handleProfilePictureClick}
               >
-                <div className="h-24 w-24 border-2 border-primary/20 rounded-full overflow-hidden bg-gradient-to-br from-primary/80 to-primary/40 flex items-center justify-center">
+                <div className="h-24 w-24 border-2 border-primary/20 rounded-full overflow-hidden bg-white flex items-center justify-center">
                   {avatarLottieData ? (
                     <LottieAvatar
                       animationData={avatarLottieData}
@@ -998,9 +998,11 @@ export default function ProfilePage() {
                       }}
                     />
                   ) : (
-                    <span className="text-xl text-white font-semibold">
-                      {(fetchedCurrentUser?.firstName?.charAt(0)?.toUpperCase() || '') + (fetchedCurrentUser?.lastName?.charAt(0)?.toUpperCase() || '') || "U"}
-                    </span>
+                    <div className="w-full h-full bg-gradient-to-br from-primary/80 to-primary/40 flex items-center justify-center">
+                      <span className="text-xl text-white font-semibold">
+                        {(fetchedCurrentUser?.firstName?.charAt(0)?.toUpperCase() || '') + (fetchedCurrentUser?.lastName?.charAt(0)?.toUpperCase() || '') || "U"}
+                      </span>
+                    </div>
                   )}
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full opacity-0 hover:opacity-100 transition-opacity">
@@ -1356,14 +1358,20 @@ export default function ProfilePage() {
                             }`}
                             onClick={() => handleLottieSelect(animation)}
                           >
-                            <div className="aspect-square bg-white rounded overflow-hidden flex items-center justify-center">
-                              <LottieAvatar
-                                animationData={animation.preview}
-                                width={60}
-                                height={60}
-                                autoplay={playingAnimations.has(animation.id)}
-                                loop={true}
-                              />
+                            <div className="aspect-square bg-white rounded overflow-hidden flex items-center justify-center min-h-[60px]">
+                              {animation.preview ? (
+                                <LottieAvatar
+                                  animationData={animation.preview}
+                                  width={60}
+                                  height={60}
+                                  autoplay={playingAnimations.has(animation.id)}
+                                  loop={true}
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                                  Loading...
+                                </div>
+                              )}
                             </div>
                             <p className="text-xs text-center mt-1 truncate" title={animation.name}>
                               {animation.name}

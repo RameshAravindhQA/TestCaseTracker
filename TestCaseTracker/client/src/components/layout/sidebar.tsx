@@ -48,6 +48,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { NavaDhitiLogo } from "@/components/ui/navadhiti-logo";
+import { useColorTheme } from "@/components/theme/theme-provider";
+import { useStableAvatar } from "@/hooks/use-stable-avatar";
+import { LottieAvatar } from "@/components/ui/lottie-avatar";
 
 interface SidebarProps {
   className?: string;
@@ -306,6 +316,65 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     }, 100);
   }, []);
 
+  // Use stable avatar to prevent flickering
+  const stableAvatar = useStableAvatar(user);
+
+  // Get Lottie data for avatar display
+  const avatarLottieData = useMemo(() => {
+    if (!user || user.avatarType !== 'lottie' || !user.avatarData) {
+      return null;
+    }
+
+    try {
+      const avatarData = typeof user.avatarData === 'string' 
+        ? JSON.parse(user.avatarData) 
+        : user.avatarData;
+
+      return avatarData?.preview || null;
+    } catch (error) {
+      console.error('❌ Error parsing avatar Lottie data:', error);
+      return null;
+    }
+  }, [user]);
+
+  // Compute avatar source with proper Lottie handling
+  const avatarSrc = useMemo(() => {
+    if (!user) return undefined;
+
+    // Handle Lottie animations - don't use profilePicture URL for Lottie
+    if (user.avatarType === 'lottie' && user.avatarData) {
+      // Return null for Lottie animations as they should be rendered by LottieAvatar component
+      return null;
+    }
+
+    // Handle regular profile pictures
+    if (user.profilePicture && !user.profilePicture.startsWith('lottie:')) {
+      // Add cache busting timestamp
+      const separator = user.profilePicture.includes('?') ? '&' : '?';
+      return `${user.profilePicture}${separator}t=${Date.now()}`;
+    }
+
+    return undefined;
+  }, [user]);
+
+  const userPermissions = useQuery<string[]>({
+    queryKey: ['/api/user/permissions'],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", "/api/user/permissions");
+        if (!res.ok) {
+          throw new Error('Failed to fetch permissions');
+        }
+        return res.json();
+      } catch (error) {
+        console.warn('Failed to fetch permissions:', error);
+        return [];
+      }
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+
   return (
     <aside
       className={cn(
@@ -323,11 +392,52 @@ const SidebarComponent = ({ className }: SidebarProps) => {
 
       <div className="flex items-center p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         {/* Using the FrozenAvatar component that "freezes" on first render */}
-        <FrozenAvatar 
+        
+        {/* Sidebar Profile Section */}
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="h-10 w-10 rounded-full overflow-hidden bg-white border-2 border-primary/20 flex items-center justify-center">
+            {avatarLottieData ? (
+              <LottieAvatar
+                animationData={avatarLottieData}
+                width={36}
+                height={36}
+                autoplay={true}
+                loop={true}
+                name={user?.firstName || 'User'}
+              />
+            ) : avatarSrc ? (
+              <img
+                src={avatarSrc}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error("Sidebar avatar image failed to load:", e);
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary/80 to-primary/40 flex items-center justify-center">
+                <span className="text-xs text-white font-semibold">
+                  {stableAvatar.userInitials}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">
+              {user?.name || "User"}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {user?.role || "Member"}
+            </p>
+          </div>
+        </div>
+        
+        {/*  <FrozenAvatar 
           user={user} 
           className="h-8 w-8 ring-2 ring-gray-200 dark:ring-gray-700"
           fallbackClassName="bg-gradient-to-br from-primary/80 to-primary/40"
-        />
+        /> */}
         {useMemo(() => (
           <div className="ml-3">
             <p className="text-sm font-medium text-gray-900 dark:text-white">

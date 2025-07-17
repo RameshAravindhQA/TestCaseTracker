@@ -4,7 +4,7 @@ import { Button } from './button';
 import { Card } from './card';
 import { Badge } from './badge';
 import { useToast } from '@/hooks/use-toast';
-import { Play, Pause, RotateCcw, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, AlertCircle, CheckCircle, Loader2, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface LottieAvatarProps {
@@ -63,8 +63,8 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
       return false;
     }
 
-    if (!hasLayers || data.layers.length === 0) {
-      setErrorMessage('Invalid Lottie: missing or empty layers');
+    if (!hasLayers) {
+      setErrorMessage(`Invalid Lottie: missing layers (${name})`);
       return false;
     }
 
@@ -78,7 +78,7 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
     if (!data.assets) data.assets = [];
 
     return true;
-  }, [width, height]);
+  }, [width, height, name]);
 
   // Handle animation data changes
   useEffect(() => {
@@ -169,29 +169,18 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
   }
 
   // Render error state
-  if (hasError) {
+  if (hasError || !animationData) {
     return (
-      <div
-        className={`flex items-center justify-center bg-destructive/10 border border-destructive/20 rounded-lg ${className}`}
+      <div 
+        className={`flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded ${className}`}
         style={{ width, height, ...style }}
+        onClick={onSelect}
       >
-        <div className="text-center p-2">
-          <AlertCircle className="h-6 w-6 text-destructive mx-auto mb-2" />
-          <p className="text-xs text-destructive break-words">{errorMessage}</p>
-          {controls && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setHasError(false);
-                setErrorMessage('');
-                setAnimationKey(prev => prev + 1);
-              }}
-              className="mt-2"
-            >
-              Retry
-            </Button>
-          )}
+        <div className="text-center p-1">
+          <XCircle className="h-3 w-3 text-red-500 mx-auto mb-1" />
+          <p className="text-xs text-red-600 dark:text-red-400 truncate">
+            Failed
+          </p>
         </div>
       </div>
     );
