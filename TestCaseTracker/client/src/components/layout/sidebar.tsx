@@ -1,351 +1,454 @@
-import React, { useState, useEffect } from "react";
-import { useLocation } from "wouter";
-import { cn } from "@/lib/utils";
+import React, { useState, useEffect, useMemo, memo } from "react";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { FrozenAvatar } from "@/components/ui/frozen-avatar";
+import { cn } from "@/lib/utils";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+import { logout } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
+import { User } from "@/types";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import {
   LayoutDashboard,
-  FolderOpen,
-  TestTube,
-  Bug,
-  Users,
-  FileText,
-  BarChart3,
-  Settings,
-  GitBranch,
-  MessageCircle,
-  ClipboardList,
-  BookOpen,
+  FolderKanban,
   CheckSquare,
+  BugPlay,
+  FileBarChart,
+  FileText,
+  Users,
+  Settings,
+  LogOut,
+  Loader2,
   Clock,
-  Globe,
-  Workflow,
-  Bot,
+  Play,
+  Terminal,
+  Trello,
   Kanban,
-  MessageSquare,
-  Calendar,
-  ChevronLeft,
+  Monitor,
+  Navigation,
+  RefreshCw,
+  Compass,
+  BoxSelect,
+  FormInput,
+  ListFilter,
+  Star,
+  ExternalLink,
   ChevronRight,
-  Menu,
-  X,
-  Home,
-  FileTextIcon,
-  GitMerge,
-  
-  Users2,
-  Settings2,
-  Network,
-  Brain,
-  Zap,
-  Target,
-  Shield,
-  UserCog,
-  LifeBuoy,
-  Mail,
-  Phone
+  Github,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SidebarProps {
-  isCollapsed: boolean;
-  onToggle: () => void;
-  isMobile: boolean;
-  isOpen: boolean;
-  onClose: () => void;
+  className?: string;
 }
 
-interface Project {
-  id: number;
+interface NavItem {
   name: string;
-  status: string;
+  href: string;
+  icon: React.ReactNode;
+  badge?: string;
+  children?: NavItem[];
 }
 
-interface DashboardStats {
-  totalProjects: number;
-  totalTestCases: number;
-  openBugs: number;
-  passRate: number;
-}
+const SidebarComponent = ({ className }: SidebarProps) => {
+  const [location] = useLocation();
+  const { toast } = useToast();
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const sidebarRef = React.useRef<HTMLDivElement>(null);
+  const activeItemRef = React.useRef<HTMLAnchorElement>(null);
 
-const navigationItems = [
-  {
-    title: "Overview",
-    items: [
-      { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard", badge: null },
-      { icon: BarChart3, label: "Reports", href: "/reports", badge: null },
-      { icon: GitBranch, label: "Functional Flow", href: "/functional-flow", badge: "Beta" },
-    ]
-  },
-  {
-    title: "Project Management",
-    items: [
-      { icon: FolderOpen, label: "Projects", href: "/projects", badge: null },
-      { icon: Users, label: "Team", href: "/users", badge: null },
-      { icon: MessageSquare, label: "Messenger", href: "/messenger", badge: "New" },
-    ]
-  },
-  {
-    title: "Testing",
-    items: [
-      { icon: TestTube, label: "Test Cases", href: "/test-cases", badge: null },
-      { icon: Bug, label: "Bugs", href: "/bugs", badge: null },
-      { icon: ClipboardList, label: "Test Sheets", href: "/test-sheets", badge: null },
-      { icon: Network, label: "Traceability Matrix", href: "/traceability-matrix", badge: null },
-    ]
-  },
-  {
-    title: "Documentation",
-    items: [
-      { icon: FileText, label: "Documents", href: "/documents", badge: null },
-      { icon: BookOpen, label: "Notebooks", href: "/notebooks", badge: null },
-    ]
-  },
-  {
-    title: "Tools & Automation",
-    items: [
-      { icon: Bot, label: "Automation", href: "/automation", badge: "Pro" },
-      { icon: GitBranch, label: "GitHub Integration", href: "/github", badge: null },
-      { icon: Kanban, label: "Kanban Board", href: "/kanban", badge: null },
-      { icon: Brain, label: "Test Data Generator", href: "/test-data-generator", badge: "AI" },
-    ]
-  },
-  {
-    title: "Time & Tasks",
-    items: [
-      { icon: Clock, label: "Timesheets", href: "/timesheets", badge: null },
-      { icon: CheckSquare, label: "Todo Lists", href: "/todos", badge: null },
-    ]
-  },
-  {
-    title: "Administration",
-    items: [
-      { icon: Settings, label: "Settings", href: "/settings", badge: null },
-      { icon: Shield, label: "Permissions", href: "/permissions", badge: null },
-      { icon: UserCog, label: "Admin Panel", href: "/admin/notifications", badge: null },
-    ]
-  }
-];
-
-export function SidebarComponent({ isCollapsed, onToggle, isMobile, isOpen, onClose }: SidebarProps) {
-  const [location, navigate] = useLocation();
-  const { user } = useAuth();
-
-  // Always call hooks at the top level - never conditionally
-  const { data: projects } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/projects");
-      if (!response.ok) throw new Error("Failed to fetch projects");
-      return response.json();
-    },
-    enabled: !!user, // Only run when user is available
-    staleTime: 30000,
-    refetchOnWindowFocus: false,
+  const { data: user } = useQuery<User>({
+    queryKey: ["/api/auth/user"],
+    refetchInterval: 30000, // Reduce frequency to 30 seconds
+    refetchOnWindowFocus: false, // Disable refetch on window focus to prevent avatar flicker
+    staleTime: 60000, // 1 minute stale time
   });
 
-  const { data: stats } = useQuery<DashboardStats>({
-    queryKey: ["/api/dashboard/stats"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/dashboard/stats");
-      if (!response.ok) throw new Error("Failed to fetch stats");
-      return response.json();
+  const logoutMutation = useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      // Clear all query cache
+      queryClient.clear();
+
+      // Remove auth status from localStorage
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('lastLoginTime');
+
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account",
+      });
+
+      // Redirect to login page
+      window.location.href = "/login";
     },
-    enabled: !!user, // Only run when user is available
-    staleTime: 30000,
-    refetchOnWindowFocus: false,
+    onError: (error) => {
+      toast({
+        title: "Logout failed",
+        description: `${error}`,
+        variant: "destructive",
+      });
+    }
   });
 
-  // Early return after all hooks are called
-  if (!user) {
-    return null;
-  }
-
-  const handleNavigation = (href: string) => {
-    navigate(href);
-    if (isMobile) {
-      onClose();
-    }
+  const handleLogout = () => {
+    setLogoutDialogOpen(true);
   };
 
-  const isActive = (href: string) => {
-    if (href === "/dashboard") {
-      return location === "/dashboard" || location === "/";
-    }
-    return location.startsWith(href);
+  const confirmLogout = () => {
+    logoutMutation.mutate();
   };
 
-  const getBadgeCount = (href: string) => {
-    if (!stats) return null;
+  // Memoize navigation items to prevent recreation on re-render
+  const navItems: NavItem[] = useMemo(() => [
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: <LayoutDashboard className="h-5 w-5" />,
+    },
+    {
+      name: "Projects",
+      href: "/projects",
+      icon: <FolderKanban className="h-5 w-5" />,
+    },
+    {
+      name: "Kanban Board",
+      href: "/kanban",
+      icon: <Trello className="h-5 w-5" />,
+    },
+    {
+      name: "Test Cases",
+      href: "/test-cases",
+      icon: <CheckSquare className="h-5 w-5" />,
+    },
+    {
+      name: "Bug Reports",
+      href: "/bugs",
+      icon: <BugPlay className="h-5 w-5" />,
+    },
+    {
+      name: "Messenger",
+      href: "/messenger",
+      icon: <Terminal className="h-5 w-5" />,
+    },
+    {
+      name: "GitHub Integration",
+      href: "/github",
+      icon: <Github className="h-5 w-5" />,
+    },
+    {
+      name: "Functional Flow",
+      href: "/functional-flow",
+      icon: <BoxSelect className="h-5 w-5" />,
+    },
+    {
+      name: "Timesheets",
+      href: "/timesheets",
+      icon: <Clock className="h-5 w-5" />,
+    },
+    {
+      name: "Documents",
+      href: "/documents",
+      icon: <FileText className="h-5 w-5" />,
+    },
+    {
+      name: "Reports",
+      href: "/reports",
+      icon: <FileBarChart className="h-5 w-5" />,
+    },
+    {
+      name: "Test Sheets",
+      href: "/test-sheets",
+      icon: <FormInput className="h-5 w-5" />,
+    },
+    {
+      name: "Traceability Matrix",
+      href: "/traceability-matrix",
+      icon: <ListFilter className="h-5 w-5" />,
+    },
+    {
+      name: "Notebooks",
+      href: "/notebooks",
+      icon: <FileText className="h-5 w-5" />,
+    },
+    {
+      name: "Todo List",
+      href: "/todos",
+      icon: <CheckSquare className="h-5 w-5" />,
+    },
+    {
+      name: "Test Data Generator",
+      href: "/test-data-generator",
+      icon: <FileText className="h-5 w-5" />,
+    },
+    {
+      name: "Test Automation",
+      href: "/automation",
+      icon: <Play className="h-5 w-5" />,
+    },
+  ], []);
 
-    switch (href) {
-      case "/bugs":
-        return stats.openBugs > 0 ? stats.openBugs : null;
-      case "/projects":
-        return stats.totalProjects > 0 ? stats.totalProjects : null;
-      case "/test-cases":
-        return stats.totalTestCases > 0 ? stats.totalTestCases : null;
-      default:
-        return null;
+  const adminItems: NavItem[] = useMemo(() => [
+    {
+      name: "Users",
+      href: "/users",
+      icon: <Users className="h-5 w-5" />,
+    },
+    {
+      name: "Settings",
+      href: "/settings",
+      icon: <Settings className="h-5 w-5" />,
+    },
+  ], []);
+
+  const userItems: NavItem[] = useMemo(() => [
+    {
+      name: "My Profile",
+      href: "/profile",
+      icon: <Users className="h-5 w-5" />,
+    },
+  ], []);
+
+  useEffect(() => {
+    if (activeItemRef.current && sidebarRef.current) {
+      const activeElement = activeItemRef.current;
+      const sidebar = sidebarRef.current;
+
+      // Calculate the position to scroll to
+      const elementTop = activeElement.offsetTop;
+      const elementHeight = activeElement.offsetHeight;
+      const sidebarHeight = sidebar.clientHeight;
+      const sidebarScrollTop = sidebar.scrollTop;
+
+      // Check if element is fully visible
+      const isVisible = (
+        elementTop >= sidebarScrollTop &&
+        elementTop + elementHeight <= sidebarScrollTop + sidebarHeight
+      );
+
+      if (!isVisible) {
+        // Scroll to center the active item
+        const scrollTo = elementTop - (sidebarHeight / 2) + (elementHeight / 2);
+        sidebar.scrollTo({
+          top: scrollTo,
+          behavior: 'smooth'
+        });
+      }
     }
-  };
-
-  const sidebarContent = (
-    <>
-      {/* Header */}
-      <div className="flex h-14 items-center border-b px-4">
-        <div className="flex items-center gap-2 font-semibold">
-          <TestTube className="h-6 w-6 text-primary" />
-          {!isCollapsed && (
-            <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              TestTracker
-            </span>
-          )}
-        </div>
-        {isMobile && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="ml-auto"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-
-      {/* Navigation */}
-      <ScrollArea className="flex-1 px-3">
-        <div className="space-y-4 py-4">
-          {navigationItems.map((section) => (
-            <div key={section.title} className="space-y-2">
-              {!isCollapsed && (
-                <h4 className="text-sm font-medium text-muted-foreground px-2 mb-2">
-                  {section.title}
-                </h4>
-              )}
-              <div className="space-y-1">
-                {section.items.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(item.href);
-                  const badgeCount = getBadgeCount(item.href);
-
-                  return (
-                    <Button
-                      key={item.href}
-                      variant={active ? "secondary" : "ghost"}
-                      className={cn(
-                        "w-full justify-start gap-2 h-10",
-                        isCollapsed && "px-2",
-                        active && "bg-accent text-accent-foreground font-medium"
-                      )}
-                      onClick={() => handleNavigation(item.href)}
-                    >
-                      <Icon className="h-4 w-4 flex-shrink-0" />
-                      {!isCollapsed && (
-                        <>
-                          <span className="flex-1 text-left">{item.label}</span>
-                          <div className="flex items-center gap-1">
-                            {badgeCount && (
-                              <Badge variant="secondary" className="h-5 text-xs px-1.5">
-                                {badgeCount}
-                              </Badge>
-                            )}
-                            {item.badge && (
-                              <Badge 
-                                variant={item.badge === "New" ? "default" : "outline"} 
-                                className="h-5 text-xs px-1.5"
-                              >
-                                {item.badge}
-                              </Badge>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
-
-      {/* Footer */}
-      <div className="border-t p-4">
-        {!isCollapsed && (
-          <div className="space-y-2">
-            <div className="text-xs text-muted-foreground">
-              Quick Stats
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="text-center p-2 bg-muted rounded">
-                <div className="font-semibold">{stats?.totalProjects || 0}</div>
-                <div className="text-muted-foreground">Projects</div>
-              </div>
-              <div className="text-center p-2 bg-muted rounded">
-                <div className="font-semibold">{stats?.passRate || 0}%</div>
-                <div className="text-muted-foreground">Pass Rate</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Collapse Toggle */}
-        {!isMobile && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full mt-2"
-            onClick={onToggle}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </Button>
-        )}
-      </div>
-    </>
-  );
-
-  if (isMobile) {
-    return (
-      <>
-        {/* Mobile Overlay */}
-        {isOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
-            onClick={onClose}
-          />
-        )}
-
-        {/* Mobile Sidebar */}
-        <div
-          className={cn(
-            "fixed left-0 top-0 z-50 h-full w-64 bg-background border-r transform transition-transform duration-200 ease-in-out",
-            isOpen ? "translate-x-0" : "-translate-x-full"
-          )}
-        >
-          <div className="flex h-full flex-col">
-            {sidebarContent}
-          </div>
-        </div>
-      </>
-    );
-  }
+  }, [location]);
 
   return (
-    <div
+    <aside
       className={cn(
-        "relative flex h-full flex-col border-r bg-background transition-all duration-200",
-        isCollapsed ? "w-16" : "w-64"
+        "fixed top-0 left-0 bottom-0 w-60 flex flex-col border-r border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-800",
+        className
       )}
     >
-      {sidebarContent}
-    </div>
+
+      <div className="flex items-center h-16 px-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <Link to="/dashboard" className="flex items-center gap-2 font-semibold">
+            <img src="/images/navadhiti-logo-tree.jpg" alt="NavaDhiti" className="h-8 w-8 rounded" />
+            <span className="">NavaDhiti</span>
+          </Link>
+      </div>
+
+      <div className="flex items-center p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        {/* Using the FrozenAvatar component that "freezes" on first render */}
+        <FrozenAvatar 
+          user={user} 
+          className="h-8 w-8 ring-2 ring-gray-200 dark:ring-gray-700"
+          fallbackClassName="bg-gradient-to-br from-primary/80 to-primary/40"
+        />
+        {useMemo(() => (
+          <div className="ml-3">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              {user?.name || (user?.firstName ? `${user?.firstName} ${user?.lastName || ''}`.trim() : "Guest User")}
+            </p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{user?.role || "User"}</p>
+          </div>
+        ), [user?.name, user?.firstName, user?.lastName, user?.role])}
+      </div>
+
+      <nav className="flex-1 overflow-y-auto" ref={sidebarRef}>
+        <div className="px-2 py-4 space-y-1">
+          {useMemo(() => 
+            navItems.map((item) => {
+              const isActive = location.startsWith(item.href);
+              return (
+              <div key={item.href}>
+                <Link 
+                  href={item.href}
+                  className={cn(
+                    "flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md group",
+                    isActive
+                      ? "text-white bg-primary"
+                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                  )}
+                >
+                  <div className="flex items-center">
+                    <span className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}>
+                      {item.icon}
+                    </span>
+                    {item.name}
+                  </div>
+                  {item.badge && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+
+                {/* Render submenu if item has children */}
+                {item.children && item.children.length > 0 && (
+                  <div className="pl-9 mt-1 space-y-1">
+                    {item.children.map((child) => (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className={cn(
+                          "flex items-center px-2 py-1.5 text-sm rounded-md",
+                          location.startsWith(child.href)
+                            ? "text-primary font-medium bg-primary/10"
+                            : "text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800"
+                        )}
+                      >
+                        <span className="mr-2 text-gray-600 dark:text-gray-300">
+                          {child.icon}
+                        </span>
+                        {child.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}), [navItems, location])}
+        </div>
+
+        {/* User account section */}
+        <>
+          <div className="px-3 py-3">
+            <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+              Account
+            </h3>
+          </div>
+
+          <div className="px-2 space-y-1">
+            {useMemo(() => 
+              userItems.map((item) => {
+                const isActive = location.startsWith(item.href);
+                return (
+                <Link 
+                  key={item.href} 
+                  href={item.href}
+                  ref={isActive ? activeItemRef : null}
+                  className={cn(
+                    "flex items-center px-2 py-2 text-sm font-medium rounded-md group",
+                    isActive
+                      ? "text-white bg-primary"
+                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                  )}
+                >
+                  <span className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}>
+                    {item.icon}
+                  </span>
+                  {item.name}
+                </Link>
+              )}), [userItems, location])}
+          </div>
+        </>
+
+        {/* Admin section */}
+        {user?.role === "Admin" && (
+          <>
+            <div className="px-3 py-3">
+              <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                Admin
+              </h3>
+            </div>
+
+            <div className="px-2 space-y-1">
+              {useMemo(() => 
+                adminItems.map((item) => {
+                  const isActive = location.startsWith(item.href);
+                  return (
+                  <Link 
+                    key={item.href} 
+                    href={item.href}
+                    className={cn(
+                      "flex items-center px-2 py-2 text-sm font-medium rounded-md group",
+                      isActive
+                        ? "text-white bg-primary"
+                        : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                    )}
+                  >
+                    <span className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}>
+                      {item.icon}
+                    </span>
+                    {item.name}
+                  </Link>
+                )}), [adminItems, location])}
+            </div>
+          </>
+        )}
+      </nav>
+
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm text-gray-700 dark:text-gray-300">Theme</span>
+          <ThemeToggle />
+        </div>
+        <Button
+          variant="outline"
+          className="flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 rounded-md transition-colors"
+          onClick={handleLogout}
+          disabled={logoutMutation.isPending}
+        >
+          <LogOut className="h-5 w-5 mr-3 text-gray-600 dark:text-gray-300" />
+          {logoutMutation.isPending ? "Logging out..." : "Logout"}
+        </Button>
+      </div>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to log out of NavaDhiti? Your session will be ended.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmLogout}
+              className="bg-primary hover:bg-primary/90"
+              disabled={logoutMutation.isPending}
+            >
+              {logoutMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logging out...
+                </>
+              ) : (
+                "Log out"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </aside>
   );
-}
+};
+
+// Memoize the SidebarComponent to prevent unnecessary re-renders
+export const Sidebar = memo(SidebarComponent);

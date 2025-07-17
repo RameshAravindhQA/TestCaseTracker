@@ -129,6 +129,75 @@ export const LottieFileDebug: React.FC<LottieFileDebugProps> = ({ onTestResults 
         };
 
         console.log(`✅ Valid Lottie for ${file}`);
+
+        // Get response text
+        const text = await response.text();
+        console.log(`📄 Response length for ${file}: ${text.length} characters`);
+
+        // Check if response is HTML (404 page)
+        if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+          console.error(`❌ HTML response for ${file}`);
+          result.status = 'HTML_ERROR';
+          result.error = 'Received HTML instead of JSON (likely 404)';
+          testResults.push(result);
+          continue;
+        }
+
+        // Try to parse JSON
+        let jsonData;
+        try {
+          jsonData = JSON.parse(text);
+          console.log(`✅ JSON parsed for ${file}`);
+        } catch (parseError) {
+          console.error(`❌ JSON parse error for ${file}:`, parseError);
+          result.status = 'PARSE_ERROR';
+          result.error = `JSON parse error: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`;
+          testResults.push(result);
+          continue;
+        }
+
+        // Check for essential Lottie properties
+        const hasVersion = jsonData.v || jsonData.version;
+        const hasLayers = Array.isArray(jsonData.layers);
+        const hasFrameRate = jsonData.fr || jsonData.frameRate;
+        const hasWidth = jsonData.w || jsonData.width;
+        const hasHeight = jsonData.h || jsonData.height;
+
+        if (!hasVersion) {
+          result.status = 'FORMAT_ERROR';
+          result.error = 'Missing version information';
+          testResults.push(result);
+          continue;
+        }
+
+        if (!hasLayers) {
+          result.status = 'FORMAT_ERROR';
+          result.error = 'Missing or invalid layers array';
+          testResults.push(result);
+          continue;
+        }
+
+        if (jsonData.layers.length === 0) {
+          result.status = 'FORMAT_ERROR';
+          result.error = 'No animation layers found';
+          testResults.push(result);
+          continue;
+        }
+
+        // Extract details
+        result.details = {
+          version: jsonData.v || jsonData.version,
+          layers: jsonData.layers?.length || 0,
+          frameRate: jsonData.fr || jsonData.frameRate,
+          width: jsonData.w || jsonData.width,
+          height: jsonData.h || jsonData.height,
+          duration: jsonData.op ? (jsonData.op / (jsonData.fr || 30)) : undefined
+        };
+
+        result.status = 'VALID_LOTTIE';
+        result.data = jsonData;
+        
+        console.log(`✅ Valid Lottie file: ${file} - v${result.details.version}, ${result.details.layers} layers`);
         
       } catch (error) {
         console.error(`❌ Fetch error for ${file}:`, error);

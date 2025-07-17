@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect } from "react";
 import { useLocation, useRouter } from "wouter";
-import { SidebarComponent } from "@/components/layout/sidebar";
+import { Sidebar } from "@/components/layout/sidebar";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Menu, X } from "lucide-react";
 import { FrozenAvatar } from "@/components/ui/frozen-avatar";
@@ -32,21 +32,15 @@ export function MainLayout({ children }: MainLayoutProps) {
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
-    // Redirect to login if not authenticated or if we have an error
-    if (!isLoading && (!user || error?.message === "Not authenticated") && !isAuthenticated && 
+    // Redirect to login if not authenticated
+    if (!isLoading && !user && !isAuthenticated && 
         location !== "/login" && 
         location !== "/register" && 
         location !== "/forgot-password") {
       console.log("User not authenticated, redirecting to login");
-      // Clear invalid auth state
-      localStorage.removeItem('isAuthenticated');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userName');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('loginTime');
       navigate("/login");
     }
-  }, [user, isLoading, error, location, navigate]);
+  }, [user, isLoading, location, navigate]);
 
   // Show loading state if checking auth
   if (isLoading && location !== "/login" && location !== "/register" && location !== "/forgot-password") {
@@ -65,15 +59,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar for desktop - kept simple with no special key */}
-      {!isMobile && (
-        <SidebarComponent
-          isCollapsed={false}
-          onToggle={() => {}}
-          isMobile={false}
-          isOpen={false}
-          onClose={() => {}}
-        />
-      )}
+      {!isMobile && <Sidebar />}
 
       {/* Mobile header */}
       {isMobile && (
@@ -128,13 +114,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <span className="sr-only">Close menu</span>
               </Button>
             </div>
-            <SidebarComponent
-              isCollapsed={false}
-              onToggle={() => {}}
-              isMobile={true}
-              isOpen={menuOpen}
-              onClose={() => setMenuOpen(false)}
-            />
+            <Sidebar />
           </div>
         </div>
       )}

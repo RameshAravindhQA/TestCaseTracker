@@ -5,15 +5,31 @@ import { useEffect, useState } from "react";
 
 export default function Login() {
   const [, navigate] = useLocation();
+  const [hasChecked, setHasChecked] = useState(false);
 
-  // Check if already logged in via localStorage only to avoid API call issues
+  // Check if already logged in via API
+  const { data: user, isLoading } = useQuery({
+    queryKey: ["/api/auth/user"],
+    retry: false,
+    throwOnError: false,
+    enabled: !hasChecked, // Only check once
+  });
+
+  // Check localStorage for auth status and redirect to dashboard if authenticated
   useEffect(() => {
+    if (hasChecked) return;
+
+    // Check both API response and localStorage for authentication status
     const isAuthenticatedInLocalStorage = localStorage.getItem('isAuthenticated') === 'true';
-    if (isAuthenticatedInLocalStorage) {
-      console.log("User already authenticated, redirecting to dashboard");
-      navigate("/dashboard");
+
+    if (!isLoading) {
+      if (user && isAuthenticatedInLocalStorage) {
+        console.log("User already authenticated, redirecting to dashboard");
+        navigate("/dashboard");
+      }
+      setHasChecked(true);
     }
-  }, [navigate]);
+  }, [user, isLoading, navigate, hasChecked]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">

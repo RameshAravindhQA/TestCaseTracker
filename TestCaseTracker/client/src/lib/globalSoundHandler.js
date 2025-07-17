@@ -178,6 +178,41 @@ class GlobalSoundHandler {
       console.error('🔊 Error playing user action sound:', error);
     }
   }
+}
+
+// Global Sound Handler for API Integrations
+class GlobalSoundHandler {
+  constructor() {
+    this.isInitialized = false;
+    this.soundManager = null;
+    this.requestCount = 0;
+    this.init();
+  }
+
+  async init() {
+    try {
+      console.log('🔊 Initializing global sound handler...');
+
+      // Wait for sound manager to be available
+      let attempts = 0;
+      while (!window.soundManager && attempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+
+      if (window.soundManager) {
+        this.soundManager = window.soundManager;
+        this.setupApiInterceptors();
+        this.setupQueryClientIntegration();
+        this.isInitialized = true;
+        console.log('🔊 Global sound handler initialized successfully');
+      } else {
+        console.warn('⚠️ Sound manager not available after waiting');
+      }
+    } catch (error) {
+      console.error('🔊 Error initializing global sound handler:', error);
+    }
+  }
 
   setupApiInterceptors() {
     // Intercept fetch calls
@@ -281,7 +316,7 @@ class GlobalSoundHandler {
 
     // Check for actual CRUD operations with specific endpoints
     const hasFormSubmission = crudPatterns.some(pattern => url.includes(pattern));
-
+    
     // Also check if this is a real form submission (not just a dropdown change)
     const isFormSubmission = url.includes('/create') || 
                              url.includes('/update') || 
@@ -340,7 +375,7 @@ const globalSoundHandler = new GlobalSoundHandler();
 
 // Handle all clicks globally and play sound
 document.addEventListener('click', (event) => {
-  if (globalSoundHandler.initialized) {
+  if (globalSoundHandler.isInitialized) {
     // Handle all clicks but exclude certain elements
       if (event.target.closest('.no-sound') || 
           event.target.closest('[data-no-sound]') ||
@@ -375,4 +410,3 @@ document.addEventListener('click', (event) => {
 
 // Export for use in other modules
 export default globalSoundHandler;
-```
