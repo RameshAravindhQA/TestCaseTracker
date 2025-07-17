@@ -906,8 +906,7 @@ export default function ProfilePage() {
               >
                 Change Picture
               </Button>
-              <```text
-p className="text-xs text-gray-500 mt-2 text-center">
+              <p className="text-xs text-gray-500 mt-2 text-center">
                 Click the button or image to upload a new profile picture.
               </p>
             </CardContent>
