@@ -6,7 +6,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { motion } from "framer-motion";
 
 function ForgotPassword() {
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
+
+  // Check if already logged in
+  const { data: user, isLoading } = useQuery({
+    queryKey: ["/api/auth/user"],
+    retry: false,
+    throwOnError: false,
+  });
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate("/dashboard");
+    }
+  }, [user, isLoading, navigate]);
 
   return (
     <motion.div 
@@ -16,6 +30,22 @@ function ForgotPassword() {
       className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4"
     >
       <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="flex justify-center">
+            <img 
+              src="/images/navadhiti-logo-tree.jpg" 
+              alt="NavaDhiti Logo" 
+              className="h-auto w-64 mx-auto mb-4" 
+            />
+          </div>
+          <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+            Reset Your Password
+          </h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            Enter your email to receive a password reset link
+          </p>
+        </div>
+
         <Card className="backdrop-blur-sm bg-white/80 dark:bg-gray-800/80 border-0 shadow-2xl">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-semibold text-center">
@@ -45,54 +75,3 @@ function ForgotPassword() {
 }
 
 export default ForgotPassword;
-
-export default function ForgotPassword() {
-  const [, navigate] = useLocation();
-  
-  // Check if already logged in
-  const { data: user, isLoading } = useQuery({
-    queryKey: ["/api/auth/user"],
-    retry: false,
-    throwOnError: false,
-  });
-  
-  // Redirect to dashboard if already logged in
-  useEffect(() => {
-    if (!isLoading && user) {
-      navigate("/dashboard");
-    }
-  }, [user, isLoading, navigate]);
-  
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <div className="flex justify-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-12 w-12 text-primary"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-              />
-            </svg>
-          </div>
-          <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
-            Reset Your Password
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Enter your email to receive a password reset link
-          </p>
-        </div>
-        
-        <ForgotPasswordForm />
-      </div>
-    </div>
-  );
-}
