@@ -75,59 +75,78 @@ export default function ProfilePage() {
   useEffect(() => {
     const loadAnimations = async () => {
       try {
-        // Load only working animations with correct paths
+        console.log('🎬 Starting to load Lottie animations...');
+        
+        // Define animations to load with fallback paths
         const animationsToLoad = [
           { id: 'rocket', name: 'Rocket', path: '/lottie/rocket.json' },
           { id: 'businessman-rocket', name: 'Business Rocket', path: '/lottie/businessman-rocket.json' },
           { id: 'male-avatar', name: 'Male Avatar', path: '/lottie/male-avatar.json' },
           { id: 'female-avatar', name: 'Female Avatar', path: '/lottie/female-avatar.json' },
+          { id: 'business-team', name: 'Business Team', path: '/lottie/business-team.json' },
+          { id: 'office-team', name: 'Office Team', path: '/lottie/office-team.json' },
+          { id: 'software-dev', name: 'Software Dev', path: '/lottie/software-dev.json' }
         ];
 
         const loadedAnimations = await Promise.all(
           animationsToLoad.map(async (animation) => {
             try {
               console.log(`🎬 Loading animation: ${animation.name} from ${animation.path}`);
-              const response = await fetch(animation.path);
-              if (!response.ok) {
-                console.error(`❌ Failed to load ${animation.name} animation: ${response.status}`);
-                return { ...animation, preview: null };
-              }
-
-              const text = await response.text();
               
-              // Check if we got HTML instead of JSON
-              if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-                console.error(`❌ Received HTML instead of JSON for ${animation.name}`);
-                return { ...animation, preview: null };
+              // Try multiple path variations
+              const possiblePaths = [
+                animation.path,
+                animation.path.replace('/lottie/', '/public/lottie/'),
+                `${animation.path}?v=${Date.now()}` // Cache busting
+              ];
+
+              let response = null;
+              let data = null;
+
+              for (const tryPath of possiblePaths) {
+                try {
+                  console.log(`🔍 Trying path: ${tryPath}`);
+                  response = await fetch(tryPath);
+                  
+                  if (response.ok) {
+                    const text = await response.text();
+                    
+                    // Check if we got HTML instead of JSON
+                    if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                      console.warn(`⚠️ Received HTML instead of JSON for ${animation.name} at ${tryPath}`);
+                      continue;
+                    }
+
+                    // Try to parse JSON
+                    try {
+                      data = JSON.parse(text);
+                      
+                      // Validate Lottie structure
+                      if (data && typeof data === 'object' && (data.v || data.layers || data.fr)) {
+                        console.log(`✅ Successfully loaded ${animation.name} from ${tryPath}`);
+                        break;
+                      } else {
+                        console.warn(`⚠️ Invalid Lottie structure for ${animation.name} at ${tryPath}`);
+                        data = null;
+                      }
+                    } catch (parseError) {
+                      console.warn(`⚠️ JSON parse error for ${animation.name} at ${tryPath}:`, parseError);
+                      continue;
+                    }
+                  } else {
+                    console.warn(`⚠️ HTTP ${response.status} for ${animation.name} at ${tryPath}`);
+                  }
+                } catch (fetchError) {
+                  console.warn(`⚠️ Fetch error for ${animation.name} at ${tryPath}:`, fetchError);
+                }
               }
 
-              // Clean and validate JSON
-              const cleanedText = text.trim();
-              let data;
-              
-              try {
-                data = JSON.parse(cleanedText);
-              } catch (parseError) {
-                console.error(`❌ JSON parse error for ${animation.name}:`, parseError);
-                console.log('Raw text preview:', cleanedText.substring(0, 200));
+              if (data) {
+                return { ...animation, preview: data };
+              } else {
+                console.error(`❌ Failed to load ${animation.name} from any path`);
                 return { ...animation, preview: null };
               }
-
-              // Validate Lottie structure
-              if (!data || typeof data !== 'object') {
-                console.error(`❌ Invalid data structure for ${animation.name}`);
-                return { ...animation, preview: null };
-              }
-
-              // Check for required Lottie properties
-              if (!data.v && !data.layers && !data.fr) {
-                console.error(`❌ Missing required Lottie properties for ${animation.name}`);
-                console.log('Data keys:', Object.keys(data));
-                return { ...animation, preview: null };
-              }
-
-              console.log(`✅ Successfully loaded and validated ${animation.name}`);
-              return { ...animation, preview: data };
 
             } catch (error) {
               console.error(`❌ Error loading ${animation.name} animation:`, error);
@@ -142,13 +161,26 @@ export default function ProfilePage() {
         
         setLottieAnimations(workingAnimations);
 
+        // Set a default selected animation if user has one
+        if (currentUser?.avatarData && workingAnimations.length > 0) {
+          const userAnimation = workingAnimations.find(anim => anim.id === currentUser.avatarData?.id);
+          if (userAnimation) {
+            setSelectedLottie(userAnimation);
+          }
+        }
+
       } catch (error) {
-        console.error('Error loading animations:', error);
+        console.error('❌ Error loading animations:', error);
+        toast({
+          title: "Animation Loading Error",
+          description: "Failed to load Lottie animations. Please try refreshing the page.",
+          variant: "destructive",
+        });
       }
     };
 
     loadAnimations();
-  }, []);
+  }, [currentUser, toast]);
 
   // Fetch current user data
   const { data: currentUser, isLoading: isUserLoading } = useQuery<User>({
@@ -288,31 +320,49 @@ export default function ProfilePage() {
 
   const updateLottieAvatarMutation = useMutation({
     mutationFn: async (lottieData: LottieAnimation) => {
+      console.log('🔄 Updating avatar with Lottie data:', lottieData);
+      
       const response = await apiRequest("PUT", "/api/users/update-avatar", {
         profilePicture: lottieData.path,
         avatarType: 'lottie',
         avatarData: lottieData
       });
+      
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to update avatar");
       }
-      return response.json();
+      
+      const result = await response.json();
+      console.log('✅ Avatar update successful:', result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: "Success",
-        description: "Avatar updated successfully",
+        title: "Avatar Updated",
+        description: `Your avatar has been updated to "${selectedLottie?.name}" successfully!`,
       });
+      
+      // Invalidate queries to refresh user data
       queryClient.invalidateQueries({ queryKey: ["/api/user/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      // Update the profile picture URL to show the new avatar
+      if (data.profilePicture) {
+        setProfilePictureUrl(`${data.profilePicture}?t=${Date.now()}`);
+        refreshAvatar();
+      }
     },
     onError: (error: Error) => {
+      console.error('❌ Avatar update failed:', error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Avatar Update Failed",
+        description: error.message || "Failed to update avatar. Please try again.",
         variant: "destructive",
       });
+      
+      // Reset selected animation on error
+      setSelectedLottie(null);
     },
   });
 
@@ -386,7 +436,18 @@ export default function ProfilePage() {
   };
 
   const handleLottieSelect = (animation: LottieAnimation) => {
+    console.log('🎭 Selecting Lottie animation:', animation);
+    
+    // Set the selected animation immediately for UI feedback
     setSelectedLottie(animation);
+    
+    // Show loading toast
+    toast({
+      title: "Updating Avatar",
+      description: `Setting "${animation.name}" as your avatar...`,
+    });
+    
+    // Update the avatar
     updateLottieAvatarMutation.mutate(animation);
   };
 
@@ -500,6 +561,7 @@ export default function ProfilePage() {
   };
 
   const handleLottieFileUpload = async (file: File) => {
+    // Validate file size
     if (file.size > 20 * 1024 * 1024) { // 20MB limit
       toast({
         title: "File too large",
@@ -509,23 +571,56 @@ export default function ProfilePage() {
       return;
     }
 
+    // Validate file type
+    if (!file.type.includes('json') && !file.name.endsWith('.json')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a JSON file containing Lottie animation data",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setUploading(true);
 
     try {
       const reader = new FileReader();
+      
       reader.onload = async (e) => {
         try {
-          const jsonData = JSON.parse(e.target?.result as string);
-
-          // Validate basic Lottie structure
-          if (!jsonData.v || !jsonData.layers) {
-            throw new Error("Invalid Lottie animation format - missing version or layers");
+          const jsonContent = e.target?.result as string;
+          
+          // Parse JSON with better error handling
+          let jsonData;
+          try {
+            jsonData = JSON.parse(jsonContent);
+          } catch (parseError) {
+            throw new Error(`Invalid JSON format: ${parseError.message}`);
           }
 
+          // Comprehensive Lottie validation
+          if (!jsonData || typeof jsonData !== 'object') {
+            throw new Error("Invalid Lottie file - not a valid JSON object");
+          }
+
+          if (!jsonData.v && !jsonData.version) {
+            throw new Error("Invalid Lottie file - missing version information");
+          }
+
+          if (!jsonData.layers || !Array.isArray(jsonData.layers)) {
+            throw new Error("Invalid Lottie file - missing or invalid layers");
+          }
+
+          if (jsonData.layers.length === 0) {
+            throw new Error("Invalid Lottie file - no animation layers found");
+          }
+
+          // Create animation object
           const animationId = `custom-${Date.now()}`;
+          const fileName = file.name.replace(/\.json$/i, '');
           const newAnimation: LottieAnimation = {
             id: animationId,
-            name: file.name.replace('.json', ''),
+            name: fileName,
             path: URL.createObjectURL(file),
             preview: jsonData
           };
@@ -533,11 +628,26 @@ export default function ProfilePage() {
           console.log('📁 Created Lottie animation:', newAnimation);
 
           // Add to animations list immediately for UI feedback
-          setLottieAnimations(prev => [...prev, newAnimation]);
+          setLottieAnimations(prev => {
+            // Check if an animation with the same name already exists
+            const existingIndex = prev.findIndex(anim => anim.name === fileName);
+            if (existingIndex >= 0) {
+              // Replace existing animation
+              const newAnimations = [...prev];
+              newAnimations[existingIndex] = newAnimation;
+              return newAnimations;
+            } else {
+              // Add new animation
+              return [...prev, newAnimation];
+            }
+          });
+
+          // Auto-select the newly uploaded animation
+          setSelectedLottie(newAnimation);
 
           toast({
             title: "Success",
-            description: "Lottie animation loaded successfully!",
+            description: `Lottie animation "${fileName}" loaded successfully!`,
           });
 
           // Try to save to backend (optional)
@@ -570,11 +680,12 @@ export default function ProfilePage() {
             console.warn("Backend upload failed, keeping local version:", uploadError);
             // Keep the local version even if backend fails
           }
+
         } catch (parseError) {
           console.error("Parse error:", parseError);
           toast({
-            title: "Error",
-            description: "Invalid Lottie JSON file format",
+            title: "Upload Error",
+            description: parseError.message || "Invalid Lottie JSON file format",
             variant: "destructive",
           });
         }
@@ -582,8 +693,8 @@ export default function ProfilePage() {
 
       reader.onerror = () => {
         toast({
-          title: "Error",
-          description: "Failed to read file",
+          title: "File Read Error",
+          description: "Failed to read the uploaded file",
           variant: "destructive",
         });
       };
@@ -592,7 +703,7 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("File upload error:", error);
       toast({
-        title: "Error",
+        title: "Upload Error",
         description: "Failed to process Lottie file",
         variant: "destructive",
       });
@@ -931,7 +1042,7 @@ export default function ProfilePage() {
                 </TabsContent>
                  {/* Avatar Animation Tab */}
                 <TabsContent value="avatar">
-                  <div className="space-y-4 pt-4">
+                  <div className="space-y-6 pt-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-lg font-medium">Select Avatar Animation</h3>
@@ -947,72 +1058,143 @@ export default function ProfilePage() {
                       </Button>
                     </div>
 
+                    {/* Current Selection Display */}
+                    {selectedLottie && (
+                      <div className="border rounded-lg p-4 bg-muted/50">
+                        <h4 className="font-medium mb-2">Current Selection</h4>
+                        <div className="flex items-center space-x-4">
+                          <div className="w-16 h-16 flex items-center justify-center border rounded">
+                            <Lottie
+                              animationData={selectedLottie.preview}
+                              loop={true}
+                              autoplay={true}
+                              style={{ height: 60, width: 60 }}
+                              renderer="svg"
+                            />
+                          </div>
+                          <div>
+                            <p className="font-medium">{selectedLottie.name}</p>
+                            <p className="text-sm text-muted-foreground">Currently selected as your avatar</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Animation Grid */}
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
-                      {lottieAnimations.map((animation) => (
-                        <motion.div
-                          key={animation.id}
-                          className={`relative rounded-md border p-4 cursor-pointer hover:shadow-md transition-all duration-300 ${
-                            selectedLottie?.id === animation.id 
-                              ? 'border-primary border-2 shadow-lg' 
-                              : 'border-muted hover:border-primary/50'
-                          }`}
-                          onClick={() => handleLottieSelect(animation)}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <div className="relative">
-                            <div className="w-full h-24 flex items-center justify-center">
-                              {animation.preview ? (
-                                <Lottie
-                                  animationData={animation.preview}
-                                  loop={true}
-                                  autoplay={playingAnimations.has(animation.id)}
-                                  style={{ height: 80, width: 80 }}
-                                  onError={(error) => {
-                                    console.error(`❌ Lottie render error for ${animation.name}:`, error);
-                                  }}
-                                  onLoad={() => {
-                                    console.log(`✅ Lottie animation rendered: ${animation.name}`);
-                                  }}
-                                  renderer="svg"
-                                />
-                              ) : (
-                                <div className="flex flex-col items-center space-y-1 bg-gray-100 rounded p-2">
-                                  <div className="text-gray-400 text-xs">Failed to load</div>
-                                  <p className="text-xs text-muted-foreground">{animation.name}</p>
+                      {lottieAnimations.length > 0 ? (
+                        lottieAnimations.map((animation) => (
+                          <motion.div
+                            key={animation.id}
+                            className={`relative rounded-lg border p-4 cursor-pointer hover:shadow-lg transition-all duration-300 ${
+                              selectedLottie?.id === animation.id 
+                                ? 'border-primary border-2 shadow-lg bg-primary/5' 
+                                : 'border-muted hover:border-primary/50 hover:bg-muted/50'
+                            }`}
+                            onClick={() => handleLottieSelect(animation)}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <div className="relative">
+                              <div className="w-full h-24 flex items-center justify-center mb-2">
+                                {animation.preview ? (
+                                  <Lottie
+                                    animationData={animation.preview}
+                                    loop={true}
+                                    autoplay={playingAnimations.has(animation.id)}
+                                    style={{ height: 80, width: 80 }}
+                                    onError={(error) => {
+                                      console.error(`❌ Lottie render error for ${animation.name}:`, error);
+                                    }}
+                                    onLoad={() => {
+                                      console.log(`✅ Lottie animation rendered: ${animation.name}`);
+                                    }}
+                                    renderer="svg"
+                                  />
+                                ) : (
+                                  <div className="flex flex-col items-center space-y-1 bg-muted rounded p-2">
+                                    <div className="text-muted-foreground text-xs">Failed to load</div>
+                                    <p className="text-xs text-muted-foreground">{animation.name}</p>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Play/Pause Button */}
+                              {animation.preview && (
+                                <div className="absolute top-1 right-1">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6 bg-background/80 hover:bg-background"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleAnimation(animation.id);
+                                    }}
+                                  >
+                                    {playingAnimations.has(animation.id) ? (
+                                      <Pause className="h-3 w-3" />
+                                    ) : (
+                                      <Play className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                </div>
+                              )}
+                              
+                              {/* Selection Indicator */}
+                              {selectedLottie?.id === animation.id && (
+                                <div className="absolute inset-0 bg-primary/10 rounded-lg flex items-center justify-center pointer-events-none">
+                                  <div className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium">
+                                    ✓ Selected
+                                  </div>
                                 </div>
                               )}
                             </div>
-                            {animation.preview && (
-                              <div className="absolute top-0 right-0 p-1">
+                            
+                            <p className="text-sm text-center font-medium truncate">{animation.name}</p>
+                            
+                            {/* Loading State */}
+                            {updateLottieAvatarMutation.isPending && selectedLottie?.id === animation.id && (
+                              <div className="absolute inset-0 bg-background/80 rounded-lg flex items-center justify-center">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              </div>
+                            )}
+                          </motion.div>
+                        ))
+                      ) : (
+                        <div className="col-span-full text-center py-8">
+                          <div className="text-muted-foreground">
+                            {uploading ? (
+                              <div className="flex items-center justify-center space-x-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>Loading animations...</span>
+                              </div>
+                            ) : (
+                              <div>
+                                <p className="mb-2">No Lottie animations loaded</p>
                                 <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-6 w-6"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleAnimation(animation.id);
-                                  }}
+                                  variant="outline"
+                                  onClick={() => fileInputRef.current?.click()}
+                                  disabled={uploading}
                                 >
-                                  {playingAnimations.has(animation.id) ? (
-                                    <Pause className="h-3 w-3" />
-                                  ) : (
-                                    <Play className="h-3 w-3" />
-                                  )}
+                                  <Upload className="mr-2 h-4 w-4" />
+                                  Upload Your First Animation
                                 </Button>
                               </div>
                             )}
                           </div>
-                          <p className="text-sm text-center mt-2 font-medium">{animation.name}</p>
-                          {selectedLottie?.id === animation.id && (
-                            <div className="absolute inset-0 bg-primary/10 rounded-md flex items-center justify-center">
-                              <div className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs">
-                                Selected
-                              </div>
-                            </div>
-                          )}
-                        </motion.div>
-                      ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Upload Instructions */}
+                    <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
+                      <h4 className="font-medium mb-2">Upload Instructions:</h4>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>Upload Lottie JSON files (max 20MB)</li>
+                        <li>Ensure your JSON file contains valid Lottie animation data</li>
+                        <li>Animations will be automatically validated before upload</li>
+                        <li>Click on any animation to set it as your avatar</li>
+                      </ul>
                     </div>
                   </div>
                 </TabsContent>
