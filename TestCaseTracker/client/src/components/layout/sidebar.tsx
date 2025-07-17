@@ -396,7 +396,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                 )}
               </div>
             )}), [navItems, location])}
-        </div>
+        </motion.div>
 
         {/* User account section */}
         <>
