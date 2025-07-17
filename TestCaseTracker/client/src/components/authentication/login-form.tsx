@@ -17,6 +17,7 @@ import { useState } from "react";
 // LoginMotivationDialog removed to prevent blur screen issues
 import { SoundButton } from "@/components/ui/sound-button";
 import { SoundDebug } from '@/components/sound-debug';
+import { LoginSuccessDialog } from '@/components/login-success-dialog'; // Import the LoginSuccessDialog component
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -31,6 +32,8 @@ export function LoginForm() {
   const [isOAuthLoading, setIsOAuthLoading] = useState<string | null>(null);
   // No longer need to manage password visibility state as it's handled by the PasswordInput component
   // Removed motivation dialog state to prevent blur screen
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+  const [userName, setUserName] = useState('');
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -66,19 +69,15 @@ export function LoginForm() {
 
       // User login successful, storing basic info
       const firstName = data.firstName || (data.name ? data.name.split(' ')[0] : data.email.split('@')[0]);
+      setUserName(firstName);
       console.log("User logged in:", firstName);
 
       // Invalidate queries to refresh user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
-      // Set flag to show welcome dialog
-      sessionStorage.setItem('showWelcomeDialog', 'true');
+      setShowWelcomeDialog(true);
 
-      // Navigate directly to dashboard
-      console.log("Login successful, navigating to dashboard...");
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 100);
+      // Don't navigate immediately, wait for welcome dialog to close
     },
     onError: (error: any) => {
       console.error("Login error:", error);
@@ -105,6 +104,15 @@ export function LoginForm() {
       }
     },
   });
+
+  const handleWelcomeDialogClose = () => {
+    setShowWelcomeDialog(false);
+    toast({
+      title: "Login successful",
+      description: "You have been logged in to your account",
+    });
+    navigate("/dashboard");
+  };
 
   const onSubmit = (data: LoginFormValues) => {
     loginMutation.mutate(data);
@@ -281,6 +289,13 @@ export function LoginForm() {
           </div>
         </CardFooter>
       </Card>
+
+      {/* Welcome Dialog */}
+      <LoginSuccessDialog 
+        isOpen={showWelcomeDialog}
+        onClose={handleWelcomeDialogClose}
+        userName={userName}
+      />
     </>
   );
 }

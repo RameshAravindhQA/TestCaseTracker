@@ -19,11 +19,16 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="container p-6 space-y-8 max-w-md">
         <div className="flex flex-col space-y-2 text-center">
-          <img 
-            src="/images/navadhiti-logo-tree.jpg" 
-            alt="NavaDhiti Logo" 
-            className="h-auto w-64 mx-auto mb-4" 
-          />
+          <div className="animate-bounce">
+            <img 
+              src="/images/navadhiti-logo-tree.jpg" 
+              alt="NavaDhiti Logo" 
+              className="h-auto w-64 mx-auto mb-4" 
+            />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">
+            Test Case Management System
+          </h1>
         </div>
 
         <div className="flex flex-col space-y-4">

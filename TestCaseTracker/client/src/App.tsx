@@ -208,34 +208,7 @@ function Router() {
 function AppContent() {
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
 
-  // Listen for login success to show welcome dialog
-  useEffect(() => {
-    const handleLoginSuccess = () => {
-      const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
-      if (!hasSeenWelcome) {
-        setTimeout(() => {
-          setShowWelcomeDialog(true);
-        }, 1000); // Delay to ensure components are mounted
-      }
-    };
-
-    window.addEventListener('login-success', handleLoginSuccess);
-
-    // Also check on auth state change
-    const checkForWelcome = () => {
-      const user = localStorage.getItem('auth-user');
-      const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
-      if (user && !hasSeenWelcome) {
-        setTimeout(() => {
-          setShowWelcomeDialog(true);
-        }, 1500);
-      }
-    };
-
-    checkForWelcome();
-
-    return () => window.removeEventListener('login-success', handleLoginSuccess);
-  }, []);
+  // Removed automatic welcome dialog trigger as it's now handled in login form
 
   return (
     <AuthProvider>
@@ -245,12 +218,6 @@ function AppContent() {
           <SoundIntegrationSetup />
           <Router />
           <GitHubIssueReporter />
-
-          {/* Welcome Dialog - triggered after login */}
-          <WelcomeDialog 
-            isOpen={showWelcomeDialog} 
-            onClose={() => setShowWelcomeDialog(false)}
-          />
         </TooltipProvider>
       </ThemeProvider>
     </AuthProvider>
