@@ -1,5 +1,5 @@
 import { ForgotPasswordForm } from "@/components/authentication/forgot-password-form";
-import { NavaDhitiLogo } from "@/components/ui/navadhiti-logo";
+import { NavadhitiLogo } from "@/components/ui/navadhiti-logo";
 import { motion } from "framer-motion";
 import { loginPageVariants, loginHeaderVariants } from "@/lib/animations";
 
@@ -18,7 +18,7 @@ export default function ForgotPasswordPage() {
           className="text-center"
         >
           <div className="flex justify-center mb-6">
-            <NavaDhitiLogo />
+            <NavadhitiLogo />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
             Test Case Management System
