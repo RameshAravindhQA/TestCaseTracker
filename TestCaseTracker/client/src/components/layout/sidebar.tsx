@@ -392,7 +392,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
 
       <div className="flex items-center p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         {/* Using the FrozenAvatar component that "freezes" on first render */}
-        
+
         {/* Sidebar Profile Section */}
         <div className="flex items-center space-x-3 mb-6">
           <div className="h-10 w-10 rounded-full overflow-hidden bg-white border-2 border-primary/20 flex items-center justify-center">
@@ -423,16 +423,13 @@ const SidebarComponent = ({ className }: SidebarProps) => {
               </div>
             )}
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex flex-col min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground truncate">
               {user?.name || "User"}
             </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user?.role || "Member"}
-            </p>
           </div>
         </div>
-        
+
         {/*  <FrozenAvatar 
           user={user} 
           className="h-8 w-8 ring-2 ring-gray-200 dark:ring-gray-700"
