@@ -1262,7 +1262,7 @@ export default function ProjectDetailPage() {
         projectId={projectId}
         config={githubConfig}
       />
-      
+
       {/* Floating Team Chat */}
       <ProjectChat projectId={projectId} currentUser={currentUser} />
     </MainLayout>
