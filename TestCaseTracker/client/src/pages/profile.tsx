@@ -362,20 +362,50 @@ export default function ProfilePage() {
     mutationFn: async (lottieData: LottieAnimation) => {
       console.log('🔄 Updating avatar with Lottie data:', lottieData);
 
-      const response = await apiRequest("PUT", "/api/users/update-avatar", {
-        profilePicture: lottieData.path,
-        avatarType: 'lottie',
-        avatarData: lottieData
-      });
+      try {
+        const response = await fetch('/api/users/update-avatar', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            profilePicture: lottieData.path,
+            avatarType: 'lottie',
+            avatarData: lottieData
+          })
+        });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to update avatar");
+        if (!response.ok) {
+          let errorMessage = `Update failed with status ${response.status}`;
+          
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (parseError) {
+            // If JSON parsing fails, try to get text response
+            try {
+              const text = await response.text();
+              if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+                errorMessage = "Server returned an error page. Please check if you're logged in.";
+              } else {
+                errorMessage = text || errorMessage;
+              }
+            } catch (textError) {
+              console.error('Failed to parse error response:', textError);
+            }
+          }
+          
+          throw new Error(errorMessage);
+        }
+
+        const result = await response.json();
+        console.log('✅ Avatar update successful:', result);
+        return result;
+      } catch (error) {
+        console.error('❌ Avatar update request failed:', error);
+        throw error;
       }
-
-      const result = await response.json();
-      console.log('✅ Avatar update successful:', result);
-      return result;
     },
     onSuccess: (data) => {
       toast({

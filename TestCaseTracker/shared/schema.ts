@@ -14,7 +14,10 @@ export const users = pgTable("users", {
   role: text("role").$type<"Tester" | "Developer" | "Admin">().notNull().default("Tester"),
   status: text("status").$type<"Active" | "Inactive">().notNull().default("Active"),
   profilePicture: text("profile_picture"),
+  avatarType: text("avatar_type").default("image"), // 'image' or 'lottie'
+  avatarData: text("avatar_data"), // JSON string for lottie data
   theme: text("theme").default("default"),
+  colorTheme: text("color_theme").default("blue"),
   tempPassword: text("temp_password"),
   tempPasswordUsed: boolean("temp_password_used").default(false),
   verificationToken: text("verification_token"),
@@ -895,4 +898,3 @@ export type TestSheet = z.infer<typeof insertTestSheetSchema> & {
 };
 
 export type InsertTestSheet = z.infer<typeof insertTestSheetSchema>;
-

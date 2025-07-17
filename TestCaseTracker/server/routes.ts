@@ -1000,6 +1000,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Error handling middleware for multer (this is used by document uploads)
   
+  // Update user avatar endpoint
+  apiRouter.put("/users/update-avatar", isAuthenticated, async (req, res) => {
+    try {
+      const { profilePicture, avatarType, avatarData } = req.body;
+      
+      if (!profilePicture) {
+        return res.status(400).json({ message: "Profile picture is required" });
+      }
+      
+      const userId = req.session.userId!;
+      
+      // Update user with new avatar data
+      const updateData: any = {
+        profilePicture: profilePicture
+      };
+      
+      // If it's a Lottie avatar, store the additional data
+      if (avatarType === 'lottie' && avatarData) {
+        updateData.avatarType = avatarType;
+        updateData.avatarData = JSON.stringify(avatarData);
+      }
+      
+      const updatedUser = await storage.updateUser(userId, updateData);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Log activity
+      await storage.createActivity({
+        userId: userId,
+        action: "updated",
+        entityType: "user",
+        entityId: userId,
+        details: { 
+          field: "avatar",
+          avatarType: avatarType || "image"
+        }
+      });
+      
+      // Return user without sensitive data
+      const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutPassword } = updatedUser;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Update avatar error:", error);
+      res.status(500).json({ message: "Failed to update avatar" });
+    }
+  });
+
   // Change password endpoint
   apiRouter.post("/user/change-password", isAuthenticated, async (req, res) => {
     try {
