@@ -20,10 +20,15 @@ window.addEventListener('error', (event) => {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
+      staleTime: 1000 * 60 * 5, // 5 minutes
       refetchOnWindowFocus: false,
     },
   },
+});
+
+// Initialize sound system early
+import('./lib/globalSoundHandler.js').then(() => {
+  console.log('🔊 Global sound handler loaded');
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

@@ -998,6 +998,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+// Basic automation endpoints
+app.get('/api/automation/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Automation service is running' });
+});
+
+app.get('/api/automation/scripts', requireAuth, (req, res) => {
+  res.json([]);
+});
+
+app.get('/api/automation/recordings', requireAuth, (req, res) => {
+  res.json([]);
+});
+
+app.post('/api/automation/start-recording', requireAuth, (req, res) => {
+  const { url, projectId, moduleId, testCaseId } = req.body;
+  
+  if (!url) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'URL is required' 
+    });
+  }
+
+  // For now, return a mock response indicating the feature is in development
+  res.json({
+    success: false,
+    message: 'Automation recording feature is currently under development. This is a placeholder endpoint.',
+    sessionId: `mock-session-${Date.now()}`,
+    filename: `test-recording-${Date.now()}.js`,
+    details: {
+      url,
+      projectId,
+      moduleId,
+      testCaseId,
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+app.post('/api/automation/stop-recording', requireAuth, (req, res) => {
+  const { sessionId } = req.body;
+  
+  res.json({
+    success: false,
+    message: 'Automation recording feature is currently under development.',
+    sessionId,
+    filename: `test-recording-${Date.now()}.js`
+  });
+});
+
+
   // Error handling middleware for multer (this is used by document uploads)
   
   // Update user avatar endpoint

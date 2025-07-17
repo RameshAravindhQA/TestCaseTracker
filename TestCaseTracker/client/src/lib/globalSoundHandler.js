@@ -32,11 +32,18 @@ class GlobalSoundHandler {
     this.soundManager = soundManager;
     this.initialized = true;
 
-    console.log('🔊 Global sound handler initialized');
+    console.log('🔊 Global sound handler initialized with sound manager:', !!soundManager);
 
     // Set up global error handling - but don't play sounds automatically
     this.setupGlobalErrorHandling();
     this.setupGlobalSuccessHandling();
+
+    // Test sound manager connection
+    if (soundManager && typeof soundManager.playSound === 'function') {
+      console.log('🔊 Sound manager connection verified');
+    } else {
+      console.warn('🔊 Sound manager connection failed');
+    }
   }
 
   setupGlobalErrorHandling() {
@@ -165,6 +172,7 @@ class GlobalSoundHandler {
   // Method to play sound on user actions (buttons, form submissions, etc.)
   playUserActionSound(soundName) {
     if (!this.initialized || !this.soundManager) {
+      console.log('🔊 Cannot play sound - not initialized or no sound manager');
       return;
     }
 
@@ -173,7 +181,11 @@ class GlobalSoundHandler {
 
     try {
       console.log(`🔊 Playing user action sound: ${soundName}`);
-      this.soundManager.playSound(soundName);
+      if (typeof this.soundManager.playSound === 'function') {
+        this.soundManager.playSound(soundName);
+      } else {
+        console.warn('🔊 Sound manager playSound method not available');
+      }
     } catch (error) {
       console.error('🔊 Error playing user action sound:', error);
     }
@@ -340,35 +352,69 @@ const globalSoundHandler = new GlobalSoundHandler();
 
 // Handle all clicks globally and play sound
 document.addEventListener('click', (event) => {
-  if (globalSoundHandler.initialized) {
-    // Handle all clicks but exclude certain elements
-      if (event.target.closest('.no-sound') || 
-          event.target.closest('[data-no-sound]') ||
-          event.target.closest('audio') ||
-          event.target.closest('video') ||
-          event.target.closest('[role="option"]') ||
-          event.target.closest('[data-radix-collection-item]') ||
-          event.target.closest('.dropdown-content')) {
-        return;
-      }
+  if (!globalSoundHandler.initialized || !globalSoundHandler.soundManager) {
+    return;
+  }
 
-      // Special handling for dropdown items - use click sound instead of CRUD
-      if (event.target.closest('[role="menuitem"]') || 
-          event.target.closest('.select-item') ||
-          event.target.closest('[data-radix-select-item]') ||
-          event.target.closest('[role="option"]') ||
-          event.target.closest('select') ||
-          event.target.closest('.dropdown-menu')) {
-        globalSoundHandler.playUserActionSound('click');
-        return;
-      }
+  // Skip if no user interaction detected
+  if (!event.isTrusted) {
+    return;
+  }
 
-    // Only play click sound for actual user interactions, not programmatic events
-    if (event.isTrusted) {
-      globalSoundHandler.playUserActionSound('click');
+  const target = event.target;
+  
+  // Handle all clicks but exclude certain elements
+  if (target.closest('.no-sound') || 
+      target.closest('[data-no-sound]') ||
+      target.closest('audio') ||
+      target.closest('video')) {
+    return;
+  }
+
+  // Check for CRUD operations first (higher priority)
+  if (target.closest('form') && 
+      (target.tagName === 'BUTTON' && target.type === 'submit')) {
+    console.log('🔊 Global handler: Form submit button clicked, playing CRUD sound');
+    globalSoundHandler.playUserActionSound('crud');
+    return;
+  }
+
+  // Check for CRUD buttons by text content
+  if (target.tagName === 'BUTTON' || target.closest('button')) {
+    const button = target.tagName === 'BUTTON' ? target : target.closest('button');
+    const text = button.textContent?.toLowerCase() || '';
+    
+    if (text.includes('create') || text.includes('save') || text.includes('update') || 
+        text.includes('delete') || text.includes('submit') || text.includes('add') ||
+        text.includes('edit') || text.includes('remove')) {
+      console.log('🔊 Global handler: CRUD button clicked, playing CRUD sound');
+      globalSoundHandler.playUserActionSound('crud');
+      return;
     }
   }
-});
+
+  // Special handling for dropdown items - use click sound
+  if (target.closest('[role="menuitem"]') || 
+      target.closest('.select-item') ||
+      target.closest('[data-radix-select-item]') ||
+      target.closest('[role="option"]') ||
+      target.closest('select') ||
+      target.closest('.dropdown-menu')) {
+    console.log('🔊 Global handler: Dropdown item clicked, playing click sound');
+    globalSoundHandler.playUserActionSound('click');
+    return;
+  }
+
+  // Default click sound for any clickable element
+  if (target.tagName === 'BUTTON' || target.tagName === 'A' || 
+      target.closest('button') || target.closest('a') ||
+      target.getAttribute('role') === 'button' ||
+      target.onclick || target.getAttribute('onClick') ||
+      window.getComputedStyle(target).cursor === 'pointer') {
+    console.log('🔊 Global handler: Clickable element clicked, playing click sound');
+    globalSoundHandler.playUserActionSound('click');
+  }
+}, true);
 
 // Disable global error listening to prevent console error sounds
 // Only handle application-specific errors through custom events

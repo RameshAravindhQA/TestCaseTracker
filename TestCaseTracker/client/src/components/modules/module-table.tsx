@@ -69,9 +69,14 @@ export function ModuleTable({ modules, projectId, onEdit, onDelete, onViewTestCa
                   duration: 0.3,
                   ease: "easeOut"
                 }}
-                onClick={() => onViewTestCases(module)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onViewTestCases(module);
+                }}
                 className="border-b transition-colors hover:bg-muted/50 hover:shadow-sm data-[state=selected]:bg-muted cursor-pointer"
-                whileHover={{ scale: 1.005, backgroundColor: "rgba(0,0,0,0.02)" }}
+                whileHover={{ scale: 1.002, backgroundColor: "rgba(0,0,0,0.02)" }}
+                style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
 
               >
                 <TableCell className="font-medium">

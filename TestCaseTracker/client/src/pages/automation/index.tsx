@@ -162,6 +162,16 @@ export default function AutomationPage() {
           throw new Error("Please fix validation errors");
         }
       try {
+        // Check if automation API endpoint exists first
+        const healthCheck = await fetch('/api/automation/health', {
+          method: 'GET',
+          credentials: 'include',
+        }).catch(() => null);
+
+        if (!healthCheck || !healthCheck.ok) {
+          throw new Error('Automation service is not available. Please ensure the automation server is running.');
+        }
+
         const response = await fetch('/api/automation/start-recording', {
           method: 'POST',
           headers: {
@@ -177,16 +187,18 @@ export default function AutomationPage() {
         });
 
         if (!response.ok) {
+          const contentType = response.headers.get('content-type');
           const text = await response.text();
-          if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-            throw new Error('API endpoint not found - server returned HTML page');
+          
+          if (contentType?.includes('text/html') || text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+            throw new Error('Automation API endpoint not implemented. The server returned an HTML page instead of JSON. This feature may not be available yet.');
           }
           
           let errorData;
           try {
             errorData = JSON.parse(text);
           } catch (parseError) {
-            throw new Error(`Server error: ${response.status} - ${text}`);
+            throw new Error(`Server error: ${response.status} - ${text.substring(0, 200)}...`);
           }
           
           throw new Error(errorData.message || `HTTP ${response.status}: ${text}`);
@@ -196,7 +208,7 @@ export default function AutomationPage() {
         return result;
       } catch (error) {
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-          throw new Error('Network error - unable to connect to server');
+          throw new Error('Network error - unable to connect to server. Please check your connection.');
         }
         throw error;
       }
