@@ -86,16 +86,24 @@ export default function ProfilePage() {
         const loadedAnimations = await Promise.all(
           animationsToLoad.map(async (animation) => {
             try {
+              console.log(`🎬 Loading animation: ${animation.name} from ${animation.path}`);
               const response = await fetch(animation.path);
               if (response.ok) {
-                const data = await response.json();
+                const text = await response.text();
+                // Check if we got HTML instead of JSON
+                if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                  console.error(`❌ Received HTML instead of JSON for ${animation.name}`);
+                  return { ...animation, preview: null };
+                }
+                const data = JSON.parse(text);
+                console.log(`✅ Successfully loaded ${animation.name}`);
                 return { ...animation, preview: data };
               } else {
-                console.error(`Failed to load ${animation.name} animation:`, response.status);
+                console.error(`❌ Failed to load ${animation.name} animation: ${response.status}`);
                 return { ...animation, preview: null };
               }
             } catch (error) {
-              console.error(`Error loading ${animation.name} animation:`, error);
+              console.error(`❌ Error loading ${animation.name} animation:`, error);
               return { ...animation, preview: null };
             }
           })

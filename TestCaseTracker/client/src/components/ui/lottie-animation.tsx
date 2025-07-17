@@ -52,10 +52,10 @@ export const LottieAnimation: React.FC<LottieAnimationProps> = ({
           
           // Construct proper path for Lottie files - try multiple paths
           const possiblePaths = [
-            path.startsWith('/') ? path : `/lottie/${path}`,
-            path.startsWith('/') ? path : `/public/lottie/${path}`,
-            path.replace('.json', '') + '.json',
-            path
+            path, // Try original path first
+            path.startsWith('/lottie/') ? path : `/lottie/${path.replace('/lottie/', '')}`,
+            path.startsWith('/public/lottie/') ? path.replace('/public', '') : `/lottie/${path.replace('/public/lottie/', '')}`,
+            path.endsWith('.json') ? path : `${path}.json`
           ];
           
           let response = null;
@@ -67,10 +67,13 @@ export const LottieAnimation: React.FC<LottieAnimationProps> = ({
               response = await fetch(tryPath);
               if (response.ok) {
                 successfulPath = tryPath;
+                console.log('✅ Animation loaded from:', successfulPath);
                 break;
+              } else {
+                console.log(`❌ Failed to load from ${tryPath}: ${response.status}`);
               }
             } catch (err) {
-              console.log('🎬 Path failed:', tryPath, err.message);
+              console.log('🎬 Path failed:', tryPath, err instanceof Error ? err.message : 'Unknown error');
             }
           }
           
