@@ -52,7 +52,7 @@ function ForgotPassword() {
               <img
                 src="/images/navadhiti-logo-tree.jpg"
                 alt="NavaDhiti Logo"
-                className="h-20 w-20 rounded-full shadow-lg border-4 border-white dark:border-gray-800"
+                className="h-32 w-32 rounded-full shadow-lg border-4 border-white dark:border-gray-800"
               />
             </div>
           </motion.div>
@@ -70,7 +70,7 @@ function ForgotPassword() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7, duration: 0.6 }}
-            className="text-gray-600 dark:text-gray-300"
+            className="text-gray-600 dark:text-gray-300 font-bold"
           >
             Reset Your Password
           </motion.p>
