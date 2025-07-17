@@ -1,32 +1,47 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-interface NavaDhitiLogoProps {
+interface NavadhitiLogoProps {
   className?: string;
-  animate?: boolean;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export const NavaDhitiLogo: React.FC<NavaDhitiLogoProps> = ({ 
-  className = "h-32 w-32", 
-  animate = true 
+export const NavadhitiLogo: React.FC<NavadhitiLogoProps> = ({ 
+  className = '', 
+  size = 'xl' 
 }) => {
+  const sizeClasses = {
+    sm: 'h-8 w-8',
+    md: 'h-12 w-12',
+    lg: 'h-16 w-16',
+    xl: 'h-24 w-24'
+  };
 
   return (
-    <motion.div 
-      className={`flex flex-col items-center justify-center ${className} logo-container`}
-      initial={false ? "initial" : "animate"}
-      animate="animate"
-      style={{
-        filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))',
-        borderRadius: '12px',
-        padding: '8px',
-        border: '1px solid rgba(154, 205, 50, 0.1)'
+    <motion.div
+      initial={{ opacity: 0, y: -100, scale: 0.8 }}
+      animate={{ 
+        opacity: 1, 
+        y: 0, 
+        scale: 1,
+        rotate: [0, 5, -5, 0]
       }}
+      transition={{ 
+        duration: 1.2,
+        ease: [0.6, 0.05, 0.01, 0.9],
+        rotate: {
+          delay: 0.8,
+          duration: 0.6,
+          ease: "easeInOut"
+        }
+      }}
+      className={`${className} flex items-center justify-center drop-shadow-lg`}
     >
-      <img src="/images/NDlogo-removebg-preview.png" alt="NavaDhiti Logo" className="w-full h-auto" />
-
-      {/* NavaDhiti Text - Enhanced with better integration */}
-      
+      <img
+        src="/images/navadhiti-logo-tree.jpg"
+        alt="Navadhiti Logo"
+        className={`${sizeClasses[size]} rounded-full object-cover shadow-lg border-2 border-white/20`}
+      />
     </motion.div>
   );
 };

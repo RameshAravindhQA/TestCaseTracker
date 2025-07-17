@@ -425,7 +425,8 @@ export default function ProfilePage() {
           preview: lottieData.preview
         };
 
-        const response = await fetch('/api/users/update-avatar', {
+        // First try the users endpoint
+        let response = await fetch('/api/users/update-avatar', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -437,6 +438,23 @@ export default function ProfilePage() {
             avatarData: stableAvatarData
           })
         });
+
+        // If users endpoint fails, try the user endpoint
+        if (!response.ok) {
+          console.log('🔄 Trying alternative endpoint...');
+          response = await fetch(`/api/user/${currentUser?.id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              profilePicture: `lottie:${lottieData.id}`,
+              avatarType: 'lottie',
+              avatarData: JSON.stringify(stableAvatarData)
+            })
+          });
+        }
 
         if (!response.ok) {
           let errorMessage = `Update failed with status ${response.status}`;
@@ -480,8 +498,9 @@ export default function ProfilePage() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
 
       // Update the profile picture URL to show the new avatar
-      if (data.profilePicture) {
-        setProfilePictureUrl(`${data.profilePicture}?t=${Date.now()}`);
+      if (data.profilePicture || data.user?.profilePicture) {
+        const newUrl = data.profilePicture || data.user?.profilePicture;
+        setProfilePictureUrl(`${newUrl}?t=${Date.now()}`);
         refreshAvatar();
       }
     },
@@ -652,11 +671,12 @@ export default function ProfilePage() {
     setUploading(true);
 
     try {
-      // Create a new FormData instance
+      // Create a new FormData instance with proper field name
       const formData = new FormData();
-      formData.append('profilePicture', file);
+      formData.append('profilePicture', file, file.name);
 
       console.log("📤 Uploading image:", file.name, file.type, file.size);
+      console.log("📤 FormData entries:", Array.from(formData.entries()));
 
       // Reset the file input
       if (fileInputRef.current) {

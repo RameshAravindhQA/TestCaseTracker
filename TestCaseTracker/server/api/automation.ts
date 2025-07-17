@@ -1,268 +1,283 @@
-import express from 'express';
-import { spawn } from 'child_process';
-import path from 'path';
-import fs from 'fs/promises';
 
-const router = express.Router();
+import { Router } from 'express';
+import { automationService } from '../automation-service';
+import { logger } from '../logger';
+import { requireAuth } from '../auth-middleware';
 
-interface RecordingSession {
-  id: string;
-  process?: any;
-  projectId?: string;
-  moduleId?: string;
-  testCaseId?: string;
-  url: string;
-  filename: string;
-  status: 'starting' | 'recording' | 'stopped' | 'error';
-  startTime: Date;
-}
-
-const activeSessions = new Map<string, RecordingSession>();
+const router = Router();
 
 // Start recording
-router.post('/start-recording', async (req, res) => {
+router.post('/start-recording', requireAuth, async (req, res) => {
   try {
     const { url, projectId, moduleId, testCaseId } = req.body;
 
     if (!url) {
-      return res.status(400).json({ error: 'URL is required' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'URL is required' 
+      });
     }
 
-    const sessionId = `recording_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
-    const filename = `project-${projectId || 'unknown'}-module-${moduleId || 'unknown'}-${timestamp}.spec.ts`;
-    const outputPath = path.join(process.cwd(), 'recordings', filename);
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid URL format. Please provide a valid URL (e.g., https://example.com)',
+      });
+    }
 
-    // Ensure recordings directory exists
-    await fs.mkdir(path.join(process.cwd(), 'recordings'), { recursive: true });
-
-    const session: RecordingSession = {
-      id: sessionId,
+    logger.info('Starting recording request:', {
+      url,
       projectId,
       moduleId,
       testCaseId,
+      userId: req.session.userId,
+    });
+
+    const result = await automationService.startRecording({
       url,
-      filename,
-      status: 'starting',
-      startTime: new Date()
-    };
-
-    activeSessions.set(sessionId, session);
-
-    // Start Playwright codegen
-    const playwrightProcess = spawn('npx', [
-      'playwright',
-      'codegen',
-      url,
-      '--output',
-      outputPath
-    ], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, DISPLAY: ':0' } // For headless environments
+      projectId,
+      moduleId,
+      testCaseId,
     });
 
-    session.process = playwrightProcess;
-    session.status = 'recording';
-
-    playwrightProcess.stdout?.on('data', (data) => {
-      console.log(`Recording ${sessionId}: ${data}`);
-    });
-
-    playwrightProcess.stderr?.on('data', (data) => {
-      console.error(`Recording ${sessionId} error: ${data}`);
-    });
-
-    playwrightProcess.on('close', (code) => {
-      console.log(`Recording ${sessionId} finished with code ${code}`);
-      if (activeSessions.has(sessionId)) {
-        const session = activeSessions.get(sessionId)!;
-        session.status = code === 0 ? 'stopped' : 'error';
-      }
-    });
-
-    playwrightProcess.on('error', (error) => {
-      console.error(`Recording ${sessionId} failed to start:`, error);
-      if (activeSessions.has(sessionId)) {
-        const session = activeSessions.get(sessionId)!;
-        session.status = 'error';
-      }
-    });
-
-    try {
-    // Generate unique filename for this recording session
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `${projectId}-${moduleId || 'general'}-${timestamp}.spec.ts`;
-    const outputPath = path.join(__dirname, '../../recordings', filename);
-
-    // Ensure recordings directory exists
-    const recordingsDir = path.join(__dirname, '../../recordings');
-    if (!fs.existsSync(recordingsDir)) {
-      fs.mkdirSync(recordingsDir, { recursive: true });
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
     }
 
-    // Set proper JSON content type
-    res.setHeader('Content-Type', 'application/json');
-
-    // For now, return success - actual Playwright integration would go here
-    res.status(200).json({
-      success: true,
-      message: 'Recording started successfully',
-      sessionId: `session-${Date.now()}`,
-      outputPath: filename
-    });
-
-  } catch (error) {
-    console.error('❌ Error starting recording:', error);
-    res.setHeader('Content-Type', 'application/json');
+  } catch (error: any) {
+    logger.error('Failed to start recording:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to start recording',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-
-    res.json({
-      success: true,
-      sessionId,
-      message: 'Recording started successfully',
-      filename
-    });
-
-  } catch (error) {
-    console.error('Failed to start recording:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to start recording: ' + error.message
+      message: 'Internal server error while starting recording',
+      error: error.message,
     });
   }
 });
 
 // Stop recording
-router.post('/stop-recording', async (req, res) => {
+router.post('/stop-recording', requireAuth, async (req, res) => {
   try {
     const { sessionId } = req.body;
 
-    if (!sessionId || !activeSessions.has(sessionId)) {
-      return res.status(404).json({ error: 'Recording session not found' });
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session ID is required',
+      });
     }
 
-    const session = activeSessions.get(sessionId)!;
+    logger.info('Stopping recording request:', {
+      sessionId,
+      userId: req.session.userId,
+    });
 
-    if (session.process && session.status === 'recording') {
-      session.process.kill('SIGTERM');
-      session.status = 'stopped';
+    const result = await automationService.stopRecording(sessionId);
 
-      // Wait a bit for the process to finish writing the file
-      setTimeout(async () => {
-        try {
-          const outputPath = path.join(process.cwd(), 'recordings', session.filename);
-          const fileExists = await fs.access(outputPath).then(() => true).catch(() => false);
-
-          res.json({
-            success: true,
-            message: 'Recording stopped successfully',
-            filename: session.filename,
-            fileExists
-          });
-        } catch (error) {
-          res.json({
-            success: true,
-            message: 'Recording stopped but file check failed',
-            filename: session.filename,
-            fileExists: false
-          });
-        }
-
-        activeSessions.delete(sessionId);
-      }, 2000);
+    if (result.success) {
+      res.json(result);
     } else {
-      res.status(400).json({ error: 'Recording is not active' });
+      res.status(400).json(result);
     }
 
-  } catch (error) {
-    console.error('Failed to stop recording:', error);
+  } catch (error: any) {
+    logger.error('Failed to stop recording:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to stop recording: ' + error.message
+      message: 'Internal server error while stopping recording',
+      error: error.message,
     });
   }
 });
 
-// Get recording status
-router.get('/recording-status/:sessionId', (req, res) => {
-  const { sessionId } = req.params;
-
-  if (!activeSessions.has(sessionId)) {
-    return res.status(404).json({ error: 'Recording session not found' });
-  }
-
-  const session = activeSessions.get(sessionId)!;
-
-  res.json({
-    sessionId: session.id,
-    status: session.status,
-    filename: session.filename,
-    startTime: session.startTime,
-    projectId: session.projectId,
-    moduleId: session.moduleId,
-    testCaseId: session.testCaseId
-  });
-});
-
-// List all recordings
-router.get('/recordings', async (req, res) => {
+// Execute test
+router.post('/execute-test', requireAuth, async (req, res) => {
   try {
-    const recordingsDir = path.join(process.cwd(), 'recordings');
+    const { filename } = req.body;
 
-    try {
-      const files = await fs.readdir(recordingsDir);
-      const recordings = await Promise.all(
-        files
-          .filter(file => file.endsWith('.spec.ts'))
-          .map(async (file) => {
-            const filePath = path.join(recordingsDir, file);
-            const stats = await fs.stat(filePath);
-            return {
-              filename: file,
-              createdAt: stats.birthtime,
-              size: stats.size
-            };
-          })
-      );
-
-      res.json(recordings.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
-    } catch (error) {
-      // Directory doesn't exist or is empty
-      res.json([]);
+    if (!filename) {
+      return res.status(400).json({
+        success: false,
+        message: 'Filename is required',
+      });
     }
-  } catch (error) {
-    console.error('Failed to list recordings:', error);
-    res.status(500).json({ error: 'Failed to list recordings' });
+
+    logger.info('Test execution request:', {
+      filename,
+      userId: req.session.userId,
+    });
+
+    const result = await automationService.executeTest(filename);
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (error: any) {
+    logger.error('Failed to execute test:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while executing test',
+      error: error.message,
+    });
   }
 });
 
-// Get recording file content
-router.get('/recordings/:filename', async (req, res) => {
+// Get session status
+router.get('/session/:sessionId', requireAuth, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const session = automationService.getSession(sessionId);
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: session.id,
+        status: session.status,
+        filename: session.filename,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        url: session.url,
+      },
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to get session:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while getting session',
+      error: error.message,
+    });
+  }
+});
+
+// Get execution status
+router.get('/execution/:executionId', requireAuth, async (req, res) => {
+  try {
+    const { executionId } = req.params;
+    const execution = automationService.getExecution(executionId);
+
+    if (!execution) {
+      return res.status(404).json({
+        success: false,
+        message: 'Execution not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: execution.id,
+        status: execution.status,
+        filename: execution.filename,
+        startTime: execution.startTime,
+        endTime: execution.endTime,
+        results: execution.results,
+        report: execution.report,
+      },
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to get execution:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while getting execution',
+      error: error.message,
+    });
+  }
+});
+
+// Get recordings list
+router.get('/recordings', requireAuth, async (req, res) => {
+  try {
+    const recordings = await automationService.getRecordings();
+    
+    res.json({
+      success: true,
+      data: recordings.map(filename => ({
+        filename,
+        created: new Date(), // In a real app, you'd get this from file stats
+      })),
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to get recordings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while getting recordings',
+      error: error.message,
+    });
+  }
+});
+
+// Get recording content
+router.get('/recording/:filename', requireAuth, async (req, res) => {
   try {
     const { filename } = req.params;
-    const filePath = path.join(process.cwd(), 'recordings', filename);
+    const content = await automationService.getRecordingContent(filename);
 
-    const content = await fs.readFile(filePath, 'utf-8');
-    res.json({ filename, content });
-  } catch (error) {
-    console.error('Failed to read recording file:', error);
-    res.status(404).json({ error: 'Recording file not found' });
+    if (!content) {
+      return res.status(404).json({
+        success: false,
+        message: 'Recording not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        filename,
+        content,
+      },
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to get recording content:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while getting recording content',
+      error: error.message,
+    });
   }
 });
 
-router.get('/scripts', (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-    res.json([]);
-  });
+// Get scripts (alias for recordings)
+router.get('/scripts', requireAuth, async (req, res) => {
+  try {
+    const recordings = await automationService.getRecordings();
+    
+    res.json({
+      success: true,
+      data: recordings.map(filename => ({
+        id: filename,
+        name: filename.replace('.spec.ts', ''),
+        filename,
+        status: 'ready',
+        created: new Date(),
+      })),
+    });
 
-  router.get('/recordings', (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-    res.json([]);
-  });
+  } catch (error: any) {
+    logger.error('Failed to get scripts:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while getting scripts',
+      error: error.message,
+    });
+  }
+});
 
 export default router;

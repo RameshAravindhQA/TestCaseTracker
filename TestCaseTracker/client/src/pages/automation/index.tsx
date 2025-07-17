@@ -189,18 +189,18 @@ export default function AutomationPage() {
         if (!response.ok) {
           const contentType = response.headers.get('content-type');
           const text = await response.text();
-          
+
           if (contentType?.includes('text/html') || text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
             throw new Error('Automation API endpoint not implemented. The server returned an HTML page instead of JSON. This feature may not be available yet.');
           }
-          
+
           let errorData;
           try {
             errorData = JSON.parse(text);
           } catch (parseError) {
             throw new Error(`Server error: ${response.status} - ${text.substring(0, 200)}...`);
           }
-          
+
           throw new Error(errorData.message || `HTTP ${response.status}: ${text}`);
         }
 
@@ -338,27 +338,38 @@ export default function AutomationPage() {
   };
 
   const startRecording = async () => {
+    const validationErrors: Record<string, string> = {};
+
     if (!url) {
-      toast({
-        title: "Error",
-        description: "Please enter a URL to record",
-        variant: "destructive"
-      });
+      validationErrors.url = 'URL is required';
+    } else {
+      try {
+        new URL(url);
+      } catch (error) {
+        validationErrors.url = 'Please enter a valid URL (e.g., https://example.com)';
+      }
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setValidationErrors(validationErrors);
       return;
     }
 
+    setValidationErrors({});
     setIsLoading(true);
+
     try {
       const response = await fetch('/api/automation/start-recording', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({
           url,
-          projectId: projectId || undefined,
-          moduleId: moduleId || undefined,
-          testCaseId: testCaseId || undefined
+          projectId,
+          moduleId,
+          testCaseId
         })
       });
 
@@ -374,12 +385,46 @@ export default function AutomationPage() {
 
         toast({
           title: "Recording Started",
-          description: "Playwright browser opened. Start interacting with the page.",
+          description: "Playwright browser opened. Start interacting with the page to record your test.",
         });
+
+        // Poll for session status
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusResponse = await fetch(`/api/automation/session/${data.sessionId}`, {
+              credentials: 'include'
+            });
+            const statusData = await statusResponse.json();
+
+            if (statusData.success) {
+              setCurrentSession(prev => prev ? {
+                ...prev,
+                status: statusData.data.status
+              } : null);
+
+              if (statusData.data.status === 'stopped' || statusData.data.status === 'error') {
+                clearInterval(pollInterval);
+                if (statusData.data.status === 'stopped') {
+                  toast({
+                    title: "Recording Completed",
+                    description: `Test script saved as ${statusData.data.filename}`,
+                  });
+                }
+                loadRecordings();
+              }
+            }
+          } catch (error) {
+            console.error('Error polling session status:', error);
+          }
+        }, 2000);
+
+        // Clean up interval after 5 minutes
+        setTimeout(() => clearInterval(pollInterval), 300000);
+
       } else {
         throw new Error(data.message || 'Failed to start recording');
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || 'Failed to start recording',
@@ -532,11 +577,84 @@ export default function AutomationPage() {
   };
 
     const stopRecording = () => {
-      if (!currentSession) return;
+    if (!currentSession) return;
 
+    setIsLoading(true);
+    stopRecording1();
+  };
+
+  const executeTest = async (filename: string) => {
+    try {
       setIsLoading(true);
-      stopRecording1();
-    };
+
+      const response = await fetch('/api/automation/execute-test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ filename })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Test Execution Started",
+          description: `Running test: ${filename}`,
+        });
+
+        // Poll for execution status
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusResponse = await fetch(`/api/automation/execution/${data.executionId}`, {
+              credentials: 'include'
+            });
+            const statusData = await statusResponse.json();
+
+            if (statusData.success) {
+              const execution = statusData.data;
+
+              if (execution.status === 'completed' || execution.status === 'failed') {
+                clearInterval(pollInterval);
+
+                const duration = execution.endTime ? 
+                  new Date(execution.endTime).getTime() - new Date(execution.startTime).getTime() :
+                  0;
+
+                toast({
+                  title: execution.status === 'completed' ? "Test Passed" : "Test Failed",
+                  description: `${filename} ${execution.status} in ${duration}ms`,
+                  variant: execution.status === 'completed' ? "default" : "destructive",
+                });
+
+                // Show report if available
+                if (execution.report) {
+                  console.log('Test Report:', execution.report);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error polling execution status:', error);
+          }
+        }, 2000);
+
+        // Clean up interval after 5 minutes
+        setTimeout(() => clearInterval(pollInterval), 300000);
+
+      } else {
+        throw new Error(data.message || 'Failed to execute test');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Execution Error",
+        description: error.message || 'Failed to execute test',
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <MainLayout>
@@ -674,6 +792,14 @@ export default function AutomationPage() {
                       </p>
                     </div>
                   </div>
+                                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => executeTest(recording.filename)}
+                      disabled={isLoading}
+                    >
+                      Execute
+                    </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -823,3 +949,6 @@ export default function AutomationPage() {
     </MainLayout>
   );
 }
+```
+
+The code has been updated to include robust test automation implementation with polling for session and execution statuses, and adding execute test function.
