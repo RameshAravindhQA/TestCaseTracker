@@ -437,9 +437,10 @@ export function Messenger() {
     }
   };
 
-  const filteredContacts = contacts.filter(contact =>
-    `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredContacts = (contacts || []).filter(contact =>
+    contact && contact.firstName && contact.lastName && contact.email &&
+    (`${contact.firstName} ${contact.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contact.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const renderMessageContent = (message: Message) => {
@@ -529,44 +530,50 @@ export function Messenger() {
             ) : filteredContacts.length === 0 ? (
               <div className="p-4 text-center text-gray-500">No contacts found</div>
             ) : (
-              filteredContacts.map((contact) => (
-                <motion.div
-                  key={contact.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={cn(
-                    "flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors",
-                    selectedContact?.id === contact.id && "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700"
-                  )}
-                  onClick={() => setSelectedContact(contact)}
-                >
-                  <div className="relative">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={contact.profilePicture} alt={`${contact.firstName} ${contact.lastName}`} />
-                      <AvatarFallback>
-                        {contact.firstName[0]}{contact.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    {contact.isOnline && (
-                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />
+              filteredContacts.map((contact) => {
+                if (!contact || !contact.firstName || !contact.lastName) {
+                  return null;
+                }
+                
+                return (
+                  <motion.div
+                    key={contact.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={cn(
+                      "flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors",
+                      selectedContact?.id === contact.id && "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700"
                     )}
-                  </div>
-
-                  <div className="ml-3 flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {contact.firstName} {contact.lastName}
-                      </p>
-                      <Badge variant="secondary" className={cn("text-xs", getRoleColor(contact.role))}>
-                        {contact.role}
-                      </Badge>
+                    onClick={() => setSelectedContact(contact)}
+                  >
+                    <div className="relative">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={contact.profilePicture} alt={`${contact.firstName} ${contact.lastName}`} />
+                        <AvatarFallback>
+                          {contact.firstName?.[0] || '?'}{contact.lastName?.[0] || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      {contact.isOnline && (
+                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />
+                      )}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {contact.email}
-                    </p>
-                  </div>
-                </motion.div>
-              ))
+
+                    <div className="ml-3 flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {contact.firstName} {contact.lastName}
+                        </p>
+                        <Badge variant="secondary" className={cn("text-xs", getRoleColor(contact.role || 'user'))}>
+                          {contact.role || 'User'}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {contact.email || 'No email'}
+                      </p>
+                    </div>
+                  </motion.div>
+                );
+              }).filter(Boolean)
             )}
           </div>
         </ScrollArea>
@@ -646,26 +653,31 @@ export function Messenger() {
                     <p>No messages yet. Start a conversation! 💬</p>
                   </div>
                 ) : (
-                  messages.map((message) => (
-                    <motion.div
-                      key={message.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={cn(
-                        "flex group",
-                        message.senderId === user?.id ? "justify-end" : "justify-start"
-                      )}
-                    >
-                      <div className={cn(
-                        "flex items-end space-x-2 max-w-xs lg:max-w-md",
-                        message.senderId === user?.id ? "flex-row-reverse space-x-reverse" : "flex-row"
-                      )}>
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={message.sender.profilePicture} />
-                          <AvatarFallback className="text-xs">
-                            {message.sender.firstName[0]}{message.sender.lastName[0]}
-                          </AvatarFallback>
-                        </Avatar>
+                  (messages || []).map((message) => {
+                    if (!message || !message.sender) {
+                      return null;
+                    }
+                    
+                    return (
+                      <motion.div
+                        key={message.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={cn(
+                          "flex group",
+                          message.senderId === user?.id ? "justify-end" : "justify-start"
+                        )}
+                      >
+                        <div className={cn(
+                          "flex items-end space-x-2 max-w-xs lg:max-w-md",
+                          message.senderId === user?.id ? "flex-row-reverse space-x-reverse" : "flex-row"
+                        )}>
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={message.sender?.profilePicture} />
+                            <AvatarFallback className="text-xs">
+                              {message.sender?.firstName?.[0] || '?'}{message.sender?.lastName?.[0] || '?'}
+                            </AvatarFallback>
+                          </Avatar>
                         <div className={cn(
                           "rounded-lg px-3 py-2",
                           message.senderId === user?.id 
@@ -781,7 +793,8 @@ export function Messenger() {
                         )}
                       </div>
                     </motion.div>
-                  ))
+                  );
+                  }).filter(Boolean)
                 )}
                 <div ref={messagesEndRef} />
               </div>

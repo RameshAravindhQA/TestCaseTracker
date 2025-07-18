@@ -43,6 +43,38 @@ export default function GitHubIntegrationPage() {
     }
   });
 
+  // Delete integration mutation
+  const deleteIntegrationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/github/integrations/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(errorData || 'Failed to delete integration');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "✅ Integration Deleted",
+        description: "GitHub integration deleted successfully",
+        className: "bg-green-800 text-white border-green-700",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/github/integrations'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "❌ Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Test connection mutation
   const testConnectionMutation = useMutation({
     mutationFn: async (integration: GitHubIntegration) => {

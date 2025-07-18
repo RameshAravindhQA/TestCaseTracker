@@ -124,9 +124,9 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
     },
     onSuccess: () => {
       toast({
-        title: "Success",
+        title: "✅ GitHub Integration Success",
         description: `GitHub integration ${editingIntegration ? 'updated' : 'created'} successfully`,
-        variant: "success",
+        className: "bg-green-800 text-white border-green-700",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/github/integrations'] });
       if (onClose) {
