@@ -372,3 +372,6 @@ const model2 = genAI2.getGenerativeModel({
 // Debug logging
 console.log('🔧 Gemini API Key configured:', !!process.env.GOOGLE_API_KEY);
 console.log('🔧 Gemini service initialized');
+
+// Export the service instance for use in routes
+export default geminiService;

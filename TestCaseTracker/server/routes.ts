@@ -1530,6 +1530,248 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Enhanced AI Test Case Generation endpoint with multipart form data support
+  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, 
+    (req, res, next) => {
+      bugAttachmentUpload.array('images', 10)(req, res, (err) => {
+        if (err) {
+          console.error("Enhanced AI file upload error:", err);
+          return res.status(400).json({ error: 'File upload failed' });
+        }
+        next();
+      });
+    },
+    async (req, res) => {
+      try {
+        console.log('Enhanced AI Generation Request Body:', req.body);
+        console.log('Enhanced AI Generation Files:', req.files);
+        
+        const { 
+          requirement, 
+          projectContext, 
+          moduleContext, 
+          testType, 
+          priority,
+          websiteUrl,
+          elementInspection,
+          userFlows,
+          businessRules,
+          inputType 
+        } = req.body;
+        
+        if (!requirement && !websiteUrl && (!req.files || req.files.length === 0)) {
+          return res.status(400).json({ error: 'Requirement, website URL, or images are required' });
+        }
+
+        // Enhanced mock AI generation with different input types
+        let mockTestCases = [];
+        let analysisResults = {
+          coverage: 'Comprehensive',
+          complexity: 'Medium',
+          focusAreas: 'User Interface, Data Validation, Error Handling',
+          suggestions: ['Consider adding performance tests', 'Include accessibility testing']
+        };
+
+        // Generate test cases based on input type
+        switch (inputType) {
+          case 'text':
+            mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
+            break;
+          case 'url':
+            mockTestCases = generateUrlBasedTestCases(websiteUrl, userFlows, testType, priority);
+            analysisResults.focusAreas = 'Navigation, UI Components, Cross-browser Testing';
+            break;
+          case 'image':
+            mockTestCases = generateImageBasedTestCases(req.files, requirement, testType, priority);
+            analysisResults.focusAreas = 'Visual Elements, Layout, Responsive Design';
+            break;
+          case 'inspect':
+            mockTestCases = generateInspectionBasedTestCases(elementInspection, requirement, testType, priority);
+            analysisResults.focusAreas = 'Element Interactions, JavaScript Functionality';
+            break;
+          default:
+            mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
+        }
+
+        res.json({
+          testCases: mockTestCases,
+          analysis: analysisResults,
+          message: `Generated ${mockTestCases.length} enhanced test cases using ${inputType} input`
+        });
+      } catch (error) {
+        console.error('Enhanced AI test case generation error:', error);
+        res.status(500).json({ error: 'Failed to generate enhanced test cases' });
+      }
+    }
+  );
+
+  // Helper functions for different test case generation types
+  function generateTextBasedTestCases(requirement, businessRules, testType, priority) {
+    const baseRequirement = requirement || 'User Registration';
+    return [
+      {
+        feature: `${baseRequirement} - Happy Path`,
+        testObjective: `Verify successful ${baseRequirement.toLowerCase()} with valid data`,
+        preConditions: "Application is accessible and registration page is loaded",
+        testSteps: `1. Navigate to registration page\n2. Enter valid user details\n3. Submit the form\n4. Verify successful registration`,
+        expectedResult: `User should be successfully registered and receive confirmation`,
+        priority: priority || "High",
+        testType: testType || "functional",
+        coverage: "Happy Path",
+        category: "Core Functionality",
+        tags: ["registration", "positive-testing", "core-flow"]
+      },
+      {
+        feature: `${baseRequirement} - Data Validation`,
+        testObjective: `Verify data validation rules for ${baseRequirement.toLowerCase()}`,
+        preConditions: "Registration page is accessible",
+        testSteps: `1. Navigate to registration page\n2. Enter invalid data formats\n3. Submit form\n4. Verify validation messages`,
+        expectedResult: "Appropriate validation messages should be displayed",
+        priority: priority || "High",
+        testType: testType || "functional",
+        coverage: "Input Validation",
+        category: "Data Validation",
+        tags: ["validation", "negative-testing", "error-handling"]
+      },
+      {
+        feature: `${baseRequirement} - Security Testing`,
+        testObjective: `Verify security measures for ${baseRequirement.toLowerCase()}`,
+        preConditions: "Registration page is accessible",
+        testSteps: `1. Attempt SQL injection in form fields\n2. Test XSS prevention\n3. Verify password security requirements\n4. Test rate limiting`,
+        expectedResult: "All security measures should prevent malicious activities",
+        priority: "Medium",
+        testType: "security",
+        coverage: "Security Validation",
+        category: "Security",
+        tags: ["security", "sql-injection", "xss-prevention"]
+      }
+    ];
+  }
+
+  function generateUrlBasedTestCases(websiteUrl, userFlows, testType, priority) {
+    return [
+      {
+        feature: "Website Navigation - Menu Links",
+        testObjective: "Verify all navigation menu links work correctly",
+        preConditions: `Website ${websiteUrl} is accessible`,
+        testSteps: "1. Load the website\n2. Click on each menu item\n3. Verify pages load correctly\n4. Check for broken links",
+        expectedResult: "All menu links should navigate to correct pages without errors",
+        priority: priority || "High",
+        testType: testType || "functional",
+        coverage: "Navigation Testing",
+        category: "User Interface",
+        tags: ["navigation", "ui-testing", "links"]
+      },
+      {
+        feature: "Website Responsiveness - Mobile View",
+        testObjective: "Verify website displays correctly on mobile devices",
+        preConditions: `Website ${websiteUrl} is accessible`,
+        testSteps: "1. Open website on mobile device\n2. Test different screen sizes\n3. Verify content readability\n4. Test touch interactions",
+        expectedResult: "Website should be fully responsive and usable on mobile",
+        priority: "Medium",
+        testType: "ui",
+        coverage: "Responsive Design",
+        category: "Mobile Testing",
+        tags: ["responsive", "mobile", "ui-testing"]
+      },
+      {
+        feature: "Website Performance - Load Time",
+        testObjective: "Verify website loads within acceptable time limits",
+        preConditions: `Website ${websiteUrl} is accessible`,
+        testSteps: "1. Clear browser cache\n2. Load website\n3. Measure load time\n4. Test with different connection speeds",
+        expectedResult: "Website should load within 3 seconds on standard connections",
+        priority: "Medium",
+        testType: "performance",
+        coverage: "Performance Testing",
+        category: "Performance",
+        tags: ["performance", "load-time", "optimization"]
+      }
+    ];
+  }
+
+  function generateImageBasedTestCases(images, requirement, testType, priority) {
+    const imageCount = images ? images.length : 0;
+    return [
+      {
+        feature: "UI Layout - Visual Elements",
+        testObjective: "Verify UI elements are positioned correctly according to design",
+        preConditions: `${imageCount} design mockup(s) are available for reference`,
+        testSteps: "1. Compare actual UI with design mockups\n2. Verify element positioning\n3. Check color schemes\n4. Validate typography",
+        expectedResult: "UI should match the provided design specifications",
+        priority: priority || "High",
+        testType: testType || "ui",
+        coverage: "Visual Design",
+        category: "UI Validation",
+        tags: ["ui-testing", "visual-validation", "design-compliance"]
+      },
+      {
+        feature: "Interactive Elements - Button Functionality",
+        testObjective: "Verify all interactive elements work as expected",
+        preConditions: "UI is loaded and interactive elements are visible",
+        testSteps: "1. Identify all clickable elements\n2. Test button clicks\n3. Verify hover effects\n4. Test form interactions",
+        expectedResult: "All interactive elements should respond correctly to user actions",
+        priority: "High",
+        testType: "functional",
+        coverage: "User Interactions",
+        category: "Functionality",
+        tags: ["interaction", "buttons", "forms"]
+      },
+      {
+        feature: "Visual Accessibility - Color Contrast",
+        testObjective: "Verify color contrast meets accessibility standards",
+        preConditions: "UI design is implemented",
+        testSteps: "1. Test color contrast ratios\n2. Verify text readability\n3. Test with color blindness simulation\n4. Validate focus indicators",
+        expectedResult: "All visual elements should meet WCAG accessibility guidelines",
+        priority: "Medium",
+        testType: "accessibility",
+        coverage: "Accessibility Testing",
+        category: "Accessibility",
+        tags: ["accessibility", "color-contrast", "wcag"]
+      }
+    ];
+  }
+
+  function generateInspectionBasedTestCases(elementInspection, requirement, testType, priority) {
+    return [
+      {
+        feature: "DOM Element Validation",
+        testObjective: "Verify DOM elements are properly structured and accessible",
+        preConditions: "Web page is loaded with the specified elements",
+        testSteps: "1. Inspect DOM structure\n2. Validate element attributes\n3. Check for proper semantic markup\n4. Test element accessibility",
+        expectedResult: "All DOM elements should be properly structured and accessible",
+        priority: priority || "High",
+        testType: testType || "functional",
+        coverage: "DOM Validation",
+        category: "Technical Validation",
+        tags: ["dom", "structure", "accessibility"]
+      },
+      {
+        feature: "JavaScript Functionality - Event Handlers",
+        testObjective: "Verify JavaScript event handlers work correctly",
+        preConditions: "Page is loaded with JavaScript enabled",
+        testSteps: "1. Trigger click events\n2. Test form submissions\n3. Verify dynamic content updates\n4. Test error handling",
+        expectedResult: "All JavaScript functionality should work without errors",
+        priority: "High",
+        testType: "functional",
+        coverage: "JavaScript Testing",
+        category: "Frontend Functionality",
+        tags: ["javascript", "events", "dynamic-content"]
+      },
+      {
+        feature: "CSS Styling - Visual Rendering",
+        testObjective: "Verify CSS styles are applied correctly",
+        preConditions: "Page is loaded with all stylesheets",
+        testSteps: "1. Inspect computed styles\n2. Test responsive breakpoints\n3. Verify animations\n4. Check cross-browser compatibility",
+        expectedResult: "All CSS styles should render correctly across different browsers",
+        priority: "Medium",
+        testType: "ui",
+        coverage: "Visual Styling",
+        category: "UI Styling",
+        tags: ["css", "styling", "cross-browser"]
+      }
+    ];
+  }
+
   // Bug Comments API endpoints
   apiRouter.get("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
     try {
