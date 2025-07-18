@@ -1546,6 +1546,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         console.log('Enhanced AI Generation Request Body:', req.body);
         console.log('Enhanced AI Generation Files:', req.files);
         
+        // Set proper content type header
+        res.setHeader('Content-Type', 'application/json');
+        
         const { 
           requirement, 
           projectContext, 
@@ -1572,38 +1575,126 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           suggestions: ['Consider adding performance tests', 'Include accessibility testing']
         };
 
-        // Generate test cases based on input type
-        switch (inputType) {
-          case 'text':
-            mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
-            break;
-          case 'url':
-            mockTestCases = generateUrlBasedTestCases(websiteUrl, userFlows, testType, priority);
-            analysisResults.focusAreas = 'Navigation, UI Components, Cross-browser Testing';
-            break;
-          case 'image':
-            mockTestCases = generateImageBasedTestCases(req.files, requirement, testType, priority);
-            analysisResults.focusAreas = 'Visual Elements, Layout, Responsive Design';
-            break;
-          case 'inspect':
-            mockTestCases = generateInspectionBasedTestCases(elementInspection, requirement, testType, priority);
-            analysisResults.focusAreas = 'Element Interactions, JavaScript Functionality';
-            break;
-          default:
-            mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
+        // Generate test cases based on input type - focus on registration if mentioned
+        const isRegistrationTest = requirement && requirement.toLowerCase().includes('register');
+        
+        if (isRegistrationTest || (moduleContext && moduleContext.toLowerCase().includes('registration'))) {
+          mockTestCases = generateRegistrationTestCases(requirement, testType, priority);
+          analysisResults.focusAreas = 'Registration Forms, Input Validation, Security';
+        } else {
+          switch (inputType) {
+            case 'text':
+              mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
+              break;
+            case 'url':
+              mockTestCases = generateUrlBasedTestCases(websiteUrl, userFlows, testType, priority);
+              analysisResults.focusAreas = 'Navigation, UI Components, Cross-browser Testing';
+              break;
+            case 'image':
+              mockTestCases = generateImageBasedTestCases(req.files, requirement, testType, priority);
+              analysisResults.focusAreas = 'Visual Elements, Layout, Responsive Design';
+              break;
+            case 'inspect':
+              mockTestCases = generateInspectionBasedTestCases(elementInspection, requirement, testType, priority);
+              analysisResults.focusAreas = 'Element Interactions, JavaScript Functionality';
+              break;
+            default:
+              mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
+          }
         }
 
-        res.json({
+        const response = {
           testCases: mockTestCases,
           analysis: analysisResults,
-          message: `Generated ${mockTestCases.length} enhanced test cases using ${inputType} input`
-        });
+          message: `Generated ${mockTestCases.length} enhanced test cases using ${inputType || 'text'} input`
+        };
+
+        console.log('Sending AI response:', response);
+        res.json(response);
       } catch (error) {
         console.error('Enhanced AI test case generation error:', error);
         res.status(500).json({ error: 'Failed to generate enhanced test cases' });
       }
     }
   );
+
+  // Helper function for registration-specific test cases
+  function generateRegistrationTestCases(requirement, testType, priority) {
+    return [
+      {
+        feature: "User Registration - Valid Data Entry",
+        testObjective: "Verify successful user registration with valid data",
+        preConditions: "Registration page is accessible and all required fields are displayed",
+        testSteps: "1. Navigate to registration page\n2. Enter valid first name (e.g., 'John')\n3. Enter valid last name (e.g., 'Doe')\n4. Enter valid email address (e.g., 'john.doe@example.com')\n5. Enter strong password meeting requirements\n6. Confirm password by re-entering the same password\n7. Accept terms and conditions\n8. Click 'Register' button\n9. Verify success message appears\n10. Check user receives confirmation email",
+        expectedResult: "User should be successfully registered, receive confirmation message, and get verification email",
+        priority: "High",
+        testType: testType || "functional",
+        coverage: "Positive Testing",
+        category: "Registration - Happy Path",
+        tags: ["registration", "positive-testing", "user-creation", "email-verification"]
+      },
+      {
+        feature: "User Registration - Email Validation",
+        testObjective: "Verify email field validation with invalid email formats",
+        preConditions: "Registration page is loaded",
+        testSteps: "1. Navigate to registration page\n2. Enter valid first and last name\n3. Enter invalid email formats:\n   - Missing @ symbol (e.g., 'testexample.com')\n   - Missing domain (e.g., 'test@')\n   - Invalid characters (e.g., 'test@exam ple.com')\n   - Empty email field\n4. Attempt to register\n5. Verify validation error messages",
+        expectedResult: "Appropriate error messages should be displayed for each invalid email format without allowing registration",
+        priority: priority || "High",
+        testType: testType || "functional",
+        coverage: "Email Validation",
+        category: "Registration - Input Validation",
+        tags: ["registration", "negative-testing", "email-validation", "error-handling"]
+      },
+      {
+        feature: "User Registration - Password Security",
+        testObjective: "Verify password field validation and security requirements",
+        preConditions: "Registration page is accessible",
+        testSteps: "1. Navigate to registration page\n2. Fill valid details except password\n3. Test weak passwords:\n   - Too short (< 8 characters)\n   - No uppercase letters\n   - No special characters\n   - Common passwords (e.g., 'password123')\n4. Test password confirmation mismatch\n5. Verify validation messages\n6. Test strong password acceptance",
+        expectedResult: "Weak passwords should be rejected with specific error messages. Strong passwords should be accepted",
+        priority: "High",
+        testType: "security",
+        coverage: "Password Security",
+        category: "Registration - Security",
+        tags: ["registration", "password-security", "validation", "security-testing"]
+      },
+      {
+        feature: "User Registration - Duplicate Email Prevention",
+        testObjective: "Verify system prevents registration with existing email addresses",
+        preConditions: "At least one user already registered in the system",
+        testSteps: "1. Navigate to registration page\n2. Enter valid first name, last name\n3. Enter email address that already exists in system\n4. Enter valid password and confirmation\n5. Accept terms and conditions\n6. Click 'Register' button\n7. Verify error message appears",
+        expectedResult: "System should display error message indicating email already exists and prevent duplicate registration",
+        priority: priority || "High",
+        testType: testType || "functional",
+        coverage: "Duplicate Prevention",
+        category: "Registration - Business Logic",
+        tags: ["registration", "duplicate-prevention", "negative-testing", "business-rules"]
+      },
+      {
+        feature: "User Registration - Required Fields Validation",
+        testObjective: "Verify all required fields are validated before registration",
+        preConditions: "Registration page is loaded",
+        testSteps: "1. Navigate to registration page\n2. Leave first name field empty and fill others\n3. Attempt registration - verify error\n4. Leave last name field empty and fill others\n5. Attempt registration - verify error\n6. Leave email field empty and fill others\n7. Attempt registration - verify error\n8. Leave password field empty and fill others\n9. Attempt registration - verify error\n10. Leave all fields empty and attempt registration",
+        expectedResult: "Appropriate error messages should appear for each missing required field preventing form submission",
+        priority: priority || "Medium",
+        testType: testType || "functional",
+        coverage: "Required Field Validation",
+        category: "Registration - Input Validation",
+        tags: ["registration", "required-fields", "negative-testing", "form-validation"]
+      },
+      {
+        feature: "User Registration - Terms and Conditions",
+        testObjective: "Verify terms and conditions acceptance is mandatory",
+        preConditions: "Registration page is accessible",
+        testSteps: "1. Navigate to registration page\n2. Fill all required fields with valid data\n3. Leave terms and conditions checkbox unchecked\n4. Attempt to register\n5. Verify error message or prevention\n6. Check terms and conditions checkbox\n7. Attempt registration again\n8. Verify successful registration",
+        expectedResult: "Registration should not proceed without accepting terms and conditions. Should succeed when accepted",
+        priority: "Medium",
+        testType: testType || "functional",
+        coverage: "Terms Acceptance",
+        category: "Registration - Legal Compliance",
+        tags: ["registration", "terms-conditions", "legal-compliance", "mandatory-fields"]
+      }
+    ];
+  }
 
   // Helper functions for different test case generation types
   function generateTextBasedTestCases(requirement, businessRules, testType, priority) {

@@ -87,15 +87,27 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         const response = await fetch('/api/ai/generate-enhanced-test-cases', {
           method: 'POST',
           body: formData,
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json'
+          }
         });
 
         console.log('Enhanced AI API Response status:', response.status);
+        console.log('Enhanced AI API Response headers:', response.headers);
 
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Enhanced AI API Error response:', errorText);
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        // Check if response is actually JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const responseText = await response.text();
+          console.error('Expected JSON but got:', contentType, responseText.substring(0, 200));
+          throw new Error('Server returned non-JSON response');
         }
 
         const result = await response.json();
