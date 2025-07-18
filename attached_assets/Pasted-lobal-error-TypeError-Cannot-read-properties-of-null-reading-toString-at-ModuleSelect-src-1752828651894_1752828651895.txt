@@ -1,0 +1,60 @@
+lobal error: TypeError: Cannot read properties of null (reading 'toString')
+    at ModuleSelect (src/components/ui/module-select.tsx:38:49)
+    at renderWithHooks (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:11548:26)
+    at mountIndeterminateComponent (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:14926:21)
+    at beginWork (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:15914:22)
+    at HTMLUnknownElement.callCallback2 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:3674:22)
+    at Object.invokeGuardedCallbackDev (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:3699:24)
+    at invokeGuardedCallback (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:3733:39)
+    at beginWork$1 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:19765:15)
+    at performUnitOfWork (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:19198:20)
+    at workLoopConcurrent (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:19189:13)
+(anonymous) @ main.tsx:17Understand this error
+src/components/ui/module-select.tsx:38 Uncaught TypeError: Cannot read properties of null (reading 'toString')
+    at ModuleSelect (src/components/ui/module-select.tsx:38:49)
+    at renderWithHooks (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:11548:26)
+    at mountIndeterminateComponent (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:14926:21)
+    at beginWork (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:15914:22)
+    at HTMLUnknownElement.callCallback2 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:3674:22)
+    at Object.invokeGuardedCallbackDev (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:3699:24)
+    at invokeGuardedCallback (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:3733:39)
+    at beginWork$1 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:19765:15)
+    at performUnitOfWork (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:19198:20)
+    at workLoopConcurrent (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:19189:13)Understand this error
+main.tsx:17 Global error: TypeError: Cannot read properties of null (reading 'toString')
+    at ModuleSelect (src/components/ui/module-select.tsx:38:49)
+    at renderWithHooks (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:11548:26)
+    at mountIndeterminateComponent (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:14926:21)
+    at beginWork (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:15914:22)
+    at HTMLUnknownElement.callCallback2 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:3674:22)
+    at Object.invokeGuardedCallbackDev (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:3699:24)
+    at invokeGuardedCallback (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:3733:39)
+    at beginWork$1 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:19765:15)
+    at performUnitOfWork (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:19198:20)
+    at workLoopSync (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:19137:13)
+(anonymous) @ main.tsx:17Understand this error
+src/components/ui/module-select.tsx:38 Uncaught TypeError: Cannot read properties of null (reading 'toString')
+    at ModuleSelect (src/components/ui/module-select.tsx:38:49)
+    at renderWithHooks (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:11548:26)
+    at mountIndeterminateComponent (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:14926:21)
+    at beginWork (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:15914:22)
+    at HTMLUnknownElement.callCallback2 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:3674:22)
+    at Object.invokeGuardedCallbackDev (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:3699:24)
+    at invokeGuardedCallback (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:3733:39)
+    at beginWork$1 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:19765:15)
+    at performUnitOfWork (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:19198:20)
+    at workLoopSync (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=7e213408:19137:13)Understand this error
+ The above error occurred in the <ModuleSelect> component:
+
+    at ModuleSelect (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/components/ui/module-select.tsx:26:3)
+    at div
+    at div
+    at div
+    at AIGeneratorPage (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/pages/ai-generator/index.tsx:33:41)
+    at Suspense
+    at ProtectedRoute (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/lib/protected-route.tsx:21:34)
+    at ProtectedLazyComponent (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/App.tsx?v=1uPuwhwyfRiwcRua4Fe0d:89:35)
+    at Route (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/wouter.js?v=7e213408:206:16)
+    at Switch (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/wouter.js?v=7e213408:262:17)
+    at Router
+    at Provider (
