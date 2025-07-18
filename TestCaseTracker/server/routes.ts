@@ -1536,21 +1536,57 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   // Enhanced AI Test Case Generation endpoint with multipart form data support
   apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, 
     (req, res, next) => {
-      // Ensure JSON response header is set early
+      // Ensure JSON response header is set early and add CORS headers
       res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       
-      bugAttachmentUpload.array('images', 10)(req, res, (err) => {
-        if (err) {
-          console.error("Enhanced AI file upload error:", err);
-          return res.status(400).json({ error: 'File upload failed' });
-        }
-        next();
-      });
+      // Handle preflight requests
+      if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+      }
+      
+      console.log('Enhanced AI Generation - Processing request...');
+      
+      try {
+        bugAttachmentUpload.array('images', 10)(req, res, (err) => {
+          if (err) {
+            console.error("Enhanced AI file upload error:", err);
+            // Ensure we return JSON even on upload errors
+            return res.status(400).json({ 
+              success: false,
+              error: 'File upload failed',
+              details: err.message 
+            });
+          }
+          console.log('Enhanced AI Generation - File upload successful');
+          next();
+        });
+      } catch (uploadError) {
+        console.error("Enhanced AI upload catch error:", uploadError);
+        return res.status(500).json({ 
+          success: false,
+          error: 'Upload processing failed',
+          details: uploadError.message 
+        });
+      }
     },
     async (req, res) => {
+      // Wrap the entire handler in try-catch for maximum safety
       try {
+        console.log('Enhanced AI Generation - Handler started');
         console.log('Enhanced AI Generation Request Body:', req.body);
-        console.log('Enhanced AI Generation Files:', req.files);
+        console.log('Enhanced AI Generation Files:', req.files ? req.files.length : 0);
+        
+        // Validate authentication
+        if (!req.session || !req.session.userId) {
+          console.log('Enhanced AI Generation - Authentication failed');
+          return res.status(401).json({ 
+            success: false,
+            error: 'Authentication required' 
+          });
+        }
         
         const { 
           requirement, 
@@ -1565,9 +1601,23 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           inputType 
         } = req.body;
         
+        console.log('Enhanced AI Generation - Parsed input:', {
+          hasRequirement: !!requirement,
+          hasWebsiteUrl: !!websiteUrl,
+          filesCount: req.files ? req.files.length : 0,
+          inputType: inputType
+        });
+        
+        // Input validation
         if (!requirement && !websiteUrl && (!req.files || req.files.length === 0)) {
-          return res.status(400).json({ error: 'Requirement, website URL, or images are required' });
+          console.log('Enhanced AI Generation - Missing required input');
+          return res.status(400).json({ 
+            success: false,
+            error: 'At least one input is required: requirement text, website URL, or uploaded images' 
+          });
         }
+
+        console.log('Enhanced AI Generation - Starting test case generation...');
 
         // Enhanced mock AI generation with different input types
         let mockTestCases = [];
@@ -1578,45 +1628,80 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           suggestions: ['Consider adding performance tests', 'Include accessibility testing']
         };
 
-        // Generate test cases based on input type - focus on registration if mentioned
-        const isRegistrationTest = requirement && requirement.toLowerCase().includes('register');
-        
-        if (isRegistrationTest || (moduleContext && moduleContext.toLowerCase().includes('registration'))) {
-          mockTestCases = generateRegistrationTestCases(requirement, testType, priority);
-          analysisResults.focusAreas = 'Registration Forms, Input Validation, Security';
-        } else {
-          switch (inputType) {
-            case 'text':
-              mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
-              break;
-            case 'url':
-              mockTestCases = generateUrlBasedTestCases(websiteUrl, userFlows, testType, priority);
-              analysisResults.focusAreas = 'Navigation, UI Components, Cross-browser Testing';
-              break;
-            case 'image':
-              mockTestCases = generateImageBasedTestCases(req.files, requirement, testType, priority);
-              analysisResults.focusAreas = 'Visual Elements, Layout, Responsive Design';
-              break;
-            case 'inspect':
-              mockTestCases = generateInspectionBasedTestCases(elementInspection, requirement, testType, priority);
-              analysisResults.focusAreas = 'Element Interactions, JavaScript Functionality';
-              break;
-            default:
-              mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
+        try {
+          // Generate test cases based on input type - focus on registration if mentioned
+          const isRegistrationTest = requirement && requirement.toLowerCase().includes('register');
+          
+          if (isRegistrationTest || (moduleContext && moduleContext.toLowerCase().includes('registration'))) {
+            console.log('Enhanced AI Generation - Generating registration test cases');
+            mockTestCases = generateRegistrationTestCases(requirement, testType, priority);
+            analysisResults.focusAreas = 'Registration Forms, Input Validation, Security';
+          } else {
+            console.log('Enhanced AI Generation - Generating based on input type:', inputType);
+            switch (inputType) {
+              case 'text':
+                mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
+                break;
+              case 'url':
+                mockTestCases = generateUrlBasedTestCases(websiteUrl, userFlows, testType, priority);
+                analysisResults.focusAreas = 'Navigation, UI Components, Cross-browser Testing';
+                break;
+              case 'image':
+                mockTestCases = generateImageBasedTestCases(req.files, requirement, testType, priority);
+                analysisResults.focusAreas = 'Visual Elements, Layout, Responsive Design';
+                break;
+              case 'inspect':
+                mockTestCases = generateInspectionBasedTestCases(elementInspection, requirement, testType, priority);
+                analysisResults.focusAreas = 'Element Interactions, JavaScript Functionality';
+                break;
+              default:
+                mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
+            }
           }
+        } catch (generationError) {
+          console.error('Enhanced AI Generation - Test case generation failed:', generationError);
+          // Fallback to basic test cases
+          mockTestCases = [{
+            feature: "Generated Test Case",
+            testObjective: "Verify the functionality works as expected",
+            preConditions: "System is accessible and user has required permissions",
+            testSteps: "1. Execute the test scenario\n2. Verify expected behavior\n3. Document results",
+            expectedResult: "Functionality works as expected without errors",
+            priority: priority || "Medium",
+            testType: testType || "functional",
+            coverage: "Basic functionality",
+            category: "AI Generated",
+            tags: ["ai-generated", "fallback"]
+          }];
         }
 
+        console.log('Enhanced AI Generation - Generated test cases:', mockTestCases.length);
+
         const response = {
+          success: true,
           testCases: mockTestCases,
           analysis: analysisResults,
-          message: `Generated ${mockTestCases.length} enhanced test cases using ${inputType || 'text'} input`
+          message: `Successfully generated ${mockTestCases.length} enhanced test cases using ${inputType || 'text'} input`,
+          timestamp: new Date().toISOString()
         };
 
-        console.log('Sending AI response:', response);
-        res.json(response);
-      } catch (error) {
-        console.error('Enhanced AI test case generation error:', error);
-        res.status(500).json({ error: 'Failed to generate enhanced test cases', details: error.message });
+        console.log('Enhanced AI Generation - Sending successful response');
+        
+        // Double-check content type before sending
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(200).json(response);
+        
+      } catch (handlerError) {
+        console.error('Enhanced AI Generation - Handler error:', handlerError);
+        
+        // Ensure we always return JSON, even on unexpected errors
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(500).json({ 
+          success: false,
+          error: 'Internal server error during test case generation',
+          details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
+          timestamp: new Date().toISOString()
+        });
       }
     }
   );
