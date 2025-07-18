@@ -1,0 +1,45 @@
+[MESSENGER] Error fetching messages: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+queryFn @ messenger.tsx:150
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=7e213408:881
+run @ @tanstack_react-query.js?v=7e213408:513
+start @ @tanstack_react-query.js?v=7e213408:555
+fetch @ @tanstack_react-query.js?v=7e213408:969
+executeFetch_fn @ @tanstack_react-query.js?v=7e213408:2279
+(anonymous) @ @tanstack_react-query.js?v=7e213408:2313
+setInterval
+updateRefetchInterval_fn @ @tanstack_react-query.js?v=7e213408:2311
+updateTimers_fn @ @tanstack_react-query.js?v=7e213408:2318
+onQueryUpdate @ @tanstack_react-query.js?v=7e213408:2274
+(anonymous) @ @tanstack_react-query.js?v=7e213408:1042
+(anonymous) @ @tanstack_react-query.js?v=7e213408:1041
+batch @ @tanstack_react-query.js?v=7e213408:603
+dispatch_fn @ @tanstack_react-query.js?v=7e213408:1040
+setData @ @tanstack_react-query.js?v=7e213408:718
+onSuccess @ @tanstack_react-query.js?v=7e213408:940
+resolve @ @tanstack_react-query.js?v=7e213408:475
+Promise.then
+run @ @tanstack_react-query.js?v=7e213408:517
+start @ @tanstack_react-query.js?v=7e213408:555
+fetch @ @tanstack_react-query.js?v=7e213408:969
+executeFetch_fn @ @tanstack_react-query.js?v=7e213408:2279
+(anonymous) @ @tanstack_react-query.js?v=7e213408:2313
+setInterval
+updateRefetchInterval_fn @ @tanstack_react-query.js?v=7e213408:2311
+updateTimers_fn @ @tanstack_react-query.js?v=7e213408:2318
+onQueryUpdate @ @tanstack_react-query.js?v=7e213408:2274
+(anonymous) @ @tanstack_react-query.js?v=7e213408:1042
+(anonymous) @ @tanstack_react-query.js?v=7e213408:1041
+batch @ @tanstack_react-query.js?v=7e213408:603
+dispatch_fn @ @tanstack_react-query.js?v=7e213408:1040
+setData @ @tanstack_react-query.js?v=7e213408:718
+onSuccess @ @tanstack_react-query.js?v=7e213408:940
+resolve @ @tanstack_react-query.js?v=7e213408:475
+Promise.then
+run @ @tanstack_react-query.js?v=7e213408:517
+start @ @tanstack_react-query.js?v=7e213408:555
+fetch @ @tanstack_react-query.js?v=7e213408:969
+executeFetch_fn @ @tanstack_react-query.js?v=7e213408:2279
+(anonymous) @ @tanstack_react-query.js?v=7e213408:2313Understand this error
+queryClient.ts:38 Starting GET request to /api/conversations/direct?userId=1
+messenger.tsx:325 [MESSENGER] Send message error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
