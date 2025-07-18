@@ -44,7 +44,9 @@ export function ModuleSelect({
       data-testid="module-select"
     >
       <SelectTrigger className={className}>
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={placeholder} >
+          {selectedModuleId ? selectedModuleId.toString() : "Select module"}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {isLoading ? (

@@ -120,28 +120,39 @@ export function Messenger() {
   });
 
   // Fetch messages for selected contact
-  const { data: messages = [], isLoading: messagesLoading } = useQuery<Message[]>({
+  const { data: messages = [], isLoading: messagesLoading, refetch: refetchMessages } = useQuery<Message[]>({
     queryKey: ['/api/messages', selectedContact?.id],
     queryFn: async () => {
       if (!selectedContact) return [];
-      // Get or create direct conversation
-      let conversationResponse = await apiRequest('GET', `/api/conversations/direct?userId=${selectedContact.id}`);
-      if (conversationResponse.status === 404) {
-        // Create new conversation if it doesn't exist
-        conversationResponse = await apiRequest('POST', '/api/conversations/direct', {
-          userId: selectedContact.id
-        });
+      try {
+        // Get or create direct conversation
+        let conversationResponse = await apiRequest('GET', `/api/conversations/direct?userId=${selectedContact.id}`);
+        if (conversationResponse.status === 404) {
+          // Create new conversation if it doesn't exist
+          conversationResponse = await apiRequest('POST', '/api/conversations/direct', {
+            userId: selectedContact.id
+          });
+        }
+        if (!conversationResponse.ok) throw new Error('Failed to get conversation');
+        const conversation = await conversationResponse.json();
+        
+        // Fetch messages for this conversation
+        const messagesResponse = await apiRequest('GET', `/api/messages/conversation/${conversation.id}`);
+        if (!messagesResponse.ok) {
+          if (messagesResponse.status === 404) {
+            return []; // No messages yet
+          }
+          throw new Error('Failed to fetch messages');
+        }
+        const messagesData = await messagesResponse.json();
+        return Array.isArray(messagesData) ? messagesData : [];
+      } catch (error) {
+        console.error('[MESSENGER] Error fetching messages:', error);
+        return [];
       }
-      if (!conversationResponse.ok) throw new Error('Failed to get conversation');
-      const conversation = await conversationResponse.json();
-      
-      // Fetch messages for this conversation
-      const messagesResponse = await apiRequest('GET', `/api/messages/conversation/${conversation.id}`);
-      if (!messagesResponse.ok) throw new Error('Failed to fetch messages');
-      return messagesResponse.json();
     },
     enabled: !!selectedContact,
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchInterval: 3000, // Refetch every 3 seconds for real-time updates
   });
 
   // WebSocket connection setup
@@ -191,12 +202,15 @@ export function Messenger() {
                 // Handle new message
                 queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
                 if (selectedContact && (data.message.senderId === selectedContact.id || data.message.receiverId === selectedContact.id)) {
-                  queryClient.invalidateQueries({ queryKey: [`/api/messages?userId=${selectedContact.id}`] });
+                  queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact.id] });
+                  refetchMessages(); // Force immediate refresh
                 }
-                toast({
-                  title: "New message",
-                  description: `From ${data.message.sender.firstName}`,
-                });
+                if (data.message.senderId !== user?.id) {
+                  toast({
+                    title: "New message",
+                    description: `From ${data.message.sender?.firstName || 'Unknown'}`,
+                  });
+                }
                 break;
               case 'user_typing':
                 if (data.userId !== user.id) {
@@ -289,16 +303,21 @@ export function Messenger() {
 
         // Then send via WebSocket for real-time delivery (if connected)
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({
-            type: 'send_message',
-            data: {
-              conversationId: conversation.id,
-              message: messageData.content,
-              type: messageData.type || 'text',
-              attachments: messageData.attachments || [],
-              messageId: messageResult.id
-            }
-          }));
+          try {
+            wsRef.current.send(JSON.stringify({
+              type: 'send_message',
+              data: {
+                conversationId: conversation.id,
+                receiverId: selectedContact.id,
+                message: messageData.content,
+                type: messageData.type || 'text',
+                attachments: messageData.attachments || []
+              }
+            }));
+          } catch (wsError) {
+            console.error('[MESSENGER] WebSocket send error:', wsError);
+            // Don't fail the mutation if WebSocket fails
+          }
         }
 
         return messageResult;
@@ -311,6 +330,9 @@ export function Messenger() {
       setNewMessage('');
       setAttachments([]);
       setReplyingTo(null);
+      
+      // Immediately refetch messages to show the new message
+      refetchMessages();
       queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact?.id] });
 
       toast({
