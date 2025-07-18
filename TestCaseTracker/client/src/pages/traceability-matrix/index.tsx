@@ -547,16 +547,6 @@ export default function TraceabilityMatrixPage() {
     );
   }
 
-  // Force re-render when selectedProjectId changes
-  useEffect(() => {
-    if (selectedProjectId) {
-      // Reset any cached data when project changes
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/modules`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/matrix/markers`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/matrix/cells`] });
-    }
-  }, [selectedProjectId, queryClient]);
-
   if (!selectedProjectId || !projects || projects.length === 0) {
     return (
       <MainLayout>

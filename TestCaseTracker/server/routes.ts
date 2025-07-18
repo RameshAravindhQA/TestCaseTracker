@@ -1665,33 +1665,37 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           });
         }
 
-        // Use the improved Gemini service
-        console.log('🔮 Using enhanced Gemini AI service...');
-        
-        const geminiRequest = {
-          requirement: requirement || '',
-          projectContext: projectContext || '',
-          moduleContext: moduleContext || '',
-          testType: testType || 'functional',
-          priority: priority || 'Medium',
-          websiteUrl: websiteUrl || '',
-          elementInspection: elementInspection || '',
-          userFlows: userFlows || '',
-          businessRules: businessRules || '',
-          inputType: inputType || 'text',
-          images: req.files || []
-        };
-        
-        const geminiResponse = await geminiService.generateTestCases(geminiRequest);
-        
-        return res.status(200).json({
-          success: true,
-          testCases: geminiResponse.testCases,
-          analysis: geminiResponse.analysis,
-          message: geminiResponse.message,
-          source: geminiResponse.message.includes('mock') ? 'mock-service' : 'gemini-ai',
-          timestamp: new Date().toISOString()
-        });
+        // Try to use Gemini service first
+        try {
+          console.log('🔮 Attempting to use Gemini AI service...');
+          
+          const geminiRequest = {
+            requirement: requirement || '',
+            projectContext: projectContext || '',
+            moduleContext: moduleContext || '',
+            testType: testType || 'functional',
+            priority: priority || 'Medium',
+            websiteUrl: websiteUrl || '',
+            elementInspection: elementInspection || '',
+            userFlows: userFlows || '',
+            businessRules: businessRules || '',
+            inputType: inputType || 'text',
+            images: req.files || []
+          };
+          
+          const geminiResponse = await geminiService.generateTestCases(geminiRequest);
+          
+          return res.status(200).json({
+            success: true,
+            testCases: geminiResponse.testCases,
+            analysis: geminiResponse.analysis,
+            message: geminiResponse.message,
+            source: 'gemini-ai',
+            timestamp: new Date().toISOString()
+          });
+          
+        } catch (geminiError: any) {
+          console.error('❌ Gemini service failed, falling back to mock service:', geminiError.message);
           
           // Fall back to mock service
           const mockResponse = generateMockResponse(requirement || '', moduleContext || '', testType || 'functional', priority || 'Medium', inputType || 'text', websiteUrl || '', req.files || [], businessRules || '', elementInspection || '', userFlows || '');
