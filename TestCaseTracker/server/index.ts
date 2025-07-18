@@ -6,7 +6,7 @@ import path from "path";
 import { createServer } from "http";
 import { logger } from "./logger";
 import { initializeDatabase } from "./matrix-fix";
-import { setupWebSocket } from "./websocket-setup";
+
 
 const PORT = process.env.PORT || 5000;
 

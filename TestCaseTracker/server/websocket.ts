@@ -28,10 +28,12 @@ export class ChatWebSocketServer {
   constructor(server: any) {
     this.wss = new WebSocketServer({ 
       server,
-      path: '/ws/chat' // Use specific path to avoid conflicts with Vite's WebSocket
+      path: '/ws/chat', // Use specific path to avoid conflicts with Vite's WebSocket
+      host: '0.0.0.0' // Bind to all interfaces for external access
     });
     this.setupWebSocket();
     this.startCleanupInterval();
+    logger.info('Chat WebSocket server initialized on /ws/chat');
   }
 
   private setupWebSocket() {
@@ -205,46 +207,55 @@ export class ChatWebSocketServer {
     }
 
     try {
-      // Store message in database with proper structure
-      const chatMessage = await storage.createChatMessage({
-        conversationId,
-        userId: user.userId,
-        userName: user.userName,
-        message: message.trim(),
+      // Store message in database using the correct API format
+      const chatMessage = await storage.createMessage({
+        senderId: user.userId,
+        receiverId: conversationId, // Using conversationId as receiverId for direct messages
+        content: message.trim(),
         type: 'text',
-        replyToId: replyToId || null,
-        attachments: attachments || [],
-        createdAt: new Date().toISOString()
+        attachments: attachments || []
       });
 
       // Clear typing indicator
       this.clearTypingIndicator(user.userId, conversationId);
 
-      // Broadcast message to all users in conversation (including sender for consistency)
-      this.broadcastToConversation(conversationId, {
-        type: 'new_message',
-        message: {
-          ...chatMessage,
-          userName: user.userName,
-          user: {
-            id: user.userId,
-            firstName: user.userName,
-            profilePicture: null
-          }
+      // Create the message object with sender info
+      const messageWithSender = {
+        ...chatMessage,
+        sender: {
+          id: user.userId,
+          firstName: user.userName,
+          lastName: '',
+          profilePicture: null
         }
+      };
+
+      // Broadcast message to receiver and sender
+      this.broadcastToUsers([user.userId, conversationId], {
+        type: 'new_message',
+        message: messageWithSender
       });
 
-      // Send confirmation to sender with temp ID for replacement
+      // Send confirmation to sender
       this.send(ws, {
         type: 'message_sent',
         messageId: chatMessage.id,
         tempId: tempId,
-        timestamp: chatMessage.createdAt
+        timestamp: chatMessage.createdAt || new Date().toISOString()
       });
 
     } catch (error) {
       logger.error('Error sending message:', error);
       this.sendError(ws, 'Failed to send message');
+    }
+  }
+
+  private broadcastToUsers(userIds: number[], message: any) {
+    for (const userId of userIds) {
+      const user = this.connectedUsers.get(userId);
+      if (user && user.ws.readyState === WebSocket.OPEN) {
+        this.send(user.ws, message);
+      }
     }
   }
 

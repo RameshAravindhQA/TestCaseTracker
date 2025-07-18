@@ -140,7 +140,7 @@ export function Messenger() {
       try {
         setConnectionStatus('connecting');
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
 
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
@@ -161,13 +161,54 @@ export function Messenger() {
 
         ws.onmessage = (event) => {
           try {
-            const message = JSON.parse(event.data);
+            const data = JSON.parse(event.data);
 
-            if (message.type === 'new_message') {
-              // Refresh messages when new message received
-              queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact?.id] });
-            } else if (message.type === 'authenticated') {
-              console.log('WebSocket authenticated');
+            switch (data.type) {
+              case 'connection_established':
+                console.log('WebSocket connection established');
+                break;
+              
+              case 'authenticated':
+                console.log('WebSocket authenticated successfully');
+                break;
+              
+              case 'new_message':
+                // Refresh messages when new message received
+                queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+                if (selectedContact) {
+                  queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact.id] });
+                }
+                break;
+              
+              case 'message_sent':
+                // Message was successfully sent
+                console.log('Message sent successfully:', data);
+                break;
+              
+              case 'user_typing':
+                // Handle typing indicators
+                if (data.isTyping && data.userId !== user?.id) {
+                  setIsTyping(true);
+                  setTimeout(() => setIsTyping(false), 3000);
+                }
+                break;
+              
+              case 'presence_update':
+                // Handle user presence updates
+                queryClient.invalidateQueries({ queryKey: ['/api/users/public'] });
+                break;
+              
+              case 'error':
+                console.error('WebSocket error:', data.error);
+                toast({
+                  title: "Connection Error",
+                  description: data.error,
+                  variant: "destructive",
+                });
+                break;
+              
+              default:
+                console.log('Unknown WebSocket message type:', data.type);
             }
           } catch (error) {
             console.error('Error parsing WebSocket message:', error);
@@ -211,6 +252,20 @@ export function Messenger() {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: { receiverId: number; content: string; type?: string; attachments?: any[] }) => {
+      // Send via WebSocket for real-time delivery first
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && selectedContact) {
+        wsRef.current.send(JSON.stringify({
+          type: 'send_message',
+          data: {
+            conversationId: selectedContact.id, // Use conversationId instead of receiverId
+            message: messageData.content,
+            type: messageData.type || 'text',
+            attachments: messageData.attachments || []
+          }
+        }));
+      }
+
+      // Also send via API for persistence
       const response = await apiRequest('POST', '/api/messages', messageData);
       if (!response.ok) throw new Error('Failed to send message');
       return response.json();
@@ -220,18 +275,6 @@ export function Messenger() {
       setAttachments([]);
       setReplyingTo(null);
       queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact?.id] });
-
-      // Also send via WebSocket for real-time delivery
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && selectedContact) {
-        wsRef.current.send(JSON.stringify({
-          type: 'send_message',
-          data: {
-            receiverId: selectedContact.id,
-            message: newMessage.trim(),
-            type: 'text'
-          }
-        }));
-      }
 
       toast({
         title: "✅ Message sent",
