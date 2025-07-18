@@ -913,7 +913,7 @@ export default function ProfilePage() {
                 {/* Profile Picture & Basic Info Card */}
                 <motion.div variants={cardVariants}>
                   <Card className="lg:col-span-1">
-                    <CardHeaderclassName="text-center">
+                    <CardHeader className="text-center">
                       <div className="relative mx-auto">
                         {/* Profile Picture */}
                         <div 
