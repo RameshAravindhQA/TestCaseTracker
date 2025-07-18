@@ -136,6 +136,10 @@ export function Messenger() {
   useEffect(() => {
     if (!user) return;
 
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    let reconnectTimeout: NodeJS.Timeout;
+
     const connectWebSocket = () => {
       try {
         setConnectionStatus('connecting');
@@ -144,24 +148,40 @@ export function Messenger() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws`;
 
-        console.log(`[MESSENGER] Attempting to connect to WebSocket: ${wsUrl}`);
+        console.log(`[MESSENGER] Attempting to connect to WebSocket: ${wsUrl} (attempt ${reconnectAttempts + 1})`);
 
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
+        // Set connection timeout
+        const connectionTimeout = setTimeout(() => {
+          if (ws.readyState === WebSocket.CONNECTING) {
+            console.log('[MESSENGER] Connection timeout, closing WebSocket');
+            ws.close();
+          }
+        }, 10000);
+
         ws.onopen = () => {
           console.log('[MESSENGER] WebSocket connected successfully');
+          clearTimeout(connectionTimeout);
           setConnectionStatus('connected');
           setIsConnected(true);
+          reconnectAttempts = 0;
 
-          // Authenticate user
-          ws.send(JSON.stringify({
-            type: 'authenticate',
-            data: {
-              userId: user.id,
-              userName: user.firstName
+          // Authenticate user with retry mechanism
+          const authenticate = () => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'authenticate',
+                data: {
+                  userId: user.id,
+                  userName: user.firstName
+                }
+              }));
             }
-          }));
+          };
+
+          authenticate();
         };
 
         ws.onmessage = (event) => {
@@ -172,6 +192,9 @@ export function Messenger() {
             switch (data.type) {
               case 'authenticated':
                 console.log('[MESSENGER] User authenticated via WebSocket');
+                break;
+              case 'connection_established':
+                console.log('[MESSENGER] Connection established');
                 break;
               case 'new_message':
                 // Handle new message
@@ -208,22 +231,35 @@ export function Messenger() {
         };
 
         ws.onclose = (event) => {
-          console.log('[MESSENGER] WebSocket connection closed:', event);
+          console.log('[MESSENGER] WebSocket connection closed:', event.code, event.reason);
+          clearTimeout(connectionTimeout);
           setConnectionStatus('disconnected');
           setIsConnected(false);
           wsRef.current = null;
 
-          // Attempt to reconnect after a delay
-          if (!event.wasClean) {
-            setTimeout(() => {
-              console.log('[MESSENGER] Attempting to reconnect...');
+          // Attempt to reconnect with exponential backoff
+          if (!event.wasClean && reconnectAttempts < maxReconnectAttempts) {
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+            reconnectAttempts++;
+            
+            console.log(`[MESSENGER] Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+            
+            reconnectTimeout = setTimeout(() => {
               connectWebSocket();
-            }, 3000);
+            }, delay);
+          } else if (reconnectAttempts >= maxReconnectAttempts) {
+            console.log('[MESSENGER] Max reconnection attempts reached');
+            toast({
+              title: "Connection Lost",
+              description: "Unable to reconnect to chat service. Please refresh the page.",
+              variant: "destructive"
+            });
           }
         };
 
         ws.onerror = (error) => {
           console.error('[MESSENGER] WebSocket error:', error);
+          clearTimeout(connectionTimeout);
           setConnectionStatus('disconnected');
           setIsConnected(false);
         };
@@ -232,14 +268,25 @@ export function Messenger() {
         console.error('[MESSENGER] Failed to create WebSocket connection:', error);
         setConnectionStatus('disconnected');
         setIsConnected(false);
+        
+        // Retry connection
+        if (reconnectAttempts < maxReconnectAttempts) {
+          reconnectAttempts++;
+          reconnectTimeout = setTimeout(() => {
+            connectWebSocket();
+          }, 5000);
+        }
       }
     };
 
     connectWebSocket();
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.close(1000, 'Component unmounting');
         wsRef.current = null;
       }
     };
