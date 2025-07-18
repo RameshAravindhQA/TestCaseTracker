@@ -396,7 +396,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
     const selectedCases = generatedTestCases
       .filter((_, index) => selectedTestCases.has(index))
       .map(tc => ({
-        projectId: Number(selectedProjectId),
+        projectId: Number(projectId),
         moduleId: moduleId || modules[0]?.id,
         feature: tc.feature,
         testObjective: tc.testObjective,
