@@ -1,0 +1,35 @@
+ Response preview: <!DOCTYPE html>
+
+<html lang="en"> <head> <script type="module"> import { createHotContext } from "/@vite/client"; const hot = createHotContext("/__dummy__runtime-error-plugin");
+function sendErr
+ai-test-generator.tsx:165 🔄 HTML error page detected
+ai-test-generator.tsx:169 🔄 Retrying in 2000ms...
+ai-test-generator.tsx:99 🔄 AI Generation attempt 3/3
+ai-test-generator.tsx:106 Sound playback failed: TypeError: playSound is not a function
+at Object.mutationFn (ai-test-generator.tsx:104:19)
+mutationFn @ ai-test-generator.tsx:106Understand this warning
+ai-test-generator.tsx:128 📡 AI API Response: Object
+ai-test-generator.tsx:142 📝 Response content type: text/html; charset=utf-8
+ai-test-generator.tsx:147 📄 Response text length: 32695
+ai-test-generator.tsx:148 📄 Response preview: <!DOCTYPE html>
+
+<html lang="en"> <head> <script type="module"> import { createHotContext } from "/@vite/client"; const hot = createHotContext("/__dummy__runtime-error-plugin");
+function sendErr
+ai-test-generator.tsx:165 🔄 HTML error page detected
+ai-test-generator.tsx:199 ❌ Failed to parse response: Error: Server is experiencing issues. The service may be restarting. Please try again in a moment.
+at Object.mutationFn (ai-test-generator.tsx:175:21)
+mutationFn @ ai-test-generator.tsx:199Understand this error
+ai-test-generator.tsx:255 ❌ AI Generation attempt 3 failed: Error: Failed to parse server response. Please check your connection and try again.
+at Object.mutationFn (ai-test-generator.tsx:209:19)
+mutationFn @ ai-test-generator.tsx:255Understand this error
+ai-test-generator.tsx:318 ❌ Enhanced AI Generation error: Error: Failed after 3 attempts: Failed to parse server response. Please check your connection and try again.
+at Object.mutationFn (ai-test-generator.tsx:276:19)
+
+I think the issue is how to place the data , I have shared the test case table and test case fields give as same in after generating the test cases , after I click on merge then that test cases should reflected in the project modules, with respective module with continue test case id.
+Is that the issue ?
+RA
+
+ramesharavindhk
+
+Scroll to latest
+Assistant mode
