@@ -547,6 +547,22 @@ export default function TraceabilityMatrixPage() {
     );
   }
 
+  const handleProjectChange = (projectId: string) => {
+    const newProjectId = parseInt(projectId);
+    console.log('🔄 Project changed from', selectedProjectId, 'to', newProjectId);
+
+    setSelectedProjectId(newProjectId);
+
+    // Reset matrix data when project changes
+    setMatrixData({});
+    setCustomMarkers([]);
+
+    // Force refetch data for new project
+    setTimeout(() => {
+      refetch();
+    }, 100);
+  };
+
   if (!selectedProjectId || !projects || projects.length === 0) {
     return (
       <MainLayout>
@@ -670,11 +686,24 @@ export default function TraceabilityMatrixPage() {
               <Download className="h-4 w-4 mr-2" />
               Export PDF
             </Button>
-            <ProjectSelect
-              selectedProjectId={selectedProjectId}
-              onProjectChange={setSelectedProjectId}
-              projects={projects || []}
-            />
+            <Select 
+              value={selectedProjectId?.toString() || ""} 
+              onValueChange={handleProjectChange}
+              key={selectedProjectId} // Force re-render when project changes
+            >
+              <SelectTrigger className="w-[280px]">
+                <SelectValue placeholder="Select a project">
+                  {selectedProjectId && projects.find(p => p.id === selectedProjectId)?.name}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={project.id.toString()}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

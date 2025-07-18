@@ -90,147 +90,82 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         formData.append('imageCount', data.images.length.toString());
       }
 
-      let attempt = 0;
-      const maxAttempts = 3; // Reduced attempts for better UX
-      const baseDelay = 1000;
+      try {
+        console.log('🔄 Calling AI Generation API...');
 
-      while (attempt < maxAttempts) {
+        // Play sound for AI generation start
         try {
-          console.log(`🔄 AI Generation attempt ${attempt + 1}/${maxAttempts}`);
-
-          // Play sound for AI generation start
-          try {
-            const { playSound } = await import('../../lib/soundManager.js');
-            await playSound('crud');
-          } catch (soundError) {
-            console.warn('Sound playback failed:', soundError);
-          }
-
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => {
-            console.log('⏰ Request timeout, aborting...');
-            controller.abort();
-          }, 30000); // 30 seconds timeout
-
-          const response = await fetch('/api/ai/generate-enhanced-test-cases', {
-            method: 'POST',
-            body: formData,
-            credentials: 'include',
-            headers: {
-              'Accept': 'application/json',
-              'X-Requested-With': 'XMLHttpRequest'
-            },
-            signal: controller.signal
-          });
-
-          clearTimeout(timeoutId);
-
-          // Enhanced error handling for different response types
-          if (!response.ok) {
-            console.error('❌ API request failed:', {
-              status: response.status,
-              statusText: response.statusText,
-              url: response.url,
-              contentType: response.headers.get('content-type')
-            });
-
-            let errorMessage = `Server error (${response.status})`;
-
-            try {
-              const errorData = await response.json();
-              errorMessage = errorData.error || errorData.message || errorMessage;
-            } catch {
-              // If JSON parsing fails, try to get text
-              try {
-                const errorText = await response.text();
-                if (errorText.includes('<!DOCTYPE html>')) {
-                  errorMessage = 'Server is experiencing issues. The service may be restarting. Please try again in a moment.';
-                } else {
-                  errorMessage = errorText || errorMessage;
-                }
-              } catch {
-                // Use default error message
-              }
-            }
-
-            throw new Error(errorMessage);
-          }
-
-          // Check content type before parsing
-          const contentType = response.headers.get('content-type');
-          console.log('📡 AI API Response:', {
-            status: response.status,
-            statusText: response.statusText,
-            contentType,
-            ok: response.ok
-          });
-
-          if (!contentType || !contentType.includes('application/json')) {
-            console.error('❌ Expected JSON response but got:', contentType);
-            const textResponse = await response.text();
-            console.log('📄 Response text length:', textResponse.length);
-            console.log('📄 Response preview:', textResponse.substring(0, 200) + '...');
-
-            if (textResponse.includes('<!DOCTYPE html>')) {
-              console.log('🔄 HTML error page detected');
-              throw new Error('Server is experiencing issues. The service may be restarting. Please try again in a moment.');
-            }
-
-            throw new Error('Server returned invalid response format. Expected JSON but got: ' + contentType);
-          }
-
-          const responseData = await response.json();
-
-          // Validate response structure
-          if (!responseData.success) {
-            throw new Error(responseData.error || 'AI generation failed');
-          }
-
-          if (!responseData.testCases || !Array.isArray(responseData.testCases)) {
-            throw new Error('Invalid response: missing test cases array');
-          }
-
-          if (responseData.testCases.length === 0) {
-            throw new Error('No test cases were generated');
-          }
-
-          console.log('✅ AI Generation successful:', {
-            testCasesCount: responseData.testCases.length,
-            message: responseData.message
-          });
-
-          return responseData;
-
-        } catch (error: any) {
-          console.error(`❌ AI Generation attempt ${attempt + 1} failed:`, error);
-
-          // Check if we should retry
-          const shouldRetry = (
-            error.name === 'AbortError' || 
-            error.message.includes('fetch') || 
-            error.message.includes('network') ||
-            error.message.includes('Server is experiencing') ||
-            error.message.includes('Failed to parse')
-          ) && attempt < maxAttempts - 1;
-
-          if (shouldRetry) {
-            const delay = baseDelay * Math.pow(2, attempt);
-            console.log(`🔄 Retrying in ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            attempt++;
-            continue;
-          }
-
-          // Final attempt - throw error
-          if (attempt === maxAttempts - 1) {
-            throw new Error(`Failed after ${maxAttempts} attempts: ${error.message}`);
-          }
-
-          throw error;
+          const { playSound } = await import('../../lib/soundManager.js');
+          await playSound('crud');
+        } catch (soundError) {
+          console.warn('Sound playback failed:', soundError);
         }
-      }
 
-      throw new Error('Unexpected error in AI generation');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          console.log('⏰ Request timeout, aborting...');
+          controller.abort();
+        }, 15000); // 15 seconds timeout
+
+        const response = await fetch('/api/ai/generate-enhanced-test-cases', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        console.log('📡 AI API Response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get('content-type'),
+          ok: response.ok
+        });
+
+        if (!response.ok) {
+          console.error('❌ API request failed:', response.status);
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+
+        // Check content type
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('❌ Expected JSON response but got:', contentType);
+          throw new Error('Server returned invalid response format');
+        }
+
+        const responseData = await response.json();
+        console.log('✅ Parsed JSON response:', {
+          success: responseData.success,
+          testCasesCount: responseData.testCases?.length || 0,
+          source: responseData.source
+        });
+
+        // Validate response structure
+        if (!responseData.success) {
+          throw new Error(responseData.error || 'AI generation failed');
+        }
+
+        if (!responseData.testCases || !Array.isArray(responseData.testCases)) {
+          throw new Error('Invalid response: missing test cases array');
+        }
+
+        if (responseData.testCases.length === 0) {
+          throw new Error('No test cases were generated');
+        }
+
+        console.log('✅ AI Generation successful');
+        return responseData;
+
+      } catch (error: any) {
+        console.error('❌ AI Generation failed:', error);
+        throw new Error(error.message || 'AI generation failed');
+      }
     },
     onSuccess: (data) => {
       console.log('✅ Enhanced AI Generation Response:', data);
