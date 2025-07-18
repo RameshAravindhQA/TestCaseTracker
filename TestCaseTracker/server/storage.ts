@@ -798,8 +798,7 @@ class MemStorage implements IStorage {
     return customer;
   }
 
-  async getCustomers(): Promise<Customer[]>{
-    return Array.from(this.customers.values());
+  async getCustomers(): Promise<Customer[]>{    return Array.from(this.customers.values());
   }
 
   async getCustomerById(id: number): Promise<Customer | null> {
@@ -2534,6 +2533,116 @@ class MemStorage implements IStorage {
         let results = this.chatMessages.filter(msg => msg.conversationId === conversationId);
         return results;
     }
+  // Message storage methods for messenger
+  async createMessage(messageData: any) {
+    const message = {
+      id: this.getNextId('messages'),
+      senderId: messageData.senderId,
+      receiverId: messageData.receiverId,
+      content: messageData.content,
+      type: messageData.type || 'text',
+      attachments: messageData.attachments || [],
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (!this.data.messages) {
+      this.data.messages = [];
+    }
+
+    this.data.messages.push(message);
+    return message;
+  }
+
+  async getMessagesByChat(conversationId: number) {
+    if (!this.data.messages) {
+      return [];
+    }
+
+    // For direct conversations, get messages between the two users
+    return this.data.messages.filter(message => 
+      (message.senderId === conversationId || message.receiverId === conversationId)
+    ).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async getDirectConversation(userId1: number, userId2: number) {
+    if (!this.data.conversations) {
+      this.data.conversations = [];
+    }
+
+    // Find existing direct conversation
+    let conversation = this.data.conversations.find(conv => 
+      conv.type === 'direct' && 
+      conv.participants.includes(userId1) && 
+      conv.participants.includes(userId2)
+    );
+
+    return conversation || null;
+  }
+
+  async createDirectConversation(userId1: number, userId2: number) {
+    const conversation = {
+      id: this.getNextId('conversations'),
+      type: 'direct' as const,
+      name: null,
+      description: null,
+      participants: [userId1, userId2],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (!this.data.conversations) {
+      this.data.conversations = [];
+    }
+
+    this.data.conversations.push(conversation);
+    return conversation;
+  }
+
+  async getUserConversations(userId: number) {
+    if (!this.data.conversations) {
+      return [];
+    }
+
+    return this.data.conversations.filter(conv => 
+      conv.participants.includes(userId)
+    );
+  }
+
+  async createConversation(conversationData: any) {
+    const conversation = {
+      id: this.getNextId('conversations'),
+      type: conversationData.type,
+      name: conversationData.name,
+      description: conversationData.description || null,
+      participants: conversationData.participants,
+      projectId: conversationData.projectId || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (!this.data.conversations) {
+      this.data.conversations = [];
+    }
+
+    this.data.conversations.push(conversation);
+    return conversation;
+  }
+
+  async markMessageAsRead(messageId: number, userId: number) {
+    if (!this.data.messages) {
+      return false;
+    }
+
+    const message = this.data.messages.find(m => m.id === messageId);
+    if (message && message.receiverId === userId) {
+      message.isRead = true;
+      message.readAt = new Date().toISOString();
+      return true;
+    }
+    return false;
+  }
 }
 
 // Export storage and class

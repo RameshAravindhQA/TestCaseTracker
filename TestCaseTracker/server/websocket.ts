@@ -28,7 +28,7 @@ export class ChatWebSocketServer {
   constructor(server: any) {
     this.wss = new WebSocketServer({ 
       server,
-      path: '/ws/chat', // Use specific path to avoid conflicts with Vite's WebSocket
+      path: '/ws', // Use /ws path to match client connection
       host: '0.0.0.0' // Bind to all interfaces for external access
     });
     this.setupWebSocket();

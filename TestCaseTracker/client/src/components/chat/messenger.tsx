@@ -139,22 +139,27 @@ export function Messenger() {
     const connectWebSocket = () => {
       try {
         setConnectionStatus('connecting');
+
+        // Use wss for secure connections, ws for local development
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+        console.log(`[MESSENGER] Attempting to connect to WebSocket: ${wsUrl}`);
 
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onopen = () => {
+          console.log('[MESSENGER] WebSocket connected successfully');
           setConnectionStatus('connected');
           setIsConnected(true);
 
-          // Authenticate with server
+          // Authenticate user
           ws.send(JSON.stringify({
             type: 'authenticate',
             data: {
               userId: user.id,
-              userName: `${user.firstName} ${user.lastName || ''}`.trim()
+              userName: user.firstName
             }
           }));
         };
@@ -162,79 +167,69 @@ export function Messenger() {
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
+            console.log('[MESSENGER] Received WebSocket message:', data);
 
             switch (data.type) {
-              case 'connection_established':
-                console.log('WebSocket connection established');
-                break;
-              
               case 'authenticated':
-                console.log('WebSocket authenticated successfully');
+                console.log('[MESSENGER] User authenticated via WebSocket');
                 break;
-              
               case 'new_message':
-                // Refresh messages when new message received
+                // Handle new message
                 queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
-                if (selectedContact) {
-                  queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact.id] });
+                if (selectedContact && (data.message.senderId === selectedContact.id || data.message.receiverId === selectedContact.id)) {
+                  queryClient.invalidateQueries({ queryKey: [`/api/messages?userId=${selectedContact.id}`] });
                 }
+                toast({
+                  title: "New message",
+                  description: `From ${data.message.sender.firstName}`,
+                });
                 break;
-              
-              case 'message_sent':
-                // Message was successfully sent
-                console.log('Message sent successfully:', data);
-                break;
-              
               case 'user_typing':
-                // Handle typing indicators
-                if (data.isTyping && data.userId !== user?.id) {
-                  setIsTyping(true);
-                  setTimeout(() => setIsTyping(false), 3000);
+                if (data.userId !== user.id) {
+                  setIsTyping(data.isTyping);
                 }
                 break;
-              
               case 'presence_update':
-                // Handle user presence updates
+                // Update user presence
                 queryClient.invalidateQueries({ queryKey: ['/api/users/public'] });
                 break;
-              
               case 'error':
-                console.error('WebSocket error:', data.error);
+                console.error('[MESSENGER] WebSocket error:', data.error);
                 toast({
                   title: "Connection Error",
                   description: data.error,
-                  variant: "destructive",
+                  variant: "destructive"
                 });
                 break;
-              
-              default:
-                console.log('Unknown WebSocket message type:', data.type);
             }
           } catch (error) {
-            console.error('Error parsing WebSocket message:', error);
+            console.error('[MESSENGER] Error parsing WebSocket message:', error);
           }
         };
 
-        ws.onclose = () => {
+        ws.onclose = (event) => {
+          console.log('[MESSENGER] WebSocket connection closed:', event);
           setConnectionStatus('disconnected');
           setIsConnected(false);
+          wsRef.current = null;
 
-          // Attempt to reconnect after 3 seconds
-          setTimeout(() => {
-            if (user) {
+          // Attempt to reconnect after a delay
+          if (!event.wasClean) {
+            setTimeout(() => {
+              console.log('[MESSENGER] Attempting to reconnect...');
               connectWebSocket();
-            }
-          }, 3000);
+            }, 3000);
+          }
         };
 
         ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
+          console.error('[MESSENGER] WebSocket error:', error);
           setConnectionStatus('disconnected');
           setIsConnected(false);
         };
 
       } catch (error) {
-        console.error('Failed to connect WebSocket:', error);
+        console.error('[MESSENGER] Failed to create WebSocket connection:', error);
         setConnectionStatus('disconnected');
         setIsConnected(false);
       }
@@ -245,9 +240,10 @@ export function Messenger() {
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
-  }, [user, queryClient]);
+  }, [user, queryClient, toast]);
 
   // Send message mutation
   const sendMessageMutation = useMutation({
@@ -482,15 +478,15 @@ export function Messenger() {
 
   const filteredContacts = (contacts || []).filter(contact => {
     if (!contact) return false;
-    
+
     // Handle both the old format (firstName, lastName) and new format (name)
     const displayName = contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
     const email = contact.email || '';
-    
+
     if (!displayName && !email) return false;
-    
+
     if (!searchTerm) return true;
-    
+
     return displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
            email.toLowerCase().includes(searchTerm.toLowerCase());
   });
@@ -584,15 +580,15 @@ export function Messenger() {
             ) : (
               filteredContacts.map((contact) => {
                 if (!contact) return null;
-                
+
                 // Handle both old format (firstName, lastName) and new format (name)
                 const displayName = contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
                 const initials = contact.name ? 
                   contact.name.split(' ').map(n => n[0]).join('').substring(0, 2) : 
                   `${contact.firstName?.[0] || '?'}${contact.lastName?.[0] || '?'}`;
-                
+
                 if (!displayName) return null;
-                
+
                 return (
                   <motion.div
                     key={contact.id}
@@ -715,7 +711,7 @@ export function Messenger() {
                     if (!message || !message.sender) {
                       return null;
                     }
-                    
+
                     return (
                       <motion.div
                         key={message.id}
