@@ -301,9 +301,13 @@ export default function ProfilePage() {
   const { data: profile, isLoading } = useQuery<UserProfile>({
     queryKey: ["/api/auth/profile"],
     queryFn: async () => {
+      console.log('Fetching profile data...');
       const response = await apiRequest("GET", "/api/auth/profile");
       if (!response.ok) throw new Error("Failed to fetch profile");
       const data = await response.json();
+      console.log('Profile data received:', data);
+      
+      // Update form data with received profile data
       setFormData({
         firstName: data.firstName || "",
         lastName: data.lastName || "",
@@ -311,9 +315,12 @@ export default function ProfilePage() {
         bio: data.bio || "",
         location: data.location || ""
       });
+      
       return data;
     },
-    enabled: !!currentUser // Only fetch if currentUser is available
+    enabled: !!currentUser, // Only fetch if currentUser is available
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
   });
 
   useEffect(() => {
@@ -717,8 +724,12 @@ export default function ProfilePage() {
 
   // Handle profile picture upload
   const handleProfilePictureClick = () => {
+    console.log('Profile picture click triggered');
     if (fileInputRef.current) {
+      console.log('File input reference exists, clicking...');
       fileInputRef.current.click();
+    } else {
+      console.error('File input reference not found');
     }
   };
 

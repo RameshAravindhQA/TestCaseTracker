@@ -289,6 +289,7 @@ class MemStorage implements IStorage {
     return Array.from(this.users.values()).find(user => user.email === email);
   }
 
+  // Get all users
   async getAllUsers(): Promise<User[]> {
     return Array.from(this.users.values());
   }
@@ -1302,12 +1303,12 @@ class MemStorage implements IStorage {
 
     // Combine and remove duplicates
     const projectMap = new Map<number, Project>();
-    
+
     // Add created projects
     createdProjects.forEach(project => {
       projectMap.set(project.id, project);
     });
-    
+
     // Add member projects
     membershipProjects.forEach(project => {
       projectMap.set(project.id, project);
@@ -2273,6 +2274,21 @@ class MemStorage implements IStorage {
       console.error('Error updating chat message:', error);
       return null;
     }
+  }
+  // Message management
+  async getMessages(userId?: number): Promise<any[]> {
+    // Mock implementation - in real app, this would query a messages table
+    return [];
+  }
+
+  async addMessageReaction(reactionData: any): Promise<any> {
+    // Mock implementation - in real app, this would insert into message_reactions table
+    return { id: Date.now(), ...reactionData };
+  }
+
+  async deleteChatMessage(messageId: number, userId: number): Promise<boolean> {
+    // Mock implementation - in real app, this would delete from messages table
+    return true;
   }
   private data: {
     users: any[];
