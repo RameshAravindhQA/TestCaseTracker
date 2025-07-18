@@ -1536,55 +1536,51 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   // Enhanced AI Test Case Generation endpoint with multipart form data support
   apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, 
     (req, res, next) => {
-      // Ensure JSON response header is set early and add CORS headers
+      // Set response headers early to ensure JSON response
       res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       
       // Handle preflight requests
       if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+        return res.status(200).json({ message: 'Options OK' });
       }
       
       console.log('Enhanced AI Generation - Processing request...');
       
-      try {
-        bugAttachmentUpload.array('images', 10)(req, res, (err) => {
-          if (err) {
-            console.error("Enhanced AI file upload error:", err);
-            // Ensure we return JSON even on upload errors
-            return res.status(400).json({ 
-              success: false,
-              error: 'File upload failed',
-              details: err.message 
-            });
-          }
-          console.log('Enhanced AI Generation - File upload successful');
-          next();
-        });
-      } catch (uploadError) {
-        console.error("Enhanced AI upload catch error:", uploadError);
-        return res.status(500).json({ 
-          success: false,
-          error: 'Upload processing failed',
-          details: uploadError.message 
-        });
-      }
+      // Handle file upload with error handling
+      bugAttachmentUpload.array('images', 10)(req, res, (err) => {
+        if (err) {
+          console.error("Enhanced AI file upload error:", err);
+          return res.status(400).json({ 
+            success: false,
+            error: 'File upload failed',
+            details: err.message,
+            timestamp: new Date().toISOString()
+          });
+        }
+        console.log('Enhanced AI Generation - File upload successful');
+        next();
+      });
     },
     async (req, res) => {
-      // Wrap the entire handler in try-catch for maximum safety
       try {
         console.log('Enhanced AI Generation - Handler started');
-        console.log('Enhanced AI Generation Request Body:', req.body);
-        console.log('Enhanced AI Generation Files:', req.files ? req.files.length : 0);
+        
+        // Ensure we're returning JSON regardless of what happens
+        const sendJsonResponse = (status, data) => {
+          res.setHeader('Content-Type', 'application/json');
+          return res.status(status).json(data);
+        };
         
         // Validate authentication
         if (!req.session || !req.session.userId) {
           console.log('Enhanced AI Generation - Authentication failed');
-          return res.status(401).json({ 
+          return sendJsonResponse(401, { 
             success: false,
-            error: 'Authentication required' 
+            error: 'Authentication required',
+            timestamp: new Date().toISOString()
           });
         }
         
@@ -1601,25 +1597,24 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           inputType 
         } = req.body;
         
-        console.log('Enhanced AI Generation - Parsed input:', {
+        console.log('Enhanced AI Generation - Input validation:', {
           hasRequirement: !!requirement,
           hasWebsiteUrl: !!websiteUrl,
           filesCount: req.files ? req.files.length : 0,
-          inputType: inputType
+          inputType: inputType || 'text'
         });
         
         // Input validation
         if (!requirement && !websiteUrl && (!req.files || req.files.length === 0)) {
           console.log('Enhanced AI Generation - Missing required input');
-          return res.status(400).json({ 
+          return sendJsonResponse(400, { 
             success: false,
-            error: 'At least one input is required: requirement text, website URL, or uploaded images' 
+            error: 'At least one input is required: requirement text, website URL, or uploaded images',
+            timestamp: new Date().toISOString()
           });
         }
 
-        console.log('Enhanced AI Generation - Starting test case generation...');
-
-        // Enhanced mock AI generation with different input types
+        // Generate test cases with error handling
         let mockTestCases = [];
         let analysisResults = {
           coverage: 'Comprehensive',
@@ -1629,7 +1624,6 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         };
 
         try {
-          // Generate test cases based on input type - focus on registration if mentioned
           const isRegistrationTest = requirement && requirement.toLowerCase().includes('register');
           
           if (isRegistrationTest || (moduleContext && moduleContext.toLowerCase().includes('registration'))) {
@@ -1675,7 +1669,23 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           }];
         }
 
-        console.log('Enhanced AI Generation - Generated test cases:', mockTestCases.length);
+        // Ensure we have valid test cases
+        if (!Array.isArray(mockTestCases) || mockTestCases.length === 0) {
+          mockTestCases = [{
+            feature: "Default Test Case",
+            testObjective: "Verify basic functionality",
+            preConditions: "System is ready for testing",
+            testSteps: "1. Perform basic test\n2. Verify results",
+            expectedResult: "System behaves as expected",
+            priority: priority || "Medium",
+            testType: testType || "functional",
+            coverage: "Basic",
+            category: "AI Generated",
+            tags: ["ai-generated", "default"]
+          }];
+        }
+
+        console.log('Enhanced AI Generation - Generated test cases count:', mockTestCases.length);
 
         const response = {
           success: true,
@@ -1686,22 +1696,29 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         };
 
         console.log('Enhanced AI Generation - Sending successful response');
-        
-        // Double-check content type before sending
-        res.setHeader('Content-Type', 'application/json');
-        return res.status(200).json(response);
+        return sendJsonResponse(200, response);
         
       } catch (handlerError) {
-        console.error('Enhanced AI Generation - Handler error:', handlerError);
+        console.error('Enhanced AI Generation - Critical handler error:', handlerError);
         
-        // Ensure we always return JSON, even on unexpected errors
-        res.setHeader('Content-Type', 'application/json');
-        return res.status(500).json({ 
-          success: false,
-          error: 'Internal server error during test case generation',
-          details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
-          timestamp: new Date().toISOString()
-        });
+        // Final fallback to ensure JSON response
+        try {
+          res.setHeader('Content-Type', 'application/json');
+          return res.status(500).json({ 
+            success: false,
+            error: 'Internal server error during test case generation',
+            details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
+            timestamp: new Date().toISOString()
+          });
+        } catch (finalError) {
+          console.error('Enhanced AI Generation - Final error handler failed:', finalError);
+          // Last resort - send minimal JSON
+          try {
+            res.end('{"success":false,"error":"Critical server error","timestamp":"' + new Date().toISOString() + '"}');
+          } catch (e) {
+            console.error('Enhanced AI Generation - Complete failure:', e);
+          }
+        }
       }
     }
   );
@@ -5178,15 +5195,35 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     console.error('API Error Handler caught:', error);
     
     // Ensure we always return JSON for API routes
-    res.setHeader('Content-Type', 'application/json');
-    
-    const status = error.status || error.statusCode || 500;
-    const message = error.message || 'Internal Server Error';
-    
-    res.status(status).json({
-      error: message,
-      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
-    });
+    try {
+      res.setHeader('Content-Type', 'application/json');
+      
+      const status = error.status || error.statusCode || 500;
+      const message = error.message || 'Internal Server Error';
+      
+      // Don't send headers if already sent
+      if (!res.headersSent) {
+        res.status(status).json({
+          success: false,
+          error: message,
+          timestamp: new Date().toISOString(),
+          ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+        });
+      } else {
+        console.error('Headers already sent, cannot send error response');
+      }
+    } catch (handlerError) {
+      console.error('Error in error handler:', handlerError);
+      
+      // Last resort - try to send minimal response
+      if (!res.headersSent) {
+        try {
+          res.status(500).end('{"success":false,"error":"Critical server error"}');
+        } catch (finalError) {
+          console.error('Complete error handler failure:', finalError);
+        }
+      }
+    }
   });
 
   // Prefix all API routes with /api

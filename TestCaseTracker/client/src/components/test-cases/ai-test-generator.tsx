@@ -85,14 +85,14 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       // Add images if any
       if (data.images && data.images.length > 0) {
         data.images.forEach((image: File, index: number) => {
-          formData.append(`images`, image); // Use consistent field name
+          formData.append(`images`, image);
         });
         formData.append('imageCount', data.images.length.toString());
       }
 
       let attempt = 0;
-      const maxAttempts = 5; // Increased attempts
-      const baseDelay = 1000; // 1 second base delay
+      const maxAttempts = 3; // Reduced attempts for better UX
+      const baseDelay = 1000;
 
       while (attempt < maxAttempts) {
         try {
@@ -102,7 +102,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
           const timeoutId = setTimeout(() => {
             console.log('⏰ Request timeout, aborting...');
             controller.abort();
-          }, 45000); // Increased timeout to 45 seconds
+          }, 30000); // 30 seconds timeout
 
           const response = await fetch('/api/ai/generate-enhanced-test-cases', {
             method: 'POST',
@@ -110,7 +110,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             credentials: 'include',
             headers: {
               'Accept': 'application/json',
-              'X-Requested-With': 'XMLHttpRequest' // Help identify AJAX requests
+              'X-Requested-With': 'XMLHttpRequest'
             },
             signal: controller.signal
           });
@@ -124,39 +124,69 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             ok: response.ok
           });
 
-          // First check if we got an OK response
-          if (!response.ok) {
-            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          // Enhanced response handling
+          let responseData;
+          let isJsonResponse = false;
+          
+          try {
+            const contentType = response.headers.get('content-type') || '';
+            console.log('📝 Response content type:', contentType);
             
-            try {
-              const errorText = await response.text();
-              console.error('❌ AI API Error response:', errorText.substring(0, 500));
+            if (contentType.includes('application/json')) {
+              responseData = await response.json();
+              isJsonResponse = true;
+              console.log('✅ Received JSON response:', {
+                success: responseData.success,
+                hasTestCases: !!responseData.testCases,
+                testCasesCount: responseData.testCases?.length || 0
+              });
+            } else {
+              // Handle non-JSON responses
+              const responseText = await response.text();
+              console.error('❌ Expected JSON but got:', contentType);
+              console.error('📄 Response preview:', responseText.substring(0, 500));
               
-              // Try to parse as JSON for detailed error
-              try {
-                const errorJson = JSON.parse(errorText);
-                if (errorJson.error) {
-                  errorMessage = errorJson.error;
+              // Check if it's an HTML error page
+              if (responseText.includes('<!DOCTYPE html>')) {
+                console.log('🔄 HTML error page detected');
+                
+                if (attempt < maxAttempts - 1) {
+                  const delay = baseDelay * Math.pow(2, attempt);
+                  console.log(`🔄 Retrying in ${delay}ms...`);
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  attempt++;
+                  continue;
                 }
-              } catch (parseError) {
-                // If it's HTML error page, extract useful info
-                if (errorText.includes('<!DOCTYPE html>')) {
-                  const titleMatch = errorText.match(/<title>(.*?)<\/title>/);
-                  if (titleMatch) {
-                    errorMessage = `Server error: ${titleMatch[1]}`;
-                  } else {
-                    errorMessage = 'Server returned HTML error page';
-                  }
-                }
+                
+                throw new Error('Server is experiencing issues. Please try again later.');
               }
-            } catch (textError) {
-              console.error('Failed to read error response:', textError);
+              
+              throw new Error('Server returned unexpected response format');
+            }
+          } catch (parseError) {
+            console.error('❌ Failed to parse response:', parseError);
+            
+            if (attempt < maxAttempts - 1) {
+              const delay = baseDelay * Math.pow(2, attempt);
+              console.log(`🔄 Parse error, retrying in ${delay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              attempt++;
+              continue;
             }
             
-            // Retry on server errors or timeouts
-            if ((response.status >= 500 || response.status === 408) && attempt < maxAttempts - 1) {
-              const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
-              console.log(`🔄 Server error, retrying in ${delay}ms...`);
+            throw new Error('Failed to parse server response');
+          }
+
+          // Check if response is OK
+          if (!response.ok) {
+            const errorMessage = isJsonResponse && responseData.error 
+              ? responseData.error 
+              : `Server error: ${response.status} ${response.statusText}`;
+            
+            // Retry on server errors
+            if (response.status >= 500 && attempt < maxAttempts - 1) {
+              const delay = baseDelay * Math.pow(2, attempt);
+              console.log(`🔄 Server error ${response.status}, retrying in ${delay}ms...`);
               await new Promise(resolve => setTimeout(resolve, delay));
               attempt++;
               continue;
@@ -165,74 +195,59 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             throw new Error(errorMessage);
           }
 
-          // Check content type
-          const contentType = response.headers.get('content-type') || '';
-          console.log('📝 Response content type:', contentType);
-          
-          if (!contentType.includes('application/json')) {
-            const responseText = await response.text();
-            console.error('❌ Expected JSON but got:', contentType);
-            console.error('📄 Response preview:', responseText.substring(0, 500));
-            
-            // If it's an HTML error page and we have retries left, try again
-            if (responseText.includes('<!DOCTYPE html>') && attempt < maxAttempts - 1) {
-              const delay = baseDelay * Math.pow(2, attempt);
-              console.log(`🔄 HTML error page detected, retrying in ${delay}ms...`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-              attempt++;
-              continue;
-            }
-            
-            throw new Error('Server returned non-JSON response. Please try again.');
+          // Validate response structure
+          if (!isJsonResponse) {
+            throw new Error('Invalid response format: not JSON');
           }
-
-          // Parse JSON response
-          const result = await response.json();
-          console.log('✅ AI API Success:', {
-            success: result.success,
-            testCasesCount: result.testCases?.length || 0,
-            message: result.message
+          
+          if (!responseData.success) {
+            throw new Error(responseData.error || 'AI generation failed');
+          }
+          
+          if (!responseData.testCases || !Array.isArray(responseData.testCases)) {
+            throw new Error('Invalid response: missing test cases array');
+          }
+          
+          if (responseData.testCases.length === 0) {
+            throw new Error('No test cases were generated');
+          }
+          
+          console.log('✅ AI Generation successful:', {
+            testCasesCount: responseData.testCases.length,
+            message: responseData.message
           });
           
-          // Validate response structure
-          if (!result.testCases || !Array.isArray(result.testCases)) {
-            throw new Error('Invalid response format: missing test cases array');
-          }
-          
-          return result;
+          return responseData;
           
         } catch (error: any) {
           console.error(`❌ AI Generation attempt ${attempt + 1} failed:`, error);
           
-          // Classify error types for retry logic
-          const isNetworkError = error.name === 'AbortError' || 
-                                 error.message.includes('fetch') || 
-                                 error.message.includes('network') ||
-                                 error.message.includes('timeout');
+          // Check if we should retry
+          const shouldRetry = (
+            error.name === 'AbortError' || 
+            error.message.includes('fetch') || 
+            error.message.includes('network') ||
+            error.message.includes('Server is experiencing') ||
+            error.message.includes('Failed to parse')
+          ) && attempt < maxAttempts - 1;
           
-          const isServerError = error.message.includes('Server returned') ||
-                                error.message.includes('HTML error page') ||
-                                error.message.includes('HTTP 5');
-          
-          // Retry on network or server errors
-          if ((isNetworkError || isServerError) && attempt < maxAttempts - 1) {
-            const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
-            console.log(`🔄 Retrying in ${delay}ms due to ${isNetworkError ? 'network' : 'server'} error...`);
+          if (shouldRetry) {
+            const delay = baseDelay * Math.pow(2, attempt);
+            console.log(`🔄 Retrying in ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
             attempt++;
             continue;
           }
           
-          // If we've exhausted all attempts, throw the most recent error
+          // Final attempt - throw error
           if (attempt === maxAttempts - 1) {
             throw new Error(`Failed after ${maxAttempts} attempts: ${error.message}`);
           }
           
-          attempt++;
+          throw error;
         }
       }
       
-      // This should never be reached, but just in case
       throw new Error('Unexpected error in AI generation');
     },
     onSuccess: (data) => {
