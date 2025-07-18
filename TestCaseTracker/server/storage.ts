@@ -1283,7 +1283,7 @@ class MemStorage implements IStorage {
     if (!document) return undefined;
 
     const updatedDocument = { ...document, ...documentData };
-    this.documents.set(newDocument.id, updatedDocument);
+    this.documents.set(updatedDocument.id, updatedDocument);
     return updatedDocument;
   }
 
