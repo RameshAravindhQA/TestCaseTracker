@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { logger } from './logger';
 import * as fs from 'fs';
@@ -242,7 +241,7 @@ Analyze the provided DOM elements and generate test cases for:
     try {
       // Clean the response to extract JSON
       let jsonStr = response.trim();
-      
+
       // Remove markdown code blocks if present
       if (jsonStr.startsWith('```json')) {
         jsonStr = jsonStr.replace(/^```json\s*/, '').replace(/\s*```$/, '');
@@ -251,7 +250,7 @@ Analyze the provided DOM elements and generate test cases for:
       }
 
       const parsed = JSON.parse(jsonStr);
-      
+
       // Validate the structure
       if (!parsed.testCases || !Array.isArray(parsed.testCases)) {
         throw new Error('Invalid response structure: missing testCases array');
@@ -290,7 +289,7 @@ Analyze the provided DOM elements and generate test cases for:
     } catch (error) {
       logger.error('Error parsing Gemini response:', error);
       logger.debug('Raw response:', response);
-      
+
       // Fallback: create a basic test case from the response
       return {
         testCases: [{
@@ -338,7 +337,7 @@ Return a JSON response with:
 
       const result = await this.model.generateContent(prompt);
       const response = result.response.text();
-      
+
       try {
         return JSON.parse(response);
       } catch {
@@ -357,3 +356,19 @@ Return a JSON response with:
 }
 
 export const geminiService = new GeminiAIService();
+
+const genAI2 = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+const model2 = genAI2.getGenerativeModel({ 
+  model: "gemini-1.5-flash",
+  generationConfig: {
+    temperature: 0.7,
+    topK: 40,
+    topP: 0.95,
+    maxOutputTokens: 8192,
+  },
+});
+
+// Debug logging
+console.log('🔧 Gemini API Key configured:', !!process.env.GOOGLE_API_KEY);
+console.log('🔧 Gemini service initialized');

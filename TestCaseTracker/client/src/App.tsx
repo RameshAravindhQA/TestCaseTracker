@@ -130,6 +130,9 @@ function Router() {
       <Route path="/test-cases">
         <ProtectedComponent Component={TestCasesPage} />
       </Route>
+      <Route path="/ai-generator">
+         <ProtectedLazyComponent Component={lazy(() => import("@/pages/ai-generator"))} />
+      </Route>
       <Route path="/bugs">
         <ProtectedComponent Component={BugsPage} />
       </Route>

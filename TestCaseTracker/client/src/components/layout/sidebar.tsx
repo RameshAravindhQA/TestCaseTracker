@@ -37,6 +37,7 @@ import {
   ExternalLink,
   ChevronRight,
   Github,
+  Sparkles,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -141,6 +142,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       name: "Test Cases",
       href: "/test-cases",
       icon: <CheckSquare className="h-5 w-5" />,
+    },
+    {
+      name: "AI Generator",
+      href: "/ai-generator",
+      icon: <Sparkles className="h-5 w-5" />,
     },
     {
       name: "Bug Reports",

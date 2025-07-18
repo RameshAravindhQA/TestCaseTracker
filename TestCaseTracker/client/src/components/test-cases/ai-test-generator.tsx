@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +36,7 @@ interface AITestGeneratorProps {
 export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AITestGeneratorProps) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("text");
-  
+
   // Form inputs
   const [requirement, setRequirement] = useState("");
   const [projectContext, setProjectContext] = useState("");
@@ -49,13 +48,13 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   const [elementInspection, setElementInspection] = useState("");
   const [userFlows, setUserFlows] = useState("");
   const [businessRules, setBusinessRules] = useState("");
-  
+
   // Results
   const [generatedTestCases, setGeneratedTestCases] = useState<GeneratedTestCase[]>([]);
   const [selectedTestCases, setSelectedTestCases] = useState<Set<number>>(new Set());
   const [showResults, setShowResults] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -63,7 +62,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   const generateTestCases = useMutation({
     mutationFn: async (data: any) => {
       console.log('Sending enhanced AI request with data:', data);
-      
+
       const formData = new FormData();
       formData.append('requirement', data.requirement);
       formData.append('projectContext', data.projectContext);
@@ -75,7 +74,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       formData.append('userFlows', data.userFlows || '');
       formData.append('businessRules', data.businessRules || '');
       formData.append('inputType', data.inputType);
-      
+
       // Add images if any
       if (data.images && data.images.length > 0) {
         data.images.forEach((image: File, index: number) => {
@@ -90,15 +89,15 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
           body: formData,
           credentials: 'include'
         });
-        
+
         console.log('Enhanced AI API Response status:', response.status);
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Enhanced AI API Error response:', errorText);
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const result = await response.json();
         console.log('Enhanced AI API Success response:', result);
         return result;
@@ -111,7 +110,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       console.log('Enhanced AI Generation Response:', data);
       setShowResults(true);
       setAnalysisResults(data.analysis);
-      
+
       if (data.testCases && Array.isArray(data.testCases) && data.testCases.length > 0) {
         setGeneratedTestCases(data.testCases);
         toast({
@@ -193,7 +192,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    
+
     if (imageFiles.length !== files.length) {
       toast({
         title: "Invalid files",
@@ -201,7 +200,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         variant: "destructive",
       });
     }
-    
+
     setSelectedImages(prev => [...prev, ...imageFiles]);
   };
 
@@ -296,12 +295,20 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="default" className="gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
+      {onTestCasesGenerated && (
+        <DialogTrigger asChild>
+          <Button variant="default" className="gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
+            <Sparkles className="h-4 w-4" />
+            🤖 AI Test Generator Pro
+          </Button>
+        </DialogTrigger>
+      )}
+      {!onTestCasesGenerated && (
+        <Button onClick={() => setOpen(true)} variant="default" className="gap-2 w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
           <Sparkles className="h-4 w-4" />
-          🤖 AI Test Generator Pro
+          Start AI Generation
         </Button>
-      </DialogTrigger>
+      )}
       <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -409,7 +416,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                     rows={4}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Business Rules & Constraints</label>
                   <Textarea
