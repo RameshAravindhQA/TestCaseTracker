@@ -126,7 +126,7 @@ export function Messenger() {
       if (!selectedContact) return [];
       try {
         console.log(`[MESSENGER] Fetching messages for contact: ${selectedContact.id}`);
-        
+
         // Get or create direct conversation
         let conversationResponse = await apiRequest('GET', `/api/conversations/direct?userId=${selectedContact.id}`);
         if (conversationResponse.status === 404) {
@@ -136,16 +136,16 @@ export function Messenger() {
             userId: selectedContact.id
           });
         }
-        
+
         if (!conversationResponse.ok) {
           const errorText = await conversationResponse.text();
           console.error('[MESSENGER] Conversation API error:', errorText);
           throw new Error('Failed to get conversation');
         }
-        
+
         const conversation = await conversationResponse.json();
         console.log('[MESSENGER] Got conversation:', conversation);
-        
+
         // Fetch messages for this conversation
         const messagesResponse = await apiRequest('GET', `/api/messages/conversation/${conversation.id}`);
         if (!messagesResponse.ok) {
@@ -157,7 +157,7 @@ export function Messenger() {
           console.error('[MESSENGER] Messages API error:', errorText);
           throw new Error('Failed to fetch messages');
         }
-        
+
         const messagesData = await messagesResponse.json();
         console.log('[MESSENGER] Got messages:', messagesData);
         return Array.isArray(messagesData) ? messagesData : [];
@@ -297,10 +297,10 @@ export function Messenger() {
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: { receiverId: number; content: string; type?: string; attachments?: any[] }) => {
       if (!selectedContact) throw new Error('No contact selected');
-      
+
       try {
         console.log('[MESSENGER] Sending message to:', selectedContact.id);
-        
+
         // Get or create conversation first
         let conversationResponse = await apiRequest('GET', `/api/conversations/direct?userId=${selectedContact.id}`);
         if (conversationResponse.status === 404) {
@@ -309,13 +309,13 @@ export function Messenger() {
             userId: selectedContact.id
           });
         }
-        
+
         if (!conversationResponse.ok) {
           const errorText = await conversationResponse.text();
           console.error('[MESSENGER] Conversation error:', errorText);
           throw new Error('Failed to get conversation');
         }
-        
+
         const conversation = await conversationResponse.json();
         console.log('[MESSENGER] Using conversation:', conversation.id);
 
@@ -327,13 +327,13 @@ export function Messenger() {
           type: messageData.type || 'text',
           attachments: messageData.attachments || []
         });
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           console.error('[MESSENGER] Send message API error:', errorText);
           throw new Error('Failed to send message');
         }
-        
+
         const messageResult = await response.json();
         console.log('[MESSENGER] Message sent successfully:', messageResult);
 
@@ -366,7 +366,7 @@ export function Messenger() {
       setNewMessage('');
       setAttachments([]);
       setReplyingTo(null);
-      
+
       // Immediately refetch messages to show the new message
       refetchMessages();
       queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact?.id] });
