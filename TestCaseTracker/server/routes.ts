@@ -143,9 +143,10 @@ const createUploadDirectories = () => {
 // Helper function to test GitHub connection
 async function testGitHubConnection(owner: string, repo: string, token: string) {
   try {
-    console.log(`Testing GitHub connection for ${owner}/${repo}`);
+    console.log(`🔗 Testing GitHub connection for ${owner}/${repo}`);
     
     // Test 1: Verify token by getting user info
+    console.log('📋 Step 1: Verifying GitHub token...');
     const userResponse = await fetch('https://api.github.com/user', {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -156,25 +157,28 @@ async function testGitHubConnection(owner: string, repo: string, token: string) 
     
     if (!userResponse.ok) {
       const errorText = await userResponse.text();
-      console.error('GitHub user API error:', userResponse.status, errorText);
+      console.error('❌ GitHub user API error:', userResponse.status, errorText);
       
       if (userResponse.status === 401) {
         return {
           success: false,
-          message: 'Invalid GitHub token. Please check your Personal Access Token and ensure it has the correct permissions.'
+          message: 'Invalid GitHub token. Please check your Personal Access Token and ensure it has the correct permissions.',
+          step: 'token_verification'
         };
       }
       
       return {
         success: false,
-        message: `GitHub API error: ${userResponse.status} ${userResponse.statusText}`
+        message: `GitHub API error: ${userResponse.status} ${userResponse.statusText}`,
+        step: 'token_verification'
       };
     }
     
     const user = await userResponse.json();
-    console.log('GitHub user authenticated:', user.login);
+    console.log('✅ GitHub user authenticated:', user.login);
     
     // Test 2: Check if repository exists and is accessible
+    console.log('📋 Step 2: Checking repository access...');
     const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -185,65 +189,84 @@ async function testGitHubConnection(owner: string, repo: string, token: string) 
     
     if (!repoResponse.ok) {
       const errorText = await repoResponse.text();
-      console.error('GitHub repo API error:', repoResponse.status, errorText);
+      console.error('❌ GitHub repo API error:', repoResponse.status, errorText);
       
       if (repoResponse.status === 404) {
         return {
           success: false,
-          message: 'Repository not found. Please check the owner/repository name or ensure the repository exists and is accessible.'
+          message: 'Repository not found. Please check the owner/repository name or ensure the repository exists and is accessible.',
+          step: 'repository_access'
         };
       }
       
       if (repoResponse.status === 403) {
         return {
           success: false,
-          message: 'Access forbidden. Your token may lack required permissions. Please generate a new token with "repo" scope.'
+          message: 'Access forbidden. Your token may lack required permissions. Please generate a new token with "repo" scope.',
+          step: 'repository_access'
         };
       }
       
       return {
         success: false,
-        message: `Failed to access repository: ${repoResponse.status} ${repoResponse.statusText}`
+        message: `Failed to access repository: ${repoResponse.status} ${repoResponse.statusText}`,
+        step: 'repository_access'
       };
     }
     
     const repoData = await repoResponse.json();
-    console.log('GitHub repository accessible:', repoData.full_name);
+    console.log('✅ GitHub repository accessible:', repoData.full_name);
     
     // Test 3: Check if we can create issues (requires appropriate permissions)
+    console.log('📋 Step 3: Checking issue creation permissions...');
     const hasIssuesPermission = repoData.permissions?.admin || repoData.permissions?.push || repoData.permissions?.maintain;
+    
+    console.log('🔒 Repository permissions:', repoData.permissions);
     
     if (!hasIssuesPermission) {
       return {
         success: false,
-        message: 'Token does not have sufficient permissions to create issues. Please ensure the token has "repo" or "public_repo" scope.'
+        message: 'Token does not have sufficient permissions to create issues. Please ensure the token has "repo" or "public_repo" scope.',
+        step: 'permissions_check',
+        data: {
+          user: user.login,
+          repo: repoData.full_name,
+          permissions: repoData.permissions,
+          hasIssues: repoData.has_issues
+        }
       };
     }
+    
+    console.log('✅ All GitHub connection tests passed!');
     
     return {
       success: true,
       message: 'GitHub connection successful! Repository is accessible and token has required permissions.',
+      step: 'complete',
       data: {
         user: user.login,
         repo: repoData.full_name,
         permissions: repoData.permissions,
-        hasIssues: repoData.has_issues
+        hasIssues: repoData.has_issues,
+        tokenScopes: userResponse.headers.get('x-oauth-scopes') || 'unknown'
       }
     };
     
   } catch (error: any) {
-    console.error('GitHub connection test failed:', error);
+    console.error('❌ GitHub connection test failed:', error);
     
     if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
       return {
         success: false,
-        message: 'Network error. Please check your internet connection and try again.'
+        message: 'Network error. Please check your internet connection and try again.',
+        step: 'network_error'
       };
     }
     
     return {
       success: false,
-      message: `GitHub API Error: ${error.message || 'Unknown error occurred'}`
+      message: `GitHub API Error: ${error.message || 'Unknown error occurred'}`,
+      step: 'unknown_error'
     };
   }
 }
@@ -1511,6 +1534,8 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const { repoUrl, accessToken, username, repository } = req.body;
       
+      console.log("GitHub test connection request:", { repoUrl, username, repository, hasToken: !!accessToken });
+      
       // Extract owner and repo from different possible formats
       let repoOwner, repoName;
       
@@ -1529,11 +1554,20 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       if (!repoOwner || !repoName || !accessToken) {
         return res.status(400).json({ 
           success: false,
-          message: "Repository owner, name, and access token are required" 
+          message: "Repository owner, name, and access token are required",
+          details: {
+            hasOwner: !!repoOwner,
+            hasRepo: !!repoName,
+            hasToken: !!accessToken
+          }
         });
       }
       
+      console.log(`Testing connection to ${repoOwner}/${repoName}`);
+      
       const testResult = await testGitHubConnection(repoOwner, repoName, accessToken);
+      
+      console.log("GitHub test result:", testResult);
       
       if (testResult.success) {
         res.json(testResult);
@@ -1544,7 +1578,8 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       console.error("Test GitHub connection error:", error);
       res.status(500).json({ 
         success: false,
-        message: "Connection test failed due to server error" 
+        message: "Connection test failed due to server error",
+        error: error.message
       });
     }
   });

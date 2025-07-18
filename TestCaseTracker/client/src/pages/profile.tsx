@@ -913,4 +913,285 @@ export default function ProfilePage() {
                 {/* Profile Picture & Basic Info Card */}
                 <motion.div variants={cardVariants}>
                   <Card className="lg:col-span-1">
-                    <Card
+                    <CardHeaderclassName="text-center">
+                      <div className="relative mx-auto">
+                        {/* Profile Picture */}
+                        <div 
+                          className="relative w-32 h-32 mx-auto mb-4 cursor-pointer group"
+                          onClick={handleProfilePictureClick}
+                        >
+                          <div className="w-full h-full bg-white dark:bg-gray-800 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600">
+                            {avatarLottieData ? (
+                              <LottieAvatar
+                                animationData={avatarLottieData}
+                                size="lg"
+                                className="w-full h-full"
+                              />
+                            ) : (
+                              <Avatar className="w-full h-full">
+                                <AvatarImage 
+                                  src={avatarSrc} 
+                                  alt={`${currentUser.firstName} ${currentUser.lastName || ''}`}
+                                  className="object-cover"
+                                />
+                                <AvatarFallback className="text-2xl font-bold bg-blue-500 text-white">
+                                  {currentUser.firstName?.[0]}{currentUser.lastName?.[0] || ''}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                          </div>
+
+                          {/* Upload Overlay */}
+                          <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <Camera className="h-8 w-8 text-white" />
+                          </div>
+
+                          {uploading && (
+                            <div className="absolute inset-0 bg-black bg-opacity-75 rounded-full flex items-center justify-center">
+                              <Loader2 className="h-8 w-8 text-white animate-spin" />
+                            </div>
+                          )}
+                        </div>
+
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*,.json"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </div>
+
+                      <CardTitle className="text-xl">
+                        {currentUser.firstName} {currentUser.lastName || ''}
+                      </CardTitle>
+                      <CardDescription className="flex items-center justify-center gap-2">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getRoleColor(currentUser.role)}`}>
+                          <Shield className="w-3 h-3 mr-1" />
+                          {currentUser.role}
+                        </span>
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                          <Mail className="w-4 h-4 mr-2" />
+                          {currentUser.email}
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Joined {new Date(currentUser.createdAt).toLocaleDateString()}
+                        </div>
+                        {currentUser.lastLoginAt && (
+                          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                            <Clock className="w-4 h-4 mr-2" />
+                            Last login {new Date(currentUser.lastLoginAt).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                {/* Personal Information Card */}
+                <motion.div variants={cardVariants}>
+                  <Card className="lg:col-span-2">
+                    <CardHeader>
+                      <CardTitle>Personal Information</CardTitle>
+                      <CardDescription>Update your personal details</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Form {...profileForm}>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                          <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="firstName">First Name</Label>
+                              <Input
+                                id="firstName"
+                                value={formData.firstName}
+                                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                                disabled={!isEditing}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="lastName">Last Name</Label>
+                              <Input
+                                id="lastName"
+                                value={formData.lastName}
+                                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                                disabled={!isEditing}
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                              id="email"
+                              type="email"
+                              value={currentUser.email}
+                              disabled
+                              className="bg-gray-50 dark:bg-gray-800"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                          </div>
+                        </div>
+
+                          <div className="flex justify-end">
+                            {isEditing ? (
+                              <div className="space-x-2">
+                                <Button variant="ghost" onClick={() => {
+                                  setIsEditing(false);
+                                  setFormData({
+                                    firstName: profile?.firstName || "",
+                                    lastName: profile?.lastName || "",
+                                  });
+                                }}>
+                                  Cancel
+                                </Button>
+                                <Button type="submit" disabled={updateProfileMutation.isPending}>
+                                  {updateProfileMutation.isPending ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Updating...
+                                    </>
+                                  ) : (
+                                    "Save Changes"
+                                  )}
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button onClick={() => setIsEditing(true)}>
+                                <Edit3 className="mr-2 h-4 w-4" />
+                                Edit Profile
+                              </Button>
+                            )}
+                          </div>
+                        </form>
+                      </Form>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
+            </TabsContent>
+
+            {/* Security Tab */}
+            <TabsContent value="security" className="space-y-6">
+              <motion.div variants={cardVariants}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Change Password</CardTitle>
+                    <CardDescription>Update your password for enhanced security</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Form {...passwordForm}>
+                      <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                        <FormField
+                          control={passwordForm.control}
+                          name="currentPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Current Password</FormLabel>
+                              <FormControl>
+                                <PasswordInput placeholder="Enter current password" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={passwordForm.control}
+                          name="newPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>New Password</FormLabel>
+                              <FormControl>
+                                <PasswordInput placeholder="Enter new password" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={passwordForm.control}
+                          name="confirmPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Confirm New Password</FormLabel>
+                              <FormControl>
+                                <PasswordInput placeholder="Confirm new password" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <Button type="submit" disabled={updatePasswordMutation.isPending}>
+                          {updatePasswordMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Updating...
+                            </>
+                          ) : (
+                            "Change Password"
+                          )}
+                        </Button>
+                      </form>
+                    </Form>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            {/* Avatar Tab */}
+            <TabsContent value="avatar" className="space-y-6">
+              <motion.div variants={cardVariants}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Choose your Avatar</CardTitle>
+                    <CardDescription>Select a Lottie animation or upload an image to represent yourself.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {lottieAnimations.map((animation) => (
+                        <div key={animation.id} className="relative">
+                          <LottieAvatarGrid
+                            animationData={animation.preview}
+                            isPlaying={playingAnimations.has(animation.id)}
+                            isPaused={!playingAnimations.has(animation.id)}
+                            onClick={() => handleLottieSelect(animation)}
+                            isSelected={selectedLottie?.id === animation.id}
+                            onMouseEnter={() => toggleAnimation(animation.id)}
+                            onMouseLeave={() => toggleAnimation(animation.id)}
+                            style={{ cursor: 'pointer' }}
+                            animationId={animation.id}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <Separator />
+
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-gray-500">
+                        Want to upload your own Lottie animation or image?
+                      </p>
+                      <Button variant="outline" onClick={handleProfilePictureClick}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload File
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+      </div>
+    </MainLayout>
+  );
+}
