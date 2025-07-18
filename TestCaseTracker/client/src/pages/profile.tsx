@@ -1126,7 +1126,7 @@ export default function ProfilePage() {
                     size="sm"
                     variant="outline"
                     className="absolute -bottom-1 -right-1 rounded-full h-8 w-8 p-0 bg-white shadow-md"
-                    onClick={() => handleProfilePictureClick}
+                    onClick={handleProfilePictureClick}
                   >
                     <Camera className="h-4 w-4" />
                   </Button>
@@ -1313,7 +1313,7 @@ export default function ProfilePage() {
             </Card>
           </motion.div>
         </div>
-      </motion.div>
+      </div>
     </MainLayout>
   );
 }
