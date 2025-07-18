@@ -831,7 +831,7 @@ export function Messenger() {
                   className="hidden"
                   accept="image/*,video/*,.pdf,.doc,.docx,.txt"
                 />
-```text```text
+```text
                 <Button 
                   size="sm" 
                   variant="outline"
@@ -890,7 +890,7 @@ export function Messenger() {
                 </Button>
               </div>
             </div>
-          </>
+          </div>
         ) : (
           <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
             <div className="text-center">
