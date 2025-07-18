@@ -96,7 +96,7 @@ export function Messenger() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [isTyping, setIsTyping] = useState(isTyping);
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState('');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -120,16 +120,56 @@ export function Messenger() {
   });
 
   // Fetch messages for selected contact
-  const { data: messages = [], isLoading: messagesLoading } = useQuery<Message[]>({
-    queryKey: ['/api/messages', selectedContact?.id],
+  const { data: messages = [], isLoading: messagesLoading, refetch: refetchMessages } = useQuery({
+    queryKey: ['messages', selectedContact?.id],
     queryFn: async () => {
       if (!selectedContact) return [];
-      const response = await apiRequest('GET', `/api/messages?userId=${selectedContact.id}`);
-      if (!response.ok) throw new Error('Failed to fetch messages');
-      return response.json();
+
+      console.log(`[MESSENGER] Fetching messages for contact:`, selectedContact.id);
+
+      // Try to get direct conversation first
+      const conversationResponse = await fetch('/api/chats/direct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: selectedContact.id }),
+        credentials: 'include'
+      });
+
+      if (!conversationResponse.ok) {
+        console.error('[MESSENGER] Failed to get/create conversation');
+        return [];
+      }
+
+      const conversation = await conversationResponse.json();
+      console.log(`[MESSENGER] Got conversation:`, conversation);
+
+      // Now fetch messages for this conversation
+      const messagesResponse = await fetch(`/api/chats/${conversation.id}/messages`, {
+        credentials: 'include'
+      });
+
+      if (!messagesResponse.ok) {
+        // Fallback to old API
+        const fallbackResponse = await fetch(`/api/messages?userId=${selectedContact.id}`, {
+          credentials: 'include'
+        });
+
+        if (!fallbackResponse.ok) {
+          throw new Error('Failed to fetch messages');
+        }
+
+        const fallbackData = await fallbackResponse.json();
+        console.log(`[MESSENGER] Fetched ${fallbackData.length} messages (fallback) for contact ${selectedContact.id}:`, fallbackData);
+        return fallbackData;
+      }
+
+      const data = await messagesResponse.json();
+      console.log(`[MESSENGER] Fetched ${data.length} messages for contact ${selectedContact.id}:`, data);
+      return data;
     },
-    enabled: !!selectedContact,
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    enabled: !!selectedContact && isConnected,
+    refetchInterval: 5000, // Refetch every 5 seconds as fallback
+    staleTime: 1000, // Consider data stale after 1 second
   });
 
   // WebSocket connection setup
@@ -241,9 +281,9 @@ export function Messenger() {
           if (!event.wasClean && reconnectAttempts < maxReconnectAttempts) {
             const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
             reconnectAttempts++;
-            
+
             console.log(`[MESSENGER] Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
-            
+
             reconnectTimeout = setTimeout(() => {
               connectWebSocket();
             }, delay);
@@ -268,7 +308,7 @@ export function Messenger() {
         console.error('[MESSENGER] Failed to create WebSocket connection:', error);
         setConnectionStatus('disconnected');
         setIsConnected(false);
-        
+
         // Retry connection
         if (reconnectAttempts < maxReconnectAttempts) {
           reconnectAttempts++;

@@ -58,10 +58,26 @@ export function RegisterForm() {
       });
       navigate("/login");
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      let errorMessage = "Registration failed. Please try again.";
+      
+      if (error?.message) {
+        if (error.message.includes("already exists")) {
+          errorMessage = "User already exists with this email id";
+        } else {
+          errorMessage = error.message;
+        }
+      } else if (typeof error === 'string') {
+        if (error.includes("already exists")) {
+          errorMessage = "User already exists with this email id";
+        } else {
+          errorMessage = error;
+        }
+      }
+      
       toast({
         title: "Registration failed",
-        description: `${error}`,
+        description: errorMessage,
         variant: "destructive",
       });
     },
