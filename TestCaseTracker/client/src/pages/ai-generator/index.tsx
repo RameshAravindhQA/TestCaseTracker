@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { ProjectSelect } from '@/components/ui/project-select';
 import { ModuleSelect } from '@/components/ui/module-select';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 interface GeneratedTestCase {
   title: string;
@@ -173,7 +174,8 @@ export default function AIGeneratorPage() {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <ErrorBoundary>
+      <div className="container mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">AI Test Case Generator</h1>
         <p className="text-muted-foreground">Generate comprehensive test cases using Google Gemini AI</p>
@@ -187,7 +189,7 @@ export default function AIGeneratorPage() {
         <div>
           <Label>Target Module</Label>
           <ModuleSelect 
-            projectId={selectedProject} 
+            projectId={selectedProject || undefined} 
             value={selectedModule} 
             onValueChange={setSelectedModule}
             disabled={!selectedProject}
@@ -416,5 +418,6 @@ export default function AIGeneratorPage() {
         </Card>
       )}
     </div>
+    </ErrorBoundary>
   );
 }
