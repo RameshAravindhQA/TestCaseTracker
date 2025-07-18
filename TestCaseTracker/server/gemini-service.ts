@@ -47,15 +47,30 @@ export interface TestCaseGenerationResponse {
 }
 
 export class GeminiAIService {
-  private model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-  private visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" });
+  private model: any = null;
+  private visionModel: any = null;
+
+  constructor() {
+    try {
+      if (process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-gemini-api-key') {
+        this.model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+        this.visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" });
+      }
+    } catch (error) {
+      console.warn('Gemini models initialization failed:', error);
+    }
+  }
 
   async generateTestCases(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     try {
       // Check if API key is configured
       if (!process.env.GOOGLE_API_KEY || process.env.GOOGLE_API_KEY === 'your-gemini-api-key' || process.env.GOOGLE_API_KEY.trim() === '') {
         logger.error('Google API key not configured properly');
-        throw new Error('Google Gemini API key is not properly configured. Please set GOOGLE_API_KEY environment variable.');
+        throw new Error('Google Gemini API key is not properly configured. Using mock service instead.');
+      }
+
+      if (!this.model) {
+        throw new Error('Gemini model not initialized. Using mock service instead.');
       }
 
       logger.info('Generating test cases with Gemini AI', { 

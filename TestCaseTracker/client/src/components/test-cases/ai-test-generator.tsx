@@ -132,7 +132,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             const contentType = response.headers.get('content-type') || '';
             console.log('📝 Response content type:', contentType);
 
-            if (contentType.includes('application/json')) {
+            // Always try to parse as JSON first
+            try {
               responseData = await response.json();
               isJsonResponse = true;
               console.log('✅ Received JSON response:', {
@@ -140,14 +141,13 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                 hasTestCases: !!responseData.testCases,
                 testCasesCount: responseData.testCases?.length || 0
               });
-            } else {
-              // Handle non-JSON responses
+            } catch (jsonError) {
+              // If JSON parsing fails, try to get text
               const responseText = await response.text();
-              console.error('❌ Expected JSON but got:', contentType);
-              console.error('📄 Response preview:', responseText.substring(0, 500));
+              console.error('❌ Failed to parse JSON, response text:', responseText.substring(0, 500));
 
               // Check if it's an HTML error page
-              if (responseText.includes('<!DOCTYPE html>')) {
+              if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html')) {
                 console.log('🔄 HTML error page detected');
 
                 if (attempt < maxAttempts - 1) {
@@ -158,7 +158,12 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                   continue;
                 }
 
-                throw new Error('Server is experiencing issues. Please try again later.');
+                throw new Error('Server is experiencing issues. The service may be restarting. Please try again in a moment.');
+              }
+
+              // Try to extract error message from HTML if possible
+              if (responseText.includes('error')) {
+                throw new Error('Server error occurred. Please try again.');
               }
 
               throw new Error('Server returned unexpected response format');
@@ -174,7 +179,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
               continue;
             }
 
-            throw new Error('Failed to parse server response');
+            throw new Error('Failed to parse server response. Please check your connection and try again.');
           }
 
           // Check if response is OK
