@@ -210,7 +210,7 @@ export class ChatWebSocketServer {
       // Get conversation details to find the receiver
       const conversation = await storage.getDirectConversation(user.userId, conversationId);
       let receiverId = conversationId;
-      
+
       if (conversation && conversation.participants) {
         // Find the other participant
         const otherParticipant = conversation.participants.find((p: any) => {

@@ -692,7 +692,7 @@ class MemStorage implements IStorage {
 
   // Document operations
   async createDocument(data: Omit<Document, 'id' | 'createdAt' | 'updatedAt'>): Promise<Document> {
-    const id = this.nextId++;
+    const id = this.getNextId();
     const now = new Date();
 
     const document: Document = {
@@ -735,7 +735,7 @@ class MemStorage implements IStorage {
 
   // Document folder operations
   async createDocumentFolder(data: Omit<DocumentFolder, 'id' | 'createdAt' | 'updatedAt'>): Promise<DocumentFolder> {
-    const id = this.nextId++;
+    const id = this.getNextId();
     const now = new Date();
 
     const folder: DocumentFolder = {
@@ -798,7 +798,7 @@ class MemStorage implements IStorage {
     return customer;
   }
 
-  async getCustomers(): Promise<```text
+  async getCustomers(): Promise<text
 Customer[]> { return Array.from(this.customers.values());
   }
 
@@ -2363,7 +2363,7 @@ Customer[]> { return Array.from(this.customers.values());
     }
 
     const newMarker: CustomMarker = {
-      id: this.getNextId('customMarker').toString(),
+      id: this.getNextId().toString(),
       ...marker,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -2544,7 +2544,7 @@ Customer[]> { return Array.from(this.customers.values());
   // Message storage methods for messenger
   async createMessage(messageData: any) {
     const message = {
-      id: this.getNextId('messages'),
+      id: this.getNextId(),
       senderId: messageData.senderId,
       receiverId: messageData.receiverId,
       content: messageData.content,
@@ -2591,7 +2591,7 @@ Customer[]> { return Array.from(this.customers.values());
 
   async createDirectConversation(userId1: number, userId2: number) {
     const conversation = {
-      id: this.getNextId('conversations'),
+      id: this.getNextId(),
       type: 'direct' as const,
       name: null,
       description: null,
@@ -2620,7 +2620,7 @@ Customer[]> { return Array.from(this.customers.values());
 
   async createConversation(conversationData: any) {
     const conversation = {
-      id: this.getNextId('conversations'),
+      id: this.getNextId(),
       type: conversationData.type,
       name: conversationData.name,
       description: conversationData.description || null,

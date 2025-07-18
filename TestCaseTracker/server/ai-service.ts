@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -23,6 +22,14 @@ interface GeneratedTestCase {
   expectedResult: string;
   priority: 'Low' | 'Medium' | 'High' | 'Critical';
   tags: string[];
+}
+
+interface TestCaseGenerationRequest {
+  description: string;
+  testingType?: string;
+  requirements?: string;
+  websiteUrl?: string;
+  imageBase64?: string;
 }
 
 class AIService {
@@ -52,7 +59,7 @@ class AIService {
 
       const testCases = this.parseTestCases(result);
       logger.info(`Generated ${testCases.length} test cases`);
-      
+
       return testCases;
     } catch (error) {
       logger.error('Error generating test cases:', error);
@@ -178,7 +185,7 @@ Generate test cases for a UI application based on common interface patterns:
     try {
       // Clean the response to extract JSON
       let jsonStr = response.trim();
-      
+
       // Remove markdown code blocks if present
       if (jsonStr.startsWith('```json')) {
         jsonStr = jsonStr.replace(/```json\n?/, '').replace(/\n?```$/, '');
@@ -193,7 +200,7 @@ Generate test cases for a UI application based on common interface patterns:
       }
 
       const testCases = JSON.parse(jsonStr);
-      
+
       if (!Array.isArray(testCases)) {
         throw new Error('Response is not an array');
       }
@@ -212,7 +219,7 @@ Generate test cases for a UI application based on common interface patterns:
     } catch (error) {
       logger.error('Error parsing AI response:', error);
       logger.error('Raw response:', response);
-      
+
       // Return fallback test cases
       return [{
         title: 'Basic Functionality Test',
@@ -224,6 +231,153 @@ Generate test cases for a UI application based on common interface patterns:
         tags: ['basic', 'functionality']
       }];
     }
+  }
+
+  async generateTestCasesFromSpecs(request: TestCaseGenerationRequest): Promise<any[]> {
+    if (!this.genAI) {
+      throw new Error('Google AI not configured');
+    }
+
+    try {
+      let prompt = `Generate comprehensive test cases for the following requirements:
+
+Description: ${request.description}
+Testing Type: ${request.testingType || 'functional'}
+Requirements: ${request.requirements || 'Not specified'}
+
+Please generate test cases in the following JSON format:
+[
+  {
+    "title": "Test case title",
+    "description": "Detailed test case description",
+    "priority": "High|Medium|Low",
+    "type": "Positive|Negative|Edge Case",
+    "preconditions": "Prerequisites for the test",
+    "steps": ["Step 1", "Step 2", "Step 3"],
+    "expectedResult": "Expected outcome",
+    "category": "Functional|UI|Integration|API"
+  }
+]
+
+Generate at least 10-15 comprehensive test cases covering positive, negative, and edge cases.`;
+
+      if (request.websiteUrl) {
+        prompt += `\nWebsite URL for reference: ${request.websiteUrl}`;
+      }
+
+      const model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      // Try to extract JSON from the response
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+
+      // Fallback: parse the text response into structured format
+      return this.parseTextToTestCases(text);
+    } catch (error) {
+      console.error('Error generating test cases from specs:', error);
+      throw error;
+    }
+  }
+
+  async generateTestCasesFromImage(request: TestCaseGenerationRequest & { imageBase64: string }): Promise<any[]> {
+    if (!this.genAI) {
+      throw new Error('Google AI not configured');
+    }
+
+    try {
+      const prompt = `Analyze this UI screenshot and generate comprehensive test cases for the interface shown.
+
+Description: ${request.description}
+Testing Focus: UI/UX Testing, Functional Testing
+
+Generate test cases that cover:
+1. UI element validation
+2. User interaction flows
+3. Input validation
+4. Error handling
+5. Responsive design (if applicable)
+6. Accessibility considerations
+
+Format the response as JSON array with test case objects.`;
+
+      const model = this.genAI.getGenerativeModel({ model: 'gemini-pro-vision' });
+      const result = await model.generateContent([
+        prompt,
+        {
+          inlineData: {
+            data: request.imageBase64,
+            mimeType: 'image/jpeg'
+          }
+        }
+      ]);
+
+      const response = await result.response;
+      const text = response.text();
+
+      // Try to extract JSON from the response
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+
+      return this.parseTextToTestCases(text);
+    } catch (error) {
+      console.error('Error generating test cases from image:', error);
+      throw error;
+    }
+  }
+
+  private parseTextToTestCases(text: string): any[] {
+    // Fallback parser for non-JSON responses
+    const testCases: any[] = [];
+    const lines = text.split('\n');
+    let currentTestCase: any = {};
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.toLowerCase().includes('test case') && trimmed.includes(':')) {
+        if (currentTestCase.title) {
+          testCases.push(currentTestCase);
+        }
+        currentTestCase = {
+          title: trimmed.split(':')[1]?.trim() || trimmed,
+          description: '',
+          priority: 'Medium',
+          type: 'Functional',
+          preconditions: '',
+          steps: [],
+          expectedResult: '',
+          category: 'Functional'
+        };
+      } else if (trimmed.toLowerCase().includes('description:')) {
+        currentTestCase.description = trimmed.split(':')[1]?.trim() || '';
+      } else if (trimmed.toLowerCase().includes('expected:')) {
+        currentTestCase.expectedResult = trimmed.split(':')[1]?.trim() || '';
+      } else if (trimmed.toLowerCase().includes('steps:') || trimmed.match(/^\d+\./)) {
+        if (!currentTestCase.steps) currentTestCase.steps = [];
+        currentTestCase.steps.push(trimmed.replace(/^\d+\./, '').trim());
+      }
+    }
+
+    if (currentTestCase.title) {
+      testCases.push(currentTestCase);
+    }
+
+    return testCases.length > 0 ? testCases : [{
+      title: "Generated Test Case",
+      description: text.substring(0, 200),
+      priority: "Medium",
+      type: "Functional",
+      preconditions: "System should be accessible",
+      steps: ["Navigate to the application", "Perform the required action", "Verify the result"],
+      expectedResult: "Expected functionality should work as described",
+      category: "Functional"
+    }];
   }
 }
 

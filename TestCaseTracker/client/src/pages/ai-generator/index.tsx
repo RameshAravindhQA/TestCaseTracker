@@ -1,550 +1,420 @@
+The code implements an AI test case generator with enhanced UI, project/module selection, and merge functionality.
+```
 
-import React, { useState, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import { useAuth } from '@/hooks/use-auth';
+```replit_final_file
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
-import { 
-  Sparkles, 
-  Upload, 
-  Link, 
-  Search, 
-  Download,
-  Plus,
-  Merge,
-  FileText,
-  Image as ImageIcon,
-  Globe,
-  Wand2,
-  CheckCircle2,
-  AlertTriangle,
-  Loader2
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, Wand2, Download, FileText, Plus, Check } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
+import { ProjectSelect } from '@/components/ui/project-select';
+import { ModuleSelect } from '@/components/ui/module-select';
 
 interface GeneratedTestCase {
-  id: string;
   title: string;
   description: string;
+  priority: 'High' | 'Medium' | 'Low';
+  type: string;
   preconditions: string;
   steps: string[];
   expectedResult: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Critical';
-  tags: string[];
-  selected: boolean;
-}
-
-interface Project {
-  id: number;
-  name: string;
-}
-
-interface Module {
-  id: number;
-  name: string;
-  projectId: number;
+  category: string;
+  selected?: boolean;
 }
 
 export default function AIGeneratorPage() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  const [activeTab, setActiveTab] = useState('description');
-  const [projectDescription, setProjectDescription] = useState('');
+  const [description, setDescription] = useState('');
+  const [testingType, setTestingType] = useState('functional');
   const [websiteUrl, setWebsiteUrl] = useState('');
-  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [requirements, setRequirements] = useState('');
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
   const [selectedModule, setSelectedModule] = useState<number | null>(null);
-  const [generatedTestCases, setGeneratedTestCases] = useState<GeneratedTestCase[]>([]);
+  const [generatedTests, setGeneratedTests] = useState<GeneratedTestCase[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
-  // Fetch projects
-  const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ['/api/projects'],
+  const queryClient = useQueryClient();
+
+  const { data: projects } = useQuery({
+    queryKey: ['projects'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/projects');
-      if (!response.ok) throw new Error('Failed to fetch projects');
+      const response = await fetch('/api/projects');
       return response.json();
-    },
+    }
   });
 
-  // Fetch modules for selected project
-  const { data: modules = [] } = useQuery<Module[]>({
-    queryKey: ['/api/modules', selectedProject],
+  const { data: modules } = useQuery({
+    queryKey: ['modules', selectedProject],
     queryFn: async () => {
       if (!selectedProject) return [];
-      const response = await apiRequest('GET', `/api/modules?projectId=${selectedProject}`);
-      if (!response.ok) throw new Error('Failed to fetch modules');
+      const response = await fetch(`/api/modules?projectId=${selectedProject}`);
       return response.json();
     },
-    enabled: !!selectedProject,
+    enabled: !!selectedProject
   });
 
-  // Generate test cases mutation
   const generateTestCasesMutation = useMutation({
-    mutationFn: async (data: {
-      type: 'description' | 'url' | 'image';
-      content: string;
-      images?: File[];
-      projectId?: number;
-      moduleId?: number;
-    }) => {
-      const formData = new FormData();
-      formData.append('type', data.type);
-      formData.append('content', data.content);
-      if (data.projectId) formData.append('projectId', data.projectId.toString());
-      if (data.moduleId) formData.append('moduleId', data.moduleId.toString());
-      
-      if (data.images) {
-        data.images.forEach((image, index) => {
-          formData.append(`images`, image);
-        });
-      }
-
-      const response = await apiRequest('POST', '/api/ai/generate-test-cases', formData, { isFormData: true });
+    mutationFn: async (data: any) => {
+      const response = await fetch('/api/ai/generate-test-cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
       if (!response.ok) throw new Error('Failed to generate test cases');
       return response.json();
     },
     onSuccess: (data) => {
-      setGeneratedTestCases(data.testCases.map((tc: any, index: number) => ({
-        ...tc,
-        id: `generated-${Date.now()}-${index}`,
-        selected: true
-      })));
-      toast({
-        title: "✨ Test cases generated!",
-        description: `Generated ${data.testCases.length} test cases using AI`,
-      });
+      setGeneratedTests(data.map((test: any) => ({ ...test, selected: true })));
+      toast({ title: 'Success', description: 'Test cases generated successfully!' });
     },
-    onError: (error) => {
-      toast({
-        title: "❌ Generation failed",
-        description: "Failed to generate test cases. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Merge test cases mutation
-  const mergeTestCasesMutation = useMutation({
-    mutationFn: async (data: {
-      testCases: GeneratedTestCase[];
-      projectId: number;
-      moduleId: number;
-    }) => {
-      const response = await apiRequest('POST', '/api/ai/merge-test-cases', data);
-      if (!response.ok) throw new Error('Failed to merge test cases');
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "✅ Test cases merged!",
-        description: `Successfully added ${data.mergedCount} test cases to the project`,
-      });
-      setGeneratedTestCases([]);
-      queryClient.invalidateQueries({ queryKey: ['/api/test-cases'] });
-    },
-    onError: (error) => {
-      toast({
-        title: "❌ Merge failed",
-        description: "Failed to merge test cases. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    setUploadedImages(prev => [...prev, ...imageFiles]);
-  };
-
-  const removeImage = (index: number) => {
-    setUploadedImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleGenerate = () => {
-    if (!selectedProject || !selectedModule) {
-      toast({
-        title: "⚠️ Missing selection",
-        description: "Please select a project and module first",
-        variant: "destructive",
-      });
-      return;
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to generate test cases', variant: 'destructive' });
     }
+  });
 
-    let content = '';
-    let type: 'description' | 'url' | 'image' = 'description';
+  const mergeTestCasesMutation = useMutation({
+    mutationFn: async (testCases: GeneratedTestCase[]) => {
+      const selectedTests = testCases.filter(test => test.selected);
+      const promises = selectedTests.map(test => 
+        fetch('/api/test-cases', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: test.title,
+            description: test.description,
+            priority: test.priority,
+            type: test.type,
+            preconditions: test.preconditions,
+            steps: test.steps.join('\n'),
+            expectedResult: test.expectedResult,
+            projectId: selectedProject,
+            moduleId: selectedModule,
+            status: 'Not Executed',
+            createdById: 1 // Current user ID
+          })
+        })
+      );
+      return Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['test-cases'] });
+      toast({ title: 'Success', description: 'Test cases merged to project successfully!' });
+      setGeneratedTests([]);
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to merge test cases', variant: 'destructive' });
+    }
+  });
 
-    switch (activeTab) {
-      case 'description':
-        if (!projectDescription.trim()) {
-          toast({
-            title: "⚠️ Missing description",
-            description: "Please provide a project description",
-            variant: "destructive",
-          });
-          return;
-        }
-        content = projectDescription;
-        type = 'description';
-        break;
-      case 'url':
-        if (!websiteUrl.trim()) {
-          toast({
-            title: "⚠️ Missing URL",
-            description: "Please provide a website URL",
-            variant: "destructive",
-          });
-          return;
-        }
-        content = websiteUrl;
-        type = 'url';
-        break;
-      case 'images':
-        if (uploadedImages.length === 0) {
-          toast({
-            title: "⚠️ No images",
-            description: "Please upload at least one image",
-            variant: "destructive",
-          });
-          return;
-        }
-        content = 'Image analysis';
-        type = 'image';
-        break;
+  const handleGenerate = async (type: 'requirements' | 'image' | 'url') => {
+    if (!description.trim()) {
+      toast({ title: 'Error', description: 'Please provide a description', variant: 'destructive' });
+      return;
     }
 
     setIsGenerating(true);
-    generateTestCasesMutation.mutate({
-      type,
-      content,
-      images: type === 'image' ? uploadedImages : undefined,
-      projectId: selectedProject,
-      moduleId: selectedModule,
+    try {
+      const requestData = {
+        projectId: selectedProject,
+        moduleId: selectedModule,
+        description,
+        requirements,
+        testingType,
+        websiteUrl: type === 'url' ? websiteUrl : undefined
+      };
+
+      if (type === 'image' && selectedImage) {
+        const base64 = await convertImageToBase64(selectedImage);
+        await generateTestCasesMutation.mutateAsync({ ...requestData, imageBase64: base64 });
+      } else {
+        await generateTestCasesMutation.mutateAsync(requestData);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        resolve(base64.split(',')[1]); // Remove data:image/... prefix
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
     });
   };
 
-  const handleMergeSelected = () => {
-    const selectedTestCases = generatedTestCases.filter(tc => tc.selected);
-    
-    if (selectedTestCases.length === 0) {
-      toast({
-        title: "⚠️ No test cases selected",
-        description: "Please select at least one test case to merge",
-        variant: "destructive",
-      });
-      return;
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
     }
-
-    if (!selectedProject || !selectedModule) {
-      toast({
-        title: "⚠️ Missing selection",
-        description: "Please select a project and module",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    mergeTestCasesMutation.mutate({
-      testCases: selectedTestCases,
-      projectId: selectedProject,
-      moduleId: selectedModule,
-    });
   };
 
-  const toggleTestCaseSelection = (id: string) => {
-    setGeneratedTestCases(prev => 
-      prev.map(tc => 
-        tc.id === id ? { ...tc, selected: !tc.selected } : tc
+  const toggleTestSelection = (index: number) => {
+    setGeneratedTests(prev => 
+      prev.map((test, i) => 
+        i === index ? { ...test, selected: !test.selected } : test
       )
     );
   };
 
-  const selectedCount = generatedTestCases.filter(tc => tc.selected).length;
+  const selectAllTests = () => {
+    setGeneratedTests(prev => prev.map(test => ({ ...test, selected: true })));
+  };
+
+  const deselectAllTests = () => {
+    setGeneratedTests(prev => prev.map(test => ({ ...test, selected: false })));
+  };
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="flex items-center space-x-3">
-        <Sparkles className="h-8 w-8 text-purple-600" />
+    <div className="container mx-auto p-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">AI Test Case Generator</h1>
+        <p className="text-muted-foreground">Generate comprehensive test cases using Google Gemini AI</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            AI Test Case Generator
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Generate comprehensive test cases using Google Gemini AI
-          </p>
+          <Label>Target Project</Label>
+          <ProjectSelect value={selectedProject} onValueChange={setSelectedProject} />
+        </div>
+        <div>
+          <Label>Target Module</Label>
+          <ModuleSelect 
+            projectId={selectedProject} 
+            value={selectedModule} 
+            onValueChange={setSelectedModule}
+            disabled={!selectedProject}
+          />
         </div>
       </div>
 
-      {/* Project and Module Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <FileText className="h-5 w-5" />
-            <span>Target Project & Module</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Project</label>
-              <Select value={selectedProject?.toString() || ''} onValueChange={(value) => {
-                setSelectedProject(parseInt(value));
-                setSelectedModule(null);
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id.toString()}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Module</label>
-              <Select 
-                value={selectedModule?.toString() || ''} 
-                onValueChange={(value) => setSelectedModule(parseInt(value))}
-                disabled={!selectedProject}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a module" />
-                </SelectTrigger>
-                <SelectContent>
-                  {modules.map((module) => (
-                    <SelectItem key={module.id} value={module.id.toString()}>
-                      {module.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="requirements" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="requirements">Requirements</TabsTrigger>
+          <TabsTrigger value="image">Image Analysis</TabsTrigger>
+          <TabsTrigger value="url">URL Inspection</TabsTrigger>
+        </TabsList>
 
-      {/* Input Methods */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Input Method</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="description" className="flex items-center space-x-2">
-                <FileText className="h-4 w-4" />
-                <span>Description</span>
-              </TabsTrigger>
-              <TabsTrigger value="url" className="flex items-center space-x-2">
-                <Globe className="h-4 w-4" />
-                <span>Website URL</span>
-              </TabsTrigger>
-              <TabsTrigger value="images" className="flex items-center space-x-2">
-                <ImageIcon className="h-4 w-4" />
-                <span>Images</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="description" className="space-y-4">
-              <Textarea
-                placeholder="Describe your project, features, or functionality you want to test..."
-                value={projectDescription}
-                onChange={(e) => setProjectDescription(e.target.value)}
-                className="min-h-[200px]"
-              />
-            </TabsContent>
-
-            <TabsContent value="url" className="space-y-4">
-              <Input
-                placeholder="https://example.com"
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-              />
-              <p className="text-sm text-gray-600">
-                AI will analyze the website structure and content to generate relevant test cases
-              </p>
-            </TabsContent>
-
-            <TabsContent value="images" className="space-y-4">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageUpload}
-                  multiple
-                  accept="image/*"
-                  className="hidden"
+        <TabsContent value="requirements">
+          <Card>
+            <CardHeader>
+              <CardTitle>Generate from Requirements</CardTitle>
+              <CardDescription>Describe your feature or functionality</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="description">Feature Description *</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe the feature you want to test..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="min-h-[100px]"
                 />
-                <Button 
-                  variant="outline" 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="mb-4"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Images
-                </Button>
-                <p className="text-sm text-gray-600">
-                  Upload screenshots, mockups, or UI designs for analysis
-                </p>
               </div>
+              <div>
+                <Label htmlFor="requirements">Additional Requirements</Label>
+                <Textarea
+                  id="requirements"
+                  placeholder="Any specific requirements, constraints, or acceptance criteria..."
+                  value={requirements}
+                  onChange={(e) => setRequirements(e.target.value)}
+                  className="min-h-[80px]"
+                />
+              </div>
+              <div>
+                <Label htmlFor="testing-type">Testing Type</Label>
+                <Select value={testingType} onValueChange={setTestingType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="functional">Functional</SelectItem>
+                    <SelectItem value="ui">UI/UX</SelectItem>
+                    <SelectItem value="integration">Integration</SelectItem>
+                    <SelectItem value="api">API</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={() => handleGenerate('requirements')} disabled={isGenerating} className="w-full">
+                <Wand2 className="w-4 h-4 mr-2" />
+                {isGenerating ? 'Generating...' : 'Generate Test Cases'}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-              {uploadedImages.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {uploadedImages.map((image, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={URL.createObjectURL(image)}
-                        alt={`Upload ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border"
+        <TabsContent value="image">
+          <Card>
+            <CardHeader>
+              <CardTitle>Generate from Image</CardTitle>
+              <CardDescription>Upload a screenshot, mockup, or UI design</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="description-image">Image Description *</Label>
+                <Textarea
+                  id="description-image"
+                  placeholder="Describe what this image shows and what needs to be tested..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="min-h-[80px]"
+                />
+              </div>
+              <div>
+                <Label>Upload Image</Label>
+                <div className="border-2 border-dashed border-muted rounded-lg p-8 text-center">
+                  {selectedImage ? (
+                    <div>
+                      <img 
+                        src={URL.createObjectURL(selectedImage)} 
+                        alt="Selected" 
+                        className="max-w-full max-h-48 mx-auto mb-4"
                       />
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                        onClick={() => removeImage(index)}
-                      >
-                        ×
+                      <p className="text-sm text-muted-foreground">{selectedImage.name}</p>
+                      <Button variant="outline" onClick={() => setSelectedImage(null)} className="mt-2">
+                        Remove Image
                       </Button>
-                      <p className="text-xs text-center mt-1 truncate">{image.name}</p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-
-          <div className="pt-4">
-            <Button 
-              onClick={handleGenerate}
-              disabled={isGenerating || generateTestCasesMutation.isPending}
-              className="w-full md:w-auto"
-            >
-              {isGenerating || generateTestCasesMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="h-4 w-4 mr-2" />
-                  Generate Test Cases
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Generated Test Cases */}
-      {generatedTestCases.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center space-x-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                <span>Generated Test Cases ({generatedTestCases.length})</span>
-              </CardTitle>
-              <div className="flex items-center space-x-2">
-                <Badge variant="secondary">{selectedCount} selected</Badge>
-                <Button 
-                  onClick={handleMergeSelected}
-                  disabled={selectedCount === 0 || mergeTestCasesMutation.isPending}
-                  size="sm"
-                >
-                  {mergeTestCasesMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Merging...
-                    </>
                   ) : (
                     <>
-                      <Merge className="h-4 w-4 mr-2" />
-                      Merge Selected
+                      <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                      <p>Drag and drop an image or click to browse</p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <Button variant="outline" className="mt-4" onClick={() => document.getElementById('image-upload')?.click()}>
+                        Choose File
+                      </Button>
                     </>
                   )}
-                </Button>
+                </div>
               </div>
+              <Button onClick={() => handleGenerate('image')} disabled={isGenerating || !selectedImage} className="w-full">
+                <Wand2 className="w-4 h-4 mr-2" />
+                {isGenerating ? 'Analyzing Image...' : 'Generate from Image'}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="url">
+          <Card>
+            <CardHeader>
+              <CardTitle>Generate from URL</CardTitle>
+              <CardDescription>Analyze a website or web application</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="url">Website URL *</Label>
+                <Input 
+                  id="url" 
+                  placeholder="https://example.com" 
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="description-url">Testing Focus *</Label>
+                <Textarea
+                  id="description-url"
+                  placeholder="What aspects of this website do you want to test? (e.g., user registration, checkout process, navigation, etc.)"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="min-h-[80px]"
+                />
+              </div>
+              <Button onClick={() => handleGenerate('url')} disabled={isGenerating || !websiteUrl} className="w-full">
+                <FileText className="w-4 h-4 mr-2" />
+                {isGenerating ? 'Analyzing Website...' : 'Analyze Website'}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {generatedTests.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Generated Test Cases</CardTitle>
+            <CardDescription>
+              {generatedTests.length} test cases generated • {generatedTests.filter(t => t.selected).length} selected
+            </CardDescription>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={selectAllTests}>
+                Select All
+              </Button>
+              <Button variant="outline" size="sm" onClick={deselectAllTests}>
+                Deselect All
+              </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <AnimatePresence>
-              {generatedTestCases.map((testCase, index) => (
-                <motion.div
-                  key={testCase.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ delay: index * 0.1 }}
+          <CardContent>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {generatedTests.map((test, index) => (
+                <div 
+                  key={index} 
+                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                    test.selected ? 'border-primary bg-primary/5' : 'border-muted'
+                  }`}
+                  onClick={() => toggleTestSelection(index)}
                 >
-                  <Card className={`cursor-pointer transition-colors ${testCase.selected ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={testCase.selected}
-                          onChange={() => toggleTestCaseSelection(testCase.id)}
-                          className="mt-1"
-                        />
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-semibold">{testCase.title}</h4>
-                            <div className="flex items-center space-x-2">
-                              <Badge variant={
-                                testCase.priority === 'Critical' ? 'destructive' :
-                                testCase.priority === 'High' ? 'default' :
-                                testCase.priority === 'Medium' ? 'secondary' : 'outline'
-                              }>
-                                {testCase.priority}
-                              </Badge>
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {testCase.description}
-                          </p>
-                          <div className="text-sm space-y-1">
-                            <p><strong>Preconditions:</strong> {testCase.preconditions}</p>
-                            <div>
-                              <strong>Steps:</strong>
-                              <ol className="list-decimal list-inside ml-4 space-y-1">
-                                {testCase.steps.map((step, stepIndex) => (
-                                  <li key={stepIndex}>{step}</li>
-                                ))}
-                              </ol>
-                            </div>
-                            <p><strong>Expected Result:</strong> {testCase.expectedResult}</p>
-                          </div>
-                          {testCase.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {testCase.tags.map((tag, tagIndex) => (
-                                <Badge key={tagIndex} variant="outline" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                          test.selected ? 'bg-primary border-primary' : 'border-muted'
+                        }`}>
+                          {test.selected && <Check className="w-3 h-3 text-primary-foreground" />}
                         </div>
+                        <h4 className="font-medium">{test.title}</h4>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          test.priority === 'High' ? 'bg-red-100 text-red-800' :
+                          test.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {test.priority}
+                        </span>
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                      <p className="text-sm text-muted-foreground mb-2">{test.description}</p>
+                      <div className="text-xs text-muted-foreground">
+                        <p><strong>Type:</strong> {test.type} | <strong>Category:</strong> {test.category}</p>
+                        {test.preconditions && <p><strong>Preconditions:</strong> {test.preconditions}</p>}
+                        <p><strong>Steps:</strong> {test.steps.length} step(s)</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </AnimatePresence>
+            </div>
+            <div className="flex gap-2 mt-6 pt-4 border-t">
+              <Button 
+                onClick={() => mergeTestCasesMutation.mutate(generatedTests)}
+                disabled={!selectedProject || !generatedTests.some(t => t.selected) || mergeTestCasesMutation.isPending}
+                className="flex-1"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {mergeTestCasesMutation.isPending ? 'Merging...' : `Merge ${generatedTests.filter(t => t.selected).length} Test Cases`}
+              </Button>
+              <Button variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
