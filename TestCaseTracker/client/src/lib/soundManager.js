@@ -58,11 +58,10 @@ export class SoundManager {
       const audio = new Audio();
 
       return new Promise((resolve, reject) => {
-        // Set a timeout for loading (reduced to 1 second for faster startup)
         const timeout = setTimeout(() => {
           console.log(`⏰ Audio load timeout for ${key} with ${path}`);
           reject(new Error(`Timeout loading ${key}`));
-        }, 1000);
+        }, 5000);
 
         audio.addEventListener('canplaythrough', () => {
           clearTimeout(timeout);

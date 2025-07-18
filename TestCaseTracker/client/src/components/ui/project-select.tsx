@@ -27,7 +27,7 @@ export function ProjectSelect({
 }: ProjectSelectProps) {
   return (
     <Select
-      value={selectedProjectId?.toString() || ''}
+      value={selectedProjectId?.toString()}
       onValueChange={onChange}
       disabled={isLoading}
       data-testid="project-select"

@@ -207,35 +207,13 @@ export class ChatWebSocketServer {
     }
 
     try {
-      // Get conversation details to find the receiver
-      const conversation = await storage.getDirectConversation(user.userId, conversationId);
-      let receiverId = conversationId;
-
-      if (conversation && conversation.participants) {
-        // Find the other participant
-        const otherParticipant = conversation.participants.find((p: any) => {
-          const pId = typeof p === 'object' ? p.id : p;
-          return pId !== user.userId;
-        });
-        if (otherParticipant) {
-          receiverId = typeof otherParticipant === 'object' ? otherParticipant.id : otherParticipant;
-        }
-      }
-
       // Store message in database using the correct API format
       const chatMessage = await storage.createMessage({
         senderId: user.userId,
-        receiverId: receiverId,
-        conversationId: conversationId,
+        receiverId: conversationId, // Using conversationId as receiverId for direct messages
         content: message.trim(),
         type: 'text',
-        attachments: attachments || [],
-        sender: {
-          id: user.userId,
-          firstName: user.userName,
-          lastName: '',
-          profilePicture: null
-        }
+        attachments: attachments || []
       });
 
       // Clear typing indicator

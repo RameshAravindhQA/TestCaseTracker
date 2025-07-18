@@ -37,7 +37,6 @@ import TimesheetsPage from "@/pages/timesheets/index";
 import NotebooksPage from "@/pages/notebooks/index";
 import TodosPage from "./pages/todos";
 import TestDataGeneratorPage from "./pages/test-data-generator";
-import AIGeneratorPage from "./pages/ai-generator"; // Added AI Generator Page
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -193,10 +192,6 @@ function Router() {
       </Route>
       <Route path="/automation">
         <ProtectedLazyComponent Component={lazy(() => import("./pages/automation"))} />
-      </Route>
-      <Route path="/ai-generator">
-        <ProtectedLazyComponent Component={lazy(() => import("./pages/ai-generator"))} />
-      </Route>"))} />
       </Route>
 
       {/* Catch-all 404 route - make sure this is last */}

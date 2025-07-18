@@ -1,8 +1,9 @@
+
 import { Module } from "@/types";
-import {
+import { 
   Select,
-  SelectContent,
-  SelectTrigger,
+  SelectContent, 
+  SelectTrigger, 
   SelectValue,
   SelectItem
 } from "./select";
@@ -11,7 +12,7 @@ import { StatusBadge } from "./status-badge";
 interface ModuleSelectProps {
   modules: Module[] | undefined;
   isLoading?: boolean;
-  selectedModuleId: number | string | null | undefined;
+  selectedModuleId: number | string;
   onChange: (value: string) => void;
   className?: string;
   placeholder?: string;
@@ -34,7 +35,7 @@ export function ModuleSelect({
   onValueChange
 }: ModuleSelectProps) {
   const handleValueChange = onValueChange || onChange;
-  const currentValue = value !== undefined ? value.toString() : (selectedModuleId != null) ? selectedModuleId.toString() : "";
+  const currentValue = value !== undefined ? value.toString() : selectedModuleId?.toString() || "";
 
   return (
     <Select
@@ -44,9 +45,7 @@ export function ModuleSelect({
       data-testid="module-select"
     >
       <SelectTrigger className={className}>
-        <SelectValue placeholder={placeholder} >
-          {selectedModuleId ? selectedModuleId.toString() : "Select module"}
-        </SelectValue>
+        <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
         {isLoading ? (
@@ -60,8 +59,8 @@ export function ModuleSelect({
             )}
             {modules && modules.length > 0 ? (
               modules.map((module) => (
-                <SelectItem
-                  key={module.id}
+                <SelectItem 
+                  key={module.id} 
                   value={module.id.toString()}
                 >
                   <div className="flex items-center justify-between w-full">
