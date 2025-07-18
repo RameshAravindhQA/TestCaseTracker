@@ -36,7 +36,6 @@ interface AITestGeneratorProps {
 export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AITestGeneratorProps) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("text");
-  const [selectedProjectId, setSelectedProjectId] = useState(projectId || "");
 
   // Form inputs
   const [requirement, setRequirement] = useState("");
@@ -101,12 +100,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
           // Play sound for AI generation start
           try {
-            const soundModule = await import('../../lib/soundManager.js');
-            if (soundModule.default && typeof soundModule.default.playSound === 'function') {
-              await soundModule.default.playSound('crud');
-            } else if (soundModule.playSound && typeof soundModule.playSound === 'function') {
-              await soundModule.playSound('crud');
-            }
+            const { playSound } = await import('../../lib/soundManager.js');
+            await playSound('crud');
           } catch (soundError) {
             console.warn('Sound playback failed:', soundError);
           }
@@ -127,26 +122,6 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             },
             signal: controller.signal
           });
-
-          // Check if we got a redirect or HTML response
-          const contentType = response.headers.get('content-type') || '';
-          if (!response.ok) {
-            console.error(`❌ HTTP Error: ${response.status} ${response.statusText}`);
-            if (response.status === 404) {
-              throw new Error('AI service endpoint not found. Please check if the server is running properly.');
-            }
-            if (response.status >= 500) {
-              throw new Error('Server error occurred. Please try again later.');
-            }
-            throw new Error(`Request failed with status ${response.status}`);
-          }
-
-          if (!contentType.includes('application/json')) {
-            console.error(`❌ Expected JSON but got: ${contentType}`);
-            const responseText = await response.text();
-            console.error('❌ Response body:', responseText.substring(0, 500));
-            throw new Error('Server returned non-JSON response. The service may be restarting.');
-          }
 
           clearTimeout(timeoutId);
 
@@ -312,12 +287,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       
       // Play success sound
       try {
-        import('../../lib/soundManager.js').then((soundModule) => {
-          if (soundModule.default && typeof soundModule.default.playSound === 'function') {
-            soundModule.default.playSound('success');
-          } else if (soundModule.playSound && typeof soundModule.playSound === 'function') {
-            soundModule.playSound('success');
-          }
+        import('../../lib/soundManager.js').then(({ playSound }) => {
+          playSound('success');
         });
       } catch (soundError) {
         console.warn('Sound playback failed:', soundError);
@@ -348,12 +319,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
       // Play error sound
       try {
-        import('../../lib/soundManager.js').then((soundModule) => {
-          if (soundModule.default && typeof soundModule.default.playSound === 'function') {
-            soundModule.default.playSound('error');
-          } else if (soundModule.playSound && typeof soundModule.playSound === 'function') {
-            soundModule.playSound('error');
-          }
+        import('../../lib/soundManager.js').then(({ playSound }) => {
+          playSound('error');
         });
       } catch (soundError) {
         console.warn('Sound playback failed:', soundError);
@@ -479,7 +446,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
     const selectedCases = generatedTestCases
       .filter((_, index) => selectedTestCases.has(index))
       .map(tc => ({
-        projectId: Number(selectedProjectId || projectId),
+        projectId: Number(selectedProjectId),
         moduleId: moduleId || modules[0]?.id,
         feature: tc.feature,
         testObjective: tc.testObjective,

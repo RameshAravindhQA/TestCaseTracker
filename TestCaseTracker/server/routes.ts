@@ -1604,9 +1604,6 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, 
     (req, res, next) => {
       console.log('🔍 AI Generation endpoint hit - Initial request processing');
-      console.log('🔍 Request method:', req.method);
-      console.log('🔍 Request URL:', req.url);
-      console.log('🔍 Request headers:', req.headers);
       
       // Set response headers early to ensure JSON response
       res.setHeader('Content-Type', 'application/json');

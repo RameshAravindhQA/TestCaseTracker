@@ -479,7 +479,3 @@ if (typeof window !== 'undefined') {
 }
 
 export const soundManager = typeof window !== 'undefined' ? window.soundManager : null;
-
-// Export the SoundManager instance and playSound function
-export { soundManager };
-export default { soundManager };
