@@ -1477,7 +1477,54 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
 
 
-// AI Test Case Generation endpoint
+// Gemini API Debug endpoint
+  apiRouter.get("/ai/debug-gemini", isAuthenticated, async (req, res) => {
+    try {
+      const hasApiKey = !!process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-gemini-api-key';
+      
+      if (!hasApiKey) {
+        return res.json({
+          configured: false,
+          error: 'Google Gemini API key is not configured',
+          message: 'Please set GOOGLE_API_KEY environment variable'
+        });
+      }
+
+      // Test basic API connectivity
+      try {
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+        
+        // Simple test prompt
+        const result = await model.generateContent("Say 'Hello, API is working!' in JSON format: {\"message\": \"Hello, API is working!\"}");
+        const response = result.response.text();
+        
+        return res.json({
+          configured: true,
+          apiKeyPrefix: process.env.GOOGLE_API_KEY.substring(0, 10) + '...',
+          testResponse: response,
+          message: 'Gemini API is properly configured and working'
+        });
+      } catch (apiError: any) {
+        return res.json({
+          configured: false,
+          error: apiError.message,
+          message: 'Gemini API key is configured but API call failed',
+          apiKeyPrefix: process.env.GOOGLE_API_KEY.substring(0, 10) + '...'
+        });
+      }
+    } catch (error: any) {
+      console.error('Gemini debug error:', error);
+      res.status(500).json({
+        configured: false,
+        error: error.message,
+        message: 'Failed to test Gemini configuration'
+      });
+    }
+  });
+
+  // AI Test Case Generation endpoint
   apiRouter.post("/ai/generate-test-cases", isAuthenticated, async (req, res) => {
     try {
       // Ensure JSON response header
@@ -1569,7 +1616,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         console.log('Enhanced AI Generation - Handler started');
         
         // Ensure we're returning JSON regardless of what happens
-        const sendJsonResponse = (status, data) => {
+        const sendJsonResponse = (status: number, data: any) => {
           res.setHeader('Content-Type', 'application/json');
           return res.status(status).json(data);
         };
@@ -1614,7 +1661,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           });
         }
 
-        // Generate test cases with error handling
+        // Check if Gemini is properly configured
+        const hasGeminiKey = process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-gemini-api-key';
+        
         let mockTestCases = [];
         let analysisResults = {
           coverage: 'Comprehensive',
@@ -1623,6 +1672,46 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           suggestions: ['Consider adding performance tests', 'Include accessibility testing']
         };
 
+        if (hasGeminiKey) {
+          try {
+            console.log('Enhanced AI Generation - Using Gemini AI service');
+            const geminiRequest = {
+              requirement: requirement || '',
+              projectContext,
+              moduleContext,
+              testType: testType || 'functional',
+              priority: priority || 'Medium',
+              websiteUrl,
+              elementInspection,
+              userFlows,
+              businessRules,
+              inputType: inputType || 'text',
+              images: req.files as Express.Multer.File[]
+            };
+
+            const { geminiService } = await import('./gemini-service');
+            const geminiResponse = await geminiService.generateTestCases(geminiRequest);
+            
+            return sendJsonResponse(200, {
+              success: true,
+              testCases: geminiResponse.testCases,
+              analysis: geminiResponse.analysis,
+              message: geminiResponse.message,
+              source: 'gemini-ai',
+              timestamp: new Date().toISOString()
+            });
+
+          } catch (geminiError: any) {
+            console.error('Enhanced AI Generation - Gemini service failed:', geminiError);
+            
+            // Fall back to mock generation if Gemini fails
+            console.log('Enhanced AI Generation - Falling back to mock generation');
+          }
+        } else {
+          console.log('Enhanced AI Generation - No Gemini key, using mock generation');
+        }
+
+        // Generate test cases with mock service (fallback)
         try {
           const isRegistrationTest = requirement && requirement.toLowerCase().includes('register');
           
@@ -1691,14 +1780,15 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           success: true,
           testCases: mockTestCases,
           analysis: analysisResults,
-          message: `Successfully generated ${mockTestCases.length} enhanced test cases using ${inputType || 'text'} input`,
+          message: `Successfully generated ${mockTestCases.length} test cases using ${hasGeminiKey ? 'mock service (Gemini fallback)' : 'mock service'} with ${inputType || 'text'} input`,
+          source: hasGeminiKey ? 'mock-fallback' : 'mock-service',
           timestamp: new Date().toISOString()
         };
 
         console.log('Enhanced AI Generation - Sending successful response');
         return sendJsonResponse(200, response);
         
-      } catch (handlerError) {
+      } catch (handlerError: any) {
         console.error('Enhanced AI Generation - Critical handler error:', handlerError);
         
         // Final fallback to ensure JSON response

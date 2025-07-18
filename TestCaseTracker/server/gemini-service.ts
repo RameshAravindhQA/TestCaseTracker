@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // Initialize Google Gemini AI
+console.log('🔧 Initializing Gemini AI with API key:', !!process.env.GOOGLE_API_KEY ? 'CONFIGURED' : 'MISSING');
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || 'your-gemini-api-key');
 
 export interface TestCaseGenerationRequest {
@@ -50,31 +51,73 @@ export class GeminiAIService {
 
   async generateTestCases(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     try {
-      logger.info('Generating test cases with Gemini AI', { inputType: request.inputType });
+      // Check if API key is configured
+      if (!process.env.GOOGLE_API_KEY || process.env.GOOGLE_API_KEY === 'your-gemini-api-key') {
+        logger.error('Google API key not configured');
+        throw new Error('Google Gemini API key is not properly configured. Please set GOOGLE_API_KEY environment variable.');
+      }
+
+      logger.info('Generating test cases with Gemini AI', { 
+        inputType: request.inputType,
+        hasApiKey: !!process.env.GOOGLE_API_KEY,
+        keyPrefix: process.env.GOOGLE_API_KEY?.substring(0, 10) + '...'
+      });
 
       let prompt = this.buildBasePrompt(request);
       let response;
 
-      switch (request.inputType) {
-        case 'text':
-          response = await this.generateFromText(prompt, request);
-          break;
-        case 'url':
-          response = await this.generateFromUrl(prompt, request);
-          break;
-        case 'image':
-          response = await this.generateFromImages(prompt, request);
-          break;
-        case 'inspect':
-          response = await this.generateFromInspection(prompt, request);
-          break;
-        default:
-          response = await this.generateFromText(prompt, request);
+      try {
+        switch (request.inputType) {
+          case 'text':
+            response = await this.generateFromText(prompt, request);
+            break;
+          case 'url':
+            response = await this.generateFromUrl(prompt, request);
+            break;
+          case 'image':
+            response = await this.generateFromImages(prompt, request);
+            break;
+          case 'inspect':
+            response = await this.generateFromInspection(prompt, request);
+            break;
+          default:
+            response = await this.generateFromText(prompt, request);
+        }
+
+        logger.info('Gemini API response received', { 
+          responseType: typeof response,
+          responseLength: response?.length || 0,
+          responsePreview: response?.substring(0, 100) + '...'
+        });
+
+      } catch (apiError: any) {
+        logger.error('Gemini API call failed:', {
+          error: apiError.message,
+          status: apiError.status,
+          code: apiError.code
+        });
+
+        // Check for specific API errors
+        if (apiError.message?.includes('API_KEY_INVALID')) {
+          throw new Error('Invalid Google Gemini API key. Please check your GOOGLE_API_KEY configuration.');
+        }
+        if (apiError.message?.includes('QUOTA_EXCEEDED')) {
+          throw new Error('Google Gemini API quota exceeded. Please check your billing and quota limits.');
+        }
+        if (apiError.message?.includes('PERMISSION_DENIED')) {
+          throw new Error('Permission denied for Google Gemini API. Please check your API key permissions.');
+        }
+
+        throw apiError;
       }
 
       return this.parseResponse(response);
-    } catch (error) {
-      logger.error('Error generating test cases with Gemini:', error);
+    } catch (error: any) {
+      logger.error('Error generating test cases with Gemini:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       throw new Error(`Test case generation failed: ${error.message}`);
     }
   }
@@ -239,6 +282,16 @@ Analyze the provided DOM elements and generate test cases for:
 
   private parseResponse(response: string): TestCaseGenerationResponse {
     try {
+      logger.info('Parsing Gemini response', { 
+        responseType: typeof response,
+        responseLength: response?.length || 0,
+        isString: typeof response === 'string'
+      });
+
+      if (!response || typeof response !== 'string') {
+        throw new Error('Invalid response format: expected string but got ' + typeof response);
+      }
+
       // Clean the response to extract JSON
       let jsonStr = response.trim();
 
@@ -249,29 +302,62 @@ Analyze the provided DOM elements and generate test cases for:
         jsonStr = jsonStr.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
 
-      const parsed = JSON.parse(jsonStr);
+      // Log the cleaned JSON string for debugging
+      logger.debug('Cleaned JSON string:', jsonStr.substring(0, 500) + (jsonStr.length > 500 ? '...' : ''));
+
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (parseError) {
+        logger.error('JSON parsing failed:', parseError);
+        logger.debug('Failed to parse JSON:', jsonStr);
+        throw new Error('Failed to parse response as JSON. Response may not be in correct format.');
+      }
 
       // Validate the structure
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Invalid response structure: expected object but got ' + typeof parsed);
+      }
+
       if (!parsed.testCases || !Array.isArray(parsed.testCases)) {
-        throw new Error('Invalid response structure: missing testCases array');
+        logger.warn('Response missing testCases array, creating default structure');
+        parsed.testCases = [];
       }
 
       // Ensure all test cases have required fields
-      parsed.testCases = parsed.testCases.map((tc: any, index: number) => ({
-        feature: tc.feature || `Generated Feature ${index + 1}`,
-        testObjective: tc.testObjective || 'Validate functionality',
-        preConditions: tc.preConditions || 'System should be accessible',
-        testSteps: tc.testSteps || '1. Perform action\n2. Verify result',
-        expectedResult: tc.expectedResult || 'Expected outcome achieved',
-        priority: tc.priority || 'Medium',
-        testType: tc.testType || 'functional',
-        coverage: tc.coverage || 'Basic functionality',
-        category: tc.category || 'General',
-        tags: tc.tags || ['ai-generated']
-      }));
+      parsed.testCases = parsed.testCases.map((tc: any, index: number) => {
+        if (!tc || typeof tc !== 'object') {
+          logger.warn(`Invalid test case at index ${index}, creating default`);
+          return {
+            feature: `Generated Feature ${index + 1}`,
+            testObjective: 'Validate functionality',
+            preConditions: 'System should be accessible',
+            testSteps: '1. Perform action\n2. Verify result',
+            expectedResult: 'Expected outcome achieved',
+            priority: 'Medium',
+            testType: 'functional',
+            coverage: 'Basic functionality',
+            category: 'General',
+            tags: ['ai-generated']
+          };
+        }
+
+        return {
+          feature: tc.feature || `Generated Feature ${index + 1}`,
+          testObjective: tc.testObjective || 'Validate functionality',
+          preConditions: tc.preConditions || 'System should be accessible',
+          testSteps: tc.testSteps || '1. Perform action\n2. Verify result',
+          expectedResult: tc.expectedResult || 'Expected outcome achieved',
+          priority: tc.priority || 'Medium',
+          testType: tc.testType || 'functional',
+          coverage: tc.coverage || 'Basic functionality',
+          category: tc.category || 'General',
+          tags: Array.isArray(tc.tags) ? tc.tags : ['ai-generated']
+        };
+      });
 
       // Ensure analysis object exists
-      if (!parsed.analysis) {
+      if (!parsed.analysis || typeof parsed.analysis !== 'object') {
         parsed.analysis = {
           coverage: 'Comprehensive',
           complexity: 'Medium',
@@ -280,20 +366,30 @@ Analyze the provided DOM elements and generate test cases for:
         };
       }
 
-      return {
+      const result = {
         testCases: parsed.testCases,
         analysis: parsed.analysis,
         message: parsed.message || `Generated ${parsed.testCases.length} test cases successfully`
       };
 
-    } catch (error) {
-      logger.error('Error parsing Gemini response:', error);
-      logger.debug('Raw response:', response);
+      logger.info('Successfully parsed Gemini response', {
+        testCasesCount: result.testCases.length,
+        hasAnalysis: !!result.analysis
+      });
+
+      return result;
+
+    } catch (error: any) {
+      logger.error('Error parsing Gemini response:', {
+        message: error.message,
+        responseType: typeof response,
+        responsePreview: response?.substring(0, 200) || 'null/undefined'
+      });
 
       // Fallback: create a basic test case from the response
       return {
         testCases: [{
-          feature: 'AI Generated Test Case',
+          feature: 'AI Generated Test Case (Fallback)',
           testObjective: 'Validate the specified functionality',
           preConditions: 'System should be in a testable state',
           testSteps: '1. Execute the test scenario\n2. Verify the expected behavior\n3. Document the results',
@@ -302,15 +398,15 @@ Analyze the provided DOM elements and generate test cases for:
           testType: 'functional',
           coverage: 'Basic functionality',
           category: 'Generated',
-          tags: ['ai-generated', 'needs-review']
+          tags: ['ai-generated', 'needs-review', 'fallback']
         }],
         analysis: {
           coverage: 'Basic',
           complexity: 'Unknown',
-          focusAreas: 'Manual review required',
-          suggestions: ['Review and refine the generated test case', 'Add more specific details']
+          focusAreas: 'Manual review required - API response parsing failed',
+          suggestions: ['Review and refine the generated test case', 'Check Gemini API configuration', 'Verify API response format']
         },
-        message: 'Generated basic test case - manual review recommended'
+        message: 'Generated fallback test case due to parsing error - manual review recommended'
       };
     }
   }

@@ -69,7 +69,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       }
 
       const formData = new FormData();
-      
+
       // Append all form fields with proper defaults
       formData.append('requirement', data.requirement || '');
       formData.append('projectContext', data.projectContext || '');
@@ -97,7 +97,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       while (attempt < maxAttempts) {
         try {
           console.log(`🔄 AI Generation attempt ${attempt + 1}/${maxAttempts}`);
-          
+
           const controller = new AbortController();
           const timeoutId = setTimeout(() => {
             console.log('⏰ Request timeout, aborting...');
@@ -127,11 +127,11 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
           // Enhanced response handling
           let responseData;
           let isJsonResponse = false;
-          
+
           try {
             const contentType = response.headers.get('content-type') || '';
             console.log('📝 Response content type:', contentType);
-            
+
             if (contentType.includes('application/json')) {
               responseData = await response.json();
               isJsonResponse = true;
@@ -145,11 +145,11 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
               const responseText = await response.text();
               console.error('❌ Expected JSON but got:', contentType);
               console.error('📄 Response preview:', responseText.substring(0, 500));
-              
+
               // Check if it's an HTML error page
               if (responseText.includes('<!DOCTYPE html>')) {
                 console.log('🔄 HTML error page detected');
-                
+
                 if (attempt < maxAttempts - 1) {
                   const delay = baseDelay * Math.pow(2, attempt);
                   console.log(`🔄 Retrying in ${delay}ms...`);
@@ -157,15 +157,15 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                   attempt++;
                   continue;
                 }
-                
+
                 throw new Error('Server is experiencing issues. Please try again later.');
               }
-              
+
               throw new Error('Server returned unexpected response format');
             }
           } catch (parseError) {
             console.error('❌ Failed to parse response:', parseError);
-            
+
             if (attempt < maxAttempts - 1) {
               const delay = baseDelay * Math.pow(2, attempt);
               console.log(`🔄 Parse error, retrying in ${delay}ms...`);
@@ -173,7 +173,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
               attempt++;
               continue;
             }
-            
+
             throw new Error('Failed to parse server response');
           }
 
@@ -182,7 +182,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             const errorMessage = isJsonResponse && responseData.error 
               ? responseData.error 
               : `Server error: ${response.status} ${response.statusText}`;
-            
+
             // Retry on server errors
             if (response.status >= 500 && attempt < maxAttempts - 1) {
               const delay = baseDelay * Math.pow(2, attempt);
@@ -191,7 +191,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
               attempt++;
               continue;
             }
-            
+
             throw new Error(errorMessage);
           }
 
@@ -199,29 +199,29 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
           if (!isJsonResponse) {
             throw new Error('Invalid response format: not JSON');
           }
-          
+
           if (!responseData.success) {
             throw new Error(responseData.error || 'AI generation failed');
           }
-          
+
           if (!responseData.testCases || !Array.isArray(responseData.testCases)) {
             throw new Error('Invalid response: missing test cases array');
           }
-          
+
           if (responseData.testCases.length === 0) {
             throw new Error('No test cases were generated');
           }
-          
+
           console.log('✅ AI Generation successful:', {
             testCasesCount: responseData.testCases.length,
             message: responseData.message
           });
-          
+
           return responseData;
-          
+
         } catch (error: any) {
           console.error(`❌ AI Generation attempt ${attempt + 1} failed:`, error);
-          
+
           // Check if we should retry
           const shouldRetry = (
             error.name === 'AbortError' || 
@@ -230,7 +230,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             error.message.includes('Server is experiencing') ||
             error.message.includes('Failed to parse')
           ) && attempt < maxAttempts - 1;
-          
+
           if (shouldRetry) {
             const delay = baseDelay * Math.pow(2, attempt);
             console.log(`🔄 Retrying in ${delay}ms...`);
@@ -238,16 +238,16 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             attempt++;
             continue;
           }
-          
+
           // Final attempt - throw error
           if (attempt === maxAttempts - 1) {
             throw new Error(`Failed after ${maxAttempts} attempts: ${error.message}`);
           }
-          
+
           throw error;
         }
       }
-      
+
       throw new Error('Unexpected error in AI generation');
     },
     onSuccess: (data) => {
@@ -271,10 +271,10 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
     },
     onError: (error: any) => {
       console.error('Enhanced AI Generation error:', error);
-      
+
       let errorMessage = "Failed to generate test cases. Please try again.";
       let errorTitle = "Generation Failed";
-      
+
       if (error.message.includes('non-JSON response')) {
         errorMessage = "Server error occurred. The service might be temporarily unavailable. Please try again in a few moments.";
         errorTitle = "Server Error";
@@ -288,7 +288,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         errorMessage = "Invalid request. Please check your input and try again.";
         errorTitle = "Invalid Request";
       }
-      
+
       toast({
         title: errorTitle,
         description: errorMessage,
