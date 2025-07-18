@@ -190,6 +190,7 @@ export interface IStorage {
 
   // Chat operations
   createChatMessage(message: any): Promise<any>;
+  createMessage(message: any): Promise<any>;
   getChatMessages(projectId: number, limit?: number): Promise<any[]>;
   updateChatMessage(messageId: number, userId: number, updates: any): Promise<any | null>;
 
@@ -2107,6 +2108,11 @@ class MemStorage implements IStorage {
     return message;
   }
 
+  async createMessage(messageData: any): Promise<any> {
+    // Alias to createChatMessage for compatibility
+    return this.createChatMessage(messageData);
+  }
+
   async getMessagesByChat(chatId: number): Promise<any[]> {
     // Get all messages for this conversation
     const allMessages = Array.from(this.chatMessages.values());
@@ -2277,8 +2283,14 @@ class MemStorage implements IStorage {
   }
   // Message management
   async getMessages(userId?: number): Promise<any[]> {
-    // Mock implementation - in real app, this would query a messages table
-    return [];
+    if (userId) {
+      // Return messages for specific user
+      return Array.from(this.chatMessages.values()).filter(msg => 
+        msg.userId === userId || (msg.mentionedUsers && msg.mentionedUsers.includes(userId))
+      );
+    }
+    // Return all messages
+    return Array.from(this.chatMessages.values());
   }
 
   async addMessageReaction(reactionData: any): Promise<any> {

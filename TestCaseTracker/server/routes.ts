@@ -8787,7 +8787,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const userId = req.session.userId!;
       const messageData = { ...req.body, senderId: userId };
-      const message = await storage.createMessage(messageData);
+      const message = await storage.createChatMessage(messageData);
       res.status(201).json(message);
     } catch (error) {
       console.error('Error creating message:', error);
