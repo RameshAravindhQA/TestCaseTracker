@@ -883,6 +883,26 @@ export default function ProfilePage() {
 
   const [users, setUsers] = useState<any[]>([]);
 
+  // Fetch users for avatar grid
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/users', {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const usersData = await response.json();
+          setUsers(usersData || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+        setUsers([]);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6 px-4 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">

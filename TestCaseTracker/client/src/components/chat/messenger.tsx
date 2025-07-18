@@ -610,29 +610,29 @@ export function Messenger() {
                     </span>
                   </div>
 
-                <div className="flex items-center space-x-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={startVoiceCall}
-                    title="Start voice call"
-                  >
-                    <Phone className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={startVideoCall}
-                    title="Start video call"
-                  >
-                    <Video className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="outline">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={startVoiceCall}
+                      title="Start voice call"
+                    >
+                      <Phone className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={startVideoCall}
+                      title="Start video call"
+                    >
+                      <Video className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
 
             {/* Messages */}
             <ScrollArea className="flex-1 p-4 bg-gray-50 dark:bg-gray-900">

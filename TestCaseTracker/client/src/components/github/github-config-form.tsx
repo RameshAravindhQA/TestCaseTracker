@@ -183,6 +183,16 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
       return;
     }
 
+    // For editing, we don't require access token if it's not provided (will keep existing)
+    if (!editingIntegration && !formData.accessToken) {
+      toast({
+        title: "Missing Access Token",
+        description: "Access token is required for new integrations",
+        variant: "destructive",
+      });
+      return;
+    }
+
     saveMutation.mutate(formData);
   };
 

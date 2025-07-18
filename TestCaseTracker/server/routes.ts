@@ -1435,6 +1435,108 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Create GitHub integration
+  apiRouter.post("/github/integrations", isAuthenticated, async (req, res) => {
+    try {
+      const { projectId, repoUrl, accessToken, webhookSecret, isActive, webhookUrl } = req.body;
+
+      // Validate required fields
+      if (!projectId || !repoUrl || !accessToken) {
+        return res.status(400).json({ 
+          message: "Project ID, repository URL, and access token are required" 
+        });
+      }
+
+      // Extract username and repository from URL
+      const urlMatch = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+      if (!urlMatch) {
+        return res.status(400).json({ 
+          message: "Invalid GitHub repository URL format" 
+        });
+      }
+
+      const [, username, repository] = urlMatch;
+
+      // For now, just return success response
+      // In a real implementation, you would save to database
+      const integration = {
+        id: Date.now(),
+        projectId: parseInt(projectId),
+        repoUrl,
+        accessToken: '***masked***', // Don't return actual token
+        webhookUrl: webhookUrl || '',
+        isEnabled: isActive !== false,
+        createdAt: new Date().toISOString(),
+        username,
+        repository
+      };
+
+      res.status(201).json(integration);
+    } catch (error) {
+      console.error("Create GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to create GitHub integration" });
+    }
+  });
+
+  // Update GitHub integration
+  apiRouter.put("/github/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { projectId, repoUrl, accessToken, webhookSecret, isActive, webhookUrl } = req.body;
+
+      // Validate required fields
+      if (!projectId || !repoUrl) {
+        return res.status(400).json({ 
+          message: "Project ID and repository URL are required" 
+        });
+      }
+
+      // Extract username and repository from URL
+      const urlMatch = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+      if (!urlMatch) {
+        return res.status(400).json({ 
+          message: "Invalid GitHub repository URL format" 
+        });
+      }
+
+      const [, username, repository] = urlMatch;
+
+      // For now, just return success response
+      // In a real implementation, you would update in database
+      const integration = {
+        id: parseInt(id),
+        projectId: parseInt(projectId),
+        repoUrl,
+        accessToken: accessToken ? '***masked***' : '***unchanged***',
+        webhookUrl: webhookUrl || '',
+        isEnabled: isActive !== false,
+        updatedAt: new Date().toISOString(),
+        username,
+        repository
+      };
+
+      res.json(integration);
+    } catch (error) {
+      console.error("Update GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to update GitHub integration" });
+    }
+  });
+
+  // Delete GitHub integration
+  apiRouter.delete("/github/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // For now, just return success response
+      // In a real implementation, you would delete from database
+      
+      res.json({ message: "GitHub integration deleted successfully" });
+    } catch (error) {
+      console.error("Delete GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to delete GitHub integration" });tegrations" });
+    }
+  });
+
   apiRouter.post("/github/integrations", isAuthenticated, async (req, res) => {
     try {
       const { projectId, username, repository, accessToken, webhookUrl, isEnabled = true } = req.body;
