@@ -103,14 +103,17 @@ export function Messenger() {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Fetch all users for contacts
   const { data: contacts = [], isLoading: contactsLoading } = useQuery<Contact[]>({
-    queryKey: ['/api/users'],
+    queryKey: ['/api/users/public'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/users');
+      const response = await apiRequest('GET', '/api/users/public');
       if (!response.ok) throw new Error('Failed to fetch contacts');
       const data = await response.json();
       return data.filter((contact: Contact) => contact.id !== user?.id);
@@ -130,6 +133,82 @@ export function Messenger() {
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
 
+  // WebSocket connection setup
+  useEffect(() => {
+    if (!user) return;
+
+    const connectWebSocket = () => {
+      try {
+        setConnectionStatus('connecting');
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          setConnectionStatus('connected');
+          setIsConnected(true);
+          
+          // Authenticate with server
+          ws.send(JSON.stringify({
+            type: 'authenticate',
+            data: {
+              userId: user.id,
+              userName: `${user.firstName} ${user.lastName || ''}`.trim()
+            }
+          }));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            
+            if (message.type === 'new_message') {
+              // Refresh messages when new message received
+              queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact?.id] });
+            } else if (message.type === 'authenticated') {
+              console.log('WebSocket authenticated');
+            }
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+          }
+        };
+
+        ws.onclose = () => {
+          setConnectionStatus('disconnected');
+          setIsConnected(false);
+          
+          // Attempt to reconnect after 3 seconds
+          setTimeout(() => {
+            if (user) {
+              connectWebSocket();
+            }
+          }, 3000);
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          setConnectionStatus('disconnected');
+          setIsConnected(false);
+        };
+
+      } catch (error) {
+        console.error('Failed to connect WebSocket:', error);
+        setConnectionStatus('disconnected');
+        setIsConnected(false);
+      }
+    };
+
+    connectWebSocket();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [user, queryClient]);
+
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: { receiverId: number; content: string; type?: string; attachments?: any[] }) => {
@@ -142,6 +221,19 @@ export function Messenger() {
       setAttachments([]);
       setReplyingTo(null);
       queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact?.id] });
+      
+      // Also send via WebSocket for real-time delivery
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && selectedContact) {
+        wsRef.current.send(JSON.stringify({
+          type: 'send_message',
+          data: {
+            receiverId: selectedContact.id,
+            message: newMessage.trim(),
+            type: 'text'
+          }
+        }));
+      }
+      
       toast({
         title: "✅ Message sent",
         description: "Your message has been delivered successfully",
@@ -504,6 +596,20 @@ export function Messenger() {
                     </p>
                   </div>
                 </div>
+                
+                <div className="flex items-center space-x-2">
+                  {/* Connection Status */}
+                  <div className="flex items-center space-x-1">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full",
+                      connectionStatus === 'connected' ? 'bg-green-500' :
+                      connectionStatus === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
+                    )} />
+                    <span className="text-xs text-gray-500">
+                      {connectionStatus === 'connected' ? 'Online' :
+                       connectionStatus === 'connecting' ? 'Connecting' : 'Offline'}
+                    </span>
+                  </div>
                 
                 <div className="flex items-center space-x-2">
                   <Button 

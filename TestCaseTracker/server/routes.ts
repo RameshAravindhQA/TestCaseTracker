@@ -1969,6 +1969,63 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Handle both direct messages and conversation messages
+  apiRouter.post("/messages", isAuthenticated, async (req, res) => {
+    try {
+      const { receiverId, content, conversationId } = req.body;
+      
+      let targetConversationId = conversationId;
+      
+      // If no conversation ID but has receiverId, create/find direct conversation
+      if (!targetConversationId && receiverId) {
+        let conversation = await storage.getDirectConversation(req.session.userId!, receiverId);
+        
+        if (!conversation) {
+          conversation = await storage.createDirectConversation(req.session.userId!, receiverId);
+        }
+        
+        targetConversationId = conversation.id;
+      }
+      
+      const message = await storage.createChatMessage({
+        userId: req.session.userId!,
+        receiverId,
+        conversationId: targetConversationId,
+        message: content,
+        type: 'text'
+      });
+      
+      res.json(message);
+    } catch (error) {
+      console.error('Send message error:', error);
+      res.status(500).json({ error: 'Failed to send message' });
+    }
+  });
+
+  // Get messages for a user (direct messages)
+  apiRouter.get("/messages", isAuthenticated, async (req, res) => {
+    try {
+      const { userId } = req.query;
+      
+      if (userId) {
+        // Get direct conversation with this user
+        const conversation = await storage.getDirectConversation(req.session.userId!, parseInt(userId as string));
+        
+        if (conversation) {
+          const messages = await storage.getMessagesByChat(conversation.id);
+          res.json(messages);
+        } else {
+          res.json([]);
+        }
+      } else {
+        res.json([]);
+      }
+    } catch (error) {
+      console.error('Get messages error:', error);
+      res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  });
+
   // Project Chat endpoints
   apiRouter.get("/projects/:projectId/chat", isAuthenticated, async (req, res) => {
     try {

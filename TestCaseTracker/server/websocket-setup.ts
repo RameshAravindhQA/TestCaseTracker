@@ -18,6 +18,13 @@ export function setupWebSocket(server: Server) {
     // Initialize client data
     connectedClients.set(ws, {});
 
+    // Set up ping/pong for connection health
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === ws.OPEN) {
+        ws.ping();
+      }
+    }, 30000); // Ping every 30 seconds
+
     ws.on('message', async (data) => {
       try {
         const message = JSON.parse(data.toString());
@@ -29,17 +36,28 @@ export function setupWebSocket(server: Server) {
             clientInfo!.userId = message.data.userId;
             clientInfo!.userName = message.data.userName;
             
-            // Add user to chat service
-            chatService.addUserSocket(message.data.userId, ws);
-            
             // Send authentication confirmation
             ws.send(JSON.stringify({
               type: 'authenticated',
               message: 'Successfully authenticated',
-              onlineUsers: [] // TODO: Get actual online users
+              onlineUsers: Array.from(connectedClients.values()).filter(c => c.userId).map(c => ({
+                userId: c.userId,
+                userName: c.userName
+              }))
             }));
             
             logger.info(`User ${message.data.userName} (ID: ${message.data.userId}) authenticated`);
+            
+            // Broadcast user online status to others
+            wss.clients.forEach(client => {
+              if (client !== ws && client.readyState === client.OPEN) {
+                client.send(JSON.stringify({
+                  type: 'user_online',
+                  userId: message.data.userId,
+                  userName: message.data.userName
+                }));
+              }
+            });
             break;
 
           case 'ping':
@@ -52,18 +70,18 @@ export function setupWebSocket(server: Server) {
               try {
                 // Extract data from the message structure
                 const messageData = message.data || message;
-                const conversationId = messageData.conversationId || message.conversationId;
+                const receiverId = messageData.receiverId;
                 const messageText = messageData.message || message.message;
                 
-                if (!conversationId || !messageText) {
-                  throw new Error('Missing conversationId or message content');
+                if (!messageText) {
+                  throw new Error('Missing message content');
                 }
 
                 // Create the chat message directly in storage
-                const chatMessage = await chatService.createChatMessage({
-                  conversationId: conversationId,
+                const chatMessage = await storage.createChatMessage({
                   userId: clientInfo.userId,
                   userName: clientInfo.userName || 'Unknown User',
+                  receiverId: receiverId,
                   message: messageText,
                   type: messageData.messageType || 'text'
                 });
@@ -108,18 +126,31 @@ export function setupWebSocket(server: Server) {
         }
       } catch (error) {
         logger.error('Error processing WebSocket message:', error);
-        ws.send(JSON.stringify({
-          type: 'error',
-          error: 'Invalid message format'
-        }));
+        if (ws.readyState === ws.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            error: 'Invalid message format'
+          }));
+        }
       }
     });
 
     ws.on('close', (code, reason) => {
+      clearInterval(pingInterval);
       const clientInfo = connectedClients.get(ws);
       if (clientInfo?.userId) {
-        chatService.removeUserSocket(clientInfo.userId, ws);
         logger.info(`User ${clientInfo.userName} (ID: ${clientInfo.userId}) disconnected`);
+        
+        // Broadcast user offline status to others
+        wss.clients.forEach(client => {
+          if (client.readyState === client.OPEN) {
+            client.send(JSON.stringify({
+              type: 'user_offline',
+              userId: clientInfo.userId,
+              userName: clientInfo.userName
+            }));
+          }
+        });
       }
       connectedClients.delete(ws);
       logger.info(`WebSocket connection closed: ${code} - ${reason}`);
@@ -127,23 +158,52 @@ export function setupWebSocket(server: Server) {
 
     ws.on('error', (error) => {
       logger.error('WebSocket error:', error);
+      clearInterval(pingInterval);
       const clientInfo = connectedClients.get(ws);
       if (clientInfo?.userId) {
-        chatService.removeUserSocket(clientInfo.userId, ws);
+        // Broadcast user offline status to others
+        wss.clients.forEach(client => {
+          if (client.readyState === client.OPEN) {
+            client.send(JSON.stringify({
+              type: 'user_offline',
+              userId: clientInfo.userId,
+              userName: clientInfo.userName
+            }));
+          }
+        });
       }
       connectedClients.delete(ws);
     });
 
+    ws.on('pong', () => {
+      // Connection is alive
+    });
+
     // Send welcome message
-    ws.send(JSON.stringify({
-      type: 'connected',
-      message: 'Connected to Test Case Management System'
-    }));
+    if (ws.readyState === ws.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'connected',
+        message: 'Connected to Test Case Management System',
+        timestamp: new Date().toISOString()
+      }));
+    }
   });
 
   wss.on('error', (error) => {
     logger.error('WebSocket Server error:', error);
   });
+
+  // Clean up inactive connections
+  setInterval(() => {
+    wss.clients.forEach(ws => {
+      if (ws.readyState !== ws.OPEN) {
+        const clientInfo = connectedClients.get(ws);
+        if (clientInfo) {
+          connectedClients.delete(ws);
+        }
+      }
+    });
+  }, 60000); // Check every minute
 
   logger.info(`WebSocket server started on path /ws`);
   
