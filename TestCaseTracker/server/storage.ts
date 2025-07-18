@@ -799,8 +799,7 @@ class MemStorage implements IStorage {
   }
 
   async getCustomers(): Promise<Customer[]> { 
-    return Array.from```text
-(this.customers.values());
+    return Array.from(this.customers.values());
   }
 
   async getCustomerById(id: number): Promise<Customer | null> {
