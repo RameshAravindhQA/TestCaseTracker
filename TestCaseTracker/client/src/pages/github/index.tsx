@@ -78,6 +78,11 @@ export default function GitHubIntegrationPage() {
   // Test connection mutation
   const testConnectionMutation = useMutation({
     mutationFn: async (integration: GitHubIntegration) => {
+      const urlParts = integration.repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+      if (!urlParts) {
+        throw new Error('Invalid repository URL format');
+      }
+
       const response = await fetch('/api/github/test-connection', {
         method: 'POST',
         headers: {
@@ -85,14 +90,15 @@ export default function GitHubIntegrationPage() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          repoUrl: integration.repoUrl,
+          username: urlParts[1],
+          repository: urlParts[2],
           accessToken: integration.accessToken,
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || 'Connection test failed');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Connection test failed');
       }
 
       return response.json();
@@ -114,37 +120,7 @@ export default function GitHubIntegrationPage() {
     },
   });
 
-  // Delete integration mutation
-  const deleteIntegrationMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await fetch(`/api/github/integrations/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || 'Failed to delete integration');
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "GitHub integration deleted successfully",
-        variant: "success",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/github/integrations'] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  
 
   return (
     <MainLayout>

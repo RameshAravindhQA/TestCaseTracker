@@ -116,8 +116,8 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || 'Failed to save GitHub integration');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save GitHub integration');
       }
 
       return response.json();
