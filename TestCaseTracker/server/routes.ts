@@ -1563,29 +1563,10 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
-  // Error boundary middleware for AI endpoint
-  const aiErrorBoundary = (req: Request, res: Response, next: NextFunction) => {
-    // Ensure JSON response headers are set
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    
-    // Wrap next() to catch any synchronous errors
-    try {
-      next();
-    } catch (error: any) {
-      console.error('AI endpoint error boundary caught:', error);
-      if (!res.headersSent) {
-        res.status(500).json({
-          success: false,
-          error: 'Server error in AI generation',
-          timestamp: new Date().toISOString()
-        });
-      }
-    }
-  };
+  
 
   // Enhanced AI Test Case Generation endpoint with multipart form data support
-  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, aiErrorBoundary, 
+  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, 
     (req, res, next) => {
       // Set response headers early to ensure JSON response
       res.setHeader('Content-Type', 'application/json');
@@ -1595,7 +1576,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       
       // Handle preflight requests
       if (req.method === 'OPTIONS') {
-        return res.status(200).json({ message: 'Options OK' });
+        return res.status(200).json({ success: true, message: 'Options OK' });
       }
       
       console.log('Enhanced AI Generation - Processing request...');
@@ -1621,7 +1602,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       });
     },
     async (req, res) => {
-      // Always ensure JSON response
+      // Always ensure JSON response helper
       const sendJsonResponse = (status: number, data: any) => {
         try {
           if (!res.headersSent) {
@@ -1773,27 +1754,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         console.error('Enhanced AI Generation - Critical handler error:', handlerError);
         
         // Final fallback response - ensure JSON even in critical errors
-        try {
-          if (!res.headersSent) {
-            res.setHeader('Content-Type', 'application/json');
-            return res.status(500).json({ 
-              success: false,
-              error: 'Internal server error during test case generation',
-              details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
-              timestamp: new Date().toISOString()
-            });
-          }
-        } catch (responseError) {
-          console.error('Failed to send error response:', responseError);
-          // Absolute last resort
-          try {
-            if (!res.headersSent) {
-              res.status(500).end('{"success":false,"error":"Critical server error"}');
-            }
-          } catch (finalError) {
-            console.error('Complete response system failure:', finalError);
-          }
-        }
+        return sendJsonResponse(500, { 
+          success: false,
+          error: 'Internal server error during test case generation',
+          details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
+          timestamp: new Date().toISOString()
+        });
       }
     }
   );
