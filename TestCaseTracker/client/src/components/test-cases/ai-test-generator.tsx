@@ -83,39 +83,87 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         formData.append('imageCount', data.images.length.toString());
       }
 
-      try {
-        const response = await fetch('/api/ai/generate-enhanced-test-cases', {
-          method: 'POST',
-          body: formData,
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json'
+      let attempt = 0;
+      const maxAttempts = 3;
+      const retryDelay = 1000; // 1 second
+
+      while (attempt < maxAttempts) {
+        try {
+          console.log(`AI Generation attempt ${attempt + 1}/${maxAttempts}`);
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+          const response = await fetch('/api/ai/generate-enhanced-test-cases', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+            headers: {
+              'Accept': 'application/json'
+            },
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+
+          console.log('Enhanced AI API Response status:', response.status);
+          console.log('Enhanced AI API Response headers:', Object.fromEntries(response.headers.entries()));
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Enhanced AI API Error response:', errorText);
+            
+            // If it's a server error (5xx) or timeout, retry
+            if (response.status >= 500 && attempt < maxAttempts - 1) {
+              console.log(`Server error, retrying in ${retryDelay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              attempt++;
+              continue;
+            }
+            
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
-        });
 
-        console.log('Enhanced AI API Response status:', response.status);
-        console.log('Enhanced AI API Response headers:', response.headers);
+          // Check if response is actually JSON
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const responseText = await response.text();
+            console.error('Expected JSON but got:', contentType);
+            console.error('Response text (first 500 chars):', responseText.substring(0, 500));
+            
+            // If it's an HTML error page, retry
+            if (responseText.includes('<!DOCTYPE html>') && attempt < maxAttempts - 1) {
+              console.log(`Received HTML error page, retrying in ${retryDelay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              attempt++;
+              continue;
+            }
+            
+            throw new Error('Server returned non-JSON response');
+          }
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Enhanced AI API Error response:', errorText);
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          const result = await response.json();
+          console.log('Enhanced AI API Success response:', result);
+          return result;
+          
+        } catch (error: any) {
+          console.error(`Enhanced AI Generation attempt ${attempt + 1} failed:`, error);
+          
+          // If it's a network error or timeout, retry
+          if ((error.name === 'AbortError' || error.message.includes('fetch')) && attempt < maxAttempts - 1) {
+            console.log(`Network error, retrying in ${retryDelay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            attempt++;
+            continue;
+          }
+          
+          // If we've exhausted all attempts, throw the error
+          if (attempt === maxAttempts - 1) {
+            throw error;
+          }
+          
+          attempt++;
         }
-
-        // Check if response is actually JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          const responseText = await response.text();
-          console.error('Expected JSON but got:', contentType, responseText.substring(0, 200));
-          throw new Error('Server returned non-JSON response');
-        }
-
-        const result = await response.json();
-        console.log('Enhanced AI API Success response:', result);
-        return result;
-      } catch (error) {
-        console.error('Enhanced AI Generation request failed:', error);
-        throw error;
       }
     },
     onSuccess: (data) => {
@@ -139,9 +187,27 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
     },
     onError: (error: any) => {
       console.error('Enhanced AI Generation error:', error);
+      
+      let errorMessage = "Failed to generate test cases. Please try again.";
+      let errorTitle = "Generation Failed";
+      
+      if (error.message.includes('non-JSON response')) {
+        errorMessage = "Server error occurred. The service might be temporarily unavailable. Please try again in a few moments.";
+        errorTitle = "Server Error";
+      } else if (error.message.includes('AbortError') || error.message.includes('timeout')) {
+        errorMessage = "Request timed out. Please check your connection and try again.";
+        errorTitle = "Request Timeout";
+      } else if (error.message.includes('HTTP 500')) {
+        errorMessage = "Internal server error. Please try again or contact support if the issue persists.";
+        errorTitle = "Server Error";
+      } else if (error.message.includes('HTTP 400')) {
+        errorMessage = "Invalid request. Please check your input and try again.";
+        errorTitle = "Invalid Request";
+      }
+      
       toast({
-        title: "Generation failed",
-        description: `Failed to generate test cases: ${error.message}. Please try again.`,
+        title: errorTitle,
+        description: errorMessage,
         variant: "destructive",
       });
     },

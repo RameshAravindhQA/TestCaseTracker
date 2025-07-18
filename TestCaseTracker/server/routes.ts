@@ -1480,6 +1480,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 // AI Test Case Generation endpoint
   apiRouter.post("/ai/generate-test-cases", isAuthenticated, async (req, res) => {
     try {
+      // Ensure JSON response header
+      res.setHeader('Content-Type', 'application/json');
+      
       const { requirement, projectContext, moduleContext, testType, priority } = req.body;
       
       if (!requirement) {
@@ -1533,6 +1536,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   // Enhanced AI Test Case Generation endpoint with multipart form data support
   apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, 
     (req, res, next) => {
+      // Ensure JSON response header is set early
+      res.setHeader('Content-Type', 'application/json');
+      
       bugAttachmentUpload.array('images', 10)(req, res, (err) => {
         if (err) {
           console.error("Enhanced AI file upload error:", err);
@@ -1545,9 +1551,6 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       try {
         console.log('Enhanced AI Generation Request Body:', req.body);
         console.log('Enhanced AI Generation Files:', req.files);
-        
-        // Set proper content type header
-        res.setHeader('Content-Type', 'application/json');
         
         const { 
           requirement, 
@@ -1613,7 +1616,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         res.json(response);
       } catch (error) {
         console.error('Enhanced AI test case generation error:', error);
-        res.status(500).json({ error: 'Failed to generate enhanced test cases' });
+        res.status(500).json({ error: 'Failed to generate enhanced test cases', details: error.message });
       }
     }
   );
@@ -5083,6 +5086,22 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       console.error("Delete todo error:", error);
       res.status(500).json({ message: "Server error" });
     }
+  });
+
+  // Global error handler for API routes - must be placed at the end
+  apiRouter.use((error: any, req: Request, res: Response, next: NextFunction) => {
+    console.error('API Error Handler caught:', error);
+    
+    // Ensure we always return JSON for API routes
+    res.setHeader('Content-Type', 'application/json');
+    
+    const status = error.status || error.statusCode || 500;
+    const message = error.message || 'Internal Server Error';
+    
+    res.status(status).json({
+      error: message,
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
   });
 
   // Prefix all API routes with /api
