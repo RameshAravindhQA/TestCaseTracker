@@ -1,0 +1,17 @@
+[MESSENGER] WebSocket connected successfully
+messenger.tsx:184 [MESSENGER] Received WebSocket message: {type: 'connection_established', timestamp: '2025-07-18T08:28:32.588Z'}
+messenger.tsx:184 [MESSENGER] Received WebSocket message: {type: 'presence_update', userId: 1, isOnline: true, timestamp: '2025-07-18T08:28:33.175Z'}isOnline: truetimestamp: "2025-07-18T08:28:33.175Z"type: "presence_update"userId: 1[[Prototype]]: Object
+queryClient.ts:38 Starting GET request to /api/users/public
+messenger.tsx:184 [MESSENGER] Received WebSocket message: {type: 'authenticated', userId: 1, onlineUsers: Array(2)}onlineUsers: Array(2)0: lastSeen: "2025-07-18T08:28:33.175Z"userId: 1userName: "Ramesh"[[Prototype]]: Objectconstructor: ƒ Object()hasOwnProperty: ƒ hasOwnProperty()isPrototypeOf: ƒ isPrototypeOf()propertyIsEnumerable: ƒ propertyIsEnumerable()toLocaleString: ƒ toLocaleString()toString: ƒ toString()valueOf: ƒ valueOf()__defineGetter__: ƒ __defineGetter__()__defineSetter__: ƒ __defineSetter__()__lookupGetter__: ƒ __lookupGetter__()__lookupSetter__: ƒ __lookupSetter__()__proto__: (...)get __proto__: ƒ __proto__()set __proto__: ƒ __proto__()1: {userId: 2, userName: 'Ramesh', lastSeen: '2025-07-18T08:27:22.479Z'}length: 2[[Prototype]]: Array(0)type: "authenticated"userId: 1[[Prototype]]: Objectconstructor: ƒ Object()hasOwnProperty: ƒ hasOwnProperty()isPrototypeOf: ƒ isPrototypeOf()propertyIsEnumerable: ƒ propertyIsEnumerable()toLocaleString: ƒ toLocaleString()toString: ƒ toString()valueOf: ƒ valueOf()__defineGetter__: ƒ __defineGetter__()__defineSetter__: ƒ __defineSetter__()__lookupGetter__: ƒ __lookupGetter__()__lookupSetter__: ƒ __lookupSetter__()__proto__: (...)get __proto__: ƒ __proto__()set __proto__: ƒ __proto__()
+messenger.tsx:188 [MESSENGER] User authenticated via WebSocket
+messenger.tsx:225 [MESSENGER] WebSocket connection closed: CloseEvent {isTrusted: true, wasClean: true, code: 1005, reason: '', type: 'close', …}
+soundManager.js:145 🔊 Clickable element detected, playing click sound
+soundManager.js:282 🔊 Attempting to play sound: click
+soundManager.js:290 🎵 Successfully played sound: click
+2queryClient.ts:38 Starting GET request to /api/conversations/direct?userId=2
+2messenger:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was receivedUnderstand this error
+client:736  GET https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev:24678/ net::ERR_CONNECTION_TIMED_OUT
+ping @ client:736
+waitForSuccessfulPing @ client:749
+(anonymous) @ client:561Understand this error
+4queryClient.ts:38 Starting GET request to /api/conversations/direct?userId=2

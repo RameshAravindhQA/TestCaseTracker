@@ -1,0 +1,32 @@
+chunk-RPCDYKBN.js?v=7e213408:14032 The above error occurred in the <ModuleSelect> component:
+
+    at ModuleSelect (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/components/ui/module-select.tsx:26:3)
+    at div
+    at div
+    at div
+    at AIGeneratorPage (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/pages/ai-generator/index.tsx:33:41)
+    at Suspense
+    at ProtectedRoute (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/lib/protected-route.tsx:21:34)
+    at ProtectedLazyComponent (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/App.tsx?v=AWx1gjqJ2wIPRyltRGULW:89:35)
+    at Route (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…kspace/TestCaseTracker/node_modules/.vite/deps/wouter.js?v=7e213408:206:16)
+    at Switch (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…kspace/TestCaseTracker/node_modules/.vite/deps/wouter.js?v=7e213408:262:17)
+    at Router
+    at Provider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…TestCaseTracker/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=7e213408:38:15)
+    at TooltipProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…Tracker/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=7e213408:65:5)
+    at V (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…ce/TestCaseTracker/node_modules/.vite/deps/next-themes.js?v=7e213408:44:25)
+    at J (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…ce/TestCaseTracker/node_modules/.vite/deps/next-themes.js?v=7e213408:42:18)
+    at ThemeProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/components/theme/theme-provider.tsx:31:3)
+    at AuthProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/hooks/use-auth.tsx:26:32)
+    at AppContent (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/App.tsx?v=AWx1gjqJ2wIPRyltRGULW:431:53)
+    at SoundProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/hooks/use-sound-provider.tsx:21:33)
+    at QueryClientProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…Tracker/node_modules/.vite/deps/@tanstack_react-query.js?v=7e213408:2933:3)
+    at App (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/App.tsx?v=AWx1gjqJ2wIPRyltRGULW:471:53)
+    at AuthProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/hooks/use-auth.tsx?v=AWx1gjqJ2wIPRyltRGULW:26:32)
+    at QueryClientProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…Tracker/node_modules/.vite/deps/@tanstack_react-query.js?v=7e213408:2933:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+main.tsx:17 Global error: TypeError: Cannot read properties of null (reading 'toString')
+    at ModuleSelect (module-select.tsx:38:52)
+chunk-RPCDYKBN.js?v=7e213408:19413 Uncaught TypeError: Cannot read properties of null (reading 'toString')
+    at ModuleSelect (module-select.tsx:38:52)
