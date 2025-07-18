@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -142,14 +141,14 @@ export function Messenger() {
         setConnectionStatus('connecting');
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws`;
-        
+
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onopen = () => {
           setConnectionStatus('connected');
           setIsConnected(true);
-          
+
           // Authenticate with server
           ws.send(JSON.stringify({
             type: 'authenticate',
@@ -163,7 +162,7 @@ export function Messenger() {
         ws.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data);
-            
+
             if (message.type === 'new_message') {
               // Refresh messages when new message received
               queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact?.id] });
@@ -178,7 +177,7 @@ export function Messenger() {
         ws.onclose = () => {
           setConnectionStatus('disconnected');
           setIsConnected(false);
-          
+
           // Attempt to reconnect after 3 seconds
           setTimeout(() => {
             if (user) {
@@ -221,7 +220,7 @@ export function Messenger() {
       setAttachments([]);
       setReplyingTo(null);
       queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact?.id] });
-      
+
       // Also send via WebSocket for real-time delivery
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && selectedContact) {
         wsRef.current.send(JSON.stringify({
@@ -233,7 +232,7 @@ export function Messenger() {
           }
         }));
       }
-      
+
       toast({
         title: "✅ Message sent",
         description: "Your message has been delivered successfully",
@@ -326,7 +325,7 @@ export function Messenger() {
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedContact) return;
-    
+
     const messageData = {
       receiverId: selectedContact.id,
       content: newMessage.trim(),
@@ -420,7 +419,7 @@ export function Messenger() {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInHours = Math.abs(now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
+
     if (diffInHours < 24) {
       return format(date, 'HH:mm');
     } else {
@@ -509,7 +508,7 @@ export function Messenger() {
               <Plus className="h-4 w-4" />
             </Button>
           </div>
-          
+
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -552,7 +551,7 @@ export function Messenger() {
                       <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />
                     )}
                   </div>
-                  
+
                   <div className="ml-3 flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -596,7 +595,7 @@ export function Messenger() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   {/* Connection Status */}
                   <div className="flex items-center space-x-1">
@@ -610,7 +609,7 @@ export function Messenger() {
                        connectionStatus === 'connecting' ? 'Connecting' : 'Offline'}
                     </span>
                   </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Button 
                     size="sm" 
@@ -803,7 +802,7 @@ export function Messenger() {
                   </Button>
                 </div>
               )}
-              
+
               {attachments.length > 0 && (
                 <div className="mb-2 flex flex-wrap gap-2">
                   {attachments.map((file, index) => (
@@ -832,6 +831,7 @@ export function Messenger() {
                   className="hidden"
                   accept="image/*,video/*,.pdf,.doc,.docx,.txt"
                 />
+```text
                 <Button 
                   size="sm" 
                   variant="outline"
