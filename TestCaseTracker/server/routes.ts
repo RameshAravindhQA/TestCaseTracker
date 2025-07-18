@@ -6,6 +6,7 @@ import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject } from "./m
 import { logger } from "./logger";
 import { emailService } from "./email-service";
 import githubIntegrationsRouter from "./api/github-integrations";
+import { geminiService } from "./gemini-service";
 import { 
   insertUserSchema, 
   insertProjectSchema, 
@@ -1491,14 +1492,48 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         });
       }
 
-      return res.json({
-        configured: true,
-        apiKeyPrefix: process.env.GOOGLE_API_KEY.substring(0, 10) + '...',
-        message: 'Gemini API key is configured (mock service active)',
-        note: 'Using intelligent mock service for test case generation'
-      });
+      // Test Gemini service
+      try {
+        
+        const testRequest = {
+          requirement: 'Test registration form with email and password',
+          projectContext: 'Test project',
+          moduleContext: 'Registration',
+          testType: 'functional',
+          priority: 'Medium',
+          inputType: 'text',
+          images: []
+        };
+        
+        console.log('🧪 Testing Gemini service...');
+        const testResponse = await geminiService.generateTestCases(testRequest);
+        
+        return res.json({
+          configured: true,
+          apiKeyPrefix: process.env.GOOGLE_API_KEY.substring(0, 10) + '...',
+          message: 'Gemini API key is configured and service is working',
+          testResult: {
+            success: true,
+            testCasesGenerated: testResponse.testCases.length,
+            hasAnalysis: !!testResponse.analysis
+          },
+          timestamp: new Date().toISOString()
+        });
+        
+      } catch (serviceError: any) {
+        console.error('❌ Gemini service test failed:', serviceError);
+        return res.json({
+          configured: true,
+          apiKeyPrefix: process.env.GOOGLE_API_KEY.substring(0, 10) + '...',
+          message: 'Gemini API key is configured but service failed',
+          error: serviceError.message,
+          fallbackActive: true,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
     } catch (error: any) {
-      console.error('Gemini debug error:', error);
+      console.error('❌ Gemini debug error:', error);
       res.status(500).json({
         configured: false,
         error: error.message,
@@ -1579,12 +1614,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         return res.status(200).json({ success: true, message: 'Options OK' });
       }
       
-      console.log('Enhanced AI Generation - Processing request...');
+      console.log('🤖 Enhanced AI Generation - Processing request...');
       
       // Handle file upload with error handling
       bugAttachmentUpload.array('images', 10)(req, res, (err) => {
         if (err) {
-          console.error("Enhanced AI file upload error:", err);
+          console.error("❌ Enhanced AI file upload error:", err);
           // Ensure JSON response even on error
           if (!res.headersSent) {
             res.setHeader('Content-Type', 'application/json');
@@ -1597,7 +1632,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           }
           return;
         }
-        console.log('Enhanced AI Generation - File upload successful');
+        console.log('✅ Enhanced AI Generation - File upload successful');
         next();
       });
     },
@@ -1610,24 +1645,24 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             return res.status(status).json(data);
           }
         } catch (error) {
-          console.error('Error sending JSON response:', error);
+          console.error('❌ Error sending JSON response:', error);
           // Last resort fallback
           try {
             if (!res.headersSent) {
               res.status(500).end('{"success":false,"error":"Response error"}');
             }
           } catch (finalError) {
-            console.error('Complete response failure:', finalError);
+            console.error('❌ Complete response failure:', finalError);
           }
         }
       };
 
       try {
-        console.log('Enhanced AI Generation - Handler started');
+        console.log('🤖 Enhanced AI Generation - Handler started');
         
         // Validate authentication
         if (!req.session || !req.session.userId) {
-          console.log('Enhanced AI Generation - Authentication failed');
+          console.log('❌ Enhanced AI Generation - Authentication failed');
           return sendJsonResponse(401, { 
             success: false,
             error: 'Authentication required',
@@ -1648,16 +1683,17 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           inputType 
         } = req.body;
         
-        console.log('Enhanced AI Generation - Input validation:', {
+        console.log('🔍 Enhanced AI Generation - Input validation:', {
           hasRequirement: !!requirement,
           hasWebsiteUrl: !!websiteUrl,
           filesCount: req.files ? req.files.length : 0,
-          inputType: inputType || 'text'
+          inputType: inputType || 'text',
+          requirement: requirement?.substring(0, 100) + '...'
         });
         
         // Input validation
         if (!requirement && !websiteUrl && (!req.files || req.files.length === 0)) {
-          console.log('Enhanced AI Generation - Missing required input');
+          console.log('❌ Enhanced AI Generation - Missing required input');
           return sendJsonResponse(400, { 
             success: false,
             error: 'At least one input is required: requirement text, website URL, or uploaded images',
@@ -1665,93 +1701,54 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           });
         }
 
-        // Generate test cases with robust mock service
-        let mockTestCases = [];
-        let analysisResults = {
-          coverage: 'Comprehensive',
-          complexity: 'Medium',
-          focusAreas: 'User Interface, Data Validation, Error Handling',
-          suggestions: ['Consider adding performance tests', 'Include accessibility testing']
-        };
-
+        // Try to use Gemini service first
         try {
-          const isRegistrationTest = requirement && requirement.toLowerCase().includes('register');
+          console.log('🔮 Attempting to use Gemini AI service...');
           
-          if (isRegistrationTest || (moduleContext && moduleContext.toLowerCase().includes('registration'))) {
-            console.log('Enhanced AI Generation - Generating registration test cases');
-            mockTestCases = generateRegistrationTestCases(requirement, testType, priority);
-            analysisResults.focusAreas = 'Registration Forms, Input Validation, Security';
-          } else {
-            console.log('Enhanced AI Generation - Generating based on input type:', inputType);
-            switch (inputType) {
-              case 'text':
-                mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
-                break;
-              case 'url':
-                mockTestCases = generateUrlBasedTestCases(websiteUrl, userFlows, testType, priority);
-                analysisResults.focusAreas = 'Navigation, UI Components, Cross-browser Testing';
-                break;
-              case 'image':
-                mockTestCases = generateImageBasedTestCases(req.files, requirement, testType, priority);
-                analysisResults.focusAreas = 'Visual Elements, Layout, Responsive Design';
-                break;
-              case 'inspect':
-                mockTestCases = generateInspectionBasedTestCases(elementInspection, requirement, testType, priority);
-                analysisResults.focusAreas = 'Element Interactions, JavaScript Functionality';
-                break;
-              default:
-                mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
-            }
-          }
-        } catch (generationError) {
-          console.error('Enhanced AI Generation - Test case generation failed:', generationError);
-          // Fallback to basic test cases
-          mockTestCases = [{
-            feature: "Generated Test Case",
-            testObjective: "Verify the functionality works as expected",
-            preConditions: "System is accessible and user has required permissions",
-            testSteps: "1. Execute the test scenario\n2. Verify expected behavior\n3. Document results",
-            expectedResult: "Functionality works as expected without errors",
-            priority: priority || "Medium",
-            testType: testType || "functional",
-            coverage: "Basic functionality",
-            category: "AI Generated",
-            tags: ["ai-generated", "fallback"]
-          }];
+          // Prepare request for Gemini
+          const geminiRequest = {
+            requirement: requirement || '',
+            projectContext: projectContext || '',
+            moduleContext: moduleContext || '',
+            testType: testType || 'functional',
+            priority: priority || 'Medium',
+            websiteUrl: websiteUrl || '',
+            elementInspection: elementInspection || '',
+            userFlows: userFlows || '',
+            businessRules: businessRules || '',
+            inputType: inputType || 'text',
+            images: req.files || []
+          };
+          
+          console.log('📤 Sending request to Gemini service...');
+          const geminiResponse = await geminiService.generateTestCases(geminiRequest);
+          
+          console.log('✅ Gemini service response received:', {
+            testCasesCount: geminiResponse.testCases.length,
+            hasAnalysis: !!geminiResponse.analysis
+          });
+          
+          return sendJsonResponse(200, {
+            success: true,
+            testCases: geminiResponse.testCases,
+            analysis: geminiResponse.analysis,
+            message: geminiResponse.message,
+            source: 'gemini-ai',
+            timestamp: new Date().toISOString()
+          });
+          
+        } catch (geminiError: any) {
+          console.error('❌ Gemini service failed:', geminiError.message);
+          console.log('🔄 Falling back to mock service...');
+          
+          // Fall back to mock service
+          const mockResponse = generateMockResponse(requirement, moduleContext, testType, priority, inputType, websiteUrl, req.files, businessRules, elementInspection, userFlows);
+          
+          return sendJsonResponse(200, mockResponse);
         }
-
-        // Ensure we have valid test cases
-        if (!Array.isArray(mockTestCases) || mockTestCases.length === 0) {
-          mockTestCases = [{
-            feature: "Default Test Case",
-            testObjective: "Verify basic functionality",
-            preConditions: "System is ready for testing",
-            testSteps: "1. Perform basic test\n2. Verify results",
-            expectedResult: "System behaves as expected",
-            priority: priority || "Medium",
-            testType: testType || "functional",
-            coverage: "Basic",
-            category: "AI Generated",
-            tags: ["ai-generated", "default"]
-          }];
-        }
-
-        console.log('Enhanced AI Generation - Generated test cases count:', mockTestCases.length);
-
-        const response = {
-          success: true,
-          testCases: mockTestCases,
-          analysis: analysisResults,
-          message: `Successfully generated ${mockTestCases.length} test cases using intelligent mock service with ${inputType || 'text'} input`,
-          source: 'mock-service',
-          timestamp: new Date().toISOString()
-        };
-
-        console.log('Enhanced AI Generation - Sending successful response');
-        return sendJsonResponse(200, response);
         
       } catch (handlerError: any) {
-        console.error('Enhanced AI Generation - Critical handler error:', handlerError);
+        console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
         
         // Final fallback response - ensure JSON even in critical errors
         return sendJsonResponse(500, { 
@@ -1763,6 +1760,73 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
     }
   );
+
+  // Generate mock response when Gemini fails
+  function generateMockResponse(requirement, moduleContext, testType, priority, inputType, websiteUrl, files, businessRules, elementInspection, userFlows) {
+    console.log('🎭 Generating mock response...');
+    
+    let mockTestCases = [];
+    let analysisResults = {
+      coverage: 'Comprehensive',
+      complexity: 'Medium',
+      focusAreas: 'User Interface, Data Validation, Error Handling',
+      suggestions: ['Consider adding performance tests', 'Include accessibility testing']
+    };
+
+    const isRegistrationTest = requirement && requirement.toLowerCase().includes('register');
+    
+    if (isRegistrationTest || (moduleContext && moduleContext.toLowerCase().includes('registration'))) {
+      console.log('🎭 Generating registration test cases');
+      mockTestCases = generateRegistrationTestCases(requirement, testType, priority);
+      analysisResults.focusAreas = 'Registration Forms, Input Validation, Security';
+    } else {
+      console.log('🎭 Generating based on input type:', inputType);
+      switch (inputType) {
+        case 'text':
+          mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
+          break;
+        case 'url':
+          mockTestCases = generateUrlBasedTestCases(websiteUrl, userFlows, testType, priority);
+          analysisResults.focusAreas = 'Navigation, UI Components, Cross-browser Testing';
+          break;
+        case 'image':
+          mockTestCases = generateImageBasedTestCases(files, requirement, testType, priority);
+          analysisResults.focusAreas = 'Visual Elements, Layout, Responsive Design';
+          break;
+        case 'inspect':
+          mockTestCases = generateInspectionBasedTestCases(elementInspection, requirement, testType, priority);
+          analysisResults.focusAreas = 'Element Interactions, JavaScript Functionality';
+          break;
+        default:
+          mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
+      }
+    }
+
+    // Ensure we have valid test cases
+    if (!Array.isArray(mockTestCases) || mockTestCases.length === 0) {
+      mockTestCases = [{
+        feature: "Default Test Case",
+        testObjective: "Verify basic functionality",
+        preConditions: "System is ready for testing",
+        testSteps: "1. Perform basic test\n2. Verify results",
+        expectedResult: "System behaves as expected",
+        priority: priority || "Medium",
+        testType: testType || "functional",
+        coverage: "Basic",
+        category: "AI Generated",
+        tags: ["ai-generated", "default"]
+      }];
+    }
+
+    return {
+      success: true,
+      testCases: mockTestCases,
+      analysis: analysisResults,
+      message: `Successfully generated ${mockTestCases.length} test cases using intelligent mock service with ${inputType || 'text'} input`,
+      source: 'mock-service',
+      timestamp: new Date().toISOString()
+    };
+  }
 
   // Helper function for registration-specific test cases
   function generateRegistrationTestCases(requirement, testType, priority) {

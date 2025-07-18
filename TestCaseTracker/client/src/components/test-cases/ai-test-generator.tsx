@@ -98,6 +98,14 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         try {
           console.log(`🔄 AI Generation attempt ${attempt + 1}/${maxAttempts}`);
 
+          // Play sound for AI generation start
+          try {
+            const { playSound } = await import('../../lib/soundManager.js');
+            await playSound('crud');
+          } catch (soundError) {
+            console.warn('Sound playback failed:', soundError);
+          }
+
           const controller = new AbortController();
           const timeoutId = setTimeout(() => {
             console.log('⏰ Request timeout, aborting...');
@@ -275,15 +283,28 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       throw new Error('Unexpected error in AI generation');
     },
     onSuccess: (data) => {
-      console.log('Enhanced AI Generation Response:', data);
+      console.log('✅ Enhanced AI Generation Response:', data);
+      
+      // Play success sound
+      try {
+        import('../../lib/soundManager.js').then(({ playSound }) => {
+          playSound('success');
+        });
+      } catch (soundError) {
+        console.warn('Sound playback failed:', soundError);
+      }
+      
       setShowResults(true);
       setAnalysisResults(data.analysis);
 
       if (data.testCases && Array.isArray(data.testCases) && data.testCases.length > 0) {
         setGeneratedTestCases(data.testCases);
+        
+        const sourceLabel = data.source === 'gemini-ai' ? 'Google Gemini AI' : 'Intelligent Mock Service';
+        
         toast({
           title: "🎯 AI Test Cases Generated",
-          description: `Generated ${data.testCases.length} comprehensive test cases with ${data.analysis?.coverage || 'detailed'} coverage`,
+          description: `Generated ${data.testCases.length} comprehensive test cases using ${sourceLabel}`,
         });
       } else {
         toast({
@@ -294,7 +315,16 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       }
     },
     onError: (error: any) => {
-      console.error('Enhanced AI Generation error:', error);
+      console.error('❌ Enhanced AI Generation error:', error);
+
+      // Play error sound
+      try {
+        import('../../lib/soundManager.js').then(({ playSound }) => {
+          playSound('error');
+        });
+      } catch (soundError) {
+        console.warn('Sound playback failed:', soundError);
+      }
 
       let errorMessage = "Failed to generate test cases. Please try again.";
       let errorTitle = "Generation Failed";
