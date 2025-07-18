@@ -633,6 +633,7 @@ export function Messenger() {
                   </div>
                 </div>
               </div>
+            </div>
 
             {/* Messages */}
             <ScrollArea className="flex-1 p-4 bg-gray-50 dark:bg-gray-900">
@@ -826,12 +827,11 @@ export function Messenger() {
                 <input
                   type="file"
                   ref={fileInputRef}
-                  onChange={handleFileUpload}
+onChange={handleFileUpload}
                   multiple
                   className="hidden"
                   accept="image/*,video/*,.pdf,.doc,.docx,.txt"
                 />
-```text
                 <Button 
                   size="sm" 
                   variant="outline"
@@ -890,7 +890,7 @@ export function Messenger() {
                 </Button>
               </div>
             </div>
-          </div>
+          </>
         ) : (
           <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
             <div className="text-center">

@@ -942,12 +942,13 @@ export default function ProfilePage() {
                           className="relative w-32 h-32 mx-auto mb-4 cursor-pointer group"
                           onClick={handleProfilePictureClick}
                         >
-                          <div className="w-full h-full bg-white dark:bg-gray-800 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600">
+                          <div className="w-full h-full bg-white dark:bg-gray-800 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center">
                             {avatarLottieData ? (
                               <LottieAvatar
                                 animationData={avatarLottieData}
-                                size="lg"
-                                className="w-full h-full"
+                                width={120}
+                                height={120}
+                                className="w-full h-full object-contain"
                               />
                             ) : (
                               <Avatar className="w-full h-full">

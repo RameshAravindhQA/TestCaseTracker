@@ -205,7 +205,7 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
           }`}
           onClick={handleSelect}
         >
-          <div className="relative bg-white rounded overflow-hidden">
+          <div className="relative bg-white rounded overflow-hidden flex items-center justify-center">
             <Lottie
               key={`${animationKey}-${name}`}
               lottieRef={lottieRef}
@@ -234,7 +234,7 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
         </motion.div>
       ) : (
         /* Normal mode */
-        <div className="relative">
+        <div className="relative flex items-center justify-center">
           <Lottie
             key={`${animationKey}-${name}`}
             lottieRef={lottieRef}
