@@ -1563,8 +1563,29 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Error boundary middleware for AI endpoint
+  const aiErrorBoundary = (req: Request, res: Response, next: NextFunction) => {
+    // Ensure JSON response headers are set
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    
+    // Wrap next() to catch any synchronous errors
+    try {
+      next();
+    } catch (error: any) {
+      console.error('AI endpoint error boundary caught:', error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          error: 'Server error in AI generation',
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+  };
+
   // Enhanced AI Test Case Generation endpoint with multipart form data support
-  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, 
+  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, aiErrorBoundary, 
     (req, res, next) => {
       // Set response headers early to ensure JSON response
       res.setHeader('Content-Type', 'application/json');
@@ -1583,12 +1604,17 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       bugAttachmentUpload.array('images', 10)(req, res, (err) => {
         if (err) {
           console.error("Enhanced AI file upload error:", err);
-          return res.status(400).json({ 
-            success: false,
-            error: 'File upload failed',
-            details: err.message,
-            timestamp: new Date().toISOString()
-          });
+          // Ensure JSON response even on error
+          if (!res.headersSent) {
+            res.setHeader('Content-Type', 'application/json');
+            return res.status(400).json({ 
+              success: false,
+              error: 'File upload failed',
+              details: err.message,
+              timestamp: new Date().toISOString()
+            });
+          }
+          return;
         }
         console.log('Enhanced AI Generation - File upload successful');
         next();
@@ -1604,6 +1630,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           }
         } catch (error) {
           console.error('Error sending JSON response:', error);
+          // Last resort fallback
+          try {
+            if (!res.headersSent) {
+              res.status(500).end('{"success":false,"error":"Response error"}');
+            }
+          } catch (finalError) {
+            console.error('Complete response failure:', finalError);
+          }
         }
       };
 
@@ -1738,13 +1772,28 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       } catch (handlerError: any) {
         console.error('Enhanced AI Generation - Critical handler error:', handlerError);
         
-        // Final fallback response
-        return sendJsonResponse(500, { 
-          success: false,
-          error: 'Internal server error during test case generation',
-          details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
-          timestamp: new Date().toISOString()
-        });
+        // Final fallback response - ensure JSON even in critical errors
+        try {
+          if (!res.headersSent) {
+            res.setHeader('Content-Type', 'application/json');
+            return res.status(500).json({ 
+              success: false,
+              error: 'Internal server error during test case generation',
+              details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
+              timestamp: new Date().toISOString()
+            });
+          }
+        } catch (responseError) {
+          console.error('Failed to send error response:', responseError);
+          // Absolute last resort
+          try {
+            if (!res.headersSent) {
+              res.status(500).end('{"success":false,"error":"Critical server error"}');
+            }
+          } catch (finalError) {
+            console.error('Complete response system failure:', finalError);
+          }
+        }
       }
     }
   );

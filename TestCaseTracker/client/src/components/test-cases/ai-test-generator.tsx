@@ -124,17 +124,52 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             ok: response.ok
           });
 
-          // Enhanced response handling
+          // Enhanced response handling - avoid reading body multiple times
           let responseData;
           let isJsonResponse = false;
+          let responseText = '';
 
           try {
             const contentType = response.headers.get('content-type') || '';
             console.log('📝 Response content type:', contentType);
 
-            // Always try to parse as JSON first
+            // Read the response body only once
             try {
-              responseData = await response.json();
+              responseText = await response.text();
+              console.log('📄 Response text length:', responseText.length);
+              console.log('📄 Response preview:', responseText.substring(0, 200));
+            } catch (textError) {
+              console.error('❌ Failed to read response text:', textError);
+              
+              if (attempt < maxAttempts - 1) {
+                const delay = baseDelay * Math.pow(2, attempt);
+                console.log(`🔄 Text read error, retrying in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                attempt++;
+                continue;
+              }
+
+              throw new Error('Failed to read server response. Please check your connection and try again.');
+            }
+
+            // Check if it's an HTML error page
+            if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html')) {
+              console.log('🔄 HTML error page detected');
+
+              if (attempt < maxAttempts - 1) {
+                const delay = baseDelay * Math.pow(2, attempt);
+                console.log(`🔄 Retrying in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                attempt++;
+                continue;
+              }
+
+              throw new Error('Server is experiencing issues. The service may be restarting. Please try again in a moment.');
+            }
+
+            // Try to parse as JSON
+            try {
+              responseData = JSON.parse(responseText);
               isJsonResponse = true;
               console.log('✅ Received JSON response:', {
                 success: responseData.success,
@@ -142,26 +177,10 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                 testCasesCount: responseData.testCases?.length || 0
               });
             } catch (jsonError) {
-              // If JSON parsing fails, try to get text
-              const responseText = await response.text();
-              console.error('❌ Failed to parse JSON, response text:', responseText.substring(0, 500));
+              console.error('❌ Failed to parse JSON:', jsonError);
+              console.error('❌ Response text:', responseText.substring(0, 500));
 
-              // Check if it's an HTML error page
-              if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html')) {
-                console.log('🔄 HTML error page detected');
-
-                if (attempt < maxAttempts - 1) {
-                  const delay = baseDelay * Math.pow(2, attempt);
-                  console.log(`🔄 Retrying in ${delay}ms...`);
-                  await new Promise(resolve => setTimeout(resolve, delay));
-                  attempt++;
-                  continue;
-                }
-
-                throw new Error('Server is experiencing issues. The service may be restarting. Please try again in a moment.');
-              }
-
-              // Try to extract error message from HTML if possible
+              // Try to extract error message from text
               if (responseText.includes('error')) {
                 throw new Error('Server error occurred. Please try again.');
               }
