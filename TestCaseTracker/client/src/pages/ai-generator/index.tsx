@@ -58,20 +58,37 @@ export default function AIGeneratorPage() {
 
   const generateTestCasesMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log('Sending AI request:', data);
       const response = await fetch('/api/ai/generate-test-cases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      if (!response.ok) throw new Error('Failed to generate test cases');
-      return response.json();
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Network error' }));
+        throw new Error(errorData.error || 'Failed to generate test cases');
+      }
+      
+      const result = await response.json();
+      console.log('AI response:', result);
+      return result;
     },
     onSuccess: (data) => {
-      setGeneratedTests(data.map((test: any) => ({ ...test, selected: true })));
-      toast({ title: 'Success', description: 'Test cases generated successfully!' });
+      if (data.testCases && Array.isArray(data.testCases)) {
+        setGeneratedTests(data.testCases.map((test: any) => ({ ...test, selected: true })));
+        toast({ title: 'Success', description: data.message || 'Test cases generated successfully!' });
+      } else {
+        toast({ title: 'Warning', description: 'No test cases were generated', variant: 'destructive' });
+      }
     },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to generate test cases', variant: 'destructive' });
+    onError: (error: any) => {
+      console.error('AI Generation error:', error);
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to generate test cases', 
+        variant: 'destructive' 
+      });
     }
   });
 
@@ -115,12 +132,19 @@ export default function AIGeneratorPage() {
       return;
     }
 
+    if (!selectedProject) {
+      toast({ title: 'Error', description: 'Please select a project', variant: 'destructive' });
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const requestData = {
-        projectId: selectedProject,
-        moduleId: selectedModule,
+        type: type === 'requirements' ? 'description' : type,
+        content: description,
         description,
+        projectId: selectedProject,
+        moduleId: selectedModule || 1,
         requirements,
         testingType,
         websiteUrl: type === 'url' ? websiteUrl : undefined

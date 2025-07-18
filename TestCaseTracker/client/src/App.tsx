@@ -196,6 +196,7 @@ function Router() {
       </Route>
       <Route path="/ai-generator">
         <ProtectedLazyComponent Component={lazy(() => import("./pages/ai-generator"))} />
+      </Route>"))} />
       </Route>
 
       {/* Catch-all 404 route - make sure this is last */}

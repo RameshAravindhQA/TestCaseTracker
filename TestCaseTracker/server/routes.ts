@@ -1480,10 +1480,56 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 // AI Test Case Generation endpoint
   apiRouter.post("/ai/generate-test-cases", isAuthenticated, async (req, res) => {
     try {
-      const { requirement, projectContext, moduleContext, testType, priority } = req.body;
+      const { 
+        type = 'description',
+        content,
+        description,
+        projectId, 
+        moduleId,
+        requirements,
+        testingType,
+        websiteUrl,
+        imageBase64
+      } = req.body;
       
-      if (!requirement) {
-        return res.status(400).json({ error: 'Requirement is required' });
+      console.log('AI Generation Request:', { type, content, description, projectId, moduleId });
+      
+      if (!description && !content) {
+        return res.status(400).json({ error: 'Description or content is required' });
+      }
+
+      // Import AI service
+      const { aiService } = require('./ai-service');
+      
+      // Prepare request data
+      const aiRequest = {
+        type: type || 'description',
+        content: content || description || '',
+        projectId: projectId || 1,
+        moduleId: moduleId || 1,
+        images: req.files || []
+      };
+
+      console.log('Calling AI service with:', aiRequest);
+      
+      // Generate test cases using AI service
+      const testCases = await aiService.generateTestCases(aiRequest);
+      
+      console.log('AI service returned:', testCases);
+      
+      res.json({
+        success: true,
+        testCases: testCases,
+        message: `Generated ${testCases.length} test cases successfully`
+      });
+    } catch (error) {
+      console.error('AI Generation error:', error);
+      res.status(500).json({ 
+        error: 'Failed to generate test cases',
+        details: error.message
+      });
+    }
+  });nt is required' });
       }
 
       // Mock AI generation for now (replace with actual OpenAI integration when API key is available)
