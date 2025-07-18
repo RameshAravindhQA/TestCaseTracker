@@ -1,0 +1,60 @@
+
+ai-test-generator.tsx:147 📄 Response preview: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script type="module">
+import { createHotContext } from "/@vite/client";
+const hot = createHotContext("/__dummy__runtime-error-plugin");
+
+function sendError(error) {
+  if (!(error instanceof Error)) {
+    error = new Error("(unknown runtime error)");
+  }
+  const serialized = {
+    message: error.message,
+    stack: error.stack,
+  };
+  hot.send("runtime-error-plugin:error", serialized);
+}
+
+window.addEventListener("error", (evt) => {
+  sendError(evt.er
+ai-test-generator.tsx:151 🔄 HTML error page detected
+ai-test-generator.tsx:155 🔄 Retrying in 2000ms...
+ai-test-generator.tsx:99 🔄 AI Generation attempt 3/3
+ai-test-generator.tsx:120 📡 AI API Response: 
+{status: 200, statusText: 'OK', contentType: 'text/html; charset=utf-8', ok: true}
+ai-test-generator.tsx:133 📝 Response content type: text/html; charset=utf-8
+ai-test-generator.tsx:146 ❌ Expected JSON but got: text/html; charset=utf-8
+ai-test-generator.tsx:147 📄 Response preview: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script type="module">
+import { createHotContext } from "/@vite/client";
+const hot = createHotContext("/__dummy__runtime-error-plugin");
+
+function sendError(error) {
+  if (!(error instanceof Error)) {
+    error = new Error("(unknown runtime error)");
+  }
+  const serialized = {
+    message: error.message,
+    stack: error.stack,
+  };
+  hot.send("runtime-error-plugin:error", serialized);
+}
+
+window.addEventListener("error", (evt) => {
+  sendError(evt.er
+ai-test-generator.tsx:151 🔄 HTML error page detected
+ai-test-generator.tsx:167 ❌ Failed to parse response: Error: Server is experiencing issues. Please try again later.
+    at Object.mutationFn (ai-test-generator.tsx:161:23)
+ai-test-generator.tsx:223 ❌ AI Generation attempt 3 failed: Error: Failed to parse server response
+    at Object.mutationFn (ai-test-generator.tsx:177:19)
+ai-test-generator.tsx:273 Enhanced AI Generation error: Error: Failed after 3 attempts: Failed to parse server response
+    at Object.mutationFn (ai-test-generator.tsx:244:19)
+client:536 WebSocket connection to 'wss://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev:24678/?token=8BoBPDi6nBsI' failed: 
+
+client:560 [vite] server connection lost. Polling for restart...
+﻿
+
