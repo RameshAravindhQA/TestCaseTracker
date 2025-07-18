@@ -64,6 +64,16 @@ export function SoundSettings() {
     const newSettings = { ...settings, enabled };
     setSettings(newSettings);
     updateSoundManager(newSettings);
+    
+    // Immediately update the global sound manager
+    if (window.soundManager) {
+      window.soundManager.setEnabled(enabled);
+    }
+    
+    toast({
+      title: enabled ? "🔊 Sound Enabled" : "🔇 Sound Disabled",
+      description: enabled ? "Sound effects are now active" : "Sound effects are now muted",
+    });
   };
 
   const handleVolumeChange = (value: number[]) => {
@@ -84,17 +94,28 @@ export function SoundSettings() {
 
   const updateSoundManager = (newSettings: typeof settings) => {
     if (window.soundManager) {
+      // Always update the enabled state and volume
+      window.soundManager.isEnabled = newSettings.enabled;
+      window.soundManager.volume = newSettings.volume;
+      
+      // Use the methods if they exist
+      if (typeof window.soundManager.setEnabled === 'function') {
+        window.soundManager.setEnabled(newSettings.enabled);
+      }
+      if (typeof window.soundManager.setVolume === 'function') {
+        window.soundManager.setVolume(newSettings.volume);
+      }
       if (typeof window.soundManager.updateSettings === 'function') {
         window.soundManager.updateSettings(newSettings);
-      } else {
-        window.soundManager.isEnabled = newSettings.enabled;
-        window.soundManager.volume = newSettings.volume;
-        if (typeof window.soundManager.setVolume === 'function') {
-          window.soundManager.setVolume(newSettings.volume);
-        }
-        if (typeof window.soundManager.setEnabled === 'function') {
-          window.soundManager.setEnabled(newSettings.enabled);
-        }
+      }
+      
+      // Update audio cache volumes
+      if (window.soundManager.audioCache) {
+        window.soundManager.audioCache.forEach((audio) => {
+          if (audio && audio.volume !== undefined) {
+            audio.volume = newSettings.volume;
+          }
+        });
       }
     }
   };

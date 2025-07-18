@@ -227,8 +227,8 @@ export function Messenger() {
           setIsConnected(false);
           wsRef.current = null;
 
-          // Attempt to reconnect after a delay
-          if (!event.wasClean) {
+          // Attempt to reconnect after a delay (only if it wasn't a clean close)
+          if (!event.wasClean && event.code !== 1000) {
             setTimeout(() => {
               console.log('[MESSENGER] Attempting to reconnect...');
               connectWebSocket();
@@ -264,39 +264,48 @@ export function Messenger() {
     mutationFn: async (messageData: { receiverId: number; content: string; type?: string; attachments?: any[] }) => {
       if (!selectedContact) throw new Error('No contact selected');
       
-      // Get or create conversation first
-      let conversationResponse = await apiRequest('GET', `/api/conversations/direct?userId=${selectedContact.id}`);
-      if (conversationResponse.status === 404) {
-        conversationResponse = await apiRequest('POST', '/api/conversations/direct', {
-          userId: selectedContact.id
+      try {
+        // Get or create conversation first
+        let conversationResponse = await apiRequest('GET', `/api/conversations/direct?userId=${selectedContact.id}`);
+        if (conversationResponse.status === 404) {
+          conversationResponse = await apiRequest('POST', '/api/conversations/direct', {
+            userId: selectedContact.id
+          });
+        }
+        if (!conversationResponse.ok) throw new Error('Failed to get conversation');
+        const conversation = await conversationResponse.json();
+
+        // Send via API for persistence first
+        const response = await apiRequest('POST', '/api/messages', {
+          conversationId: conversation.id,
+          receiverId: messageData.receiverId,
+          content: messageData.content,
+          type: messageData.type || 'text',
+          attachments: messageData.attachments || []
         });
-      }
-      if (!conversationResponse.ok) throw new Error('Failed to get conversation');
-      const conversation = await conversationResponse.json();
+        
+        if (!response.ok) throw new Error('Failed to send message');
+        const messageResult = await response.json();
 
-      // Send via WebSocket for real-time delivery
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({
-          type: 'send_message',
-          data: {
-            conversationId: conversation.id,
-            message: messageData.content,
-            type: messageData.type || 'text',
-            attachments: messageData.attachments || []
-          }
-        }));
-      }
+        // Then send via WebSocket for real-time delivery (if connected)
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({
+            type: 'send_message',
+            data: {
+              conversationId: conversation.id,
+              message: messageData.content,
+              type: messageData.type || 'text',
+              attachments: messageData.attachments || [],
+              messageId: messageResult.id
+            }
+          }));
+        }
 
-      // Send via API for persistence with conversation context
-      const response = await apiRequest('POST', '/api/messages', {
-        conversationId: conversation.id,
-        receiverId: messageData.receiverId,
-        content: messageData.content,
-        type: messageData.type || 'text',
-        attachments: messageData.attachments || []
-      });
-      if (!response.ok) throw new Error('Failed to send message');
-      return response.json();
+        return messageResult;
+      } catch (error) {
+        console.error('[MESSENGER] Send message error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       setNewMessage('');
@@ -681,7 +690,7 @@ export function Messenger() {
                   </Avatar>
                   <div className="ml-3">
                     <h3 className="font-semibold text-gray-900 dark:text-white">
-                      {selectedContact.firstName} {selectedContact.lastName}
+                      {selectedContact.name || `${selectedContact.firstName || ''} ${selectedContact.lastName || ''}`.trim() || 'Unknown Contact'}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {selectedContact.isOnline ? '🟢 Active now' : `🔴 Last seen ${selectedContact.lastSeen || 'recently'}`}
