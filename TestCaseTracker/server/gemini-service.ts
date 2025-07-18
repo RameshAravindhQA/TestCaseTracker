@@ -5,7 +5,8 @@ import * as path from 'path';
 
 // Initialize Google Gemini AI
 console.log('🔧 Initializing Gemini AI with API key:', !!process.env.GOOGLE_API_KEY ? 'CONFIGURED' : 'MISSING');
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || 'your-gemini-api-key');
+console.log('🔧 API Key preview:', process.env.GOOGLE_API_KEY ? process.env.GOOGLE_API_KEY.substring(0, 10) + '...' : 'NOT SET');
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
 
 export interface TestCaseGenerationRequest {
   requirement: string;
@@ -52,8 +53,8 @@ export class GeminiAIService {
   async generateTestCases(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     try {
       // Check if API key is configured
-      if (!process.env.GOOGLE_API_KEY || process.env.GOOGLE_API_KEY === 'your-gemini-api-key') {
-        logger.error('Google API key not configured');
+      if (!process.env.GOOGLE_API_KEY || process.env.GOOGLE_API_KEY === 'your-gemini-api-key' || process.env.GOOGLE_API_KEY.trim() === '') {
+        logger.error('Google API key not configured properly');
         throw new Error('Google Gemini API key is not properly configured. Please set GOOGLE_API_KEY environment variable.');
       }
 
@@ -452,18 +453,6 @@ Return a JSON response with:
 }
 
 export const geminiService = new GeminiAIService();
-
-const genAI2 = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-const model2 = genAI2.getGenerativeModel({ 
-  model: "gemini-1.5-flash",
-  generationConfig: {
-    temperature: 0.7,
-    topK: 40,
-    topP: 0.95,
-    maxOutputTokens: 8192,
-  },
-});
 
 // Debug logging
 console.log('🔧 Gemini API Key configured:', !!process.env.GOOGLE_API_KEY);
