@@ -290,7 +290,7 @@ export const LottieAvatar: React.FC<LottieAvatarProps> = ({
 
 // Grid component for displaying multiple animations
 export const LottieAvatarGrid: React.FC<{
-  animations: Array<{
+  animations?: Array<{
     id: string;
     name: string;
     preview: any;
@@ -301,13 +301,65 @@ export const LottieAvatarGrid: React.FC<{
   itemWidth?: number;
   itemHeight?: number;
   showControls?: boolean;
+  // Legacy props for backward compatibility
+  animationData?: any;
+  isPlaying?: boolean;
+  isPaused?: boolean;
+  onClick?: () => void;
+  isSelected?: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  style?: React.CSSProperties;
+  animationId?: string;
+  users?: any[];
 }> = ({ 
-  animations, 
+  animations = [], 
   gridCols = 4, 
   itemWidth = 80, 
   itemHeight = 80,
-  showControls = true 
+  showControls = true,
+  // Legacy props
+  animationData,
+  isPlaying,
+  isPaused,
+  onClick,
+  isSelected,
+  onMouseEnter,
+  onMouseLeave,
+  style,
+  animationId,
+  users = []
 }) => {
+  // Handle legacy usage where individual animation props are passed
+  if (animationData && animationId) {
+    return (
+      <div style={style} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+        <LottieAvatar
+          key={animationId}
+          animationData={animationData}
+          name={animationId}
+          width={itemWidth}
+          height={itemHeight}
+          previewMode={true}
+          selected={isSelected}
+          onSelect={onClick}
+          autoplay={isPlaying}
+          controls={showControls}
+          className="transition-all duration-200"
+        />
+      </div>
+    );
+  }
+
+  // Handle modern usage with animations array
+  if (!animations || animations.length === 0) {
+    return (
+      <div className="text-center p-4">
+        <p className="text-muted-foreground">No animations available</p>
+      </div>
+    );
+  }
+
   return (
     <div className={`grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-${Math.min(gridCols, 6)}`}>
       {animations.map((animation) => (

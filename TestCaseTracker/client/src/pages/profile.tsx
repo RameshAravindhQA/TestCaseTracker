@@ -1178,23 +1178,43 @@ export default function ProfilePage() {
                     <CardDescription>Select a Lottie animation or upload an image to represent yourself.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {lottieAnimations.map((animation) => (
-                        <div key={animation.id} className="relative">
-                          <LottieAvatarGrid
-                            animationData={animation.preview}
-                            isPlaying={playingAnimations.has(animation.id)}
-                            isPaused={!playingAnimations.has(animation.id)}
-                            onClick={() => handleLottieSelect(animation)}
-                            isSelected={selectedLottie?.id === animation.id}
-                            onMouseEnter={() => toggleAnimation(animation.id)}
-                            onMouseLeave={() => toggleAnimation(animation.id)}
-                            style={{ cursor: 'pointer' }}
-                            animationId={animation.id}
-                            users={users || []}
-                          />
+                    {/* Error boundary wrapper */}
+                    <div className="min-h-[200px]">
+                      {/* Loading state */}
+                      {lottieAnimations.length === 0 ? (
+                        <div className="flex items-center justify-center p-8">
+                          <div className="text-center">
+                            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                            <p className="text-muted-foreground">Loading animations...</p>
+                          </div>
                         </div>
-                      ))}
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                          {lottieAnimations.map((animation) => {
+                            // Safety check for each animation
+                            if (!animation || !animation.id) {
+                              console.warn('Invalid animation data:', animation);
+                              return null;
+                            }
+                            
+                            return (
+                              <div key={animation.id} className="relative">
+                                <LottieAvatar
+                                  animationData={animation.preview}
+                                  name={animation.name || 'Unknown'}
+                                  width={120}
+                                  height={120}
+                                  previewMode={true}
+                                  selected={selectedLottie?.id === animation.id}
+                                  onSelect={() => handleLottieSelect(animation)}
+                                  autoplay={playingAnimations.has(animation.id)}
+                                  className="transition-all duration-200"
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     <Separator />
