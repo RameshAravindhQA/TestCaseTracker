@@ -40,42 +40,42 @@ export default function ModulesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
-  
+
   // Use localStorage to persist selectedProjectId and searchQuery between operations
   const [selectedProjectId, setSelectedProjectId] = useState<number | string>(() => {
     // Try to get saved projectId from localStorage
     const savedProjectId = localStorage.getItem('modules_selectedProjectId');
     return savedProjectId ? JSON.parse(savedProjectId) : "";
   });
-  
+
   const [searchQuery, setSearchQuery] = useState(() => {
     // Try to get saved search query from localStorage
     const savedQuery = localStorage.getItem('modules_searchQuery');
     return savedQuery || "";
   });
-  
+
   // Save selections to localStorage whenever they change
   useEffect(() => {
     if (selectedProjectId) {
       localStorage.setItem('modules_selectedProjectId', JSON.stringify(selectedProjectId));
     }
   }, [selectedProjectId]);
-  
+
   useEffect(() => {
     localStorage.setItem('modules_searchQuery', searchQuery);
   }, [searchQuery]);
-  
+
   // Fetch projects
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
   });
-  
+
   // Fetch modules for selected project
   const { data: modules, isLoading: isModulesLoading } = useQuery<Module[]>({
     queryKey: [`/api/projects/${selectedProjectId}/modules`],
     enabled: !!selectedProjectId,
   });
-  
+
   // Delete module mutation
   const deleteModuleMutation = useMutation({
     mutationFn: async (moduleId: number) => {
@@ -87,11 +87,11 @@ export default function ModulesPage() {
         title: "Module deleted",
         description: "Module has been deleted successfully",
       });
-      
+
       // Ensure sidebar state persists after deletion
       localStorage.setItem('modules_selectedProjectId', JSON.stringify(selectedProjectId));
       localStorage.setItem('modules_searchQuery', searchQuery);
-      
+
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/modules`] });
       setDeleteDialogOpen(false);
     },
@@ -103,13 +103,13 @@ export default function ModulesPage() {
       });
     },
   });
-  
+
   // Handler for edit button
   const handleEdit = (module: Module) => {
     setSelectedModule(module);
     setFormOpen(true);
   };
-  
+
   // Handler for delete button
   const handleDelete = (module: Module) => {
     setSelectedModule(module);
@@ -120,7 +120,7 @@ export default function ModulesPage() {
   const handleViewTestCases = (module: Module) => {
     navigate(`/projects/${module.projectId}?module=${module.id}`);
   };
-  
+
   // Confirm delete handler
   const confirmDelete = () => {
     if (selectedModule) {
@@ -134,10 +134,10 @@ export default function ModulesPage() {
     module.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (module.description && module.description.toLowerCase().includes(searchQuery.toLowerCase()))
   ) || [];
-  
+
   return (
     <MainLayout>
-      <div className="py-6 px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto py-6 px-4 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
         <div className="mb-6 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="p-2 bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-500 rounded-xl shadow-lg">
@@ -167,7 +167,7 @@ export default function ModulesPage() {
             New Module
           </Button>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="md:col-span-2">
             <ProjectSelect
@@ -178,7 +178,7 @@ export default function ModulesPage() {
               placeholder="Select a project"
             />
           </div>
-          
+
           <div className="md:col-span-2 relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-gray-400" />
@@ -192,7 +192,7 @@ export default function ModulesPage() {
             />
           </div>
         </div>
-        
+
         {!selectedProjectId ? (
           <Card>
             <CardContent className="pt-6 text-center">
@@ -234,7 +234,7 @@ export default function ModulesPage() {
           />
         )}
       </div>
-      
+
       {/* Create/Edit Module Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="sm:max-w-[600px]">
@@ -258,7 +258,7 @@ export default function ModulesPage() {
           />
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

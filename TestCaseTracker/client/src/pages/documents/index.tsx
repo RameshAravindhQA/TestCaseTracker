@@ -990,7 +990,7 @@ export default function DocumentsPage() {
     setIsPasteLoading(true);
 
     try {
-      if ('fileType' in clipboardItem) {
+      if ('fileType' in clipboarditem) {
         // It's a document
         const document = clipboardItem as Document;
 
@@ -1120,285 +1120,208 @@ export default function DocumentsPage() {
 
   return (
     <MainLayout>
-      <DndProvider backend={HTML5Backend}>
-        <div className="py-6 px-4 sm:px-6 lg:px-8">
-          <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 rounded-xl shadow-lg">
-                  <FolderOpen className="h-8 w-8 text-white" />
-                </div>
-                Document Management
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">
-                Manage project documents and folders
-              </p>
-            </div>
-
-            <div className="flex gap-2 flex-wrap">
-              <div className="flex items-center gap-2 mr-4">
-                <Tabs value={viewType} onValueChange={(value) => setViewType(value as "list" | "grid" | "windows")}>
-                  <TabsList>
-                    <TabsTrigger value="list">List</TabsTrigger>
-                    <TabsTrigger value="grid">Grid</TabsTrigger>
-                    <TabsTrigger value="windows">Windows Explorer</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-              <Button
-                onClick={() => handleAddDocument()}
-                variant="default"
-                className="flex items-center gap-2"
-                disabled={!selectedProjectId}
-              >
-                <FileText className="h-4 w-4" />
-                Upload Document
-              </Button>
-              <Button
-                onClick={handleAddFolder}
-                variant="outline"
-                className="flex items-center gap-2"
-                disabled={!selectedProjectId}
-              >
-                <Folder className="h-4 w-4" />
-                New Folder
-              </Button>
-
-              {/* Enhanced clipboard/paste functionality */}
-              {showPasteButton && (
-                <div className="relative">
-                  <Button
-                    onClick={() => handlePasteItem(currentFolderId)}
-                    variant="default"
-                    className={`flex items-center gap-2 ${clipboardAction === 'cut' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-                    disabled={isPasteLoading || !clipboardItem || !selectedProjectId}
-                  >
-                    {isPasteLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <>
-                        {clipboardAction === 'cut' ? <Scissors className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
-                      </>
-                    )}
-                    Paste {clipboardItem?.name ? `"${clipboardItem.name.substring(0, 15)}${clipboardItem.name.length > 15 ? '...' : ''}"` : ''}
-                  </Button>
-
-                  {/* Clear clipboard button */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute -right-7 top-0 h-full w-6 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-800/40 text-red-600 dark:text-red-400 border-l border-red-200 dark:border-red-800 rounded-r-md"
-                    onClick={() => {
-                      setClipboardAction(null);
-                      setClipboardItem(null);
-                      setShowPasteButton(false);
-                    }}
-                    title="Clear clipboard"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
-
-              <Button
-                onClick={() => window.location.reload()}
-                variant="ghost"
-                className="flex items-center gap-2"
-              >
-                <ArrowRight className="h-4 w-4" />
-                Refresh
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="md:col-span-2">
-              <Select
-                value={selectedProjectId ? selectedProjectId.toString() : undefined}
-                onValueChange={(value) => {
-                  setSelectedProjectId(parseInt(value));
-                  setSearchQuery("");
-                  // Reset folder navigation when changing projects
-                  setCurrentPath([]);
-                  setCurrentFolderId(null);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects?.map((project) => (
-                    <SelectItem key={project.id} value={project.id.toString()}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="md:col-span-2 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
-              </div>
-              <Input
-                type="search"
-                placeholder="Search documents and folders..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                disabled={!selectedProjectId}
-              />
-            </div>
-          </div>
-
-          {!selectedProjectId ? (
-            <Card>
-              <CardContent className="pt-6 text-center py-10">
-                <Folder className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500">
-                  Please select a project to view its documents
-                </p>
-              </CardContent>
-            </Card>
-          ) : isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : rootFolders.length === 0 && rootDocuments.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6 text-center py-10">
-                <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500">
-                  {searchQuery
-                    ? "No documents or folders match your search"
-                    : "No documents or folders found. Upload a document or create a folder to get started."}
-                </p>
-                <div className="flex justify-center gap-2 mt-4">
-                  <Button
-                    onClick={() => handleAddDocument()}
-                    variant="default"
-                    className="flex items-center gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Upload Document
-                  </Button>
-                  <Button
-                    onClick={handleAddFolder}
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
-                    <Folder className="h-4 w-4" />
-                    New Folder
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <RootDropZone
-              onFolderDrop={handleFolderDropToRoot}
-              isActive={!!currentFolderId}
-            >
-              {viewType === "windows" ? (
-                <WindowsExplorerView
-                  folders={filteredFolders}
-                  documents={filteredDocuments}
-                  currentFolderId={currentFolderId}
-                  onNavigateToFolder={handleNavigateToFolder}
-                  onViewDocument={handleViewDocument}
-                  onEditDocument={handleEditDocument}
-                  onDeleteDocument={handleDeleteDocument}
-                  onDownloadDocument={handleDownloadDocument}
-                  onAddDocument={handleAddDocument}
-                  onAddFolder={handleAddSubFolder}
-                  onEditFolder={handleEditFolder}
-                  onDeleteFolder={handleDeleteFolder}
-                />
-              ) : (
-                <div className="border rounded-md overflow-hidden bg-white dark:bg-gray-950 shadow">
-                  {/* Windows-style Explorer Header and Address Bar */}
-                  <div className="p-3 border-b flex items-center justify-between bg-gray-50 dark:bg-gray-900">
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          // Navigate to parent folder or back to root
-                          if (currentPath.length <= 1) {
-                            handleNavigateToFolder(null); // Go to root
-                          } else {
-                            // Go to parent folder
-                            const parentFolderId = currentPath[currentPath.length - 2];
-                            handleNavigateToFolder(parentFolderId);
-                          }
-                        }}
-                        disabled={currentPath.length === 0}
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost"
-                        size="icon"
-                        disabled
-                      >
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {/* Address/Path bar similar to Windows Explorer */}
-                    <div className="flex-1 mx-4">
-                      <div className="flex items-center bg-white dark:bg-gray-800 border rounded-md px-2 py-1">
-                        <span className="text-gray-500 mr-2">
-                          <Folder className="h-4 w-4" />
-                        </span>
-                        <div className="flex items-center text-sm text-gray-600 dark:text-gray-300 overflow-x-auto">
-                          <span 
-                            className="cursor-pointer hover:underline hover:text-blue-500 flex items-center"
-                            onClick={() => handleNavigateToFolder(null)}
-                          >
-                            Root
-                          </span>
-                          {currentPath.map((folderId, index) => {
-                            const folder = folders?.find(f => f.id === folderId);
-                            if (!folder) return null;
-                            return (
-                              <div key={folderId} className="flex items-center">
-                                <ChevronRight className="h-4 w-4 mx-1 text-gray-400" />
-                                <span 
-                                  className="cursor-pointer hover:underline hover:text-blue-500"
-                                  onClick={() => handleNavigateToFolder(folderId)}
-                                >
-                                  {folder.name}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="relative rounded-md shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-gray-400" />
-                      </div>
-                      <Input
-                        type="search"
-                        placeholder="Search..."
-                        className="pl-10 w-48"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        disabled={!selectedProjectId}
-                      />
-                    </div>
+      <div className="w-full py-6 px-4 sm:px-6 lg:px-8 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
+        <DndProvider backend={HTML5Backend}>
+          <div className="py-6 px-4 sm:px-6 lg:px-8">
+            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 rounded-xl shadow-lg">
+                    <FolderOpen className="h-8 w-8 text-white" />
                   </div>
+                  Document Management
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-2">
+                  Manage project documents and folders
+                </p>
+              </div>
 
-                  {/* Main Explorer Content - Windows-style Grid View */}
-                  <div className="p-4 h-[500px] overflow-auto">
-                    {/* File and Folder Grid - Windows Explorer style */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      {/* Root Folder navigation icon */}
-                      {currentPath.length > 0 && (
-                        <div 
-                          className="flex flex-col items-center justify-center p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+              <div className="flex gap-2 flex-wrap">
+                <div className="flex items-center gap-2 mr-4">
+                  <Tabs value={viewType} onValueChange={(value) => setViewType(value as "list" | "grid" | "windows")}>
+                    <TabsList>
+                      <TabsTrigger value="list">List</TabsTrigger>
+                      <TabsTrigger value="grid">Grid</TabsTrigger>
+                      <TabsTrigger value="windows">Windows Explorer</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+                <Button
+                  onClick={() => handleAddDocument()}
+                  variant="default"
+                  className="flex items-center gap-2"
+                  disabled={!selectedProjectId}
+                >
+                  <FileText className="h-4 w-4" />
+                  Upload Document
+                </Button>
+                <Button
+                  onClick={handleAddFolder}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  disabled={!selectedProjectId}
+                >
+                  <Folder className="h-4 w-4" />
+                  New Folder
+                </Button>
+
+                {/* Enhanced clipboard/paste functionality */}
+                {showPasteButton && (
+                  <div className="relative">
+                    <Button
+                      onClick={() => handlePasteItem(currentFolderId)}
+                      variant="default"
+                      className={`flex items-center gap-2 ${clipboardAction === 'cut' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                      disabled={isPasteLoading || !clipboardItem || !selectedProjectId}
+                    >
+                      {isPasteLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <>
+                          {clipboardAction === 'cut' ? <Scissors className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
+                        </>
+                      )}
+                      Paste {clipboardItem?.name ? `"${clipboardItem.name.substring(0, 15)}${clipboardItem.name.length > 15 ? '...' : ''}"` : ''}
+                    </Button>
+
+                    {/* Clear clipboard button */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute -right-7 top-0 h-full w-6 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-800/40 text-red-600 dark:text-red-400 border-l border-red-200 dark:border-red-800 rounded-r-md"
+                      onClick={() => {
+                        setClipboardAction(null);
+                        setClipboardItem(null);
+                        setShowPasteButton(false);
+                      }}
+                      title="Clear clipboard"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="ghost"
+                  className="flex items-center gap-2"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="md:col-span-2">
+                <Select
+                  value={selectedProjectId ? selectedProjectId.toString() : undefined}
+                  onValueChange={(value) => {
+                    setSelectedProjectId(parseInt(value));
+                    setSearchQuery("");
+                    // Reset folder navigation when changing projects
+                    setCurrentPath([]);
+                    setCurrentFolderId(null);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects?.map((project) => (
+                      <SelectItem key={project.id} value={project.id.toString()}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-2 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <Input
+                  type="search"
+                  placeholder="Search documents and folders..."
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  disabled={!selectedProjectId}
+                />
+              </div>
+            </div>
+
+            {!selectedProjectId ? (
+              <Card>
+                <CardContent className="pt-6 text-center py-10">
+                  <Folder className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-500">
+                    Please select a project to view its documents
+                  </p>
+                </CardContent>
+              </Card>
+            ) : isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : rootFolders.length === 0 && rootDocuments.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6 text-center py-10">
+                  <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-500">
+                    {searchQuery
+                      ? "No documents or folders match your search"
+                      : "No documents or folders found. Upload a document or create a folder to get started."}
+                  </p>
+                  <div className="flex justify-center gap-2 mt-4">
+                    <Button
+                      onClick={() => handleAddDocument()}
+                      variant="default"
+                      className="flex items-center gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Upload Document
+                    </Button>
+                    <Button
+                      onClick={handleAddFolder}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <Folder className="h-4 w-4" />
+                      New Folder
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <RootDropZone
+                onFolderDrop={handleFolderDropToRoot}
+                isActive={!!currentFolderId}
+              >
+                {viewType === "windows" ? (
+                  <WindowsExplorerView
+                    folders={filteredFolders}
+                    documents={filteredDocuments}
+                    currentFolderId={currentFolderId}
+                    onNavigateToFolder={handleNavigateToFolder}
+                    onViewDocument={handleViewDocument}
+                    onEditDocument={handleEditDocument}
+                    onDeleteDocument={handleDeleteDocument}
+                    onDownloadDocument={handleDownloadDocument}
+                    onAddDocument={handleAddDocument}
+                    onAddFolder={handleAddSubFolder}
+                    onEditFolder={handleEditFolder}
+                    onDeleteFolder={handleDeleteFolder}
+                  />
+                ) : (
+                  <div className="border rounded-md overflow-hidden bg-white dark:bg-gray-950 shadow">
+                    {/* Windows-style Explorer Header and Address Bar */}
+                    <div className="p-3 border-b flex items-center justify-between bg-gray-50 dark:bg-gray-900">
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          variant="ghost"
+                          size="icon"
                           onClick={() => {
                             // Navigate to parent folder or back to root
                             if (currentPath.length <= 1) {
@@ -1409,339 +1332,418 @@ export default function DocumentsPage() {
                               handleNavigateToFolder(parentFolderId);
                             }
                           }}
+                          disabled={currentPath.length === 0}
                         >
-                          <div className="relative mb-2">
-                            <FolderOpen className="h-16 w-16 text-yellow-400" />
-                            <ArrowUp className="h-4 w-4 absolute bottom-1 right-1 text-black dark:text-white bg-yellow-300 rounded-full p-0.5" />
-                          </div>
-                          <span className="text-sm text-center truncate">Parent Folder</span>
-                        </div>
-                      )}
-
-                      {/* Display folders first - Windows Explorer style */}
-                      {!currentFolderId ? 
-                        rootFolders.map((folder) => (
-                          <div 
-                            key={folder.id}
-                            className="flex flex-col items-center justify-center p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors relative group"
-                            onClick={() => handleNavigateToFolder(folder.id)}
-                          >
-                            <div className="relative mb-2">
-                              <Folder className="h-16 w-16 text-yellow-400" />
-                            </div>
-                            <span className="text-sm text-center truncate max-w-full">{folder.name}</span>
-
-                            {/* Context menu actions shown on hover */}
-                            <div className="absolute top-1 right-1 hidden group-hover:flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditFolder(folder);
-                                }}
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm text-red-500"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteFolder(folder);
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                        : getSubFolders(currentFolderId).map((folder) => (
-                          <div 
-                            key={folder.id}
-                            className="flex flex-col items-center justify-center p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors relative group"
-                            onClick={() => handleNavigateToFolder(folder.id)}
-                          >
-                            <div className="relative mb-2">
-                              <Folder className="h-16 w-16 text-yellow-400" />
-                            </div>
-                            <span className="text-sm text-center truncate max-w-full">{folder.name}</span>
-
-                            {/* Context menu actions shown on hover */}
-                            <div className="absolute top-1 right-1 hidden group-hover:flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditFolder(folder);
-                                }}
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm text-red-500"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteFolder(folder);
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                      }
-
-                      {/* Display documents - Windows Explorer style */}
-                      {filteredDocuments.map((document) => (
-                        <div 
-                          key={document.id}
-                          className="flex flex-col items-center justify-center p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors relative group"
-                          onClick={() => handleViewDocument(document)}
+                          <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost"
+                          size="icon"
+                          disabled
                         >
-                          <div className="relative mb-2">
-                            <FileText className="h-16 w-16 text-blue-400" />
-                          </div>
-                          <span className="text-sm text-center truncate max-w-full">{document.name}</span>
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </div>
 
-                          {/* Context menu actions shown on hover */}
-                          <div className="absolute top-1 right-1 hidden group-hover:flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownloadDocument(document);
-                              }}
+                      {/* Address/Path bar similar to Windows Explorer */}
+                      <div className="flex-1 mx-4">
+                        <div className="flex items-center bg-white dark:bg-gray-800 border rounded-md px-2 py-1">
+                          <span className="text-gray-500 mr-2">
+                            <Folder className="h-4 w-4" />
+                          </span>
+                          <div className="flex items-center text-sm text-gray-600 dark:text-gray-300 overflow-x-auto">
+                            <span 
+                              className="cursor-pointer hover:underline hover:text-blue-500 flex items-center"
+                              onClick={() => handleNavigateToFolder(null)}
                             >
-                              <Download className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditDocument(document);
-                              }}
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm text-red-500"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteDocument(document);
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleClipboardAction('cut', document);
-                              }}
-                            >
-                              Cut
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleClipboardAction('copy', document);
-                              }}
-                            >
-                              Copy
-                            </Button>
+                              Root
+                            </span>
+                            {currentPath.map((folderId, index) => {
+                              const folder = folders?.find(f => f.id === folderId);
+                              if (!folder) return null;
+                              return (
+                                <div key={folderId} className="flex items-center">
+                                  <ChevronRight className="h-4 w-4 mx-1 text-gray-400" />
+                                  <span 
+                                    className="cursor-pointer hover:underline hover:text-blue-500"
+                                    onClick={() => handleNavigateToFolder(folderId)}
+                                  >
+                                    {folder.name}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                      ))}
+                      </div>
+
+                      <div className="relative rounded-md shadow-sm">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Search className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <Input
+                          type="search"
+                          placeholder="Search..."
+                          className="pl-10 w-48"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          disabled={!selectedProjectId}
+                        />
+                      </div>
                     </div>
 
-                    {/* Explorer Status Bar */}
-                    <div className="p-2 border-t bg-gray-50 dark:bg-gray-900 text-xs text-gray-500 dark:text-gray-400 flex justify-between items-center">
-                      <div>
-                        {!currentFolderId
-                          ? `${rootFolders.length} folders, ${rootDocuments.length} documents`
-                                                    : `${getSubFolders(currentFolderId).length} folders, ${filteredDocuments.filter(doc => doc.folderId === currentFolderId).length} documents`
+                    {/* Main Explorer Content - Windows-style Grid View */}
+                    <div className="p-4 h-[500px] overflow-auto">
+                      {/* File and Folder Grid - Windows Explorer style */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        {/* Root Folder navigation icon */}
+                        {currentPath.length > 0 && (
+                          <div 
+                            className="flex flex-col items-center justify-center p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                            onClick={() => {
+                              // Navigate to parent folder or back to root
+                              if (currentPath.length <= 1) {
+                                handleNavigateToFolder(null); // Go to root
+                              } else {
+                                // Go to parent folder
+                                const parentFolderId = currentPath[currentPath.length - 2];
+                                handleNavigateToFolder(parentFolderId);
+                              }
+                            }}
+                          >
+                            <div className="relative mb-2">
+                              <FolderOpen className="h-16 w-16 text-yellow-400" />
+                              <ArrowUp className="h-4 w-4 absolute bottom-1 right-1 text-black dark:text-white bg-yellow-300 rounded-full p-0.5" />
+                            </div>
+                            <span className="text-sm text-center truncate">Parent Folder</span>
+                          </div>
+                        )}
+
+                        {/* Display folders first - Windows Explorer style */}
+                        {!currentFolderId ? 
+                          rootFolders.map((folder) => (
+                            <div 
+                              key={folder.id}
+                              className="flex flex-col items-center justify-center p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors relative group"
+                              onClick={() => handleNavigateToFolder(folder.id)}
+                            >
+                              <div className="relative mb-2">
+                                <Folder className="h-16 w-16 text-yellow-400" />
+                              </div>
+                              <span className="text-sm text-center truncate max-w-full">{folder.name}</span>
+
+                              {/* Context menu actions shown on hover */}
+                              <div className="absolute top-1 right-1 hidden group-hover:flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditFolder(folder);
+                                  }}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm text-red-500"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteFolder(folder);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))
+                          : getSubFolders(currentFolderId).map((folder) => (
+                            <div 
+                              key={folder.id}
+                              className="flex flex-col items-center justify-center p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors relative group"
+                              onClick={() => handleNavigateToFolder(folder.id)}
+                            >
+                              <div className="relative mb-2">
+                                <Folder className="h-16 w-16 text-yellow-400" />
+                              </div>
+                              <span className="text-sm text-center truncate max-w-full">{folder.name}</span>
+
+                              {/* Context menu actions shown on hover */}
+                              <div className="absolute top-1 right-1 hidden group-hover:flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditFolder(folder);
+                                  }}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm text-red-500"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteFolder(folder);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))
                         }
+
+                        {/* Display documents - Windows Explorer style */}
+                        {filteredDocuments.map((document) => (
+                          <div 
+                            key={document.id}
+                            className="flex flex-col items-center justify-center p-3 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors relative group"
+                            onClick={() => handleViewDocument(document)}
+                          >
+                            <div className="relative mb-2">
+                              <FileText className="h-16 w-16 text-blue-400" />
+                            </div>
+                            <span className="text-sm text-center truncate max-w-full">{document.name}</span>
+
+                            {/* Context menu actions shown on hover */}
+                            <div className="absolute top-1 right-1 hidden group-hover:flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownloadDocument(document);
+                                }}
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditDocument(document);
+                                }}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm text-red-500"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteDocument(document);
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleClipboardAction('cut', document);
+                                }}
+                              >
+                                Cut
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 bg-white dark:bg-gray-800 border shadow-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleClipboardAction('copy', document);
+                                }}
+                              >
+                                Copy
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div>
-                        {searchQuery && `Showing results for "${searchQuery}"`}
+
+                      {/* Explorer Status Bar */}
+                      <div className="p-2 border-t bg-gray-50 dark:bg-gray-900 text-xs text-gray-500 dark:text-gray-400 flex justify-between items-center">
+                        <div>
+                          {!currentFolderId
+                            ? `${rootFolders.length} folders, ${rootDocuments.length} documents`
+                                                      : `${getSubFolders(currentFolderId).length} folders, ${filteredDocuments.filter(doc => doc.folderId === currentFolderId).length} documents`
+                          }
+                        </div>
+                        <div>
+                          {searchQuery && `Showing results for "${searchQuery}"`}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </RootDropZone>
-          )}
-        </div>
+                )}
+              </RootDropZone>
+            )}
+          </div>
 
-        {/* Folder Form Dialog */}
-        <Dialog open={folderFormOpen} onOpenChange={setFolderFormOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedFolder ? "Edit Folder" : "Create New Folder"}
-              </DialogTitle>
-              <DialogDescription>
-                {selectedFolder
-                  ? "Update the folder details below."
-                  : "Enter the details for the new folder."}
-              </DialogDescription>
-            </DialogHeader>
+          {/* Folder Form Dialog */}
+          <Dialog open={folderFormOpen} onOpenChange={setFolderFormOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedFolder ? "Edit Folder" : "Create New Folder"}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedFolder
+                    ? "Update the folder details below."
+                    : "Enter the details for the new folder."}
+                </DialogDescription>
+              </DialogHeader>
 
-            <DocumentFolderForm
-              projectId={Number(selectedProjectId)}
-              parentFolderId={selectedParentFolder}
-              existingFolder={selectedFolder}
-              folders={folders || []}
-              onSubmit={(data) => {
-                if (selectedFolder) {
-                  // Validate folder name before update
-                  if (!data.name || data.name.trim() === '') {
-                    toast({
-                      title: "Validation Error",
-                      description: "Folder name cannot be empty",
-                      variant: "destructive"
+              <DocumentFolderForm
+                projectId={Number(selectedProjectId)}
+                parentFolderId={selectedParentFolder}
+                existingFolder={selectedFolder}
+                folders={folders || []}
+                onSubmit={(data) => {
+                  if (selectedFolder) {
+                    // Validate folder name before update
+                    if (!data.name || data.name.trim() === '') {
+                      toast({
+                        title: "Validation Error",
+                        description: "Folder name cannot be empty",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+
+                    // Check if name is unchanged to avoid unnecessary API calls
+                    if (data.name === selectedFolder.name && 
+                        data.description === selectedFolder.description && 
+                        data.parentFolderId === selectedFolder.parentFolderId) {
+                      toast({
+                        title: "Info",
+                        description: "No changes detected in folder details",
+                      });
+                      setFolderFormOpen(false);
+                      return;
+                    }
+
+                    console.log("Updating folder with new data:", data);
+                    updateFolderMutation.mutate({
+                      id: selectedFolder.id,
+                      data,
                     });
-                    return;
+                  } else {
+                    createFolderMutation.mutate(data);
                   }
-
-                  // Check if name is unchanged to avoid unnecessary API calls
-                  if (data.name === selectedFolder.name && 
-                      data.description === selectedFolder.description && 
-                      data.parentFolderId === selectedFolder.parentFolderId) {
-                    toast({
-                      title: "Info",
-                      description: "No changes detected in folder details",
-                    });
-                    setFolderFormOpen(false);
-                    return;
-                  }
-
-                  console.log("Updating folder with new data:", data);
-                  updateFolderMutation.mutate({
-                    id: selectedFolder.id,
-                    data,
-                  });
-                } else {
-                  createFolderMutation.mutate(data);
+                }}
+                isSubmitting={
+                  createFolderMutation.isPending || updateFolderMutation.isPending
                 }
-              }}
-              isSubmitting={
-                createFolderMutation.isPending || updateFolderMutation.isPending
-              }
-            />
-          </DialogContent>
-        </Dialog>
+              />
+            </DialogContent>
+          </Dialog>
 
-        {/* Document Upload Dialog */}
-        <Dialog open={uploadFormOpen} onOpenChange={setUploadFormOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Upload Document</DialogTitle>
-              <DialogDescription>
-                Upload a document to the selected project.
-              </DialogDescription>
-            </DialogHeader>
+          {/* Document Upload Dialog */}
+          <Dialog open={uploadFormOpen} onOpenChange={setUploadFormOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Upload Document</DialogTitle>
+                <DialogDescription>
+                  Upload a document to the selected project.
+                </DialogDescription>
+              </DialogHeader>
 
-            <DocumentUploadForm
-              projectId={Number(selectedProjectId)}
-              folders={folders || []}
-              selectedFolderId={selectedParentFolder}
-              onSubmit={(data) => {
-                uploadDocumentMutation.mutate(data as InsertDocument & { file: File });
-              }}
-              isSubmitting={uploadDocumentMutation.isPending}
-            />
-          </DialogContent>
-        </Dialog>
+              <DocumentUploadForm
+                projectId={Number(selectedProjectId)}
+                folders={folders || []}
+                selectedFolderId={selectedParentFolder}
+                onSubmit={(data) => {
+                  uploadDocumentMutation.mutate(data as InsertDocument & { file: File });
+                }}
+                isSubmitting={uploadDocumentMutation.isPending}
+              />
+            </DialogContent>
+          </Dialog>
 
-        {/* Document Viewer */}
-        <DocumentViewer
-          document={viewDocumentOpen ? selectedDocument : null}
-          onClose={() => {
-            setViewDocumentOpen(false);
-            setSelectedDocument(null);
-          }}
-          onDownload={() => selectedDocument && handleDownloadDocument(selectedDocument)}
-        />
+          {/* Document Viewer */}
+          <DocumentViewer
+            document={viewDocumentOpen ? selectedDocument : null}
+            onClose={() => {
+              setViewDocumentOpen(false);
+              setSelectedDocument(null);
+            }}
+            onDownload={() => selectedDocument && handleDownloadDocument(selectedDocument)}
+          />
 
-        {/* Delete Document Confirmation */}
-        <AlertDialog open={deleteDocumentDialog} onOpenChange={setDeleteDocumentDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete the document "{selectedDocument?.name}".
-                This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmDeleteDocument}
-                className="bg-red-600 hover:bg-red-700"
-                disabled={deleteDocumentMutation.isPending}
-              >
-                {deleteDocumentMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  "Delete Document"
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          {/* Delete Document Confirmation */}
+          <AlertDialog open={deleteDocumentDialog} onOpenChange={setDeleteDocumentDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the document "{selectedDocument?.name}".
+                  This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDeleteDocument}
+                  className="bg-red-600 hover:bg-red-700"
+                  disabled={deleteDocumentMutation.isPending}
+                >
+                  {deleteDocumentMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete Document"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
-        {/* Delete Folder Confirmation */}
-        <AlertDialog open={deleteFolderDialog} onOpenChange={setDeleteFolderDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete the folder "{selectedFolder?.name}" and all its contents.
-                This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmDeleteFolder}
-                className="bg-red-600 hover:bg-red-700"
-                disabled={deleteFolderMutation.isPending}
-              >
-                {deleteFolderMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  "Delete Folder"
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </DndProvider>
+          {/* Delete Folder Confirmation */}
+          <AlertDialog open={deleteFolderDialog} onOpenChange={setDeleteFolderDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the folder "{selectedFolder?.name}" and all its contents.
+                  This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDeleteFolder}
+                  className="bg-red-600 hover:bg-red-700"
+                  disabled={deleteFolderMutation.isPending}
+                >
+                  {deleteFolderMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete Folder"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </DndProvider>
+      </div>
     </MainLayout>
   );
 }

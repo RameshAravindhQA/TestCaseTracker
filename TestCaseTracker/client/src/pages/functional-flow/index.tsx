@@ -269,182 +269,184 @@ export default function FunctionalFlowPage() {
 
   return (
     <MainLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Functional Flow Diagrams</h1>
-            <p className="text-muted-foreground">Create and manage visual workflow diagrams</p>
+      <div className="h-screen w-full bg-gray-100 overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Functional Flow Diagrams</h1>
+              <p className="text-muted-foreground">Create and manage visual workflow diagrams</p>
+            </div>
           </div>
-        </div>
 
-        {/* Project Selection and Controls */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Project Selection & Controls</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="project">Select Project</Label>
-                <Select value={selectedProject} onValueChange={setSelectedProject}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((project: Project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedProject && (
+          {/* Project Selection and Controls */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Selection & Controls</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="diagram">Load Existing Diagram</Label>
-                  <Select value={selectedDiagram} onValueChange={setSelectedDiagram}>
+                  <Label htmlFor="project">Select Project</Label>
+                  <Select value={selectedProject} onValueChange={setSelectedProject}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Choose a diagram" />
+                      <SelectValue placeholder="Choose a project" />
                     </SelectTrigger>
                     <SelectContent>
-                      {diagrams.map((diagram: FlowDiagram) => (
-                        <SelectItem key={diagram.id} value={diagram.id}>
-                          {diagram.name}
+                      {projects.map((project: Project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
 
-              <div className="flex items-end gap-2">
-                {selectedDiagram && (
-                  <Button onClick={handleLoadDiagram} className="flex-1">
-                    Load Diagram
-                  </Button>
+                {selectedProject && (
+                  <div>
+                    <Label htmlFor="diagram">Load Existing Diagram</Label>
+                    <Select value={selectedDiagram} onValueChange={setSelectedDiagram}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a diagram" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {diagrams.map((diagram: FlowDiagram) => (
+                          <SelectItem key={diagram.id} value={diagram.id}>
+                            {diagram.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 )}
-              </div>
-            </div>
 
-            <div className="flex gap-2 flex-wrap">
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button disabled={!selectedProject}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Node
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Node</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="nodeLabel">Node Label</Label>
-                      <Input
-                        id="nodeLabel"
-                        value={newNodeLabel}
-                        onChange={(e) => setNewNodeLabel(e.target.value)}
-                        placeholder="Enter node label"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="nodeType">Node Type</Label>
-                      <Select value={newNodeType} onValueChange={setNewNodeType}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(nodeTypes).map(([key, type]) => (
-                            <SelectItem key={key} value={key}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button onClick={addNode} className="w-full">
+                <div className="flex items-end gap-2">
+                  {selectedDiagram && (
+                    <Button onClick={handleLoadDiagram} className="flex-1">
+                      Load Diagram
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button disabled={!selectedProject}>
+                      <Plus className="w-4 h-4 mr-2" />
                       Add Node
                     </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Node</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="nodeLabel">Node Label</Label>
+                        <Input
+                          id="nodeLabel"
+                          value={newNodeLabel}
+                          onChange={(e) => setNewNodeLabel(e.target.value)}
+                          placeholder="Enter node label"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="nodeType">Node Type</Label>
+                        <Select value={newNodeType} onValueChange={setNewNodeType}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(nodeTypes).map(([key, type]) => (
+                              <SelectItem key={key} value={key}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button onClick={addNode} className="w-full">
+                        Add Node
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
 
-              <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button disabled={!selectedProject}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Diagram
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Save Flow Diagram</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="diagramName">Diagram Name</Label>
-                      <Input
-                        id="diagramName"
-                        value={diagramName}
-                        onChange={(e) => setDiagramName(e.target.value)}
-                        placeholder="Enter diagram name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="diagramDescription">Description</Label>
-                      <Textarea
-                        id="diagramDescription"
-                        value={diagramDescription}
-                        onChange={(e) => setDiagramDescription(e.target.value)}
-                        placeholder="Enter diagram description"
-                        rows={3}
-                      />
-                    </div>
-                    <Button onClick={handleSaveDiagram} className="w-full" disabled={saveDiagramMutation.isPending}>
-                      {saveDiagramMutation.isPending ? 'Saving...' : 'Save Diagram'}
+                <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button disabled={!selectedProject}>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Diagram
                     </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Save Flow Diagram</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="diagramName">Diagram Name</Label>
+                        <Input
+                          id="diagramName"
+                          value={diagramName}
+                          onChange={(e) => setDiagramName(e.target.value)}
+                          placeholder="Enter diagram name"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="diagramDescription">Description</Label>
+                        <Textarea
+                          id="diagramDescription"
+                          value={diagramDescription}
+                          onChange={(e) => setDiagramDescription(e.target.value)}
+                          placeholder="Enter diagram description"
+                          rows={3}
+                        />
+                      </div>
+                      <Button onClick={handleSaveDiagram} className="w-full" disabled={saveDiagramMutation.isPending}>
+                        {saveDiagramMutation.isPending ? 'Saving...' : 'Save Diagram'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
 
-              <Button onClick={exportToPDF} disabled={!selectedProject}>
-                <FileDown className="w-4 h-4 mr-2" />
-                Export PDF
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                <Button onClick={exportToPDF} disabled={!selectedProject}>
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Export PDF
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Flow Diagram Canvas */}
-        <Card className="min-h-[600px] flex-1">
-          <CardContent className="p-4 h-full">
-            <div ref={reactFlowRef} className="h-[550px] w-full border rounded-lg">
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                fitView
-                attributionPosition="bottom-left"
-              >
-                <Controls />
-                <MiniMap />
-                <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-                <Panel position="top-left">
-                  <div className="bg-white p-2 rounded shadow-lg border">
-                    <h3 className="font-semibold text-sm">Flow Diagram</h3>
-                    <p className="text-xs text-gray-600">
-                      Drag nodes to move, click to select, connect by dragging from node handles
-                    </p>
-                  </div>
-                </Panel>
-              </ReactFlow>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Flow Diagram Canvas */}
+          <Card className="min-h-[600px] flex-1">
+            <CardContent className="p-4 h-full">
+              <div ref={reactFlowRef} className="h-[550px] w-full border rounded-lg">
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
+                  fitView
+                  attributionPosition="bottom-left"
+                >
+                  <Controls />
+                  <MiniMap />
+                  <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+                  <Panel position="top-left">
+                    <div className="bg-white p-2 rounded shadow-lg border">
+                      <h3 className="font-semibold text-sm">Flow Diagram</h3>
+                      <p className="text-xs text-gray-600">
+                        Drag nodes to move, click to select, connect by dragging from node handles
+                      </p>
+                    </div>
+                  </Panel>
+                </ReactFlow>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </MainLayout>
   );

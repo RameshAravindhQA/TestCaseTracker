@@ -598,7 +598,7 @@ export default function ProfilePage() {
     mutationFn: async (formData: FormData) => {
       console.log("Starting profile picture upload");
       console.log("FormData contents:", Array.from(formData.entries()));
-      
+
       try {
         // Use fetch directly to ensure proper FormData handling
         const response = await fetch('/api/user/upload-profile-picture', {
@@ -935,7 +935,7 @@ export default function ProfilePage() {
         console.log("💾 Saving to backend...");
         const formData = new FormData();
         formData.append('file', file); // Use 'file' field name for bug attachment endpoint
-        
+
         const response = await fetch("/api/uploads/bug-attachment", {
           method: "POST",
           body: formData,
@@ -957,7 +957,7 @@ export default function ProfilePage() {
           } else {
             const text = await response.text();
             console.warn('⚠️ Backend returned non-JSON response:', text.substring(0, 200));
-            
+
             // Check if it's an HTML error page
             if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
               console.warn('⚠️ Received HTML error page from server');
@@ -973,7 +973,7 @@ export default function ProfilePage() {
         } else {
           const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
           console.error(`❌ Backend upload failed with status ${response.status}:`, errorData);
-          
+
           toast({
             title: "Upload Failed",
             description: `Server error (${response.status}): ${errorData.message}. Animation saved locally only.`,
@@ -1031,7 +1031,7 @@ export default function ProfilePage() {
       const avatarData = typeof profile.avatarData === 'string' 
         ? JSON.parse(profile.avatarData) 
         : profile.avatarData;
-      
+
       return avatarData?.preview || null;
     } catch (error) {
       console.error('❌ Error parsing avatar Lottie data:', error);
@@ -1078,12 +1078,7 @@ export default function ProfilePage() {
 
   return (
     <MainLayout>
-      <motion.div 
-        className="container max-w-4xl mx-auto py-6 px-4 space-y-6"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
+      <div className="container mx-auto py-6 px-4 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
         {/* Header */}
         <motion.div 
           className="flex items-center justify-between"

@@ -25,7 +25,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -209,7 +208,7 @@ export default function NotebooksPage() {
 
   return (
     <MainLayout>
-      <div className="py-6 px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto py-6 px-4 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
         {/* Header */}
         <div className="mb-6 flex justify-between items-center">
           <div>

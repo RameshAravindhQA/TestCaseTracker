@@ -387,472 +387,473 @@ export default function ReportsPage() {
 
   return (
     <MainLayout>
-      <div className="py-6 px-4 sm:px-6 lg:px-8">
-        <div className="mb-6 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-gradient-to-br from-green-500 via-emerald-600 to-teal-500 rounded-xl shadow-lg">
-              <FileBarChart className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-              <p className="text-muted-foreground mt-1">Generate and export project reports</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="flex gap-2">
-              <ProjectSelect
-                projects={projects}
-                isLoading={isProjectsLoading}
-                selectedProjectId={selectedProjectId || ""}
-                onChange={(value) => {
-                  setSelectedProjectId(value ? parseInt(value) : null);
-                  setSelectedModuleId("all");
-                }}
-                placeholder="Select a project"
-                className="w-[200px]"
-              />
-
-              <ModuleSelect
-                modules={modules}
-                isLoading={isModulesLoading}
-                selectedModuleId={selectedModuleId}
-                onChange={(value) => setSelectedModuleId(value)}
-                disabled={!selectedProjectId || isModulesLoading}
-                placeholder="All modules"
-                className="w-[200px]"
-                includeAllOption={true}
-              />
-            </div>
-
-            {selectedProjectId && (
-              <div className="flex gap-2">
-                <Button
-                  variant="default"
-                  className="flex items-center gap-2"
-                  onClick={handleConsolidatedReports}
-                  disabled={isLoading}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                  Consolidated Reports
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2"
-                  onClick={exportToCSV}
-                  disabled={isLoading}
-                >
-                  <Download className="h-4 w-4" />
-                  Export CSV
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2"
-                  onClick={exportToPDF}
-                  disabled={isLoading}
-                >
-                  <FileType className="h-4 w-4" />
-                  Export PDF
-                </Button>
+      <div className="container mx-auto py-6 px-4 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
+        <div className="py-6 px-4 sm:px-6 lg:px-8">
+          <div className="mb-6 flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-gradient-to-br from-green-500 via-emerald-600 to-teal-500 rounded-xl shadow-lg">
+                <FileBarChart className="h-8 w-8 text-white" />
               </div>
-            )}
-          </div>
-        </div>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
+                <p className="text-muted-foreground mt-1">Generate and export project reports</p>
+              </div>
+            </div>
 
-        {!selectedProjectId ? (
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <p className="text-gray-500">Please select a project to view and generate reports</p>
-            </CardContent>
-          </Card>
-        ) : isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Enhanced Bug Summary */}
-            {selectedProject && (
-              <EnhancedBugSummary
-                bugs={bugs || []}
-                modules={modules || []}
-                projectName={selectedProject.name}
-                className="mb-6"
-              />
-            )}
+            <div className="flex items-center gap-4">
+              <div className="flex gap-2">
+                <ProjectSelect
+                  projects={projects}
+                  isLoading={isProjectsLoading}
+                  selectedProjectId={selectedProjectId || ""}
+                  onChange={(value) => {
+                    setSelectedProjectId(value ? parseInt(value) : null);
+                    setSelectedModuleId("all");
+                  }}
+                  placeholder="Select a project"
+                  className="w-[200px]"
+                />
 
-            {/* Project Summary */}
+                <ModuleSelect
+                  modules={modules}
+                  isLoading={isModulesLoading}
+                  selectedModuleId={selectedModuleId}
+                  onChange={(value) => setSelectedModuleId(value)}
+                  disabled={!selectedProjectId || isModulesLoading}
+                  placeholder="All modules"
+                  className="w-[200px]"
+                  includeAllOption={true}
+                />
+              </div>
+
+              {selectedProjectId && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="default"
+                    className="flex items-center gap-2"
+                    onClick={handleConsolidatedReports}
+                    disabled={isLoading}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                    Consolidated Reports
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    onClick={exportToCSV}
+                    disabled={isLoading}
+                  >
+                    <Download className="h-4 w-4" />
+                    Export CSV
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    onClick={exportToPDF}
+                    disabled={isLoading}
+                  >
+                    <FileType className="h-4 w-4" />
+                    Export PDF
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {!selectedProjectId ? (
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Project Overview
-                </CardTitle>
-                <CardDescription>
-                  Summary statistics for {selectedProject?.name || "selected project"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-700 shadow-sm">
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Test Cases</h3>
-                    <p className="text-2xl font-semibold dark:text-white">{totalTestCases}</p>
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-700 shadow-sm">
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Bugs</h3>
-                    <p className="text-2xl font-semibold dark:text-white">{totalBugs}</p>
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-700 shadow-sm">
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Modules</h3>
-                    <p className="text-2xl font-semibold dark:text-white">{modules?.length || 0}</p>
-                  </div>
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-700 shadow-sm">
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Pass Rate</h3>
-                    <p className="text-2xl font-semibold dark:text-white">{passRate}%</p>
-                  </div>
-                </div>
+              <CardContent className="pt-6 text-center">
+                <p className="text-gray-500">Please select a project to view and generate reports</p>
               </CardContent>
             </Card>
-
-            {/* Real-time Status Overview */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Real-time Progress Dashboard
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium">Test Case Execution Progress</h3>
-                      <TrendingUp className="h-4 w-4 text-green-500" />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Passed</span>
-                        <span>{passedTestCases}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Failed</span>
-                        <span>{failedTestCases}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Blocked</span>
-                        <span>{blockedTestCases}</span>
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Passed: {passedTestCases}, Failed: {failedTestCases}, Blocked: {blockedTestCases}, Not Executed: {notExecutedTestCases}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium">Bug Resolution Progress</h3>
-                      <Activity className="h-4 w-4 text-blue-500" />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Resolved</span>
-                        <span>{resolvedBugs + closedBugs}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>In Progress</span>
-                        <span>{inProgressBugs}</span>
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Resolved: {resolvedBugs + closedBugs}, In Progress: {inProgressBugs}, Open: {openBugs}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Test case stats */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Test Case Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-64">
-                    {testStatusData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={testStatusData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percentage }) => `${name}: ${percentage}%`}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            onClick={handleTestStatusClick}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            {testStatusData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <p className="text-center text-gray-500 mt-20">No test case data available</p>
-                    )}
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <div className="grid grid-cols-2 gap-4 w-full text-sm">
-                    <div className="text-center">
-                      <span className="font-medium">Passed</span>
-                      <div className="text-green-600">{passedTestCases}</div>
-                    </div>
-                    <div className="text-center">
-                      <span className="font-medium">Failed</span>
-                      <div className="text-red-600">{failedTestCases}</div>
-                    </div>
-                    <div className="text-center">
-                      <span className="font-medium">Blocked</span>
-                      <div className="text-yellow-600">{blockedTestCases}</div>
-                    </div>
-                    <div className="text-center">
-                      <span className="font-medium">Not Executed</span>
-                      <div className="text-gray-600">{notExecutedTestCases}</div>
-                    </div>
-                  </div>
-                </CardFooter>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Test Case Priority</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-64">
-                    {testPriorityData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={testPriorityData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percentage }) => `${name}: ${percentage}%`}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {testPriorityData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <p className="text-center text-gray-500 mt-20">No test case data available</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+          ) : isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Enhanced Bug Summary */}
+              {selectedProject && (
+                <EnhancedBugSummary
+                  bugs={bugs || []}
+                  modules={modules || []}
+                  projectName={selectedProject.name}
+                  className="mb-6"
+                />
+              )}
 
-            {/* Bug stats */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Project Summary */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Bug Severity</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Project Overview
+                  </CardTitle>
+                  <CardDescription>
+                    Summary statistics for {selectedProject?.name || "selected project"}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64">
-                    {bugSeverityData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={bugSeverityData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percentage }) => `${name}: ${percentage}%`}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            onClick={handleBugSeverityClick}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            {bugSeverityData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <p className="text-center text-gray-500 mt-20">No bug data available</p>
-                    )}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-700 shadow-sm">
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Test Cases</h3>
+                      <p className="text-2xl font-semibold dark:text-white">{totalTestCases}</p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-700 shadow-sm">
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Bugs</h3>
+                      <p className="text-2xl font-semibold dark:text-white">{totalBugs}</p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-700 shadow-sm">
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Modules</h3>
+                      <p className="text-2xl font-semibold dark:text-white">{modules?.length || 0}</p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-700 shadow-sm">
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Pass Rate</h3>
+                      <p className="text-2xl font-semibold dark:text-white">{passRate}%</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              {/* Real-time Status Overview */}
+              <Card className="mb-6">
                 <CardHeader>
-                  <CardTitle>Bug Status</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Real-time Progress Dashboard
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64">
-                    {bugStatusData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={bugStatusData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percentage }) => `${name}: ${percentage}%`}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            onClick={handleBugStatusClick}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            {bugStatusData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <p className="text-center text-gray-500 mt-20">No bug data available</p>
-                    )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium">Test Case Execution Progress</h3>
+                        <TrendingUp className="h-4 w-4 text-green-500" />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Passed</span>
+                          <span>{passedTestCases}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Failed</span>
+                          <span>{failedTestCases}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Blocked</span>
+                          <span>{blockedTestCases}</span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Passed: {passedTestCases}, Failed: {failedTestCases}, Blocked: {blockedTestCases}, Not Executed: {notExecutedTestCases}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium">Bug Resolution Progress</h3>
+                        <Activity className="h-4 w-4 text-blue-500" />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Resolved</span>
+                          <span>{resolvedBugs + closedBugs}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>In Progress</span>
+                          <span>{inProgressBugs}</span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Resolved: {resolvedBugs + closedBugs}, In Progress: {inProgressBugs}, Open: {openBugs}
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <div className="grid grid-cols-2 gap-4 w-full text-sm">
-                    <div className="text-center">
-                      <span className="font-medium">Open</span>
-                      <div className="text-red-600">{openBugs}</div>
-                    </div>
-                    <div className="text-center">
-                      <span className="font-medium">In Progress</span>
-                      <div className="text-blue-600">{inProgressBugs}</div>
-                    </div>
-                    <div className="text-center">
-                      <span className="font-medium">Resolved</span>
-                      <div className="text-green-600">{resolvedBugs}</div>
-                    </div>
-                    <div className="text-center">
-                      <span className="font-medium">Closed</span>
-                      <div className="text-gray-600">{closedBugs}</div>
-                    </div>
-                  </div>
-                </CardFooter>
               </Card>
-            </div>
-          </div>
-        )}
 
-        {/* Chart Data Dialog */}
-        <Dialog open={chartDialogOpen} onOpenChange={setChartDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                {chartDialogData?.title}
-              </DialogTitle>
-              <DialogDescription>
-                Detailed view of {chartDialogData?.items.length || 0} items
-              </DialogDescription>
-            </DialogHeader>
-
-            {chartDialogData && (
-              <div className="mt-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {chartDialogData.type === 'testStatus' ? (
-                        <>
-                          <TableHead>Feature</TableHead>
-                          <TableHead>Module</TableHead>
-                          <TableHead>Priority</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Created</TableHead>
-                        </>
+              {/* Test case stats */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Test Case Status</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      {testStatusData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={testStatusData}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={({ name, percentage }) => `${name}: ${percentage}%`}
+                              outerRadius={80}
+                              fill="#8884d8"
+                              dataKey="value"
+                              onClick={handleTestStatusClick}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              {testStatusData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
                       ) : (
-                        <>
-                          <TableHead>Title</TableHead>
-                          <TableHead>Module</TableHead>
-                          <TableHead>Severity</TableHead>
-                          <TableHead>Priority</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Created</TableHead>
-                        </>
+                        <p className="text-center text-gray-500 mt-20">No test case data available</p>
                       )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {chartDialogData.items.map((item, index) => (
-                      <TableRow key={index}>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <div className="grid grid-cols-2 gap-4 w-full text-sm">
+                      <div className="text-center">
+                        <span className="font-medium">Passed</span>
+                        <div className="text-green-600">{passedTestCases}</div>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-medium">Failed</span>
+                        <div className="text-red-600">{failedTestCases}</div>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-medium">Blocked</span>
+                        <div className="text-yellow-600">{blockedTestCases}</div>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-medium">Not Executed</span>
+                        <div className="text-gray-600">{notExecutedTestCases}</div>
+                      </div>
+                    </div>
+                  </CardFooter>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Test Case Priority</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      {testPriorityData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={testPriorityData}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={({ name, percentage }) => `${name}: ${percentage}%`}
+                              outerRadius={80}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              {testPriorityData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <p className="text-center text-gray-500 mt-20">No test case data available</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Bug stats */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Bug Severity</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      {bugSeverityData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={bugSeverityData}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={({ name, percentage }) => `${name}: ${percentage}%`}
+                              outerRadius={80}
+                              fill="#8884d8"
+                              dataKey="value"
+                              onClick={handleBugSeverityClick}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              {bugSeverityData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <p className="text-center text-gray-500 mt-20">No bug data available</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Bug Status</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64">
+                      {bugStatusData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={bugStatusData}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={({ name, percentage }) => `${name}: ${percentage}%`}
+                              outerRadius={80}
+                              fill="#8884d8"
+                              dataKey="value"
+                              onClick={handleBugStatusClick}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              {bugStatusData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <p className="text-center text-gray-500 mt-20">No bug data available</p>
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <div className="grid grid-cols-2 gap-4 w-full text-sm">
+                      <div className="text-center">
+                        <span className="font-medium">Open</span>
+                        <div className="text-red-600">{openBugs}</div>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-medium">In Progress</span>
+                        <div className="text-blue-600">{inProgressBugs}</div>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-medium">Resolved</span>
+                        <div className="text-green-600">{resolvedBugs}</div>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-medium">Closed</span>
+                        <div className="text-gray-600">{closedBugs}</div>
+                      </div>
+                    </div>
+                  </CardFooter>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* Chart Data Dialog */}
+          <Dialog open={chartDialogOpen} onOpenChange={setChartDialogOpen}>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Eye className="h-5 w-5" />
+                  {chartDialogData?.title}
+                </DialogTitle>
+                <DialogDescription>
+                  Detailed view of {chartDialogData?.items.length || 0} items
+                </DialogDescription>
+              </DialogHeader>
+
+              {chartDialogData && (
+                <div className="mt-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
                         {chartDialogData.type === 'testStatus' ? (
                           <>
-                            <TableCell>{item.feature || item.title}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {modules?.find(m => m.id === item.moduleId)?.name || 'Unknown'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={item.priority === 'High' ? 'destructive' : 'secondary'}>
-                                {item.priority}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={item.status === 'Pass' ? 'default' : 'destructive'}>
-                                {item.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                            <TableHead>Feature</TableHead>
+                            <TableHead>Module</TableHead>
+                            <TableHead>Priority</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Created</TableHead>
                           </>
                         ) : (
                           <>
-                            <TableCell>{item.title}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {modules?.find(m => m.id === item.moduleId)?.name || 'Unknown'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={item.severity === 'Critical' ? 'destructive' : 'secondary'}>
-                                {item.severity}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={item.priority === 'High' ? 'destructive' : 'secondary'}>
-                                {item.priority}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={item.status === 'Open' ? 'destructive' : 'default'}>
-                                {item.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{new Date(item.dateReported || item.createdAt).toLocaleDateString()}</TableCell>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Module</TableHead>
+                            <TableHead>Severity</TableHead>
+                            <TableHead>Priority</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Created</TableHead>
                           </>
                         )}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+                    </TableHeader>
+                    <TableBody>
+                      {chartDialogData.items.map((item, index) => (
+                        <TableRow key={index}>
+                          {chartDialogData.type === 'testStatus' ? (
+                            <>
+                              <TableCell>{item.feature || item.title}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {modules?.find(m => m.id === item.moduleId)?.name || 'Unknown'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={item.priority === 'High' ? 'destructive' : 'secondary'}>
+                                  {item.priority}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={item.status === 'Pass' ? 'default' : 'destructive'}>
+                                  {item.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                            </>
+                          ) : (
+                            <>
+                              <TableCell>{item.title}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {modules?.find(m => m.id === item.moduleId)?.name || 'Unknown'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={item.severity === 'Critical' ? 'destructive' : 'secondary'}>
+                                  {item.severity}
+                                </Badge>
+                              </TableCell>                              <TableCell>
+                                <Badge variant={item.priority === 'High' ? 'destructive' : 'secondary'}>
+                                  {item.priority}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={item.status === 'Open' ? 'destructive' : 'default'}>
+                                  {item.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{new Date(item.dateReported || item.createdAt).toLocaleDateString()}</TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
     </MainLayout>
   );

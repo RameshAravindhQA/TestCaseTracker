@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProjectSelect } from "@/components/ui/project-select";
@@ -590,7 +589,7 @@ export default function TraceabilityMatrixPage() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto py-6 px-4 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="p-2 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">

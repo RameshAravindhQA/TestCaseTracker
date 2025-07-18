@@ -340,7 +340,7 @@ export default function UsersPage() {
 
   return (
     <MainLayout>
-      <div className="py-6 px-4 sm:px-6 lg:px-8">
+      <div className="w-full py-6 px-4 sm:px-6 lg:px-8 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
         <div className="mb-6 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Users</h1>
