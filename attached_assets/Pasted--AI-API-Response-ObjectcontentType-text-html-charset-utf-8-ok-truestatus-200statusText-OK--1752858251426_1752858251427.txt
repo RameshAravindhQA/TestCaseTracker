@@ -1,0 +1,54 @@
+ AI API Response: ObjectcontentType: "text/html; charset=utf-8"ok: truestatus: 200statusText: "OK"[[Prototype]]: Object
+ai-test-generator.tsx:134 📝 Response content type: text/html; charset=utf-8
+ai-test-generator.tsx:139 📄 Response text length: 32695
+ai-test-generator.tsx:140 📄 Response preview: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script type="module">
+import { createHotContext } from "/@vite/client";
+const hot = createHotContext("/__dummy__runtime-error-plugin");
+
+function sendErr
+ai-test-generator.tsx:157 🔄 HTML error page detected
+ai-test-generator.tsx:161 🔄 Retrying in 1000ms...
+ai-test-generator.tsx:99 🔄 AI Generation attempt 2/3
+ai-test-generator.tsx:120 📡 AI API Response: Object
+ai-test-generator.tsx:134 📝 Response content type: text/html; charset=utf-8
+ai-test-generator.tsx:139 📄 Response text length: 32695
+ai-test-generator.tsx:140 📄 Response preview: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script type="module">
+import { createHotContext } from "/@vite/client";
+const hot = createHotContext("/__dummy__runtime-error-plugin");
+
+function sendErr
+ai-test-generator.tsx:157 🔄 HTML error page detected
+ai-test-generator.tsx:161 🔄 Retrying in 2000ms...
+ai-test-generator.tsx:99 🔄 AI Generation attempt 3/3
+ai-test-generator.tsx:120 📡 AI API Response: Object
+ai-test-generator.tsx:134 📝 Response content type: text/html; charset=utf-8
+ai-test-generator.tsx:139 📄 Response text length: 32695
+ai-test-generator.tsx:140 📄 Response preview: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script type="module">
+import { createHotContext } from "/@vite/client";
+const hot = createHotContext("/__dummy__runtime-error-plugin");
+
+function sendErr
+ai-test-generator.tsx:157 🔄 HTML error page detected
+ai-test-generator.tsx:191 ❌ Failed to parse response: Error: Server is experiencing issues. The service may be restarting. Please try again in a moment.
+    at Object.mutationFn (ai-test-generator.tsx:167:21)
+mutationFn @ ai-test-generator.tsx:191Understand this error
+ai-test-generator.tsx:247 ❌ AI Generation attempt 3 failed: Error: Failed to parse server response. Please check your connection and try again.
+    at Object.mutationFn (ai-test-generator.tsx:201:19)
+mutationFn @ ai-test-generator.tsx:247Understand this error
+ai-test-generator.tsx:297 Enhanced AI Generation error: Error: Failed after 3 attempts: Failed to parse server response. Please check your connection and try again.
+    at Object.mutationFn (ai-test-generator.tsx:268:19)
+onError @ ai-test-generator.tsx:297
+execute @ @tanstack_react-query.js?v=b1be5688:1301Understand this error
+:24678/:1  Failed to load resource: net::ERR_CONNECTION_TIMED_OUTUnderstand this error
+client:736  GET https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev:24678/ net::ERR_CONNECTION_TIMED_OUT
+ping @ client:736
+waitForSuccessfulPing @ client:755Understand this error
