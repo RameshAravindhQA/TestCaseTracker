@@ -575,7 +575,7 @@ export function Messenger() {
       {/* Chat Area */}
       <div className="flex-1 flex flex-col">
         {selectedContact ? (
-          
+          <>
             {/* Chat Header */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
               <div className="flex items-center justify-between">
@@ -890,7 +890,7 @@ export function Messenger() {
                 </Button>
               </div>
             </div>
-          
+          </>
         ) : (
           <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
             <div className="text-center">

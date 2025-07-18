@@ -173,6 +173,16 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
       return;
     }
 
+    // Ensure we have all required fields
+    if (!formData.projectId || !formData.username || !formData.repository) {
+      toast({
+        title: "Missing Required Fields",
+        description: "Please fill in all required fields: Project, Username, and Repository",
+        variant: "destructive",
+      });
+      return;
+    }
+
     saveMutation.mutate(formData);
   };
 

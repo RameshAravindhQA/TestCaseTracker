@@ -881,6 +881,8 @@ export default function ProfilePage() {
     );
   }
 
+  const [users, setUsers] = useState<any[]>([]);
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6 px-4 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
@@ -1169,6 +1171,7 @@ export default function ProfilePage() {
                             onMouseLeave={() => toggleAnimation(animation.id)}
                             style={{ cursor: 'pointer' }}
                             animationId={animation.id}
+                            users={users || []}
                           />
                         </div>
                       ))}
