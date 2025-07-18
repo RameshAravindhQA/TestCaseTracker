@@ -125,34 +125,55 @@ export function Messenger() {
     queryFn: async () => {
       if (!selectedContact) return [];
       try {
+        console.log(`[MESSENGER] Fetching messages for contact: ${selectedContact.id}`);
+        
         // Get or create direct conversation
         let conversationResponse = await apiRequest('GET', `/api/conversations/direct?userId=${selectedContact.id}`);
         if (conversationResponse.status === 404) {
+          console.log('[MESSENGER] Conversation not found, creating new one');
           // Create new conversation if it doesn't exist
           conversationResponse = await apiRequest('POST', '/api/conversations/direct', {
             userId: selectedContact.id
           });
         }
-        if (!conversationResponse.ok) throw new Error('Failed to get conversation');
+        
+        if (!conversationResponse.ok) {
+          const errorText = await conversationResponse.text();
+          console.error('[MESSENGER] Conversation API error:', errorText);
+          throw new Error('Failed to get conversation');
+        }
+        
         const conversation = await conversationResponse.json();
+        console.log('[MESSENGER] Got conversation:', conversation);
         
         // Fetch messages for this conversation
         const messagesResponse = await apiRequest('GET', `/api/messages/conversation/${conversation.id}`);
         if (!messagesResponse.ok) {
           if (messagesResponse.status === 404) {
+            console.log('[MESSENGER] No messages found for conversation');
             return []; // No messages yet
           }
+          const errorText = await messagesResponse.text();
+          console.error('[MESSENGER] Messages API error:', errorText);
           throw new Error('Failed to fetch messages');
         }
+        
         const messagesData = await messagesResponse.json();
+        console.log('[MESSENGER] Got messages:', messagesData);
         return Array.isArray(messagesData) ? messagesData : [];
       } catch (error) {
         console.error('[MESSENGER] Error fetching messages:', error);
+        toast({
+          title: "Connection Error",
+          description: "Failed to load messages. Please check your connection.",
+          variant: "destructive"
+        });
         return [];
       }
     },
     enabled: !!selectedContact,
     refetchInterval: 3000, // Refetch every 3 seconds for real-time updates
+    retry: false, // Don't retry on failure to avoid spam
   });
 
   // WebSocket connection setup
@@ -165,8 +186,7 @@ export function Messenger() {
 
         // Use correct WebSocket URL for Replit
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // Remove port from URL for Replit deployment
-        const host = window.location.hostname;
+        const host = window.location.host; // Include port for development
         const wsUrl = `${protocol}//${host}/ws`;
 
         console.log(`[MESSENGER] Attempting to connect to WebSocket: ${wsUrl}`);
@@ -184,7 +204,7 @@ export function Messenger() {
             type: 'authenticate',
             data: {
               userId: user.id,
-              userName: user.firstName
+              userName: user.firstName || user.name || 'Unknown User'
             }
           }));
         };
@@ -279,15 +299,25 @@ export function Messenger() {
       if (!selectedContact) throw new Error('No contact selected');
       
       try {
+        console.log('[MESSENGER] Sending message to:', selectedContact.id);
+        
         // Get or create conversation first
         let conversationResponse = await apiRequest('GET', `/api/conversations/direct?userId=${selectedContact.id}`);
         if (conversationResponse.status === 404) {
+          console.log('[MESSENGER] Creating new conversation');
           conversationResponse = await apiRequest('POST', '/api/conversations/direct', {
             userId: selectedContact.id
           });
         }
-        if (!conversationResponse.ok) throw new Error('Failed to get conversation');
+        
+        if (!conversationResponse.ok) {
+          const errorText = await conversationResponse.text();
+          console.error('[MESSENGER] Conversation error:', errorText);
+          throw new Error('Failed to get conversation');
+        }
+        
         const conversation = await conversationResponse.json();
+        console.log('[MESSENGER] Using conversation:', conversation.id);
 
         // Send via API for persistence first
         const response = await apiRequest('POST', '/api/messages', {
@@ -298,8 +328,14 @@ export function Messenger() {
           attachments: messageData.attachments || []
         });
         
-        if (!response.ok) throw new Error('Failed to send message');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[MESSENGER] Send message API error:', errorText);
+          throw new Error('Failed to send message');
+        }
+        
         const messageResult = await response.json();
+        console.log('[MESSENGER] Message sent successfully:', messageResult);
 
         // Then send via WebSocket for real-time delivery (if connected)
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {

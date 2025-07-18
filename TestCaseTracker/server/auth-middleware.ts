@@ -1,4 +1,3 @@
-
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { storage } from './storage';
@@ -130,7 +129,7 @@ export async function authenticateToken(req: AuthenticatedRequest, res: Response
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as any;
     const user = await storage.getUser(decoded.userId);
-    
+
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
@@ -152,3 +151,29 @@ export async function authenticateToken(req: AuthenticatedRequest, res: Response
     return res.status(403).json({ message: 'Invalid token' });
   }
 }
+
+export const isAuthenticated = async (req: Request, res: Response, next: NextFunction) => {
+  const sessionId = req.session.id;
+
+  if (!req.session.userId) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  try {
+    // Optionally verify the user still exists and add user info to session
+    const user = await storage.getUser(req.session.userId);
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    // Add user details to session for use in API handlers
+    req.session.userFirstName = user.firstName;
+    req.session.userLastName = user.lastName;
+    req.session.userEmail = user.email;
+
+    next();
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};

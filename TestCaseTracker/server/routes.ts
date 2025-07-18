@@ -1791,6 +1791,130 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Direct conversation endpoints for messenger
+  apiRouter.get("/conversations/direct", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(400).json({ error: 'userId parameter is required' });
+      }
+
+      const conversation = await storage.getDirectConversation(req.session.userId!, parseInt(userId));
+      res.json(conversation);
+    } catch (error) {
+      console.error('Get direct conversation error:', error);
+      if (error.message === 'Conversation not found') {
+        res.status(404).json({ error: 'Conversation not found' });
+      } else {
+        res.status(500).json({ error: 'Failed to get conversation' });
+      }
+    }
+  });
+
+  apiRouter.post("/conversations/direct", isAuthenticated, async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const conversation = await storage.createDirectConversation(req.session.userId!, userId);
+      res.json(conversation);
+    } catch (error) {
+      console.error('Create direct conversation error:', error);
+      res.status(500).json({ error: 'Failed to create conversation' });
+    }
+  });
+
+  // Messages endpoints for conversations
+  apiRouter.get("/messages/conversation/:conversationId", isAuthenticated, async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.conversationId);
+      const messages = await storage.getConversationMessages(conversationId);
+      res.json(messages || []);
+    } catch (error) {
+      console.error('Get conversation messages error:', error);
+      res.status(404).json({ error: 'Messages not found' });
+    }
+  });
+
+  apiRouter.post("/messages", isAuthenticated, async (req, res) => {
+    try {
+      const { conversationId, receiverId, content, type = 'text', attachments = [] } = req.body;
+      
+      if (!conversationId || !receiverId || !content) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      const message = await storage.createMessage({
+        senderId: req.session.userId!,
+        receiverId,
+        conversationId,
+        content,
+        type,
+        attachments,
+        sender: {
+          id: req.session.userId!,
+          firstName: req.session.userFirstName || 'Unknown',
+          lastName: req.session.userLastName || '',
+          profilePicture: null
+        }
+      });
+
+      res.json(message);
+    } catch (error) {
+      console.error('Create message error:', error);
+      res.status(500).json({ error: 'Failed to send message' });
+    }
+  });
+
+  apiRouter.put("/messages/:id", isAuthenticated, async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.id);
+      const { content } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ error: 'Content is required' });
+      }
+
+      const message = await storage.updateMessage(messageId, { content, isEdited: true });
+      res.json(message);
+    } catch (error) {
+      console.error('Update message error:', error);
+      res.status(500).json({ error: 'Failed to update message' });
+    }
+  });
+
+  apiRouter.delete("/messages/:id", isAuthenticated, async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.id);
+      await storage.deleteMessage(messageId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete message error:', error);
+      res.status(500).json({ error: 'Failed to delete message' });
+    }
+  });
+
+  apiRouter.post("/messages/:id/react", isAuthenticated, async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.id);
+      const { emoji } = req.body;
+      
+      if (!emoji) {
+        return res.status(400).json({ error: 'Emoji is required' });
+      }
+
+      const reaction = await storage.addMessageReaction(messageId, req.session.userId!, emoji);
+      res.json(reaction);
+    } catch (error) {
+      console.error('Add message reaction error:', error);
+      res.status(500).json({ error: 'Failed to add reaction' });
+    }
+  });t messages' });
+    }
+  });
+
   apiRouter.post("/chats/direct", isAuthenticated, async (req, res) => {
     try {
       const { targetUserId } = req.body;
