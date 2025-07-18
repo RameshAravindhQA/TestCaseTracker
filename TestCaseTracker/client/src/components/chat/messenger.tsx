@@ -124,9 +124,21 @@ export function Messenger() {
     queryKey: ['/api/messages', selectedContact?.id],
     queryFn: async () => {
       if (!selectedContact) return [];
-      const response = await apiRequest('GET', `/api/messages?userId=${selectedContact.id}`);
-      if (!response.ok) throw new Error('Failed to fetch messages');
-      return response.json();
+      // Get or create direct conversation
+      let conversationResponse = await apiRequest('GET', `/api/conversations/direct?userId=${selectedContact.id}`);
+      if (conversationResponse.status === 404) {
+        // Create new conversation if it doesn't exist
+        conversationResponse = await apiRequest('POST', '/api/conversations/direct', {
+          userId: selectedContact.id
+        });
+      }
+      if (!conversationResponse.ok) throw new Error('Failed to get conversation');
+      const conversation = await conversationResponse.json();
+      
+      // Fetch messages for this conversation
+      const messagesResponse = await apiRequest('GET', `/api/messages/conversation/${conversation.id}`);
+      if (!messagesResponse.ok) throw new Error('Failed to fetch messages');
+      return messagesResponse.json();
     },
     enabled: !!selectedContact,
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
@@ -140,9 +152,11 @@ export function Messenger() {
       try {
         setConnectionStatus('connecting');
 
-        // Use wss for secure connections, ws for local development
+        // Use correct WebSocket URL for Replit
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        // Remove port from URL for Replit deployment
+        const host = window.location.hostname;
+        const wsUrl = `${protocol}//${host}/ws`;
 
         console.log(`[MESSENGER] Attempting to connect to WebSocket: ${wsUrl}`);
 
@@ -248,12 +262,24 @@ export function Messenger() {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: { receiverId: number; content: string; type?: string; attachments?: any[] }) => {
-      // Send via WebSocket for real-time delivery first
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && selectedContact) {
+      if (!selectedContact) throw new Error('No contact selected');
+      
+      // Get or create conversation first
+      let conversationResponse = await apiRequest('GET', `/api/conversations/direct?userId=${selectedContact.id}`);
+      if (conversationResponse.status === 404) {
+        conversationResponse = await apiRequest('POST', '/api/conversations/direct', {
+          userId: selectedContact.id
+        });
+      }
+      if (!conversationResponse.ok) throw new Error('Failed to get conversation');
+      const conversation = await conversationResponse.json();
+
+      // Send via WebSocket for real-time delivery
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({
           type: 'send_message',
           data: {
-            conversationId: selectedContact.id, // Use conversationId instead of receiverId
+            conversationId: conversation.id,
             message: messageData.content,
             type: messageData.type || 'text',
             attachments: messageData.attachments || []
@@ -261,8 +287,14 @@ export function Messenger() {
         }));
       }
 
-      // Also send via API for persistence
-      const response = await apiRequest('POST', '/api/messages', messageData);
+      // Send via API for persistence with conversation context
+      const response = await apiRequest('POST', '/api/messages', {
+        conversationId: conversation.id,
+        receiverId: messageData.receiverId,
+        content: messageData.content,
+        type: messageData.type || 'text',
+        attachments: messageData.attachments || []
+      });
       if (!response.ok) throw new Error('Failed to send message');
       return response.json();
     },

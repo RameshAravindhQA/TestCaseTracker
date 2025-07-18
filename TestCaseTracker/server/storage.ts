@@ -798,7 +798,8 @@ class MemStorage implements IStorage {
     return customer;
   }
 
-  async getCustomers(): Promise<Customer[]>{    return Array.from(this.customers.values());
+  async getCustomers(): Promise<```text
+Customer[]> { return Array.from(this.customers.values());
   }
 
   async getCustomerById(id: number): Promise<Customer | null> {
@@ -2080,17 +2081,22 @@ class MemStorage implements IStorage {
 
     const message = {
       id,
+      senderId: messageData.senderId,
+      receiverId: messageData.receiverId,
       conversationId: messageData.conversationId,
-      userId: messageData.userId,
-      userName: messageData.userName,
-      message: messageData.message,
+      content: messageData.content,
       type: messageData.type || 'text',
       timestamp: now,
       createdAt: now,
-      replyToId: messageData.replyToId || null,
+      isRead: false,
+      isEdited: false,
       attachments: messageData.attachments || [],
-      isPinned: false,
-      isEdited: false
+      sender: messageData.sender || {
+        id: messageData.senderId,
+        firstName: 'Unknown',
+        lastName: '',
+        profilePicture: null
+      }
     };
 
     // Store in main messages map
@@ -2098,10 +2104,12 @@ class MemStorage implements IStorage {
 
     // Also store in conversation-specific cache
     const conversationId = messageData.conversationId;
-    if (!this.conversationMessages.has(conversationId)) {
-      this.conversationMessages.set(conversationId, []);
+    if (conversationId) {
+      if (!this.conversationMessages.has(conversationId)) {
+        this.conversationMessages.set(conversationId, []);
+      }
+      this.conversationMessages.get(conversationId)!.push(message);
     }
-    this.conversationMessages.get(conversationId)!.push(message);
 
     console.log(`Storage: Created message ${id} for conversation ${conversationId}`);
     return message;
@@ -2144,7 +2152,7 @@ class MemStorage implements IStorage {
     // Create conversations from message groups
     for (const [convId, messages] of conversationMessages.entries()) {
       // Find other participants (not current user)
-      const otherUserIds = [...new Set(messages.map(m => m.userId).filter(id => id !== userId))];
+      const otherUserIds = [...new Set(messages.map(m => m.senderId).filter(id => id !== userId))];
 
       if (otherUserIds.length > 0) {
         const otherUser = await this.getUser(otherUserIds[0]);
@@ -2160,7 +2168,7 @@ class MemStorage implements IStorage {
               id: otherUser.id, 
               name: `${otherUser.firstName} ${otherUser.lastName || ''}`.trim() 
             }],
-            lastMessage: lastMessage.message,
+            lastMessage: lastMessage.content,
             unreadCount: 0,
             createdAt: lastMessage.timestamp
           });
@@ -2285,7 +2293,7 @@ class MemStorage implements IStorage {
     if (userId) {
       // Return messages for specific user
       return Array.from(this.chatMessages.values()).filter(msg => 
-        msg.userId === userId || (msg.mentionedUsers && msg.mentionedUsers.includes(userId))
+        msg.senderId === userId || (msg.mentionedUsers && msg.mentionedUsers.includes(userId))
       );
     }
     // Return all messages
