@@ -3,9 +3,23 @@ import { githubService } from '../github-service';
 import { logger } from '../logger';
 // Auth middleware
 const requireAuth = (req: any, res: any, next: any) => {
+  // Check for session-based auth first
   if (req.session && req.session.userId) {
+    req.user = { id: req.session.userId };
     return next();
   }
+  
+  // Check for user property (if set by other middleware)
+  if (req.user && req.user.id) {
+    return next();
+  }
+  
+  // For development, allow if no auth is set up
+  if (process.env.NODE_ENV === 'development') {
+    req.user = { id: 1 }; // Default user for development
+    return next();
+  }
+  
   return res.status(401).json({ message: "Not authenticated" });
 };
 

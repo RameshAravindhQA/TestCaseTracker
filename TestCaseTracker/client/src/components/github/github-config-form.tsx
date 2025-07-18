@@ -76,10 +76,11 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
         isActive: editingIntegration.isEnabled,
         webhookUrl: editingIntegration.webhookUrl || ''
       });
-    } else if (projectId) {
-      // Reset form for new integration
+    } else {
+      // Reset form for new integration - use first project if no projectId provided
+      const defaultProjectId = projectId || (projects && projects.length > 0 ? projects[0].id : '');
       setFormData({
-        projectId: projectId.toString(),
+        projectId: defaultProjectId.toString(),
         username: '',
         repository: '',
         accessToken: '',
@@ -88,7 +89,7 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
         webhookUrl: ''
       });
     }
-  }, [editingIntegration, projectId]);
+  }, [editingIntegration, projectId, projects]);
 
   // Create/Update mutation
   const saveMutation = useMutation({
