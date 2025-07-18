@@ -1911,8 +1911,6 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       console.error('Add message reaction error:', error);
       res.status(500).json({ error: 'Failed to add reaction' });
     }
-  });t messages' });
-    }
   });
 
   apiRouter.post("/chats/direct", isAuthenticated, async (req, res) => {
