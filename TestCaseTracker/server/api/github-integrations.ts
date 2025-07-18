@@ -77,6 +77,7 @@ router.post('/test-connection', requireAuth, async (req, res) => {
 router.post('/create', requireAuth, async (req, res) => {
   try {
     const { 
+      projectId,
       project,
       githubUsername, 
       repositoryName, 
@@ -85,11 +86,12 @@ router.post('/create', requireAuth, async (req, res) => {
       enableIntegration 
     } = req.body;
 
-    // Validate required fields
-    if (!project || !githubUsername || !repositoryName || !personalAccessToken) {
+    // Validate required fields - check for both projectId and project
+    const projectIdentifier = projectId || project;
+    if (!projectIdentifier || !githubUsername || !repositoryName || !personalAccessToken) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: project, githubUsername, repositoryName, and personalAccessToken are required',
+        message: 'Missing required fields: projectId (or project), githubUsername, repositoryName, and personalAccessToken are required',
       });
     }
 
@@ -122,8 +124,8 @@ router.post('/create', requireAuth, async (req, res) => {
     // For now, we'll just return success
     const integration = {
       id: Date.now(),
-      projectId: project,
-      projectName: project,
+      projectId: projectIdentifier,
+      projectName: project || projectIdentifier,
       githubUsername,
       repositoryName,
       personalAccessToken: personalAccessToken.substring(0, 10) + '...',

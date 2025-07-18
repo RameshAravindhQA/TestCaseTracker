@@ -1081,238 +1081,426 @@ export default function ProfilePage() {
       <div className="container mx-auto py-6 px-4 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
         {/* Header */}
         <motion.div 
-          className="flex items-center justify-between"
-          variants={cardVariants}
+          className="mb-8"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
         >
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
-            <p className="text-gray-600 mt-1">Manage your account information and preferences</p>
-          </div>
-          <Button
-            onClick={() => setIsEditing(!isEditing)}
-            variant={isEditing ? "outline" : "default"}
-            className="flex items-center gap-2"
-          >
-            {isEditing ? (
-              <>
-                <X className="h-4 w-4" />
-                Cancel
-              </>
-            ) : (
-              <>
-                <Edit3 className="h-4 w-4" />
-                Edit Profile
-              </>
-            )}
-          </Button>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Profile Settings</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your account information and preferences</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Profile Picture & Basic Info Card */}
-          <motion.div variants={cardVariants}>
-            <Card className="lg:col-span-1">
-              <CardHeader className="text-center pb-4">
-                <div className="relative mx-auto">
-                  <Avatar className="h-24 w-24 mx-auto border-4 border-white shadow-lg">
-                    <AvatarImage 
-                      src={avatarSrc} 
-                      alt={`${profile?.firstName} ${profile?.lastName}`}
-                    />
-                    <AvatarFallback className="text-xl font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                      {profile?.firstName?.[0]}{profile?.lastName?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="absolute -bottom-1 -right-1 rounded-full h-8 w-8 p-0 bg-white shadow-md"
-                    onClick={handleProfilePictureClick}
-                  >
-                    <Camera className="h-4 w-4" />
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange2}
-                    className="hidden"
-                  />
-                </div>
-                <div className="space-y-2 mt-4">
-                  <CardTitle className="text-xl">
-                    {profile?.firstName} {profile?.lastName}
-                  </CardTitle>
-                  <Badge className={`${getRoleColor(profile?.role || '')} border`}>
-                    <Shield className="h-3 w-3 mr-1" />
-                    {profile?.role}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span className="truncate">{profile?.email}</span>
-                </div>
-                {profile?.phone && (
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <Phone className="h-4 w-4 text-gray-400" />
-                    <span>{profile.phone}</span>
-                  </div>
-                )}
-                {profile?.location && (
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <MapPin className="h-4 w-4 text-gray-400" />
-                    <span>{profile.location}</span>
-                  </div>
-                )}
-                <Separator />
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-3 text-gray-600">
-                    <Calendar className="h-4 w-4 text-gray-400" />
-                    <span>
-                      Joined {new Date(profile?.createdAt || '').toLocaleDateString()}
-                    </span>
-                  </div>
-                  {profile?.lastLoginAt && (
-                    <div className="flex items-center gap-3 text-gray-600">
-                      <Clock className="h-4 w-4 text-gray-400" />
-                      <span>
-                        Last active {new Date(profile.lastLoginAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <Tabs defaultValue="profile" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="profile">Profile</TabsTrigger>
+              <TabsTrigger value="security">Security</TabsTrigger>
+              <TabsTrigger value="avatar">Avatar</TabsTrigger>
+            </TabsList>
 
-          {/* Profile Details Form */}
-          <motion.div variants={cardVariants} className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Profile Information
-                </CardTitle>
-                <CardDescription>
-                  Update your personal information and bio
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Name Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input
-                        id="firstName"
-                        value={formData.firstName}
-                        onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                        disabled={!isEditing}
-                        className={!isEditing ? "bg-gray-50" : ""}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input
-                        id="lastName"
-                        value={formData.lastName}
-                        onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                        disabled={!isEditing}
-                        className={!isEditing ? "bg-gray-50" : ""}
-                      />
-                    </div>
-                  </div>
+            {/* Profile Tab */}
+            <TabsContent value="profile" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Profile Picture & Basic Info Card */}
+                <motion.div variants={cardVariants}>
+                  <Card className="lg:col-span-1">
+                    <CardHeader className="text-center pb-4">
+                      <div className="relative mx-auto">
+                        {avatarLottieData ? (
+                          <div className="h-24 w-24 mx-auto border-4 border-white shadow-lg rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600">
+                            <LottieAvatar
+                              animationData={avatarLottieData}
+                              className="w-full h-full"
+                            />
+                          </div>
+                        ) : (
+                          <Avatar className="h-24 w-24 mx-auto border-4 border-white shadow-lg">
+                            <AvatarImage 
+                              src={avatarSrc} 
+                              alt={`${profile?.firstName} ${profile?.lastName}`}
+                            />
+                            <AvatarFallback className="text-xl font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                              {profile?.firstName?.[0]}{profile?.lastName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="absolute -bottom-1 -right-1 rounded-full h-8 w-8 p-0 bg-white shadow-md"
+                          onClick={handleProfilePictureClick}
+                        >
+                          <Camera className="h-4 w-4" />
+                        </Button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*,.json"
+                          onChange={handleFileChange2}
+                          className="hidden"
+                        />
+                      </div>
+                      <div className="space-y-2 mt-4">
+                        <CardTitle className="text-xl">
+                          {profile?.firstName} {profile?.lastName}
+                        </CardTitle>
+                        <Badge className={`${getRoleColor(profile?.role || '')} border`}>
+                          <Shield className="h-3 w-3 mr-1" />
+                          {profile?.role}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center gap-3 text-sm text-gray-600">
+                        <Mail className="h-4 w-4 text-gray-400" />
+                        <span className="truncate">{profile?.email}</span>
+                      </div>
+                      {profile?.phone && (
+                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                          <Phone className="h-4 w-4 text-gray-400" />
+                          <span>{profile.phone}</span>
+                        </div>
+                      )}
+                      {profile?.location && (
+                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                          <MapPin className="h-4 w-4 text-gray-400" />
+                          <span>{profile.location}</span>
+                        </div>
+                      )}
+                      <Separator />
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-3 text-gray-600">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <span>
+                            Joined {new Date(profile?.createdAt || '').toLocaleDateString()}
+                          </span>
+                        </div>
+                        {profile?.lastLoginAt && (
+                          <div className="flex items-center gap-3 text-gray-600">
+                            <Clock className="h-4 w-4 text-gray-400" />
+                            <span>
+                              Last active {new Date(profile.lastLoginAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
 
-                  {/* Contact Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                        disabled={!isEditing}
-                        className={!isEditing ? "bg-gray-50" : ""}
-                        placeholder="Enter your phone number"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="location">Location</Label>
-                      <Input
-                        id="location"
-                        value={formData.location}
-                        onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                        disabled={!isEditing}
-                        className={!isEditing ? "bg-gray-50" : ""}
-                        placeholder="City, Country"
-                      />
-                    </div>
-                  </div>
+                {/* Profile Details Form */}
+                <motion.div variants={cardVariants} className="lg:col-span-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Settings className="h-5 w-5" />
+                        Profile Information
+                      </CardTitle>
+                      <CardDescription>
+                        Update your personal information and bio
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Name Fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="firstName">First Name</Label>
+                            <Input
+                              id="firstName"
+                              value={formData.firstName}
+                              onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                              disabled={!isEditing}
+                              className={!isEditing ? "bg-gray-50" : ""}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="lastName">Last Name</Label>
+                            <Input
+                              id="lastName"
+                              value={formData.lastName}
+                              onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                              disabled={!isEditing}
+                              className={!isEditing ? "bg-gray-50" : ""}
+                            />
+                          </div>
+                        </div>
 
-                  {/* Bio Field */}
-                  <div className="space-y-2">
-                    <Label htmlFor="bio">Bio</Label>
-                    <Textarea
-                      id="bio"
-                      value={formData.bio}
-                      onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                      disabled={!isEditing}
-                      className={`min-h-[100px] resize-none ${!isEditing ? "bg-gray-50" : ""}`}
-                      placeholder="Tell us about yourself..."
-                    />
-                  </div>
+                        {/* Contact Fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="phone">Phone Number</Label>
+                            <Input
+                              id="phone"
+                              type="tel"
+                              value={formData.phone}
+                              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                              disabled={!isEditing}
+                              className={!isEditing ? "bg-gray-50" : ""}
+                              placeholder="Enter your phone number"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="location">Location</Label>
+                            <Input
+                              id="location"
+                              value={formData.location}
+                              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                              disabled={!isEditing}
+                              className={!isEditing ? "bg-gray-50" : ""}
+                              placeholder="City, Country"
+                            />
+                          </div>
+                        </div>
 
-                  {/* Email (Read-only) */}
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={profile?.email || ""}
-                      disabled
-                      className="bg-gray-50"
-                    />
-                    <p className="text-xs text-gray-500">
-                      Email cannot be changed. Contact support if needed.
-                    </p>
-                  </div>
+                        {/* Bio Field */}
+                        <div className="space-y-2">
+                          <Label htmlFor="bio">Bio</Label>
+                          <Textarea
+                            id="bio"
+                            value={formData.bio}
+                            onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                            disabled={!isEditing}
+                            className={`min-h-[100px] resize-none ${!isEditing ? "bg-gray-50" : ""}`}
+                            placeholder="Tell us about yourself..."
+                          />
+                        </div>
 
-                  {/* Action Buttons */}
-                  {isEditing && (
-                    <div className="flex gap-3 pt-4 border-t">
-                      <Button
-                        type="submit"
-                        disabled={updateProfileMutation2.isPending}
-                        className="flex items-center gap-2"
-                      >
-                        <Save className="h-4 w-4" />
-                        {updateProfileMutation2.isPending ? "Saving..." : "Save Changes"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setIsEditing(false);
-                          setFormData({
-                            firstName: profile?.firstName || "",
-                            lastName: profile?.lastName || "",
-                            phone: profile?.phone || "",
-                            bio: profile?.bio || "",
-                            location: profile?.location || ""
-                          });
-                        }}
-                      >
-                        Cancel
-                      </Button>
+                        {/* Email (Read-only) */}
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email Address</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={profile?.email || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                          <p className="text-xs text-gray-500">
+                            Email cannot be changed. Contact support if needed.
+                          </p>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3 pt-4 border-t">
+                          <Button
+                            type="button"
+                            onClick={() => setIsEditing(!isEditing)}
+                            variant={isEditing ? "outline" : "default"}
+                            className="flex items-center gap-2"
+                          >
+                            {isEditing ? (
+                              <>
+                                <X className="h-4 w-4" />
+                                Cancel
+                              </>
+                            ) : (
+                              <>
+                                <Edit3 className="h-4 w-4" />
+                                Edit Profile
+                              </>
+                            )}
+                          </Button>
+                          
+                          {isEditing && (
+                            <Button
+                              type="submit"
+                              disabled={updateProfileMutation2.isPending}
+                              className="flex items-center gap-2"
+                            >
+                              <Save className="h-4 w-4" />
+                              {updateProfileMutation2.isPending ? "Saving..." : "Save Changes"}
+                            </Button>
+                          )}
+                        </div>
+                      </form>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
+            </TabsContent>
+
+            {/* Security Tab */}
+            <TabsContent value="security" className="space-y-6">
+              <motion.div variants={cardVariants}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      Change Password
+                    </CardTitle>
+                    <CardDescription>
+                      Update your password to keep your account secure
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Form {...passwordForm}>
+                      <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
+                        <FormField
+                          control={passwordForm.control}
+                          name="currentPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Current Password</FormLabel>
+                              <FormControl>
+                                <PasswordInput {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={passwordForm.control}
+                          name="newPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>New Password</FormLabel>
+                              <FormControl>
+                                <PasswordInput {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={passwordForm.control}
+                          name="confirmPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Confirm New Password</FormLabel>
+                              <FormControl>
+                                <PasswordInput {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <Button
+                          type="submit"
+                          disabled={updatePasswordMutation.isPending}
+                          className="w-full"
+                        >
+                          {updatePasswordMutation.isPending && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Update Password
+                        </Button>
+                      </form>
+                    </Form>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            {/* Avatar Tab */}
+            <TabsContent value="avatar" className="space-y-6">
+              <motion.div variants={cardVariants}>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Upload className="h-5 w-5" />
+                      Avatar Customization
+                    </CardTitle>
+                    <CardDescription>
+                      Choose from animated avatars or upload your own image
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {/* Upload Section */}
+                      <div>
+                        <Label className="text-sm font-medium mb-3 block">Upload Custom Avatar</Label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                          <Upload className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-600 mb-2">
+                            Drop your image or Lottie animation here, or click to browse
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Supports: JPEG, PNG, GIF, WebP (images) or JSON (Lottie animations)
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-3"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                          >
+                            {uploading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="mr-2 h-4 w-4" />
+                                Choose File
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Lottie Animations Grid */}
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <Label className="text-sm font-medium">Animated Avatars</Label>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const allIds = lottieAnimations.map(anim => anim.id);
+                              const allPlaying = allIds.every(id => playingAnimations.has(id));
+                              if (allPlaying) {
+                                setPlayingAnimations(new Set());
+                              } else {
+                                setPlayingAnimations(new Set(allIds));
+                              }
+                            }}
+                          >
+                            {lottieAnimations.length > 0 && lottieAnimations.every(anim => playingAnimations.has(anim.id)) ? (
+                              <>
+                                <Pause className="h-4 w-4 mr-2" />
+                                Pause All
+                              </>
+                            ) : (
+                              <>
+                                <Play className="h-4 w-4 mr-2" />
+                                Play All
+                              </>
+                            )}
+                          </Button>
+                        </div>
+
+                        {lottieAnimations.length === 0 ? (
+                          <div className="text-center p-8 text-gray-500">
+                            <div className="text-sm">No animations available</div>
+                            <div className="text-xs mt-1">Upload a Lottie JSON file to get started</div>
+                          </div>
+                        ) : (
+                          <LottieAvatarGrid
+                            animations={lottieAnimations}
+                            selectedAnimation={selectedLottie}
+                            onAnimationSelect={handleLottieSelect}
+                            playingAnimations={playingAnimations}
+                            onToggleAnimation={toggleAnimation}
+                            isUpdating={updateLottieAvatarMutation.isPending}
+                          />
+                        )}
+                      </div>
                     </div>
-                  )}
-                </form>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+          </Tabs>
+        </motion.div>
       </div>
     </MainLayout>
   );
