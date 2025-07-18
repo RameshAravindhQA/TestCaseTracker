@@ -802,6 +802,151 @@ class MemStorage implements IStorage {
     return Array.from(this.customers.values());
   }
 
+  // Messenger/Chat methods
+  async getUserConversations(userId: number): Promise<any[]> {
+    return Array.from(this.messages.values())
+      .filter(msg => msg.senderId === userId || msg.receiverId === userId)
+      .map(msg => ({
+        id: msg.conversationId || msg.id,
+        name: `Conversation ${msg.id}`,
+        type: 'direct',
+        lastMessage: msg.content,
+        lastMessageAt: msg.createdAt,
+        participants: [msg.senderId, msg.receiverId]
+      }))
+      .slice(0, 10);
+  }
+
+  async getMessagesByChat(chatId: number): Promise<any[]> {
+    return Array.from(this.messages.values())
+      .filter(msg => msg.conversationId === chatId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async getDirectConversation(userId1: number, userId2: number): Promise<any | null> {
+    // Find existing conversation between these users
+    const existingMessages = Array.from(this.messages.values())
+      .filter(msg => 
+        (msg.senderId === userId1 && msg.receiverId === userId2) ||
+        (msg.senderId === userId2 && msg.receiverId === userId1)
+      );
+
+    if (existingMessages.length > 0) {
+      const conversationId = existingMessages[0].conversationId || existingMessages[0].id;
+      return {
+        id: conversationId,
+        type: 'direct',
+        name: `Direct Conversation`,
+        participants: [userId1, userId2],
+        createdAt: existingMessages[0].createdAt
+      };
+    }
+
+    return null;
+  }
+
+  async createDirectConversation(userId1: number, userId2: number): Promise<any> {
+    const conversationId = Date.now();
+    return {
+      id: conversationId,
+      type: 'direct',
+      name: `Direct Conversation`,
+      participants: [userId1, userId2],
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  async getConversationMessages(conversationId: number): Promise<any[]> {
+    return this.getMessagesByChat(conversationId);
+  }
+
+  async createMessage(messageData: any): Promise<any> {
+    const id = Date.now();
+    const message = {
+      id,
+      ...messageData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.messages.set(id, message);
+    return message;
+  }
+
+  async updateMessage(messageId: number, updateData: any): Promise<any> {
+    const message = this.messages.get(messageId);
+    if (message) {
+      const updatedMessage = {
+        ...message,
+        ...updateData,
+        updatedAt: new Date().toISOString()
+      };
+      this.messages.set(messageId, updatedMessage);
+      return updatedMessage;
+    }
+    return null;
+  }
+
+  async deleteMessage(messageId: number): Promise<boolean> {
+    return this.messages.delete(messageId);
+  }
+
+  async addMessageReaction(messageId: number, userId: number, emoji: string): Promise<any> {
+    const reactionId = Date.now();
+    const reaction = {
+      id: reactionId,
+      messageId,
+      userId,
+      emoji,
+      createdAt: new Date().toISOString()
+    };
+    return reaction;
+  }
+
+  async createConversation(conversationData: any): Promise<any> {
+    const id = Date.now();
+    const conversation = {
+      id,
+      ...conversationData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    return conversation;
+  }
+
+  async createChatMessage(messageData: any): Promise<any> {
+    const id = Date.now();
+    const message = {
+      id,
+      ...messageData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.messages.set(id, message);
+    return message;
+  }
+
+  async getChatMessages(projectId: number): Promise<any[]> {
+    return Array.from(this.messages.values())
+      .filter(msg => msg.projectId === projectId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async updateChatMessage(messageId: number, userId: number, updateData: any): Promise<any> {
+    const message = this.messages.get(messageId);
+    if (message && message.userId === userId) {
+      const updatedMessage = {
+        ...message,
+        ...updateData,
+        updatedAt: new Date().toISOString()
+      };
+      this.messages.set(messageId, updatedMessage);
+      return updatedMessage;
+    }
+    return null;
+  }
+
   async getCustomerById(id: number): Promise<Customer | null> {
     return this.customers.get(id) || null;
   }
