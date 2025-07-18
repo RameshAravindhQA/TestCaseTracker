@@ -1,0 +1,115 @@
+Starting AI test case generation... {requirement: 'Registration test case with first last name phone …stive and negative tets cases with test template ', projectContext: '', moduleContext: 'Registration ', testType: 'functional', priority: 'Medium', …}
+ai-test-generator.tsx:99 🔄 AI Generation attempt 1/3
+ai-test-generator.tsx:106 Sound playback failed: TypeError: playSound is not a function
+    at Object.mutationFn (ai-test-generator.tsx:104:19)
+mutationFn @ ai-test-generator.tsx:106
+await in mutationFn
+fn @ @tanstack_react-query.js?v=b1be5688:1236
+run @ @tanstack_react-query.js?v=b1be5688:513
+start @ @tanstack_react-query.js?v=b1be5688:555
+execute @ @tanstack_react-query.js?v=b1be5688:1272
+await in execute
+mutate @ @tanstack_react-query.js?v=b1be5688:2691
+(anonymous) @ @tanstack_react-query.js?v=b1be5688:3414
+handleGenerate @ ai-test-generator.tsx:405
+callCallback2 @ chunk-RPCDYKBN.js?v=b1be5688:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=b1be5688:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=b1be5688:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=b1be5688:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=b1be5688:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=b1be5688:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=b1be5688:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=b1be5688:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=b1be5688:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=b1be5688:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=b1be5688:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=b1be5688:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=b1be5688:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=b1be5688:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=b1be5688:5449Understand this warning
+soundManager.js:289 🎵 Successfully played sound: crud
+ai-test-generator.tsx:128 📡 AI API Response: {status: 200, statusText: 'OK', contentType: 'text/html; charset=utf-8', ok: true}contentType: "text/html; charset=utf-8"ok: truestatus: 200statusText: "OK"[[Prototype]]: Object
+ai-test-generator.tsx:142 📝 Response content type: text/html; charset=utf-8
+ai-test-generator.tsx:147 📄 Response text length: 32695
+ai-test-generator.tsx:148 📄 Response preview: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script type="module">
+import { createHotContext } from "/@vite/client";
+const hot = createHotContext("/__dummy__runtime-error-plugin");
+
+function sendErr
+ai-test-generator.tsx:165 🔄 HTML error page detected
+ai-test-generator.tsx:169 🔄 Retrying in 1000ms...
+ai-test-generator.tsx:99 🔄 AI Generation attempt 2/3
+ai-test-generator.tsx:106 Sound playback failed: TypeError: playSound is not a function
+    at Object.mutationFn (ai-test-generator.tsx:104:19)
+mutationFn @ ai-test-generator.tsx:106
+await in mutationFn
+fn @ @tanstack_react-query.js?v=b1be5688:1236
+run @ @tanstack_react-query.js?v=b1be5688:513
+start @ @tanstack_react-query.js?v=b1be5688:555
+execute @ @tanstack_react-query.js?v=b1be5688:1272
+await in execute
+mutate @ @tanstack_react-query.js?v=b1be5688:2691
+(anonymous) @ @tanstack_react-query.js?v=b1be5688:3414
+handleGenerate @ ai-test-generator.tsx:405
+callCallback2 @ chunk-RPCDYKBN.js?v=b1be5688:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=b1be5688:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=b1be5688:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=b1be5688:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=b1be5688:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=b1be5688:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=b1be5688:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=b1be5688:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=b1be5688:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=b1be5688:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=b1be5688:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=b1be5688:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=b1be5688:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=b1be5688:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=b1be5688:5449Understand this warning
+ai-test-generator.tsx:128 📡 AI API Response: {status: 200, statusText: 'OK', contentType: 'text/html; charset=utf-8', ok: true}
+ai-test-generator.tsx:142 📝 Response content type: text/html; charset=utf-8
+ai-test-generator.tsx:147 📄 Response text length: 32695
+ai-test-generator.tsx:148 📄 Response preview: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script type="module">
+import { createHotContext } from "/@vite/client";
+const hot = createHotContext("/__dummy__runtime-error-plugin");
+
+function sendErr
+ai-test-generator.tsx:165 🔄 HTML error page detected
+ai-test-generator.tsx:169 🔄 Retrying in 2000ms...
+ai-test-generator.tsx:99 🔄 AI Generation attempt 3/3
+ai-test-generator.tsx:106 Sound playback failed: TypeError: playSound is not a function
+    at Object.mutationFn (ai-test-generator.tsx:104:19)
+mutationFn @ ai-test-generator.tsx:106
+await in mutationFn
+fn @ @tanstack_react-query.js?v=b1be5688:1236
+run @ @tanstack_react-query.js?v=b1be5688:513
+start @ @tanstack_react-query.js?v=b1be5688:555
+execute @ @tanstack_react-query.js?v=b1be5688:1272
+await in execute
+mutate @ @tanstack_react-query.js?v=b1be5688:2691
+(anonymous) @ @tanstack_react-query.js?v=b1be5688:3414
+handleGenerate @ ai-test-generator.tsx:405
+callCallback2 @ chunk-RPCDYKBN.js?v=b1be5688:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=b1be5688:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=b1be5688:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=b1be5688:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=b1be5688:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=b1be5688:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=b1be5688:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=b1be5688:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=b1be5688:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=b1be5688:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=b1be5688:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=b1be5688:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=b1be5688:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=b1be5688:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=b1be5688:5449Understand this warning
+ai-test-generator.tsx:128 📡 AI API Response: {status: 200, statusText: 'OK', contentType: 'text/html; charset=utf-8', ok: true}
+ai-test-generator.tsx:142 📝 Response content type: text/html; charset=utf-8
+ai-test-generator.tsx:147 📄 Response text length: 32695
