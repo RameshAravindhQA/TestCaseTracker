@@ -1,0 +1,76 @@
+❌ Expected JSON but got: text/html; charset=utf-8
+mutationFn @ ai-test-generator.tsx:174
+await in mutationFn
+fn @ @tanstack_react-query.js?v=b1be5688:1236
+run @ @tanstack_react-query.js?v=b1be5688:513
+start @ @tanstack_react-query.js?v=b1be5688:555
+execute @ @tanstack_react-query.js?v=b1be5688:1272
+await in execute
+mutate @ @tanstack_react-query.js?v=b1be5688:2691
+(anonymous) @ @tanstack_react-query.js?v=b1be5688:3414
+handleGenerate @ ai-test-generator.tsx:336
+callCallback2 @ chunk-RPCDYKBN.js?v=b1be5688:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=b1be5688:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=b1be5688:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=b1be5688:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=b1be5688:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=b1be5688:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=b1be5688:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=b1be5688:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=b1be5688:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=b1be5688:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=b1be5688:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=b1be5688:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=b1be5688:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=b1be5688:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=b1be5688:5449Understand this error
+ai-test-generator.tsx:175 📄 Response preview: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script type="module">
+import { createHotContext } from "/@vite/client";
+const hot = createHotContext("/__dummy__runtime-error-plugin");
+
+function sendError(error) {
+  if (!(error instanceof Error)) {
+    error = new Error("(unknown runtime error)");
+  }
+  const serialized = {
+    message: error.message,
+    stack: error.stack,
+  };
+  hot.send("runtime-error-plugin:error", serialized);
+}
+
+window.addEventListener("error", (evt) => {
+  sendError(evt.er
+mutationFn @ ai-test-generator.tsx:175
+await in mutationFn
+fn @ @tanstack_react-query.js?v=b1be5688:1236
+run @ @tanstack_react-query.js?v=b1be5688:513
+start @ @tanstack_react-query.js?v=b1be5688:555
+execute @ @tanstack_react-query.js?v=b1be5688:1272
+await in execute
+mutate @ @tanstack_react-query.js?v=b1be5688:2691
+(anonymous) @ @tanstack_react-query.js?v=b1be5688:3414
+handleGenerate @ ai-test-generator.tsx:336
+callCallback2 @ chunk-RPCDYKBN.js?v=b1be5688:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=b1be5688:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=b1be5688:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=b1be5688:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=b1be5688:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=b1be5688:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=b1be5688:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=b1be5688:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=b1be5688:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=b1be5688:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=b1be5688:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=b1be5688:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=b1be5688:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=b1be5688:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=b1be5688:5449Understand this error
+ai-test-generator.tsx:180 🔄 HTML error page detected, retrying in 4000ms...
+ai-test-generator.tsx:99 🔄 AI Generation attempt 4/5
+ai-test-generator.tsx:120 📡 AI API Response: {status: 200, statusText: 'OK', contentType: 'text/html; charset=utf-8', ok: true}
+ai-test-generator.tsx:170 📝 Response content type: text/html; charset=utf-8
+ai
