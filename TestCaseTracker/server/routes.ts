@@ -749,12 +749,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(user => user.id !== req.session.userId) // Exclude current user
         .map(user => ({
           id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
           name: `${user.firstName} ${user.lastName || ''}`.trim(),
           email: user.email,
           avatar: user.profilePicture,
+          profilePicture: user.profilePicture,
+          role: user.role,
           isOnline: false, // Will be updated by WebSocket
           lastSeen: user.lastLoginAt || user.createdAt
         }));
+      
+      console.log(`[API] Returning ${publicUsers.length} public users for messenger:`, publicUsers.map(u => ({ id: u.id, name: u.name, email: u.email })));
       
       res.json(publicUsers);
     } catch (error) {

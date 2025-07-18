@@ -437,11 +437,20 @@ export function Messenger() {
     }
   };
 
-  const filteredContacts = (contacts || []).filter(contact =>
-    contact && contact.firstName && contact.lastName && contact.email &&
-    (`${contact.firstName} ${contact.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.email.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredContacts = (contacts || []).filter(contact => {
+    if (!contact) return false;
+    
+    // Handle both the old format (firstName, lastName) and new format (name)
+    const displayName = contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
+    const email = contact.email || '';
+    
+    if (!displayName && !email) return false;
+    
+    if (!searchTerm) return true;
+    
+    return displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           email.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   const renderMessageContent = (message: Message) => {
     if (message.type === 'image') {
@@ -531,9 +540,15 @@ export function Messenger() {
               <div className="p-4 text-center text-gray-500">No contacts found</div>
             ) : (
               filteredContacts.map((contact) => {
-                if (!contact || !contact.firstName || !contact.lastName) {
-                  return null;
-                }
+                if (!contact) return null;
+                
+                // Handle both old format (firstName, lastName) and new format (name)
+                const displayName = contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
+                const initials = contact.name ? 
+                  contact.name.split(' ').map(n => n[0]).join('').substring(0, 2) : 
+                  `${contact.firstName?.[0] || '?'}${contact.lastName?.[0] || '?'}`;
+                
+                if (!displayName) return null;
                 
                 return (
                   <motion.div
@@ -548,9 +563,9 @@ export function Messenger() {
                   >
                     <div className="relative">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={contact.profilePicture} alt={`${contact.firstName} ${contact.lastName}`} />
+                        <AvatarImage src={contact.avatar || contact.profilePicture} alt={displayName} />
                         <AvatarFallback>
-                          {contact.firstName?.[0] || '?'}{contact.lastName?.[0] || '?'}
+                          {initials}
                         </AvatarFallback>
                       </Avatar>
                       {contact.isOnline && (
@@ -561,7 +576,7 @@ export function Messenger() {
                     <div className="ml-3 flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {contact.firstName} {contact.lastName}
+                          {displayName}
                         </p>
                         <Badge variant="secondary" className={cn("text-xs", getRoleColor(contact.role || 'user'))}>
                           {contact.role || 'User'}

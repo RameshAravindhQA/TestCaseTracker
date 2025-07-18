@@ -1,8 +1,13 @@
-
 import { Router } from 'express';
 import { githubService } from '../github-service';
 import { logger } from '../logger';
-import { authenticateToken } from '../auth-middleware';
+// Auth middleware
+const requireAuth = (req: any, res: any, next: any) => {
+  if (req.session && req.session.userId) {
+    return next();
+  }
+  return res.status(401).json({ message: "Not authenticated" });
+};
 
 const router = Router();
 
@@ -11,10 +16,10 @@ let integrations: any[] = [];
 let nextId = 1;
 
 // Get all GitHub integrations for a user
-router.get('/integrations', authenticateToken, async (req, res) => {
+router.get('/integrations', requireAuth, async (req, res) => {
   try {
     const userId = req.user?.id;
-    
+
     // Filter integrations for the current user (in production, this would be database query)
     const userIntegrations = integrations.map(integration => ({
       ...integration,
@@ -31,7 +36,7 @@ router.get('/integrations', authenticateToken, async (req, res) => {
 });
 
 // Test GitHub connection
-router.post('/test-connection', authenticateToken, async (req, res) => {
+router.post('/test-connection', requireAuth, async (req, res) => {
   try {
     const { username, repository, accessToken } = req.body;
 
@@ -85,7 +90,7 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
 });
 
 // Create GitHub integration
-router.post('/integrations', authenticateToken, async (req, res) => {
+router.post('/integrations', requireAuth, async (req, res) => {
   try {
     const { 
       projectId,
@@ -175,7 +180,7 @@ router.post('/integrations', authenticateToken, async (req, res) => {
 });
 
 // Update GitHub integration
-router.put('/integrations/:id', authenticateToken, async (req, res) => {
+router.put('/integrations/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -274,7 +279,7 @@ router.put('/integrations/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete GitHub integration
-router.delete('/integrations/:id', authenticateToken, async (req, res) => {
+router.delete('/integrations/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -312,7 +317,7 @@ router.delete('/integrations/:id', authenticateToken, async (req, res) => {
 });
 
 // Create GitHub issue
-router.post('/create-issue', authenticateToken, async (req, res) => {
+router.post('/create-issue', requireAuth, async (req, res) => {
   try {
     const { 
       title, 
