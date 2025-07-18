@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@lottiefiles/react-lottie-player": "^3.6.0",
     "@octokit/rest": "^22.0.0",
     "@playwright/test": "^1.54.1",
