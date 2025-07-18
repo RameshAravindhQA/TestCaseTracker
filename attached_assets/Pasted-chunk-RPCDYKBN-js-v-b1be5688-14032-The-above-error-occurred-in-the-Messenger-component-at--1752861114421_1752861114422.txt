@@ -1,0 +1,29 @@
+chunk-RPCDYKBN.js?v=b1be5688:14032 The above error occurred in the <Messenger> component:
+
+    at Messenger (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/components/chat/messenger.tsx:58:20)
+    at div
+    at div
+    at MotionComponent (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…TestCaseTracker/node_modules/.vite/deps/framer-motion.js?v=b1be5688:945:40)
+    at div
+    at MotionComponent (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…TestCaseTracker/node_modules/.vite/deps/framer-motion.js?v=b1be5688:945:40)
+    at PresenceChild (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…TestCaseTracker/node_modules/.vite/deps/framer-motion.js?v=b1be5688:121:24)
+    at AnimatePresence (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…TestCaseTracker/node_modules/.vite/deps/framer-motion.js?v=b1be5688:210:26)
+    at main
+    at div
+    at MainLayout (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/components/layout/main-layout.tsx:31:30)
+    at MessengerPage
+    at Suspense
+    at ProtectedRoute (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/lib/protected-route.tsx:21:34)
+    at ProtectedLazyComponent (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/App.tsx?v=vhvwr-bJv55ol-u8F4bux:89:35)
+    at Route (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…kspace/TestCaseTracker/node_modules/.vite/deps/wouter.js?v=b1be5688:206:16)
+    at Switch (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…kspace/TestCaseTracker/node_modules/.vite/deps/wouter.js?v=b1be5688:262:17)
+    at Router
+    at Provider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…TestCaseTracker/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=b1be5688:38:15)
+    at TooltipProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…Tracker/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=b1be5688:65:5)
+    at V (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…ce/TestCaseTracker/node_modules/.vite/deps/next-themes.js?v=b1be5688:44:25)
+    at J (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.d…ce/TestCaseTracker/node_modules/.vite/deps/next-themes.js?v=b1be5688:42:18)
+    at ThemeProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/components/theme/theme-provider.tsx:31:3)
+    at AuthProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/hooks/use-auth.tsx:26:32)
+    at AppContent (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/App.tsx?v=vhvwr-bJv55ol-u8F4bux:431:53)
+    at SoundProvider (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/hooks/use-sound-provider.tsx:21:33)
+    at QueryClientProvider
