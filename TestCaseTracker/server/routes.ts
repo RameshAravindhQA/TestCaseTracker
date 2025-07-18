@@ -1603,14 +1603,26 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   // Enhanced AI Test Case Generation endpoint with multipart form data support
   apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, 
     (req, res, next) => {
+      console.log('🔍 AI Generation endpoint hit - Initial request processing');
+      console.log('🔍 Request method:', req.method);
+      console.log('🔍 Request headers:', JSON.stringify(req.headers, null, 2));
+      console.log('🔍 Session info:', {
+        userId: req.session?.userId,
+        userRole: req.session?.userRole,
+        hasSession: !!req.session
+      });
+      
       // Set response headers early to ensure JSON response
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       
+      console.log('✅ Response headers set for JSON');
+      
       // Handle preflight requests
       if (req.method === 'OPTIONS') {
+        console.log('🔍 Handling OPTIONS preflight request');
         return res.status(200).json({ success: true, message: 'Options OK' });
       }
       
@@ -1620,6 +1632,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       bugAttachmentUpload.array('images', 10)(req, res, (err) => {
         if (err) {
           console.error("❌ Enhanced AI file upload error:", err);
+          console.error("❌ Error details:", {
+            code: err.code,
+            message: err.message,
+            stack: err.stack
+          });
           // Ensure JSON response even on error
           if (!res.headersSent) {
             res.setHeader('Content-Type', 'application/json');
@@ -1633,6 +1650,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           return;
         }
         console.log('✅ Enhanced AI Generation - File upload successful');
+        console.log('✅ Files processed:', req.files ? req.files.length : 0);
         next();
       });
     },
@@ -1659,16 +1677,30 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
       try {
         console.log('🤖 Enhanced AI Generation - Handler started');
+        console.log('🔍 Request body keys:', Object.keys(req.body));
+        console.log('🔍 Request body sample:', {
+          requirement: req.body.requirement?.substring(0, 100) + '...',
+          testType: req.body.testType,
+          priority: req.body.priority,
+          inputType: req.body.inputType
+        });
         
         // Validate authentication
         if (!req.session || !req.session.userId) {
           console.log('❌ Enhanced AI Generation - Authentication failed');
+          console.log('❌ Session details:', {
+            hasSession: !!req.session,
+            userId: req.session?.userId,
+            sessionKeys: req.session ? Object.keys(req.session) : []
+          });
           return sendJsonResponse(401, { 
             success: false,
             error: 'Authentication required',
             timestamp: new Date().toISOString()
           });
         }
+        
+        console.log('✅ Authentication validated for user:', req.session.userId);
         
         const { 
           requirement, 
@@ -1720,43 +1752,89 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             images: req.files || []
           };
           
-          console.log('📤 Sending request to Gemini service...');
+          console.log('📤 Sending request to Gemini service with data:', {
+            hasRequirement: !!geminiRequest.requirement,
+            testType: geminiRequest.testType,
+            inputType: geminiRequest.inputType,
+            filesCount: geminiRequest.images.length
+          });
+          
           const geminiResponse = await geminiService.generateTestCases(geminiRequest);
+          
+          console.log('📥 Gemini service response received:', {
+            hasResponse: !!geminiResponse,
+            testCasesCount: geminiResponse?.testCases?.length || 0,
+            responseType: typeof geminiResponse
+          });
           
           console.log('✅ Gemini service response received:', {
             testCasesCount: geminiResponse.testCases.length,
             hasAnalysis: !!geminiResponse.analysis
           });
           
-          return sendJsonResponse(200, {
+          const successResponse = {
             success: true,
             testCases: geminiResponse.testCases,
             analysis: geminiResponse.analysis,
             message: geminiResponse.message,
             source: 'gemini-ai',
             timestamp: new Date().toISOString()
+          };
+          
+          console.log('✅ Sending successful Gemini response:', {
+            testCasesCount: successResponse.testCases.length,
+            hasAnalysis: !!successResponse.analysis,
+            source: successResponse.source
           });
           
+          return sendJsonResponse(200, successResponse);
+          
         } catch (geminiError: any) {
-          console.error('❌ Gemini service failed:', geminiError.message);
+          console.error('❌ Gemini service failed:', {
+            error: geminiError.message,
+            stack: geminiError.stack,
+            name: geminiError.name
+          });
           console.log('🔄 Falling back to mock service...');
           
           // Fall back to mock service
           const mockResponse = generateMockResponse(requirement, moduleContext, testType, priority, inputType, websiteUrl, req.files, businessRules, elementInspection, userFlows);
           
+          console.log('📤 Sending mock response:', {
+            testCasesCount: mockResponse.testCases?.length || 0,
+            source: mockResponse.source
+          });
+          
           return sendJsonResponse(200, mockResponse);
         }
         
       } catch (handlerError: any) {
-        console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
+        console.error('❌ Enhanced AI Generation - Critical handler error:', {
+          message: handlerError.message,
+          stack: handlerError.stack,
+          name: handlerError.name,
+          url: req.url,
+          method: req.method,
+          sessionId: req.session?.id,
+          userId: req.session?.userId
+        });
         
         // Final fallback response - ensure JSON even in critical errors
-        return sendJsonResponse(500, { 
+        const errorResponse = { 
           success: false,
           error: 'Internal server error during test case generation',
           details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
-          timestamp: new Date().toISOString()
-        });
+          timestamp: new Date().toISOString(),
+          debug: {
+            endpoint: '/ai/generate-enhanced-test-cases',
+            method: req.method,
+            hasSession: !!req.session,
+            userId: req.session?.userId
+          }
+        };
+        
+        console.log('📤 Sending error response:', errorResponse);
+        return sendJsonResponse(500, errorResponse);
       }
     }
   );

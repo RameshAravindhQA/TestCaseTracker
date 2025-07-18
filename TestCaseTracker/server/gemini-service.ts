@@ -70,7 +70,16 @@ export class GeminiAIService {
         inputType: request.inputType,
         hasApiKey: !!process.env.GOOGLE_API_KEY,
         hasModel: !!this.model,
-        requirement: request.requirement?.substring(0, 100) + '...'
+        requirement: request.requirement?.substring(0, 100) + '...',
+        testType: request.testType,
+        priority: request.priority
+      });
+      
+      console.log('🔍 Gemini service state:', {
+        apiKeyConfigured: !!process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-gemini-api-key',
+        apiKeyPrefix: process.env.GOOGLE_API_KEY ? process.env.GOOGLE_API_KEY.substring(0, 10) + '...' : 'NOT SET',
+        modelInitialized: !!this.model,
+        visionModelInitialized: !!this.visionModel
       });
 
       // Check if API key is configured
@@ -117,11 +126,16 @@ export class GeminiAIService {
         console.error('❌ Gemini API call failed:', {
           error: apiError.message,
           status: apiError.status,
-          code: apiError.code
+          code: apiError.code,
+          stack: apiError.stack,
+          name: apiError.name,
+          inputType: request.inputType,
+          hasApiKey: !!process.env.GOOGLE_API_KEY
         });
 
         // Return mock response instead of throwing error
         console.log('🔄 Falling back to mock response due to API error');
+        console.log('🔄 Mock response will be generated for input type:', request.inputType);
         return this.getMockResponse(request);
       }
 
@@ -297,9 +311,19 @@ Analyze the provided DOM elements and generate test cases for:
   }
 
   private getMockResponse(request: TestCaseGenerationRequest): TestCaseGenerationResponse {
-    console.log('🎭 Generating mock response for request:', request.inputType);
+    console.log('🎭 Generating mock response for request:', {
+      inputType: request.inputType,
+      requirement: request.requirement?.substring(0, 50) + '...',
+      testType: request.testType,
+      priority: request.priority
+    });
     
     const mockTestCases = this.generateMockTestCases(request);
+    
+    console.log('🎭 Mock test cases generated:', {
+      count: mockTestCases.length,
+      firstTestCase: mockTestCases[0]?.feature || 'None'
+    });
     
     return {
       testCases: mockTestCases,
