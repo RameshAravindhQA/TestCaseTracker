@@ -1,7 +1,4 @@
-The code implements an AI test case generator with enhanced UI, project/module selection, and merge functionality.
-```
 
-```replit_final_file
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -96,7 +93,7 @@ export default function AIGeneratorPage() {
             projectId: selectedProject,
             moduleId: selectedModule,
             status: 'Not Executed',
-            createdById: 1 // Current user ID
+            createdById: 1
           })
         })
       );
@@ -145,7 +142,7 @@ export default function AIGeneratorPage() {
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = reader.result as string;
-        resolve(base64.split(',')[1]); // Remove data:image/... prefix
+        resolve(base64.split(',')[1]);
       };
       reader.onerror = reject;
       reader.readAsDataURL(file);
