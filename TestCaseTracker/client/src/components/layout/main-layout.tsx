@@ -140,7 +140,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Main content */}
       <main className={cn(
-        "flex-1 min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300 overflow-hidden",
+        "flex-1 min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300 overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600",
         !isMobile ? "ml-60" : "pt-16"
       )}>
         <AnimatePresence mode="wait">

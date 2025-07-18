@@ -166,8 +166,6 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
     return Object.keys(newErrors).length === 0;
   };
 
-
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -184,6 +182,62 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  // Simple connection test function
+  const testConnection = async () => {
+    if (!formData.username || !formData.repository || !formData.accessToken) {
+                    toast({
+                      title: "Missing Information",
+                      description: "Please fill in username, repository, and access token before testing",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+    try {
+      const response = await fetch('/api/github/test-connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          username: formData.username,
+          repository: formData.repository,
+          accessToken: formData.accessToken }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast({
+          title: "Connection Test Failed",
+          description: error.message || "Failed to test connection",
+          variant: "destructive",
+        });
+        throw new Error('Connection test failed');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        toast({
+          title: "Connection Test Successful",
+          description: result.message,
+        });
+      } else {
+        toast({
+          title: "Connection Test Failed",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+
+    } catch (error) {
+      toast({
+        title: "Connection Test Failed",
+        description: "Failed to connect to repository",
+        variant: "destructive",
+      });
     }
   };
 
@@ -285,66 +339,9 @@ export function GitHubConfigForm({ open, onOpenChange, projectId, config, editin
               <Button
                 type="button"
                 variant="outline"
-                onClick={async () => {
-                  if (!formData.username || !formData.repository || !formData.accessToken) {
-                    toast({
-                      title: "Missing Information",
-                      description: "Please fill in username, repository, and access token before testing",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-
-                  try {
-                    const response = await fetch('/api/github/test-connection', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      credentials: 'include',
-                      body: JSON.stringify({
-                        username: formData.username,
-                        repository: formData.repository,
-                        accessToken: formData.accessToken
-                      })
-                    });
-
-                    if (response.ok) {
-                      const result = await response.json();
-                      if (result.success) {
-                        toast({
-                          title: "Connection Successful",
-                          description: result.message,
-                        });
-                      } else {
-                        toast({
-                          title: "Connection Failed",
-                          description: result.message,
-                          variant: "destructive",
-                        });
-                      }
-                    } else {
-                      const error = await response.json();
-                      toast({
-                        title: "Connection Failed",
-                        description: error.message || "Failed to test connection",
-                        variant: "destructive",
-                      });
-                    }
-                  } catch (error) {
-                    console.error('Connection test error:', error);
-                    toast({
-                      title: "Connection Failed",
-                      description: "Failed to test connection. Please try again.",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-                disabled={testConnectionMutation.isPending}
+                onClick={testConnection}
               >
-                {testConnectionMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Test'
-                )}
+                Test Connection
               </Button>
             </div>
             {errors.accessToken && (

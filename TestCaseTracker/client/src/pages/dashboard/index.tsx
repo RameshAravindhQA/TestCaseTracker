@@ -402,61 +402,7 @@ export function DashboardPage() {
                         </Table>
                       </div>
 
-                      {/* Detailed Test Cases List */}
-                      {testCases && testCases.length > 0 && (
-                        <div className="space-y-2">
-                          <h3 className="text-lg font-semibold">All Test Cases ({testCases.length})</h3>
-                          <div className="max-h-96 overflow-y-auto border rounded-lg">
-                            <Table>
-                              <TableHeader className="sticky top-0 bg-white z-10">
-                                <TableRow>
-                                  <TableHead className="min-w-[120px]">Test Case ID</TableHead>
-                                  <TableHead className="min-w-[150px]">Feature</TableHead>
-                                  <TableHead className="min-w-[120px]">Project</TableHead>
-                                  <TableHead className="min-w-[100px]">Status</TableHead>
-                                  <TableHead className="min-w-[100px]">Priority</TableHead>
-                                  <TableHead className="min-w-[100px]">Created</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {testCases.map((testCase) => {
-                                  const project = projectStats?.find(p => p.id === testCase.projectId);
-                                  return (
-                                    <TableRow key={testCase.id} className="hover:bg-gray-50">
-                                      <TableCell className="font-mono text-sm">{testCase.testCaseId}</TableCell>
-                                      <TableCell className="max-w-[200px] truncate" title={testCase.feature || testCase.scenario || 'N/A'}>
-                                        {testCase.feature || testCase.scenario || 'N/A'}
-                                      </TableCell>
-                                      <TableCell>{project?.name || 'Unknown'}</TableCell>
-                                      <TableCell>
-                                        <Badge variant={
-                                          testCase.status === 'Pass' ? 'default' :
-                                          testCase.status === 'Fail' ? 'destructive' :
-                                          testCase.status === 'Blocked' ? 'secondary' : 'outline'
-                                        }>
-                                          {testCase.status}
-                                        </Badge>
-                                      </TableCell>
-                                      <TableCell>
-                                        <Badge variant="outline" className={
-                                          testCase.priority === 'High' ? 'border-red-200 text-red-700' :
-                                          testCase.priority === 'Medium' ? 'border-yellow-200 text-yellow-700' :
-                                          'border-green-200 text-green-700'
-                                        }>
-                                          {testCase.priority}
-                                        </Badge>
-                                      </TableCell>
-                                      <TableCell className="text-sm text-gray-600">
-                                        {new Date(testCase.createdAt).toLocaleDateString()}
-                                      </TableCell>
-                                    </TableRow>
-                                  );
-                                })}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        </div>
-                      )}
+                      
                     </div>
                   ) : (
                     <div className="text-center py-8">
