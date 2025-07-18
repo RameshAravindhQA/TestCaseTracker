@@ -19,13 +19,11 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useColorTheme } from "@/components/theme/theme-provider";
-import { Loader2, Upload, Play, Pause, Camera, Edit3, Save, X, Shield, Clock, Settings, Mail, Phone, MapPin, Calendar } from "lucide-react";
+import { Loader2, Upload, Play, Pause, Camera, Edit3, Save, X, Shield, Clock, Settings, Mail, User as UserIcon, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { LottieFileDebug } from "@/components/lottie-file-debug";
 import { LottieAvatar, LottieAvatarGrid } from "@/components/ui/lottie-avatar";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 
 // Form schema for profile data
 const profileFormSchema = z.object({
@@ -63,11 +61,10 @@ interface UserProfile {
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string;
-  bio?: string;
-  location?: string;
   role: string;
   profilePicture?: string;
+  avatarType?: string;
+  avatarData?: string;
   createdAt: string;
   lastLoginAt?: string;
 }
@@ -75,7 +72,7 @@ interface UserProfile {
 export default function ProfilePage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { colorTheme, setColorTheme } = useColorTheme(); // Move this up
+  const { colorTheme, setColorTheme } = useColorTheme();
   const [selectedLottie, setSelectedLottie] = useState<LottieAnimation | null>(null);
   const [lottieAnimations, setLottieAnimations] = useState<LottieAnimation[]>([
     { id: 'rocket', name: 'Rocket', path: '/lottie/rocket.json' },
@@ -94,9 +91,6 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    phone: "",
-    bio: "",
-    location: ""
   });
 
   // Ensure user is available before proceeding
@@ -178,8 +172,6 @@ export default function ProfilePage() {
               const hasVersion = data.v || data.version;
               const hasLayers = Array.isArray(data.layers) && data.layers.length > 0;
               const hasFrameRate = data.fr || data.frameRate;
-              const hasWidth = data.w || data.width;
-              const hasHeight = data.h || data.height;
 
               if (hasVersion && hasLayers && hasFrameRate) {
                 // Ensure required Lottie properties
@@ -207,8 +199,6 @@ export default function ProfilePage() {
                   hasVersion,
                   hasLayers,
                   hasFrameRate,
-                  hasWidth,
-                  hasHeight,
                   layersCount: data.layers?.length || 0
                 });
               }
@@ -264,25 +254,6 @@ export default function ProfilePage() {
         }
       }
 
-      // Show user-friendly message about loading results
-      if (workingAnimations.length === 0) {
-        toast({
-          title: "No Animations Available",
-          description: "No valid Lottie animations could be loaded. Please check the files.",
-          variant: "destructive",
-        });
-      } else if (failedAnimations.length > 0) {
-        toast({
-          title: "Partial Load",
-          description: `Loaded ${workingAnimations.length} animations. ${failedAnimations.length} failed to load.`,
-        });
-      } else {
-        toast({
-          title: "Animations Loaded",
-          description: `Successfully loaded ${workingAnimations.length} Lottie animations.`,
-        });
-      }
-
       // Auto-play all valid animations
       const validIds = workingAnimations.map(anim => anim.id);
       setPlayingAnimations(new Set(validIds));
@@ -299,28 +270,25 @@ export default function ProfilePage() {
 
   // Fetch user profile
   const { data: profile, isLoading } = useQuery<UserProfile>({
-    queryKey: ["/api/auth/profile"],
+    queryKey: ["/api/auth/user"],
     queryFn: async () => {
       console.log('Fetching profile data...');
-      const response = await apiRequest("GET", "/api/auth/profile");
+      const response = await apiRequest("GET", "/api/auth/user");
       if (!response.ok) throw new Error("Failed to fetch profile");
       const data = await response.json();
       console.log('Profile data received:', data);
-      
+
       // Update form data with received profile data
       setFormData({
         firstName: data.firstName || "",
         lastName: data.lastName || "",
-        phone: data.phone || "",
-        bio: data.bio || "",
-        location: data.location || ""
       });
-      
+
       return data;
     },
-    enabled: !!currentUser, // Only fetch if currentUser is available
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    enabled: !!currentUser,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
   });
 
   useEffect(() => {
@@ -329,9 +297,6 @@ export default function ProfilePage() {
       setFormData({
         firstName: profile.firstName || "",
         lastName: profile.lastName || "",
-        phone: profile.phone || "",
-        bio: profile.bio || "",
-        location: profile.location || ""
       });
     }
   }, [profile]);
@@ -340,23 +305,32 @@ export default function ProfilePage() {
     loadAnimations();
   }, [loadAnimations]);
 
-  // Color theme is already declared above
-
-  // Profile form setup - initialize with empty defaults first
+  // Profile form setup - initialize with user data
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      role: "",
+      firstName: currentUser?.firstName || "",
+      lastName: currentUser?.lastName || "",
+      email: currentUser?.email || "",
+      role: currentUser?.role || "",
       theme: "default",
       colorTheme: "blue",
     },
   });
 
-  // Update profile form when user data is loaded
-  const { isSubmitting: isProfileSubmitting } = profileForm.formState;
+  // Update form when user data changes
+  useEffect(() => {
+    if (currentUser) {
+      profileForm.reset({
+        firstName: currentUser.firstName,
+        lastName: currentUser.lastName || "",
+        email: currentUser.email,
+        role: currentUser.role,
+        theme: "default",
+        colorTheme: colorTheme,
+      });
+    }
+  }, [currentUser, profileForm, colorTheme]);
 
   // Password form setup
   const passwordForm = useForm<PasswordFormValues>({
@@ -383,37 +357,13 @@ export default function ProfilePage() {
         title: "Profile updated",
         description: "Your profile information has been updated successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/user/current'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      setIsEditing(false);
     },
     onError: (error) => {
       toast({
         title: "Error",
         description: `Failed to update profile: ${error}`,
-        variant: "destructive",
-      });
-    },
-  });
-
-    // Update profile mutation
-  const updateProfileMutation2 = useMutation({
-    mutationFn: async (data: Partial<UserProfile>) => {
-      const response = await apiRequest("PUT", "/api/auth/profile", data);
-      if (!response.ok) throw new Error("Failed to update profile");
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Profile updated successfully",
-      });
-      setIsEditing(false);
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/profile"] });
-      queryClient.invalidateQueries({ queryKey: ['/api/user/current'] }); // Invalidate user query as well
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update profile",
         variant: "destructive",
       });
     },
@@ -431,13 +381,11 @@ export default function ProfilePage() {
             newPassword: data.newPassword,
           }
         );
-        // Handle response that may not be valid JSON
         if (!res.ok) {
           const text = await res.text();
           try {
-            return JSON.parse(text); // Try to parse as JSON
+            return JSON.parse(text);
           } catch (e) {
-            // If not valid JSON, return an object with the text
             return { message: text || 'Password update failed' };
           }
         }
@@ -468,7 +416,6 @@ export default function ProfilePage() {
       console.log('🔄 Updating avatar with Lottie data:', lottieData);
 
       try {
-        // Create a stable data object without blob URLs
         const stableAvatarData = {
           id: lottieData.id,
           name: lottieData.name,
@@ -476,10 +423,8 @@ export default function ProfilePage() {
           preview: lottieData.preview
         };
 
-        // Use a stable identifier that doesn't conflict with image URLs
         const profilePictureValue = `lottie-avatar-${lottieData.id}`;
 
-        // First try the users endpoint
         let response = await fetch('/api/users/update-avatar', {
           method: 'PUT',
           headers: {
@@ -493,7 +438,6 @@ export default function ProfilePage() {
           })
         });
 
-        // If users endpoint fails, try the user endpoint
         if (!response.ok) {
           console.log('🔄 Trying alternative endpoint...');
           response = await fetch(`/api/user/${currentUser?.id}`, {
@@ -517,7 +461,6 @@ export default function ProfilePage() {
             const errorData = await response.json();
             errorMessage = errorData.message || errorMessage;
           } catch (parseError) {
-            // If JSON parsing fails, try to get text response
             try {
               const text = await response.text();
               if (text.includes('<!DOCTYPE') || text.includes('<html')) {
@@ -547,11 +490,7 @@ export default function ProfilePage() {
         description: `Your avatar has been updated to "${selectedLottie?.name}" successfully!`,
       });
 
-      // Invalidate queries to refresh user data
-      queryClient.invalidateQueries({ queryKey: ["/api/user/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-
-      // Update the profile picture URL to show the new avatar
       if (data.profilePicture || data.user?.profilePicture) {
         const newUrl = data.profilePicture || data.user?.profilePicture;
         setProfilePictureUrl(`${newUrl}?t=${Date.now()}`);
@@ -565,38 +504,7 @@ export default function ProfilePage() {
         description: error.message || "Failed to update avatar. Please try again.",
         variant: "destructive",
       });
-
-      // Reset selected animation on error
       setSelectedLottie(null);
-    },
-  });
-
-    // Upload profile picture mutation
-  const uploadPictureMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append("profilePicture", file);
-
-      const response = await apiRequest("POST", "/api/auth/profile-picture", formData, {
-        skipContentType: true
-      });
-      if (!response.ok) throw new Error("Failed to upload picture");
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Profile picture updated successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/profile"] });
-      queryClient.invalidateQueries({ queryKey: ['/api/user/current'] }); // Also invalidate user query
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to upload profile picture",
-        variant: "destructive",
-      });
     },
   });
 
@@ -607,15 +515,13 @@ export default function ProfilePage() {
       console.log("FormData contents:", Array.from(formData.entries()));
 
       try {
-        // Use fetch directly to ensure proper FormData handling
         const response = await fetch('/api/user/upload-profile-picture', {
           method: 'POST',
-          body: formData, // Don't set Content-Type header, let browser set it
+          body: formData,
           credentials: 'include'
         });
 
         console.log("Upload response status:", response.status);
-        console.log("Upload response headers:", response.headers);
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -637,25 +543,19 @@ export default function ProfilePage() {
         title: "Profile picture updated",
         description: "Your profile picture has been updated successfully.",
       });
-      // Force reload the current user data
-      queryClient.invalidateQueries({ queryKey: ['/api/user/current'] });
+
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
 
-      // Update the profile picture URL immediately with the new path
       if (data.profilePicture) {
         setProfilePictureUrl(`${data.profilePicture}?t=${Date.now()}`);
       }
 
-      // Force refresh the avatar
       refreshAvatar();
-
-      // Add a slight delay before stopping the loading state to ensure the data has refreshed
       setTimeout(() => setUploading(false), 1000);
     },
     onError: (error: any) => {
       console.error("Profile picture upload error:", error);
 
-      // Try to extract a more detailed error message if available
       let errorMsg = "Failed to upload profile picture. Please try again.";
       if (error instanceof Error) {
         errorMsg = error.message;
@@ -677,9 +577,13 @@ export default function ProfilePage() {
     updateProfileMutation.mutate(data);
   };
 
-      const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfileMutation2.mutate(formData);
+    updateProfileMutation.mutate({
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: currentUser?.email || "",
+    });
   };
 
   const onPasswordSubmit = (data: PasswordFormValues) => {
@@ -689,24 +593,20 @@ export default function ProfilePage() {
   const handleLottieSelect = (animation: LottieAnimation) => {
     console.log('🎭 Selecting Lottie animation:', animation);
 
-    // Prevent multiple rapid selections
     if (updateLottieAvatarMutation.isPending) {
       return;
     }
 
-    // Set the selected animation immediately for UI feedback
     setSelectedLottie(prev => {
       console.log('Previous selection:', prev?.id, 'New selection:', animation.id);
       return animation;
     });
 
-    // Show loading toast
     toast({
       title: "Updating Avatar",
       description: `Setting "${animation.name}" as your avatar...`,
     });
 
-    // Update the avatar
     updateLottieAvatarMutation.mutate(animation);
   };
 
@@ -733,18 +633,21 @@ export default function ProfilePage() {
     }
   };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      uploadPictureMutation.mutate(file);
-    }
-  };
-
-  const handleFileChange2 = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     console.log("File selected:", file.name, file.type, file.size);
+
+    // Check file size (20MB limit)
+    if (file.size > 20 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "File must be under 20MB",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Check file type
     if (file.type.startsWith('image/')) {
@@ -754,27 +657,16 @@ export default function ProfilePage() {
     } else {
       toast({
         title: "Unsupported file type",
-        description: "Please upload an image (JPEG, PNG, GIF, WebP) or Lottie JSON file.",
+        description: "Please upload an image (JPEG, PNG, GIF, WebP) or Lottie JSON file (max 20MB).",
         variant: "destructive",
       });
     }
 
-    // Clear the input value to allow re-upload of the same file
     event.target.value = '';
   };
 
   const handleImageUpload = async (file: File) => {
     console.log("🖼️ Starting image upload:", file.name, file.size);
-
-    // Validate file size (2MB limit)
-    if (file.size > 2 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Image must be under 2MB",
-        variant: "destructive",
-      });
-      return;
-    }
 
     setUploading(true);
 
@@ -783,15 +675,7 @@ export default function ProfilePage() {
       formData.append('profilePicture', file, file.name);
 
       console.log("📤 Uploading image FormData:", formData);
-      console.log("📤 FormData entries:", Array.from(formData.entries()));
-      console.log("📤 File details:", {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        lastModified: file.lastModified
-      });
 
-      // Show uploading toast
       toast({
         title: "Uploading...",
         description: "Your profile picture is being uploaded.",
@@ -827,7 +711,6 @@ export default function ProfilePage() {
     const newKey = Date.now();
     setAvatarKey(newKey);
 
-    // Also update the URL with the new timestamp
     if (profile?.profilePicture) {
       setProfilePictureUrl(`${profile.profilePicture}?t=${newKey}`);
     }
@@ -836,33 +719,12 @@ export default function ProfilePage() {
   const handleLottieFileUpload = async (file: File) => {
     console.log("🎭 Starting Lottie file upload:", file.name, file.size);
 
-    // Validate file size
-    if (file.size > 10 * 1024 * 1024) { // Reduced to 10MB for better performance
-      toast({
-        title: "File too large",
-        description: "Lottie file must be under 10MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file type
-    if (!file.type.includes('json') && !file.name.endsWith('.json')) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload a JSON file containing Lottie animation data",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setUploading(true);
 
     try {
       console.log("📖 Reading Lottie file...");
       const text = await file.text();
 
-      // Parse JSON with better error handling
       let jsonData;
       try {
         jsonData = JSON.parse(text);
@@ -872,7 +734,6 @@ export default function ProfilePage() {
         throw new Error(`Invalid JSON format: ${parseError.message}`);
       }
 
-      // Comprehensive Lottie validation
       if (!jsonData || typeof jsonData !== 'object') {
         throw new Error("Invalid Lottie file - not a valid JSON object");
       }
@@ -889,7 +750,6 @@ export default function ProfilePage() {
         throw new Error("Invalid Lottie file - no animation layers found");
       }
 
-      // Ensure required properties for playback
       const sanitizedData = {
         ...jsonData,
         fr: jsonData.fr || jsonData.frameRate || 30,
@@ -909,7 +769,6 @@ export default function ProfilePage() {
         height: sanitizedData.h
       });
 
-      // Create animation object
       const animationId = `custom-${Date.now()}`;
       const fileName = file.name.replace(/\.json$/i, '');
       const newAnimation: LottieAnimation = {
@@ -921,7 +780,6 @@ export default function ProfilePage() {
 
       console.log('🎭 Created Lottie animation:', newAnimation);
 
-      // Add to animations list immediately for UI feedback
       setLottieAnimations(prev => {
         const existingIndex = prev.findIndex(anim => anim.name === fileName);
         if (existingIndex >= 0) {
@@ -933,72 +791,12 @@ export default function ProfilePage() {
         }
       });
 
-      // Auto-select the newly uploaded animation
       setSelectedLottie(newAnimation);
 
       toast({
         title: "Lottie Upload Success",
         description: `Animation "${fileName}" loaded successfully! Click to set as avatar.`,
       });
-
-      // Try to save to backend using the bug attachment endpoint (which now supports JSON)
-      try {
-        console.log("💾 Saving to backend...");
-        const formData = new FormData();
-        formData.append('file', file); // Use 'file' field name for bug attachment endpoint
-
-        const response = await fetch("/api/uploads/bug-attachment", {
-          method: "POST",
-          body: formData,
-          credentials: 'include'
-        });
-
-        if (response.ok) {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const result = await response.json();
-            console.log('✅ Backend upload successful:', result);
-
-            // Update the animation with server path if provided
-            if (result.fileUrl) {
-              setLottieAnimations(prev => prev.map(anim => 
-                anim.id === newAnimation.id ? { ...anim, path: result.fileUrl } : anim
-              ));
-            }
-          } else {
-            const text = await response.text();
-            console.warn('⚠️ Backend returned non-JSON response:', text.substring(0, 200));
-
-            // Check if it's an HTML error page
-            if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-              console.warn('⚠️ Received HTML error page from server');
-              toast({
-                title: "Upload Warning",
-                description: "Server returned an error page. Animation saved locally only.",
-                variant: "destructive",
-              });
-            } else {
-              console.warn('⚠️ Backend upload failed, keeping local version');
-            }
-          }
-        } else {
-          const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-          console.error(`❌ Backend upload failed with status ${response.status}:`, errorData);
-
-          toast({
-            title: "Upload Failed",
-            description: `Server error (${response.status}): ${errorData.message}. Animation saved locally only.`,
-            variant: "destructive",
-          });
-        }
-      } catch (uploadError) {
-        console.error("❌ Backend upload failed:", uploadError);
-        toast({
-          title: "Upload Error",
-          description: "Network error. Animation saved locally only.",
-          variant: "destructive",
-        });
-      }
 
     } catch (error) {
       console.error("❌ Lottie upload error:", error);
@@ -1012,19 +810,15 @@ export default function ProfilePage() {
     }
   };
 
-    // Compute avatar source with proper Lottie handling
+  // Compute avatar source with proper Lottie handling
   const avatarSrc = useMemo(() => {
     if (!profile) return undefined;
 
-    // Handle Lottie animations - don't use profilePicture URL for Lottie
     if (profile.avatarType === 'lottie' && profile.avatarData) {
-      // Return null for Lottie animations as they should be rendered by LottieAvatar component
       return null;
     }
 
-    // Handle regular profile pictures
     if (profile.profilePicture && !profile.profilePicture.startsWith('lottie:')) {
-      // Add cache busting timestamp
       const separator = profile.profilePicture.includes('?') ? '&' : '?';
       return `${profile.profilePicture}${separator}t=${avatarKey}&v=${Date.now()}`;
     }
@@ -1119,400 +913,4 @@ export default function ProfilePage() {
                 {/* Profile Picture & Basic Info Card */}
                 <motion.div variants={cardVariants}>
                   <Card className="lg:col-span-1">
-                    <CardHeader className="text-center pb-4">
-                      <div className="relative mx-auto">
-                        {avatarLottieData ? (
-                          <div className="h-24 w-24 mx-auto border-4 border-white shadow-lg rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600">
-                            <LottieAvatar
-                              animationData={avatarLottieData}
-                              className="w-full h-full"
-                            />
-                          </div>
-                        ) : (
-                          <Avatar className="h-24 w-24 mx-auto border-4 border-white shadow-lg">
-                            <AvatarImage 
-                              src={avatarSrc} 
-                              alt={`${profile?.firstName} ${profile?.lastName}`}
-                            />
-                            <AvatarFallback className="text-xl font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                              {profile?.firstName?.[0]}{profile?.lastName?.[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="absolute -bottom-1 -right-1 rounded-full h-8 w-8 p-0 bg-white shadow-md"
-                          onClick={handleProfilePictureClick}
-                        >
-                          <Camera className="h-4 w-4" />
-                        </Button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*,.json"
-                          onChange={handleFileChange2}
-                          className="hidden"
-                        />
-                      </div>
-                      <div className="space-y-2 mt-4">
-                        <CardTitle className="text-xl">
-                          {profile?.firstName} {profile?.lastName}
-                        </CardTitle>
-                        <Badge className={`${getRoleColor(profile?.role || '')} border`}>
-                          <Shield className="h-3 w-3 mr-1" />
-                          {profile?.role}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <Mail className="h-4 w-4 text-gray-400" />
-                        <span className="truncate">{profile?.email}</span>
-                      </div>
-                      {profile?.phone && (
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          <span>{profile.phone}</span>
-                        </div>
-                      )}
-                      {profile?.location && (
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                          <MapPin className="h-4 w-4 text-gray-400" />
-                          <span>{profile.location}</span>
-                        </div>
-                      )}
-                      <Separator />
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-3 text-gray-600">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <span>
-                            Joined {new Date(profile?.createdAt || '').toLocaleDateString()}
-                          </span>
-                        </div>
-                        {profile?.lastLoginAt && (
-                          <div className="flex items-center gap-3 text-gray-600">
-                            <Clock className="h-4 w-4 text-gray-400" />
-                            <span>
-                              Last active {new Date(profile.lastLoginAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                {/* Profile Details Form */}
-                <motion.div variants={cardVariants} className="lg:col-span-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Settings className="h-5 w-5" />
-                        Profile Information
-                      </CardTitle>
-                      <CardDescription>
-                        Update your personal information and bio
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Name Fields */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="firstName">First Name</Label>
-                            <Input
-                              id="firstName"
-                              value={formData.firstName}
-                              onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                              disabled={!isEditing}
-                              className={!isEditing ? "bg-gray-50" : ""}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="lastName">Last Name</Label>
-                            <Input
-                              id="lastName"
-                              value={formData.lastName}
-                              onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                              disabled={!isEditing}
-                              className={!isEditing ? "bg-gray-50" : ""}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Contact Fields */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="phone">Phone Number</Label>
-                            <Input
-                              id="phone"
-                              type="tel"
-                              value={formData.phone}
-                              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                              disabled={!isEditing}
-                              className={!isEditing ? "bg-gray-50" : ""}
-                              placeholder="Enter your phone number"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="location">Location</Label>
-                            <Input
-                              id="location"
-                              value={formData.location}
-                              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                              disabled={!isEditing}
-                              className={!isEditing ? "bg-gray-50" : ""}
-                              placeholder="City, Country"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Bio Field */}
-                        <div className="space-y-2">
-                          <Label htmlFor="bio">Bio</Label>
-                          <Textarea
-                            id="bio"
-                            value={formData.bio}
-                            onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                            disabled={!isEditing}
-                            className={`min-h-[100px] resize-none ${!isEditing ? "bg-gray-50" : ""}`}
-                            placeholder="Tell us about yourself..."
-                          />
-                        </div>
-
-                        {/* Email (Read-only) */}
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={profile?.email || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
-                          <p className="text-xs text-gray-500">
-                            Email cannot be changed. Contact support if needed.
-                          </p>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-3 pt-4 border-t">
-                          <Button
-                            type="button"
-                            onClick={() => setIsEditing(!isEditing)}
-                            variant={isEditing ? "outline" : "default"}
-                            className="flex items-center gap-2"
-                          >
-                            {isEditing ? (
-                              <>
-                                <X className="h-4 w-4" />
-                                Cancel
-                              </>
-                            ) : (
-                              <>
-                                <Edit3 className="h-4 w-4" />
-                                Edit Profile
-                              </>
-                            )}
-                          </Button>
-                          
-                          {isEditing && (
-                            <Button
-                              type="submit"
-                              disabled={updateProfileMutation2.isPending}
-                              className="flex items-center gap-2"
-                            >
-                              <Save className="h-4 w-4" />
-                              {updateProfileMutation2.isPending ? "Saving..." : "Save Changes"}
-                            </Button>
-                          )}
-                        </div>
-                      </form>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </div>
-            </TabsContent>
-
-            {/* Security Tab */}
-            <TabsContent value="security" className="space-y-6">
-              <motion.div variants={cardVariants}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Shield className="h-5 w-5" />
-                      Change Password
-                    </CardTitle>
-                    <CardDescription>
-                      Update your password to keep your account secure
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Form {...passwordForm}>
-                      <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
-                        <FormField
-                          control={passwordForm.control}
-                          name="currentPassword"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Current Password</FormLabel>
-                              <FormControl>
-                                <PasswordInput {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={passwordForm.control}
-                          name="newPassword"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>New Password</FormLabel>
-                              <FormControl>
-                                <PasswordInput {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={passwordForm.control}
-                          name="confirmPassword"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Confirm New Password</FormLabel>
-                              <FormControl>
-                                <PasswordInput {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <Button
-                          type="submit"
-                          disabled={updatePasswordMutation.isPending}
-                          className="w-full"
-                        >
-                          {updatePasswordMutation.isPending && (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          )}
-                          Update Password
-                        </Button>
-                      </form>
-                    </Form>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </TabsContent>
-
-            {/* Avatar Tab */}
-            <TabsContent value="avatar" className="space-y-6">
-              <motion.div variants={cardVariants}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Upload className="h-5 w-5" />
-                      Avatar Customization
-                    </CardTitle>
-                    <CardDescription>
-                      Choose from animated avatars or upload your own image
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      {/* Upload Section */}
-                      <div>
-                        <Label className="text-sm font-medium mb-3 block">Upload Custom Avatar</Label>
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                          <Upload className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                          <p className="text-sm text-gray-600 mb-2">
-                            Drop your image or Lottie animation here, or click to browse
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Supports: JPEG, PNG, GIF, WebP (images) or JSON (Lottie animations)
-                          </p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-3"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploading}
-                          >
-                            {uploading ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Uploading...
-                              </>
-                            ) : (
-                              <>
-                                <Upload className="mr-2 h-4 w-4" />
-                                Choose File
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Lottie Animations Grid */}
-                      <div>
-                        <div className="flex items-center justify-between mb-4">
-                          <Label className="text-sm font-medium">Animated Avatars</Label>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const allIds = lottieAnimations.map(anim => anim.id);
-                              const allPlaying = allIds.every(id => playingAnimations.has(id));
-                              if (allPlaying) {
-                                setPlayingAnimations(new Set());
-                              } else {
-                                setPlayingAnimations(new Set(allIds));
-                              }
-                            }}
-                          >
-                            {lottieAnimations.length > 0 && lottieAnimations.every(anim => playingAnimations.has(anim.id)) ? (
-                              <>
-                                <Pause className="h-4 w-4 mr-2" />
-                                Pause All
-                              </>
-                            ) : (
-                              <>
-                                <Play className="h-4 w-4 mr-2" />
-                                Play All
-                              </>
-                            )}
-                          </Button>
-                        </div>
-
-                        {lottieAnimations.length === 0 ? (
-                          <div className="text-center p-8 text-gray-500">
-                            <div className="text-sm">No animations available</div>
-                            <div className="text-xs mt-1">Upload a Lottie JSON file to get started</div>
-                          </div>
-                        ) : (
-                          <LottieAvatarGrid
-                            animations={lottieAnimations}
-                            selectedAnimation={selectedLottie}
-                            onAnimationSelect={handleLottieSelect}
-                            playingAnimations={playingAnimations}
-                            onToggleAnimation={toggleAnimation}
-                            isUpdating={updateLottieAvatarMutation.isPending}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </TabsContent>
-          </Tabs>
-        </motion.div>
-      </div>
-    </MainLayout>
-  );
-}
+                    <Card
