@@ -1533,7 +1533,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.json({ message: "GitHub integration deleted successfully" });
     } catch (error) {
       console.error("Delete GitHub integration error:", error);
-      res.status(500).json({ message: "Failed to delete GitHub integration" });tegrations" });
+      res.status(500).json({ message: "Failed to delete GitHub integration" });
     }
   });
 
