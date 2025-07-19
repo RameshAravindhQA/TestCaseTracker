@@ -92,6 +92,14 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
       try {
         console.log('🔄 Calling AI Generation API...');
+        console.log('📋 Request details:', {
+          requirement: data.requirement?.substring(0, 100),
+          moduleContext: data.moduleContext,
+          testType: data.testType,
+          priority: data.priority,
+          inputType: data.inputType,
+          hasImages: data.images && data.images.length > 0
+        });
 
         // Play sound for AI generation start
         try {
@@ -105,16 +113,42 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         const timeoutId = setTimeout(() => {
           console.log('⏰ Request timeout, aborting...');
           controller.abort();
-        }, 15000); // 15 seconds timeout
+        }, 30000); // 30 seconds timeout
+
+        // Determine if we should use FormData or JSON
+        let requestBody: FormData | string;
+        let headers: Record<string, string> = {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        };
+
+        if (data.images && data.images.length > 0) {
+          // Use FormData for file uploads
+          requestBody = formData;
+          console.log('🔄 Using FormData for file uploads');
+        } else {
+          // Use JSON for text-only requests
+          requestBody = JSON.stringify({
+            requirement: data.requirement || '',
+            projectContext: data.projectContext || '',
+            moduleContext: data.moduleContext || '',
+            testType: data.testType || 'functional',
+            priority: data.priority || 'Medium',
+            websiteUrl: data.websiteUrl || '',
+            elementInspection: data.elementInspection || '',
+            userFlows: data.userFlows || '',
+            businessRules: data.businessRules || '',
+            inputType: data.inputType || 'text'
+          });
+          headers['Content-Type'] = 'application/json';
+          console.log('🔄 Using JSON for text-only request');
+        }
 
         const response = await fetch('/api/ai/generate-enhanced-test-cases', {
           method: 'POST',
-          body: formData,
+          body: requestBody,
           credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-          },
+          headers,
           signal: controller.signal
         });
 
@@ -124,26 +158,44 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
           status: response.status,
           statusText: response.statusText,
           contentType: response.headers.get('content-type'),
-          ok: response.ok
+          ok: response.ok,
+          url: response.url
         });
 
         if (!response.ok) {
-          console.error('❌ API request failed:', response.status);
-          throw new Error(`API request failed with status ${response.status}`);
+          const errorText = await response.text();
+          console.error('❌ API request failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorText: errorText.substring(0, 500)
+          });
+          
+          // Try to parse error as JSON
+          try {
+            const errorJson = JSON.parse(errorText);
+            throw new Error(errorJson.error || errorJson.message || `API request failed with status ${response.status}`);
+          } catch (parseError) {
+            throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
+          }
         }
 
         // Check content type
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
-          console.error('❌ Expected JSON response but got:', contentType);
-          throw new Error('Server returned invalid response format');
+          const responseText = await response.text();
+          console.error('❌ Expected JSON response but got:', {
+            contentType,
+            responsePreview: responseText.substring(0, 200)
+          });
+          throw new Error('Server returned invalid response format (expected JSON but got HTML/text)');
         }
 
         const responseData = await response.json();
         console.log('✅ Parsed JSON response:', {
           success: responseData.success,
           testCasesCount: responseData.testCases?.length || 0,
-          source: responseData.source
+          source: responseData.source,
+          hasAnalysis: !!responseData.analysis
         });
 
         // Validate response structure
@@ -159,12 +211,28 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
           throw new Error('No test cases were generated');
         }
 
-        console.log('✅ AI Generation successful');
+        console.log('✅ AI Generation successful - returning data');
         return responseData;
 
       } catch (error: any) {
-        console.error('❌ AI Generation failed:', error);
-        throw new Error(error.message || 'AI generation failed');
+        console.error('❌ AI Generation failed:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack?.substring(0, 500)
+        });
+        
+        // Provide more specific error messages
+        if (error.name === 'AbortError') {
+          throw new Error('Request timed out. Please try again with a shorter requirement or check your connection.');
+        } else if (error.message.includes('JSON')) {
+          throw new Error('Server response format error. Please try again or contact support if the issue persists.');
+        } else if (error.message.includes('status 500')) {
+          throw new Error('Internal server error. Please try again in a few moments.');
+        } else if (error.message.includes('status 401')) {
+          throw new Error('Authentication error. Please refresh the page and try again.');
+        }
+        
+        throw new Error(error.message || 'AI generation failed unexpectedly');
       }
     },
     onSuccess: (data) => {
@@ -331,7 +399,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
     const selectedCases = generatedTestCases
       .filter((_, index) => selectedTestCases.has(index))
       .map(tc => ({
-        projectId: Number(selectedProjectId),
+        projectId: projectId,
         moduleId: moduleId || modules[0]?.id,
         feature: tc.feature,
         testObjective: tc.testObjective,

@@ -1604,6 +1604,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, 
     (req, res, next) => {
       console.log('🔍 AI Generation endpoint hit - Initial request processing');
+      console.log('🔍 Request method:', req.method);
+      console.log('🔍 Request headers:', req.headers);
+      console.log('🔍 Request body keys:', Object.keys(req.body || {}));
       
       // Set response headers early to ensure JSON response
       res.setHeader('Content-Type', 'application/json');
@@ -1616,29 +1619,40 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         return res.status(200).json({ success: true, message: 'Options OK' });
       }
       
-      // Handle file upload with error handling
-      bugAttachmentUpload.array('images', 10)(req, res, (err) => {
-        if (err) {
-          console.error("❌ Enhanced AI file upload error:", err);
-          return res.status(400).json({ 
-            success: false,
-            error: 'File upload failed',
-            details: err.message,
-            timestamp: new Date().toISOString()
-          });
-        }
+      // Only process multipart if content-type indicates it
+      const contentType = req.headers['content-type'] || '';
+      if (contentType.includes('multipart/form-data')) {
+        console.log('🔍 Processing multipart form data');
+        // Handle file upload with error handling
+        bugAttachmentUpload.array('images', 10)(req, res, (err) => {
+          if (err) {
+            console.error("❌ Enhanced AI file upload error:", err);
+            return res.status(400).json({ 
+              success: false,
+              error: 'File upload failed',
+              details: err.message,
+              timestamp: new Date().toISOString()
+            });
+          }
+          console.log('✅ File upload processed successfully');
+          next();
+        });
+      } else {
+        console.log('🔍 Processing JSON request');
         next();
-      });
+      }
     },
     async (req, res) => {
       try {
         console.log('🤖 Enhanced AI Generation - Handler started');
+        console.log('🔍 Session data:', { userId: req.session?.userId, userRole: req.session?.userRole });
         
         // Ensure JSON response regardless of what happens
         res.setHeader('Content-Type', 'application/json');
         
         // Validate authentication
         if (!req.session || !req.session.userId) {
+          console.error('❌ Authentication failed');
           return res.status(401).json({ 
             success: false,
             error: 'Authentication required',
@@ -1659,14 +1673,23 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           inputType 
         } = req.body;
         
-        console.log('📋 Request data:', {
-          requirement: requirement?.substring(0, 50),
+        console.log('📋 Request data received:', {
+          requirement: requirement?.substring(0, 100) + '...',
+          projectContext: projectContext?.substring(0, 50),
+          moduleContext,
+          testType,
+          priority,
           inputType,
-          filesCount: req.files?.length || 0
+          filesCount: req.files?.length || 0,
+          hasWebsiteUrl: !!websiteUrl,
+          hasElementInspection: !!elementInspection,
+          hasUserFlows: !!userFlows,
+          hasBusinessRules: !!businessRules
         });
         
         // Input validation
         if (!requirement && !websiteUrl && (!req.files || req.files.length === 0)) {
+          console.error('❌ No input provided');
           return res.status(400).json({ 
             success: false,
             error: 'At least one input is required: requirement text, website URL, or uploaded images',
@@ -1692,18 +1715,32 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             images: req.files || []
           };
           
+          console.log('🔮 Gemini request prepared:', {
+            hasRequirement: !!geminiRequest.requirement,
+            hasModuleContext: !!geminiRequest.moduleContext,
+            testType: geminiRequest.testType,
+            priority: geminiRequest.priority,
+            inputType: geminiRequest.inputType
+          });
+          
           const geminiResponse = await geminiService.generateTestCases(geminiRequest);
           
-          console.log('✅ Gemini response generated successfully');
+          console.log('✅ Gemini response generated successfully:', {
+            testCasesCount: geminiResponse.testCases?.length || 0,
+            source: geminiResponse.source
+          });
           
-          return res.status(200).json({
+          const response = {
             success: true,
             testCases: geminiResponse.testCases,
             analysis: geminiResponse.analysis,
             message: geminiResponse.message,
             source: geminiResponse.source,
             timestamp: new Date().toISOString()
-          });
+          };
+          
+          console.log('📤 Sending successful response');
+          return res.status(200).json(response);
           
         } catch (geminiError: any) {
           console.error('❌ Gemini service failed, falling back to mock service:', geminiError.message);
@@ -1722,21 +1759,29 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             userFlows || ''
           );
           
-          console.log('✅ Mock response generated successfully');
+          console.log('✅ Mock response generated successfully:', {
+            testCasesCount: mockResponse.testCases?.length || 0,
+            source: mockResponse.source
+          });
           
+          console.log('📤 Sending mock response');
           return res.status(200).json(mockResponse);
         }
         
       } catch (handlerError: any) {
         console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
+        console.error('❌ Error stack:', handlerError.stack);
         
         // Ensure we always return JSON even in error cases
-        return res.status(500).json({ 
+        const errorResponse = { 
           success: false,
           error: 'Internal server error during test case generation',
           details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
           timestamp: new Date().toISOString()
-        });
+        };
+        
+        console.log('📤 Sending error response');
+        return res.status(500).json(errorResponse);
       }
     }
   );
