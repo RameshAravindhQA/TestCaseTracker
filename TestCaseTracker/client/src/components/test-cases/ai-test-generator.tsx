@@ -95,12 +95,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
         // Play sound for AI generation start
         try {
-          const soundModule = await import('../../lib/soundManager.js');
-          if (soundModule.default && soundModule.default.playSound) {
-            await soundModule.default.playSound('crud');
-          } else if (soundModule.playSound) {
-            await soundModule.playSound('crud');
-          }
+          const { playSound } = await import('../../lib/soundManager.js');
+          await playSound('crud');
         } catch (soundError) {
           console.warn('Sound playback failed:', soundError);
         }
@@ -176,12 +172,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
       // Play success sound
       try {
-        import('../../lib/soundManager.js').then((soundModule) => {
-          if (soundModule.default && soundModule.default.playSound) {
-            soundModule.default.playSound('success');
-          } else if (soundModule.playSound) {
-            soundModule.playSound('success');
-          }
+        import('../../lib/soundManager.js').then(({ playSound }) => {
+          playSound('success');
         });
       } catch (soundError) {
         console.warn('Sound playback failed:', soundError);
@@ -212,12 +204,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
       // Play error sound
       try {
-        import('../../lib/soundManager.js').then((soundModule) => {
-          if (soundModule.default && soundModule.default.playSound) {
-            soundModule.default.playSound('error');
-          } else if (soundModule.playSound) {
-            soundModule.playSound('error');
-          }
+        import('../../lib/soundManager.js').then(({ playSound }) => {
+          playSound('error');
         });
       } catch (soundError) {
         console.warn('Sound playback failed:', soundError);
@@ -343,7 +331,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
     const selectedCases = generatedTestCases
       .filter((_, index) => selectedTestCases.has(index))
       .map(tc => ({
-        projectId: projectId,
+        projectId: Number(selectedProjectId),
         moduleId: moduleId || modules[0]?.id,
         feature: tc.feature,
         testObjective: tc.testObjective,
