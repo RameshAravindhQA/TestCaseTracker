@@ -2074,10 +2074,13 @@ class MemStorage implements IStorage {
   }
 
   // Chat and messaging methods
+  private messages = new Map<number, any>();
+
   async getChatMessages(projectId: number, limit: number = 50): Promise<any[]> {
     try {
       // Get messages for project chat
-      return this.messages.filter(m => m.projectId === projectId)
+      return Array.from(this.messages.values())
+        .filter(m => m.projectId === projectId)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
         .slice(0, limit)
         .reverse(); // Show oldest first
@@ -2092,7 +2095,7 @@ class MemStorage implements IStorage {
       console.log(`[STORAGE] Getting messages for chat/conversation ${chatId}`);
 
       // Get direct messages for this conversation
-      const directMessages = this.messages.filter(m => 
+      const directMessages = Array.from(this.messages.values()).filter(m => 
         m.conversationId === chatId || 
         (m.senderId && m.receiverId && (
           (m.senderId === chatId) || (m.receiverId === chatId)
@@ -2110,6 +2113,51 @@ class MemStorage implements IStorage {
       return [];
     }
   }
+
+  async createChatMessage(messageData: any): Promise<any> {
+    try {
+      console.log(`[STORAGE] Creating chat message:`, messageData);
+
+      if (!messageData.userId && !messageData.senderId) {
+        throw new Error('Missing required fields: userId or senderId');
+      }
+
+      const id = this.getNextId();
+      const now = new Date().toISOString();
+
+      const message = {
+        id,
+        userId: messageData.userId || messageData.senderId,
+        senderId: messageData.senderId || messageData.userId,
+        receiverId: messageData.receiverId,
+        conversationId: messageData.conversationId,
+        projectId: messageData.projectId,
+        userName: messageData.userName || 'Anonymous',
+        message: messageData.message || messageData.content,
+        content: messageData.content || messageData.message,
+        type: messageData.type || 'text',
+        mentionedUsers: messageData.mentionedUsers || [],
+        attachments: messageData.attachments || [],
+        isEdited: messageData.isEdited || false,
+        isRead: messageData.isRead || false,
+        timestamp: messageData.timestamp || now,
+        createdAt: now,
+        updatedAt: now,
+        sender: messageData.sender || null
+      };
+
+      // Store in messages map
+      this.messages.set(id, message);
+
+      console.log(`[STORAGE] Created message ${id} from ${message.senderId} to ${message.receiverId}`);
+      return message;
+    } catch (error) {
+      console.error('Error creating chat message:', error);
+      throw error;
+    }
+  }
+
+  private conversations: any[] = [];
 
   async getUserConversations(userId: number): Promise<any[]> {
     try {
@@ -2137,7 +2185,7 @@ class MemStorage implements IStorage {
       console.log(`[STORAGE] Looking for direct conversation between users ${userId1} and ${userId2}`);
 
       // Find existing direct conversation
-      const conversation = this.conversations.filter(conv => 
+      const conversation = this.conversations.find(conv => 
         conv.type === 'direct' && 
         conv.participants.length === 2 &&
         conv.participants.includes(userId1) && 
@@ -2158,7 +2206,7 @@ class MemStorage implements IStorage {
       console.log(`[STORAGE] Creating direct conversation between users ${userId1} and ${userId2}`);
 
       const conversation = {
-        id: this.conversations.length + 1,
+        id: this.getNextId(),
         type: 'direct',
         name: null,
         description: null,
@@ -2182,7 +2230,7 @@ class MemStorage implements IStorage {
       console.log(`[STORAGE] Creating ${data.type} conversation:`, data.name);
 
       const conversation = {
-        id: this.conversations.length + 1,
+        id: this.getNextId(),
         type: data.type,
         name: data.name,
         description: data.description,

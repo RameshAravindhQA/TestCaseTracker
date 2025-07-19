@@ -2363,7 +2363,17 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   // Handle both direct messages and conversation messages
   apiRouter.post("/messages", isAuthenticated, async (req, res) => {
     try {
-      const { receiverId, content, conversationId } = req.body;
+      console.log('[API] Creating message with data:', req.body);
+      
+      const { receiverId, content, conversationId, type, attachments } = req.body;
+      
+      if (!content || content.trim() === '') {
+        return res.status(400).json({ error: 'Message content is required' });
+      }
+      
+      if (!receiverId && !conversationId) {
+        return res.status(400).json({ error: 'Either receiverId or conversationId is required' });
+      }
       
       let targetConversationId = conversationId;
       
@@ -2378,18 +2388,32 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         targetConversationId = conversation.id;
       }
       
+      // Get sender info
+      const sender = await storage.getUser(req.session.userId!);
+      
       const message = await storage.createChatMessage({
+        senderId: req.session.userId!,
         userId: req.session.userId!,
         receiverId,
         conversationId: targetConversationId,
-        message: content,
-        type: 'text'
+        content: content.trim(),
+        message: content.trim(),
+        type: type || 'text',
+        attachments: attachments || [],
+        userName: sender ? `${sender.firstName} ${sender.lastName || ''}`.trim() : 'Anonymous',
+        sender: sender ? {
+          id: sender.id,
+          firstName: sender.firstName,
+          lastName: sender.lastName,
+          profilePicture: sender.profilePicture
+        } : null
       });
       
+      console.log('[API] Message created successfully:', message.id);
       res.json(message);
     } catch (error) {
-      console.error('Send message error:', error);
-      res.status(500).json({ error: 'Failed to send message' });
+      console.error('Error creating message:', error);
+      res.status(500).json({ error: 'Failed to create message' });
     }
   });
 
