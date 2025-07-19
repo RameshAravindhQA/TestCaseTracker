@@ -15,15 +15,17 @@ try {
   console.log('🔧 Full environment check:', {
     NODE_ENV: process.env.NODE_ENV,
     hasApiKey: !!apiKey,
-    keyLength: apiKey?.length || 0
+    keyLength: apiKey?.length || 0,
+    apiKeyPreview: apiKey ? `${apiKey.substring(0, 15)}...` : 'NONE'
   });
 
-  if (apiKey && apiKey !== 'your-gemini-api-key' && apiKey.trim() !== '') {
+  if (apiKey && apiKey !== 'your-gemini-api-key' && apiKey.trim() !== '' && apiKey.startsWith('AIza')) {
     genAI = new GoogleGenerativeAI(apiKey);
-    console.log('✅ Gemini AI initialized successfully');
+    console.log('✅ Gemini AI initialized successfully with valid API key');
   } else {
-    initializationError = 'Google Gemini API key not configured';
-    console.warn('❌ Google Gemini API key not configured');
+    initializationError = 'Google Gemini API key not configured or invalid format';
+    console.warn('❌ Google Gemini API key not configured or invalid format');
+    console.warn('🔧 Expected format: AIzaSy... but got:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NONE');
     console.warn('🔧 Available env vars:', Object.keys(process.env).filter(k => k.includes('GOOGLE')));
   }
 } catch (error) {
@@ -100,12 +102,95 @@ export class GeminiAIService {
     console.log('🚀 Starting test case generation...', {
       inputType: request.inputType,
       hasGemini: this.isInitialized,
-      requirement: request.requirement?.substring(0, 50) + '...'
+      requirement: request.requirement?.substring(0, 50) + '...',
+      apiKeyConfigured: !!genAI,
+      initError: initializationError
     });
 
-    // Always try mock service first for reliability
-    console.log('🎭 Using intelligent mock service for reliable test generation');
-    return this.getMockResponse(request);
+    // Try Gemini AI first if properly configured
+    if (this.isInitialized && genAI && !initializationError) {
+      try {
+        console.log('🤖 Attempting to use Google Gemini AI...');
+        return await this.generateWithGemini(request);
+      } catch (error) {
+        console.error('❌ Gemini AI failed, falling back to mock service:', error);
+        return this.getMockResponse(request);
+      }
+    } else {
+      console.log('🎭 Using intelligent mock service (Gemini not available)');
+      console.log('🔧 Reason:', initializationError || 'Gemini not initialized');
+      return this.getMockResponse(request);
+    }
+  }
+
+  private async generateWithGemini(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
+    if (!this.model) {
+      throw new Error('Gemini model not initialized');
+    }
+
+    const prompt = this.buildGeminiPrompt(request);
+    
+    try {
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      console.log('🤖 Gemini response received:', text.substring(0, 200) + '...');
+      
+      // Parse the JSON response
+      const testCases = JSON.parse(text);
+      
+      return {
+        testCases: testCases,
+        analysis: {
+          coverage: 'Comprehensive',
+          complexity: this.getComplexityLevel(request),
+          focusAreas: this.getFocusAreas(request),
+          suggestions: this.getSuggestions(request)
+        },
+        message: `Generated ${testCases.length} test cases using Google Gemini AI`,
+        source: 'gemini-ai'
+      };
+    } catch (error) {
+      console.error('❌ Gemini AI generation error:', error);
+      throw error;
+    }
+  }
+
+  private buildGeminiPrompt(request: TestCaseGenerationRequest): string {
+    return `You are an expert QA engineer. Generate comprehensive test cases based on the following requirement:
+
+Requirement: ${request.requirement}
+${request.projectContext ? `Project Context: ${request.projectContext}` : ''}
+${request.moduleContext ? `Module Context: ${request.moduleContext}` : ''}
+Test Type: ${request.testType || 'functional'}
+Priority: ${request.priority || 'Medium'}
+Input Type: ${request.inputType || 'text'}
+
+Generate 4-6 detailed test cases that cover:
+1. Happy path scenarios
+2. Edge cases  
+3. Error scenarios
+4. Boundary conditions
+5. Integration points
+
+Return ONLY a valid JSON array with the following structure:
+[
+  {
+    "feature": "Feature name",
+    "testObjective": "Clear test objective",
+    "preConditions": "Prerequisites",
+    "testSteps": "1. Step one\\n2. Step two\\n3. Step three",
+    "expectedResult": "Expected outcome",
+    "priority": "High|Medium|Low",
+    "testType": "${request.testType || 'functional'}",
+    "coverage": "What this test covers",
+    "category": "Test category",
+    "tags": ["tag1", "tag2"]
+  }
+]
+
+Ensure the response is valid JSON only, no additional text.`;
   }
 
   private getMockResponse(request: TestCaseGenerationRequest): TestCaseGenerationResponse {

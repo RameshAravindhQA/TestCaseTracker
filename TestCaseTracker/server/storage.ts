@@ -2074,122 +2074,79 @@ class MemStorage implements IStorage {
   }
 
   // Chat and messaging methods
-  async createChatMessage(messageData: any): Promise<any> {
-    const id = this.getNextId();
-    const now = new Date().toISOString();
-
-    const message = {
-      id,
-      conversationId: messageData.conversationId,
-      userId: messageData.userId,
-      userName: messageData.userName,
-      message: messageData.message,
-      type: messageData.type || 'text',
-      timestamp: now,
-      createdAt: now,
-      replyToId: messageData.replyToId || null,
-      attachments: messageData.attachments || [],
-      isPinned: false,
-      isEdited: false
-    };
-
-    // Store in main messages map
-    this.chatMessages.set(id, message);
-
-    // Also store in conversation-specific cache
-    const conversationId = messageData.conversationId;
-    if (!this.conversationMessages.has(conversationId)) {
-      this.conversationMessages.set(conversationId, []);
+  async getChatMessages(projectId: number, limit: number = 50): Promise<any[]> {
+    try {
+      // Get messages for project chat
+      return this.messages.filter(m => m.projectId === projectId)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, limit)
+        .reverse(); // Show oldest first
+    } catch (error) {
+      console.error('Error getting chat messages:', error);
+      return [];
     }
-    this.conversationMessages.get(conversationId)!.push(message);
-
-    console.log(`Storage: Created message ${id} for conversation ${conversationId}`);
-    return message;
-  }
-
-  async createMessage(messageData: any): Promise<any> {
-    // Alias to createChatMessage for compatibility
-    return this.createChatMessage(messageData);
   }
 
   async getMessagesByChat(chatId: number): Promise<any[]> {
-    // Get all messages for this conversation
-    const allMessages = Array.from(this.chatMessages.values());
-    const messages = allMessages.filter(msg => 
-      msg.conversationId === chatId || msg.chatId === chatId
-    ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    try {
+      console.log(`[STORAGE] Getting messages for chat/conversation ${chatId}`);
 
-    // Always update the cache with fresh data
-    this.conversationMessages.set(chatId, messages);
+      // Get direct messages for this conversation
+      const directMessages = this.messages.filter(m => 
+        m.conversationId === chatId || 
+        (m.senderId && m.receiverId && (
+          (m.senderId === chatId) || (m.receiverId === chatId)
+        ))
+      );
 
-    console.log(`Storage: Retrieved ${messages.length} messages for chat ${chatId}`);
-    return messages;
+      console.log(`[STORAGE] Found ${directMessages.length} messages for chat ${chatId}`);
+
+      // Sort by timestamp (oldest first)
+      return directMessages.sort((a, b) => 
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+    } catch (error) {
+      console.error('Error getting messages by chat:', error);
+      return [];
+    }
   }
 
   async getUserConversations(userId: number): Promise<any[]> {
-    const conversationMap = new Map();
-    const allMessages = Array.from(this.chatMessages.values());
+    try {
+      console.log(`[STORAGE] Getting conversations for user ${userId}`);
 
-    // Group messages by conversation and create unique conversations
-    const conversationMessages = new Map();
-
-    for (const message of allMessages) {
-      const convId = message.conversationId;
-      if (!conversationMessages.has(convId)) {
-        conversationMessages.set(convId, []);
-      }
-      conversationMessages.get(convId).push(message);
-    }
-
-    // Create conversations from message groups
-    for (const [convId, messages] of conversationMessages.entries()) {
-      // Find other participants (not current user)
-      const otherUserIds = [...new Set(messages.map(m => m.userId).filter(id => id !== userId))];
-
-      if (otherUserIds.length > 0) {
-        const otherUser = await this.getUser(otherUserIds[0]);
-        if (otherUser) {
-          const sortedMessages = messages.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-          const lastMessage = sortedMessages[0];
-
-          conversationMap.set(convId, {
-            id: convId,
-            name: `${otherUser.firstName} ${otherUser.lastName || ''}`.trim(),
-            type: "direct",
-            participants: [{ 
-              id: otherUser.id, 
-              name: `${otherUser.firstName} ${otherUser.lastName || ''}`.trim() 
-            }],
-            lastMessage: lastMessage.message,
-            unreadCount: 0,
-            createdAt: lastMessage.timestamp
-          });
-        }
-      }
-    }
-
-    console.log(`Storage: Retrieved ${conversationMap.size} conversations for user ${userId}`);
-    return Array.from(conversationMap.values()).sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  }
-
-  private getOtherUserFromConversation(conversationId: number, currentUserId: number): number | null {
-    const conversation = this.conversations.get(conversationId);
-    if (conversation && conversation.participants) {
-      const otherParticipant = conversation.participants.find((p: any) => 
-        (typeof p === 'object' ? p.id : p) !== currentUserId
+      // Get all conversations where user is a participant
+      const userConversations = this.conversations.filter(conv => 
+        conv.participants.includes(userId)
       );
-      return otherParticipant ? (typeof otherParticipant === 'object' ? otherParticipant.id : otherParticipant) : null;
+
+      console.log(`[STORAGE] Found ${userConversations.length} conversations for user ${userId}`);
+
+      // Sort by last activity
+      return userConversations.sort((a, b) => 
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+    } catch (error) {
+      console.error('Error getting user conversations:', error);
+      return [];
     }
-    return null;
   }
 
   async getDirectConversation(userId1: number, userId2: number): Promise<any | null> {
     try {
-      // Check if we have any existing conversation between these users
-      // For now, return null to create a new conversation
-      return null;
+      console.log(`[STORAGE] Looking for direct conversation between users ${userId1} and ${userId2}`);
+
+      // Find existing direct conversation
+      const conversation = this.conversations.filter(conv => 
+        conv.type === 'direct' && 
+        conv.participants.length === 2 &&
+        conv.participants.includes(userId1) && 
+        conv.participants.includes(userId2)
+      );
+
+      console.log(`[STORAGE] Direct conversation ${conversation ? 'found' : 'not found'}`);
+
+      return conversation || null;
     } catch (error) {
       console.error('Error getting direct conversation:', error);
       return null;
@@ -2198,42 +2155,21 @@ class MemStorage implements IStorage {
 
   async createDirectConversation(userId1: number, userId2: number): Promise<any> {
     try {
-      const user1 = await this.getUser(userId1);
-      const user2 = await this.getUser(userId2);
-
-      if (!user1 || !user2) {
-        throw new Error('One or both users not found');
-      }
-
-      // Create a unique conversation ID
-      const conversationId = Date.now();
+      console.log(`[STORAGE] Creating direct conversation between users ${userId1} and ${userId2}`);
 
       const conversation = {
-        id: conversationId,
-        type: "direct" as const,
-        name: `${user2.firstName} ${user2.lastName || ''}`.trim(),
-        participants: [
-          {
-            id: userId1,
-            name: `${user1.firstName} ${user1.lastName || ''}`.trim()
-          },
-          {
-            id: userId2,
-            name: `${user2.firstName} ${user2.lastName || ''}`.trim()
-          }
-        ],
-        lastMessage: "",
-        unreadCount: 0,
-        createdAt: new Date().toISOString()
+        id: this.conversations.length + 1,
+        type: 'direct',
+        name: null,
+        description: null,
+        participants: [userId1, userId2],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
-      // Store the conversation
-      this.conversations.set(conversationId, conversation);
+      this.conversations.push(conversation);
+      console.log(`[STORAGE] Created direct conversation ${conversation.id}`);
 
-      // Initialize empty message array for this conversation
-      this.conversationMessages.set(conversationId, []);
-
-      console.log(`Storage: Created direct conversation ${conversationId} between users ${userId1} and ${userId2}`);
       return conversation;
     } catch (error) {
       console.error('Error creating direct conversation:', error);
@@ -2243,41 +2179,25 @@ class MemStorage implements IStorage {
 
   async createConversation(data: any): Promise<any> {
     try {
+      console.log(`[STORAGE] Creating ${data.type} conversation:`, data.name);
+
       const conversation = {
-        id: Date.now(),
-        ...data,
-        createdAt: new Date().toISOString()
+        id: this.conversations.length + 1,
+        type: data.type,
+        name: data.name,
+        description: data.description,
+        participants: data.participants,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
+
+      this.conversations.push(conversation);
+      console.log(`[STORAGE] Created conversation ${conversation.id}`);
 
       return conversation;
     } catch (error) {
       console.error('Error creating conversation:', error);
       throw error;
-    }
-  }
-
-    async markMessageAsRead(messageId: number, userId: number) {
-    try {
-      // For now, just return success
-      return true;
-    } catch (error) {
-      console.error('Error marking message as read:', error);
-      return false;
-    }
-  }
-
-  async updateChatMessage(messageId: number, userId: number, updates: any) {
-    try {
-      // Find and update the chat message
-      const message = this.chatMessages.find(m => m.id === messageId && m.userId === userId);
-      if (message) {
-        Object.assign(message, updates);
-        return message;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error updating chat message:', error);
-      return null;
     }
   }
   // Message management
@@ -2537,7 +2457,7 @@ class MemStorage implements IStorage {
   async createMessage(messageData: any) {
     const id = this.getNextId();
     const now = new Date().toISOString();
-    
+
     const message = {
       id,
       senderId: messageData.senderId,
@@ -2554,7 +2474,7 @@ class MemStorage implements IStorage {
 
     // Store in chatMessages map for better access
     this.chatMessages.set(id, message);
-    
+
     console.log(`Storage: Created message ${id} from ${messageData.senderId} to ${messageData.receiverId}`);
     return message;
   }
