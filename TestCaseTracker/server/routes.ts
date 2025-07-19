@@ -7,6 +7,7 @@ import { logger } from "./logger";
 import { emailService } from "./email-service";
 import githubIntegrationsRouter from "./api/github-integrations";
 import { geminiService } from "./gemini-service";
+import { EnhancedAIService } from "./enhanced-ai-service";
 import { 
   insertUserSchema, 
   insertProjectSchema, 
@@ -1195,6 +1196,26 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   // Error handling middleware for multer (this is used by document uploads)
   
   // AI Test Case Generation endpoints (moved up before document routes)
+  
+  // Get available AI providers
+  apiRouter.get("/ai/providers", isAuthenticated, async (req, res) => {
+    try {
+      const providers = EnhancedAIService.getAvailableProviders();
+      res.json({
+        success: true,
+        providers,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Get AI providers error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get AI providers',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+  
   apiRouter.get("/ai/debug-gemini", isAuthenticated, async (req, res) => {
     // Set JSON response headers
     res.setHeader('Content-Type', 'application/json');
@@ -1297,7 +1318,8 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         elementInspection,
         userFlows,
         businessRules,
-        inputType 
+        inputType,
+        aiProvider
       } = req.body;
       
       console.log('📋 Request data received:', {
@@ -1307,6 +1329,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         testType,
         priority,
         inputType,
+        aiProvider: aiProvider || 'gemini',
         hasWebsiteUrl: !!websiteUrl,
         hasElementInspection: !!elementInspection,
         hasUserFlows: !!userFlows,
@@ -1323,12 +1346,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         });
       }
 
-      // Try to use Gemini service with proper error handling
-      let geminiResponse;
+      // Use enhanced AI service with provider selection
+      let aiResponse;
       try {
-        console.log('🔮 Attempting to use Gemini AI service...');
+        console.log(`🔮 Attempting to use ${aiProvider || 'gemini'} AI service...`);
         
-        const geminiRequest = {
+        const aiRequest = {
           requirement: requirement || '',
           projectContext: projectContext || '',
           moduleContext: moduleContext || '',
@@ -1339,29 +1362,32 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           userFlows: userFlows || '',
           businessRules: businessRules || '',
           inputType: inputType || 'text',
+          aiProvider: aiProvider || 'gemini',
           images: []
         };
         
-        console.log('🔮 Calling Gemini service with request:', {
-          hasRequirement: !!geminiRequest.requirement,
-          hasModuleContext: !!geminiRequest.moduleContext,
-          testType: geminiRequest.testType,
-          priority: geminiRequest.priority,
-          inputType: geminiRequest.inputType
+        console.log('🔮 Calling enhanced AI service with request:', {
+          hasRequirement: !!aiRequest.requirement,
+          hasModuleContext: !!aiRequest.moduleContext,
+          testType: aiRequest.testType,
+          priority: aiRequest.priority,
+          inputType: aiRequest.inputType,
+          provider: aiRequest.aiProvider
         });
         
-        geminiResponse = await geminiService.generateTestCases(geminiRequest);
+        aiResponse = await EnhancedAIService.generateTestCases(aiRequest);
         
-        console.log('✅ Gemini response generated successfully:', {
-          testCasesCount: geminiResponse.testCases?.length || 0,
-          source: geminiResponse.source
+        console.log('✅ AI response generated successfully:', {
+          testCasesCount: aiResponse.testCases?.length || 0,
+          source: aiResponse.source,
+          provider: aiResponse.provider
         });
         
-      } catch (geminiError: any) {
-        console.error('❌ Gemini service failed, falling back to mock service:', geminiError.message);
+      } catch (aiError: any) {
+        console.error('❌ AI service failed, falling back to mock service:', aiError.message);
         
         // Fall back to mock service
-        geminiResponse = generateMockResponse(
+        aiResponse = generateMockResponse(
           requirement || '', 
           moduleContext || '', 
           testType || 'functional', 
@@ -1375,23 +1401,24 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         );
         
         console.log('✅ Mock response generated successfully:', {
-          testCasesCount: geminiResponse.testCases?.length || 0,
-          source: geminiResponse.source
+          testCasesCount: aiResponse.testCases?.length || 0,
+          source: aiResponse.source
         });
       }
 
       // Prepare final response
       const response = {
         success: true,
-        testCases: geminiResponse.testCases || [],
-        analysis: geminiResponse.analysis || {
+        testCases: aiResponse.testCases || [],
+        analysis: aiResponse.analysis || {
           coverage: 'Basic',
           complexity: 'Medium',
           focusAreas: 'User Interface, Data Validation',
           suggestions: ['Consider adding performance tests']
         },
-        message: geminiResponse.message || 'Test cases generated successfully',
-        source: geminiResponse.source || 'mock-service',
+        message: aiResponse.message || 'Test cases generated successfully',
+        source: aiResponse.source || 'mock-service',
+        provider: aiResponse.provider || aiProvider || 'gemini',
         timestamp: new Date().toISOString()
       };
       

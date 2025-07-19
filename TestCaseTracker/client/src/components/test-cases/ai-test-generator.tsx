@@ -51,12 +51,28 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
 
+  // AI Provider selection
+  const [aiProvider, setAiProvider] = useState("google-gemini");
+
   // Results
   const [generatedTestCases, setGeneratedTestCases] = useState<GeneratedTestCase[]>([]);
   const [selectedTestCases, setSelectedTestCases] = useState<Set<number>>(new Set());
   const [showResults, setShowResults] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const availableProviders = [
+    {
+      provider: "google-gemini",
+      name: "Google Gemini",
+      available: true,
+    },
+    {
+      provider: "open-ai",
+      name: "OpenAI",
+      available: true,
+    },
+  ];
 
   // AI Generation Mutation
   const generateMutation = useMutation({
@@ -283,7 +299,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       priority,
       websiteUrl: activeTab === 'url' ? websiteUrl : '',
       inputType,
-      images: activeTab === 'images' ? selectedImages : []
+      images: activeTab === 'images' ? selectedImages : [],
+      aiProvider,
     });
   };
 
