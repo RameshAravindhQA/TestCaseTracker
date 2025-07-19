@@ -169,7 +169,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             statusText: response.statusText,
             errorText: errorText.substring(0, 500)
           });
-
+          
           // Try to parse error as JSON
           try {
             const errorJson = JSON.parse(errorText);
@@ -181,64 +181,22 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
         // Check content type
         const contentType = response.headers.get('content-type');
-        let responseData;
-
-        try {
-          // Get the raw response text
+        if (!contentType || !contentType.includes('application/json')) {
           const responseText = await response.text();
-          console.log('📋 Raw response received:', {
+          console.error('❌ Expected JSON response but got:', {
             contentType,
-            status: response.status,
-            statusText: response.statusText,
-            responseLength: responseText.length,
-            responsePreview: responseText.substring(0, 500)
+            responsePreview: responseText.substring(0, 200)
           });
-
-          // Check if we got HTML instead of JSON
-          if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html')) {
-            console.error('❌ Server returned HTML page instead of JSON');
-            console.error('❌ HTML content preview:', responseText.substring(0, 1000));
-            throw new Error('Server error: Received HTML page instead of API response. This usually indicates a server-side error or routing issue.');
-          }
-
-          // Check content type
-          if (!contentType || !contentType.includes('application/json')) {
-            console.error('❌ Invalid content type:', {
-              expectedContentType: 'application/json',
-              actualContentType: contentType,
-              responsePreview: responseText.substring(0, 200)
-            });
-            throw new Error(`Invalid response format: Expected JSON but got ${contentType || 'unknown'}`);
-          }
-
-          // Try to parse as JSON
-          if (!responseText || responseText.trim() === '') {
-            throw new Error('Empty response from server');
-          }
-
-          responseData = JSON.parse(responseText);
-          console.log('✅ Successfully parsed JSON response:', {
-            success: responseData.success,
-            testCasesCount: responseData.testCases?.length || 0,
-            source: responseData.source,
-            hasAnalysis: !!responseData.analysis,
-            hasError: !!responseData.error
-          });
-
-        } catch (parseError: any) {
-          console.error('❌ Response parsing failed:', {
-            error: parseError.message,
-            contentType,
-            responseStatus: response.status,
-            responseLength: responseText?.length || 0
-          });
-
-          if (parseError instanceof SyntaxError) {
-            throw new Error('Server returned invalid JSON. This may indicate a server error.');
-          } else {
-            throw new Error(parseError.message || 'Failed to process server response');
-          }
+          throw new Error('Server returned invalid response format (expected JSON but got HTML/text)');
         }
+
+        const responseData = await response.json();
+        console.log('✅ Parsed JSON response:', {
+          success: responseData.success,
+          testCasesCount: responseData.testCases?.length || 0,
+          source: responseData.source,
+          hasAnalysis: !!responseData.analysis
+        });
 
         // Validate response structure
         if (!responseData.success) {
@@ -262,7 +220,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
           message: error.message,
           stack: error.stack?.substring(0, 500)
         });
-
+        
         // Provide more specific error messages
         if (error.name === 'AbortError') {
           throw new Error('Request timed out. Please try again with a shorter requirement or check your connection.');
@@ -273,7 +231,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         } else if (error.message.includes('status 401')) {
           throw new Error('Authentication error. Please refresh the page and try again.');
         }
-
+        
         throw new Error(error.message || 'AI generation failed unexpectedly');
       }
     },
@@ -341,45 +299,6 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       toast({
         title: errorTitle,
         description: errorMessage,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Debug function to test AI generation
-  const debugAIGeneration = useMutation({
-    mutationFn: async () => {
-      console.log('🔍 Debug: Testing AI Generation API...');
-
-      const response = await fetch('/api/ai/debug-generation', {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Debug API failed: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('🔍 Debug response:', data);
-      return data;
-    },
-    onSuccess: (data) => {
-      console.log('✅ Debug test successful:', data);
-      toast({
-        title: "🔍 AI Generation Debug",
-        description: `Debug completed. Service status: ${data.debug.testGeneration?.success ? 'Working' : 'Failed'}`,
-      });
-    },
-    onError: (error: any) => {
-      console.error('❌ Debug test failed:', error);
-      toast({
-        title: "Debug Failed",
-        description: error.message,
         variant: "destructive",
       });
     },
@@ -799,18 +718,6 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
               </TabsContent>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button 
-                  variant="secondary" 
-                  onClick={() => debugAIGeneration.mutate()}
-                  disabled={debugAIGeneration.isPending}
-                  size="sm"
-                >
-                  {debugAIGeneration.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "🔍 Debug"
-                  )}
-                </Button>
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>

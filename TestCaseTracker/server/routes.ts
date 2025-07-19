@@ -1207,80 +1207,6 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       
       // Update user with new avatar data
       const updateData: any = {
-
-
-  // Debug endpoint for AI generation testing
-  apiRouter.get("/ai/debug-generation", isAuthenticated, async (req, res) => {
-    try {
-      console.log('🔍 AI Generation Debug Endpoint Called');
-      
-      res.setHeader('Content-Type', 'application/json');
-      
-      const debugInfo = {
-        timestamp: new Date().toISOString(),
-        session: {
-          userId: req.session?.userId,
-          userRole: req.session?.userRole,
-          sessionId: req.sessionID
-        },
-        environment: {
-          nodeEnv: process.env.NODE_ENV,
-          hasGeminiKey: !!process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-gemini-api-key',
-          geminiKeyPrefix: process.env.GOOGLE_API_KEY?.substring(0, 10) + '...' || 'NOT_SET'
-        }
-      };
-      
-      // Test a simple generation request
-      try {
-        const testRequest = {
-          requirement: 'Test login functionality with valid credentials',
-          projectContext: 'Web application',
-          moduleContext: 'Authentication',
-          testType: 'functional',
-          priority: 'High',
-          websiteUrl: '',
-          elementInspection: '',
-          userFlows: '',
-          businessRules: '',
-          inputType: 'text' as const,
-          images: []
-        };
-        
-        console.log('🧪 Testing Gemini service with sample request...');
-        const testResponse = await geminiService.generateTestCases(testRequest);
-        
-        debugInfo.testGeneration = {
-          success: true,
-          testCasesGenerated: testResponse.testCases.length,
-          source: testResponse.source,
-          message: testResponse.message
-        };
-        
-      } catch (testError: any) {
-        console.error('🧪 Test generation failed:', testError);
-        debugInfo.testGeneration = {
-          success: false,
-          error: testError.message,
-          source: 'test-failed'
-        };
-      }
-      
-      res.json({
-        success: true,
-        debug: debugInfo,
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error: any) {
-      console.error('Debug endpoint error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Debug endpoint failed',
-        details: error.message
-      });
-    }
-  });
-
         profilePicture: profilePicture
       };
       
@@ -1676,16 +1602,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
   // Enhanced AI Test Case Generation endpoint with proper error handling
   apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, async (req, res) => {
-    console.log('🤖 AI Generation endpoint called');
-    console.log('🔍 Request headers:', req.headers);
-    console.log('🔍 Request body keys:', Object.keys(req.body || {}));
-    console.log('🔍 Session info:', { 
-      hasSession: !!req.session, 
-      userId: req.session?.userId, 
-      sessionId: req.sessionID 
-    });
-
-    // Set JSON headers immediately and ensure they stay JSON
+    // Set JSON headers immediately
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -1693,25 +1610,19 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
     try {
       console.log('🤖 Enhanced AI Generation - Handler started');
+      console.log('🔍 Session data:', { userId: req.session?.userId, userRole: req.session?.userRole });
+      console.log('🔍 Request body:', req.body);
       
-      // Validate authentication more thoroughly
+      // Validate authentication
       if (!req.session || !req.session.userId) {
-        console.error('❌ Authentication failed - no session or userId');
-        console.error('❌ Session details:', {
-          hasSession: !!req.session,
-          sessionKeys: req.session ? Object.keys(req.session) : 'none',
-          userId: req.session?.userId
-        });
+        console.error('❌ Authentication failed');
         return res.status(401).json({ 
           success: false,
-          error: 'Authentication required - please log in again',
+          error: 'Authentication required',
           timestamp: new Date().toISOString()
         });
       }
-
-      console.log('✅ Authentication validated for user:', req.session.userId);
       
-      // Extract and validate request data
       const { 
         requirement, 
         projectContext, 
@@ -1725,40 +1636,30 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         inputType 
       } = req.body;
       
-      console.log('📋 Extracted request data:', {
-        requirement: requirement ? `${requirement.substring(0, 100)}${requirement.length > 100 ? '...' : ''}` : 'EMPTY',
-        projectContext: projectContext ? `${projectContext.substring(0, 50)}${projectContext.length > 50 ? '...' : ''}` : 'EMPTY',
-        moduleContext: moduleContext || 'EMPTY',
-        testType: testType || 'EMPTY',
-        priority: priority || 'EMPTY',
-        inputType: inputType || 'EMPTY',
+      console.log('📋 Request data received:', {
+        requirement: requirement?.substring(0, 100) + '...',
+        projectContext: projectContext?.substring(0, 50),
+        moduleContext,
+        testType,
+        priority,
+        inputType,
         hasWebsiteUrl: !!websiteUrl,
         hasElementInspection: !!elementInspection,
         hasUserFlows: !!userFlows,
         hasBusinessRules: !!businessRules
       });
       
-      // More flexible input validation
-      const hasRequirement = requirement && requirement.trim().length > 0;
-      const hasWebsiteUrl = websiteUrl && websiteUrl.trim().length > 0;
-      
-      if (!hasRequirement && !hasWebsiteUrl) {
-        console.error('❌ No valid input provided');
+      // Input validation
+      if (!requirement && !websiteUrl) {
+        console.error('❌ No input provided');
         return res.status(400).json({ 
           success: false,
           error: 'At least one input is required: requirement text or website URL',
-          receivedData: {
-            requirementLength: requirement ? requirement.length : 0,
-            websiteUrlLength: websiteUrl ? websiteUrl.length : 0,
-            inputType: inputType || 'unknown'
-          },
           timestamp: new Date().toISOString()
         });
       }
 
-      console.log('✅ Input validation passed');
-
-      // Try to use Gemini service with comprehensive error handling
+      // Try to use Gemini service
       try {
         console.log('🔮 Attempting to use Gemini AI service...');
         
@@ -1776,163 +1677,73 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           images: []
         };
         
-        console.log('🔮 Calling Gemini service with sanitized request:', {
+        console.log('🔮 Calling Gemini service with request:', {
           hasRequirement: !!geminiRequest.requirement,
-          requirementLength: geminiRequest.requirement.length,
           hasModuleContext: !!geminiRequest.moduleContext,
-          moduleContext: geminiRequest.moduleContext,
           testType: geminiRequest.testType,
           priority: geminiRequest.priority,
           inputType: geminiRequest.inputType
         });
         
-        // Add timeout wrapper for Gemini service
-        const geminiPromise = geminiService.generateTestCases(geminiRequest);
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Gemini service timeout after 30 seconds')), 30000);
-        });
-        
-        const geminiResponse = await Promise.race([geminiPromise, timeoutPromise]);
+        const geminiResponse = await geminiService.generateTestCases(geminiRequest);
         
         console.log('✅ Gemini response generated successfully:', {
           testCasesCount: geminiResponse.testCases?.length || 0,
-          source: geminiResponse.source,
-          hasAnalysis: !!geminiResponse.analysis
+          source: geminiResponse.source
         });
-        
-        // Validate Gemini response structure
-        if (!geminiResponse || typeof geminiResponse !== 'object') {
-          throw new Error('Invalid Gemini response structure');
-        }
-        
-        if (!Array.isArray(geminiResponse.testCases)) {
-          throw new Error('Gemini response missing valid test cases array');
-        }
         
         const response = {
           success: true,
           testCases: geminiResponse.testCases,
-          analysis: geminiResponse.analysis || {
-            coverage: 'Comprehensive',
-            complexity: 'Medium',
-            focusAreas: 'AI Generated',
-            suggestions: []
-          },
-          message: geminiResponse.message || `Generated ${geminiResponse.testCases.length} test cases`,
-          source: geminiResponse.source || 'gemini-ai',
+          analysis: geminiResponse.analysis,
+          message: geminiResponse.message,
+          source: geminiResponse.source,
           timestamp: new Date().toISOString()
         };
         
-        console.log('📤 Sending successful Gemini response with', response.testCases.length, 'test cases');
+        console.log('📤 Sending successful response');
         return res.status(200).json(response);
         
       } catch (geminiError: any) {
-        console.error('❌ Gemini service failed, falling back to mock service:');
-        console.error('❌ Gemini error details:', {
-          name: geminiError.name,
-          message: geminiError.message,
-          stack: geminiError.stack?.substring(0, 500)
+        console.error('❌ Gemini service failed, falling back to mock service:', geminiError.message);
+        
+        // Fall back to mock service
+        const mockResponse = generateMockResponse(
+          requirement || '', 
+          moduleContext || '', 
+          testType || 'functional', 
+          priority || 'Medium', 
+          inputType || 'text', 
+          websiteUrl || '', 
+          [], 
+          businessRules || '', 
+          elementInspection || '', 
+          userFlows || ''
+        );
+        
+        console.log('✅ Mock response generated successfully:', {
+          testCasesCount: mockResponse.testCases?.length || 0,
+          source: mockResponse.source
         });
         
-        // Generate comprehensive mock response as fallback
-        try {
-          console.log('🎭 Generating mock response as fallback...');
-          
-          const mockResponse = generateMockResponse(
-            requirement || '', 
-            moduleContext || '', 
-            testType || 'functional', 
-            priority || 'Medium', 
-            inputType || 'text', 
-            websiteUrl || '', 
-            [], 
-            businessRules || '', 
-            elementInspection || '', 
-            userFlows || ''
-          );
-          
-          console.log('✅ Mock response generated successfully:', {
-            testCasesCount: mockResponse.testCases?.length || 0,
-            source: mockResponse.source,
-            success: mockResponse.success
-          });
-          
-          console.log('📤 Sending mock response as fallback');
-          return res.status(200).json(mockResponse);
-          
-        } catch (mockError: any) {
-          console.error('❌ Mock service also failed:', mockError);
-          
-          // Final fallback - minimal response
-          const finalFallback = {
-            success: true,
-            testCases: [{
-              feature: "Test Case Generation",
-              testObjective: "Verify system functionality",
-              preConditions: "System is accessible",
-              testSteps: "1. Access the system\n2. Verify basic functionality\n3. Check expected behavior",
-              expectedResult: "System should work as expected",
-              priority: priority || "Medium",
-              testType: testType || "functional",
-              coverage: "Basic Functionality",
-              category: "System Test",
-              tags: ["generated", "fallback"]
-            }],
-            analysis: {
-              coverage: 'Basic',
-              complexity: 'Low',
-              focusAreas: 'Core Functionality',
-              suggestions: ['Add more specific test cases', 'Include edge case testing']
-            },
-            message: 'Generated basic test case due to service limitations',
-            source: 'fallback-service',
-            timestamp: new Date().toISOString()
-          };
-          
-          console.log('📤 Sending final fallback response');
-          return res.status(200).json(finalFallback);
-        }
+        console.log('📤 Sending mock response');
+        return res.status(200).json(mockResponse);
       }
       
     } catch (handlerError: any) {
       console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
-      console.error('❌ Error details:', {
-        name: handlerError.name,
-        message: handlerError.message,
-        stack: handlerError.stack?.substring(0, 1000)
-      });
+      console.error('❌ Error stack:', handlerError.stack);
       
-      // Force JSON response even if headers were modified
-      try {
-        res.setHeader('Content-Type', 'application/json');
-        
-        const errorResponse = { 
-          success: false,
-          error: 'Critical server error during AI test case generation',
-          details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Internal service error - please try again',
-          debugInfo: process.env.NODE_ENV === 'development' ? {
-            errorName: handlerError.name,
-            timestamp: new Date().toISOString(),
-            endpoint: '/ai/generate-enhanced-test-cases'
-          } : undefined,
-          timestamp: new Date().toISOString()
-        };
-        
-        console.log('📤 Sending critical error response');
-        
-        if (!res.headersSent) {
-          return res.status(500).json(errorResponse);
-        } else {
-          console.error('❌ Headers already sent - cannot send error response');
-        }
-      } catch (responseError) {
-        console.error('❌ Failed to send error response:', responseError);
-        
-        // Last resort - try to end the response
-        if (!res.headersSent) {
-          res.status(500).end('{"success":false,"error":"Critical server error"}');
-        }
-      }
+      // Ensure we always return JSON even in error cases
+      const errorResponse = { 
+        success: false,
+        error: 'Internal server error during test case generation',
+        details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('📤 Sending error response');
+      return res.status(500).json(errorResponse);
     }
   });
 
