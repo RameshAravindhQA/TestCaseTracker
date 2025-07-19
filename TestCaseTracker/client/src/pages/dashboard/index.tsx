@@ -37,8 +37,21 @@ import {
 } from "recharts";
 import { Project, TestCase, Bug as BugType } from "@shared/schema";
 import { SoundDebug } from '@/components/sound-debug'
-import { motion } from "framer-motion";
-import { containerVariants, cardVariants } from "@/lib/animations";
+import { motion } from 'framer-motion';
+import { StatsCard } from '@/components/dashboard/stats-card';
+import { ProjectsTable } from '@/components/dashboard/projects-table';
+import { RecentActivity } from '@/components/dashboard/recent-activity';
+import { TestStatusChart } from '@/components/dashboard/test-status-chart';
+import { BugSeverityChart } from '@/components/dashboard/bug-severity-chart';
+import { TestStatusCounts } from '@/components/dashboard/test-status-counts';
+import MotionGraphicsShowcase from '@/components/ui/motion-graphics-showcase';
+import { 
+  ScrollTriggeredSection, 
+  ParallaxBackground, 
+  InteractiveCard,
+  MorphingText,
+  FloatingElements
+} from '@/components/ui/advanced-animations';
 
 export function DashboardPage() {
   const { user } = useAuth();
@@ -402,7 +415,7 @@ export function DashboardPage() {
                         </Table>
                       </div>
 
-                      
+
                     </div>
                   ) : (
                     <div className="text-center py-8">
