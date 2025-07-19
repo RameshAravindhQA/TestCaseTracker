@@ -1634,6 +1634,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       try {
         console.log('🤖 Enhanced AI Generation - Handler started');
         
+        // Ensure JSON response regardless of what happens
+        res.setHeader('Content-Type', 'application/json');
+        
         // Validate authentication
         if (!req.session || !req.session.userId) {
           return res.status(401).json({ 
@@ -1655,6 +1658,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           businessRules,
           inputType 
         } = req.body;
+        
+        console.log('📋 Request data:', {
+          requirement: requirement?.substring(0, 50),
+          inputType,
+          filesCount: req.files?.length || 0
+        });
         
         // Input validation
         if (!requirement && !websiteUrl && (!req.files || req.files.length === 0)) {
@@ -1685,12 +1694,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           
           const geminiResponse = await geminiService.generateTestCases(geminiRequest);
           
+          console.log('✅ Gemini response generated successfully');
+          
           return res.status(200).json({
             success: true,
             testCases: geminiResponse.testCases,
             analysis: geminiResponse.analysis,
             message: geminiResponse.message,
-            source: 'gemini-ai',
+            source: geminiResponse.source,
             timestamp: new Date().toISOString()
           });
           
@@ -1698,7 +1709,20 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           console.error('❌ Gemini service failed, falling back to mock service:', geminiError.message);
           
           // Fall back to mock service
-          const mockResponse = generateMockResponse(requirement || '', moduleContext || '', testType || 'functional', priority || 'Medium', inputType || 'text', websiteUrl || '', req.files || [], businessRules || '', elementInspection || '', userFlows || '');
+          const mockResponse = generateMockResponse(
+            requirement || '', 
+            moduleContext || '', 
+            testType || 'functional', 
+            priority || 'Medium', 
+            inputType || 'text', 
+            websiteUrl || '', 
+            req.files || [], 
+            businessRules || '', 
+            elementInspection || '', 
+            userFlows || ''
+          );
+          
+          console.log('✅ Mock response generated successfully');
           
           return res.status(200).json(mockResponse);
         }
@@ -1706,6 +1730,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       } catch (handlerError: any) {
         console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
         
+        // Ensure we always return JSON even in error cases
         return res.status(500).json({ 
           success: false,
           error: 'Internal server error during test case generation',
@@ -1718,7 +1743,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
   // Generate mock response when Gemini fails
   function generateMockResponse(requirement, moduleContext, testType, priority, inputType, websiteUrl, files, businessRules, elementInspection, userFlows) {
-    console.log('🎭 Generating mock response...');
+    console.log('🎭 Generating mock response for:', { requirement: requirement?.substring(0, 50), inputType });
     
     let mockTestCases = [];
     let analysisResults = {
@@ -1759,6 +1784,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
     // Ensure we have valid test cases
     if (!Array.isArray(mockTestCases) || mockTestCases.length === 0) {
+      console.log('🎭 Using default test case as fallback');
       mockTestCases = [{
         feature: "Default Test Case",
         testObjective: "Verify basic functionality",
@@ -1772,6 +1798,8 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         tags: ["ai-generated", "default"]
       }];
     }
+
+    console.log('🎭 Mock response generated with', mockTestCases.length, 'test cases');
 
     return {
       success: true,
@@ -5256,7 +5284,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     
     // Ensure we always return JSON for API routes
     try {
+      // Force JSON content type
       res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-cache');
       
       const status = error.status || error.statusCode || 500;
       const message = error.message || 'Internal Server Error';
@@ -5267,7 +5297,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           success: false,
           error: message,
           timestamp: new Date().toISOString(),
-          ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+          ...(process.env.NODE_ENV === 'development' && { 
+            stack: error.stack,
+            url: req.url,
+            method: req.method 
+          })
         });
       } else {
         console.error('Headers already sent, cannot send error response');
@@ -5275,10 +5309,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     } catch (handlerError) {
       console.error('Error in error handler:', handlerError);
       
-      // Last resort - try to send minimal response
+      // Last resort - try to send minimal JSON response
       if (!res.headersSent) {
         try {
-          res.status(500).end('{"success":false,"error":"Critical server error"}');
+          res.setHeader('Content-Type', 'application/json');
+          res.status(500).end('{"success":false,"error":"Critical server error","timestamp":"' + new Date().toISOString() + '"}');
         } catch (finalError) {
           console.error('Complete error handler failure:', finalError);
         }
