@@ -1,0 +1,57 @@
+Starting AI test case generation: {requirement: 'Registration test case with first last name phone …button with both postive and negative tets cases ', projectContext: '', moduleContext: '', testType: 'functional', priority: 'Medium', …}
+soundManager.js:289 🎵 Successfully played sound: crud
+ai-test-generator.tsx:67  POST https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/api/ai/generate-enhanced-test-cases 404 (Not Found)
+mutationFn @ ai-test-generator.tsx:67
+fn @ @tanstack_react-query.js?v=b1be5688:1236
+run @ @tanstack_react-query.js?v=b1be5688:513
+start @ @tanstack_react-query.js?v=b1be5688:555
+execute @ @tanstack_react-query.js?v=b1be5688:1272
+await in execute
+mutate @ @tanstack_react-query.js?v=b1be5688:2691
+(anonymous) @ @tanstack_react-query.js?v=b1be5688:3414
+handleGenerate @ ai-test-generator.tsx:278
+callCallback2 @ chunk-RPCDYKBN.js?v=b1be5688:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=b1be5688:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=b1be5688:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=b1be5688:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=b1be5688:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=b1be5688:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=b1be5688:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=b1be5688:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=b1be5688:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=b1be5688:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=b1be5688:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=b1be5688:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=b1be5688:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=b1be5688:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=b1be5688:5449Understand this error
+ai-test-generator.tsx:77 📡 API Response: {status: 404, statusText: 'Not Found', contentType: 'application/json; charset=utf-8', ok: false, url: 'https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2z…ke.replit.dev/api/ai/generate-enhanced-test-cases'}
+ai-test-generator.tsx:125 💥 Request failed: Error: API endpoint not found: POST /
+    at Object.mutationFn (ai-test-generator.tsx:103:17)
+mutationFn @ ai-test-generator.tsx:125
+await in mutationFn
+fn @ @tanstack_react-query.js?v=b1be5688:1236
+run @ @tanstack_react-query.js?v=b1be5688:513
+start @ @tanstack_react-query.js?v=b1be5688:555
+execute @ @tanstack_react-query.js?v=b1be5688:1272
+await in execute
+mutate @ @tanstack_react-query.js?v=b1be5688:2691
+(anonymous) @ @tanstack_react-query.js?v=b1be5688:3414
+handleGenerate @ ai-test-generator.tsx:278
+callCallback2 @ chunk-RPCDYKBN.js?v=b1be5688:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=b1be5688:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=b1be5688:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=b1be5688:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=b1be5688:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=b1be5688:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=b1be5688:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=b1be5688:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=b1be5688:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=b1be5688:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=b1be5688:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=b1be5688:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=b1be5688:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=b1be5688:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=b1be5688:5449Understand this error
+ai-test-generator.tsx:159 ❌ AI Generation error: Error: API endpoint not found: POST /
+    at Object.mutationFn (ai-test-generator.tsx:103:17)
