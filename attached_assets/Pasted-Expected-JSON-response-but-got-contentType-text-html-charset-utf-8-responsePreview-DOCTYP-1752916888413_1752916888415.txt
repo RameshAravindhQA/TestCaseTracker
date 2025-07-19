@@ -1,0 +1,54 @@
+Expected JSON response but got: {contentType: 'text/html; charset=utf-8', responsePreview: '<!DOCTYPE html>\n<html lang="en">\n  <head>\n    <scr…_dummy__runtime-error-plugin");\n\nfunction sendErr'}contentType: "text/html; charset=utf-8"responsePreview: "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <script type=\"module\">\nimport { createHotContext } from \"/@vite/client\";\nconst hot = createHotContext(\"/__dummy__runtime-error-plugin\");\n\nfunction sendErr"[[Prototype]]: Object
+mutationFn @ ai-test-generator.tsx:186
+await in mutationFn
+fn @ @tanstack_react-query.js?v=b1be5688:1236
+run @ @tanstack_react-query.js?v=b1be5688:513
+start @ @tanstack_react-query.js?v=b1be5688:555
+execute @ @tanstack_react-query.js?v=b1be5688:1272
+await in execute
+mutate @ @tanstack_react-query.js?v=b1be5688:2691
+(anonymous) @ @tanstack_react-query.js?v=b1be5688:3414
+handleGenerate @ ai-test-generator.tsx:362
+callCallback2 @ chunk-RPCDYKBN.js?v=b1be5688:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=b1be5688:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=b1be5688:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=b1be5688:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=b1be5688:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=b1be5688:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=b1be5688:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=b1be5688:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=b1be5688:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=b1be5688:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=b1be5688:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=b1be5688:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=b1be5688:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=b1be5688:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=b1be5688:5449Understand this error
+ai-test-generator.tsx:218 ❌ AI Generation failed: {name: 'Error', message: 'Server returned invalid response format (expected JSON but got HTML/text)', stack: 'Error: Server returned invalid response format (ex…mponents/test-cases/ai-test-generator.tsx:156:17)'}message: "Server returned invalid response format (expected JSON but got HTML/text)"name: "Error"stack: "Error: Server returned invalid response format (expected JSON but got HTML/text)\n    at Object.mutationFn (https://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/src/components/test-cases/ai-test-generator.tsx:156:17)"[[Prototype]]: Object
+mutationFn @ ai-test-generator.tsx:218
+await in mutationFn
+fn @ @tanstack_react-query.js?v=b1be5688:1236
+run @ @tanstack_react-query.js?v=b1be5688:513
+start @ @tanstack_react-query.js?v=b1be5688:555
+execute @ @tanstack_react-query.js?v=b1be5688:1272
+await in execute
+mutate @ @tanstack_react-query.js?v=b1be5688:2691
+(anonymous) @ @tanstack_react-query.js?v=b1be5688:3414
+handleGenerate @ ai-test-generator.tsx:362
+callCallback2 @ chunk-RPCDYKBN.js?v=b1be5688:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=b1be5688:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=b1be5688:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=b1be5688:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=b1be5688:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=b1be5688:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=b1be5688:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=b1be5688:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=b1be5688:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=b1be5688:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=b1be5688:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=b1be5688:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=b1be5688:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=b1be5688:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=b1be5688:5449Understand this error
+ai-test-generator.tsx:273 ❌ Enhanced AI Generation error: Error: Server response format error. Please try again or contact support if the issue persists.
+    at Object.mutationFn (ai-test-generator.tsx:228:17)
