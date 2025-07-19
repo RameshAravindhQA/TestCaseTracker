@@ -107,16 +107,7 @@ function SoundIntegrationSetup() {
   }, []);
 
   return null;
-}
-
-function Router() {
-  return (
-    <Switch>
-      {/* Public routes */}
-      <Route path="/login" component={Login}/>
-      <Route path="/register" component={Register}/>
-      <Route path="/forgot-password" component={ForgotPassword}/>
-      <Route path="/reset-password" component={ResetPassword}/>
+}nent={ResetPassword}/>
 
       {/* Protected routes */}
       <Route path="/dashboard" component={DashboardPage} />
