@@ -2535,24 +2535,39 @@ class MemStorage implements IStorage {
     }
   // Message storage methods for messenger
   async createMessage(messageData: any) {
+    const id = this.getNextId();
+    const now = new Date().toISOString();
+    
     const message = {
-      id: this.getNextId('messages'),
+      id,
       senderId: messageData.senderId,
       receiverId: messageData.receiverId,
       content: messageData.content,
       type: messageData.type || 'text',
       attachments: messageData.attachments || [],
       isRead: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      timestamp: messageData.timestamp || now,
+      createdAt: now,
+      updatedAt: now,
+      sender: messageData.sender || null
     };
 
-    if (!this.data.messages) {
-      this.data.messages = [];
-    }
-
-    this.data.messages.push(message);
+    // Store in chatMessages map for better access
+    this.chatMessages.set(id, message);
+    
+    console.log(`Storage: Created message ${id} from ${messageData.senderId} to ${messageData.receiverId}`);
     return message;
+  }
+
+  async getMessages(userId?: number): Promise<any[]> {
+    if (userId) {
+      // Return messages for specific user
+      return Array.from(this.chatMessages.values()).filter(msg => 
+        msg.senderId === userId || msg.receiverId === userId
+      );
+    }
+    // Return all messages
+    return Array.from(this.chatMessages.values());
   }
 
   async getMessagesByChat(conversationId: number) {

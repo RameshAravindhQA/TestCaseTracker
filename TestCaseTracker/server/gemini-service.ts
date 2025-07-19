@@ -11,7 +11,12 @@ try {
   console.log('🔧 Initializing Gemini AI...');
 
   const apiKey = process.env.GOOGLE_API_KEY;
-  console.log('🔧 API Key status:', apiKey ? 'CONFIGURED' : 'MISSING');
+  console.log('🔧 API Key status:', apiKey ? `CONFIGURED (${apiKey.substring(0, 10)}...)` : 'MISSING');
+  console.log('🔧 Full environment check:', {
+    NODE_ENV: process.env.NODE_ENV,
+    hasApiKey: !!apiKey,
+    keyLength: apiKey?.length || 0
+  });
 
   if (apiKey && apiKey !== 'your-gemini-api-key' && apiKey.trim() !== '') {
     genAI = new GoogleGenerativeAI(apiKey);
@@ -19,6 +24,7 @@ try {
   } else {
     initializationError = 'Google Gemini API key not configured';
     console.warn('❌ Google Gemini API key not configured');
+    console.warn('🔧 Available env vars:', Object.keys(process.env).filter(k => k.includes('GOOGLE')));
   }
 } catch (error) {
   initializationError = `Gemini initialization failed: ${error.message}`;

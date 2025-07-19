@@ -127,40 +127,14 @@ export function Messenger() {
 
       console.log(`[MESSENGER] Fetching messages for contact:`, selectedContact.id);
 
-      // Try to get direct conversation first
-      const conversationResponse = await fetch('/api/chats/direct', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId: selectedContact.id }),
-        credentials: 'include'
-      });
-
-      if (!conversationResponse.ok) {
-        console.error('[MESSENGER] Failed to get/create conversation');
-        return [];
-      }
-
-      const conversation = await conversationResponse.json();
-      console.log(`[MESSENGER] Got conversation:`, conversation);
-
-      // Now fetch messages for this conversation
-      const messagesResponse = await fetch(`/api/chats/${conversation.id}/messages`, {
+      // Use the messages API directly with userId parameter
+      const messagesResponse = await fetch(`/api/messages?userId=${selectedContact.id}`, {
         credentials: 'include'
       });
 
       if (!messagesResponse.ok) {
-        // Fallback to old API
-        const fallbackResponse = await fetch(`/api/messages?userId=${selectedContact.id}`, {
-          credentials: 'include'
-        });
-
-        if (!fallbackResponse.ok) {
-          throw new Error('Failed to fetch messages');
-        }
-
-        const fallbackData = await fallbackResponse.json();
-        console.log(`[MESSENGER] Fetched ${fallbackData.length} messages (fallback) for contact ${selectedContact.id}:`, fallbackData);
-        return fallbackData;
+        console.error('[MESSENGER] Failed to fetch messages');
+        return [];
       }
 
       const data = await messagesResponse.json();
@@ -335,23 +309,27 @@ export function Messenger() {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: { receiverId: number; content: string; type?: string; attachments?: any[] }) => {
-      // Send via WebSocket for real-time delivery first
+      console.log('[MESSENGER] Sending message via API:', messageData);
+      
+      // Send via API for persistence first
+      const response = await apiRequest('POST', '/api/messages', messageData);
+      if (!response.ok) throw new Error('Failed to send message');
+      const savedMessage = await response.json();
+      
+      // Then send via WebSocket for real-time delivery
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && selectedContact) {
         wsRef.current.send(JSON.stringify({
           type: 'send_message',
           data: {
-            conversationId: selectedContact.id, // Use conversationId instead of receiverId
+            receiverId: messageData.receiverId,
             message: messageData.content,
             type: messageData.type || 'text',
             attachments: messageData.attachments || []
           }
         }));
       }
-
-      // Also send via API for persistence
-      const response = await apiRequest('POST', '/api/messages', messageData);
-      if (!response.ok) throw new Error('Failed to send message');
-      return response.json();
+      
+      return savedMessage;
     },
     onSuccess: () => {
       setNewMessage('');
