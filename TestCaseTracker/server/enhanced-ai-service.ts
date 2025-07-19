@@ -55,12 +55,23 @@ let openaiInitError: string | null = null;
 // Initialize Google Gemini
 try {
   const geminiApiKey = process.env.GOOGLE_API_KEY;
-  if (geminiApiKey && geminiApiKey !== 'your-gemini-api-key' && geminiApiKey.startsWith('AIza')) {
+  console.log('🔧 Gemini API Key Check:', {
+    hasKey: !!geminiApiKey,
+    keyLength: geminiApiKey?.length || 0,
+    startsWithAIza: geminiApiKey?.startsWith('AIza') || false,
+    preview: geminiApiKey ? `${geminiApiKey.substring(0, 10)}...` : 'NONE'
+  });
+  
+  if (geminiApiKey && geminiApiKey !== 'your-gemini-api-key' && geminiApiKey.trim() !== '' && geminiApiKey.startsWith('AIza')) {
     genAI = new GoogleGenerativeAI(geminiApiKey);
     console.log('✅ Gemini AI initialized successfully');
   } else {
-    geminiInitError = 'Google Gemini API key not configured or invalid format';
-    console.warn('❌ Google Gemini API key not configured or invalid format');
+    geminiInitError = `Google Gemini API key not configured or invalid format. Key: ${geminiApiKey ? 'PROVIDED' : 'MISSING'}`;
+    console.warn('❌ Google Gemini API key issue:', {
+      hasKey: !!geminiApiKey,
+      keyFormat: geminiApiKey?.startsWith('AIza') ? 'CORRECT' : 'INCORRECT',
+      keyLength: geminiApiKey?.length || 0
+    });
   }
 } catch (error) {
   geminiInitError = `Gemini initialization failed: ${error.message}`;
@@ -70,14 +81,25 @@ try {
 // Initialize OpenAI
 try {
   const openaiApiKey = process.env.OPENAI_API_KEY;
-  if (openaiApiKey && openaiApiKey !== 'your-openai-api-key' && openaiApiKey.startsWith('sk-')) {
+  console.log('🔧 OpenAI API Key Check:', {
+    hasKey: !!openaiApiKey,
+    keyLength: openaiApiKey?.length || 0,
+    startsWithSk: openaiApiKey?.startsWith('sk-') || false,
+    preview: openaiApiKey ? `${openaiApiKey.substring(0, 15)}...` : 'NONE'
+  });
+  
+  if (openaiApiKey && openaiApiKey !== 'your-openai-api-key' && openaiApiKey.trim() !== '' && openaiApiKey.startsWith('sk-')) {
     openai = new OpenAI({
       apiKey: openaiApiKey,
     });
     console.log('✅ OpenAI initialized successfully');
   } else {
-    openaiInitError = 'OpenAI API key not configured or invalid format';
-    console.warn('❌ OpenAI API key not configured or invalid format');
+    openaiInitError = `OpenAI API key not configured or invalid format. Key: ${openaiApiKey ? 'PROVIDED' : 'MISSING'}`;
+    console.warn('❌ OpenAI API key issue:', {
+      hasKey: !!openaiApiKey,
+      keyFormat: openaiApiKey?.startsWith('sk-') ? 'CORRECT' : 'INCORRECT',
+      keyLength: openaiApiKey?.length || 0
+    });
   }
 } catch (error) {
   openaiInitError = `OpenAI initialization failed: ${error.message}`;
@@ -129,32 +151,48 @@ export class EnhancedAIService {
 
   private static async generateWithGemini(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     if (!genAI || geminiInitError) {
+      console.error('🚨 Gemini initialization issue:', {
+        hasGenAI: !!genAI,
+        initError: geminiInitError,
+        apiKeyPresent: !!process.env.GOOGLE_API_KEY
+      });
       throw new Error(geminiInitError || 'Gemini not initialized');
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-    const prompt = this.buildPrompt(request);
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    console.log('🤖 Gemini response received:', text.substring(0, 200) + '...');
-    
-    const testCases = JSON.parse(text);
-    
-    return {
-      testCases: testCases,
-      analysis: {
-        coverage: 'Comprehensive',
-        complexity: this.getComplexityLevel(request),
-        focusAreas: this.getFocusAreas(request),
-        suggestions: this.getSuggestions(request)
-      },
-      message: `Generated ${testCases.length} test cases using Google Gemini AI`,
-      source: 'gemini-ai',
-      provider: 'gemini'
-    };
+    try {
+      console.log('🔮 Attempting Gemini generation...');
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      const prompt = this.buildPrompt(request);
+      
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      console.log('🤖 Gemini response received:', text.substring(0, 200) + '...');
+      
+      const testCases = JSON.parse(text);
+      
+      return {
+        testCases: testCases,
+        analysis: {
+          coverage: 'Comprehensive',
+          complexity: this.getComplexityLevel(request),
+          focusAreas: this.getFocusAreas(request),
+          suggestions: this.getSuggestions(request)
+        },
+        message: `Generated ${testCases.length} test cases using Google Gemini AI`,
+        source: 'gemini-ai',
+        provider: 'gemini'
+      };
+    } catch (error: any) {
+      console.error('🚨 Gemini generation failed:', {
+        error: error.message,
+        status: error.status,
+        code: error.code,
+        details: error.details
+      });
+      throw error;
+    }
   }
 
   private static async generateWithOpenAI(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {

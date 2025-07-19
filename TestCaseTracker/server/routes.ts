@@ -1215,6 +1215,40 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       });
     }
   });
+
+  // AI Service Debug endpoint
+  apiRouter.get("/ai/debug-status", isAuthenticated, async (req, res) => {
+    try {
+      const envCheck = {
+        openaiKey: {
+          present: !!process.env.OPENAI_API_KEY,
+          format: process.env.OPENAI_API_KEY?.startsWith('sk-') || false,
+          length: process.env.OPENAI_API_KEY?.length || 0
+        },
+        geminiKey: {
+          present: !!process.env.GOOGLE_API_KEY,
+          format: process.env.GOOGLE_API_KEY?.startsWith('AIza') || false,
+          length: process.env.GOOGLE_API_KEY?.length || 0
+        }
+      };
+
+      const providers = EnhancedAIService.getAvailableProviders();
+      
+      res.json({
+        success: true,
+        environmentCheck: envCheck,
+        providers,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ AI debug status error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
   
   apiRouter.get("/ai/debug-gemini", isAuthenticated, async (req, res) => {
     // Set JSON response headers
