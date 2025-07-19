@@ -1,0 +1,62 @@
+2chunk-4GO2BC5N.js?v=b1be5688:340 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ chunk-4GO2BC5N.js?v=b1be5688:340Understand this warning
+soundManager.js:130 🔊 Form submission button detected, playing CRUD sound
+soundManager.js:281 🔊 Attempting to play sound: crud
+index.tsx:94 Dashboard Debug: Object
+index.tsx:191 Dashboard Debug - Data Summary: Object
+index.tsx:94 Dashboard Debug: Object
+index.tsx:191 Dashboard Debug - Data Summary: Object
+queryClient.ts:38 Starting GET request to /api/user/permissions
+queryClient.ts:38 Starting GET request to /api/projects
+queryClient.ts:38 Starting GET request to /api/test-cases
+queryClient.ts:38 Starting GET request to /api/bugs
+content-script.js:194 Content Script re-injected or page loaded
+content-script.js:196 Keep-Alive mechanism ongoing
+soundManager.js:289 🎵 Successfully played sound: crud
+index.tsx:94 Dashboard Debug: Object
+index.tsx:191 Dashboard Debug - Data Summary: Object
+index.tsx:94 Dashboard Debug: Object
+index.tsx:191 Dashboard Debug - Data Summary: Object
+index.tsx:71 Dashboard - Fetched test cases: Array(0)
+index.tsx:94 Dashboard Debug: Object
+index.tsx:191 Dashboard Debug - Data Summary: Object
+index.tsx:94 Dashboard Debug: Object
+index.tsx:191 Dashboard Debug - Data Summary: Object
+index.tsx:94 Dashboard Debug: Object
+index.tsx:191 Dashboard Debug - Data Summary: Object
+index.tsx:94 Dashboard Debug: Object
+index.tsx:191 Dashboard Debug - Data Summary: Object
+soundManager.js:144 🔊 Clickable element detected, playing click sound
+soundManager.js:281 🔊 Attempting to play sound: click
+2protected-route.tsx:47 User authenticated: Amog
+content-script.js:194 Content Script re-injected or page loaded
+content-script.js:196 Keep-Alive mechanism ongoing
+soundManager.js:289 🎵 Successfully played sound: click
+queryClient.ts:38 Starting GET request to /api/user/permissions
+queryClient.ts:38 Starting GET request to /api/users/public
+2messenger.tsx:191 [MESSENGER] Attempting to connect to WebSocket: wss://68074df0-89af-41c7-88c1-c9ef6a4446f8-00-2zya6dyhsbygp.pike.replit.dev/ws (attempt 1)
+messenger.tsx:205 [MESSENGER] WebSocket connected successfully
+messenger.tsx:230 [MESSENGER] Received WebSocket message: Object
+messenger.tsx:237 [MESSENGER] Connection established
+messenger.tsx:230 [MESSENGER] Received WebSocket message: Object
+queryClient.ts:38 Starting GET request to /api/users/public
+messenger.tsx:230 [MESSENGER] Received WebSocket message: Object
+messenger.tsx:234 [MESSENGER] User authenticated via WebSocket
+messenger.tsx:205 [MESSENGER] WebSocket connected successfully
+messenger.tsx:230 [MESSENGER] Received WebSocket message: Object
+messenger.tsx:237 [MESSENGER] Connection established
+messenger.tsx:230 [MESSENGER] Received WebSocket message: Object
+queryClient.ts:38 Starting GET request to /api/users/public
+messenger.tsx:230 [MESSENGER] Received WebSocket message: Object
+messenger.tsx:234 [MESSENGER] User authenticated via WebSocket
+messenger.tsx:274 [MESSENGER] WebSocket connection closed: 1005 
+soundManager.js:144 🔊 Clickable element detected, playing click sound
+soundManager.js:281 🔊 Attempting to play sound: click
+soundManager.js:289 🎵 Successfully played sound: click
+soundManager.js:144 🔊 Clickable element detected, playing click sound
+soundManager.js:281 🔊 Attempting to play sound: click
+soundManager.js:289 🎵 Successfully played sound: click
+queryClient.ts:38 Starting POST request to /api/messages
+:24678/:1  Failed to load resource: net::ERR_CONNECTION_TIMED_OUTUnderstand this error
+content-script.js:196 Keep-Alive mechanism ongoing
+client:736  GET 
