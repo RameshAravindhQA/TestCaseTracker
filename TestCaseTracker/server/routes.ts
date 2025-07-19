@@ -1654,6 +1654,15 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           priority
         });
 
+        // Input validation
+        if (!requirement && !websiteUrl && (!req.files || req.files.length === 0)) {
+          return res.status(400).json({ 
+            success: false,
+            error: 'At least one input is required: requirement text, website URL, or uploaded images',
+            timestamp: new Date().toISOString()
+          });
+        }
+
         // Create the request object for Gemini service
         const generationRequest = {
           requirement,
@@ -1669,91 +1678,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           images: files
         };
 
-        // Use Gemini service to generate test cases
-        console.log('🚀 Calling Gemini service...');
-        const result = await geminiService.generateTestCases(generationRequest);
-        
-        console.log('✅ Enhanced AI Generation successful:', {
-          testCasesCount: result.testCases?.length || 0,
-          source: result.source
-        });
-
-        // Return successful response
-        return res.status(200).json({
-          success: true,
-          testCases: result.testCases,
-          analysis: result.analysis,
-          message: result.message,
-          source: result.source,
-          timestamp: new Date().toISOString()
-        });
-        
-      } catch (handlerError: any) {
-        console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
-        
-        // Ensure we always return JSON even in error cases
-        return res.status(500).json({ 
-          success: false,
-          error: 'Internal server error during test case generation',
-          details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
-          timestamp: new Date().toISOString()
-        });
-      }
-    }); {
-          return res.status(401).json({ 
-            success: false,
-            error: 'Authentication required',
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        const { 
-          requirement, 
-          projectContext, 
-          moduleContext, 
-          testType, 
-          priority,
-          websiteUrl,
-          elementInspection,
-          userFlows,
-          businessRules,
-          inputType 
-        } = req.body;
-        
-        console.log('📋 Request data:', {
-          requirement: requirement?.substring(0, 50),
-          inputType,
-          filesCount: req.files?.length || 0
-        });
-        
-        // Input validation
-        if (!requirement && !websiteUrl && (!req.files || req.files.length === 0)) {
-          return res.status(400).json({ 
-            success: false,
-            error: 'At least one input is required: requirement text, website URL, or uploaded images',
-            timestamp: new Date().toISOString()
-          });
-        }
-
         // Try to use Gemini service first
         try {
           console.log('🔮 Attempting to use Gemini AI service...');
           
-          const geminiRequest = {
-            requirement: requirement || '',
-            projectContext: projectContext || '',
-            moduleContext: moduleContext || '',
-            testType: testType || 'functional',
-            priority: priority || 'Medium',
-            websiteUrl: websiteUrl || '',
-            elementInspection: elementInspection || '',
-            userFlows: userFlows || '',
-            businessRules: businessRules || '',
-            inputType: inputType || 'text',
-            images: req.files || []
-          };
-          
-          const geminiResponse = await geminiService.generateTestCases(geminiRequest);
+          const geminiResponse = await geminiService.generateTestCases(generationRequest);
           
           console.log('✅ Gemini response generated successfully');
           
@@ -1799,10 +1728,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           timestamp: new Date().toISOString()
         });
       }
-    }
-  );
-
-  // Generate mock response when Gemini fails
+    // Generate mock response when Gemini fails
   function generateMockResponse(requirement, moduleContext, testType, priority, inputType, websiteUrl, files, businessRules, elementInspection, userFlows) {
     console.log('🎭 Generating mock response for:', { requirement: requirement?.substring(0, 50), inputType });
     
