@@ -65,7 +65,10 @@ async function startServer() {
       next();
     });
 
+    // CRITICAL: Register API routes BEFORE any catch-all middleware
+    console.log("📡 Registering API routes...");
     const httpServer = await registerRoutes(app);
+    console.log("✅ API routes registered successfully");
 
     // Initialize database with retry logic
     let dbInitialized = false;

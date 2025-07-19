@@ -61,80 +61,96 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   // AI Generation Mutation
   const generateMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log('🤖 Starting AI test case generation...', data);
+      console.log("🚀 Starting AI test case generation:", data);
 
-      const requestBody = {
-        requirement: data.requirement || '',
-        projectContext: data.projectContext || '',
-        moduleContext: data.moduleContext || '',
-        testType: data.testType || 'functional',
-        priority: data.priority || 'Medium',
-        websiteUrl: data.websiteUrl || '',
-        inputType: data.inputType || 'text'
-      };
+      try {
+        const response = await fetch("/api/ai/generate-enhanced-test-cases", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          },
+          credentials: 'include',
+          body: JSON.stringify(data),
+        });
 
-      console.log('🔄 Sending request:', requestBody);
+        console.log("📡 API Response:", {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get('content-type'),
+          ok: response.ok,
+          url: response.url
+        });
 
-      const response = await fetch('/api/ai/generate-enhanced-test-cases', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(requestBody),
-      });
+        // Check if we got HTML instead of JSON
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('text/html')) {
+          const htmlText = await response.text();
+          console.error("❌ Expected JSON but got HTML:", htmlText.substring(0, 200));
+          throw new Error("Server returned HTML instead of JSON. This indicates a routing issue.");
+        }
 
-      console.log('📡 Response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        contentType: response.headers.get('content-type')
-      });
+        if (!response.ok) {
+          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch (parseError) {
+            const errorText = await response.text();
+            console.error("Failed to parse error response:", errorText);
+            errorMessage = `${errorMessage} - ${errorText.substring(0, 100)}`;
+          }
+          throw new Error(errorMessage);
+        }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error:', errorText);
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        const responseData = await response.json();
+        console.log("✅ Response data:", responseData);
+
+        // Handle both new and old response formats
+        if (responseData.success !== undefined) {
+          if (!responseData.success) {
+            throw new Error(responseData.error || "AI generation failed");
+          }
+          return responseData;
+        } else {
+          // Legacy format - wrap in success response
+          return {
+            success: true,
+            testCases: responseData.testCases || responseData,
+            source: 'legacy'
+          };
+        }
+
+      } catch (error) {
+        console.error("💥 Request failed:", error);
+        throw error;
       }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const htmlText = await response.text();
-        console.error('❌ Expected JSON but got:', contentType, htmlText.substring(0, 200));
-        throw new Error('Expected JSON response but got HTML. The API endpoint may be incorrectly configured.');
-      }
-
-      const responseData = await response.json();
-      console.log('✅ Parsed JSON response:', responseData);
-
-      if (!responseData.success) {
-        throw new Error(responseData.error || 'AI generation failed');
-      }
-
-      if (!responseData.testCases || !Array.isArray(responseData.testCases)) {
-        throw new Error('Invalid response: missing test cases array');
-      }
-
-      return responseData;
     },
     onSuccess: (data) => {
-      console.log('✅ AI Generation successful:', data);
+      console.log("✅ AI generation successful:", data);
 
-      if (data.testCases && Array.isArray(data.testCases) && data.testCases.length > 0) {
-        setGeneratedTestCases(data.testCases);
-        setSelectedTestCases(new Set(data.testCases.map((_, index) => index)));
+      const testCases = data.testCases || [];
+      const source = data.source || 'unknown';
+      const message = data.message;
+
+      if (testCases && Array.isArray(testCases) && testCases.length > 0) {
+        setGeneratedTestCases(testCases);
         setShowResults(true);
 
-        const sourceLabel = data.source === 'gemini-ai' ? 'Google Gemini AI' : 'Intelligent Mock Service';
+        let toastMessage = `Generated ${testCases.length} test cases successfully.`;
+        if (message) {
+          toastMessage += ` (${message})`;
+        }
 
         toast({
-          title: "🎯 AI Test Cases Generated",
-          description: `Generated ${data.testCases.length} test cases using ${sourceLabel}`,
+          title: "Test Cases Generated! 🎉",
+          description: toastMessage,
         });
       } else {
+        console.error("❌ No test cases in response:", data);
         toast({
-          title: "No Test Cases Generated",
-          description: "The AI couldn't generate test cases. Try providing more detailed input.",
+          title: "Generation Warning",
+          description: "No test cases were generated. Please try with a different requirement.",
           variant: "destructive",
         });
       }
