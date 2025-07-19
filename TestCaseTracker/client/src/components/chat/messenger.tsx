@@ -96,7 +96,7 @@ export function Messenger() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isTyping, setIsTyping] = useState(isTyping);
+  const [isTyping, setIsTyping] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState('');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
