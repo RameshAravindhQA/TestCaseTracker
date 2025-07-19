@@ -68,8 +68,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       available: true,
     },
     {
-      provider: "open-ai",
-      name: "OpenAI",
+      provider: "openai",
+      name: "OpenAI GPT-4",
       available: true,
     },
   ];
@@ -373,12 +373,55 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
           <DialogTitle className="flex items-center gap-2">
             <Wand2 className="h-5 w-5 text-purple-600" />
             AI Test Case Generator Pro
-            <Badge variant="secondary">Powered by Google Gemini</Badge>
+            <Badge variant="secondary">
+              {aiProvider === "google-gemini" ? "Powered by Google Gemini" : "Powered by OpenAI"}
+            </Badge>
           </DialogTitle>
         </DialogHeader>
 
         {!showResults ? (
           <div className="space-y-6">
+            {/* AI Provider Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">AI Provider Selection</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div>
+                  <Label>Choose AI Provider</Label>
+                  <Select value={aiProvider} onValueChange={setAiProvider}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select AI provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableProviders.map((provider) => (
+                        <SelectItem 
+                          key={provider.provider} 
+                          value={provider.provider}
+                          disabled={!provider.available}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span>{provider.name}</span>
+                            {provider.available ? (
+                              <Badge variant="secondary" className="ml-2">Available</Badge>
+                            ) : (
+                              <Badge variant="destructive" className="ml-2">Unavailable</Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {aiProvider === "google-gemini" ? 
+                      "Using Google Gemini AI for intelligent test case generation" : 
+                      "Using OpenAI GPT-4 for comprehensive test case analysis"
+                    }
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Project and Module Selection */}
             <Card>
               <CardHeader>
