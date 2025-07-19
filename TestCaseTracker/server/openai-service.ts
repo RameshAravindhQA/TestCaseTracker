@@ -69,7 +69,7 @@ Format as JSON array with the following structure:
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o", // Updated to use the latest OpenAI model
         messages: [
           {
             role: "system",
@@ -122,7 +122,7 @@ Return as a JSON array of strings.
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o", // Updated to use the latest OpenAI model
         messages: [
           {
             role: "system",

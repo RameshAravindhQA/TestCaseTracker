@@ -164,43 +164,68 @@ export class EnhancedAIService {
 
     const prompt = this.buildPrompt(request);
     
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only, no additional text or explanations."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 3000,
-    });
+    // Try different OpenAI models in order of preference
+    const models = ["gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"];
+    let lastError: Error | null = null;
+    
+    for (const model of models) {
+      try {
+        console.log(`🔮 Trying OpenAI model: ${model}`);
+        
+        const completion = await openai.chat.completions.create({
+          model: model,
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only, no additional text or explanations."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 3000,
+        });
 
     const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response from OpenAI');
-    }
+        if (!content) {
+          throw new Error(`No response from OpenAI using model ${model}`);
+        }
 
-    console.log('🤖 OpenAI response received:', content.substring(0, 200) + '...');
+        console.log(`🤖 OpenAI response received using ${model}:`, content.substring(0, 200) + '...');
+        
+        const testCases = JSON.parse(content);
+        
+        return {
+          testCases: testCases,
+          analysis: {
+            coverage: 'Comprehensive',
+            complexity: this.getComplexityLevel(request),
+            focusAreas: this.getFocusAreas(request),
+            suggestions: this.getSuggestions(request)
+          },
+          message: `Generated ${testCases.length} test cases using OpenAI ${model}`,
+          source: 'openai',
+          provider: 'openai'
+        };
+        
+      } catch (error: any) {
+        console.error(`❌ OpenAI model ${model} failed:`, error.message);
+        lastError = error;
+        
+        // If it's a model not found error, try the next model
+        if (error.status === 404 || error.code === 'model_not_found') {
+          continue;
+        }
+        
+        // For other errors, break and throw
+        break;
+      }
+    }
     
-    const testCases = JSON.parse(content);
-    
-    return {
-      testCases: testCases,
-      analysis: {
-        coverage: 'Comprehensive',
-        complexity: this.getComplexityLevel(request),
-        focusAreas: this.getFocusAreas(request),
-        suggestions: this.getSuggestions(request)
-      },
-      message: `Generated ${testCases.length} test cases using OpenAI GPT-4`,
-      source: 'openai',
-      provider: 'openai'
-    };
+    // If we get here, all models failed
+    throw new Error(`All OpenAI models failed. Last error: ${lastError?.message || 'Unknown error'}`);
   }
 
   private static buildPrompt(request: TestCaseGenerationRequest): string {
