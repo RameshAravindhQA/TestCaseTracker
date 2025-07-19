@@ -1,0 +1,62 @@
+❌ Expected JSON but got HTML: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script type="module">
+import { createHotContext } from "/@vite/client";
+const hot = createHotContext("/__dummy__runtime-error-plugin");
+
+function sendErr
+mutationFn @ ai-test-generator.tsx:89
+await in mutationFn
+fn @ @tanstack_react-query.js?v=b1be5688:1236
+run @ @tanstack_react-query.js?v=b1be5688:513
+start @ @tanstack_react-query.js?v=b1be5688:555
+execute @ @tanstack_react-query.js?v=b1be5688:1272
+await in execute
+mutate @ @tanstack_react-query.js?v=b1be5688:2691
+(anonymous) @ @tanstack_react-query.js?v=b1be5688:3414
+handleGenerate @ ai-test-generator.tsx:278
+callCallback2 @ chunk-RPCDYKBN.js?v=b1be5688:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=b1be5688:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=b1be5688:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=b1be5688:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=b1be5688:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=b1be5688:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=b1be5688:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=b1be5688:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=b1be5688:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=b1be5688:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=b1be5688:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=b1be5688:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=b1be5688:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=b1be5688:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=b1be5688:5449Understand this error
+ai-test-generator.tsx:125 💥 Request failed: Error: Server returned HTML instead of JSON. This indicates a routing issue.
+    at Object.mutationFn (ai-test-generator.tsx:90:17)
+mutationFn @ ai-test-generator.tsx:125
+await in mutationFn
+fn @ @tanstack_react-query.js?v=b1be5688:1236
+run @ @tanstack_react-query.js?v=b1be5688:513
+start @ @tanstack_react-query.js?v=b1be5688:555
+execute @ @tanstack_react-query.js?v=b1be5688:1272
+await in execute
+mutate @ @tanstack_react-query.js?v=b1be5688:2691
+(anonymous) @ @tanstack_react-query.js?v=b1be5688:3414
+handleGenerate @ ai-test-generator.tsx:278
+callCallback2 @ chunk-RPCDYKBN.js?v=b1be5688:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=b1be5688:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=b1be5688:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=b1be5688:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=b1be5688:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=b1be5688:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=b1be5688:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=b1be5688:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=b1be5688:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=b1be5688:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=b1be5688:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=b1be5688:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=b1be5688:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=b1be5688:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=b1be5688:5449Understand this error
+ai-test-generator.tsx:159 ❌ AI Generation error: Error: Server returned HTML instead of JSON. This indicates a routing issue.
+    at Object.mutationFn (ai-test-generator.tsx:90:17)
