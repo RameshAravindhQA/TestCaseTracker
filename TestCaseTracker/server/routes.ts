@@ -1194,6 +1194,421 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
   // Error handling middleware for multer (this is used by document uploads)
   
+  // AI Test Case Generation endpoints (moved up before document routes)
+  apiRouter.get("/ai/debug-gemini", isAuthenticated, async (req, res) => {
+    // Set JSON response headers
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+    try {
+      const hasApiKey = !!process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-gemini-api-key';
+      
+      if (!hasApiKey) {
+        return res.status(200).json({
+          configured: false,
+          error: 'Google Gemini API key is not configured',
+          message: 'Please set GOOGLE_API_KEY environment variable in .env file',
+          envFile: '.env file exists: ' + require('fs').existsSync(path.join(process.cwd(), '.env')),
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Test Gemini service
+      try {
+        const testRequest = {
+          requirement: 'Test registration form with email and password',
+          projectContext: 'Test project',
+          moduleContext: 'Registration',
+          testType: 'functional',
+          priority: 'Medium',
+          inputType: 'text' as const,
+          images: []
+        };
+        
+        console.log('🧪 Testing Gemini service...');
+        const testResponse = await geminiService.generateTestCases(testRequest);
+        
+        return res.status(200).json({
+          configured: true,
+          apiKeyPrefix: process.env.GOOGLE_API_KEY.substring(0, 10) + '...',
+          message: 'Gemini API key is configured and service is working',
+          testResult: {
+            success: true,
+            testCasesGenerated: testResponse.testCases?.length || 0,
+            hasAnalysis: !!testResponse.analysis,
+            source: testResponse.source
+          },
+          timestamp: new Date().toISOString()
+        });
+        
+      } catch (serviceError: any) {
+        console.error('❌ Gemini service test failed:', serviceError);
+        return res.status(200).json({
+          configured: true,
+          apiKeyPrefix: process.env.GOOGLE_API_KEY.substring(0, 10) + '...',
+          message: 'Gemini API key is configured but service failed',
+          error: serviceError.message,
+          fallbackActive: true,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Gemini debug error:', error);
+      return res.status(500).json({
+        configured: false,
+        error: error.message,
+        message: 'Failed to test Gemini configuration',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Enhanced AI Test Case Generation endpoint
+  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, async (req, res) => {
+    // Set JSON response headers immediately
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    try {
+      console.log('🤖 Enhanced AI Generation - Handler started');
+      console.log('🔍 Session data:', { userId: req.session?.userId, userRole: req.session?.userRole });
+      console.log('🔍 Request body:', req.body);
+      
+      // Validate authentication
+      if (!req.session || !req.session.userId) {
+        console.error('❌ Authentication failed');
+        return res.status(401).json({ 
+          success: false,
+          error: 'Authentication required',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      const { 
+        requirement, 
+        projectContext, 
+        moduleContext, 
+        testType, 
+        priority,
+        websiteUrl,
+        elementInspection,
+        userFlows,
+        businessRules,
+        inputType 
+      } = req.body;
+      
+      console.log('📋 Request data received:', {
+        requirement: requirement?.substring(0, 100) + '...',
+        projectContext: projectContext?.substring(0, 50),
+        moduleContext,
+        testType,
+        priority,
+        inputType,
+        hasWebsiteUrl: !!websiteUrl,
+        hasElementInspection: !!elementInspection,
+        hasUserFlows: !!userFlows,
+        hasBusinessRules: !!businessRules
+      });
+      
+      // Input validation
+      if (!requirement && !websiteUrl) {
+        console.error('❌ No input provided');
+        return res.status(400).json({ 
+          success: false,
+          error: 'At least one input is required: requirement text or website URL',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Try to use Gemini service with proper error handling
+      let geminiResponse;
+      try {
+        console.log('🔮 Attempting to use Gemini AI service...');
+        
+        const geminiRequest = {
+          requirement: requirement || '',
+          projectContext: projectContext || '',
+          moduleContext: moduleContext || '',
+          testType: testType || 'functional',
+          priority: priority || 'Medium',
+          websiteUrl: websiteUrl || '',
+          elementInspection: elementInspection || '',
+          userFlows: userFlows || '',
+          businessRules: businessRules || '',
+          inputType: inputType || 'text',
+          images: []
+        };
+        
+        console.log('🔮 Calling Gemini service with request:', {
+          hasRequirement: !!geminiRequest.requirement,
+          hasModuleContext: !!geminiRequest.moduleContext,
+          testType: geminiRequest.testType,
+          priority: geminiRequest.priority,
+          inputType: geminiRequest.inputType
+        });
+        
+        geminiResponse = await geminiService.generateTestCases(geminiRequest);
+        
+        console.log('✅ Gemini response generated successfully:', {
+          testCasesCount: geminiResponse.testCases?.length || 0,
+          source: geminiResponse.source
+        });
+        
+      } catch (geminiError: any) {
+        console.error('❌ Gemini service failed, falling back to mock service:', geminiError.message);
+        
+        // Fall back to mock service
+        geminiResponse = generateMockResponse(
+          requirement || '', 
+          moduleContext || '', 
+          testType || 'functional', 
+          priority || 'Medium', 
+          inputType || 'text', 
+          websiteUrl || '', 
+          [], 
+          businessRules || '', 
+          elementInspection || '', 
+          userFlows || ''
+        );
+        
+        console.log('✅ Mock response generated successfully:', {
+          testCasesCount: geminiResponse.testCases?.length || 0,
+          source: geminiResponse.source
+        });
+      }
+
+      // Prepare final response
+      const response = {
+        success: true,
+        testCases: geminiResponse.testCases || [],
+        analysis: geminiResponse.analysis || {
+          coverage: 'Basic',
+          complexity: 'Medium',
+          focusAreas: 'User Interface, Data Validation',
+          suggestions: ['Consider adding performance tests']
+        },
+        message: geminiResponse.message || 'Test cases generated successfully',
+        source: geminiResponse.source || 'mock-service',
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('📤 Sending successful response');
+      return res.status(200).json(response);
+      
+    } catch (handlerError: any) {
+      console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
+      console.error('❌ Error stack:', handlerError.stack);
+      
+      // Ensure we always return JSON even in error cases
+      const errorResponse = { 
+        success: false,
+        error: 'Internal server error during test case generation',
+        details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('📤 Sending error response');
+      return res.status(500).json(errorResponse);
+    }
+  });
+
+  // Generate mock response when Gemini fails
+  function generateMockResponse(requirement: string, moduleContext: string, testType: string, priority: string, inputType: string, websiteUrl: string, files: any[], businessRules: string, elementInspection: string, userFlows: string) {
+    console.log('🎭 Generating mock response for:', { requirement: requirement?.substring(0, 50), inputType });
+    
+    let mockTestCases = [];
+    let analysisResults = {
+      coverage: 'Comprehensive',
+      complexity: 'Medium',
+      focusAreas: 'User Interface, Data Validation, Error Handling',
+      suggestions: ['Consider adding performance tests', 'Include accessibility testing']
+    };
+
+    const isRegistrationTest = requirement && requirement.toLowerCase().includes('register');
+    
+    if (isRegistrationTest || (moduleContext && moduleContext.toLowerCase().includes('registration'))) {
+      console.log('🎭 Generating registration test cases');
+      mockTestCases = generateRegistrationTestCases(requirement, testType, priority);
+      analysisResults.focusAreas = 'Registration Forms, Input Validation, Security';
+    } else {
+      console.log('🎭 Generating based on input type:', inputType);
+      switch (inputType) {
+        case 'text':
+          mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
+          break;
+        case 'url':
+          mockTestCases = generateUrlBasedTestCases(websiteUrl, userFlows, testType, priority);
+          analysisResults.focusAreas = 'Navigation, UI Components, Cross-browser Testing';
+          break;
+        case 'image':
+          mockTestCases = generateImageBasedTestCases(files, requirement, testType, priority);
+          analysisResults.focusAreas = 'Visual Elements, Layout, Responsive Design';
+          break;
+        case 'inspect':
+          mockTestCases = generateInspectionBasedTestCases(elementInspection, requirement, testType, priority);
+          analysisResults.focusAreas = 'Element Interactions, JavaScript Functionality';
+          break;
+        default:
+          mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
+      }
+    }
+
+    // Ensure we have valid test cases
+    if (!Array.isArray(mockTestCases) || mockTestCases.length === 0) {
+      console.log('🎭 Using default test case as fallback');
+      mockTestCases = [{
+        feature: "Default Test Case",
+        testObjective: "Verify basic functionality",
+        preConditions: "System is ready for testing",
+        testSteps: "1. Perform basic test\n2. Verify results",
+        expectedResult: "System behaves as expected",
+        priority: priority || "Medium",
+        testType: testType || "functional",
+        coverage: "Basic",
+        category: "AI Generated",
+        tags: ["ai-generated", "default"]
+      }];
+    }
+
+    console.log('🎭 Mock response generated with', mockTestCases.length, 'test cases');
+
+    return {
+      success: true,
+      testCases: mockTestCases,
+      analysis: analysisResults,
+      message: `Successfully generated ${mockTestCases.length} test cases using intelligent mock service with ${inputType || 'text'} input`,
+      source: 'mock-service',
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  // Helper function for registration-specific test cases
+  function generateRegistrationTestCases(requirement: string, testType: string, priority: string) {
+    return [
+      {
+        feature: "User Registration - Valid Data Entry",
+        testObjective: "Verify successful user registration with valid data",
+        preConditions: "Registration page is accessible and all required fields are displayed",
+        testSteps: "1. Navigate to registration page\n2. Enter valid first name (e.g., 'John')\n3. Enter valid last name (e.g., 'Doe')\n4. Enter valid email address (e.g., 'john.doe@example.com')\n5. Enter strong password meeting requirements\n6. Confirm password by re-entering the same password\n7. Accept terms and conditions\n8. Click 'Register' button\n9. Verify success message appears\n10. Check user receives confirmation email",
+        expectedResult: "User should be successfully registered, receive confirmation message, and get verification email",
+        priority: "High",
+        testType: testType || "functional",
+        coverage: "Positive Testing",
+        category: "Registration - Happy Path",
+        tags: ["registration", "positive-testing", "user-creation", "email-verification"]
+      },
+      {
+        feature: "User Registration - Email Validation",
+        testObjective: "Verify email field validation with invalid email formats",
+        preConditions: "Registration page is loaded",
+        testSteps: "1. Navigate to registration page\n2. Enter valid first and last name\n3. Enter invalid email formats:\n   - Missing @ symbol (e.g., 'testexample.com')\n   - Missing domain (e.g., 'test@')\n   - Invalid characters (e.g., 'test@exam ple.com')\n   - Empty email field\n4. Attempt to register\n5. Verify validation error messages",
+        expectedResult: "Appropriate error messages should be displayed for each invalid email format without allowing registration",
+        priority: priority || "High",
+        testType: testType || "functional",
+        coverage: "Email Validation",
+        category: "Registration - Input Validation",
+        tags: ["registration", "negative-testing", "email-validation", "error-handling"]
+      },
+      {
+        feature: "User Registration - Password Security",
+        testObjective: "Verify password field validation and security requirements",
+        preConditions: "Registration page is accessible",
+        testSteps: "1. Navigate to registration page\n2. Fill valid details except password\n3. Test weak passwords:\n   - Too short (< 8 characters)\n   - No uppercase letters\n   - No special characters\n   - Common passwords (e.g., 'password123')\n4. Test password confirmation mismatch\n5. Verify validation messages\n6. Test strong password acceptance",
+        expectedResult: "Weak passwords should be rejected with specific error messages. Strong passwords should be accepted",
+        priority: "High",
+        testType: "security",
+        coverage: "Password Security",
+        category: "Registration - Security",
+        tags: ["registration", "password-security", "validation", "security-testing"]
+      }
+    ];
+  }
+
+  // Helper functions for different test case generation types
+  function generateTextBasedTestCases(requirement: string, businessRules: string, testType: string, priority: string) {
+    const baseRequirement = requirement || 'User Registration';
+    return [
+      {
+        feature: `${baseRequirement} - Happy Path`,
+        testObjective: `Verify successful ${baseRequirement.toLowerCase()} with valid data`,
+        preConditions: "Application is accessible and registration page is loaded",
+        testSteps: `1. Navigate to registration page\n2. Enter valid user details\n3. Submit the form\n4. Verify successful registration`,
+        expectedResult: `User should be successfully registered and receive confirmation`,
+        priority: priority || "High",
+        testType: testType || "functional",
+        coverage: "Happy Path",
+        category: "Core Functionality",
+        tags: ["registration", "positive-testing", "core-flow"]
+      },
+      {
+        feature: `${baseRequirement} - Data Validation`,
+        testObjective: `Verify data validation rules for ${baseRequirement.toLowerCase()}`,
+        preConditions: "Registration page is accessible",
+        testSteps: `1. Navigate to registration page\n2. Enter invalid data formats\n3. Submit form\n4. Verify validation messages`,
+        expectedResult: "Appropriate validation messages should be displayed",
+        priority: priority || "High",
+        testType: testType || "functional",
+        coverage: "Input Validation",
+        category: "Data Validation",
+        tags: ["validation", "negative-testing", "error-handling"]
+      }
+    ];
+  }
+
+  function generateUrlBasedTestCases(websiteUrl: string, userFlows: string, testType: string, priority: string) {
+    return [
+      {
+        feature: "Website Navigation - Menu Links",
+        testObjective: "Verify all navigation menu links work correctly",
+        preConditions: `Website ${websiteUrl} is accessible`,
+        testSteps: "1. Load the website\n2. Click on each menu item\n3. Verify pages load correctly\n4. Check for broken links",
+        expectedResult: "All menu links should navigate to correct pages without errors",
+        priority: priority || "High",
+        testType: testType || "functional",
+        coverage: "Navigation Testing",
+        category: "User Interface",
+        tags: ["navigation", "ui-testing", "links"]
+      }
+    ];
+  }
+
+  function generateImageBasedTestCases(images: any[], requirement: string, testType: string, priority: string) {
+    return [
+      {
+        feature: "UI Layout - Visual Elements",
+        testObjective: "Verify UI elements are positioned correctly according to design",
+        preConditions: `Design mockup(s) are available for reference`,
+        testSteps: "1. Compare actual UI with design mockups\n2. Verify element positioning\n3. Check color schemes\n4. Validate typography",
+        expectedResult: "UI should match the provided design specifications",
+        priority: priority || "High",
+        testType: testType || "ui",
+        coverage: "Visual Design",
+        category: "UI Validation",
+        tags: ["ui-testing", "visual-validation", "design-compliance"]
+      }
+    ];
+  }
+
+  function generateInspectionBasedTestCases(elementInspection: string, requirement: string, testType: string, priority: string) {
+    return [
+      {
+        feature: "DOM Element Validation",
+        testObjective: "Verify DOM elements are properly structured and accessible",
+        preConditions: "Web page is loaded with the specified elements",
+        testSteps: "1. Inspect DOM structure\n2. Validate element attributes\n3. Check for proper semantic markup\n4. Test element accessibility",
+        expectedResult: "All DOM elements should be properly structured and accessible",
+        priority: priority || "High",
+        testType: testType || "functional",
+        coverage: "DOM Validation",
+        category: "Technical Validation",
+        tags: ["dom", "structure", "accessibility"]
+      }
+    ];
+  }
+
   // Update user avatar endpoint
   apiRouter.put("/users/update-avatar", isAuthenticated, async (req, res) => {
     try {
@@ -1478,630 +1893,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
 
 
-// Gemini API Debug endpoint
-  apiRouter.get("/ai/debug-gemini", isAuthenticated, async (req, res) => {
-    // Set JSON response headers
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
-    try {
-      const hasApiKey = !!process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-gemini-api-key';
-      
-      if (!hasApiKey) {
-        return res.status(200).json({
-          configured: false,
-          error: 'Google Gemini API key is not configured',
-          message: 'Please set GOOGLE_API_KEY environment variable in .env file',
-          envFile: '.env file exists: ' + require('fs').existsSync(path.join(process.cwd(), '.env')),
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      // Test Gemini service
-      try {
-        const testRequest = {
-          requirement: 'Test registration form with email and password',
-          projectContext: 'Test project',
-          moduleContext: 'Registration',
-          testType: 'functional',
-          priority: 'Medium',
-          inputType: 'text' as const,
-          images: []
-        };
-        
-        console.log('🧪 Testing Gemini service...');
-        const testResponse = await geminiService.generateTestCases(testRequest);
-        
-        return res.status(200).json({
-          configured: true,
-          apiKeyPrefix: process.env.GOOGLE_API_KEY.substring(0, 10) + '...',
-          message: 'Gemini API key is configured and service is working',
-          testResult: {
-            success: true,
-            testCasesGenerated: testResponse.testCases?.length || 0,
-            hasAnalysis: !!testResponse.analysis,
-            source: testResponse.source
-          },
-          timestamp: new Date().toISOString()
-        });
-        
-      } catch (serviceError: any) {
-        console.error('❌ Gemini service test failed:', serviceError);
-        return res.status(200).json({
-          configured: true,
-          apiKeyPrefix: process.env.GOOGLE_API_KEY.substring(0, 10) + '...',
-          message: 'Gemini API key is configured but service failed',
-          error: serviceError.message,
-          fallbackActive: true,
-          timestamp: new Date().toISOString()
-        });
-      }
-      
-    } catch (error: any) {
-      console.error('❌ Gemini debug error:', error);
-      return res.status(500).json({
-        configured: false,
-        error: error.message,
-        message: 'Failed to test Gemini configuration',
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-
-  // AI Test Case Generation endpoint
-  apiRouter.post("/ai/generate-test-cases", isAuthenticated, async (req, res) => {
-    // Set JSON response headers immediately
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-
-    try {
-      console.log('🤖 Simple AI Generation - Handler started');
-      
-      const { requirement, projectContext, moduleContext, testType, priority } = req.body;
-      
-      if (!requirement) {
-        return res.status(400).json({ 
-          success: false,
-          error: 'Requirement is required',
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      console.log('📋 Simple AI generation request:', { requirement: requirement?.substring(0, 50) + '...' });
-
-      // Mock AI generation with enhanced structure
-      const mockTestCases = [
-        {
-          feature: `Test ${requirement} - Happy Path`,
-          testObjective: `Verify that ${requirement} works correctly under normal conditions`,
-          preConditions: "User is logged in and has appropriate permissions",
-          testSteps: `1. Navigate to the ${requirement} section\n2. Enter valid data\n3. Click submit/save\n4. Verify the action completes successfully`,
-          expectedResult: `${requirement} should complete successfully with appropriate confirmation`,
-          priority: priority || "Medium",
-          testType: testType || "functional",
-          coverage: `Happy path scenario for ${requirement}`,
-          category: "Functional",
-          tags: ["positive-testing", "core-flow"]
-        },
-        {
-          feature: `Test ${requirement} - Error Handling`,
-          testObjective: `Verify that ${requirement} handles errors gracefully`,
-          preConditions: "User is logged in and has appropriate permissions",
-          testSteps: `1. Navigate to the ${requirement} section\n2. Enter invalid data\n3. Click submit/save\n4. Verify appropriate error message is displayed`,
-          expectedResult: "System should display clear error message and prevent invalid operation",
-          priority: priority || "Medium",
-          testType: testType || "functional",
-          coverage: `Error handling for ${requirement}`,
-          category: "Error Handling",
-          tags: ["negative-testing", "error-handling"]
-        },
-        {
-          feature: `Test ${requirement} - Boundary Conditions`,
-          testObjective: `Verify that ${requirement} handles boundary conditions correctly`,
-          preConditions: "User is logged in and has appropriate permissions",
-          testSteps: `1. Navigate to the ${requirement} section\n2. Enter boundary values (min/max)\n3. Click submit/save\n4. Verify system handles boundaries correctly`,
-          expectedResult: "System should handle boundary conditions appropriately",
-          priority: priority || "Low",
-          testType: testType || "functional",
-          coverage: `Boundary testing for ${requirement}`,
-          category: "Boundary Testing",
-          tags: ["boundary-testing", "edge-cases"]
-        }
-      ];
-
-      const response = {
-        success: true,
-        testCases: mockTestCases,
-        message: `Generated ${mockTestCases.length} test cases for: ${requirement}`,
-        timestamp: new Date().toISOString()
-      };
-
-      console.log('📤 Simple AI generation - Sending response');
-      return res.status(200).json(response);
-      
-    } catch (error: any) {
-      console.error('❌ Simple AI test case generation error:', error);
-      
-      const errorResponse = {
-        success: false,
-        error: 'Failed to generate test cases',
-        details: process.env.NODE_ENV === 'development' ? error.message : 'Please try again',
-        timestamp: new Date().toISOString()
-      };
-      
-      return res.status(500).json(errorResponse);
-    }
-  });
-
-  
-
-  // Enhanced AI Test Case Generation endpoint with proper error handling
-  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, async (req, res) => {
-    // Set JSON response headers immediately
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-
-    try {
-      console.log('🤖 Enhanced AI Generation - Handler started');
-      console.log('🔍 Session data:', { userId: req.session?.userId, userRole: req.session?.userRole });
-      console.log('🔍 Request body:', req.body);
-      
-      // Validate authentication
-      if (!req.session || !req.session.userId) {
-        console.error('❌ Authentication failed');
-        return res.status(401).json({ 
-          success: false,
-          error: 'Authentication required',
-          timestamp: new Date().toISOString()
-        });
-      }
-      
-      const { 
-        requirement, 
-        projectContext, 
-        moduleContext, 
-        testType, 
-        priority,
-        websiteUrl,
-        elementInspection,
-        userFlows,
-        businessRules,
-        inputType 
-      } = req.body;
-      
-      console.log('📋 Request data received:', {
-        requirement: requirement?.substring(0, 100) + '...',
-        projectContext: projectContext?.substring(0, 50),
-        moduleContext,
-        testType,
-        priority,
-        inputType,
-        hasWebsiteUrl: !!websiteUrl,
-        hasElementInspection: !!elementInspection,
-        hasUserFlows: !!userFlows,
-        hasBusinessRules: !!businessRules
-      });
-      
-      // Input validation
-      if (!requirement && !websiteUrl) {
-        console.error('❌ No input provided');
-        return res.status(400).json({ 
-          success: false,
-          error: 'At least one input is required: requirement text or website URL',
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      // Try to use Gemini service with proper error handling
-      let geminiResponse;
-      try {
-        console.log('🔮 Attempting to use Gemini AI service...');
-        
-        const geminiRequest = {
-          requirement: requirement || '',
-          projectContext: projectContext || '',
-          moduleContext: moduleContext || '',
-          testType: testType || 'functional',
-          priority: priority || 'Medium',
-          websiteUrl: websiteUrl || '',
-          elementInspection: elementInspection || '',
-          userFlows: userFlows || '',
-          businessRules: businessRules || '',
-          inputType: inputType || 'text',
-          images: []
-        };
-        
-        console.log('🔮 Calling Gemini service with request:', {
-          hasRequirement: !!geminiRequest.requirement,
-          hasModuleContext: !!geminiRequest.moduleContext,
-          testType: geminiRequest.testType,
-          priority: geminiRequest.priority,
-          inputType: geminiRequest.inputType
-        });
-        
-        geminiResponse = await geminiService.generateTestCases(geminiRequest);
-        
-        console.log('✅ Gemini response generated successfully:', {
-          testCasesCount: geminiResponse.testCases?.length || 0,
-          source: geminiResponse.source
-        });
-        
-      } catch (geminiError: any) {
-        console.error('❌ Gemini service failed, falling back to mock service:', geminiError.message);
-        
-        // Fall back to mock service
-        geminiResponse = generateMockResponse(
-          requirement || '', 
-          moduleContext || '', 
-          testType || 'functional', 
-          priority || 'Medium', 
-          inputType || 'text', 
-          websiteUrl || '', 
-          [], 
-          businessRules || '', 
-          elementInspection || '', 
-          userFlows || ''
-        );
-        
-        console.log('✅ Mock response generated successfully:', {
-          testCasesCount: geminiResponse.testCases?.length || 0,
-          source: geminiResponse.source
-        });
-      }
-
-      // Prepare final response
-      const response = {
-        success: true,
-        testCases: geminiResponse.testCases || [],
-        analysis: geminiResponse.analysis || {
-          coverage: 'Basic',
-          complexity: 'Medium',
-          focusAreas: 'User Interface, Data Validation',
-          suggestions: ['Consider adding performance tests']
-        },
-        message: geminiResponse.message || 'Test cases generated successfully',
-        source: geminiResponse.source || 'mock-service',
-        timestamp: new Date().toISOString()
-      };
-      
-      console.log('📤 Sending successful response');
-      return res.status(200).json(response);
-      
-    } catch (handlerError: any) {
-      console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
-      console.error('❌ Error stack:', handlerError.stack);
-      
-      // Ensure we always return JSON even in error cases
-      const errorResponse = { 
-        success: false,
-        error: 'Internal server error during test case generation',
-        details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
-        timestamp: new Date().toISOString()
-      };
-      
-      console.log('📤 Sending error response');
-      return res.status(500).json(errorResponse);
-    }
-  });
-
-  // Generate mock response when Gemini fails
-  function generateMockResponse(requirement, moduleContext, testType, priority, inputType, websiteUrl, files, businessRules, elementInspection, userFlows) {
-    console.log('🎭 Generating mock response for:', { requirement: requirement?.substring(0, 50), inputType });
-    
-    let mockTestCases = [];
-    let analysisResults = {
-      coverage: 'Comprehensive',
-      complexity: 'Medium',
-      focusAreas: 'User Interface, Data Validation, Error Handling',
-      suggestions: ['Consider adding performance tests', 'Include accessibility testing']
-    };
-
-    const isRegistrationTest = requirement && requirement.toLowerCase().includes('register');
-    
-    if (isRegistrationTest || (moduleContext && moduleContext.toLowerCase().includes('registration'))) {
-      console.log('🎭 Generating registration test cases');
-      mockTestCases = generateRegistrationTestCases(requirement, testType, priority);
-      analysisResults.focusAreas = 'Registration Forms, Input Validation, Security';
-    } else {
-      console.log('🎭 Generating based on input type:', inputType);
-      switch (inputType) {
-        case 'text':
-          mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
-          break;
-        case 'url':
-          mockTestCases = generateUrlBasedTestCases(websiteUrl, userFlows, testType, priority);
-          analysisResults.focusAreas = 'Navigation, UI Components, Cross-browser Testing';
-          break;
-        case 'image':
-          mockTestCases = generateImageBasedTestCases(files, requirement, testType, priority);
-          analysisResults.focusAreas = 'Visual Elements, Layout, Responsive Design';
-          break;
-        case 'inspect':
-          mockTestCases = generateInspectionBasedTestCases(elementInspection, requirement, testType, priority);
-          analysisResults.focusAreas = 'Element Interactions, JavaScript Functionality';
-          break;
-        default:
-          mockTestCases = generateTextBasedTestCases(requirement, businessRules, testType, priority);
-      }
-    }
-
-    // Ensure we have valid test cases
-    if (!Array.isArray(mockTestCases) || mockTestCases.length === 0) {
-      console.log('🎭 Using default test case as fallback');
-      mockTestCases = [{
-        feature: "Default Test Case",
-        testObjective: "Verify basic functionality",
-        preConditions: "System is ready for testing",
-        testSteps: "1. Perform basic test\n2. Verify results",
-        expectedResult: "System behaves as expected",
-        priority: priority || "Medium",
-        testType: testType || "functional",
-        coverage: "Basic",
-        category: "AI Generated",
-        tags: ["ai-generated", "default"]
-      }];
-    }
-
-    console.log('🎭 Mock response generated with', mockTestCases.length, 'test cases');
-
-    return {
-      success: true,
-      testCases: mockTestCases,
-      analysis: analysisResults,
-      message: `Successfully generated ${mockTestCases.length} test cases using intelligent mock service with ${inputType || 'text'} input`,
-      source: 'mock-service',
-      timestamp: new Date().toISOString()
-    };
-  }
-
-  // Helper function for registration-specific test cases
-  function generateRegistrationTestCases(requirement, testType, priority) {
-    return [
-      {
-        feature: "User Registration - Valid Data Entry",
-        testObjective: "Verify successful user registration with valid data",
-        preConditions: "Registration page is accessible and all required fields are displayed",
-        testSteps: "1. Navigate to registration page\n2. Enter valid first name (e.g., 'John')\n3. Enter valid last name (e.g., 'Doe')\n4. Enter valid email address (e.g., 'john.doe@example.com')\n5. Enter strong password meeting requirements\n6. Confirm password by re-entering the same password\n7. Accept terms and conditions\n8. Click 'Register' button\n9. Verify success message appears\n10. Check user receives confirmation email",
-        expectedResult: "User should be successfully registered, receive confirmation message, and get verification email",
-        priority: "High",
-        testType: testType || "functional",
-        coverage: "Positive Testing",
-        category: "Registration - Happy Path",
-        tags: ["registration", "positive-testing", "user-creation", "email-verification"]
-      },
-      {
-        feature: "User Registration - Email Validation",
-        testObjective: "Verify email field validation with invalid email formats",
-        preConditions: "Registration page is loaded",
-        testSteps: "1. Navigate to registration page\n2. Enter valid first and last name\n3. Enter invalid email formats:\n   - Missing @ symbol (e.g., 'testexample.com')\n   - Missing domain (e.g., 'test@')\n   - Invalid characters (e.g., 'test@exam ple.com')\n   - Empty email field\n4. Attempt to register\n5. Verify validation error messages",
-        expectedResult: "Appropriate error messages should be displayed for each invalid email format without allowing registration",
-        priority: priority || "High",
-        testType: testType || "functional",
-        coverage: "Email Validation",
-        category: "Registration - Input Validation",
-        tags: ["registration", "negative-testing", "email-validation", "error-handling"]
-      },
-      {
-        feature: "User Registration - Password Security",
-        testObjective: "Verify password field validation and security requirements",
-        preConditions: "Registration page is accessible",
-        testSteps: "1. Navigate to registration page\n2. Fill valid details except password\n3. Test weak passwords:\n   - Too short (< 8 characters)\n   - No uppercase letters\n   - No special characters\n   - Common passwords (e.g., 'password123')\n4. Test password confirmation mismatch\n5. Verify validation messages\n6. Test strong password acceptance",
-        expectedResult: "Weak passwords should be rejected with specific error messages. Strong passwords should be accepted",
-        priority: "High",
-        testType: "security",
-        coverage: "Password Security",
-        category: "Registration - Security",
-        tags: ["registration", "password-security", "validation", "security-testing"]
-      },
-      {
-        feature: "User Registration - Duplicate Email Prevention",
-        testObjective: "Verify system prevents registration with existing email addresses",
-        preConditions: "At least one user already registered in the system",
-        testSteps: "1. Navigate to registration page\n2. Enter valid first name, last name\n3. Enter email address that already exists in system\n4. Enter valid password and confirmation\n5. Accept terms and conditions\n6. Click 'Register' button\n7. Verify error message appears",
-        expectedResult: "System should display error message indicating email already exists and prevent duplicate registration",
-        priority: priority || "High",
-        testType: testType || "functional",
-        coverage: "Duplicate Prevention",
-        category: "Registration - Business Logic",
-        tags: ["registration", "duplicate-prevention", "negative-testing", "business-rules"]
-      },
-      {
-        feature: "User Registration - Required Fields Validation",
-        testObjective: "Verify all required fields are validated before registration",
-        preConditions: "Registration page is loaded",
-        testSteps: "1. Navigate to registration page\n2. Leave first name field empty and fill others\n3. Attempt registration - verify error\n4. Leave last name field empty and fill others\n5. Attempt registration - verify error\n6. Leave email field empty and fill others\n7. Attempt registration - verify error\n8. Leave password field empty and fill others\n9. Attempt registration - verify error\n10. Leave all fields empty and attempt registration",
-        expectedResult: "Appropriate error messages should appear for each missing required field preventing form submission",
-        priority: priority || "Medium",
-        testType: testType || "functional",
-        coverage: "Required Field Validation",
-        category: "Registration - Input Validation",
-        tags: ["registration", "required-fields", "negative-testing", "form-validation"]
-      },
-      {
-        feature: "User Registration - Terms and Conditions",
-        testObjective: "Verify terms and conditions acceptance is mandatory",
-        preConditions: "Registration page is accessible",
-        testSteps: "1. Navigate to registration page\n2. Fill all required fields with valid data\n3. Leave terms and conditions checkbox unchecked\n4. Attempt to register\n5. Verify error message or prevention\n6. Check terms and conditions checkbox\n7. Attempt registration again\n8. Verify successful registration",
-        expectedResult: "Registration should not proceed without accepting terms and conditions. Should succeed when accepted",
-        priority: "Medium",
-        testType: testType || "functional",
-        coverage: "Terms Acceptance",
-        category: "Registration - Legal Compliance",
-        tags: ["registration", "terms-conditions", "legal-compliance", "mandatory-fields"]
-      }
-    ];
-  }
-
-  // Helper functions for different test case generation types
-  function generateTextBasedTestCases(requirement, businessRules, testType, priority) {
-    const baseRequirement = requirement || 'User Registration';
-    return [
-      {
-        feature: `${baseRequirement} - Happy Path`,
-        testObjective: `Verify successful ${baseRequirement.toLowerCase()} with valid data`,
-        preConditions: "Application is accessible and registration page is loaded",
-        testSteps: `1. Navigate to registration page\n2. Enter valid user details\n3. Submit the form\n4. Verify successful registration`,
-        expectedResult: `User should be successfully registered and receive confirmation`,
-        priority: priority || "High",
-        testType: testType || "functional",
-        coverage: "Happy Path",
-        category: "Core Functionality",
-        tags: ["registration", "positive-testing", "core-flow"]
-      },
-      {
-        feature: `${baseRequirement} - Data Validation`,
-        testObjective: `Verify data validation rules for ${baseRequirement.toLowerCase()}`,
-        preConditions: "Registration page is accessible",
-        testSteps: `1. Navigate to registration page\n2. Enter invalid data formats\n3. Submit form\n4. Verify validation messages`,
-        expectedResult: "Appropriate validation messages should be displayed",
-        priority: priority || "High",
-        testType: testType || "functional",
-        coverage: "Input Validation",
-        category: "Data Validation",
-        tags: ["validation", "negative-testing", "error-handling"]
-      },
-      {
-        feature: `${baseRequirement} - Security Testing`,
-        testObjective: `Verify security measures for ${baseRequirement.toLowerCase()}`,
-        preConditions: "Registration page is accessible",
-        testSteps: `1. Attempt SQL injection in form fields\n2. Test XSS prevention\n3. Verify password security requirements\n4. Test rate limiting`,
-        expectedResult: "All security measures should prevent malicious activities",
-        priority: "Medium",
-        testType: "security",
-        coverage: "Security Validation",
-        category: "Security",
-        tags: ["security", "sql-injection", "xss-prevention"]
-      }
-    ];
-  }
-
-  function generateUrlBasedTestCases(websiteUrl, userFlows, testType, priority) {
-    return [
-      {
-        feature: "Website Navigation - Menu Links",
-        testObjective: "Verify all navigation menu links work correctly",
-        preConditions: `Website ${websiteUrl} is accessible`,
-        testSteps: "1. Load the website\n2. Click on each menu item\n3. Verify pages load correctly\n4. Check for broken links",
-        expectedResult: "All menu links should navigate to correct pages without errors",
-        priority: priority || "High",
-        testType: testType || "functional",
-        coverage: "Navigation Testing",
-        category: "User Interface",
-        tags: ["navigation", "ui-testing", "links"]
-      },
-      {
-        feature: "Website Responsiveness - Mobile View",
-        testObjective: "Verify website displays correctly on mobile devices",
-        preConditions: `Website ${websiteUrl} is accessible`,
-        testSteps: "1. Open website on mobile device\n2. Test different screen sizes\n3. Verify content readability\n4. Test touch interactions",
-        expectedResult: "Website should be fully responsive and usable on mobile",
-        priority: "Medium",
-        testType: "ui",
-        coverage: "Responsive Design",
-        category: "Mobile Testing",
-        tags: ["responsive", "mobile", "ui-testing"]
-      },
-      {
-        feature: "Website Performance - Load Time",
-        testObjective: "Verify website loads within acceptable time limits",
-        preConditions: `Website ${websiteUrl} is accessible`,
-        testSteps: "1. Clear browser cache\n2. Load website\n3. Measure load time\n4. Test with different connection speeds",
-        expectedResult: "Website should load within 3 seconds on standard connections",
-        priority: "Medium",
-        testType: "performance",
-        coverage: "Performance Testing",
-        category: "Performance",
-        tags: ["performance", "load-time", "optimization"]
-      }
-    ];
-  }
-
-  function generateImageBasedTestCases(images, requirement, testType, priority) {
-    const imageCount = images ? images.length : 0;
-    return [
-      {
-        feature: "UI Layout - Visual Elements",
-        testObjective: "Verify UI elements are positioned correctly according to design",
-        preConditions: `${imageCount} design mockup(s) are available for reference`,
-        testSteps: "1. Compare actual UI with design mockups\n2. Verify element positioning\n3. Check color schemes\n4. Validate typography",
-        expectedResult: "UI should match the provided design specifications",
-        priority: priority || "High",
-        testType: testType || "ui",
-        coverage: "Visual Design",
-        category: "UI Validation",
-        tags: ["ui-testing", "visual-validation", "design-compliance"]
-      },
-      {
-        feature: "Interactive Elements - Button Functionality",
-        testObjective: "Verify all interactive elements work as expected",
-        preConditions: "UI is loaded and interactive elements are visible",
-        testSteps: "1. Identify all clickable elements\n2. Test button clicks\n3. Verify hover effects\n4. Test form interactions",
-        expectedResult: "All interactive elements should respond correctly to user actions",
-        priority: "High",
-        testType: "functional",
-        coverage: "User Interactions",
-        category: "Functionality",
-        tags: ["interaction", "buttons", "forms"]
-      },
-      {
-        feature: "Visual Accessibility - Color Contrast",
-        testObjective: "Verify color contrast meets accessibility standards",
-        preConditions: "UI design is implemented",
-        testSteps: "1. Test color contrast ratios\n2. Verify text readability\n3. Test with color blindness simulation\n4. Validate focus indicators",
-        expectedResult: "All visual elements should meet WCAG accessibility guidelines",
-        priority: "Medium",
-        testType: "accessibility",
-        coverage: "Accessibility Testing",
-        category: "Accessibility",
-        tags: ["accessibility", "color-contrast", "wcag"]
-      }
-    ];
-  }
-
-  function generateInspectionBasedTestCases(elementInspection, requirement, testType, priority) {
-    return [
-      {
-        feature: "DOM Element Validation",
-        testObjective: "Verify DOM elements are properly structured and accessible",
-        preConditions: "Web page is loaded with the specified elements",
-        testSteps: "1. Inspect DOM structure\n2. Validate element attributes\n3. Check for proper semantic markup\n4. Test element accessibility",
-        expectedResult: "All DOM elements should be properly structured and accessible",
-        priority: priority || "High",
-        testType: testType || "functional",
-        coverage: "DOM Validation",
-        category: "Technical Validation",
-        tags: ["dom", "structure", "accessibility"]
-      },
-      {
-        feature: "JavaScript Functionality - Event Handlers",
-        testObjective: "Verify JavaScript event handlers work correctly",
-        preConditions: "Page is loaded with JavaScript enabled",
-        testSteps: "1. Trigger click events\n2. Test form submissions\n3. Verify dynamic content updates\n4. Test error handling",
-        expectedResult: "All JavaScript functionality should work without errors",
-        priority: "High",
-        testType: "functional",
-        coverage: "JavaScript Testing",
-        category: "Frontend Functionality",
-        tags: ["javascript", "events", "dynamic-content"]
-      },
-      {
-        feature: "CSS Styling - Visual Rendering",
-        testObjective: "Verify CSS styles are applied correctly",
-        preConditions: "Page is loaded with all stylesheets",
-        testSteps: "1. Inspect computed styles\n2. Test responsive breakpoints\n3. Verify animations\n4. Check cross-browser compatibility",
-        expectedResult: "All CSS styles should render correctly across different browsers",
-        priority: "Medium",
-        testType: "ui",
-        coverage: "Visual Styling",
-        category: "UI Styling",
-        tags: ["css", "styling", "cross-browser"]
-      }
-    ];
-  }
 
   // Bug Comments API endpoints
   apiRouter.get("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
