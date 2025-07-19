@@ -1654,15 +1654,6 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           priority
         });
 
-        // Input validation
-        if (!requirement && !websiteUrl && (!req.files || req.files.length === 0)) {
-          return res.status(400).json({ 
-            success: false,
-            error: 'At least one input is required: requirement text, website URL, or uploaded images',
-            timestamp: new Date().toISOString()
-          });
-        }
-
         // Create the request object for Gemini service
         const generationRequest = {
           requirement,
@@ -1678,11 +1669,91 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           images: files
         };
 
+        // Use Gemini service to generate test cases
+        console.log('🚀 Calling Gemini service...');
+        const result = await geminiService.generateTestCases(generationRequest);
+        
+        console.log('✅ Enhanced AI Generation successful:', {
+          testCasesCount: result.testCases?.length || 0,
+          source: result.source
+        });
+
+        // Return successful response
+        return res.status(200).json({
+          success: true,
+          testCases: result.testCases,
+          analysis: result.analysis,
+          message: result.message,
+          source: result.source,
+          timestamp: new Date().toISOString()
+        });
+        
+      } catch (handlerError: any) {
+        console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
+        
+        // Ensure we always return JSON even in error cases
+        return res.status(500).json({ 
+          success: false,
+          error: 'Internal server error during test case generation',
+          details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
+          timestamp: new Date().toISOString()
+        });
+      }
+    }); {
+          return res.status(401).json({ 
+            success: false,
+            error: 'Authentication required',
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        const { 
+          requirement, 
+          projectContext, 
+          moduleContext, 
+          testType, 
+          priority,
+          websiteUrl,
+          elementInspection,
+          userFlows,
+          businessRules,
+          inputType 
+        } = req.body;
+        
+        console.log('📋 Request data:', {
+          requirement: requirement?.substring(0, 50),
+          inputType,
+          filesCount: req.files?.length || 0
+        });
+        
+        // Input validation
+        if (!requirement && !websiteUrl && (!req.files || req.files.length === 0)) {
+          return res.status(400).json({ 
+            success: false,
+            error: 'At least one input is required: requirement text, website URL, or uploaded images',
+            timestamp: new Date().toISOString()
+          });
+        }
+
         // Try to use Gemini service first
         try {
           console.log('🔮 Attempting to use Gemini AI service...');
           
-          const geminiResponse = await geminiService.generateTestCases(generationRequest);
+          const geminiRequest = {
+            requirement: requirement || '',
+            projectContext: projectContext || '',
+            moduleContext: moduleContext || '',
+            testType: testType || 'functional',
+            priority: priority || 'Medium',
+            websiteUrl: websiteUrl || '',
+            elementInspection: elementInspection || '',
+            userFlows: userFlows || '',
+            businessRules: businessRules || '',
+            inputType: inputType || 'text',
+            images: req.files || []
+          };
+          
+          const geminiResponse = await geminiService.generateTestCases(geminiRequest);
           
           console.log('✅ Gemini response generated successfully');
           
@@ -1728,7 +1799,10 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           timestamp: new Date().toISOString()
         });
       }
-    // Generate mock response when Gemini fails
+    }
+  );
+
+  // Generate mock response when Gemini fails
   function generateMockResponse(requirement, moduleContext, testType, priority, inputType, websiteUrl, files, businessRules, elementInspection, userFlows) {
     console.log('🎭 Generating mock response for:', { requirement: requirement?.substring(0, 50), inputType });
     
@@ -6361,17 +6435,266 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   });
 
   
-  // Mount API routes with /api prefix
-  app.use("/api", apiRouter);
-  
-  // Initialize database
-  await initializeDatabase();
-  
-  // Create and return the server
-  const server = createServer(app);
-  
-  return server;
-}
+  /*
+      console.error("Get automation scripts error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/automation/scripts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scriptId = parseInt(req.params.id);
+      const script = await storage.getAutomationScript(scriptId);
+      
+      if (!script) {
+        return res.status(404).json({ message: "Automation script not found" });
+      }
+      
+      res.json(script);
+    } catch (error) {
+      console.error("Get automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/automation/scripts", isAuthenticated, async (req, res) => {
+    try {
+      const scriptData = insertAutomationScriptSchema.parse(req.body);
+      scriptData.createdById = req.session.userId!;
+      
+      const script = await storage.createAutomationScript(scriptData);
+      
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "create",
+        entityType: "automation_script",
+        entityId: script.id,
+        details: {
+          name: script.name,
+          type: script.type,
+          projectId: script.projectId
+        }
+      });
+      
+      res.status(201).json(script);
+    } catch (error) {
+      console.error("Create automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.patch("/automation/scripts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scriptId = parseInt(req.params.id);
+      const script = await storage.getAutomationScript(scriptId);
+      
+      if (!script) {
+        return res.status(404).json({ message: "Automation script not found" });
+      }
+      
+      const updateData = insertAutomationScriptSchema.partial().parse(req.body);
+      updateData.updatedById = req.session.userId!;
+      
+      const updatedScript = await storage.updateAutomationScript(scriptId, updateData);
+      
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "update",
+        entityType: "automation_script",
+        entityId: scriptId,
+        details: {
+          name: script.name,
+          updates: Object.keys(updateData)
+        }
+      });
+      
+      res.json(updatedScript);
+    } catch (error) {
+      console.error("Update automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/automation/scripts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scriptId = parseInt(req.params.id);
+      const script = await storage.getAutomationScript(scriptId);
+      
+      if (!script) {
+        return res.status(404).json({ message: "Automation script not found" });
+      }
+      
+      await storage.deleteAutomationScript(scriptId);
+      
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "delete",
+        entityType: "automation_script",
+        entityId: scriptId,
+        details: {
+          name: script.name,
+          type: script.type
+        }
+      });
+      
+      res.json({ message: "Automation script deleted successfully" });
+    } catch (error) {
+      console.error("Delete automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Automation Runs
+  apiRouter.get("/automation/runs", isAuthenticated, async (req, res) => {
+    try {
+      const scriptId = req.query.scriptId ? parseInt(req.query.scriptId as string) : undefined;
+      const runs = await storage.getAutomationRuns(scriptId);
+      res.json(runs);
+    } catch (error) {
+      console.error("Get automation runs error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/automation/runs/:id", isAuthenticated, async (req, res) => {
+    try {
+      const runId = parseInt(req.params.id);
+      const run = await storage.getAutomationRun(runId);
+      
+      if (!run) {
+        return res.status(404).json({ message: "Automation run not found" });
+      }
+      
+      res.json(run);
+    } catch (error) {
+      console.error("Get automation run error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Execute script
+  apiRouter.post("/automation/scripts/:id/execute", isAuthenticated, async (req, res) => {
+    try {
+      const scriptId = parseInt(req.params.id);
+      const script = await storage.getAutomationScript(scriptId);
+      
+      if (!script) {
+        return res.status(404).json({ message: "Automation script not found" });
+      }
+      
+      const runData = {
+        scriptId,
+        status: "Running" as const,
+        startTime: new Date(),
+        executedById: req.session.userId!,
+        environment: req.body.environment,
+        browser: req.body.browser
+      };
+      
+      const run = await storage.createAutomationRun(runData);
+      
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "execute",
+        entityType: "automation_script",
+        entityId: scriptId,
+        details: {
+          name: script.name,
+          runId: run.id
+        }
+      });
+      
+      // In a real implementation, this would trigger the actual execution
+      // For simulation purposes, update the run after a delay
+      setTimeout(async () => {
+        try {
+          // Simulate a random test result
+          const statuses = ['Passed', 'Failed'];
+          const endTime = new Date();
+          const duration = Math.floor((endTime.getTime() - run.startTime.getTime()) / 1000);
+          const randomStatus = statuses[Math.floor(Math.random() * statuses.length)] as 'Passed' | 'Failed';
+          
+          await storage.updateAutomationRun(run.id, {
+            status: randomStatus,
+            endTime,
+            duration,
+            logs: `Test execution completed with status: ${randomStatus}`,
+            errorMessage: randomStatus === 'Failed' ? 'Simulated test failure' : undefined,
+          });
+          
+          // Update the script's last run information
+          await storage.updateAutomationScript(scriptId, {
+            lastRunStatus: randomStatus,
+            lastRunDate: endTime,
+            lastRunDuration: duration,
+          });
+        } catch (error) {
+          console.error('Error in delayed test execution update:', error);
+        }
+      }, 5000); // Simulate 5 second test run
+      
+      res.status(202).json({
+        message: "Script execution started",
+        runId: run.id
+      });
+    } catch (error) {
+      console.error("Execute automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Automation Schedules
+  apiRouter.get("/automation/schedules", isAuthenticated, async (req, res) => {
+    try {
+      const schedules = await storage.getAutomationSchedules();
+      res.json(schedules);
+    } catch (error) {
+      console.error("Get automation schedules error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/automation/schedules/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.id);
+      const schedule = await storage.getAutomationSchedule(scheduleId);
+      
+      if (!schedule) {
+        return res.status(404).json({ message: "Automation schedule not found" });
+      }
+      
+      res.json(schedule);
+    } catch (error) {
+      console.error("Get automation schedule error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/automation/schedules", isAuthenticated, async (req, res) => {
+    try {
+      const scheduleData = insertAutomationScheduleSchema.parse(req.body);
+      scheduleData.createdById = req.session.userId!;
+      
+      const schedule = await storage.createAutomationSchedule(scheduleData);
+      
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "create",
+        entityType: "automation_schedule",
+        entityId: schedule.id,
+        details: {
+          name: schedule.name,
+          scriptCount: (schedule.scriptIds as number[]).length
+        }
+      });
+      
+      res.status(201).json(schedule);
+    } catch (error) {
       console.error("Create automation schedule error:", error);
       res.status(500).json({ message: "Server error" });
     }
