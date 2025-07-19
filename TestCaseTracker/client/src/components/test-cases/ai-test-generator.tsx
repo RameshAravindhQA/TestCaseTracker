@@ -181,22 +181,38 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
         // Check content type
         const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
+        let responseData;
+        
+        try {
+          // Always try to parse as JSON first
           const responseText = await response.text();
-          console.error('❌ Expected JSON response but got:', {
-            contentType,
-            responsePreview: responseText.substring(0, 200)
+          console.log('📋 Raw response text:', responseText.substring(0, 300));
+          
+          if (!contentType || !contentType.includes('application/json')) {
+            console.error('❌ Expected JSON response but got:', {
+              contentType,
+              responsePreview: responseText.substring(0, 200)
+            });
+            
+            // Check if response contains HTML (server error page)
+            if (responseText.includes('<!DOCTYPE html>')) {
+              throw new Error('Server returned an error page instead of JSON. Please check server logs.');
+            }
+            
+            throw new Error('Server returned invalid response format (expected JSON)');
+          }
+          
+          responseData = JSON.parse(responseText);
+          console.log('✅ Parsed JSON response:', {
+            success: responseData.success,
+            testCasesCount: responseData.testCases?.length || 0,
+            source: responseData.source,
+            hasAnalysis: !!responseData.analysis
           });
-          throw new Error('Server returned invalid response format (expected JSON but got HTML/text)');
+        } catch (parseError) {
+          console.error('❌ Failed to parse response:', parseError);
+          throw new Error('Failed to parse server response. Please try again.');
         }
-
-        const responseData = await response.json();
-        console.log('✅ Parsed JSON response:', {
-          success: responseData.success,
-          testCasesCount: responseData.testCases?.length || 0,
-          source: responseData.source,
-          hasAnalysis: !!responseData.analysis
-        });
 
         // Validate response structure
         if (!responseData.success) {

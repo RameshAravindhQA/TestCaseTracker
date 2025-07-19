@@ -137,8 +137,25 @@ export class GeminiAIService {
       
       console.log('🤖 Gemini response received:', text.substring(0, 200) + '...');
       
+      // Clean up the response text - remove any markdown or extra formatting
+      const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      
       // Parse the JSON response
-      const testCases = JSON.parse(text);
+      let testCases;
+      try {
+        testCases = JSON.parse(cleanText);
+      } catch (parseError) {
+        console.error('❌ Failed to parse Gemini response as JSON:', parseError);
+        console.log('🔍 Raw response:', text);
+        // Fall back to mock service if JSON parsing fails
+        throw new Error('Failed to parse Gemini response as valid JSON');
+      }
+      
+      // Ensure testCases is an array
+      if (!Array.isArray(testCases)) {
+        console.error('❌ Gemini response is not an array:', typeof testCases);
+        throw new Error('Gemini response must be an array of test cases');
+      }
       
       return {
         testCases: testCases,
