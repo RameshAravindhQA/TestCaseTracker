@@ -147,6 +147,47 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         const response = await fetch('/api/ai/generate-enhanced-test-cases', {
           method: 'POST',
           body: requestBody,
+
+
+  // Debug function to test AI generation
+  const debugAIGeneration = useMutation({
+    mutationFn: async () => {
+      console.log('🔍 Debug: Testing AI Generation API...');
+      
+      const response = await fetch('/api/ai/debug-generation', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Debug API failed: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('🔍 Debug response:', data);
+      return data;
+    },
+    onSuccess: (data) => {
+      console.log('✅ Debug test successful:', data);
+      toast({
+        title: "🔍 AI Generation Debug",
+        description: `Debug completed. Service status: ${data.debug.testGeneration?.success ? 'Working' : 'Failed'}`,
+      });
+    },
+    onError: (error: any) => {
+      console.error('❌ Debug test failed:', error);
+      toast({
+        title: "Debug Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
           credentials: 'include',
           headers,
           signal: controller.signal
@@ -184,34 +225,60 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         let responseData;
         
         try {
-          // Always try to parse as JSON first
+          // Get the raw response text
           const responseText = await response.text();
-          console.log('📋 Raw response text:', responseText.substring(0, 300));
+          console.log('📋 Raw response received:', {
+            contentType,
+            status: response.status,
+            statusText: response.statusText,
+            responseLength: responseText.length,
+            responsePreview: responseText.substring(0, 500)
+          });
           
+          // Check if we got HTML instead of JSON
+          if (responseText.includes('<!DOCTYPE html>') || responseText.includes('<html')) {
+            console.error('❌ Server returned HTML page instead of JSON');
+            console.error('❌ HTML content preview:', responseText.substring(0, 1000));
+            throw new Error('Server error: Received HTML page instead of API response. This usually indicates a server-side error or routing issue.');
+          }
+          
+          // Check content type
           if (!contentType || !contentType.includes('application/json')) {
-            console.error('❌ Expected JSON response but got:', {
-              contentType,
+            console.error('❌ Invalid content type:', {
+              expectedContentType: 'application/json',
+              actualContentType: contentType,
               responsePreview: responseText.substring(0, 200)
             });
-            
-            // Check if response contains HTML (server error page)
-            if (responseText.includes('<!DOCTYPE html>')) {
-              throw new Error('Server returned an error page instead of JSON. Please check server logs.');
-            }
-            
-            throw new Error('Server returned invalid response format (expected JSON)');
+            throw new Error(`Invalid response format: Expected JSON but got ${contentType || 'unknown'}`);
+          }
+          
+          // Try to parse as JSON
+          if (!responseText || responseText.trim() === '') {
+            throw new Error('Empty response from server');
           }
           
           responseData = JSON.parse(responseText);
-          console.log('✅ Parsed JSON response:', {
+          console.log('✅ Successfully parsed JSON response:', {
             success: responseData.success,
             testCasesCount: responseData.testCases?.length || 0,
             source: responseData.source,
-            hasAnalysis: !!responseData.analysis
+            hasAnalysis: !!responseData.analysis,
+            hasError: !!responseData.error
           });
-        } catch (parseError) {
-          console.error('❌ Failed to parse response:', parseError);
-          throw new Error('Failed to parse server response. Please try again.');
+          
+        } catch (parseError: any) {
+          console.error('❌ Response parsing failed:', {
+            error: parseError.message,
+            contentType,
+            responseStatus: response.status,
+            responseLength: responseText?.length || 0
+          });
+          
+          if (parseError instanceof SyntaxError) {
+            throw new Error('Server returned invalid JSON. This may indicate a server error.');
+          } else {
+            throw new Error(parseError.message || 'Failed to process server response');
+          }
         }
 
         // Validate response structure
@@ -734,6 +801,18 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
               </TabsContent>
 
               <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => debugAIGeneration.mutate()}
+                  disabled={debugAIGeneration.isPending}
+                  size="sm"
+                >
+                  {debugAIGeneration.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "🔍 Debug"
+                  )}
+                </Button>
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
