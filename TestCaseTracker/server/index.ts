@@ -33,8 +33,7 @@ async function startServer() {
       next(error);
     });
 
-    app.use(express.static(path.join(import.meta.dirname, '../client/dist')));
-
+    // Basic request logging middleware
     app.use((req, res, next) => {
       const start = Date.now();
       const path = req.path;
@@ -65,10 +64,13 @@ async function startServer() {
       next();
     });
 
-    // CRITICAL: Register API routes BEFORE any catch-all middleware
+    // CRITICAL: Register API routes BEFORE any static file serving
     console.log("📡 Registering API routes...");
     const httpServer = await registerRoutes(app);
     console.log("✅ API routes registered successfully");
+
+    // Static file serving - MUST come after API routes
+    app.use(express.static(path.join(import.meta.dirname, '../client/dist')));
 
     // Add middleware to protect API routes from being caught by static file serving
     app.use('/api/*', (req, res, next) => {
