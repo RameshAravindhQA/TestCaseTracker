@@ -177,9 +177,6 @@ function Router() {
       <Route path="/test-upload">
         <ProtectedComponent Component={TestUploadPage} />
       </Route>
-      <Route path="/timesheets">
-        <ProtectedComponent Component={TimeSheetsPage} />
-      </Route>
       <Route path="/notebooks">
         <ProtectedComponent Component={NotebooksPage} />
       </Route>
