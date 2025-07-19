@@ -37,7 +37,6 @@ import TimesheetsPage from "@/pages/timesheets/index";
 import NotebooksPage from "@/pages/notebooks/index";
 import TodosPage from "./pages/todos";
 import TestDataGeneratorPage from "./pages/test-data-generator";
-import { BrowserRouter as Router, Routes, Route as RouteDom } from 'react-router-dom';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import MainLayout from '@/components/layout/main-layout';
 import PageTransition from '@/components/ui/page-transition';
