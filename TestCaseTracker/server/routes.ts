@@ -1602,13 +1602,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
   // Enhanced AI Test Case Generation endpoint with proper error handling
   apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, async (req, res) => {
-    // Set JSON headers immediately
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-
     try {
+      // Force JSON response headers
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
       console.log('🤖 Enhanced AI Generation - Handler started');
       console.log('🔍 Session data:', { userId: req.session?.userId, userRole: req.session?.userRole });
       console.log('🔍 Request body:', req.body);

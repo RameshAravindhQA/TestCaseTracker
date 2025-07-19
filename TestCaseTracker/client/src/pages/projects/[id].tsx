@@ -749,10 +749,8 @@ export default function ProjectDetailPage() {
                   projectId={projectId}
                   modules={modules || []}
                   onTestCasesGenerated={(generatedCases) => {
-                    // Add generated test cases to the project
-                    generatedCases.forEach(testCase => {
-                      createTestCaseMutation.mutate(testCase);
-                    });
+                    // Refresh test cases when new ones are generated
+                    queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/test-cases`] });
                   }}
                 />
                 <Button onClick={() => setTestCaseFormOpen(true)}>
