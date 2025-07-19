@@ -252,12 +252,14 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
       if (data.testCases && Array.isArray(data.testCases) && data.testCases.length > 0) {
         setGeneratedTestCases(data.testCases);
+        // Auto-select all test cases for user convenience
+        setSelectedTestCases(new Set(data.testCases.map((_, index) => index)));
 
         const sourceLabel = data.source === 'gemini-ai' ? 'Google Gemini AI' : 'Intelligent Mock Service';
 
         toast({
-          title: "🎯 AI Test Cases Generated",
-          description: `Generated ${data.testCases.length} comprehensive test cases using ${sourceLabel}`,
+          title: "🎯 AI Test Cases Ready for Review",
+          description: `Generated ${data.testCases.length} test cases using ${sourceLabel}. Review and select which ones to merge.`,
         });
       } else {
         toast({
@@ -355,6 +357,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       inputType
     };
 
+    // Reset selection state for new generation
+    setSelectedTestCases(new Set());
     generateTestCases.mutate(requestData);
   };
 
@@ -396,6 +400,15 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   };
 
   const handleMergeSelected = () => {
+    if (selectedTestCases.size === 0) {
+      toast({
+        title: "No Test Cases Selected",
+        description: "Please select at least one test case to merge into your project.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const selectedCases = generatedTestCases
       .filter((_, index) => selectedTestCases.has(index))
       .map(tc => ({
@@ -416,13 +429,25 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         createdById: 1 // This should be the current user ID
       }));
 
+    // Play success sound for merge action
+    try {
+      import('../../lib/soundManager.js').then(({ playSound }) => {
+        playSound('success');
+      });
+    } catch (soundError) {
+      console.warn('Sound playback failed:', soundError);
+    }
+
     onTestCasesGenerated(selectedCases);
     setOpen(false);
     resetForm();
 
+    const selectedModule = modules.find(m => m.id === moduleId);
+    const moduleName = selectedModule?.name || "Default Module";
+
     toast({
-      title: "🚀 Test Cases Merged!",
-      description: `Successfully merged ${selectedCases.length} AI-generated test cases into your project`,
+      title: "🚀 Test Cases Merged Successfully!",
+      description: `Merged ${selectedCases.length} AI-generated test cases into ${moduleName}`,
     });
   };
 
@@ -487,13 +512,16 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-purple-500" />
-            AI Test Case Generator Pro
+            {showResults ? "Review AI Generated Test Cases" : "AI Test Case Generator Pro"}
             <Badge variant="outline" className="bg-gradient-to-r from-purple-100 to-blue-100">
               Powered by Google Gemini
             </Badge>
           </DialogTitle>
           <DialogDescription>
-            Generate comprehensive test cases using AI with text, images, URLs, and element inspection
+            {showResults 
+              ? "Review the generated test cases below and select which ones to merge into your project"
+              : "Generate comprehensive test cases using AI with text, images, URLs, and element inspection"
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -768,30 +796,44 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             )}
 
             {/* Controls */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold">Generated Test Cases</h3>
-                <Badge variant="outline">{generatedTestCases.length} total</Badge>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">AI Generated Test Cases</h3>
+                  <Badge variant="outline">{generatedTestCases.length} total</Badge>
+                  <Badge variant="secondary">{selectedTestCases.size} selected</Badge>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleSelectAll} size="sm">
+                    {selectedTestCases.size === generatedTestCases.length ? 'Deselect All' : 'Select All'}
+                  </Button>
+                  <Button variant="outline" onClick={exportTestCases} size="sm" disabled={selectedTestCases.size === 0}>
+                    <Download className="h-4 w-4 mr-1" />
+                    Export CSV
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleSelectAll} size="sm">
-                  {selectedTestCases.size === generatedTestCases.length ? 'Deselect All' : 'Select All'}
-                </Button>
-                <Button variant="outline" onClick={exportTestCases} size="sm" disabled={selectedTestCases.size === 0}>
-                  <Download className="h-4 w-4 mr-1" />
-                  Export CSV
-                </Button>
-                <Button variant="outline" onClick={resetForm} size="sm">
-                  Generate More
-                </Button>
-                <Button 
-                  onClick={handleMergeSelected}
-                  disabled={selectedTestCases.size === 0}
-                  className="gap-2"
-                >
-                  <Merge className="h-4 w-4" />
-                  Merge Selected ({selectedTestCases.size})
-                </Button>
+              
+              <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                    Review the generated test cases and select which ones to merge into your project
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={resetForm} size="sm">
+                    Generate More
+                  </Button>
+                  <Button 
+                    onClick={handleMergeSelected}
+                    disabled={selectedTestCases.size === 0}
+                    className="gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    <Merge className="h-4 w-4" />
+                    Merge Selected ({selectedTestCases.size})
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -799,8 +841,10 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             <ScrollArea className="max-h-96">
               <div className="space-y-3">
                 {generatedTestCases.map((testCase, index) => (
-                  <Card key={index} className={`cursor-pointer transition-all ${
-                    selectedTestCases.has(index) ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-950' : ''
+                  <Card key={index} className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                    selectedTestCases.has(index) 
+                      ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800' 
+                      : 'hover:border-gray-300 dark:hover:border-gray-600'
                   }`}>
                     <CardHeader 
                       className="pb-2"
@@ -809,9 +853,15 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <CardTitle className="text-sm flex items-center gap-2">
-                            {selectedTestCases.has(index) && (
-                              <Check className="h-4 w-4 text-purple-500" />
-                            )}
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                              selectedTestCases.has(index) 
+                                ? 'bg-green-500 border-green-500' 
+                                : 'border-gray-300 hover:border-green-400'
+                            }`}>
+                              {selectedTestCases.has(index) && (
+                                <Check className="h-3 w-3 text-white" />
+                              )}
+                            </div>
                             {testCase.feature}
                           </CardTitle>
                           <CardDescription className="text-xs mt-1">
