@@ -70,6 +70,16 @@ async function startServer() {
     const httpServer = await registerRoutes(app);
     console.log("✅ API routes registered successfully");
 
+    // Add middleware to protect API routes from being caught by static file serving
+    app.use('/api/*', (req, res, next) => {
+      console.log(`🚨 API route not found: ${req.method} ${req.path}`);
+      res.status(404).json({ 
+        success: false, 
+        error: `API endpoint not found: ${req.method} ${req.path}`,
+        timestamp: new Date().toISOString()
+      });
+    });
+
     // Initialize database with retry logic
     let dbInitialized = false;
     let retries = 3;
