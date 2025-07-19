@@ -1600,191 +1600,152 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
   
 
-  // Enhanced AI Test Case Generation endpoint with multipart form data support
-  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, 
-    (req, res, next) => {
-      console.log('🔍 AI Generation endpoint hit - Initial request processing');
-      console.log('🔍 Request method:', req.method);
-      console.log('🔍 Request headers:', req.headers);
-      console.log('🔍 Request body keys:', Object.keys(req.body || {}));
-      
-      // Set response headers early to ensure JSON response
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      
-      // Handle preflight requests
-      if (req.method === 'OPTIONS') {
-        return res.status(200).json({ success: true, message: 'Options OK' });
-      }
-      
-      // Only process multipart if content-type indicates it
-      const contentType = req.headers['content-type'] || '';
-      if (contentType.includes('multipart/form-data')) {
-        console.log('🔍 Processing multipart form data');
-        // Handle file upload with error handling
-        bugAttachmentUpload.array('images', 10)(req, res, (err) => {
-          if (err) {
-            console.error("❌ Enhanced AI file upload error:", err);
-            return res.status(400).json({ 
-              success: false,
-              error: 'File upload failed',
-              details: err.message,
-              timestamp: new Date().toISOString()
-            });
-          }
-          console.log('✅ File upload processed successfully');
-          next();
-        });
-      } else {
-        console.log('🔍 Processing JSON request');
-        next();
-      }
-    },
-    async (req, res) => {
-      try {
-        console.log('🤖 Enhanced AI Generation - Handler started');
-        console.log('🔍 Session data:', { userId: req.session?.userId, userRole: req.session?.userRole });
-        
-        // Ensure JSON response regardless of what happens
-        res.setHeader('Content-Type', 'application/json');
-        
-        // Validate authentication
-        if (!req.session || !req.session.userId) {
-          console.error('❌ Authentication failed');
-          return res.status(401).json({ 
-            success: false,
-            error: 'Authentication required',
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        const { 
-          requirement, 
-          projectContext, 
-          moduleContext, 
-          testType, 
-          priority,
-          websiteUrl,
-          elementInspection,
-          userFlows,
-          businessRules,
-          inputType 
-        } = req.body;
-        
-        console.log('📋 Request data received:', {
-          requirement: requirement?.substring(0, 100) + '...',
-          projectContext: projectContext?.substring(0, 50),
-          moduleContext,
-          testType,
-          priority,
-          inputType,
-          filesCount: req.files?.length || 0,
-          hasWebsiteUrl: !!websiteUrl,
-          hasElementInspection: !!elementInspection,
-          hasUserFlows: !!userFlows,
-          hasBusinessRules: !!businessRules
-        });
-        
-        // Input validation
-        if (!requirement && !websiteUrl && (!req.files || req.files.length === 0)) {
-          console.error('❌ No input provided');
-          return res.status(400).json({ 
-            success: false,
-            error: 'At least one input is required: requirement text, website URL, or uploaded images',
-            timestamp: new Date().toISOString()
-          });
-        }
+  // Enhanced AI Test Case Generation endpoint with proper error handling
+  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, async (req, res) => {
+    // Set JSON headers immediately
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
 
-        // Try to use Gemini service first
-        try {
-          console.log('🔮 Attempting to use Gemini AI service...');
-          
-          const geminiRequest = {
-            requirement: requirement || '',
-            projectContext: projectContext || '',
-            moduleContext: moduleContext || '',
-            testType: testType || 'functional',
-            priority: priority || 'Medium',
-            websiteUrl: websiteUrl || '',
-            elementInspection: elementInspection || '',
-            userFlows: userFlows || '',
-            businessRules: businessRules || '',
-            inputType: inputType || 'text',
-            images: req.files || []
-          };
-          
-          console.log('🔮 Gemini request prepared:', {
-            hasRequirement: !!geminiRequest.requirement,
-            hasModuleContext: !!geminiRequest.moduleContext,
-            testType: geminiRequest.testType,
-            priority: geminiRequest.priority,
-            inputType: geminiRequest.inputType
-          });
-          
-          const geminiResponse = await geminiService.generateTestCases(geminiRequest);
-          
-          console.log('✅ Gemini response generated successfully:', {
-            testCasesCount: geminiResponse.testCases?.length || 0,
-            source: geminiResponse.source
-          });
-          
-          const response = {
-            success: true,
-            testCases: geminiResponse.testCases,
-            analysis: geminiResponse.analysis,
-            message: geminiResponse.message,
-            source: geminiResponse.source,
-            timestamp: new Date().toISOString()
-          };
-          
-          console.log('📤 Sending successful response');
-          return res.status(200).json(response);
-          
-        } catch (geminiError: any) {
-          console.error('❌ Gemini service failed, falling back to mock service:', geminiError.message);
-          
-          // Fall back to mock service
-          const mockResponse = generateMockResponse(
-            requirement || '', 
-            moduleContext || '', 
-            testType || 'functional', 
-            priority || 'Medium', 
-            inputType || 'text', 
-            websiteUrl || '', 
-            req.files || [], 
-            businessRules || '', 
-            elementInspection || '', 
-            userFlows || ''
-          );
-          
-          console.log('✅ Mock response generated successfully:', {
-            testCasesCount: mockResponse.testCases?.length || 0,
-            source: mockResponse.source
-          });
-          
-          console.log('📤 Sending mock response');
-          return res.status(200).json(mockResponse);
-        }
-        
-      } catch (handlerError: any) {
-        console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
-        console.error('❌ Error stack:', handlerError.stack);
-        
-        // Ensure we always return JSON even in error cases
-        const errorResponse = { 
+    try {
+      console.log('🤖 Enhanced AI Generation - Handler started');
+      console.log('🔍 Session data:', { userId: req.session?.userId, userRole: req.session?.userRole });
+      console.log('🔍 Request body:', req.body);
+      
+      // Validate authentication
+      if (!req.session || !req.session.userId) {
+        console.error('❌ Authentication failed');
+        return res.status(401).json({ 
           success: false,
-          error: 'Internal server error during test case generation',
-          details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
+          error: 'Authentication required',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      const { 
+        requirement, 
+        projectContext, 
+        moduleContext, 
+        testType, 
+        priority,
+        websiteUrl,
+        elementInspection,
+        userFlows,
+        businessRules,
+        inputType 
+      } = req.body;
+      
+      console.log('📋 Request data received:', {
+        requirement: requirement?.substring(0, 100) + '...',
+        projectContext: projectContext?.substring(0, 50),
+        moduleContext,
+        testType,
+        priority,
+        inputType,
+        hasWebsiteUrl: !!websiteUrl,
+        hasElementInspection: !!elementInspection,
+        hasUserFlows: !!userFlows,
+        hasBusinessRules: !!businessRules
+      });
+      
+      // Input validation
+      if (!requirement && !websiteUrl) {
+        console.error('❌ No input provided');
+        return res.status(400).json({ 
+          success: false,
+          error: 'At least one input is required: requirement text or website URL',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Try to use Gemini service
+      try {
+        console.log('🔮 Attempting to use Gemini AI service...');
+        
+        const geminiRequest = {
+          requirement: requirement || '',
+          projectContext: projectContext || '',
+          moduleContext: moduleContext || '',
+          testType: testType || 'functional',
+          priority: priority || 'Medium',
+          websiteUrl: websiteUrl || '',
+          elementInspection: elementInspection || '',
+          userFlows: userFlows || '',
+          businessRules: businessRules || '',
+          inputType: inputType || 'text',
+          images: []
+        };
+        
+        console.log('🔮 Calling Gemini service with request:', {
+          hasRequirement: !!geminiRequest.requirement,
+          hasModuleContext: !!geminiRequest.moduleContext,
+          testType: geminiRequest.testType,
+          priority: geminiRequest.priority,
+          inputType: geminiRequest.inputType
+        });
+        
+        const geminiResponse = await geminiService.generateTestCases(geminiRequest);
+        
+        console.log('✅ Gemini response generated successfully:', {
+          testCasesCount: geminiResponse.testCases?.length || 0,
+          source: geminiResponse.source
+        });
+        
+        const response = {
+          success: true,
+          testCases: geminiResponse.testCases,
+          analysis: geminiResponse.analysis,
+          message: geminiResponse.message,
+          source: geminiResponse.source,
           timestamp: new Date().toISOString()
         };
         
-        console.log('📤 Sending error response');
-        return res.status(500).json(errorResponse);
+        console.log('📤 Sending successful response');
+        return res.status(200).json(response);
+        
+      } catch (geminiError: any) {
+        console.error('❌ Gemini service failed, falling back to mock service:', geminiError.message);
+        
+        // Fall back to mock service
+        const mockResponse = generateMockResponse(
+          requirement || '', 
+          moduleContext || '', 
+          testType || 'functional', 
+          priority || 'Medium', 
+          inputType || 'text', 
+          websiteUrl || '', 
+          [], 
+          businessRules || '', 
+          elementInspection || '', 
+          userFlows || ''
+        );
+        
+        console.log('✅ Mock response generated successfully:', {
+          testCasesCount: mockResponse.testCases?.length || 0,
+          source: mockResponse.source
+        });
+        
+        console.log('📤 Sending mock response');
+        return res.status(200).json(mockResponse);
       }
+      
+    } catch (handlerError: any) {
+      console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
+      console.error('❌ Error stack:', handlerError.stack);
+      
+      // Ensure we always return JSON even in error cases
+      const errorResponse = { 
+        success: false,
+        error: 'Internal server error during test case generation',
+        details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('📤 Sending error response');
+      return res.status(500).json(errorResponse);
     }
-  );
+  });
 
   // Generate mock response when Gemini fails
   function generateMockResponse(requirement, moduleContext, testType, priority, inputType, websiteUrl, files, businessRules, elementInspection, userFlows) {
