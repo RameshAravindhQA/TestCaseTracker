@@ -41,6 +41,26 @@ export default function EmployeesPage() {
     },
   });
 
+  const calculateExperience = (joiningDate: string) => {
+    if (!joiningDate) return "N/A";
+    
+    const joining = new Date(joiningDate);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - joining.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    const years = Math.floor(diffDays / 365);
+    const months = Math.floor((diffDays % 365) / 30);
+    
+    if (years > 0) {
+      return `${years} year${years > 1 ? 's' : ''} ${months > 0 ? `${months} month${months > 1 ? 's' : ''}` : ''}`;
+    } else if (months > 0) {
+      return `${months} month${months > 1 ? 's' : ''}`;
+    } else {
+      return "Less than a month";
+    }
+  };
+
   const filteredEmployees = employees.filter((employee: any) =>
     `${employee.firstName} ${employee.lastName} ${employee.email} ${employee.employeeId}`
       .toLowerCase()
@@ -124,11 +144,13 @@ export default function EmployeesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Profile</TableHead>
                     <TableHead>Employee ID</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Department</TableHead>
+                    <TableHead>Experience</TableHead>
                     <TableHead>Technologies</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
@@ -137,22 +159,45 @@ export default function EmployeesPage() {
                 <TableBody>
                   {filteredEmployees.map((employee: any) => (
                     <TableRow key={employee.id}>
-                      <TableCell className="font-medium">{employee.employeeId}</TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-2">
-                          {employee.profilePicture && (
+                        <div className="flex items-center justify-center">
+                          {employee.profilePicture ? (
                             <img
                               src={employee.profilePicture}
                               alt={`${employee.firstName} ${employee.lastName}`}
-                              className="h-8 w-8 rounded-full object-cover"
+                              className="h-12 w-12 rounded-full object-cover border-2 border-gray-200"
                             />
+                          ) : (
+                            <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-medium">
+                              {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                            </div>
                           )}
-                          <span>{employee.firstName} {employee.lastName}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{employee.employeeId}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                          {employee.joiningDate && (
+                            <div className="text-sm text-muted-foreground">
+                              Joined: {new Date(employee.joiningDate).toLocaleDateString()}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>{employee.email}</TableCell>
                       <TableCell>{employee.phoneNumber || "N/A"}</TableCell>
                       <TableCell>{employee.department || "N/A"}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{calculateExperience(employee.joiningDate)}</div>
+                          {employee.overallExperience && (
+                            <div className="text-sm text-muted-foreground max-w-[200px] truncate" title={employee.overallExperience}>
+                              {employee.overallExperience}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {employee.technologies?.slice(0, 2).map((tech: string, index: number) => (

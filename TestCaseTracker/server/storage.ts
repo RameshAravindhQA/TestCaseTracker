@@ -324,6 +324,9 @@ class MemStorage implements IStorage {
   private departmentOptions = new Map<number, any>();
   private navadhitiProjects = new Map<number, any>();
 
+  // Initialize todoLists as Map instead of conflicting declarations
+  private todoListsMap = new Map<number, any>();
+
   private nextId = 1;
   private testSheetIdCounter = 1;
 
@@ -2003,16 +2006,14 @@ class MemStorage implements IStorage {
   }
 
   async getTodoLists(userId: number): Promise<any[]> {
-    if (!this.todoLists || typeof this.todoLists.values !== 'function') {
-      console.warn('TodoLists not properly initialized, initializing now');
-      this.todoLists = new Map();
-      return [];
+    if (!this.todoListsMap) {
+      this.todoListsMap = new Map();
     }
-    return Array.from(this.todoLists.values()).filter(list => list.userId === userId);
+    return Array.from(this.todoListsMap.values()).filter(list => list.userId === userId);
   }
 
   async getTodoList(id: number): Promise<any | undefined> {
-    return this.todoLists.get(id);
+    return this.todoListsMap.get(id);
   }
 
   async createTodoList(data: any): Promise<any> {
@@ -2023,12 +2024,12 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    this.todoLists.set(id, todoList);
+    this.todoListsMap.set(id, todoList);
     return todoList;
   }
 
   async updateTodoList(id: number, data: any): Promise<any | null> {
-    const todoList = this.todoLists.get(id);
+    const todoList = this.todoListsMap.get(id);
     if (!todoList) return null;
 
     const updatedTodoList = {
@@ -2036,12 +2037,12 @@ class MemStorage implements IStorage {
       ...data,
       updatedAt: new Date().toISOString()
     };
-    this.todoLists.set(id, updatedTodoList);
+    this.todoListsMap.set(id, updatedTodoList);
     return updatedTodoList;
   }
 
   async deleteTodoList(id: number): Promise<boolean> {
-    return this.todoLists.delete(id);
+    return this.todoListsMap.delete(id);
   }
 
   // Reset storage method for testing
@@ -2802,6 +2803,8 @@ class MemStorage implements IStorage {
       technologies: data.technologies || [],
       department: data.department,
       status: data.status || "Active",
+      joiningDate: data.joiningDate,
+      overallExperience: data.overallExperience,
       createdById: data.createdById,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

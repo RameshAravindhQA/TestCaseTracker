@@ -1781,6 +1781,35 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // User permissions endpoint
+  apiRouter.get("/user/permissions", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Return user permissions based on role
+      const permissions = {
+        role: user.role,
+        permissions: {
+          projects: { view: true, create: user.role === "Admin" || user.role === "Project Manager", update: true, delete: user.role === "Admin" },
+          testCases: { view: true, create: true, update: true, delete: user.role === "Admin" },
+          bugs: { view: true, create: true, update: true, delete: user.role === "Admin" },
+          reports: { view: true, create: true, update: false, delete: false },
+          users: { view: user.role === "Admin", create: user.role === "Admin", update: user.role === "Admin", delete: user.role === "Admin" }
+        }
+      };
+
+      res.json(permissions);
+    } catch (error) {
+      console.error("Get user permissions error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Change password endpoint
   apiRouter.post("/user/change-password", isAuthenticated, async (req, res) => {
     try {

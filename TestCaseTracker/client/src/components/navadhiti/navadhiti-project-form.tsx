@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,14 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { queryClient } from "@/lib/queryClient";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { DialogFooter } from "@/components/ui/dialog";
 
 const navadhitiProjectSchema = z.object({
   projectName: z.string().min(1, "Project name is required"),
+  projectLeadId: z.string().optional(),
   overallProjectActivity: z.string().optional(),
   currentSprint: z.string().optional(),
   currentIssues: z.string().optional(),
@@ -36,12 +36,22 @@ interface NavadhitiProjectFormProps {
 
 export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFormProps) {
   const { toast } = useToast();
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ["/api/employees"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/employees");
+      return res.json();
+    },
+  });
+
   const isEditing = !!project;
 
   const form = useForm<NavadhitiProjectFormValues>({
     resolver: zodResolver(navadhitiProjectSchema),
     defaultValues: {
       projectName: project?.projectName || "",
+      projectLeadId: project?.projectLeadId?.toString() || "",
       overallProjectActivity: project?.overallProjectActivity || "",
       currentSprint: project?.currentSprint || "",
       currentIssues: project?.currentIssues || "",
@@ -112,6 +122,31 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
               <FormControl>
                 <Input placeholder="Enter project name" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="projectLeadId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Project Lead</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a project lead" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {employees.map((employee: any) => (
+                    <SelectItem key={employee.id} value={employee.id.toString()}>
+                      {employee.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -257,7 +292,7 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
         {/* Status Sliders */}
         <div className="space-y-6 border-t pt-6">
           <h3 className="text-lg font-semibold">Status Tracking</h3>
-          
+
           <FormField
             control={form.control}
             name="activityStatus"

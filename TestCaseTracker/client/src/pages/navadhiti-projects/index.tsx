@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Plus, Building2, TrendingUp, AlertCircle, CheckCircle, Download, Upload, Search, Edit, Trash2, Calendar, Filter, FileDown } from "lucide-react";
@@ -107,7 +106,7 @@ export default function NavadhitiProjectsPage() {
       "at-risk": "bg-orange-500",
       blocked: "bg-red-500"
     };
-    
+
     return (
       <Badge className={`${colors[status]} text-white`}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -131,7 +130,7 @@ export default function NavadhitiProjectsPage() {
       "Project Name", "Activity", "Sprint", "Current Issues", "Action Items", 
       "Overall Status", "Activity Status", "Sprint Status", "Communication Status"
     ];
-    
+
     const csvContent = [
       headers.join(","),
       ...filteredProjects.map((project: any) => [
@@ -154,7 +153,7 @@ export default function NavadhitiProjectsPage() {
     a.download = `navadhiti-projects-${selectedDate}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
-    
+
     toast({ title: "Export completed", description: "Project data exported successfully" });
   };
 

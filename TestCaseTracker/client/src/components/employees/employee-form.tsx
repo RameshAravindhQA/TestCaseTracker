@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,14 +18,16 @@ import { X } from "lucide-react";
 const employeeSchema = z.object({
   employeeId: z.string().optional(),
   firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
+  lastName: z.string().optional(),
+  email: z.string().email("Invalid email format"),
   phoneNumber: z.string().optional(),
   profilePicture: z.string().optional(),
   locality: z.string().optional(),
-  technologies: z.array(z.string()).default([]),
+  technologies: z.array(z.string()).optional(),
   department: z.string().optional(),
   status: z.enum(["Active", "Inactive"]).default("Active"),
+  joiningDate: z.string().optional(),
+  overallExperience: z.string().optional(),
 });
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -56,6 +57,8 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
       technologies: employee?.technologies || [],
       department: employee?.department || "",
       status: employee?.status || "Active",
+      joiningDate: employee?.joiningDate || "",
+      overallExperience: employee?.overallExperience || "",
     },
   });
 
@@ -251,6 +254,34 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="joiningDate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Joining Date</FormLabel>
+              <FormControl>
+                <Input type="date" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="overallExperience"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Overall Experience</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., 5 years 3 months" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div>
           <FormLabel>Department</FormLabel>
