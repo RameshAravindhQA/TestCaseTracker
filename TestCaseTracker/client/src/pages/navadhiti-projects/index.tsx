@@ -23,6 +23,7 @@ import Papa from 'papaparse';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
+import { Download, FileType } from "lucide-react";
 
 interface NavadhitiProject {
   id: number;
@@ -58,6 +59,7 @@ export default function NavadhitiProjectsPage() {
   const [selectedProjectForStatus, setSelectedProjectForStatus] = useState<any>(null);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [statusUpdateProject, setStatusUpdateProject] = useState<NavadhitiProject | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Resource Allocation Filters
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
