@@ -1731,7 +1731,6 @@ class MemStorage implements IStorage {
 
   // Custom marker operations with proper ID handling
   async createCustomMarker(data: any): Promise<CustomMarker> {
-    ```text
     const id = this.getNextId();
 
     const marker: CustomMarker = {
