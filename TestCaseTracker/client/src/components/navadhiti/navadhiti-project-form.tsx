@@ -258,26 +258,27 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {/* Project Image Section */}
-          <div className="flex flex-col items-center space-y-4">
+          <div className="flex flex-col items-center space-y-4 p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-900">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Project Logo/Image</h3>
             <div className="relative group cursor-pointer" onClick={handleProjectImageClick}>
-              <Avatar className="w-24 h-24">
+              <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
                 <AvatarImage 
                   src={projectImageUrl || undefined} 
                   alt={`${form.watch("projectName")} project`}
                   className="object-cover"
                 />
-                <AvatarFallback className="text-lg bg-primary/10">
+                <AvatarFallback className="text-2xl bg-gradient-to-r from-purple-500 to-blue-500 text-white">
                   {form.watch("projectName")?.charAt(0)?.toUpperCase() || 'P'}
                 </AvatarFallback>
               </Avatar>
               
               <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <Camera className="h-6 w-6 text-white" />
+                <Camera className="h-8 w-8 text-white" />
               </div>
 
               {uploading && (
                 <div className="absolute inset-0 bg-black bg-opacity-75 rounded-full flex items-center justify-center">
-                  <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  <Loader2 className="h-8 w-8 text-white animate-spin" />
                 </div>
               )}
             </div>
@@ -290,16 +291,37 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
               className="hidden"
             />
 
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm"
-              onClick={handleProjectImageClick}
-              disabled={uploading}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              {uploading ? "Uploading..." : "Upload Project Image"}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={handleProjectImageClick}
+                disabled={uploading}
+                className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {uploading ? "Uploading..." : "Upload Logo"}
+              </Button>
+              {projectImageUrl && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setProjectImageUrl(null);
+                    form.setValue("projectImage", "");
+                  }}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 text-center">
+              Upload a project logo or image to easily identify your project.<br/>
+              Recommended: Square image, max 10MB
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

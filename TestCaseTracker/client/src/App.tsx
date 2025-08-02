@@ -46,6 +46,7 @@ import PageTransition from '@/components/ui/page-transition';
 import SmoothScroll from '@/components/ui/smooth-scroll';
 import AIGeneratorPage from "@/pages/ai-generator";
 import QAUpdatesPage from "@/pages/qa-updates";
+import ResourceAllocationPage from "./pages/resource-allocation";
 
 
 // Loading component for Suspense fallback
@@ -163,6 +164,8 @@ function Router() {
       </Route>
       <Route path="/navadhiti-projects">
         <ProtectedComponent Component={NavadhitiProjectsPage} />
+      </Route>
+      <Route path="/resource-allocation">
       </Route>
       <Route path="/profile">
         <ProtectedComponent Component={ProfilePage} />

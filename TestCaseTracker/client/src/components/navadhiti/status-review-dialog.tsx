@@ -1,4 +1,17 @@
 import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar, Clock, User, AlertCircle, CheckCircle2, Briefcase } from "lucide-react";
+import { format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -33,26 +46,18 @@ const defaultStatusOptions: StatusOption[] = [
 ];
 
 export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDialogProps) {
-  const [overallProjectStatus, setOverallProjectStatus] = useState(project?.overallProjectStatus || '');
-  const [currentSprint, setCurrentSprint] = useState(project?.currentSprint || '');
-  const [currentIssues, setCurrentIssues] = useState(project?.currentIssues || '');
-  const [weeklyComms, setWeeklyComms] = useState(project?.weeklyComms || '');
-  const [immediateActionItems, setImmediateActionItems] = useState(project?.immediateActionItems || '');
-  const [supportRequired, setSupportRequired] = useState(project?.supportRequired || '');
-  const [additionalRemarks, setAdditionalRemarks] = useState(project?.additionalRemarks || '');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const selectedDate = new Date(); // Define selectedDate
 
-  const [statusOptions, setStatusOptions] = useState<StatusOption[]>(defaultStatusOptions);
-  const [newStatusLabel, setNewStatusLabel] = useState("");
-  const [newStatusColor, setNewStatusColor] = useState("#3b82f6");
-  const [formData, setFormData] = useState({
-    overallProjectStatus: "",
-    currentSprintStatus: "",
-    weeklyComms: "",
-    notes: "",
-    projectLead: "" // Added projectLead to form data
-  });
+  // Form state
+  const [reviewDate, setReviewDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [projectLead, setProjectLead] = useState(project?.projectLead || '');
+  const [overallProjectStatus, setOverallProjectStatus] = useState(project?.overallProjectStatus || 1);
+  const [currentSprintStatus, setCurrentSprintStatus] = useState(project?.currentSprintStatus || 1);
+  const [weeklyComms, setWeeklyComms] = useState(project?.weeklyComms || 1);
+  const [notes, setNotes] = useState(project?.notes || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset form when project changes
   useEffect(() => {

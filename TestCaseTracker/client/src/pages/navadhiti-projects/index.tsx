@@ -77,8 +77,22 @@ export default function NavadhitiProjectsPage() {
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/navadhiti-projects");
       if (!res.ok) throw new Error("Failed to fetch projects");
-      return res.json();
+      const data = await res.json();
+      console.log('Fetched projects:', data); // Debug log
+      return data;
     },
+  });
+
+  // Filter projects based on search and status
+  const filteredProjects = projects.filter((project: NavadhitiProject) => {
+    const matchesSearch = searchTerm === "" || 
+      project.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" || project.status === statusFilter;
+    const matchesPriority = priorityFilter === "all" || project.priority === priorityFilter;
+    
+    return matchesSearch && matchesStatus && matchesPriority;
   });
 
   // Fetch employees for resource allocation
@@ -855,7 +869,7 @@ export default function NavadhitiProjectsPage() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
                     <p className="mt-2 text-gray-500">Loading projects...</p>
                   </div>
-                ) : projects.length === 0 ? (
+                ) : filteredProjects.length === 0 ? (
                   <div className="text-center py-12">
                     <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
@@ -874,7 +888,7 @@ export default function NavadhitiProjectsPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {projects.map((project: NavadhitiProject) => {
+                    {filteredProjects.filter(project => project && project.id).map((project: NavadhitiProject) => {
                       const leadEmployee = employeesData.find((emp: any) => 
                         project.assignedEmployees?.includes(emp.id)
                       );
@@ -888,12 +902,16 @@ export default function NavadhitiProjectsPage() {
                                 src={project.projectImage} 
                                 alt={project.projectName}
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // Fallback if image fails to load
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling.style.display = 'flex';
+                                }}
                               />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <Briefcase className="h-12 w-12 text-white/80" />
-                              </div>
-                            )}
+                            ) : null}
+                            <div className={`w-full h-full flex items-center justify-center ${project.projectImage ? 'hidden' : ''}`}>
+                              <Briefcase className="h-12 w-12 text-white/80" />
+                            </div>
                             <div className="absolute top-2 right-2">
                               <Badge 
                                 className={`text-xs ${
