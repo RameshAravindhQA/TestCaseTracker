@@ -5082,6 +5082,38 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Get all projects for project mapping dropdown (includes regular projects and Navadhiti projects)
+  apiRouter.get("/projects/mapping-options", isAuthenticated, async (req, res) => {
+    try {
+      // Get regular projects
+      const regularProjects = await storage.getProjects();
+      
+      // Get Navadhiti projects
+      const navadhitiProjects = await storage.getNavadhitiProjects();
+      
+      // Format both types for dropdown
+      const projectOptions = [
+        ...regularProjects.map(project => ({
+          id: project.id,
+          name: project.name,
+          type: 'regular',
+          status: project.status
+        })),
+        ...navadhitiProjects.map(project => ({
+          id: project.id,
+          name: project.projectName,
+          type: 'navadhiti',
+          status: 'Active'
+        }))
+      ];
+      
+      res.json(projectOptions);
+    } catch (error) {
+      console.error("Get project mapping options error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   apiRouter.post("/employee-projects", isAuthenticated, async (req, res) => {
     try {
       const mapping = await storage.createEmployeeProject(req.body);

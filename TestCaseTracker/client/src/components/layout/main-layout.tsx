@@ -16,7 +16,6 @@ import {
   Bell,
   Settings,
   User,
-  Menu,
   X,
   Search,
   Plus,

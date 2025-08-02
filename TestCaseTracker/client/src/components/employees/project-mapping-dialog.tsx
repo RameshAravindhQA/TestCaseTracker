@@ -24,9 +24,9 @@ export function ProjectMappingDialog({ employee, onClose }: ProjectMappingDialog
   const { toast } = useToast();
 
   const { data: projects = [] } = useQuery({
-    queryKey: ["/api/projects"],
+    queryKey: ["/api/projects/mapping-options"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/projects");
+      const res = await apiRequest("GET", "/api/projects/mapping-options");
       return res.json();
     },
   });
