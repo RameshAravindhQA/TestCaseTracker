@@ -528,7 +528,6 @@ export default function NavadhitiProjectsPage() {
           <CSVImportDialog onClose={() => setIsCsvDialogOpen(false)} />
         </DialogContent>
       </Dialog>
-    </div>
       </div>
     </MainLayout>
   );
