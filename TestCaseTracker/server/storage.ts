@@ -286,8 +286,6 @@ class MemStorage implements IStorage {
   private documents = new Map<number, any>();
   private documentFolders = new Map<number, any>();
   private testSheets = new Map<number, any>();
-  private todos = new Map<number, any>();
-  private todoLists = new Map<number, any>();
   private customers = new Map<number, any>();
   private customerProjects = new Map<number, any>();
   private timeSheets = new Map<number, any>();
@@ -313,9 +311,9 @@ class MemStorage implements IStorage {
   private messageReadStatus = new Map<string, Set<number>>(); // messageId-userId -> Set<userId>
   private conversationMessages = new Map<number, any[]>(); // conversationId -> messages array
 
-  // Todo management
-  private todoLists: Map<number, any> = new Map();
-  private todos: Map<number, any> = new Map();
+  // Todo management - using proper Maps
+  private todoListsMap = new Map<number, any>();
+  private todosMap = new Map<number, any>();
 
   // Employee Management
   private employees = new Map<number, any>();
@@ -1733,6 +1731,7 @@ class MemStorage implements IStorage {
 
   // Custom marker operations with proper ID handling
   async createCustomMarker(data: any): Promise<CustomMarker> {
+    ```text
     const id = this.getNextId();
 
     const marker: CustomMarker = {
@@ -1965,15 +1964,15 @@ class MemStorage implements IStorage {
 
   // Todo Management Implementation
   async getTodos(userId: number): Promise<any[]> {
-    return Array.from(this.todos.values()).filter(todo => todo.userId === userId);
+    return Array.from(this.todosMap.values()).filter(todo => todo.userId === userId);
   }
 
   async getTodosByUserId(userId: number): Promise<any[]> {
-    return Array.from(this.todos.values()).filter(todo => todo.userId === userId);
+    return Array.from(this.todosMap.values()).filter(todo => todo.userId === userId);
   }
 
   async getTodo(id: number): Promise<any | undefined> {
-    return this.todos.get(id);
+    return this.todosMap.get(id);
   }
 
   async createTodo(data: any): Promise<any> {
@@ -1984,12 +1983,12 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    this.todos.set(id, todo);
+    this.todosMap.set(id, todo);
     return todo;
   }
 
   async updateTodo(id: number, data: any): Promise<any | null> {
-    const todo = this.todos.get(id);
+    const todo = this.todosMap.get(id);
     if (!todo) return null;
 
     const updatedTodo = {
@@ -1997,18 +1996,15 @@ class MemStorage implements IStorage {
       ...data,
       updatedAt: new Date().toISOString()
     };
-    this.todos.set(id, updatedTodo);
+    this.todosMap.set(id, updatedTodo);
     return updatedTodo;
   }
 
   async deleteTodo(id: number): Promise<boolean> {
-    return this.todos.delete(id);
+    return this.todosMap.delete(id);
   }
 
   async getTodoLists(userId: number): Promise<any[]> {
-    if (!this.todoListsMap) {
-      this.todoListsMap = new Map();
-    }
     return Array.from(this.todoListsMap.values()).filter(list => list.userId === userId);
   }
 
@@ -2729,6 +2725,7 @@ class MemStorage implements IStorage {
   }
 
   async createConversation(conversationData: any) {
+    ```text
     const conversation = {
       id: this.getNextId('conversations'),
       type: conversationData.type,

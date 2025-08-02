@@ -43,15 +43,15 @@ export default function EmployeesPage() {
 
   const calculateExperience = (joiningDate: string) => {
     if (!joiningDate) return "N/A";
-    
+
     const joining = new Date(joiningDate);
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - joining.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     const years = Math.floor(diffDays / 365);
     const months = Math.floor((diffDays % 365) / 30);
-    
+
     if (years > 0) {
       return `${years} year${years > 1 ? 's' : ''} ${months > 0 ? `${months} month${months > 1 ? 's' : ''}` : ''}`;
     } else if (months > 0) {

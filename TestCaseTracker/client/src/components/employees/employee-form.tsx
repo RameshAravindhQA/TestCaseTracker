@@ -234,9 +234,9 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
     
     try {
       const formData = new FormData();
-      formData.append('profilePicture', file, file.name);
+      formData.append('file', file, file.name);
 
-      const response = await fetch('/api/user/upload-profile-picture', {
+      const response = await fetch('/api/uploads/bug-attachment', {
         method: 'POST',
         body: formData,
         credentials: 'include'
@@ -248,21 +248,21 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
 
       const data = await response.json();
       
-      if (data.profilePicture) {
-        const newUrl = `${data.profilePicture}?t=${Date.now()}`;
+      if (data.fileUrl) {
+        const newUrl = `${data.fileUrl}?t=${Date.now()}`;
         setProfilePictureUrl(newUrl);
-        form.setValue("profilePicture", data.profilePicture);
+        form.setValue("profilePicture", data.fileUrl);
         
         toast({
-          title: "Profile picture uploaded",
-          description: "Profile picture has been updated successfully.",
+          title: "Employee picture uploaded",
+          description: "Employee profile picture has been updated successfully.",
         });
       }
     } catch (error) {
-      console.error("Profile picture upload error:", error);
+      console.error("Employee picture upload error:", error);
       toast({
         title: "Upload failed",
-        description: "Failed to upload profile picture. Please try again.",
+        description: "Failed to upload employee picture. Please try again.",
         variant: "destructive",
       });
     } finally {

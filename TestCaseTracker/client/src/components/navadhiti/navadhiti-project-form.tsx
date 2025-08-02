@@ -22,6 +22,8 @@ const navadhitiProjectSchema = z.object({
   immediateActionItems: z.string().optional(),
   supportRequired: z.string().optional(),
   additionalRemarks: z.string().optional(),
+  status: z.enum(["active", "on-hold", "completed", "cancelled"]).default("active"),
+  priority: z.enum(["high", "medium", "low"]).default("medium"),
   activityStatus: z.number().min(0).max(100).default(0),
   sprintStatus: z.number().min(0).max(100).default(0),
   communicationStatus: z.number().min(0).max(100).default(0),
@@ -59,6 +61,8 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
       immediateActionItems: project?.immediateActionItems || "",
       supportRequired: project?.supportRequired || "",
       additionalRemarks: project?.additionalRemarks || "",
+      status: project?.status || "active",
+      priority: project?.priority || "medium",
       activityStatus: project?.activityStatus || 0,
       sprintStatus: project?.sprintStatus || 0,
       communicationStatus: project?.communicationStatus || 0,
@@ -272,16 +276,98 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
 
         <FormField
           control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Project Status</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="active">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      Active
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="on-hold">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                      On Hold
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="completed">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                      Completed
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="cancelled">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      Cancelled
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="priority"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Priority</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="high">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      High
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="medium">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                      Medium
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="low">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      Low
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="additionalRemarks"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Additional Remarks / Inputs</FormLabel>
+              <FormLabel>Additional Remarks</FormLabel>
               <FormControl>
                 <Textarea 
-                  placeholder="Any additional remarks or inputs..."
+                  placeholder="Any additional notes or remarks"
+                  className="resize-none"
                   rows={3}
                   {...field} 
-                  value={field.value || ""}
                 />
               </FormControl>
               <FormMessage />
