@@ -11,9 +11,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { DialogFooter } from "@/components/ui/dialog";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, Upload, Camera, Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const employeeSchema = z.object({
   employeeId: z.string().optional(),
@@ -28,6 +29,8 @@ const employeeSchema = z.object({
   status: z.enum(["Active", "Inactive"]).default("Active"),
   joiningDate: z.string().optional(),
   overallExperience: z.string().optional(),
+  experienceYears: z.number().optional(),
+  experienceMonths: z.number().optional(),
 });
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -43,6 +46,10 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
   const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>(employee?.technologies || []);
   const [newTechnology, setNewTechnology] = useState("");
   const [newDepartment, setNewDepartment] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(employee?.profilePicture || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [calculatedExperience, setCalculatedExperience] = useState("");
 
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
@@ -59,6 +66,8 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
       status: employee?.status || "Active",
       joiningDate: employee?.joiningDate || "",
       overallExperience: employee?.overallExperience || "",
+      experienceYears: employee?.experienceYears || 0,
+      experienceMonths: employee?.experienceMonths || 0,
     },
   });
 
@@ -164,9 +173,158 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
     );
   };
 
+  // Calculate experience from joining date
+  useEffect(() => {
+    const joiningDate = form.watch("joiningDate");
+    if (joiningDate) {
+      const joinDate = new Date(joiningDate);
+      const currentDate = new Date();
+      
+      let years = currentDate.getFullYear() - joinDate.getFullYear();
+      let months = currentDate.getMonth() - joinDate.getMonth();
+      
+      if (months < 0) {
+        years--;
+        months += 12;
+      }
+      
+      form.setValue("experienceYears", years);
+      form.setValue("experienceMonths", months);
+      
+      const experienceStr = `${years} year${years !== 1 ? 's' : ''} ${months} month${months !== 1 ? 's' : ''}`;
+      form.setValue("overallExperience", experienceStr);
+      setCalculatedExperience(experienceStr);
+    }
+  }, [form.watch("joiningDate")]);
+
+  const handleProfilePictureClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Profile picture must be under 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file type (images only)
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file (JPEG, PNG, GIF, WebP, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    handleImageUpload(file);
+    event.target.value = '';
+  };
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('profilePicture', file, file.name);
+
+      const response = await fetch('/api/user/upload-profile-picture', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      
+      if (data.profilePicture) {
+        const newUrl = `${data.profilePicture}?t=${Date.now()}`;
+        setProfilePictureUrl(newUrl);
+        form.setValue("profilePicture", data.profilePicture);
+        
+        toast({
+          title: "Profile picture uploaded",
+          description: "Profile picture has been updated successfully.",
+        });
+      }
+    } catch (error) {
+      console.error("Profile picture upload error:", error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload profile picture. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Profile Picture Section */}
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative group cursor-pointer" onClick={handleProfilePictureClick}>
+            <Avatar className="w-24 h-24">
+              <AvatarImage 
+                src={profilePictureUrl || undefined} 
+                alt={`${form.watch("firstName")} ${form.watch("lastName")}`}
+                className="object-cover"
+              />
+              <AvatarFallback className="text-lg bg-primary/10">
+                {form.watch("firstName")?.charAt(0)?.toUpperCase() || 'E'}
+                {form.watch("lastName")?.charAt(0)?.toUpperCase() || 'M'}
+              </AvatarFallback>
+            </Avatar>
+            
+            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <Camera className="h-6 w-6 text-white" />
+            </div>
+
+            {uploading && (
+              <div className="absolute inset-0 bg-black bg-opacity-75 rounded-full flex items-center justify-center">
+                <Loader2 className="h-6 w-6 text-white animate-spin" />
+              </div>
+            )}
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="sm"
+            onClick={handleProfilePictureClick}
+            disabled={uploading}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            {uploading ? "Uploading..." : "Upload Photo"}
+          </Button>
+          
+          <p className="text-xs text-muted-foreground text-center">
+            Upload a profile picture (Max 10MB)
+            <br />
+            Supported formats: JPEG, PNG, GIF, WebP
+          </p>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -269,16 +427,73 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
           )}
         />
 
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="experienceYears"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Experience (Years)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="0"
+                    placeholder="Years"
+                    value={field.value || 0}
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    readOnly
+                    className="bg-muted"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="experienceMonths"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Experience (Months)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min="0"
+                    max="11"
+                    placeholder="Months"
+                    value={field.value || 0}
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    readOnly
+                    className="bg-muted"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <FormField
           control={form.control}
           name="overallExperience"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Overall Experience</FormLabel>
+              <FormLabel>Overall Experience (Auto-calculated)</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., 5 years 3 months" {...field} />
+                <Input 
+                  placeholder="Will be calculated from joining date" 
+                  {...field}
+                  readOnly
+                  className="bg-muted"
+                />
               </FormControl>
               <FormMessage />
+              {calculatedExperience && (
+                <p className="text-sm text-muted-foreground">
+                  Auto-calculated: {calculatedExperience}
+                </p>
+              )}
             </FormItem>
           )}
         />

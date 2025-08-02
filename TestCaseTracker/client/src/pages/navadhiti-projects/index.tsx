@@ -1,148 +1,198 @@
-import React, { useState } from "react";
+
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Building2, TrendingUp, AlertCircle, CheckCircle, Download, Upload, Search, Edit, Trash2, Calendar, Filter, FileDown } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { NavadhitiProjectForm } from "@/components/navadhiti/navadhiti-project-form";
-import { CSVImportDialog } from "@/components/navadhiti/csv-import-dialog";
-import { MainLayout } from "@/components/layout/main-layout";
+import { CsvImportDialog } from "@/components/navadhiti/csv-import-dialog";
+import { Plus, MoreHorizontal, Edit, Trash2, Upload, Download, Filter, Search, Calendar, DollarSign, Users, TrendingUp } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { motion } from "framer-motion";
+
+interface NavadhitiProject {
+  id: number;
+  projectName: string;
+  projectLead: string;
+  overallProjectActivity: string;
+  currentSprint: string;
+  currentIssues: string;
+  weeklyCommunications: string;
+  immediateActionItems: string;
+  supportRequired: string;
+  startDate?: string;
+  endDate?: string;
+  budget?: number;
+  teamSize?: number;
+  status: string;
+  priority: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Status helper functions - moved to top level to avoid initialization issues
+const getStatusColor = (status: string): string => {
+  switch (status?.toLowerCase()) {
+    case 'active':
+    case 'in progress':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'completed':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'on hold':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'cancelled':
+      return 'bg-red-100 text-red-800 border-red-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+const getPriorityColor = (priority: string): string => {
+  switch (priority?.toLowerCase()) {
+    case 'high':
+      return 'bg-red-100 text-red-800 border-red-200';
+    case 'medium':
+      return 'bg-orange-100 text-orange-800 border-orange-200';
+    case 'low':
+      return 'bg-green-100 text-green-800 border-green-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+const getOverallStatus = (project: NavadhitiProject): string => {
+  if (!project) return 'Unknown';
+  
+  // Calculate overall status based on project data
+  const hasIssues = project.currentIssues && project.currentIssues.trim() !== '';
+  const needsSupport = project.supportRequired && project.supportRequired.trim() !== '';
+  
+  if (project.status === 'Completed') return 'Completed';
+  if (project.status === 'Cancelled') return 'Cancelled';
+  if (project.status === 'On Hold') return 'On Hold';
+  
+  if (hasIssues || needsSupport) return 'At Risk';
+  if (project.status === 'Active' || project.status === 'In Progress') return 'On Track';
+  
+  return 'In Progress';
+};
 
 export default function NavadhitiProjectsPage() {
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const [editingProject, setEditingProject] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("overview");
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<NavadhitiProject | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
 
-  const { data: projects = [], isLoading } = useQuery({
+  // Fetch projects
+  const { data: projects = [], isLoading, error } = useQuery({
     queryKey: ["/api/navadhiti-projects"],
     queryFn: async () => {
+      console.log("Fetching Navadhiti projects...");
       const res = await apiRequest("GET", "/api/navadhiti-projects");
-      return res.json();
+      if (!res.ok) {
+        throw new Error(`Failed to fetch projects: ${res.status}`);
+      }
+      const data = await res.json();
+      console.log("Navadhiti projects data:", data);
+      return data;
     },
   });
 
-  const updateProjectMutation = useMutation({
-    mutationFn: async ({ id, field, value }: { id: number; field: string; value: string }) => {
-      await apiRequest("PATCH", `/api/navadhiti-projects/${id}`, { [field]: value });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
-      toast({ title: "Project updated successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to update project", variant: "destructive" });
-    },
-  });
+  // Filtered projects using useMemo to prevent re-computation issues
+  const filteredProjects = useMemo(() => {
+    if (!projects || !Array.isArray(projects)) {
+      console.log("No projects data or not an array:", projects);
+      return [];
+    }
 
-  const deleteProjectMutation = useMutation({
+    return projects.filter((project: NavadhitiProject) => {
+      const matchesSearch = project.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           project.projectLead?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === "all" || 
+                           getOverallStatus(project).toLowerCase() === statusFilter.toLowerCase();
+      
+      const matchesPriority = priorityFilter === "all" || 
+                             project.priority?.toLowerCase() === priorityFilter.toLowerCase();
+      
+      return matchesSearch && matchesStatus && matchesPriority;
+    });
+  }, [projects, searchTerm, statusFilter, priorityFilter]);
+
+  // Delete mutation
+  const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/navadhiti-projects/${id}`);
+      const res = await apiRequest("DELETE", `/api/navadhiti-projects/${id}`);
+      if (!res.ok) throw new Error("Failed to delete project");
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: "Project deleted successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
     },
-    onError: () => {
-      toast({ title: "Failed to delete project", variant: "destructive" });
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to delete project", 
+        description: error.message,
+        variant: "destructive" 
+      });
     },
   });
 
-  const filteredProjects = projects.filter((project: any) => {
-    const matchesSearch = project.projectName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || getOverallStatus(project) === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const activeProjects = projects.filter((project: any) => 
-    getOverallStatus(project) === "active" || getOverallStatus(project) === "in-progress"
-  );
-
-  const handleEdit = (project: any) => {
+  const handleEdit = (project: NavadhitiProject) => {
     setEditingProject(project);
-    setIsFormOpen(true);
+    setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this project?")) {
-      deleteProjectMutation.mutate(id);
+  const handleDelete = async (id: number) => {
+    if (window.confirm("Are you sure you want to delete this project?")) {
+      deleteMutation.mutate(id);
     }
   };
 
-  const handleFormSuccess = () => {
-    setIsFormOpen(false);
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
     setEditingProject(null);
   };
 
-  const handleStatusUpdate = (projectId: number, field: string, value: string) => {
-    updateProjectMutation.mutate({ id: projectId, field, value });
-  };
-
-  const getOverallStatus = (project: any) => {
-    const avg = (project.activityStatus + project.sprintStatus + project.communicationStatus) / 3;
-    if (avg >= 90) return "active";
-    if (avg >= 60) return "in-progress";
-    if (avg >= 30) return "at-risk";
-    return "blocked";
-  };
-
-  const getStatusBadge = (activityStatus: number, sprintStatus: number, communicationStatus: number) => {
-    const status = getOverallStatus({ activityStatus, sprintStatus, communicationStatus });
-    const colors = {
-      active: "bg-green-500",
-      "in-progress": "bg-yellow-500", 
-      "at-risk": "bg-orange-500",
-      blocked: "bg-red-500"
-    };
-
-    return (
-      <Badge className={`${colors[status]} text-white`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Red": return "bg-red-500";
-      case "Amber": return "bg-yellow-500";
-      case "Green": return "bg-green-500";
-      case "No update": return "bg-gray-400";
-      default: return "bg-gray-400";
+  const exportToCSV = () => {
+    if (!projects.length) {
+      toast({ title: "No data to export", variant: "destructive" });
+      return;
     }
-  };
 
-  const exportToPDF = () => {
-    // Create CSV content for PDF export
     const headers = [
-      "Project Name", "Activity", "Sprint", "Current Issues", "Action Items", 
-      "Overall Status", "Activity Status", "Sprint Status", "Communication Status"
+      "Project Name", "Project Lead", "Status", "Priority", "Start Date", 
+      "End Date", "Budget", "Team Size", "Current Sprint", "Current Issues",
+      "Weekly Communications", "Action Items", "Support Required"
     ];
 
     const csvContent = [
       headers.join(","),
-      ...filteredProjects.map((project: any) => [
-        `"${project.projectName}"`,
-        `"${project.overallProjectActivity || ""}"`,
-        `"${project.currentSprint || ""}"`,
-        `"${project.currentIssues || ""}"`,
-        `"${project.immediateActionItems || ""}"`,
-        `"${getOverallStatus(project)}"`,
-        project.activityStatus || 0,
-        project.sprintStatus || 0,
-        project.communicationStatus || 0
+      ...projects.map((project: NavadhitiProject) => [
+        `"${project.projectName || ''}"`,
+        `"${project.projectLead || ''}"`,
+        `"${project.status || ''}"`,
+        `"${project.priority || ''}"`,
+        `"${project.startDate || ''}"`,
+        `"${project.endDate || ''}"`,
+        `"${project.budget || ''}"`,
+        `"${project.teamSize || ''}"`,
+        `"${project.currentSprint || ''}"`,
+        `"${project.currentIssues || ''}"`,
+        `"${project.weeklyCommunications || ''}"`,
+        `"${project.immediateActionItems || ''}"`,
+        `"${project.supportRequired || ''}"`
       ].join(","))
     ].join("\n");
 
@@ -150,401 +200,300 @@ export default function NavadhitiProjectsPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `navadhiti-projects-${selectedDate}.csv`;
+    a.download = `navadhiti-projects-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
 
-    toast({ title: "Export completed", description: "Project data exported successfully" });
+    toast({ title: "Projects exported successfully" });
   };
 
-  const downloadTemplate = () => {
-    const headers = [
-      "Project Name", "Overall Project Activity", "Current Sprint", "Current Issues",
-      "Weekly Comms", "Immediate Action Items", "Support Required", 
-      "Additional Remarks / Inputs", "Activity Status", "Sprint Status", "Communication Status"
-    ];
+  // Calculate summary stats
+  const stats = useMemo(() => {
+    if (!projects.length) return { total: 0, active: 0, completed: 0, atRisk: 0 };
+    
+    return {
+      total: projects.length,
+      active: projects.filter((p: NavadhitiProject) => p.status === 'Active').length,
+      completed: projects.filter((p: NavadhitiProject) => p.status === 'Completed').length,
+      atRisk: projects.filter((p: NavadhitiProject) => getOverallStatus(p) === 'At Risk').length,
+    };
+  }, [projects]);
 
-    const csvContent = headers.join(",") + "\n" + 
-      "Sample Project,Backend API Development,Sprint 3,Database connection issues,Weekly standup completed,Fix database connectivity,DevOps support for deployment,Need additional developer,75,90,100";
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "navadhiti-projects-template.csv";
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
+  if (error) {
+    console.error("Error loading Navadhiti projects:", error);
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-red-600">Error Loading Projects</h3>
+              <p className="text-muted-foreground mt-2">
+                {error instanceof Error ? error.message : "An unexpected error occurred"}
+              </p>
+              <Button 
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] })}
+                className="mt-4"
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <MainLayout>
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-500 rounded-xl shadow-lg">
-              <Building2 className="h-8 w-8 text-white" />
+    <div className="container mx-auto p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Navadhiti Projects</h1>
+          <p className="text-muted-foreground">Manage and track project activities</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportToCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+          <Button variant="outline" onClick={() => setIsCsvDialogOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import CSV
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Project
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingProject ? "Edit Project" : "Add New Project"}
+                </DialogTitle>
+              </DialogHeader>
+              <NavadhitiProjectForm
+                project={editingProject}
+                onSuccess={handleDialogClose}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="h-4 w-4 text-blue-600" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Projects</p>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Users className="h-4 w-4 text-green-600" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Active</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4 text-blue-600" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Completed</p>
+                  <p className="text-2xl font-bold text-blue-600">{stats.completed}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <DollarSign className="h-4 w-4 text-red-600" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">At Risk</p>
+                  <p className="text-2xl font-bold text-red-600">{stats.atRisk}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Filters */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Navadhiti Projects</h1>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="on track">On Track</SelectItem>
+                <SelectItem value="at risk">At Risk</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="on hold">On Hold</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priority</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Projects Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Projects ({filteredProjects.length})</CardTitle>
+          <CardDescription>
+            Manage your Navadhiti project portfolio
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-2 text-muted-foreground">Loading projects...</p>
+              </div>
+            </div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="text-center py-8">
               <p className="text-muted-foreground">
-                Project allocation and activity tracking
+                {projects.length === 0 ? "No projects found. Create your first project!" : "No projects match your filters."}
               </p>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={downloadTemplate} variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Template
-            </Button>
-            <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Import CSV
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Import Navadhiti Projects</DialogTitle>
-                </DialogHeader>
-                <CSVImportDialog
-                  onImportSuccess={() => setIsImportOpen(false)}
-                  importEndpoint="/api/navadhiti-projects/import"
-                />
-              </DialogContent>
-            </Dialog>
-            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Project
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingProject ? "Edit Project" : "Add New Project"}
-                  </DialogTitle>
-                </DialogHeader>
-                <NavadhitiProjectForm
-                  project={editingProject}
-                  onSuccess={handleFormSuccess}
-                  onCancel={() => {
-                    setIsFormOpen(false);
-                    setEditingProject(null);
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="overview">Project Overview</TabsTrigger>
-            <TabsTrigger value="calendar">Active Projects Calendar</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  Projects ({filteredProjects.length})
-                </CardTitle>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Search className="h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search projects..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="max-w-sm"
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="in-progress">In Progress</SelectItem>
-                        <SelectItem value="at-risk">At Risk</SelectItem>
-                        <SelectItem value="blocked">Blocked</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-32">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Project Name</TableHead>
-                          <TableHead>Activity</TableHead>
-                          <TableHead>Sprint</TableHead>
-                          <TableHead>Issues</TableHead>
-                          <TableHead>Action Items</TableHead>
-                          <TableHead>Status Progress</TableHead>
-                          <TableHead>Overall Status</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredProjects.map((project: any) => (
-                          <TableRow key={project.id}>
-                            <TableCell className="font-medium max-w-[200px]">
-                              <div className="truncate" title={project.projectName}>
-                                {project.projectName}
-                              </div>
-                            </TableCell>
-                            <TableCell className="max-w-[150px]">
-                              <div className="truncate" title={project.overallProjectActivity}>
-                                {project.overallProjectActivity || "N/A"}
-                              </div>
-                            </TableCell>
-                            <TableCell className="max-w-[120px]">
-                              <div className="truncate" title={project.currentSprint}>
-                                {project.currentSprint || "N/A"}
-                              </div>
-                            </TableCell>
-                            <TableCell className="max-w-[200px]">
-                              <div className="truncate" title={project.currentIssues}>
-                                {project.currentIssues || "None"}
-                              </div>
-                            </TableCell>
-                            <TableCell className="max-w-[200px]">
-                              <div className="truncate" title={project.immediateActionItems}>
-                                {project.immediateActionItems || "None"}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="space-y-1">
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-xs w-16">Activity:</span>
-                                  <Progress value={project.activityStatus || 0} className="h-2 flex-1" />
-                                  <span className="text-xs w-8">{project.activityStatus || 0}%</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-xs w-16">Sprint:</span>
-                                  <Progress value={project.sprintStatus || 0} className="h-2 flex-1" />
-                                  <span className="text-xs w-8">{project.sprintStatus || 0}%</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-xs w-16">Comms:</span>
-                                  <Progress value={project.communicationStatus || 0} className="h-2 flex-1" />
-                                  <span className="text-xs w-8">{project.communicationStatus || 0}%</span>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {getStatusBadge(
-                                project.activityStatus || 0,
-                                project.sprintStatus || 0,
-                                project.communicationStatus || 0
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEdit(project)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(project.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="calendar">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Active Projects Calendar View ({activeProjects.length})
-                </CardTitle>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <Input
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-40"
-                    />
-                    <Search className="h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search active projects..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="max-w-sm"
-                    />
-                  </div>
-                  <Button onClick={exportToPDF} variant="outline">
-                    <FileDown className="h-4 w-4 mr-2" />
-                    Export PDF
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Project Name</TableHead>
-                        <TableHead>Lead</TableHead>
-                        <TableHead>Overall Project Status</TableHead>
-                        <TableHead>Current Sprint Status</TableHead>
-                        <TableHead>Current Issues</TableHead>
-                        <TableHead>Weekly Comms</TableHead>
-                        <TableHead>Immediate Action Items</TableHead>
-                        <TableHead>Support Required</TableHead>
-                        <TableHead>Additional Remarks</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {activeProjects
-                        .filter((project: any) => 
-                          project.projectName.toLowerCase().includes(searchTerm.toLowerCase())
-                        )
-                        .map((project: any) => (
-                        <TableRow key={project.id}>
-                          <TableCell className="font-medium">
-                            {project.projectName}
-                          </TableCell>
-                          <TableCell>
-                            {project.projectLead || "Unassigned"}
-                          </TableCell>
-                          <TableCell>
-                            <Select
-                              value={project.overallProjectStatus || "No update"}
-                              onValueChange={(value) => handleStatusUpdate(project.id, "overallProjectStatus", value)}
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Project Name</TableHead>
+                    <TableHead>Project Lead</TableHead>
+                    <TableHead>Overall Status</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Current Sprint</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProjects.map((project: NavadhitiProject) => (
+                    <TableRow key={project.id}>
+                      <TableCell className="font-medium">
+                        {project.projectName}
+                      </TableCell>
+                      <TableCell>{project.projectLead}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="outline" 
+                          className={getStatusColor(getOverallStatus(project))}
+                        >
+                          {getOverallStatus(project)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="outline" 
+                          className={getPriorityColor(project.priority)}
+                        >
+                          {project.priority || 'Medium'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{project.currentSprint || 'N/A'}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(project)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(project.id)}
+                              className="text-red-600"
                             >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Red">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                    Red
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="Amber">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                    Amber
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="Green">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                                    Green
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="No update">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-                                    No update
-                                  </div>
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Select
-                              value={project.currentSprintStatus || "No update"}
-                              onValueChange={(value) => handleStatusUpdate(project.id, "currentSprintStatus", value)}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Red">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                    Red
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="Amber">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                    Amber
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="Green">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                                    Green
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="No update">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-                                    No update
-                                  </div>
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell className="max-w-[150px]">
-                            <div className="truncate" title={project.currentIssues}>
-                              {project.currentIssues || "None"}
-                            </div>
-                          </TableCell>
-                          <TableCell className="max-w-[150px]">
-                            <div className="truncate" title={project.weeklyComms}>
-                              {project.weeklyComms || "N/A"}
-                            </div>
-                          </TableCell>
-                          <TableCell className="max-w-[150px]">
-                            <div className="truncate" title={project.immediateActionItems}>
-                              {project.immediateActionItems || "None"}
-                            </div>
-                          </TableCell>
-                          <TableCell className="max-w-[150px]">
-                            <div className="truncate" title={project.supportRequired}>
-                              {project.supportRequired || "None"}
-                            </div>
-                          </TableCell>
-                          <TableCell className="max-w-[150px]">
-                            <div className="truncate" title={project.additionalRemarks}>
-                              {project.additionalRemarks || "None"}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </MainLayout>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* CSV Import Dialog */}
+      <CsvImportDialog
+        open={isCsvDialogOpen}
+        onOpenChange={setIsCsvDialogOpen}
+      />
+    </div>
   );
 }
