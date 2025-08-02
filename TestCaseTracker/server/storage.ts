@@ -1958,6 +1958,10 @@ class MemStorage implements IStorage {
     return Array.from(this.todos.values()).filter(todo => todo.userId === userId);
   }
 
+  async getTodosByUserId(userId: number): Promise<any[]> {
+    return Array.from(this.todos.values()).filter(todo => todo.userId === userId);
+  }
+
   async getTodo(id: number): Promise<any | undefined> {
     return this.todos.get(id);
   }
@@ -1992,6 +1996,10 @@ class MemStorage implements IStorage {
   }
 
   async getTodoLists(userId: number): Promise<any[]> {
+    if (!this.todoLists || typeof this.todoLists.values !== 'function') {
+      console.warn('TodoLists not properly initialized, returning empty array');
+      return [];
+    }
     return Array.from(this.todoLists.values()).filter(list => list.userId === userId);
   }
 

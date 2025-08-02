@@ -1,18 +1,16 @@
-
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Plus, Building2, TrendingUp, AlertCircle, CheckCircle, Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, Upload, Download } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { NavadhitiProjectForm } from "@/components/navadhiti/navadhiti-project-form";
 import { CSVImportDialog } from "@/components/navadhiti/csv-import-dialog";
+import { MainLayout } from "@/components/layout/main-layout";
 
 export default function NavadhitiProjectsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -85,10 +83,10 @@ export default function NavadhitiProjectsPage() {
       "Sprint Status", 
       "Communication Status"
     ];
-    
+
     const csvContent = headers.join(",") + "\n" + 
       "Sample Project,Backend API Development,Sprint 3,Database connection issues,Weekly standup completed,Fix database connectivity,DevOps support for deployment,Need additional developer,75,90,100";
-    
+
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -99,52 +97,21 @@ export default function NavadhitiProjectsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Navadhiti Projects</h1>
-          <p className="text-muted-foreground">Project allocation and activity tracking</p>
+    <MainLayout>
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-500 rounded-xl shadow-lg">
+              <Building2 className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Navadhiti Projects</h1>
+              <p className="text-muted-foreground">
+                Project allocation and activity tracking
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={downloadTemplate}>
-            <Download className="mr-2 h-4 w-4" />
-            Template
-          </Button>
-          <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Upload className="mr-2 h-4 w-4" />
-                Import CSV
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Import Projects from CSV</DialogTitle>
-              </DialogHeader>
-              <CSVImportDialog onClose={() => setIsImportOpen(false)} />
-            </DialogContent>
-          </Dialog>
-          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Project
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingProject ? "Edit Project" : "Add New Project"}
-                </DialogTitle>
-              </DialogHeader>
-              <NavadhitiProjectForm
-                project={editingProject}
-                onSuccess={handleFormSuccess}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
 
       <Card>
         <CardHeader>
@@ -261,6 +228,8 @@ export default function NavadhitiProjectsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+      </div>
+    </MainLayout>
   );
 }
