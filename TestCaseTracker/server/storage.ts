@@ -327,7 +327,7 @@ class MemStorage implements IStorage {
   private navadhitiProjects = new Map<number, any>();
   private statusReviews = new Map<number, any>();
 
-  
+
 
   private initializeEmployeeDefaults() {
     // Add default technology options
@@ -778,7 +778,8 @@ class MemStorage implements IStorage {
     const document: Document = {
       ...data,
       id,
-      createdAt: now,
+      createdAt: now```python
+
       updatedAt: now
     };
 
@@ -1728,6 +1729,8 @@ class MemStorage implements IStorage {
     return this.kanbanCards.delete(id);
   }
 
+```python
+
   // Matrix operations
   async upsertMatrixCell(cell: any): Promise<any> {
     const key = `${cell.rowModuleId}-${cell.colModuleId}-${cell.projectId}`;
@@ -2113,7 +2116,7 @@ class MemStorage implements IStorage {
 
   async createEmployee(data: any): Promise<any> {
     const id = this.getNextId();
-    
+
     // Auto-generate employee ID if not provided
     let employeeId = data.employeeId;
     if (!employeeId || employeeId.trim() === '') {
@@ -2135,7 +2138,7 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    
+
     this.employees.set(id, employee);
     return employee;
   }
@@ -2171,7 +2174,8 @@ class MemStorage implements IStorage {
     const employeeProject = {
       id,
       ...data,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     this.employeeProjects.set(id, employeeProject);
     return employeeProject;
@@ -2285,7 +2289,7 @@ class MemStorage implements IStorage {
       updatedAt: new Date().toISOString()
     };
     this.statusReviews.set(id, review);
-    
+
     // Also update the project with the status review data
     if (data.projectId) {
       const project = this.navadhitiProjects.get(data.projectId);
@@ -2312,7 +2316,7 @@ class MemStorage implements IStorage {
         console.log(`Updated project ${data.projectId} with status review data:`, updatedProject);
       }
     }
-    
+
     return review;
   }
 

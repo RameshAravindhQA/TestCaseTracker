@@ -23,7 +23,7 @@ import Papa from 'papaparse';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
-import { Download, FileType } from "lucide-react";
+import { Download, FileType, X, Plus } from "lucide-react";
 
 interface NavadhitiProject {
   id: number;
@@ -142,6 +142,21 @@ export default function NavadhitiProjectsPage() {
     },
     onError: () => {
       toast({ title: "Failed to allocate employees", variant: "destructive" });
+    },
+  });
+
+  // Unoccupy employee mutation
+  const unoccupyEmployeeMutation = useMutation({
+    mutationFn: async (allocationId: number) => {
+      const res = await apiRequest("DELETE", `/api/employee-projects/${allocationId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Employee unoccupied successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/employee-projects"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to unoccupy employee", variant: "destructive" });
     },
   });
 
@@ -676,8 +691,8 @@ export default function NavadhitiProjectsPage() {
                                 </div>
                               )}
 
-                              {status === 'available' && (
-                                <div className="mt-2 flex gap-1">
+                              <div className="mt-2 flex gap-1">
+                                {status === 'available' ? (
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -690,8 +705,37 @@ export default function NavadhitiProjectsPage() {
                                     <UserCheck className="h-3 w-3 mr-1" />
                                     Quick Allocate
                                   </Button>
-                                </div>
-                              )}
+                                ) : (
+                                  <div className="flex gap-1 w-full">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1 text-xs h-7"
+                                      onClick={() => {
+                                        if (allocation && confirm('Are you sure you want to unoccupy this employee?')) {
+                                          // Call mutation to unoccupy employee
+                                          unoccupyEmployeeMutation.mutate(allocation.id);
+                                        }
+                                      }}
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      Unoccupy
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="flex-1 text-xs h-7"
+                                      onClick={() => {
+                                        setSelectedEmployees([employee.id]);
+                                        setIsAllocationDialogOpen(true);
+                                      }}
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Add Project
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                         </CardContent>
                       </Card>
@@ -831,93 +875,148 @@ export default function NavadhitiProjectsPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {projects.map((project: NavadhitiProject) => (
-                      <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <CardTitle className="text-lg font-semibold line-clamp-1">
-                                {project.projectName}
-                              </CardTitle>
-                              <CardDescription className="mt-1">
-                                {project.clientName}
-                              </CardDescription>
+                    {projects.map((project: NavadhitiProject) => {
+                      const leadEmployee = employeesData.find((emp: any) => 
+                        project.assignedEmployees?.includes(emp.id)
+                      );
+                      
+                      return (
+                        <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200 overflow-hidden">
+                          {/* Project Image */}
+                          <div className="h-32 bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 relative overflow-hidden">
+                            {project.projectImage ? (
+                              <img 
+                                src={project.projectImage} 
+                                alt={project.projectName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Briefcase className="h-12 w-12 text-white/80" />
+                              </div>
+                            )}
+                            <div className="absolute top-2 right-2">
+                              <Badge 
+                                className={`text-xs ${
+                                  project.status === 'Active' ? 'bg-green-100 text-green-800' :
+                                  project.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                                  project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}
+                              >
+                                {project.status}
+                              </Badge>
                             </div>
-                            <Badge 
-                              className={`text-xs ${
-                                project.status === 'Active' ? 'bg-green-100 text-green-800' :
-                                project.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
-                                project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'
-                              }`}
-                            >
-                              {project.status}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Calendar className="h-4 w-4" />
-                            <span>
-                              {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - 
-                              {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
-                            </span>
                           </div>
 
-                          {project.technologies && project.technologies.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {project.technologies.slice(0, 3).map((tech, index) => (
-                                <Badge key={index} variant="secondary" className="text-xs">
-                                  {tech}
-                                </Badge>
-                              ))}
-                              {project.technologies.length > 3 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{project.technologies.length - 3} more
-                                </Badge>
-                              )}
+                          <CardHeader className="pb-3">
+                            <div className="space-y-2">
+                              <div>
+                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Project Name</Label>
+                                <CardTitle className="text-lg font-semibold line-clamp-1 mt-1">
+                                  {project.projectName}
+                                </CardTitle>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</Label>
+                                <CardDescription className="mt-1 font-medium">
+                                  {project.clientName}
+                                </CardDescription>
+                              </div>
                             </div>
-                          )}
-
-                          {project.description && (
-                            <p className="text-sm text-gray-600 line-clamp-2">
-                              {project.description}
-                            </p>
-                          )}
-
-                          <div className="flex items-center justify-between pt-2">
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-gray-400" />
-                              <span className="text-sm text-gray-600">
-                                {project.assignedEmployees?.length || 0} members
+                          </CardHeader>
+                          
+                          <CardContent className="space-y-3">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Calendar className="h-4 w-4" />
+                              <span>
+                                {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - 
+                                {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
                               </span>
                             </div>
-                            
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setEditingProject(project);
-                                  setIsDialogOpen(true);
-                                }}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  // View project details logic
-                                }}
-                              >
-                                View
-                              </Button>
+
+                            {/* Technologies */}
+                            {project.technologies && project.technologies.length > 0 && (
+                              <div>
+                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Tech</Label>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {project.technologies.slice(0, 3).map((tech, index) => (
+                                    <Badge key={index} variant="secondary" className="text-xs">
+                                      {tech}
+                                    </Badge>
+                                  ))}
+                                  {project.technologies.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{project.technologies.length - 3} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Project Lead */}
+                            {leadEmployee && (
+                              <div>
+                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Lead</Label>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {leadEmployee.profilePicture ? (
+                                    <img
+                                      src={leadEmployee.profilePicture}
+                                      alt={`${leadEmployee.firstName} ${leadEmployee.lastName}`}
+                                      className="h-6 w-6 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-6 w-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
+                                      {leadEmployee.firstName?.charAt(0)}{leadEmployee.lastName?.charAt(0)}
+                                    </div>
+                                  )}
+                                  <Badge variant="outline" className="text-xs">
+                                    {leadEmployee.firstName} {leadEmployee.lastName}
+                                  </Badge>
+                                </div>
+                              </div>
+                            )}
+
+                            {project.description && (
+                              <p className="text-sm text-gray-600 line-clamp-2">
+                                {project.description}
+                              </p>
+                            )}
+
+                            <div className="flex items-center justify-between pt-2">
+                              <div className="flex items-center gap-2">
+                                <Users className="h-4 w-4 text-gray-400" />
+                                <span className="text-sm text-gray-600">
+                                  {project.assignedEmployees?.length || 0} members
+                                </span>
+                              </div>
+                              
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEditingProject(project);
+                                    setIsDialogOpen(true);
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    // View project details logic
+                                  }}
+                                >
+                                  View
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -1047,15 +1146,16 @@ export default function NavadhitiProjectsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead>Customer Name</TableHead>
                           <TableHead>Project Name</TableHead>
-                          <TableHead>Client</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Priority</TableHead>
-                          <TableHead>Start Date</TableHead>
-                          <TableHead>End Date</TableHead>
-                          <TableHead>Progress</TableHead>
-                          <TableHead>Team Size</TableHead>
-                          <TableHead>Budget</TableHead>
+                          <TableHead>Lead</TableHead>
+                          <TableHead>Overall Project Status</TableHead>
+                          <TableHead>Current Sprint Status</TableHead>
+                          <TableHead>Current Issues</TableHead>
+                          <TableHead>Weekly Comms</TableHead>
+                          <TableHead>Immediate Action Items</TableHead>
+                          <TableHead>Support Required</TableHead>
+                          <TableHead>Additional Remarks</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1071,73 +1171,66 @@ export default function NavadhitiProjectsPage() {
                             </TableCell>
                           </TableRow>
                         ) : (
-                          projects.map((project: any) => (
-                            <TableRow key={project.id}>
-                              <TableCell className="font-medium">{project.projectName}</TableCell>
-                              <TableCell>{project.clientName}</TableCell>
-                              <TableCell>
-                                <Badge 
-                                  className={
-                                    project.status === 'Active' ? 'bg-green-100 text-green-800' :
-                                    project.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
-                                    project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-red-100 text-red-800'
-                                  }
-                                >
-                                  {project.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={
-                                  project.priority === 'High' ? 'destructive' :
-                                  project.priority === 'Medium' ? 'default' : 'secondary'
-                                }>
-                                  {project.priority}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {project.startDate ? format(new Date(project.startDate), 'MMM dd, yyyy') : 'Not set'}
-                              </TableCell>
-                              <TableCell>
-                                {project.endDate ? format(new Date(project.endDate), 'MMM dd, yyyy') : 'Ongoing'}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-16 bg-gray-200 rounded-full h-2">
-                                    <div 
-                                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                                      style={{ width: `${project.completionPercentage || 0}%` }}
-                                    ></div>
-                                  </div>
-                                  <span className="text-sm text-gray-600">
-                                    {project.completionPercentage || 0}%
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1">
-                                  <Users className="h-4 w-4 text-gray-400" />
-                                  <span>{project.assignedEmployees?.length || 0}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                {project.budget ? `$${project.budget.toLocaleString()}` : 'Not set'}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setSelectedProjectForStatus(project);
-                                    setIsStatusDialogOpen(true);
-                                  }}
-                                >
-                                  <Send className="h-4 w-4 mr-1" />
-                                  Update
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))
+                          projects.map((project: any) => {
+                            const leadEmployee = employeesData.find((emp: any) => 
+                              project.assignedEmployees?.includes(emp.id)
+                            );
+                            
+                            return (
+                              <TableRow key={project.id}>
+                                <TableCell className="font-medium">{project.clientName}</TableCell>
+                                <TableCell>{project.projectName}</TableCell>
+                                <TableCell>
+                                  {leadEmployee ? `${leadEmployee.firstName} ${leadEmployee.lastName}` : 'Not Assigned'}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge 
+                                    className={
+                                      project.status === 'Active' ? 'bg-green-100 text-green-800' :
+                                      project.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                                      project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-red-100 text-red-800'
+                                    }
+                                  >
+                                    {project.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">
+                                    {project.currentSprint || 'Not Set'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="max-w-32 truncate">
+                                  {project.currentIssues || 'None'}
+                                </TableCell>
+                                <TableCell className="max-w-32 truncate">
+                                  {project.weeklyComms || 'Not Set'}
+                                </TableCell>
+                                <TableCell className="max-w-32 truncate">
+                                  {project.immediateActionItems || 'None'}
+                                </TableCell>
+                                <TableCell className="max-w-32 truncate">
+                                  {project.supportRequired || 'None'}
+                                </TableCell>
+                                <TableCell className="max-w-40 truncate">
+                                  {project.additionalRemarks || 'None'}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setStatusUpdateProject(project);
+                                      setIsStatusDialogOpen(true);
+                                    }}
+                                  >
+                                    <Send className="h-4 w-4 mr-1" />
+                                    Update
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
                         )}
                       </TableBody>
                     </Table>
@@ -1147,6 +1240,16 @@ export default function NavadhitiProjectsPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Status Review Dialog */}
+        <StatusReviewDialog
+          project={statusUpdateProject}
+          isOpen={isStatusDialogOpen}
+          onClose={() => {
+            setIsStatusDialogOpen(false);
+            setStatusUpdateProject(null);
+          }}
+        />
       </div>
     </MainLayout>
   );

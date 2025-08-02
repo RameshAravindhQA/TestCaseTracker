@@ -32,7 +32,14 @@ const defaultStatusOptions: StatusOption[] = [
   { id: "gray", label: "No Update", color: "#6b7280" }
 ];
 
-export function StatusReviewDialog({ isOpen, onClose, project, selectedDate }: StatusReviewDialogProps) {
+export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDialogProps) {
+  const [overallProjectStatus, setOverallProjectStatus] = useState(project?.overallProjectStatus || '');
+  const [currentSprint, setCurrentSprint] = useState(project?.currentSprint || '');
+  const [currentIssues, setCurrentIssues] = useState(project?.currentIssues || '');
+  const [weeklyComms, setWeeklyComms] = useState(project?.weeklyComms || '');
+  const [immediateActionItems, setImmediateActionItems] = useState(project?.immediateActionItems || '');
+  const [supportRequired, setSupportRequired] = useState(project?.supportRequired || '');
+  const [additionalRemarks, setAdditionalRemarks] = useState(project?.additionalRemarks || '');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -114,35 +121,32 @@ export function StatusReviewDialog({ isOpen, onClose, project, selectedDate }: S
   };
 
   const handleSubmit = () => {
-    if (!formData.overallProjectStatus || !formData.currentSprintStatus || !formData.weeklyComms || !formData.projectLead) {
-      toast({ 
-        title: "Please fill all required fields", 
-        variant: "destructive" 
-      });
-      return;
-    }
-
-    const statusData = {
-      projectId: project.id,
-      projectName: project.projectName,
-      customerName: project.clientName || project.customer || '',
-      projectLead: formData.projectLead, // Use form data for project lead
-      reviewDate: selectedDate.toISOString(),
-      overallProjectStatus: formData.overallProjectStatus,
-      currentSprintStatus: formData.currentSprintStatus,
-      weeklyComms: formData.weeklyComms,
-      notes: formData.notes,
-      // Add status labels and colors for proper display
-      overallProjectStatusLabel: statusOptions.find(s => s.id === formData.overallProjectStatus)?.label || '',
-      overallProjectStatusColor: statusOptions.find(s => s.id === formData.overallProjectStatus)?.color || '#6b7280',
-      currentSprintStatusLabel: statusOptions.find(s => s.id === formData.currentSprintStatus)?.label || '',
-      currentSprintStatusColor: statusOptions.find(s => s.id === formData.currentSprintStatus)?.color || '#6b7280',
-      weeklyCommsLabel: statusOptions.find(s => s.id === formData.weeklyComms)?.label || '',
-      weeklyCommsColor: statusOptions.find(s => s.id === formData.weeklyComms)?.color || '#6b7280'
-    };
-
-    createStatusMutation.mutate(statusData);
+    updateMutation.mutate({
+      overallProjectStatus,
+      currentSprint,
+      currentIssues,
+      weeklyComms,
+      immediateActionItems,
+      supportRequired,
+      additionalRemarks,
+    });
   };
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PUT", `/api/navadhiti-projects/${project.id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Status updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
+      onClose();
+    },
+    onError: () => {
+      toast({ title: "Failed to update status", variant: "destructive" });
+    },
+  });
+
 
   if (!project) return null;
 
