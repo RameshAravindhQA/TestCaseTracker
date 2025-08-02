@@ -41,6 +41,7 @@ interface NavadhitiProject {
   updatedAt: string;
   customer?: string;
   projectImage?: string;
+  clientName?: string;
 }
 
 // Status helper functions - moved to top level to avoid initialization issues
@@ -647,7 +648,7 @@ export default function NavadhitiProjectsPage() {
                             <TableCell className="font-medium">
                               {project.projectName}
                             </TableCell>
-                            <TableCell>{project.customer || 'N/A'}</TableCell>
+                            <TableCell>{project.clientName || project.customer || 'N/A'}</TableCell>
                             <TableCell>
                               {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : 'N/A'}
                             </TableCell>
@@ -783,7 +784,7 @@ export default function NavadhitiProjectsPage() {
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell className="font-medium">{project.customer || 'N/A'}</TableCell>
+                                <TableCell>{project.clientName || project.customer || 'N/A'}</TableCell>
                                 <TableCell className="font-medium">{project.projectName}</TableCell>
                                 <TableCell>{project.projectLead || 'N/A'}</TableCell>
                                 <TableCell>

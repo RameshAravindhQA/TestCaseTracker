@@ -2227,6 +2227,11 @@ class MemStorage implements IStorage {
     const project = {
       id,
       ...data,
+      // Ensure customer and client name mapping
+      customer: data.clientName || data.customer,
+      clientName: data.clientName || data.customer,
+      // Ensure project lead is properly stored
+      projectLead: data.projectLead || data.assignedEmployees?.[0] || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -2241,6 +2246,11 @@ class MemStorage implements IStorage {
     const updatedProject = {
       ...project,
       ...data,
+      // Ensure customer and client name mapping
+      customer: data.clientName || data.customer || project.customer,
+      clientName: data.clientName || data.customer || project.clientName,
+      // Ensure project lead is properly updated
+      projectLead: data.projectLead || data.assignedEmployees?.[0] || project.projectLead,
       updatedAt: new Date().toISOString()
     };
     this.navadhitiProjects.set(id, updatedProject);

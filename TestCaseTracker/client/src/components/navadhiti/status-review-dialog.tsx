@@ -123,13 +123,20 @@ export function StatusReviewDialog({ isOpen, onClose, project, selectedDate }: S
     const statusData = {
       projectId: project.id,
       projectName: project.projectName,
-      customerName: project.clientName || '',
+      customerName: project.clientName || project.customer || '',
       projectLead: project.projectLead || '',
       reviewDate: selectedDate.toISOString(),
       overallProjectStatus: formData.overallProjectStatus,
       currentSprintStatus: formData.currentSprintStatus,
       weeklyComms: formData.weeklyComms,
-      notes: formData.notes
+      notes: formData.notes,
+      // Add status labels and colors for proper display
+      overallProjectStatusLabel: statusOptions.find(s => s.id === formData.overallProjectStatus)?.label || '',
+      overallProjectStatusColor: statusOptions.find(s => s.id === formData.overallProjectStatus)?.color || '#6b7280',
+      currentSprintStatusLabel: statusOptions.find(s => s.id === formData.currentSprintStatus)?.label || '',
+      currentSprintStatusColor: statusOptions.find(s => s.id === formData.currentSprintStatus)?.color || '#6b7280',
+      weeklyCommsLabel: statusOptions.find(s => s.id === formData.weeklyComms)?.label || '',
+      weeklyCommsColor: statusOptions.find(s => s.id === formData.weeklyComms)?.color || '#6b7280'
     };
 
     createStatusMutation.mutate(statusData);
@@ -153,7 +160,7 @@ export function StatusReviewDialog({ isOpen, onClose, project, selectedDate }: S
             <CardContent className="space-y-2">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><strong>Project:</strong> {project.projectName}</div>
-                <div><strong>Customer:</strong> {project.clientName || 'N/A'}</div>
+                <div><strong>Customer:</strong> {project.clientName || project.customer || 'N/A'}</div>
                 <div><strong>Lead:</strong> {project.projectLead || 'N/A'}</div>
                 <div><strong>Review Date:</strong> {selectedDate.toLocaleDateString()}</div>
               </div>
