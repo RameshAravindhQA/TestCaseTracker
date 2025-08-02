@@ -975,8 +975,8 @@ class MemStorage implements IStorage {
   }
 
   // Custom marker operations
-  async createCustomMarker(data: Omit<CustomMarker, 'id'>): Promise<CustomMarker> {
-    const id = this.nextId++;
+  async createCustomMarker(data: any): Promise<CustomMarker> {
+    const id = this.getNextId();
 
     const marker: CustomMarker = {
       ...data,
@@ -1730,18 +1730,15 @@ class MemStorage implements IStorage {
   }
 
   // Custom marker operations with proper ID handling
-```text
   async createCustomMarker(data: any): Promise<CustomMarker> {
     const id = this.getNextId();
 
     const marker: CustomMarker = {
       ...data,
-      id: id.toString(), // Convert to string for consistency
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      id
     };
 
-    this.customMarkers.set(id.toString(), marker);
+    this.customMarkers.set(id, marker);
     return marker;
   }
 
@@ -1754,20 +1751,19 @@ class MemStorage implements IStorage {
   }
 
   async updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null> {
-    const marker = this.customMarkers.get(id.toString());
+    const marker = this.customMarkers.get(id);
     if (!marker) return null;
 
     const updatedMarker = { 
       ...marker, 
-      ...data, 
-      updatedAt: new Date().toISOString() 
+      ...data
     };
-    this.customMarkers.set(id.toString(), updatedMarker);
+    this.customMarkers.set(id, updatedMarker);
     return updatedMarker;
   }
 
   async deleteCustomMarker(id: number): Promise<boolean> {
-    return this.customMarkers.delete(id.toString());
+    return this.customMarkers.delete(id);
   }
 
   // Matrix cell operations with proper storage
