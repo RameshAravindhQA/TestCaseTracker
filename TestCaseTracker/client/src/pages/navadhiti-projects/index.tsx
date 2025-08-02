@@ -1,95 +1,42 @@
-import { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { Plus, Calendar, Users, Briefcase, Search, Filter, X, ChevronDown, CheckCircle2, Clock, UserCheck, BookOpen, AlertCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { NavadhitiProjectForm } from "@/components/navadhiti/navadhiti-project-form";
-import { CSVImportDialog } from "@/components/navadhiti/csv-import-dialog";
-import { StatusReviewDialog } from "@/components/navadhiti/status-review-dialog";
-import { Plus, MoreHorizontal, Edit, Trash2, Upload, Download, Filter, Search, Calendar, DollarSign, Users, TrendingUp, FileText, Building } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { motion } from "framer-motion";
-import { MainLayout } from "@/components/layout/main-layout";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DatePicker } from "@/components/ui/date-picker";
-import { ColorPicker } from "@/components/ui/color-picker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { MainLayout } from "@/components/layout/main-layout";
+import { NavadhitiProjectForm } from "@/components/navadhiti/navadhiti-project-form";
+import { StatusReviewDialog } from "@/components/navadhiti/status-review-dialog";
+import { CsvImportDialog } from "@/components/navadhiti/csv-import-dialog";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 interface NavadhitiProject {
   id: number;
   projectName: string;
-  projectLead: string;
-  overallProjectActivity: string;
-  currentSprint: string;
-  currentIssues: string;
-  weeklyCommunications: string;
-  immediateActionItems: string;
-  supportRequired: string;
-  startDate?: string;
-  endDate?: string;
-  budget?: number;
-  teamSize?: number;
+  clientName: string;
+  projectType: string;
   status: string;
   priority: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+  assignedEmployees: number[];
+  technologies: string[];
+  budget: number;
+  completionPercentage: number;
   createdAt: string;
   updatedAt: string;
-  customer?: string;
-  projectImage?: string;
-  clientName?: string;
 }
-
-// Status helper functions - moved to top level to avoid initialization issues
-const getStatusColor = (status: string): string => {
-  switch (status?.toLowerCase()) {
-    case 'active':
-    case 'in progress':
-      return 'bg-green-100 text-green-800 border-green-200';
-    case 'completed':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'on hold':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'cancelled':
-      return 'bg-red-100 text-red-800 border-red-200';
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
-const getPriorityColor = (priority: string): string => {
-  switch (priority?.toLowerCase()) {
-    case 'high':
-      return 'bg-red-100 text-red-800 border-red-200';
-    case 'medium':
-      return 'bg-orange-100 text-orange-800 border-orange-200';
-    case 'low':
-      return 'bg-green-100 text-green-800 border-green-200';
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
-const getOverallStatus = (project: NavadhitiProject): string => {
-  if (!project) return 'Unknown';
-
-  // Calculate overall status based on project data
-  const hasIssues = project.currentIssues && project.currentIssues.trim() !== '';
-  const needsSupport = project.supportRequired && project.supportRequired.trim() !== '';
-
-  if (project.status === 'Completed') return 'Completed';
-  if (project.status === 'Cancelled') return 'Cancelled';
-  if (project.status === 'On Hold') return 'On Hold';
-
-  if (hasIssues || needsSupport) return 'At Risk';
-  if (project.status === 'Active' || project.status === 'In Progress') return 'On Track';
-
-  return 'In Progress';
-};
 
 export default function NavadhitiProjectsPage() {
   const { toast } = useToast();
@@ -107,18 +54,26 @@ export default function NavadhitiProjectsPage() {
   const [selectedProjectForStatus, setSelectedProjectForStatus] = useState<any>(null);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [statusUpdateProject, setStatusUpdateProject] = useState<NavadhitiProject | null>(null);
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [employeeProjects, setEmployeeProjects] = useState<any[]>([]);
 
-  // Fetch status reviews for selected date
-  const { data: statusReviews = [] } = useQuery({
-    queryKey: ["/api/navadhiti-projects/status-reviews", selectedDate.toISOString().split('T')[0]],
+  // Resource Allocation Filters
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [technologyFilter, setTechnologyFilter] = useState<string[]>([]);
+  const [statusEmployeeFilter, setStatusEmployeeFilter] = useState<string>("all");
+  const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+  const [isAllocationDialogOpen, setIsAllocationDialogOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<number | null>(null);
+  const [allocationRole, setAllocationRole] = useState("");
+  const [allocationStartDate, setAllocationStartDate] = useState("");
+  const [allocationEndDate, setAllocationEndDate] = useState("");
+
+  // Fetch projects
+  const { data: projects = [], isLoading, refetch } = useQuery({
+    queryKey: ["/api/navadhiti-projects"],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/navadhiti-projects/status-reviews?date=${selectedDate.toISOString().split('T')[0]}`);
-      if (!res.ok) throw new Error("Failed to fetch status reviews");
+      const res = await apiRequest("GET", "/api/navadhiti-projects");
+      if (!res.ok) throw new Error("Failed to fetch projects");
       return res.json();
     },
-    enabled: activeTab === "statusReview"
   });
 
   // Fetch employees for resource allocation
@@ -143,913 +98,465 @@ export default function NavadhitiProjectsPage() {
     enabled: activeTab === "resourceAllocation"
   });
 
-  // Fetch projects
-  const { data: projects = [], isLoading, error } = useQuery({
-    queryKey: ["/api/navadhiti-projects"],
+  // Fetch technology options
+  const { data: technologyOptions = [] } = useQuery({
+    queryKey: ["/api/technology-options"],
     queryFn: async () => {
-      console.log("Fetching Navadhiti projects...");
-      const res = await apiRequest("GET", "/api/navadhiti-projects");
-      if (!res.ok) {
-        throw new Error(`Failed to fetch projects: ${res.status}`);
-      }
-      const data = await res.json();
-      console.log("Navadhiti projects data:", data);
-      return data;
+      const res = await apiRequest("GET", "/api/technology-options");
+      return res.json();
     },
+    enabled: activeTab === "resourceAllocation"
   });
 
-  // Filtered projects using useMemo to prevent re-computation issues
-  const filteredProjects = useMemo(() => {
-    if (!projects || !Array.isArray(projects)) {
-      console.log("No projects data or not an array:", projects);
-      return [];
-    }
+  // Fetch department options
+  const { data: departmentOptions = [] } = useQuery({
+    queryKey: ["/api/department-options"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/department-options");
+      return res.json();
+    },
+    enabled: activeTab === "resourceAllocation"
+  });
 
-    return projects.filter((project: NavadhitiProject) => {
-      const matchesSearch = project.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           project.projectLead?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesStatus = statusFilter === "all" || 
-                           getOverallStatus(project).toLowerCase() === statusFilter.toLowerCase();
-
-      const matchesPriority = priorityFilter === "all" || 
-                             project.priority?.toLowerCase() === priorityFilter.toLowerCase();
-
-      return matchesSearch && matchesStatus && matchesPriority;
-    });
-  }, [projects, searchTerm, statusFilter, priorityFilter]);
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("DELETE", `/api/navadhiti-projects/${id}`);
-      if (!res.ok) throw new Error("Failed to delete project");
+  // Create allocation mutation
+  const allocateEmployeesMutation = useMutation({
+    mutationFn: async (allocationData: any) => {
+      const res = await apiRequest("POST", "/api/employee-projects", allocationData);
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Project deleted successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
+      toast({ title: "Employees allocated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/employee-projects"] });
+      setIsAllocationDialogOpen(false);
+      setSelectedEmployees([]);
+      setSelectedProject(null);
+      setAllocationRole("");
+      setAllocationStartDate("");
+      setAllocationEndDate("");
     },
-    onError: (error: any) => {
-      toast({ 
-        title: "Failed to delete project", 
-        description: error.message,
-        variant: "destructive" 
-      });
+    onError: () => {
+      toast({ title: "Failed to allocate employees", variant: "destructive" });
     },
   });
 
-  const handleEdit = (project: NavadhitiProject) => {
-    setEditingProject(project);
-    setIsDialogOpen(true);
-  };
+  // Filter employees based on selected criteria
+  const filteredEmployees = employeesData.filter((employee: any) => {
+    const matchesDepartment = departmentFilter === "all" || employee.department === departmentFilter;
+    const matchesTechnology = technologyFilter.length === 0 || 
+      (employee.technologies && employee.technologies.some((tech: string) => technologyFilter.includes(tech)));
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this project?")) {
-      deleteMutation.mutate(id);
-    }
-  };
+    const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.isActive);
+    const employeeStatus = allocation ? 
+      (allocation.status === 'active' ? 'occupied' : 
+       allocation.status === 'learning' ? 'learning' : 
+       allocation.status === 'leave' ? 'onLeave' : 'available') : 'available';
 
-  const handleDialogClose = () => {
-    setIsDialogOpen(false);
-    setEditingProject(null);
-  };
+    const matchesStatus = statusEmployeeFilter === "all" || employeeStatus === statusEmployeeFilter;
 
-  const exportToCSV = () => {
-    if (!projects.length) {
-      toast({ title: "No data to export", variant: "destructive" });
-      return;
-    }
+    const matchesSearch = searchTerm === "" || 
+      `${employee.firstName} ${employee.lastName} ${employee.email} ${employee.employeeId}`
+        .toLowerCase().includes(searchTerm.toLowerCase());
 
-    const headers = [
-      "Project Name", "Project Lead", "Status", "Priority", "Start Date", 
-      "End Date", "Budget", "Team Size", "Current Sprint", "Current Issues",
-      "Weekly Communications", "Action Items", "Support Required"
-    ];
+    return matchesDepartment && matchesTechnology && matchesStatus && matchesSearch;
+  });
 
-    const csvContent = [
-      headers.join(","),
-      ...projects.map((project: NavadhitiProject) => [
-        `"${project.projectName || ''}"`,
-        `"${project.projectLead || ''}"`,
-        `"${project.status || ''}"`,
-        `"${project.priority || ''}"`,
-        `"${project.startDate || ''}"`,
-        `"${project.endDate || ''}"`,
-        `"${project.budget || ''}"`,
-        `"${project.teamSize || ''}"`,
-        `"${project.currentSprint || ''}"`,
-        `"${project.currentIssues || ''}"`,
-        `"${project.weeklyCommunications || ''}"`,
-        `"${project.immediateActionItems || ''}"`,
-        `"${project.supportRequired || ''}"`
-      ].join(","))
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `navadhiti-projects-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-
-    toast({ title: "Projects exported successfully" });
-  };
-
-  const exportStatusReviewToPDF = () => {
-    if (!statusReviews.length) {
-      toast({ title: "No status review data to export", variant: "destructive" });
-      return;
-    }
-
-    // Create PDF content as HTML
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Project Status Review - ${selectedDate.toLocaleDateString()}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .date { color: #666; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            th { background-color: #f5f5f5; font-weight: bold; }
-            .status-badge { padding: 4px 8px; border-radius: 4px; color: white; font-size: 12px; }
-            .green { background-color: #10b981; }
-            .amber { background-color: #f59e0b; }
-            .red { background-color: #ef4444; }
-            .gray { background-color: #6b7280; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Project Status Review</h1>
-            <p class="date">Date: ${selectedDate.toLocaleDateString()}</p>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Customer Name</th>
-                <th>Project Name</th>
-                <th>Project Lead</th>
-                <th>Overall Status</th>
-                <th>Sprint Status</th>
-                <th>Weekly Comms</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${statusReviews.map(review => `
-                <tr>
-                  <td>${review.customerName || 'N/A'}</td>
-                  <td>${review.projectName}</td>
-                  <td>${review.projectLead || 'N/A'}</td>
-                  <td><span class="status-badge ${review.overallProjectStatus}">${review.overallProjectStatusLabel || review.overallProjectStatus}</span></td>
-                  <td><span class="status-badge ${review.currentSprintStatus}">${review.currentSprintStatusLabel || review.currentSprintStatus}</span></td>
-                  <td><span class="status-badge ${review.weeklyComms}">${review.weeklyCommsLabel || review.weeklyComms}</span></td>
-                  <td>${review.notes || ''}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-
-    // Create and download PDF
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `status-review-${selectedDate.toISOString().split('T')[0]}.html`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-
-    toast({ title: "Status review exported successfully" });
-  };
-
-  const handleStatusUpdate = (projectId: number) => {
-    setStatusUpdateProject(projects.find(p => p.id === projectId) || null);
-    setIsStatusDialogOpen(true);
-  };
-
-  const handleExportPDF = () => {
-    setExportingPDF(true);
-
-    // Create a simple PDF export
-    const printContent = `
-      <html>
-        <head>
-          <title>Navadhiti Projects Status Review - ${selectedDate.toLocaleDateString()}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .status-badge { padding: 4px 8px; border-radius: 4px; color: white; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Navadhiti Projects Status Review</h1>
-            <h2>Date: ${selectedDate.toLocaleDateString()}</h2>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Customer Name</th>
-                <th>Project Name</th>
-                <th>Project Lead</th>
-                <th>Overall Status</th>
-                <th>Sprint Status</th>
-                <th>Weekly Communications</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredProjects.map(project => `
-                <tr>
-                  <td>${project.customer || 'N/A'}</td>
-                  <td>${project.projectName}</td>
-                  <td>${project.projectLead || 'N/A'}</td>
-                  <td>${project.overallStatus || 'No Update'}</td>
-                  <td>${project.sprintStatus || 'No Update'}</td>
-                  <td>${project.weeklyComms || 'No Update'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.onload = () => {
-        printWindow.print();
-        printWindow.close();
-        setExportingPDF(false);
-      };
+  const handleEmployeeSelect = (employeeId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedEmployees([...selectedEmployees, employeeId]);
     } else {
-      setExportingPDF(false);
-      toast({
-        title: "Error",
-        description: "Could not open print window. Please check your browser settings.",
-        variant: "destructive",
-      });
+      setSelectedEmployees(selectedEmployees.filter(id => id !== employeeId));
     }
   };
 
-  // Calculate summary stats
-  const stats = useMemo(() => {
-    if (!projects.length) return { total: 0, active: 0, completed: 0, atRisk: 0 };
+  const handleAllocateEmployees = () => {
+    if (selectedEmployees.length === 0 || !selectedProject) {
+      toast({ title: "Please select employees and project", variant: "destructive" });
+      return;
+    }
 
-    return {
-      total: projects.length,
-      active: projects.filter((p: NavadhitiProject) => p.status === 'Active').length,
-      completed: projects.filter((p: NavadhitiProject) => p.status === 'Completed').length,
-      atRisk: projects.filter((p: NavadhitiProject) => getOverallStatus(p) === 'At Risk').length,
-    };
-  }, [projects]);
+    if (!allocationRole) {
+      toast({ title: "Please specify a role", variant: "destructive" });
+      return;
+    }
 
-  if (error) {
-    console.error("Error loading Navadhiti projects:", error);
-    return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-red-600">Error Loading Projects</h3>
-              <p className="text-muted-foreground mt-2">
-                {error instanceof Error ? error.message : "An unexpected error occurred"}
-              </p>
-              <Button 
-                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] })}
-                className="mt-4"
-              >
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+    // Create allocations for each selected employee
+    selectedEmployees.forEach(employeeId => {
+      allocateEmployeesMutation.mutate({
+        employeeId,
+        projectId: selectedProject,
+        projectType: 'navadhiti',
+        role: allocationRole,
+        startDate: allocationStartDate || null,
+        endDate: allocationEndDate || null,
+        isActive: true,
+        status: 'active'
+      });
+    });
+  };
+
+  const getEmployeeStatus = (employee: any) => {
+    const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.isActive);
+    if (!allocation) return 'available';
+
+    switch (allocation.status) {
+      case 'active': return 'occupied';
+      case 'learning': return 'learning';
+      case 'leave': return 'onLeave';
+      default: return 'available';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'occupied': return 'bg-red-100 text-red-800 border-red-200';
+      case 'learning': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'onLeave': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'available': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'occupied': return 'Occupied';
+      case 'learning': return 'Learning';
+      case 'onLeave': return 'On Leave';
+      case 'available': return 'Available';
+      default: return 'Unknown';
+    }
+  };
 
   return (
     <MainLayout>
       <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-500 rounded-xl shadow-lg">
+              <Briefcase className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Navadhiti Projects</h1>
+              <p className="text-muted-foreground">
+                Manage projects and resource allocation
+              </p>
+            </div>
+          </div>
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="projects">Projects</TabsTrigger>
-            <TabsTrigger value="statusReview">Status Review</TabsTrigger>
-            <TabsTrigger value="resourceAllocation">Resource Allocation</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="projects" className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              Projects
+            </TabsTrigger>
+            <TabsTrigger value="statusReview" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Status Review
+            </TabsTrigger>
+            <TabsTrigger value="resourceAllocation" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Resource Allocation
+            </TabsTrigger>
           </TabsList>
-          <TabsContent value="projects">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-3xl font-bold">Navadhiti Projects</h1>
-                <p className="text-muted-foreground">Manage and track project activities</p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={exportToCSV}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export CSV
-                </Button>
-                <Button variant="outline" onClick={() => setIsCsvDialogOpen(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import CSV
-                </Button>
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Project
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editingProject ? "Edit Project" : "Add New Project"}
-                      </DialogTitle>
-                    </DialogHeader>
-                    <NavadhitiProjectForm
-                      project={editingProject}
-                      onSuccess={handleDialogClose}
-                    />
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <TrendingUp className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Total Projects</p>
-                        <p className="text-2xl font-bold">{stats.total}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-green-600" />
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Active</p>
-                        <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Completed</p>
-                        <p className="text-2xl font-bold text-blue-600">{stats.completed}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <DollarSign className="h-4 w-4 text-red-600" />
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">At Risk</p>
-                        <p className="text-2xl font-bold text-red-600">{stats.atRisk}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-
-            {/* Filters */}
-            <Card className="mb-6">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          {/* Resource Allocation Tab */}
+          <TabsContent value="resourceAllocation" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Resource Allocation Dashboard
+                </CardTitle>
+                <CardDescription>
+                  Allocate employees to projects based on department, skills, and availability
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Filters Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <div>
+                    <Label htmlFor="search" className="text-sm font-medium">Search Employees</Label>
+                    <div className="relative mt-1">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
-                        placeholder="Search projects..."
+                        id="search"
+                        placeholder="Search by name, email, ID..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10"
                       />
                     </div>
                   </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="on track">On Track</SelectItem>
-                      <SelectItem value="at risk">At Risk</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="on hold">On Hold</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="All Priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Priority</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Projects Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Projects ({filteredProjects.length})</CardTitle>
-                <CardDescription>
-                  Manage your Navadhiti project portfolio
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-32">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                      <p className="mt-2 text-muted-foreground">Loading projects...</p>
+                  <div>
+                    <Label htmlFor="department" className="text-sm font-medium">Department</Label>
+                    <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="All Departments" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Departments</SelectItem>
+                        {departmentOptions.map((dept: any) => (
+                          <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="technologies" className="text-sm font-medium">Technologies</Label>
+                    <MultiSelect
+                      options={technologyOptions.map((tech: any) => ({
+                        label: tech.name,
+                        value: tech.name
+                      }))}
+                      selected={technologyFilter}
+                      onChange={setTechnologyFilter}
+                      placeholder="Select technologies..."
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="status" className="text-sm font-medium">Status</Label>
+                    <Select value={statusEmployeeFilter} onValueChange={setStatusEmployeeFilter}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="All Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="available">Available</SelectItem>
+                        <SelectItem value="occupied">Occupied</SelectItem>
+                        <SelectItem value="learning">Learning</SelectItem>
+                        <SelectItem value="onLeave">On Leave</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Selection Summary */}
+                {selectedEmployees.length > 0 && (
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                        <span className="font-medium text-blue-900 dark:text-blue-100">
+                          {selectedEmployees.length} employee(s) selected
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setSelectedEmployees([])}
+                        >
+                          Clear Selection
+                        </Button>
+                        <Dialog open={isAllocationDialogOpen} onOpenChange={setIsAllocationDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                              <Send className="h-4 w-4 mr-2" />
+                              Allocate to Project
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Allocate Employees to Project</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <Label>Project</Label>
+                                <Select value={selectedProject?.toString() || ""} onValueChange={(value) => setSelectedProject(parseInt(value))}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select project..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {projects.map((project: any) => (
+                                      <SelectItem key={project.id} value={project.id.toString()}>
+                                        {project.projectName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>Role</Label>
+                                <Input
+                                  placeholder="e.g., Frontend Developer, Project Manager"
+                                  value={allocationRole}
+                                  onChange={(e) => setAllocationRole(e.target.value)}
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label>Start Date</Label>
+                                  <Input
+                                    type="date"
+                                    value={allocationStartDate}
+                                    onChange={(e) => setAllocationStartDate(e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>End Date</Label>
+                                  <Input
+                                    type="date"
+                                    value={allocationEndDate}
+                                    onChange={(e) => setAllocationEndDate(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex justify-end gap-2">
+                                <Button variant="outline" onClick={() => setIsAllocationDialogOpen(false)}>
+                                  Cancel
+                                </Button>
+                                <Button onClick={handleAllocateEmployees}>
+                                  Allocate {selectedEmployees.length} Employee(s)
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     </div>
                   </div>
-                ) : filteredProjects.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      {projects.length === 0 ? "No projects found. Create your first project!" : "No projects match your filters."}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Image</TableHead>
-                          <TableHead>Project Name</TableHead>
-                          <TableHead>Customer</TableHead>
-                          <TableHead>Created Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredProjects.map((project: NavadhitiProject) => (
-                          <TableRow key={project.id}>
-                            <TableCell>
-                              {project.projectImage ? (
-                                <img
-                                  src={project.projectImage}
-                                  alt={project.projectName}
-                                  className="w-12 h-12 object-cover rounded-lg border"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 bg-gray-100 rounded-lg border flex items-center justify-center">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24"
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="h-6 w-6 text-gray-400"
-                                  >
-                                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                                    <circle cx="8.5" cy="8.5" r="1.5" />
-                                    <polyline points="21 15 16 10 5 21" />
-                                  </svg>
+                )}
+
+                {/* Employee Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {filteredEmployees.map((employee: any) => {
+                    const status = getEmployeeStatus(employee);
+                    const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                    const project = allocation ? projects.find((p: any) => p.id === allocation.projectId) : null;
+
+                    return (
+                      <Card key={employee.id} className={`relative transition-all duration-200 hover:shadow-lg ${
+                        selectedEmployees.includes(employee.id) ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
+                      }`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={selectedEmployees.includes(employee.id)}
+                                onCheckedChange={(checked) => handleEmployeeSelect(employee.id, checked as boolean)}
+                                disabled={status === 'occupied'}
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  {employee.profilePicture ? (
+                                    <img
+                                      src={employee.profilePicture}
+                                      alt={`${employee.firstName} ${employee.lastName}`}
+                                      className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
+                                    />
+                                  ) : (
+                                    <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm">
+                                      {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <h3 className="font-semibold text-sm">{employee.firstName} {employee.lastName}</h3>
+                                    <p className="text-xs text-gray-600">{employee.employeeId}</p>
+                                  </div>
                                 </div>
-                              )}
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {project.projectName}
-                            </TableCell>
-                            <TableCell>{project.clientName || project.customer || 'N/A'}</TableCell>
-                            <TableCell>
-                              {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : 'N/A'}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={getStatusColor(project.status)}
-                              >
-                                {project.status || 'Active'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleEdit(project)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleDelete(project.id)}
-                                    className="text-red-600"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                              </div>
+                            </div>
+                            <Badge className={`text-xs ${getStatusColor(status)}`}>
+                              {getStatusLabel(status)}
+                            </Badge>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Briefcase className="h-3 w-3 text-gray-400" />
+                              <span className="text-xs text-gray-600">{employee.department || 'N/A'}</span>
+                            </div>
+
+                            {employee.technologies && employee.technologies.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {employee.technologies.slice(0, 3).map((tech: string, index: number) => (
+                                  <Badge key={index} variant="secondary" className="text-xs px-2 py-0">
+                                    {tech}
+                                  </Badge>
+                                ))}
+                                {employee.technologies.length > 3 && (
+                                  <Badge variant="outline" className="text-xs px-2 py-0">
+                                    +{employee.technologies.length - 3}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+
+                            {project && (
+                              <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+                                <div className="font-medium text-gray-900 dark:text-gray-100">
+                                  Current: {project.projectName}
+                                </div>
+                                <div className="text-gray-600 dark:text-gray-400">
+                                  Role: {allocation?.role || 'N/A'}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {filteredEmployees.length === 0 && (
+                  <div className="text-center py-12">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                      No employees found
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      Try adjusting your filters to see more employees.
+                    </p>
                   </div>
                 )}
               </CardContent>
             </Card>
-
-            {/* CSV Import Dialog */}
-            <Dialog open={isCsvDialogOpen} onOpenChange={setIsCsvDialogOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Import CSV</DialogTitle>
-                </DialogHeader>
-                <CSVImportDialog onClose={() => setIsCsvDialogOpen(false)} />
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
-          <TabsContent value="statusReview">
-            <div className="space-y-6">
-              {/* Header */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">Status Review</h2>
-                  <p className="text-muted-foreground">Review project status for selected date</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={handleExportPDF}
-                    disabled={exportingPDF}
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    {exportingPDF ? "Exporting..." : "Export PDF"}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Date Selection */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Select Review Date:</label>
-                      <DatePicker
-                        selected={selectedDate}
-                        onSelect={(date) => date && setSelectedDate(date)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {statusReviews.length} reviews found for {selectedDate.toLocaleDateString()}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Active Projects Table */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Active Projects</CardTitle>
-                  <CardDescription>Click on a project to update its status</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {projects.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">No projects available</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Project Image</TableHead>
-                            <TableHead>Customer Name</TableHead>
-                            <TableHead>Project Name</TableHead>
-                            <TableHead>Project Lead</TableHead>
-                            <TableHead>Overall Status</TableHead>
-                            <TableHead>Sprint Status</TableHead>
-                            <TableHead>Weekly Comms</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {projects.map((project: NavadhitiProject) => {
-                            const review = statusReviews.find(r => r.projectId === project.id);
-                            return (
-                              <TableRow key={project.id}>
-                                <TableCell>
-                                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                                    {project.projectImage ? (
-                                      <img 
-                                        src={project.projectImage} 
-                                        alt={project.projectName}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      <Building className="w-5 h-5 text-gray-400" />
-                                    )}
-                                  </div>
-                                </TableCell>
-                                <TableCell>{project.clientName || project.customer || 'N/A'}</TableCell>
-                                <TableCell className="font-medium">{project.projectName}</TableCell>
-                                <TableCell>{project.projectLead || 'N/A'}</TableCell>
-                                <TableCell>
-                                  {review ? (
-                                    <Badge variant="outline" className="text-white" style={{backgroundColor: review.overallProjectStatusColor || '#6b7280'}}>
-                                      {review.overallProjectStatusLabel}
-                                    </Badge>
-                                  ) : (
-                                    <span className="text-muted-foreground">No Update</span>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {review ? (
-                                    <Badge variant="outline" className="text-white" style={{backgroundColor: review.currentSprintStatusColor || '#6b7280'}}>
-                                      {review.currentSprintStatusLabel}
-                                    </Badge>
-                                  ) : (
-                                    <span className="text-muted-foreground">No Update</span>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {review ? (
-                                    <Badge variant="outline" className="text-white" style={{backgroundColor: review.weeklyCommsColor || '#6b7280'}}>
-                                      {review.weeklyCommsLabel}
-                                    </Badge>
-                                  ) : (
-                                    <span className="text-muted-foreground">No Update</span>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedProjectForStatus(project);
-                                      setIsStatusDialogOpen(true);
-                                    }}
-                                  >
-                                    Update Status
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Status Review Dialog */}
-            <StatusReviewDialog
-              isOpen={isStatusDialogOpen}
-              onClose={() => {
-                setIsStatusDialogOpen(false);
-                setSelectedProjectForStatus(null);
-              }}
-              project={selectedProjectForStatus}
-              selectedDate={selectedDate}
-            />
           </TabsContent>
 
-          <TabsContent value="resourceAllocation">
-            <div className="space-y-6">
-              {/* Header */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">Resource Allocation Mapping</h2>
-                  <p className="text-muted-foreground">Manage employee allocation across projects</p>
+          {/* Other tabs content would go here */}
+          <TabsContent value="projects" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Projects</CardTitle>
+                <CardDescription>Manage your Navadhiti projects</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                    Projects management will be displayed here
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    This section contains the project management functionality.
+                  </p>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              {/* Resource Categories */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium text-green-600">Occupied</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {employeesData
-                        .filter((emp: any) => employeeProjectsData.some((ep: any) => ep.employeeId === emp.id && ep.status === 'active'))
-                        .map((employee: any) => {
-                          const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.status === 'active');
-                          const project = projects.find((p: any) => p.id === allocation?.projectId);
-                          return (
-                            <div key={employee.id} className="p-2 border rounded text-xs">
-                              <div className="font-medium">{employee.firstName} {employee.lastName}</div>
-                              <div className="text-muted-foreground">{project?.projectName || 'Unknown Project'}</div>
-                              <div className="text-xs text-green-600">
-                                {allocation?.startDate ? new Date(allocation.startDate).toLocaleDateString() : ''} - 
-                                {allocation?.endDate ? new Date(allocation.endDate).toLocaleDateString() : 'Ongoing'}
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium text-blue-600">Unoccupied</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {employeesData
-                        .filter((emp: any) => !employeeProjectsData.some((ep: any) => ep.employeeId === emp.id && ep.status === 'active'))
-                        .map((employee: any) => (
-                          <div key={employee.id} className="p-2 border rounded text-xs">
-                            <div className="font-medium">{employee.firstName} {employee.lastName}</div>
-                            <div className="text-muted-foreground">{employee.role || 'Employee'}</div>
-                            <div className="text-xs text-blue-600">Available</div>
-                          </div>
-                        ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium text-orange-600">Learning</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {employeesData
-                        .filter((emp: any) => employeeProjectsData.some((ep: any) => ep.employeeId === emp.id && ep.status === 'learning'))
-                        .map((employee: any) => {
-                          const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.status === 'learning');
-                          return (
-                            <div key={employee.id} className="p-2 border rounded text-xs">
-                              <div className="font-medium">{employee.firstName} {employee.lastName}</div>
-                              <div className="text-muted-foreground">Learning Phase</div>
-                              <div className="text-xs text-orange-600">
-                                {allocation?.learningTopic || 'General Training'}
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium text-red-600">On Leave</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {employeesData
-                        .filter((emp: any) => employeeProjectsData.some((ep: any) => ep.employeeId === emp.id && ep.status === 'leave'))
-                        .map((employee: any) => {
-                          const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.status === 'leave');
-                          return (
-                            <div key={employee.id} className="p-2 border rounded text-xs">
-                              <div className="font-medium">{employee.firstName} {employee.lastName}</div>
-                              <div className="text-muted-foreground">On Leave</div>
-                              <div className="text-xs text-red-600">
-                                {allocation?.leaveType || 'Leave'} until {allocation?.endDate ? new Date(allocation.endDate).toLocaleDateString() : 'TBD'}
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Project Allocation Table */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Project Allocations</CardTitle>
-                  <CardDescription>Allocate employees to projects with start and end dates</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Employee</TableHead>
-                          <TableHead>Current Project</TableHead>
-                          <TableHead>Role</TableHead>
-                          <TableHead>Start Date</TableHead>
-                          <TableHead>End Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {employeesData.map((employee: any) => {
-                          const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.status === 'active');
-                          const project = projects.find((p: any) => p.id === allocation?.projectId);
-                          
-                          return (
-                            <TableRow key={employee.id}>
-                              <TableCell>
-                                <div>
-                                  <div className="font-medium">{employee.firstName} {employee.lastName}</div>
-                                  <div className="text-sm text-muted-foreground">{employee.email}</div>
-                                </div>
-                              </TableCell>
-                              <TableCell>{project?.projectName || 'Not Assigned'}</TableCell>
-                              <TableCell>{allocation?.role || employee.role || 'Employee'}</TableCell>
-                              <TableCell>
-                                {allocation?.startDate ? new Date(allocation.startDate).toLocaleDateString() : '-'}
-                              </TableCell>
-                              <TableCell>
-                                {allocation?.endDate ? new Date(allocation.endDate).toLocaleDateString() : '-'}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    allocation?.status === 'active' ? 'bg-green-100 text-green-800' :
-                                    allocation?.status === 'learning' ? 'bg-orange-100 text-orange-800' :
-                                    allocation?.status === 'leave' ? 'bg-red-100 text-red-800' :
-                                    'bg-blue-100 text-blue-800'
-                                  }
-                                >
-                                  {allocation?.status === 'active' ? 'Occupied' :
-                                   allocation?.status === 'learning' ? 'Learning' :
-                                   allocation?.status === 'leave' ? 'On Leave' :
-                                   'Available'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Button size="sm" variant="outline">
-                                  Allocate
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+          <TabsContent value="statusReview" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Status Review</CardTitle>
+                <CardDescription>Review project status and progress</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                    Status review will be displayed here
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    This section contains the status review functionality.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
