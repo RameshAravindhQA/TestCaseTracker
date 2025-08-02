@@ -499,6 +499,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee-Project Mapping endpoints
+  apiRouter.get("/employee-projects", isAuthenticated, async (req, res) => {
+    try {
+      const { employeeId } = req.query;
+      const employeeProjects = await storage.getEmployeeProjects(employeeId ? parseInt(employeeId as string) : undefined);
+      res.json(employeeProjects);
+    } catch (error) {
+      console.error("Get employee projects error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/employee-projects", isAuthenticated, async (req, res) => {
+    try {
+      const mappingData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+      const mapping = await storage.createEmployeeProject(mappingData);
+      res.status(201).json(mapping);
+    } catch (error) {
+      console.error("Create employee project mapping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/employee-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteEmployeeProject(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete employee project mapping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   apiRouter.post("/navadhiti-projects/status-review", isAuthenticated, async (req, res) => {
     try {
       const reviewData = {

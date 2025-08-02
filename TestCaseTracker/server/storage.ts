@@ -2292,13 +2292,24 @@ class MemStorage implements IStorage {
       if (project) {
         const updatedProject = {
           ...project,
-          overallStatus: data.overallStatus,
-          sprintStatus: data.currentSprintStatus,
+          // Update project lead if provided
+          projectLead: data.projectLead || project.projectLead,
+          // Store both status ID and labels for flexibility
+          overallProjectStatus: data.overallProjectStatus,
+          overallProjectStatusLabel: data.overallProjectStatusLabel,
+          overallProjectStatusColor: data.overallProjectStatusColor,
+          currentSprintStatus: data.currentSprintStatus,
+          currentSprintStatusLabel: data.currentSprintStatusLabel,
+          currentSprintStatusColor: data.currentSprintStatusColor,
           weeklyComms: data.weeklyComms,
+          weeklyCommsLabel: data.weeklyCommsLabel,
+          weeklyCommsColor: data.weeklyCommsColor,
           lastReviewDate: data.reviewDate,
+          notes: data.notes,
           updatedAt: new Date().toISOString()
         };
         this.navadhitiProjects.set(data.projectId, updatedProject);
+        console.log(`Updated project ${data.projectId} with status review data:`, updatedProject);
       }
     }
     

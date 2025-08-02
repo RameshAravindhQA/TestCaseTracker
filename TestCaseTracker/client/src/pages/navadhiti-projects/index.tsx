@@ -107,6 +107,8 @@ export default function NavadhitiProjectsPage() {
   const [selectedProjectForStatus, setSelectedProjectForStatus] = useState<any>(null);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [statusUpdateProject, setStatusUpdateProject] = useState<NavadhitiProject | null>(null);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [employeeProjects, setEmployeeProjects] = useState<any[]>([]);
 
   // Fetch status reviews for selected date
   const { data: statusReviews = [] } = useQuery({
@@ -117,6 +119,28 @@ export default function NavadhitiProjectsPage() {
       return res.json();
     },
     enabled: activeTab === "statusReview"
+  });
+
+  // Fetch employees for resource allocation
+  const { data: employeesData = [] } = useQuery({
+    queryKey: ["/api/employees"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/employees");
+      if (!res.ok) throw new Error("Failed to fetch employees");
+      return res.json();
+    },
+    enabled: activeTab === "resourceAllocation"
+  });
+
+  // Fetch employee project mappings
+  const { data: employeeProjectsData = [] } = useQuery({
+    queryKey: ["/api/employee-projects"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/employee-projects");
+      if (!res.ok) throw new Error("Failed to fetch employee projects");
+      return res.json();
+    },
+    enabled: activeTab === "resourceAllocation"
   });
 
   // Fetch projects
@@ -423,6 +447,7 @@ export default function NavadhitiProjectsPage() {
           <TabsList>
             <TabsTrigger value="projects">Projects</TabsTrigger>
             <TabsTrigger value="statusReview">Status Review</TabsTrigger>
+            <TabsTrigger value="resourceAllocation">Resource Allocation</TabsTrigger>
           </TabsList>
           <TabsContent value="projects">
             {/* Header */}
@@ -846,6 +871,185 @@ export default function NavadhitiProjectsPage() {
               project={selectedProjectForStatus}
               selectedDate={selectedDate}
             />
+          </TabsContent>
+
+          <TabsContent value="resourceAllocation">
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">Resource Allocation Mapping</h2>
+                  <p className="text-muted-foreground">Manage employee allocation across projects</p>
+                </div>
+              </div>
+
+              {/* Resource Categories */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium text-green-600">Occupied</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {employeesData
+                        .filter((emp: any) => employeeProjectsData.some((ep: any) => ep.employeeId === emp.id && ep.status === 'active'))
+                        .map((employee: any) => {
+                          const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.status === 'active');
+                          const project = projects.find((p: any) => p.id === allocation?.projectId);
+                          return (
+                            <div key={employee.id} className="p-2 border rounded text-xs">
+                              <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                              <div className="text-muted-foreground">{project?.projectName || 'Unknown Project'}</div>
+                              <div className="text-xs text-green-600">
+                                {allocation?.startDate ? new Date(allocation.startDate).toLocaleDateString() : ''} - 
+                                {allocation?.endDate ? new Date(allocation.endDate).toLocaleDateString() : 'Ongoing'}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium text-blue-600">Unoccupied</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {employeesData
+                        .filter((emp: any) => !employeeProjectsData.some((ep: any) => ep.employeeId === emp.id && ep.status === 'active'))
+                        .map((employee: any) => (
+                          <div key={employee.id} className="p-2 border rounded text-xs">
+                            <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                            <div className="text-muted-foreground">{employee.role || 'Employee'}</div>
+                            <div className="text-xs text-blue-600">Available</div>
+                          </div>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium text-orange-600">Learning</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {employeesData
+                        .filter((emp: any) => employeeProjectsData.some((ep: any) => ep.employeeId === emp.id && ep.status === 'learning'))
+                        .map((employee: any) => {
+                          const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.status === 'learning');
+                          return (
+                            <div key={employee.id} className="p-2 border rounded text-xs">
+                              <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                              <div className="text-muted-foreground">Learning Phase</div>
+                              <div className="text-xs text-orange-600">
+                                {allocation?.learningTopic || 'General Training'}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium text-red-600">On Leave</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {employeesData
+                        .filter((emp: any) => employeeProjectsData.some((ep: any) => ep.employeeId === emp.id && ep.status === 'leave'))
+                        .map((employee: any) => {
+                          const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.status === 'leave');
+                          return (
+                            <div key={employee.id} className="p-2 border rounded text-xs">
+                              <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                              <div className="text-muted-foreground">On Leave</div>
+                              <div className="text-xs text-red-600">
+                                {allocation?.leaveType || 'Leave'} until {allocation?.endDate ? new Date(allocation.endDate).toLocaleDateString() : 'TBD'}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Project Allocation Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Project Allocations</CardTitle>
+                  <CardDescription>Allocate employees to projects with start and end dates</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Employee</TableHead>
+                          <TableHead>Current Project</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>End Date</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {employeesData.map((employee: any) => {
+                          const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.status === 'active');
+                          const project = projects.find((p: any) => p.id === allocation?.projectId);
+                          
+                          return (
+                            <TableRow key={employee.id}>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                                  <div className="text-sm text-muted-foreground">{employee.email}</div>
+                                </div>
+                              </TableCell>
+                              <TableCell>{project?.projectName || 'Not Assigned'}</TableCell>
+                              <TableCell>{allocation?.role || employee.role || 'Employee'}</TableCell>
+                              <TableCell>
+                                {allocation?.startDate ? new Date(allocation.startDate).toLocaleDateString() : '-'}
+                              </TableCell>
+                              <TableCell>
+                                {allocation?.endDate ? new Date(allocation.endDate).toLocaleDateString() : '-'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    allocation?.status === 'active' ? 'bg-green-100 text-green-800' :
+                                    allocation?.status === 'learning' ? 'bg-orange-100 text-orange-800' :
+                                    allocation?.status === 'leave' ? 'bg-red-100 text-red-800' :
+                                    'bg-blue-100 text-blue-800'
+                                  }
+                                >
+                                  {allocation?.status === 'active' ? 'Occupied' :
+                                   allocation?.status === 'learning' ? 'Learning' :
+                                   allocation?.status === 'leave' ? 'On Leave' :
+                                   'Available'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Button size="sm" variant="outline">
+                                  Allocate
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

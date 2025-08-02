@@ -43,7 +43,8 @@ export function StatusReviewDialog({ isOpen, onClose, project, selectedDate }: S
     overallProjectStatus: "",
     currentSprintStatus: "",
     weeklyComms: "",
-    notes: ""
+    notes: "",
+    projectLead: "" // Added projectLead to form data
   });
 
   // Reset form when project changes
@@ -53,7 +54,8 @@ export function StatusReviewDialog({ isOpen, onClose, project, selectedDate }: S
         overallProjectStatus: "",
         currentSprintStatus: "",
         weeklyComms: "",
-        notes: ""
+        notes: "",
+        projectLead: project.projectLead || '' // Initialize with existing project lead
       });
     }
   }, [project]);
@@ -112,7 +114,7 @@ export function StatusReviewDialog({ isOpen, onClose, project, selectedDate }: S
   };
 
   const handleSubmit = () => {
-    if (!formData.overallProjectStatus || !formData.currentSprintStatus || !formData.weeklyComms) {
+    if (!formData.overallProjectStatus || !formData.currentSprintStatus || !formData.weeklyComms || !formData.projectLead) {
       toast({ 
         title: "Please fill all required fields", 
         variant: "destructive" 
@@ -124,7 +126,7 @@ export function StatusReviewDialog({ isOpen, onClose, project, selectedDate }: S
       projectId: project.id,
       projectName: project.projectName,
       customerName: project.clientName || project.customer || '',
-      projectLead: project.projectLead || '',
+      projectLead: formData.projectLead, // Use form data for project lead
       reviewDate: selectedDate.toISOString(),
       overallProjectStatus: formData.overallProjectStatus,
       currentSprintStatus: formData.currentSprintStatus,
@@ -163,6 +165,22 @@ export function StatusReviewDialog({ isOpen, onClose, project, selectedDate }: S
                 <div><strong>Customer:</strong> {project.clientName || project.customer || 'N/A'}</div>
                 <div><strong>Lead:</strong> {project.projectLead || 'N/A'}</div>
                 <div><strong>Review Date:</strong> {selectedDate.toLocaleDateString()}</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Project Lead Field */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                <Label htmlFor="projectLead">Project Lead *</Label>
+                <Input
+                  id="projectLead"
+                  value={formData.projectLead}
+                  onChange={(e) => setFormData({...formData, projectLead: e.target.value})}
+                  placeholder="Enter project lead name"
+                  className="w-full"
+                />
               </div>
             </CardContent>
           </Card>
