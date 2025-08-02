@@ -12,17 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, User, AlertCircle, CheckCircle2, Briefcase } from "lucide-react";
 import { format } from "date-fns";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { ColorPicker } from "@/components/ui/color-picker";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 interface StatusOption {
@@ -48,26 +38,31 @@ const defaultStatusOptions: StatusOption[] = [
 export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const selectedDate = new Date(); // Define selectedDate
+  const selectedDate = new Date();
 
   // Form state
-  const [reviewDate, setReviewDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [projectLead, setProjectLead] = useState(project?.projectLead || '');
-  const [overallProjectStatus, setOverallProjectStatus] = useState(project?.overallProjectStatus || 1);
-  const [currentSprintStatus, setCurrentSprintStatus] = useState(project?.currentSprintStatus || 1);
-  const [weeklyComms, setWeeklyComms] = useState(project?.weeklyComms || 1);
-  const [notes, setNotes] = useState(project?.notes || '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    overallProjectStatus: "",
+    currentSprintStatus: "",
+    weeklyComms: "",
+    notes: "",
+    projectLead: ""
+  });
+
+  // Status options state
+  const [statusOptions, setStatusOptions] = useState(defaultStatusOptions);
+  const [newStatusLabel, setNewStatusLabel] = useState("");
+  const [newStatusColor, setNewStatusColor] = useState("#3b82f6");
 
   // Reset form when project changes
   useEffect(() => {
     if (project) {
       setFormData({
-        overallProjectStatus: "",
-        currentSprintStatus: "",
-        weeklyComms: "",
-        notes: "",
-        projectLead: project.projectLead || '' // Initialize with existing project lead
+        overallProjectStatus: project?.overallProjectStatus || "",
+        currentSprintStatus: project?.currentSprintStatus || "",
+        weeklyComms: project?.weeklyComms || "",
+        notes: project?.notes || "",
+        projectLead: project?.projectLead || ""
       });
     }
   }, [project]);
@@ -126,31 +121,23 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
   };
 
   const handleSubmit = () => {
-    updateMutation.mutate({
-      overallProjectStatus,
-      currentSprint,
-      currentIssues,
-      weeklyComms,
-      immediateActionItems,
-      supportRequired,
-      additionalRemarks,
-    });
-  };
+    if (!formData.projectLead.trim()) {
+      toast({ 
+        title: "Project Lead Required", 
+        description: "Please enter a project lead name",
+        variant: "destructive" 
+      });
+      return;
+    }
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("PUT", `/api/navadhiti-projects/${project.id}`, data);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Status updated successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
-      onClose();
-    },
-    onError: () => {
-      toast({ title: "Failed to update status", variant: "destructive" });
-    },
-  });
+    const statusData = {
+      projectId: project.id,
+      reviewDate: format(selectedDate, 'yyyy-MM-dd'),
+      ...formData
+    };
+
+    createStatusMutation.mutate(statusData);
+  };
 
 
   if (!project) return null;
