@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -36,7 +35,7 @@ const defaultStatusOptions: StatusOption[] = [
 export function StatusReviewDialog({ isOpen, onClose, project, selectedDate }: StatusReviewDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [statusOptions, setStatusOptions] = useState<StatusOption[]>(defaultStatusOptions);
   const [newStatusLabel, setNewStatusLabel] = useState("");
   const [newStatusColor, setNewStatusColor] = useState("#3b82f6");
@@ -81,24 +80,24 @@ export function StatusReviewDialog({ isOpen, onClose, project, selectedDate }: S
 
   const addCustomStatus = () => {
     if (!newStatusLabel.trim()) return;
-    
+
     const newStatus: StatusOption = {
       id: `custom_${Date.now()}`,
       label: newStatusLabel.trim(),
       color: newStatusColor
     };
-    
+
     setStatusOptions([...statusOptions, newStatus]);
     setNewStatusLabel("");
     setNewStatusColor("#3b82f6");
-    
+
     toast({ title: "Custom status added successfully" });
   };
 
   const getStatusBadge = (statusId: string) => {
     const status = statusOptions.find(s => s.id === statusId);
     if (!status) return null;
-    
+
     return (
       <Badge 
         style={{ 
@@ -144,7 +143,7 @@ export function StatusReviewDialog({ isOpen, onClose, project, selectedDate }: S
         <DialogHeader>
           <DialogTitle>Status Review - {project.projectName}</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6">
           {/* Project Info */}
           <Card>

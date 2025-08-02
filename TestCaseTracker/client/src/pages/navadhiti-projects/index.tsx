@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { NavadhitiProjectForm } from "@/components/navadhiti/navadhiti-project-form";
 import { CSVImportDialog } from "@/components/navadhiti/csv-import-dialog";
 import { StatusReviewDialog } from "@/components/navadhiti/status-review-dialog";
-import { Plus, MoreHorizontal, Edit, Trash2, Upload, Download, Filter, Search, Calendar, DollarSign, Users, TrendingUp, FileText } from "lucide-react";
+import { Plus, MoreHorizontal, Edit, Trash2, Upload, Download, Filter, Search, Calendar, DollarSign, Users, TrendingUp, FileText, Building } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -39,6 +39,8 @@ interface NavadhitiProject {
   priority: string;
   createdAt: string;
   updatedAt: string;
+  customer?: string;
+  projectImage?: string;
 }
 
 // Status helper functions - moved to top level to avoid initialization issues
@@ -102,6 +104,8 @@ export default function NavadhitiProjectsPage() {
   const [statusReviewData, setStatusReviewData] = useState<any[]>([]);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [selectedProjectForStatus, setSelectedProjectForStatus] = useState<any>(null);
+  const [exportingPDF, setExportingPDF] = useState(false);
+  const [statusUpdateProject, setStatusUpdateProject] = useState<NavadhitiProject | null>(null);
 
   // Fetch status reviews for selected date
   const { data: statusReviews = [] } = useQuery({
@@ -299,6 +303,80 @@ export default function NavadhitiProjectsPage() {
     window.URL.revokeObjectURL(url);
 
     toast({ title: "Status review exported successfully" });
+  };
+
+  const handleStatusUpdate = (projectId: number) => {
+    setStatusUpdateProject(projects.find(p => p.id === projectId) || null);
+    setIsStatusDialogOpen(true);
+  };
+
+  const handleExportPDF = () => {
+    setExportingPDF(true);
+
+    // Create a simple PDF export
+    const printContent = `
+      <html>
+        <head>
+          <title>Navadhiti Projects Status Review - ${selectedDate.toLocaleDateString()}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .status-badge { padding: 4px 8px; border-radius: 4px; color: white; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Navadhiti Projects Status Review</h1>
+            <h2>Date: ${selectedDate.toLocaleDateString()}</h2>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Customer Name</th>
+                <th>Project Name</th>
+                <th>Project Lead</th>
+                <th>Overall Status</th>
+                <th>Sprint Status</th>
+                <th>Weekly Communications</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredProjects.map(project => `
+                <tr>
+                  <td>${project.customer || 'N/A'}</td>
+                  <td>${project.projectName}</td>
+                  <td>${project.projectLead || 'N/A'}</td>
+                  <td>${project.overallStatus || 'No Update'}</td>
+                  <td>${project.sprintStatus || 'No Update'}</td>
+                  <td>${project.weeklyComms || 'No Update'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.print();
+        printWindow.close();
+        setExportingPDF(false);
+      };
+    } else {
+      setExportingPDF(false);
+      toast({
+        title: "Error",
+        description: "Could not open print window. Please check your browser settings.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Calculate summary stats
@@ -529,10 +607,9 @@ export default function NavadhitiProjectsPage() {
                         <TableRow>
                           <TableHead>Image</TableHead>
                           <TableHead>Project Name</TableHead>
-                          <TableHead>Project Lead</TableHead>
-                          <TableHead>Overall Status</TableHead>
-                          <TableHead>Priority</TableHead>
-                          <TableHead>Current Sprint</TableHead>
+                          <TableHead>Customer</TableHead>
+                          <TableHead>Created Date</TableHead>
+                          <TableHead>Status</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -570,24 +647,18 @@ export default function NavadhitiProjectsPage() {
                             <TableCell className="font-medium">
                               {project.projectName}
                             </TableCell>
-                            <TableCell>{project.projectLead}</TableCell>
+                            <TableCell>{project.customer || 'N/A'}</TableCell>
                             <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={getStatusColor(getOverallStatus(project))}
-                              >
-                                {getOverallStatus(project)}
-                              </Badge>
+                              {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : 'N/A'}
                             </TableCell>
                             <TableCell>
                               <Badge
                                 variant="outline"
-                                className={getPriorityColor(project.priority)}
+                                className={getStatusColor(project.status)}
                               >
-                                {project.priority || 'Medium'}
+                                {project.status || 'Active'}
                               </Badge>
                             </TableCell>
-                            <TableCell>{project.currentSprint || 'N/A'}</TableCell>
                             <TableCell>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -640,11 +711,11 @@ export default function NavadhitiProjectsPage() {
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
-                    onClick={exportStatusReviewToPDF}
-                    disabled={!statusReviews.length}
+                    onClick={handleExportPDF}
+                    disabled={exportingPDF}
                   >
                     <FileText className="mr-2 h-4 w-4" />
-                    Export PDF
+                    {exportingPDF ? "Exporting..." : "Export PDF"}
                   </Button>
                 </div>
               </div>
@@ -684,6 +755,7 @@ export default function NavadhitiProjectsPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
+                            <TableHead>Project Image</TableHead>
                             <TableHead>Customer Name</TableHead>
                             <TableHead>Project Name</TableHead>
                             <TableHead>Project Lead</TableHead>
@@ -698,7 +770,20 @@ export default function NavadhitiProjectsPage() {
                             const review = statusReviews.find(r => r.projectId === project.id);
                             return (
                               <TableRow key={project.id}>
-                                <TableCell>{project.clientName || 'N/A'}</TableCell>
+                                <TableCell>
+                                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                                    {project.projectImage ? (
+                                      <img 
+                                        src={project.projectImage} 
+                                        alt={project.projectName}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <Building className="w-5 h-5 text-gray-400" />
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-medium">{project.customer || 'N/A'}</TableCell>
                                 <TableCell className="font-medium">{project.projectName}</TableCell>
                                 <TableCell>{project.projectLead || 'N/A'}</TableCell>
                                 <TableCell>

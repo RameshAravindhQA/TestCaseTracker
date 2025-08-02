@@ -5125,6 +5125,65 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  apiRouter.post("/employees", isAuthenticated, async (req, res) => {
+    try {
+      const employeeData = req.body;
+      const employee = await storage.createEmployee(employeeData);
+      res.status(201).json(employee);
+    } catch (error) {
+      console.error("Create employee error:", error);
+      res.status(400).json({ message: "Invalid employee data" });
+    }
+  });
+
+  apiRouter.get("/technology-options", isAuthenticated, async (req, res) => {
+    try {
+      const options = await storage.getTechnologyOptions();
+      res.json(options);
+    } catch (error) {
+      console.error("Get technology options error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/technology-options", isAuthenticated, async (req, res) => {
+    try {
+      const { name } = req.body;
+      if (!name || name.trim() === '') {
+        return res.status(400).json({ message: "Technology name is required" });
+      }
+      const tech = await storage.createTechnologyOption({ name: name.trim() });
+      res.status(201).json(tech);
+    } catch (error) {
+      console.error("Create technology option error:", error);
+      res.status(400).json({ message: "Invalid technology data" });
+    }
+  });
+
+  apiRouter.get("/department-options", isAuthenticated, async (req, res) => {
+    try {
+      const options = await storage.getDepartmentOptions();
+      res.json(options);
+    } catch (error) {
+      console.error("Get department options error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/department-options", isAuthenticated, async (req, res) => {
+    try {
+      const { name } = req.body;
+      if (!name || name.trim() === '') {
+        return res.status(400).json({ message: "Department name is required" });
+      }
+      const dept = await storage.createDepartmentOption({ name: name.trim() });
+      res.status(201).json(dept);
+    } catch (error) {
+      console.error("Create department option error:", error);
+      res.status(400).json({ message: "Invalid department data" });
+    }
+  });
+
   apiRouter.get("/employees/:id", isAuthenticated, async (req, res) => {
     try {
       const employeeId = parseInt(req.params.id);

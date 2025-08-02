@@ -327,6 +327,33 @@ class MemStorage implements IStorage {
   private navadhitiProjects = new Map<number, any>();
   private statusReviews = new Map<number, any>();
 
+  
+
+  private initializeEmployeeDefaults() {
+    // Add default technology options
+    const defaultTechOptions = [
+      { id: 1, name: 'React', createdAt: new Date() },
+      { id: 2, name: 'Node.js', createdAt: new Date() },
+      { id: 3, name: 'Python', createdAt: new Date() },
+      { id: 4, name: 'Java', createdAt: new Date() },
+      { id: 5, name: 'JavaScript', createdAt: new Date() },
+      { id: 6, name: 'TypeScript', createdAt: new Date() },
+    ];
+
+    defaultTechOptions.forEach(tech => this.technologyOptions.set(tech.id, tech));
+
+    // Add default department options
+    const defaultDeptOptions = [
+      { id: 1, name: 'Development', createdAt: new Date() },
+      { id: 2, name: 'Quality Assurance', createdAt: new Date() },
+      { id: 3, name: 'DevOps', createdAt: new Date() },
+      { id: 4, name: 'UI/UX Design', createdAt: new Date() },
+      { id: 5, name: 'Project Management', createdAt: new Date() },
+    ];
+
+    defaultDeptOptions.forEach(dept => this.departmentOptions.set(dept.id, dept));
+  }
+
   private nextId = 1;
   private testSheetIdCounter = 1;
 
@@ -1922,6 +1949,11 @@ class MemStorage implements IStorage {
   }
 
   // Initialize with default data
+  constructor() {
+    this.initializeDefaultData();
+    this.initializeEmployeeDefaults();
+  }
+
   private initializeDefaultData() {
     // Add default admin user only
     const defaultAdmin = {
@@ -2070,6 +2102,117 @@ class MemStorage implements IStorage {
     return todoList;
   }
 
+  // Employee Management Implementation
+  async getEmployees(): Promise<any[]> {
+    return Array.from(this.employees.values());
+  }
+
+  async getEmployee(id: number): Promise<any | undefined> {
+    return this.employees.get(id);
+  }
+
+  async createEmployee(data: any): Promise<any> {
+    const id = this.getNextId();
+    
+    // Auto-generate employee ID if not provided
+    let employeeId = data.employeeId;
+    if (!employeeId || employeeId.trim() === '') {
+      const existingEmployees = Array.from(this.employees.values());
+      const existingNumbers = existingEmployees
+        .map(emp => emp.employeeId)
+        .filter(id => id && id.match(/^EMP-(\d+)$/))
+        .map(id => parseInt(id.replace('EMP-', ''), 10))
+        .filter(num => !isNaN(num));
+
+      const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+      employeeId = `EMP-${String(nextNumber).padStart(4, '0')}`;
+    }
+
+    const employee = {
+      id,
+      ...data,
+      employeeId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.employees.set(id, employee);
+    return employee;
+  }
+
+  async updateEmployee(id: number, data: any): Promise<any | null> {
+    const employee = this.employees.get(id);
+    if (!employee) return null;
+
+    const updatedEmployee = {
+      ...employee,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.employees.set(id, updatedEmployee);
+    return updatedEmployee;
+  }
+
+  async deleteEmployee(id: number): Promise<boolean> {
+    return this.employees.delete(id);
+  }
+
+  // Employee Project Mapping
+  async getEmployeeProjects(employeeId?: number): Promise<any[]> {
+    let results = Array.from(this.employeeProjects.values());
+    if (employeeId) {
+      results = results.filter(ep => ep.employeeId === employeeId);
+    }
+    return results;
+  }
+
+  async createEmployeeProject(data: any): Promise<any> {
+    const id = this.getNextId();
+    const employeeProject = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString()
+    };
+    this.employeeProjects.set(id, employeeProject);
+    return employeeProject;
+  }
+
+  async deleteEmployeeProject(id: number): Promise<boolean> {
+    return this.employeeProjects.delete(id);
+  }
+
+  // Technology Options
+  async getTechnologyOptions(): Promise<any[]> {
+    return Array.from(this.technologyOptions.values());
+  }
+
+  async createTechnologyOption(data: any): Promise<any> {
+    const id = this.getNextId();
+    const tech = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString()
+    };
+    this.technologyOptions.set(id, tech);
+    return tech;
+  }
+
+  // Department Options
+  async getDepartmentOptions(): Promise<any[]> {
+    return Array.from(this.departmentOptions.values());
+  }
+
+  async createDepartmentOption(data: any): Promise<any> {
+    const id = this.getNextId();
+    const dept = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString()
+    };
+    this.departmentOptions.set(id, dept);
+    return dept;
+  }
+
   // Navadhiti Projects implementation
   async getNavadhitiProjects(): Promise<any[]> {
     return Array.from(this.navadhitiProjects.values());
@@ -2132,6 +2275,23 @@ class MemStorage implements IStorage {
       updatedAt: new Date().toISOString()
     };
     this.statusReviews.set(id, review);
+    
+    // Also update the project with the status review data
+    if (data.projectId) {
+      const project = this.navadhitiProjects.get(data.projectId);
+      if (project) {
+        const updatedProject = {
+          ...project,
+          overallStatus: data.overallStatus,
+          sprintStatus: data.currentSprintStatus,
+          weeklyComms: data.weeklyComms,
+          lastReviewDate: data.reviewDate,
+          updatedAt: new Date().toISOString()
+        };
+        this.navadhitiProjects.set(data.projectId, updatedProject);
+      }
+    }
+    
     return review;
   }
 
