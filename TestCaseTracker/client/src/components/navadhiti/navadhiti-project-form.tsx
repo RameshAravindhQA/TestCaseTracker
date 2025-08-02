@@ -1,471 +1,440 @@
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { X, Plus, Upload, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { DialogFooter } from "@/components/ui/dialog";
-
-const navadhitiProjectSchema = z.object({
-  projectName: z.string().min(1, "Project name is required"),
-  projectLeadId: z.string().optional(),
-  overallProjectActivity: z.string().optional(),
-  currentSprint: z.string().optional(),
-  currentIssues: z.string().optional(),
-  weeklyComms: z.string().optional(),
-  immediateActionItems: z.string().optional(),
-  supportRequired: z.string().optional(),
-  additionalRemarks: z.string().optional(),
-  status: z.enum(["active", "on-hold", "completed", "cancelled"]).default("active"),
-  priority: z.enum(["high", "medium", "low"]).default("medium"),
-  activityStatus: z.number().min(0).max(100).default(0),
-  sprintStatus: z.number().min(0).max(100).default(0),
-  communicationStatus: z.number().min(0).max(100).default(0),
-});
-
-type NavadhitiProjectFormValues = z.infer<typeof navadhitiProjectSchema>;
 
 interface NavadhitiProjectFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   project?: any;
-  onSuccess?: () => void;
+  onSuccess: () => void;
 }
 
-export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFormProps) {
+export function NavadhitiProjectForm({ open, onOpenChange, project, onSuccess }: NavadhitiProjectFormProps) {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [technologies, setTechnologies] = useState<any[]>([]);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const { data: employees = [] } = useQuery({
-    queryKey: ["/api/employees"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/employees");
-      return res.json();
-    },
+  const [formData, setFormData] = useState({
+    projectName: '',
+    clientName: '',
+    projectType: '',
+    status: 'Active',
+    startDate: '',
+    endDate: '',
+    budget: '',
+    description: '',
+    assignedEmployees: [] as number[],
+    technologies: [] as string[],
+    customTechnology: '',
+    projectImage: ''
   });
 
-  const isEditing = !!project;
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select a valid image file (JPEG, PNG, GIF, WebP, BMP, SVG)",
+          variant: "destructive",
+        });
+        return;
+      }
 
-  const form = useForm<NavadhitiProjectFormValues>({
-    resolver: zodResolver(navadhitiProjectSchema),
-    defaultValues: {
-      projectName: project?.projectName || "",
-      projectLeadId: project?.projectLeadId?.toString() || "",
-      overallProjectActivity: project?.overallProjectActivity || "",
-      currentSprint: project?.currentSprint || "",
-      currentIssues: project?.currentIssues || "",
-      weeklyComms: project?.weeklyComms || "",
-      immediateActionItems: project?.immediateActionItems || "",
-      supportRequired: project?.supportRequired || "",
-      additionalRemarks: project?.additionalRemarks || "",
-      status: project?.status || "active",
-      priority: project?.priority || "medium",
-      activityStatus: project?.activityStatus || 0,
-      sprintStatus: project?.sprintStatus || 0,
-      communicationStatus: project?.communicationStatus || 0,
-    },
-  });
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select an image smaller than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
 
-  const createProjectMutation = useMutation({
-    mutationFn: async (data: NavadhitiProjectFormValues) => {
-      const res = await apiRequest("POST", "/api/navadhiti-projects", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Project created successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
-      form.reset();
-      if (onSuccess) onSuccess();
-    },
-    onError: () => {
-      toast({ title: "Failed to create project", variant: "destructive" });
-    },
-  });
+      setImageFile(file);
 
-  const updateProjectMutation = useMutation({
-    mutationFn: async (data: NavadhitiProjectFormValues) => {
-      const res = await apiRequest("PUT", `/api/navadhiti-projects/${project?.id}`, data);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Project updated successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
-      if (onSuccess) onSuccess();
-    },
-    onError: () => {
-      toast({ title: "Failed to update project", variant: "destructive" });
-    },
-  });
-
-  const onSubmit = (data: NavadhitiProjectFormValues) => {
-    if (isEditing) {
-      updateProjectMutation.mutate(data);
-    } else {
-      createProjectMutation.mutate(data);
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const getStatusColor = (value: number) => {
-    if (value === 100) return "text-green-600";
-    if (value >= 75) return "text-yellow-600";
-    return "text-red-600";
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setFormData(prev => ({ ...prev, projectImage: '' }));
   };
 
+  const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('type', 'navadhiti-project');
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image');
+    }
+
+    const result = await response.json();
+    return result.filePath;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      let projectImagePath = formData.projectImage;
+
+      // Upload image if a new one is selected
+      if (imageFile) {
+        projectImagePath = await uploadImage(imageFile);
+      }
+
+      const payload = {
+        ...formData,
+        projectImage: projectImagePath,
+        assignedEmployees: formData.assignedEmployees,
+        technologies: formData.technologies
+      };
+
+      const url = project ? `/api/navadhiti-projects/${project.id}` : '/api/navadhiti-projects';
+      const method = project ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save project');
+      }
+
+      toast({
+        title: "Success",
+        description: `Project ${project ? 'updated' : 'created'} successfully`,
+      });
+
+      onSuccess();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error saving project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save project",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    if (project && open) {
+      setFormData({
+        projectName: project.projectName || '',
+        clientName: project.clientName || '',
+        projectType: project.projectType || '',
+        status: project.status || 'Active',
+        startDate: project.startDate ? project.startDate.split('T')[0] : '',
+        endDate: project.endDate ? project.endDate.split('T')[0] : '',
+        budget: project.budget?.toString() || '',
+        description: project.description || '',
+        assignedEmployees: project.assignedEmployees || [],
+        technologies: project.technologies || [],
+        customTechnology: '',
+        projectImage: project.projectImage || ''
+      });
+      setImagePreview(project.projectImage || null);
+    } else if (!project && open) {
+      setFormData({
+        projectName: '',
+        clientName: '',
+        projectType: '',
+        status: 'Active',
+        startDate: '',
+        endDate: '',
+        budget: '',
+        description: '',
+        assignedEmployees: [],
+        technologies: [],
+        customTechnology: '',
+        projectImage: ''
+      });
+      setImagePreview(null);
+      setImageFile(null);
+    }
+  }, [project, open]);
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="projectName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Project Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter project name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="projectLeadId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Project Lead</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a project lead" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {employees.map((employee: any) => (
-                    <SelectItem key={employee.id} value={employee.id.toString()}>
-                      {employee.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="overallProjectActivity"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Overall Project Activity</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Describe current project activities..."
-                    rows={3}
-                    {...field} 
-                    value={field.value || ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="currentSprint"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Current Sprint</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Current sprint details..."
-                    rows={3}
-                    {...field} 
-                    value={field.value || ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="currentIssues"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Current Issues (Major challenges or risks)</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Describe any major challenges or risks..."
-                  rows={3}
-                  {...field} 
-                  value={field.value || ""}
+    <DialogContent className="sm:max-w-[425px]">
+      <DialogHeader>
+        <DialogTitle>{project ? "Edit Project" : "Create Project"}</DialogTitle>
+      </DialogHeader>
+      <form onSubmit={handleSubmit}>
+        <div className="grid gap-4 py-4">
+          <div>
+            <Label htmlFor="projectName">Project Name</Label>
+            <Input
+              id="projectName"
+              value={formData.projectName}
+              onChange={(e) => setFormData(prev => ({ ...prev, projectName: e.target.value }))}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="clientName">Client Name</Label>
+            <Input
+              id="clientName"
+              value={formData.clientName}
+              onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="projectType">Project Type</Label>
+            <Input
+              id="projectType"
+              value={formData.projectType}
+              onChange={(e) => setFormData(prev => ({ ...prev, projectType: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="status">Status</Label>
+            <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="On Hold">On Hold</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                  required
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="weeklyComms"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Weekly Communications</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Weekly communication updates..."
-                    rows={3}
-                    {...field} 
-                    value={field.value || ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="immediateActionItems"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Immediate Action Items</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="List immediate action items..."
-                    rows={3}
-                    {...field} 
-                    value={field.value || ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="supportRequired"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Support Required (Specific requests from stakeholders)</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Describe any support needed from stakeholders..."
-                  rows={3}
-                  {...field} 
-                  value={field.value || ""}
+              </div>
+              <div>
+                <Label htmlFor="endDate">End Date</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              </div>
+            </div>
 
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Project Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select project status" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="active">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                      Active
+            {/* Project Image Upload */}
+            <div>
+              <Label htmlFor="projectImage">Project Image</Label>
+              <div className="mt-2">
+                {imagePreview || (project?.projectImage && formData.projectImage) ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={imagePreview || formData.projectImage}
+                      alt="Project preview"
+                      className="w-32 h-32 object-cover rounded-lg border-2 border-dashed border-gray-300"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                      onClick={removeImage}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <Image className="mx-auto h-12 w-12 text-gray-400" />
+                    <div className="mt-2">
+                      <Label htmlFor="imageInput" className="cursor-pointer">
+                        <span className="mt-2 block text-sm font-medium text-gray-900">
+                          Upload project image
+                        </span>
+                        <span className="mt-1 block text-xs text-gray-500">
+                          PNG, JPG, GIF, WebP, BMP, SVG up to 5MB
+                        </span>
+                      </Label>
+                      <Input
+                        id="imageInput"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
                     </div>
-                  </SelectItem>
-                  <SelectItem value="on-hold">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                      On Hold
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="completed">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                      Completed
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="cancelled">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      Cancelled
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="priority"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Priority</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="high">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      High
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="medium">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                      Medium
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="low">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                      Low
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="additionalRemarks"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Additional Remarks</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Any additional notes or remarks"
-                  className="resize-none"
-                  rows={3}
-                  {...field} 
+                  </div>
+                )}
+                {!imagePreview && !(project?.projectImage && formData.projectImage) && (
+                  <div className="mt-2">
+                    <Label htmlFor="imageInput">
+                      <Button type="button" variant="outline" className="w-full">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose Image
+                      </Button>
+                    </Label>
+                    <Input
+                      id="imageInput"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          <div>
+            <Label htmlFor="budget">Budget</Label>
+            <Input
+              id="budget"
+              type="number"
+              value={formData.budget}
+              onChange={(e) => setFormData(prev => ({ ...prev, budget: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label>Assigned Employees</Label>
+            {employees.map(employee => (
+              <div key={employee.id} className="flex items-center space-x-2">
+                <Input
+                  type="checkbox"
+                  id={`employee-${employee.id}`}
+                  checked={formData.assignedEmployees.includes(employee.id)}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setFormData(prev => {
+                      let updatedEmployees = [...prev.assignedEmployees];
+                      if (checked) {
+                        updatedEmployees.push(employee.id);
+                      } else {
+                        updatedEmployees = updatedEmployees.filter(id => id !== employee.id);
+                      }
+                      return { ...prev, assignedEmployees: updatedEmployees };
+                    });
+                  }}
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Status Sliders */}
-        <div className="space-y-6 border-t pt-6">
-          <h3 className="text-lg font-semibold">Status Tracking</h3>
-
-          <FormField
-            control={form.control}
-            name="activityStatus"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex justify-between">
-                  <span>Overall Project Activity Status</span>
-                  <span className={`font-bold ${getStatusColor(field.value)}`}>
-                    {field.value}%
-                  </span>
-                </FormLabel>
-                <FormControl>
-                  <Slider
-                    value={[field.value]}
-                    onValueChange={(value) => field.onChange(value[0])}
-                    max={100}
-                    step={5}
-                    className="w-full"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+                <Label htmlFor={`employee-${employee.id}`}>{employee.name}</Label>
+              </div>
+            ))}
+          </div>
+          <div>
+            <Label>Technologies</Label>
+            {technologies.map(tech => (
+              <div key={tech.id} className="flex items-center space-x-2">
+                <Input
+                  type="checkbox"
+                  id={`tech-${tech.id}`}
+                  checked={formData.technologies.includes(tech.name)}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setFormData(prev => {
+                      let updatedTech = [...prev.technologies];
+                      if (checked) {
+                        updatedTech.push(tech.name);
+                      } else {
+                        updatedTech = updatedTech.filter(name => name !== tech.name);
+                      }
+                      return { ...prev, technologies: updatedTech };
+                    });
+                  }}
+                />
+                <Label htmlFor={`tech-${tech.id}`}>{tech.name}</Label>
+              </div>
+            ))}
+            <div className="flex items-center space-x-2 mt-2">
+              <Input
+                type="text"
+                placeholder="Custom Technology"
+                value={formData.customTechnology}
+                onChange={(e) => setFormData(prev => ({ ...prev, customTechnology: e.target.value }))}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (formData.customTechnology.trim() !== '') {
+                    setFormData(prev => ({
+                      ...prev,
+                      technologies: [...prev.technologies, formData.customTechnology.trim()],
+                      customTechnology: ''
+                    }));
+                  }
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add
+              </Button>
+            </div>
+            {formData.technologies.length > 0 && (
+              <div className="flex flex-wrap mt-2">
+                {formData.technologies.map(tech => (
+                  <Badge key={tech} className="mr-2 mb-2">
+                    {tech}
+                    <X
+                      className="h-3 w-3 ml-1 cursor-pointer"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          technologies: prev.technologies.filter(t => t !== tech)
+                        }));
+                      }}
+                    />
+                  </Badge>
+                ))}
+              </div>
             )}
-          />
-
-          <FormField
-            control={form.control}
-            name="sprintStatus"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex justify-between">
-                  <span>Current Sprint Status</span>
-                  <span className={`font-bold ${getStatusColor(field.value)}`}>
-                    {field.value}%
-                  </span>
-                </FormLabel>
-                <FormControl>
-                  <Slider
-                    value={[field.value]}
-                    onValueChange={(value) => field.onChange(value[0])}
-                    max={100}
-                    step={5}
-                    className="w-full"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="communicationStatus"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex justify-between">
-                  <span>Communication Status</span>
-                  <span className={`font-bold ${getStatusColor(field.value)}`}>
-                    {field.value}%
-                  </span>
-                </FormLabel>
-                <FormControl>
-                  <Slider
-                    value={[field.value]}
-                    onValueChange={(value) => field.onChange(value[0])}
-                    max={100}
-                    step={5}
-                    className="w-full"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          </div>
         </div>
-
-        <DialogFooter>
-          <Button 
-            type="submit" 
-            disabled={createProjectMutation.isPending || updateProjectMutation.isPending}
-          >
-            {isEditing 
-              ? (updateProjectMutation.isPending ? "Updating..." : "Update Project") 
-              : (createProjectMutation.isPending ? "Creating..." : "Create Project")}
-          </Button>
-        </DialogFooter>
+        <Button type="submit" disabled={loading}>
+          {loading ? (
+            <>
+              Saving...
+            </>
+          ) : (
+            project ? "Update Project" : "Create Project"
+          )}
+        </Button>
       </form>
-    </Form>
+    </DialogContent>
   );
 }

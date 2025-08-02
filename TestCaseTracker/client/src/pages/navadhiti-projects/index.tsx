@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -69,18 +68,18 @@ const getPriorityColor = (priority: string): string => {
 
 const getOverallStatus = (project: NavadhitiProject): string => {
   if (!project) return 'Unknown';
-  
+
   // Calculate overall status based on project data
   const hasIssues = project.currentIssues && project.currentIssues.trim() !== '';
   const needsSupport = project.supportRequired && project.supportRequired.trim() !== '';
-  
+
   if (project.status === 'Completed') return 'Completed';
   if (project.status === 'Cancelled') return 'Cancelled';
   if (project.status === 'On Hold') return 'On Hold';
-  
+
   if (hasIssues || needsSupport) return 'At Risk';
   if (project.status === 'Active' || project.status === 'In Progress') return 'On Track';
-  
+
   return 'In Progress';
 };
 
@@ -118,13 +117,13 @@ export default function NavadhitiProjectsPage() {
     return projects.filter((project: NavadhitiProject) => {
       const matchesSearch = project.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            project.projectLead?.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesStatus = statusFilter === "all" || 
                            getOverallStatus(project).toLowerCase() === statusFilter.toLowerCase();
-      
+
       const matchesPriority = priorityFilter === "all" || 
                              project.priority?.toLowerCase() === priorityFilter.toLowerCase();
-      
+
       return matchesSearch && matchesStatus && matchesPriority;
     });
   }, [projects, searchTerm, statusFilter, priorityFilter]);
@@ -210,7 +209,7 @@ export default function NavadhitiProjectsPage() {
   // Calculate summary stats
   const stats = useMemo(() => {
     if (!projects.length) return { total: 0, active: 0, completed: 0, atRisk: 0 };
-    
+
     return {
       total: projects.length,
       active: projects.filter((p: NavadhitiProject) => p.status === 'Active').length,
@@ -426,6 +425,7 @@ export default function NavadhitiProjectsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Image</TableHead>
                     <TableHead>Project Name</TableHead>
                     <TableHead>Project Lead</TableHead>
                     <TableHead>Overall Status</TableHead>
@@ -437,6 +437,34 @@ export default function NavadhitiProjectsPage() {
                 <TableBody>
                   {filteredProjects.map((project: NavadhitiProject) => (
                     <TableRow key={project.id}>
+                      <TableCell>
+                        {project.projectImage ? (
+                          <img
+                            src={project.projectImage}
+                            alt={project.projectName}
+                            className="w-12 h-12 object-cover rounded-lg border"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg border flex items-center justify-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="h-6 w-6 text-gray-400"
+                            >
+                              <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                              <circle cx="8.5" cy="8.5" r="1.5" />
+                              <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">
                         {project.projectName}
                       </TableCell>

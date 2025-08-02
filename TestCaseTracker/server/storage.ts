@@ -2725,9 +2725,8 @@ class MemStorage implements IStorage {
   }
 
   async createConversation(conversationData: any) {
-    ```text
     const conversation = {
-      id: this.getNextId('conversations'),
+      id: this.getNextId(),
       type: conversationData.type,
       name: conversationData.name,
       description: conversationData.description || null,
@@ -2899,7 +2898,17 @@ class MemStorage implements IStorage {
   async createNavadhitiProject(data: any) {
     const newProject = {
       id: this.navadhitiProjects.length + 1,
-      ...data,
+      projectName: data.projectName,
+      clientName: data.clientName,
+      projectType: data.projectType,
+      status: data.status || 'Active',
+      startDate: data.startDate,
+      endDate: data.endDate,
+      budget: data.budget,
+      description: data.description,
+      assignedEmployees: data.assignedEmployees || [],
+      technologies: data.technologies || [],
+      projectImage: data.projectImage || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -2913,7 +2922,17 @@ class MemStorage implements IStorage {
 
     this.navadhitiProjects[index] = {
       ...this.navadhitiProjects[index],
-      ...data,
+      projectName: data.projectName || this.navadhitiProjects[index].projectName,
+      clientName: data.clientName || this.navadhitiProjects[index].clientName,
+      projectType: data.projectType || this.navadhitiProjects[index].projectType,
+      status: data.status || this.navadhitiProjects[index].status,
+      startDate: data.startDate || this.navadhitiProjects[index].startDate,
+      endDate: data.endDate || this.navadhitiProjects[index].endDate,
+      budget: data.budget !== undefined ? data.budget : this.navadhitiProjects[index].budget,
+      description: data.description || this.navadhitiProjects[index].description,
+      assignedEmployees: data.assignedEmployees || this.navadhitiProjects[index].assignedEmployees,
+      technologies: data.technologies || this.navadhitiProjects[index].technologies,
+      projectImage: data.projectImage !== undefined ? data.projectImage : this.navadhitiProjects[index].projectImage,
       updatedAt: new Date().toISOString(),
     };
     return this.navadhitiProjects[index];
