@@ -778,8 +778,7 @@ class MemStorage implements IStorage {
     const document: Document = {
       ...data,
       id,
-      createdAt: now```python
-
+      createdAt: now,
       updatedAt: now
     };
 
