@@ -19,6 +19,10 @@ import { NavadhitiProjectForm } from "@/components/navadhiti/navadhiti-project-f
 import { StatusReviewDialog } from "@/components/navadhiti/status-review-dialog";
 import { CsvImportDialog } from "@/components/navadhiti/csv-import-dialog";
 import { MultiSelect } from "@/components/ui/multi-select";
+import Papa from 'papaparse';
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { format } from "date-fns";
 
 interface NavadhitiProject {
   id: number;
@@ -139,6 +143,40 @@ export default function NavadhitiProjectsPage() {
     },
   });
 
+  // Update project mutation
+  const updateProjectMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await apiRequest("PUT", `/api/navadhiti-projects/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Project updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
+      setIsDialogOpen(false);
+      setEditingProject(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to update project", variant: "destructive" });
+    },
+  });
+
+  // Create project mutation
+  const createProjectMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/navadhiti-projects", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Project created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
+      setIsDialogOpen(false);
+      setEditingProject(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to create project", variant: "destructive" });
+    },
+  });
+
   // Filter employees based on selected criteria
   const filteredEmployees = employeesData.filter((employee: any) => {
     const matchesDepartment = departmentFilter === "all" || employee.department === departmentFilter;
@@ -223,6 +261,145 @@ export default function NavadhitiProjectsPage() {
       case 'onLeave': return 'On Leave';
       case 'available': return 'Available';
       default: return 'Unknown';
+    }
+  };
+
+  // Export Status Review to CSV
+  const exportStatusReviewToCSV = () => {
+    if (!projects || projects.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "There are no projects to export",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const exportData = projects.map((project: any) => ({
+        projectName: project.projectName,
+        clientName: project.clientName,
+        status: project.status,
+        priority: project.priority,
+        startDate: project.startDate ? format(new Date(project.startDate), 'yyyy-MM-dd') : '',
+        endDate: project.endDate ? format(new Date(project.endDate), 'yyyy-MM-dd') : '',
+        completionPercentage: project.completionPercentage || 0,
+        teamSize: project.assignedEmployees?.length || 0,
+        budget: project.budget || 0,
+        description: project.description || '',
+        technologies: Array.isArray(project.technologies) ? project.technologies.join(', ') : project.technologies || ''
+      }));
+
+      const csv = Papa.unparse(exportData);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `project_status_review_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Export successful",
+        description: "Status review data exported to CSV",
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Error exporting status review data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Export Status Review to PDF
+  const exportStatusReviewToPDF = () => {
+    if (!projects || projects.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "There are no projects to export",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const doc = new jsPDF('landscape');
+      
+      // Add title
+      doc.setFontSize(18);
+      doc.text('Project Status Review Report', 14, 20);
+      
+      // Add metadata
+      doc.setFontSize(10);
+      doc.text(`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`, 14, 30);
+      doc.text(`Review Date: ${selectedDate ? format(selectedDate, 'PPP') : 'Current Date'}`, 14, 35);
+      doc.text(`Total Projects: ${projects.length}`, 14, 40);
+
+      // Status summary
+      const statusCounts = {
+        Active: projects.filter((p: any) => p.status === 'Active').length,
+        Completed: projects.filter((p: any) => p.status === 'Completed').length,
+        'On Hold': projects.filter((p: any) => p.status === 'On Hold').length,
+        Cancelled: projects.filter((p: any) => p.status === 'Cancelled').length,
+      };
+
+      doc.text(`Active: ${statusCounts.Active} | Completed: ${statusCounts.Completed} | On Hold: ${statusCounts['On Hold']} | Cancelled: ${statusCounts.Cancelled}`, 14, 45);
+
+      // Prepare table data
+      const tableData = projects.map((project: any) => [
+        project.projectName,
+        project.clientName,
+        project.status,
+        project.priority,
+        project.startDate ? format(new Date(project.startDate), 'MMM dd, yyyy') : 'Not set',
+        project.endDate ? format(new Date(project.endDate), 'MMM dd, yyyy') : 'Ongoing',
+        `${project.completionPercentage || 0}%`,
+        `${project.assignedEmployees?.length || 0}`,
+        project.budget ? `$${project.budget.toLocaleString()}` : 'Not set'
+      ]);
+
+      // Add table
+      autoTable(doc, {
+        head: [['Project', 'Client', 'Status', 'Priority', 'Start Date', 'End Date', 'Progress', 'Team', 'Budget']],
+        body: tableData,
+        startY: 55,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [60, 60, 60] },
+        columnStyles: {
+          0: { cellWidth: 30 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 20 },
+          3: { cellWidth: 15 },
+          4: { cellWidth: 25 },
+          5: { cellWidth: 25 },
+          6: { cellWidth: 15 },
+          7: { cellWidth: 10 },
+          8: { cellWidth: 20 }
+        }
+      });
+
+      // Save PDF
+      doc.save(`project_status_review_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+
+      toast({
+        title: "Export successful",
+        description: "Status review report exported to PDF",
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Error exporting status review report to PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -564,12 +741,10 @@ export default function NavadhitiProjectsPage() {
                         project={editingProject}
                         onSubmit={(data) => {
                           if (editingProject) {
-                            // Update project logic
+                            updateProjectMutation.mutate({ id: editingProject.id, data });
                           } else {
-                            // Create project logic
+                            createProjectMutation.mutate(data);
                           }
-                          setIsDialogOpen(false);
-                          setEditingProject(null);
                         }}
                         onCancel={() => {
                           setIsDialogOpen(false);
@@ -750,18 +925,221 @@ export default function NavadhitiProjectsPage() {
           <TabsContent value="statusReview" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Status Review</CardTitle>
-                <CardDescription>Review project status and progress</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      Status Review Dashboard
+                    </CardTitle>
+                    <CardDescription>Review project status and progress with detailed analytics</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => exportStatusReviewToCSV()}
+                      disabled={isExporting || !projects?.length}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Export CSV
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => exportStatusReviewToPDF()}
+                      disabled={isExporting || !projects?.length}
+                    >
+                      <FileType className="h-4 w-4 mr-2" />
+                      Export PDF
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                    Status review will be displayed here
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    This section contains the status review functionality.
-                  </p>
+              <CardContent className="space-y-6">
+                {/* Calendar and Date Filter Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-1">
+                    <div className="p-4 border rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+                      <h3 className="font-semibold mb-3 flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Review Calendar
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <Label>Review Date</Label>
+                          <Input
+                            type="date"
+                            value={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
+                            onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          <p>Selected: {selectedDate ? format(selectedDate, 'PPP') : 'No date selected'}</p>
+                          <p className="mt-1">Total Projects: {projects.length}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-2">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <Card className="p-4 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          <div>
+                            <p className="text-sm text-green-600 font-medium">Active</p>
+                            <p className="text-xl font-bold text-green-700">
+                              {projects.filter(p => p.status === 'Active').length}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+
+                      <Card className="p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                          <div>
+                            <p className="text-sm text-blue-600 font-medium">Completed</p>
+                            <p className="text-xl font-bold text-blue-700">
+                              {projects.filter(p => p.status === 'Completed').length}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+
+                      <Card className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-5 w-5 text-yellow-600" />
+                          <div>
+                            <p className="text-sm text-yellow-600 font-medium">On Hold</p>
+                            <p className="text-xl font-bold text-yellow-700">
+                              {projects.filter(p => p.status === 'On Hold').length}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+
+                      <Card className="p-4 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-5 w-5 text-red-600" />
+                          <div>
+                            <p className="text-sm text-red-600 font-medium">Cancelled</p>
+                            <p className="text-xl font-bold text-red-700">
+                              {projects.filter(p => p.status === 'Cancelled').length}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Review Table */}
+                <div className="border rounded-lg">
+                  <div className="p-4 border-b bg-gray-50 dark:bg-gray-900">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Project Status Overview
+                    </h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Project Name</TableHead>
+                          <TableHead>Client</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Priority</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>End Date</TableHead>
+                          <TableHead>Progress</TableHead>
+                          <TableHead>Team Size</TableHead>
+                          <TableHead>Budget</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {projects.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={10} className="text-center py-8">
+                              <div className="flex flex-col items-center justify-center">
+                                <Calendar className="h-12 w-12 text-gray-400 mb-2" />
+                                <p className="text-gray-500">No projects found</p>
+                                <p className="text-sm text-gray-400 mt-1">Create your first project to see status reviews</p>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          projects.map((project: any) => (
+                            <TableRow key={project.id}>
+                              <TableCell className="font-medium">{project.projectName}</TableCell>
+                              <TableCell>{project.clientName}</TableCell>
+                              <TableCell>
+                                <Badge 
+                                  className={
+                                    project.status === 'Active' ? 'bg-green-100 text-green-800' :
+                                    project.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                                    project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-red-100 text-red-800'
+                                  }
+                                >
+                                  {project.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={
+                                  project.priority === 'High' ? 'destructive' :
+                                  project.priority === 'Medium' ? 'default' : 'secondary'
+                                }>
+                                  {project.priority}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {project.startDate ? format(new Date(project.startDate), 'MMM dd, yyyy') : 'Not set'}
+                              </TableCell>
+                              <TableCell>
+                                {project.endDate ? format(new Date(project.endDate), 'MMM dd, yyyy') : 'Ongoing'}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-16 bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                      style={{ width: `${project.completionPercentage || 0}%` }}
+                                    ></div>
+                                  </div>
+                                  <span className="text-sm text-gray-600">
+                                    {project.completionPercentage || 0}%
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Users className="h-4 w-4 text-gray-400" />
+                                  <span>{project.assignedEmployees?.length || 0}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {project.budget ? `$${project.budget.toLocaleString()}` : 'Not set'}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedProjectForStatus(project);
+                                    setIsStatusDialogOpen(true);
+                                  }}
+                                >
+                                  <Send className="h-4 w-4 mr-1" />
+                                  Update
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               </CardContent>
             </Card>
