@@ -257,7 +257,7 @@ export default function EmployeesPage() {
                   ))}
                   </TableBody>
                 </Table>
-              )}
+              )
             )}
           </CardContent>
         </Card>
