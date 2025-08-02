@@ -2008,22 +2008,16 @@ class MemStorage implements IStorage {
   }
 
   async getTodoList(id: number): Promise<any | undefined> {
+    if (!this.todoListsMap) {
+      this.todoListsMap = new Map<number, any>();
+    }
     return this.todoListsMap.get(id);
   }
 
-  async createTodoList(data: any): Promise<any> {
-    const id = this.getNextId();
-    const todoList = {
-      id,
-      ...data,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    this.todoListsMap.set(id, todoList);
-    return todoList;
-  }
-
   async updateTodoList(id: number, data: any): Promise<any | null> {
+    if (!this.todoListsMap) {
+      this.todoListsMap = new Map<number, any>();
+    }
     const todoList = this.todoListsMap.get(id);
     if (!todoList) return null;
 
@@ -2037,6 +2031,9 @@ class MemStorage implements IStorage {
   }
 
   async deleteTodoList(id: number): Promise<boolean> {
+    if (!this.todoListsMap) {
+      this.todoListsMap = new Map<number, any>();
+    }
     return this.todoListsMap.delete(id);
   }
 
@@ -2950,26 +2947,45 @@ class MemStorage implements IStorage {
     return this.todoLists.filter(list => list.userId === userId);
   }
   async getTodoList(id: number) {
-    return this.todoLists.find(list => list.id === id);
+    if (!this.todoListsMap) {
+      this.todoListsMap = new Map<number, any>();
+    }
+    return this.todoListsMap.get(id);
   }
 
-  async createTodoList(todoList: TodoList) {
-    todoList.id = this.getNextId();
-    this.todoLists.push(todoList);
+  async createTodoList(data: any) {
+    const id = this.getNextId();
+    const todoList = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.todoListsMap.set(id, todoList);
     return todoList;
   }
 
-  async updateTodoList(id: number, updates: Partial<TodoList>) {
-    const list = this.todoLists.find(list => list.id === id);
-    if (!list) return null; // Not found
+  async updateTodoList(id: number, data: any): Promise<any | null> {
+    if (!this.todoListsMap) {
+      this.todoListsMap = new Map<number, any>();
+    }
+    const todoList = this.todoListsMap.get(id);
+    if (!todoList) return null;
 
-    Object.assign(list, updates);
-    return list;
+    const updatedTodoList = {
+      ...todoList,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.todoListsMap.set(id, updatedTodoList);
+    return updatedTodoList;
   }
 
-  async deleteTodoList(id: number) {
-    this.todoLists = this.todoLists.filter(list => list.id !== id);
-    return true;
+  async deleteTodoList(id: number): Promise<boolean> {
+    if (!this.todoListsMap) {
+      this.todoListsMap = new Map<number, any>();
+    }
+    return this.todoListsMap.delete(id);
   }
 
   async getTodos(listId: number) {

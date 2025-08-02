@@ -1,440 +1,531 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { X, Plus, Upload, Image } from "lucide-react";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { DialogFooter } from "@/components/ui/dialog";
+import { useState, useRef } from "react";
+import { Badge } from "@/components/ui/badge";
+import { X, Upload, Camera, Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MultiSelect } from "@/components/ui/multi-select";
+
+const navadhitiProjectSchema = z.object({
+  projectName: z.string().min(1, "Project name is required"),
+  clientName: z.string().min(1, "Client name is required"),
+  projectType: z.string().min(1, "Project type is required"),
+  status: z.enum(["Active", "Completed", "On Hold", "Cancelled"]).default("Active"),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  description: z.string().optional(),
+  assignedEmployees: z.array(z.number()).optional(),
+  technologies: z.array(z.string()).optional(),
+  projectImage: z.string().optional(),
+});
+
+type NavadhitiProjectFormValues = z.infer<typeof navadhitiProjectSchema>;
 
 interface NavadhitiProjectFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   project?: any;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
-export function NavadhitiProjectForm({ open, onOpenChange, project, onSuccess }: NavadhitiProjectFormProps) {
+export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFormProps) {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [technologies, setTechnologies] = useState<any[]>([]);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const isEditing = !!project;
+  const [selectedEmployees, setSelectedEmployees] = useState<number[]>(project?.assignedEmployees || []);
+  const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>(project?.technologies || []);
+  const [newTechnology, setNewTechnology] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [projectImageUrl, setProjectImageUrl] = useState<string | null>(project?.projectImage || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [formData, setFormData] = useState({
-    projectName: '',
-    clientName: '',
-    projectType: '',
-    status: 'Active',
-    startDate: '',
-    endDate: '',
-    budget: '',
-    description: '',
-    assignedEmployees: [] as number[],
-    technologies: [] as string[],
-    customTechnology: '',
-    projectImage: ''
+  const form = useForm<NavadhitiProjectFormValues>({
+    resolver: zodResolver(navadhitiProjectSchema),
+    defaultValues: {
+      projectName: project?.projectName || "",
+      clientName: project?.clientName || "",
+      projectType: project?.projectType || "",
+      status: project?.status || "Active",
+      startDate: project?.startDate || "",
+      endDate: project?.endDate || "",
+      description: project?.description || "",
+      assignedEmployees: project?.assignedEmployees || [],
+      technologies: project?.technologies || [],
+      projectImage: project?.projectImage || "",
+    },
   });
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'];
-      if (!allowedTypes.includes(file.type)) {
-        toast({
-          title: "Invalid file type",
-          description: "Please select a valid image file (JPEG, PNG, GIF, WebP, BMP, SVG)",
-          variant: "destructive",
-        });
-        return;
-      }
+  const { data: employees = [] } = useQuery({
+    queryKey: ["/api/employees"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/employees");
+      return res.json();
+    },
+  });
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Please select an image smaller than 5MB",
-          variant: "destructive",
-        });
-        return;
-      }
+  const { data: technologyOptions = [] } = useQuery({
+    queryKey: ["/api/technology-options"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/technology-options");
+      return res.json();
+    },
+  });
 
-      setImageFile(file);
+  const createTechnologyMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await apiRequest("POST", "/api/technology-options", { name });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technology-options"] });
+      setNewTechnology("");
+    },
+  });
 
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+  const createProjectMutation = useMutation({
+    mutationFn: async (data: NavadhitiProjectFormValues) => {
+      const res = await apiRequest("POST", "/api/navadhiti-projects", {
+        ...data,
+        assignedEmployees: selectedEmployees,
+        technologies: selectedTechnologies,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Project created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
+      form.reset();
+      if (onSuccess) onSuccess();
+    },
+    onError: (error: any) => {
+      console.error('Project creation error:', error);
+      toast({
+        title: "Failed to create project",
+        description: error.message || "An error occurred while creating the project",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateProjectMutation = useMutation({
+    mutationFn: async (data: NavadhitiProjectFormValues) => {
+      const res = await apiRequest("PUT", `/api/navadhiti-projects/${project?.id}`, {
+        ...data,
+        assignedEmployees: selectedEmployees,
+        technologies: selectedTechnologies,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Project updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
+      if (onSuccess) onSuccess();
+    },
+    onError: (error: any) => {
+      console.error('Project update error:', error);
+      toast({
+        title: "Failed to update project",
+        description: error.message || "An error occurred while updating the project",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: NavadhitiProjectFormValues) => {
+    const formData = {
+      ...data,
+      assignedEmployees: selectedEmployees,
+      technologies: selectedTechnologies,
+    };
+
+    if (isEditing) {
+      updateProjectMutation.mutate(formData);
+    } else {
+      createProjectMutation.mutate(formData);
     }
   };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
-    setFormData(prev => ({ ...prev, projectImage: '' }));
+  const handleAddTechnology = () => {
+    if (newTechnology.trim()) {
+      createTechnologyMutation.mutate(newTechnology.trim());
+    }
   };
 
-  const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('type', 'navadhiti-project');
+  const toggleTechnology = (techName: string) => {
+    setSelectedTechnologies(prev => 
+      prev.includes(techName) 
+        ? prev.filter(t => t !== techName)
+        : [...prev, techName]
+    );
+  };
 
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
+  const toggleEmployee = (employeeId: number) => {
+    setSelectedEmployees(prev => 
+      prev.includes(employeeId) 
+        ? prev.filter(id => id !== employeeId)
+        : [...prev, employeeId]
+    );
+  };
 
-    if (!response.ok) {
-      throw new Error('Failed to upload image');
+  const handleProjectImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Project image must be under 10MB",
+        variant: "destructive",
+      });
+      return;
     }
 
-    const result = await response.json();
-    return result.filePath;
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    handleImageUpload(file);
+    event.target.value = '';
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    
     try {
-      let projectImagePath = formData.projectImage;
+      const formData = new FormData();
+      formData.append('file', file, file.name);
 
-      // Upload image if a new one is selected
-      if (imageFile) {
-        projectImagePath = await uploadImage(imageFile);
-      }
-
-      const payload = {
-        ...formData,
-        projectImage: projectImagePath,
-        assignedEmployees: formData.assignedEmployees,
-        technologies: formData.technologies
-      };
-
-      const url = project ? `/api/navadhiti-projects/${project.id}` : '/api/navadhiti-projects';
-      const method = project ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      const response = await fetch('/api/uploads/bug-attachment', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save project');
+        throw new Error('Upload failed');
       }
 
-      toast({
-        title: "Success",
-        description: `Project ${project ? 'updated' : 'created'} successfully`,
-      });
-
-      onSuccess();
-      onOpenChange(false);
+      const data = await response.json();
+      
+      if (data.fileUrl) {
+        const newUrl = `${data.fileUrl}?t=${Date.now()}`;
+        setProjectImageUrl(newUrl);
+        form.setValue("projectImage", data.fileUrl);
+        
+        toast({
+          title: "Project image uploaded",
+          description: "Project image has been updated successfully.",
+        });
+      }
     } catch (error) {
-      console.error('Error saving project:', error);
+      console.error("Project image upload error:", error);
       toast({
-        title: "Error",
-        description: "Failed to save project",
+        title: "Upload failed",
+        description: "Failed to upload project image. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
-  useEffect(() => {
-    if (project && open) {
-      setFormData({
-        projectName: project.projectName || '',
-        clientName: project.clientName || '',
-        projectType: project.projectType || '',
-        status: project.status || 'Active',
-        startDate: project.startDate ? project.startDate.split('T')[0] : '',
-        endDate: project.endDate ? project.endDate.split('T')[0] : '',
-        budget: project.budget?.toString() || '',
-        description: project.description || '',
-        assignedEmployees: project.assignedEmployees || [],
-        technologies: project.technologies || [],
-        customTechnology: '',
-        projectImage: project.projectImage || ''
-      });
-      setImagePreview(project.projectImage || null);
-    } else if (!project && open) {
-      setFormData({
-        projectName: '',
-        clientName: '',
-        projectType: '',
-        status: 'Active',
-        startDate: '',
-        endDate: '',
-        budget: '',
-        description: '',
-        assignedEmployees: [],
-        technologies: [],
-        customTechnology: '',
-        projectImage: ''
-      });
-      setImagePreview(null);
-      setImageFile(null);
-    }
-  }, [project, open]);
+
   return (
-    <DialogContent className="sm:max-w-[425px]">
-      <DialogHeader>
-        <DialogTitle>{project ? "Edit Project" : "Create Project"}</DialogTitle>
-      </DialogHeader>
-      <form onSubmit={handleSubmit}>
-        <div className="grid gap-4 py-4">
-          <div>
-            <Label htmlFor="projectName">Project Name</Label>
-            <Input
-              id="projectName"
-              value={formData.projectName}
-              onChange={(e) => setFormData(prev => ({ ...prev, projectName: e.target.value }))}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="clientName">Client Name</Label>
-            <Input
-              id="clientName"
-              value={formData.clientName}
-              onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
-            />
-          </div>
-          <div>
-            <Label htmlFor="projectType">Project Type</Label>
-            <Input
-              id="projectType"
-              value={formData.projectType}
-              onChange={(e) => setFormData(prev => ({ ...prev, projectType: e.target.value }))}
-            />
-          </div>
-          <div>
-            <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="On Hold">On Hold</SelectItem>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                  required
+    <div className="max-h-[80vh] overflow-y-auto">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {/* Project Image Section */}
+          <div className="flex flex-col items-center space-y-4">
+            <div className="relative group cursor-pointer" onClick={handleProjectImageClick}>
+              <Avatar className="w-24 h-24">
+                <AvatarImage 
+                  src={projectImageUrl || undefined} 
+                  alt={`${form.watch("projectName")} project`}
+                  className="object-cover"
                 />
+                <AvatarFallback className="text-lg bg-primary/10">
+                  {form.watch("projectName")?.charAt(0)?.toUpperCase() || 'P'}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <Camera className="h-6 w-6 text-white" />
               </div>
-              <div>
-                <Label htmlFor="endDate">End Date</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                />
-              </div>
+
+              {uploading && (
+                <div className="absolute inset-0 bg-black bg-opacity-75 rounded-full flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 text-white animate-spin" />
+                </div>
+              )}
             </div>
 
-            {/* Project Image Upload */}
-            <div>
-              <Label htmlFor="projectImage">Project Image</Label>
-              <div className="mt-2">
-                {imagePreview || (project?.projectImage && formData.projectImage) ? (
-                  <div className="relative inline-block">
-                    <img
-                      src={imagePreview || formData.projectImage}
-                      alt="Project preview"
-                      className="w-32 h-32 object-cover rounded-lg border-2 border-dashed border-gray-300"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                      onClick={removeImage}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <Image className="mx-auto h-12 w-12 text-gray-400" />
-                    <div className="mt-2">
-                      <Label htmlFor="imageInput" className="cursor-pointer">
-                        <span className="mt-2 block text-sm font-medium text-gray-900">
-                          Upload project image
-                        </span>
-                        <span className="mt-1 block text-xs text-gray-500">
-                          PNG, JPG, GIF, WebP, BMP, SVG up to 5MB
-                        </span>
-                      </Label>
-                      <Input
-                        id="imageInput"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="hidden"
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={handleProjectImageClick}
+              disabled={uploading}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {uploading ? "Uploading..." : "Upload Project Image"}
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="projectName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="E-Commerce Website" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="clientName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Client Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Acme Corporation" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="projectType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Project Type</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Web Development">Web Development</SelectItem>
+                    <SelectItem value="Mobile App">Mobile App</SelectItem>
+                    <SelectItem value="Desktop Application">Desktop Application</SelectItem>
+                    <SelectItem value="API Development">API Development</SelectItem>
+                    <SelectItem value="Testing & QA">Testing & QA</SelectItem>
+                    <SelectItem value="Consulting">Consulting</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                    <SelectItem value="On Hold">On Hold</SelectItem>
+                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="startDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Start Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="endDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>End Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea 
+                    placeholder="Project description..." 
+                    rows={3}
+                    {...field} 
+                    value={field.value || ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div>
+            <FormLabel>Assigned Employees</FormLabel>
+            <div className="space-y-2 mt-1">
+              <div className="flex flex-wrap gap-2">
+                {selectedEmployees.map((employeeId) => {
+                  const employee = employees.find((emp: any) => emp.id === employeeId);
+                  return employee ? (
+                    <Badge key={employeeId} variant="secondary" className="cursor-pointer">
+                      {employee.firstName} {employee.lastName}
+                      <X
+                        className="ml-1 h-3 w-3"
+                        onClick={() => toggleEmployee(employeeId)}
                       />
-                    </div>
-                  </div>
-                )}
-                {!imagePreview && !(project?.projectImage && formData.projectImage) && (
-                  <div className="mt-2">
-                    <Label htmlFor="imageInput">
-                      <Button type="button" variant="outline" className="w-full">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Choose Image
-                      </Button>
-                    </Label>
-                    <Input
-                      id="imageInput"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                  </div>
-                )}
+                    </Badge>
+                  ) : null;
+                })}
               </div>
+              <Select onValueChange={(value) => toggleEmployee(parseInt(value))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select employees..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((employee: any) => (
+                    <SelectItem 
+                      key={employee.id} 
+                      value={employee.id.toString()}
+                      disabled={selectedEmployees.includes(employee.id)}
+                    >
+                      {employee.firstName} {employee.lastName} ({employee.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          <div>
-            <Label htmlFor="budget">Budget</Label>
-            <Input
-              id="budget"
-              type="number"
-              value={formData.budget}
-              onChange={(e) => setFormData(prev => ({ ...prev, budget: e.target.value }))}
-            />
           </div>
+
           <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            />
-          </div>
-          <div>
-            <Label>Assigned Employees</Label>
-            {employees.map(employee => (
-              <div key={employee.id} className="flex items-center space-x-2">
-                <Input
-                  type="checkbox"
-                  id={`employee-${employee.id}`}
-                  checked={formData.assignedEmployees.includes(employee.id)}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setFormData(prev => {
-                      let updatedEmployees = [...prev.assignedEmployees];
-                      if (checked) {
-                        updatedEmployees.push(employee.id);
-                      } else {
-                        updatedEmployees = updatedEmployees.filter(id => id !== employee.id);
-                      }
-                      return { ...prev, assignedEmployees: updatedEmployees };
-                    });
-                  }}
-                />
-                <Label htmlFor={`employee-${employee.id}`}>{employee.name}</Label>
-              </div>
-            ))}
-          </div>
-          <div>
-            <Label>Technologies</Label>
-            {technologies.map(tech => (
-              <div key={tech.id} className="flex items-center space-x-2">
-                <Input
-                  type="checkbox"
-                  id={`tech-${tech.id}`}
-                  checked={formData.technologies.includes(tech.name)}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setFormData(prev => {
-                      let updatedTech = [...prev.technologies];
-                      if (checked) {
-                        updatedTech.push(tech.name);
-                      } else {
-                        updatedTech = updatedTech.filter(name => name !== tech.name);
-                      }
-                      return { ...prev, technologies: updatedTech };
-                    });
-                  }}
-                />
-                <Label htmlFor={`tech-${tech.id}`}>{tech.name}</Label>
-              </div>
-            ))}
-            <div className="flex items-center space-x-2 mt-2">
-              <Input
-                type="text"
-                placeholder="Custom Technology"
-                value={formData.customTechnology}
-                onChange={(e) => setFormData(prev => ({ ...prev, customTechnology: e.target.value }))}
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  if (formData.customTechnology.trim() !== '') {
-                    setFormData(prev => ({
-                      ...prev,
-                      technologies: [...prev.technologies, formData.customTechnology.trim()],
-                      customTechnology: ''
-                    }));
-                  }
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add
-              </Button>
-            </div>
-            {formData.technologies.length > 0 && (
-              <div className="flex flex-wrap mt-2">
-                {formData.technologies.map(tech => (
-                  <Badge key={tech} className="mr-2 mb-2">
+            <FormLabel>Technologies</FormLabel>
+            <div className="space-y-2 mt-1">
+              <div className="flex flex-wrap gap-2">
+                {selectedTechnologies.map((tech) => (
+                  <Badge key={tech} variant="secondary" className="cursor-pointer">
                     {tech}
                     <X
-                      className="h-3 w-3 ml-1 cursor-pointer"
-                      onClick={() => {
-                        setFormData(prev => ({
-                          ...prev,
-                          technologies: prev.technologies.filter(t => t !== tech)
-                        }));
-                      }}
+                      className="ml-1 h-3 w-3"
+                      onClick={() => toggleTechnology(tech)}
                     />
                   </Badge>
                 ))}
               </div>
-            )}
+              <div className="grid grid-cols-3 gap-2">
+                {technologyOptions.map((tech: any) => (
+                  <Button
+                    key={tech.id}
+                    type="button"
+                    variant={selectedTechnologies.includes(tech.name) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleTechnology(tech.name)}
+                    className="text-xs"
+                  >
+                    {tech.name}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Add new technology"
+                  value={newTechnology}
+                  onChange={(e) => setNewTechnology(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddTechnology}
+                  disabled={!newTechnology.trim()}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-        <Button type="submit" disabled={loading}>
-          {loading ? (
-            <>
-              Saving...
-            </>
-          ) : (
-            project ? "Update Project" : "Create Project"
-          )}
-        </Button>
-      </form>
-    </DialogContent>
+
+          <DialogFooter>
+            <Button
+              type="submit"
+              disabled={createProjectMutation.isPending || updateProjectMutation.isPending}
+            >
+              {isEditing
+                ? updateProjectMutation.isPending ? "Updating..." : "Update Project"
+                : createProjectMutation.isPending ? "Creating..." : "Create Project"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </div>
   );
 }

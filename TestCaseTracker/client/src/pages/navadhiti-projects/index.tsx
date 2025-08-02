@@ -15,6 +15,7 @@ import { CSVImportDialog } from "@/components/navadhiti/csv-import-dialog";
 import { Plus, MoreHorizontal, Edit, Trash2, Upload, Download, Filter, Search, Calendar, DollarSign, Users, TrendingUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
+import { MainLayout } from "@/components/layout/main-layout";
 
 interface NavadhitiProject {
   id: number;
@@ -243,7 +244,8 @@ export default function NavadhitiProjectsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <MainLayout>
+      <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -527,5 +529,7 @@ export default function NavadhitiProjectsPage() {
         </DialogContent>
       </Dialog>
     </div>
+      </div>
+    </MainLayout>
   );
 }
