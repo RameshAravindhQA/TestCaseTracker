@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { NavadhitiProjectForm } from "@/components/navadhiti/navadhiti-project-form";
-import { CsvImportDialog } from "@/components/navadhiti/csv-import-dialog";
+import { CSVImportDialog } from "@/components/navadhiti/csv-import-dialog";
 import { Plus, MoreHorizontal, Edit, Trash2, Upload, Download, Filter, Search, Calendar, DollarSign, Users, TrendingUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
@@ -490,10 +490,14 @@ export default function NavadhitiProjectsPage() {
       </Card>
 
       {/* CSV Import Dialog */}
-      <CsvImportDialog
-        open={isCsvDialogOpen}
-        onOpenChange={setIsCsvDialogOpen}
-      />
+      <Dialog open={isCsvDialogOpen} onOpenChange={setIsCsvDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import CSV</DialogTitle>
+          </DialogHeader>
+          <CSVImportDialog onClose={() => setIsCsvDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
