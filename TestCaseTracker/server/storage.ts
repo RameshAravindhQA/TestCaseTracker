@@ -48,9 +48,8 @@ import {
   Tag,
   InsertTag,
   TestingType,
-  InsertTestingType,
-  TestingTypeField,
   InsertTestingTypeField,
+  TestingTypeField,
   Notebook,
   TodoList,
   Todo,
@@ -785,7 +784,9 @@ class MemStorage implements IStorage {
   }
 
   // Document folder operations
-  async createDocumentFolder(data: Omit<DocumentFolder, 'id' | 'createdAt' | 'updatedAt'>): Promise<DocumentFolder> {
+  async createDocumentFolder(data: Omit<DocumentFolder, 'id' | 'createdAt' | 'updatedAt'>): PromiseImplemented the getTodosByListId method and helper method for data persistence.
+``````text
+<DocumentFolder> {
     const id = this.nextId++;
     const now = new Date();
 
@@ -1305,7 +1306,7 @@ class MemStorage implements IStorage {
     if (!folder) return undefined;
 
     const updatedFolder = { ...folder, ...folderData };
-    this.documentFolders.set(id, updatedFolder);
+    this.documentFolders.set(newFolder.id, updatedFolder);
     return updatedFolder;
   }
 
@@ -2043,60 +2044,15 @@ class MemStorage implements IStorage {
     return this.todoListsMap.delete(id);
   }
 
-  //Fix : Add getTodosByListId method
-  async getTodosByListId(listId: number): Promise<TodoItem[]> {
-    // Initialize todos if it doesn't exist
-    if (!this.data.todos) {
-      this.data.todos = [];
-    }
-
-    return this.data.todos.filter(todo => todo.todoListId === listId) || [];
+  // Fix: Add getTodosByListId method
+  async getTodosByListId(listId: number): Promise<any[]> {
+    return Array.from(this.todosMap.values()).filter(todo => todo.todoListId === listId);
   }
 
-  async getTodos(listId: number) {
-    // Mock implementation - in real app, would query todos table
-    return this.todoItems.filter(todo => todo.listId === listId);
-  }
-
-  async createTodoList(data: any) {
-    const id = this.getNextId();
-    const now = new Date().toISOString();
-
-    // Initialize todoLists if it doesn't exist
-    if (!this.data.todoLists) {
-      this.data.todoLists = [];
-    }
-
-    const todoList = {
-      id,
-      ...data,
-      createdAt: now,
-      updatedAt: now
-    };
-
-    this.data.todoLists.push(todoList);
-    await this.saveData();
-
-    return todoList;
-  }
-
-  async createTodo(todo: Todo) {
-    todo.id = this.getNextId();
-    this.todoItems.push(todo);
-    return todo;
-  }
-
-  async updateTodo(id: number, updates: Partial<Todo>) {
-    const todo = this.todoItems.find(todo => todo.id === id);
-    if (!todo) return null; // Not found
-
-    Object.assign(todo, updates);
-    return todo;
-  }
-
-  async deleteTodo(id: number) {
-    this.todoItems = this.todoItems.filter(todo => todo.id !== id);
-    return true;
+  // Helper method for data persistence
+  private async saveData(): Promise<void> {
+    // In memory storage - no actual persistence needed for this implementation
+    console.log("Data saved to memory storage");
   }
 }
 
