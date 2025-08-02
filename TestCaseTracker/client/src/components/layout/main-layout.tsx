@@ -12,6 +12,35 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GlobalChatbot } from "@/components/chat/global-chatbot";
 import { TodoToggleButton } from "@/components/todo/todo-toggle-button";
 import { pageVariants, sidebarVariants, backdropVariants } from "@/lib/animations";
+import {
+  Bell,
+  Settings,
+  User,
+  Menu,
+  X,
+  Search,
+  Plus,
+  Home,
+  ChevronRight,
+  MessageSquare,
+  Users,
+  FolderKanban,
+  CheckSquare,
+  BugPlay,
+  FileBarChart,
+  FileText,
+  Clock,
+  Trello,
+  Github,
+  Sparkles,
+  BoxSelect,
+  FormInput,
+  ListFilter,
+  Play,
+  Terminal,
+  Briefcase,
+  UserCheck,
+} from "lucide-react";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -62,6 +91,58 @@ export function MainLayout({ children }: MainLayoutProps) {
   if (location === "/login" || location === "/register" || location === "/forgot-password") {
     return <>{children}</>;
   }
+
+  const getPageIcon = (pathname: string) => {
+    if (pathname.startsWith('/dashboard')) return <Home className="h-5 w-5" />;
+    if (pathname.startsWith('/projects')) return <FolderKanban className="h-5 w-5" />;
+    if (pathname.startsWith('/kanban')) return <Trello className="h-5 w-5" />;
+    if (pathname.startsWith('/test-cases')) return <CheckSquare className="h-5 w-5" />;
+    if (pathname.startsWith('/ai-generator')) return <Sparkles className="h-5 w-5" />;
+    if (pathname.startsWith('/bugs')) return <BugPlay className="h-5 w-5" />;
+    if (pathname.startsWith('/messenger')) return <Terminal className="h-5 w-5" />;
+    if (pathname.startsWith('/github')) return <Github className="h-5 w-5" />;
+    if (pathname.startsWith('/functional-flow')) return <BoxSelect className="h-5 w-5" />;
+    if (pathname.startsWith('/timesheets')) return <Clock className="h-5 w-5" />;
+    if (pathname.startsWith('/documents')) return <FileText className="h-5 w-5" />;
+    if (pathname.startsWith('/reports')) return <FileBarChart className="h-5 w-5" />;
+    if (pathname.startsWith('/test-sheets')) return <FormInput className="h-5 w-5" />;
+    if (pathname.startsWith('/traceability-matrix')) return <ListFilter className="h-5 w-5" />;
+    if (pathname.startsWith('/notebooks')) return <FileText className="h-5 w-5" />;
+    if (pathname.startsWith('/todos')) return <CheckSquare className="h-5 w-5" />;
+    if (pathname.startsWith('/automation')) return <Play className="h-5 w-5" />;
+    if (pathname.startsWith('/employees')) return <UserCheck className="h-5 w-5" />;
+    if (pathname.startsWith('/navadhiti-projects')) return <Briefcase className="h-5 w-5" />;
+    if (pathname.startsWith('/users')) return <Users className="h-5 w-5" />;
+    if (pathname.startsWith('/settings')) return <Settings className="h-5 w-5" />;
+    if (pathname.startsWith('/profile')) return <User className="h-5 w-5" />;
+    return <Home className="h-5 w-5" />;
+  };
+  
+  const getPageTitle = (pathname: string) => {
+    if (pathname.startsWith('/dashboard')) return 'Dashboard';
+    if (pathname.startsWith('/projects')) return 'Projects';
+    if (pathname.startsWith('/kanban')) return 'Kanban Board';
+    if (pathname.startsWith('/test-cases')) return 'Test Cases';
+    if (pathname.startsWith('/ai-generator')) return 'AI Generator';
+    if (pathname.startsWith('/bugs')) return 'Bug Reports';
+    if (pathname.startsWith('/messenger')) return 'Messenger';
+    if (pathname.startsWith('/github')) return 'GitHub Integration';
+    if (pathname.startsWith('/functional-flow')) return 'Functional Flow';
+    if (pathname.startsWith('/timesheets')) return 'Timesheets';
+    if (pathname.startsWith('/documents')) return 'Documents';
+    if (pathname.startsWith('/reports')) return 'Reports';
+    if (pathname.startsWith('/test-sheets')) return 'Test Sheets';
+    if (pathname.startsWith('/traceability-matrix')) return 'Traceability Matrix';
+    if (pathname.startsWith('/notebooks')) return 'Notebooks';
+    if (pathname.startsWith('/todos')) return 'Todo List';
+    if (pathname.startsWith('/automation')) return 'Test Automation';
+    if (pathname.startsWith('/employees')) return 'Catalyst Management';
+    if (pathname.startsWith('/navadhiti-projects')) return 'Navadhiti Projects';
+    if (pathname.startsWith('/users')) return 'User Management';
+    if (pathname.startsWith('/settings')) return 'Settings';
+    if (pathname.startsWith('/profile')) return 'My Profile';
+    return 'NavaDhiti';
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">

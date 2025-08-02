@@ -257,6 +257,18 @@ export interface IStorage {
   createNavadhitiProject(data: any): Promise<any>;
   updateNavadhitiProject(id: number, data: any): Promise<any | null>;
   deleteNavadhitiProject(id: number): Promise<boolean>;
+
+  // Todo Management Methods  
+  getTodos(userId: number): Promise<any[]>;
+  getTodo(id: number): Promise<any | undefined>;
+  createTodo(data: any): Promise<any>;
+  updateTodo(id: number, data: any): Promise<any | null>;
+  deleteTodo(id: number): Promise<boolean>;
+  getTodoLists(userId: number): Promise<any[]>;
+  getTodoList(id: number): Promise<any | undefined>;
+  createTodoList(data: any): Promise<any>;
+  updateTodoList(id: number, data: any): Promise<any | null>;
+  deleteTodoList(id: number): Promise<boolean>;
 }
 
 /**
@@ -300,6 +312,10 @@ class MemStorage implements IStorage {
   private conversationMembers = new Map<number, Set<number>>();
   private messageReadStatus = new Map<string, Set<number>>(); // messageId-userId -> Set<userId>
   private conversationMessages = new Map<number, any[]>(); // conversationId -> messages array
+
+  // Todo management
+  private todoLists = new Map<number, any>();
+  private todos = new Map<number, any>();
 
   private nextId = 1;
   private testSheetIdCounter = 1;
@@ -1935,6 +1951,81 @@ class MemStorage implements IStorage {
   async updateBugStatus(id: number, status: string): Promise<Bug | null> {
     console.log(`Storage: updateBugStatus(${id}, ${status})`);
     return this.updateBug(id, { status });
+  }
+
+  // Todo Management Implementation
+  async getTodos(userId: number): Promise<any[]> {
+    return Array.from(this.todos.values()).filter(todo => todo.userId === userId);
+  }
+
+  async getTodo(id: number): Promise<any | undefined> {
+    return this.todos.get(id);
+  }
+
+  async createTodo(data: any): Promise<any> {
+    const id = this.getNextId();
+    const todo = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.todos.set(id, todo);
+    return todo;
+  }
+
+  async updateTodo(id: number, data: any): Promise<any | null> {
+    const todo = this.todos.get(id);
+    if (!todo) return null;
+
+    const updatedTodo = {
+      ...todo,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.todos.set(id, updatedTodo);
+    return updatedTodo;
+  }
+
+  async deleteTodo(id: number): Promise<boolean> {
+    return this.todos.delete(id);
+  }
+
+  async getTodoLists(userId: number): Promise<any[]> {
+    return Array.from(this.todoLists.values()).filter(list => list.userId === userId);
+  }
+
+  async getTodoList(id: number): Promise<any | undefined> {
+    return this.todoLists.get(id);
+  }
+
+  async createTodoList(data: any): Promise<any> {
+    const id = this.getNextId();
+    const todoList = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.todoLists.set(id, todoList);
+    return todoList;
+  }
+
+  async updateTodoList(id: number, data: any): Promise<any | null> {
+    const todoList = this.todoLists.get(id);
+    if (!todoList) return null;
+
+    const updatedTodoList = {
+      ...todoList,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.todoLists.set(id, updatedTodoList);
+    return updatedTodoList;
+  }
+
+  async deleteTodoList(id: number): Promise<boolean> {
+    return this.todoLists.delete(id);
   }
 
   // Reset storage method for testing

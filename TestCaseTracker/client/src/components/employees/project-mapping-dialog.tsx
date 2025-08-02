@@ -31,6 +31,20 @@ export function ProjectMappingDialog({ employee, onClose }: ProjectMappingDialog
     },
   });
 
+  const { data: navadhitiProjects = [] } = useQuery({
+    queryKey: ["/api/navadhiti-projects"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/navadhiti-projects");
+      return res.json();
+    },
+  });
+
+  // Combine both project types
+  const allProjects = [
+    ...projects.map((p: any) => ({ ...p, type: 'regular' })),
+    ...navadhitiProjects.map((p: any) => ({ ...p, type: 'navadhiti', name: p.projectName }))
+  ];
+
   const { data: employeeProjects = [], refetch } = useQuery({
     queryKey: [`/api/employees/${employee.id}/projects`],
     queryFn: async () => {
@@ -77,9 +91,12 @@ export function ProjectMappingDialog({ employee, onClose }: ProjectMappingDialog
       return;
     }
 
+    const [projectType, projectId] = selectedProjectId.split('-');
+    
     createMappingMutation.mutate({
       employeeId: employee.id,
-      projectId: parseInt(selectedProjectId),
+      projectId: parseInt(projectId),
+      projectType: projectType,
       role,
       startDate: startDate || null,
       endDate: endDate || null,
@@ -93,7 +110,11 @@ export function ProjectMappingDialog({ employee, onClose }: ProjectMappingDialog
     }
   };
 
-  const getProjectName = (projectId: number) => {
+  const getProjectName = (projectId: number, projectType?: string) => {
+    if (projectType === 'navadhiti') {
+      const project = navadhitiProjects.find((p: any) => p.id === projectId);
+      return project?.projectName ? `${project.projectName} (Navadhiti)` : `Navadhiti Project ${projectId}`;
+    }
     const project = projects.find((p: any) => p.id === projectId);
     return project?.name || `Project ${projectId}`;
   };
@@ -119,9 +140,9 @@ export function ProjectMappingDialog({ employee, onClose }: ProjectMappingDialog
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
                   <SelectContent>
-                    {projects.map((project: any) => (
-                      <SelectItem key={project.id} value={project.id.toString()}>
-                        {project.name}
+                    {allProjects.map((project: any) => (
+                      <SelectItem key={`${project.type}-${project.id}`} value={`${project.type}-${project.id}`}>
+                        {project.name} {project.type === 'navadhiti' ? '(Navadhiti)' : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -187,7 +208,7 @@ export function ProjectMappingDialog({ employee, onClose }: ProjectMappingDialog
                   {employeeProjects.map((mapping: any) => (
                     <TableRow key={mapping.id}>
                       <TableCell className="font-medium">
-                        {getProjectName(mapping.projectId)}
+                        {getProjectName(mapping.projectId, mapping.projectType)}
                       </TableCell>
                       <TableCell>{mapping.role || "N/A"}</TableCell>
                       <TableCell>
