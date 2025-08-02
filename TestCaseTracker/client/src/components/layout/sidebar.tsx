@@ -38,6 +38,7 @@ import {
   ChevronRight,
   Github,
   Sparkles,
+  Briefcase,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -212,6 +213,16 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       name: "Test Automation",
       href: "/automation",
       icon: <Play className="h-5 w-5" />,
+    },
+    {
+      name: "Employees",
+      href: "/employees",
+      icon: <Users className="h-5 w-5" />,
+    },
+    {
+      name: "Navadhiti Projects",
+      href: "/navadhiti-projects",
+      icon: <Briefcase className="h-5 w-5" />,
     },
   ], []);
 

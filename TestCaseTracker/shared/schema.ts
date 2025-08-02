@@ -834,6 +834,117 @@ export const cellValueSchema = z.object({
 // This CellValue type is already defined earlier in the file
 // export type CellValue = z.infer<typeof cellValueSchema>;
 
+// Employee Management Schema
+export const employees = pgTable("employees", {
+  id: serial("id").primaryKey(),
+  employeeId: text("employee_id").notNull().unique(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull().unique(),
+  phoneNumber: text("phone_number"),
+  profilePicture: text("profile_picture"),
+  locality: text("locality"),
+  technologies: json("technologies").default([]),
+  department: text("department"),
+  status: text("status").$type<"Active" | "Inactive">().notNull().default("Active"),
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+// Employee Project Mapping
+export const employeeProjects = pgTable("employee_projects", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").notNull(),
+  projectId: integer("project_id").notNull(),
+  role: text("role"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Technology Options
+export const technologyOptions = pgTable("technology_options", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  category: text("category"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Department Options
+export const departmentOptions = pgTable("department_options", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Navadhiti Projects Schema
+export const navadhitiProjects = pgTable("navadhiti_projects", {
+  id: serial("id").primaryKey(),
+  projectName: text("project_name").notNull(),
+  overallProjectActivity: text("overall_project_activity"),
+  currentSprint: text("current_sprint"),
+  currentIssues: text("current_issues"),
+  weeklyComms: text("weekly_comms"),
+  immediateActionItems: text("immediate_action_items"),
+  supportRequired: text("support_required"),
+  additionalRemarks: text("additional_remarks"),
+  activityStatus: integer("activity_status").default(0), // 0-100
+  sprintStatus: integer("sprint_status").default(0), // 0-100
+  communicationStatus: integer("communication_status").default(0), // 0-100
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+// Create insert schemas
+export const insertEmployeeSchema = createInsertSchema(employees).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEmployeeProjectSchema = createInsertSchema(employeeProjects).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTechnologyOptionSchema = createInsertSchema(technologyOptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDepartmentOptionSchema = createInsertSchema(departmentOptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNavadhitiProjectSchema = createInsertSchema(navadhitiProjects).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types
+export type Employee = typeof employees.$inferSelect;
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+
+export type EmployeeProject = typeof employeeProjects.$inferSelect;
+export type InsertEmployeeProject = z.infer<typeof insertEmployeeProjectSchema>;
+
+export type TechnologyOption = typeof technologyOptions.$inferSelect;
+export type InsertTechnologyOption = z.infer<typeof insertTechnologyOptionSchema>;
+
+export type DepartmentOption = typeof departmentOptions.$inferSelect;
+export type InsertDepartmentOption = z.infer<typeof insertDepartmentOptionSchema>;
+
+export type NavadhitiProject = typeof navadhitiProjects.$inferSelect;
+export type InsertNavadhitiProject = z.infer<typeof insertNavadhitiProjectSchema>;
+
 // Test Sheets schema
 export const insertTestSheetSchema = z.object({
   name: z.string().min(1, "Sheet name is required"),

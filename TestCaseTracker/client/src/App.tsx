@@ -24,7 +24,10 @@ import TestCasesPage from "@/pages/test-cases/index";
 import BugsPage from "@/pages/bugs/index";
 import ReportsPage from "@/pages/reports/index";
 import DocumentsPage from "@/pages/documents/index";
-import ProfilePage from "@/pages/profile";
+import ProfilePage from "./pages/profile";
+import EmployeesPage from "./pages/employees";
+import NavadhitiProjectsPage from "./pages/navadhiti-projects";
+import NotFoundPage from "./pages/not-found";
 import UsersPage from "@/pages/users/index";
 import SettingsPage from "@/pages/settings/index";
 import TimeSheetsPage from "@/pages/timesheets/index";
@@ -154,6 +157,12 @@ function Router() {
       </Route>
       <Route path="/documents">
         <ProtectedComponent Component={DocumentsPage} />
+      </Route>
+      <Route path="/employees">
+        <ProtectedComponent Component={EmployeesPage} />
+      </Route>
+      <Route path="/navadhiti-projects">
+        <ProtectedComponent Component={NavadhitiProjectsPage} />
       </Route>
       <Route path="/profile">
         <ProtectedComponent Component={ProfilePage} />

@@ -230,6 +230,33 @@ export interface IStorage {
   getUserById(userId: number): Promise<User | undefined>;
   createDirectConversation(userId1: number, userId2: number): Promise<any>;
   async getProjectUsers(projectId: number): Promise<Array<{ id: number; name: string; email: string }>>;
+
+  // Employee Management Methods
+  getEmployees(): Promise<any[]>;
+  getEmployee(id: number): Promise<any | undefined>;
+  createEmployee(data: any): Promise<any>;
+  updateEmployee(id: number, data: any): Promise<any | null>;
+  deleteEmployee(id: number): Promise<boolean>;
+
+  // Employee Project Mapping
+  getEmployeeProjects(employeeId?: number): Promise<any[]>;
+  createEmployeeProject(data: any): Promise<any>;
+  deleteEmployeeProject(id: number): Promise<boolean>;
+
+  // Technology Options
+  getTechnologyOptions(): Promise<any[]>;
+  createTechnologyOption(data: any): Promise<any>;
+
+  // Department Options
+  getDepartmentOptions(): Promise<any[]>;
+  createDepartmentOption(data: any): Promise<any>;
+
+  // Navadhiti Projects Methods
+  getNavadhitiProjects(): Promise<any[]>;
+  getNavadhitiProject(id: number): Promise<any | undefined>;
+  createNavadhitiProject(data: any): Promise<any>;
+  updateNavadhitiProject(id: number, data: any): Promise<any | null>;
+  deleteNavadhitiProject(id: number): Promise<boolean>;
 }
 
 /**
@@ -2625,6 +2652,223 @@ class MemStorage implements IStorage {
       return true;
     }
     return false;
+  }
+
+  // Employee Management Storage
+  private employees: any[] = [];
+  private employeeProjects: any[] = [];
+  private technologyOptions: any[] = [
+    { id: 1, name: "JavaScript", category: "Programming Language", isActive: true, createdAt: new Date().toISOString() },
+    { id: 2, name: "React", category: "Frontend Framework", isActive: true, createdAt: new Date().toISOString() },
+    { id: 3, name: "Node.js", category: "Backend Runtime", isActive: true, createdAt: new Date().toISOString() },
+    { id: 4, name: "Python", category: "Programming Language", isActive: true, createdAt: new Date().toISOString() },
+    { id: 5, name: "Java", category: "Programming Language", isActive: true, createdAt: new Date().toISOString() },
+  ];
+  private departmentOptions: any[] = [
+    { id: 1, name: "Engineering", description: "Software Development", isActive: true, createdAt: new Date().toISOString() },
+    { id: 2, name: "Quality Assurance", description: "Testing and QA", isActive: true, createdAt: new Date().toISOString() },
+    { id: 3, name: "DevOps", description: "Infrastructure and Deployment", isActive: true, createdAt: new Date().toISOString() },
+    { id: 4, name: "Product Management", description: "Product Strategy", isActive: true, createdAt: new Date().toISOString() },
+  ];
+  private navadhitiProjects: any[] = [];
+  private todoItems: any[] = [];
+
+  // Employee Management Methods
+  async getEmployees() {
+    return this.employees;
+  }
+
+  async getEmployee(id: number) {
+    return this.employees.find(emp => emp.id === id);
+  }
+
+  async createEmployee(data: any) {
+    const newEmployee = {
+      id: this.employees.length + 1,
+      employeeId: data.employeeId || `EMP-${String(this.employees.length + 1).padStart(4, '0')}`,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phoneNumber: data.phoneNumber,
+      profilePicture: data.profilePicture,
+      locality: data.locality,
+      technologies: data.technologies || [],
+      department: data.department,
+      status: data.status || "Active",
+      createdById: data.createdById,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.employees.push(newEmployee);
+    return newEmployee;
+  }
+
+  async updateEmployee(id: number, data: any) {
+    const index = this.employees.findIndex(emp => emp.id === id);
+    if (index === -1) return null;
+
+    this.employees[index] = {
+      ...this.employees[index],
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+    return this.employees[index];
+  }
+
+  async deleteEmployee(id: number) {
+    const index = this.employees.findIndex(emp => emp.id === id);
+    if (index === -1) return false;
+    this.employees.splice(index, 1);
+    return true;
+  }
+
+  // Employee Project Mapping
+  async getEmployeeProjects(employeeId?: number) {
+    return employeeId 
+      ? this.employeeProjects.filter(ep => ep.employeeId === employeeId)
+      : this.employeeProjects;
+  }
+
+  async createEmployeeProject(data: any) {
+    const newMapping = {
+      id: this.employeeProjects.length + 1,
+      ...data,
+      createdAt: new Date().toISOString(),
+    };
+    this.employeeProjects.push(newMapping);
+    return newMapping;
+  }
+
+  async deleteEmployeeProject(id: number) {
+    const index = this.employeeProjects.findIndex(ep => ep.id === id);
+    if (index === -1) return false;
+    this.employeeProjects.splice(index, 1);
+    return true;
+  }
+
+  // Technology Options
+  async getTechnologyOptions() {
+    return this.technologyOptions.filter(tech => tech.isActive);
+  }
+
+  async createTechnologyOption(data: any) {
+    const newTech = {
+      id: this.technologyOptions.length + 1,
+      name: data.name,
+      category: data.category,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+    this.technologyOptions.push(newTech);
+    return newTech;
+  }
+
+  // Department Options
+  async getDepartmentOptions() {
+    return this.departmentOptions.filter(dept => dept.isActive);
+  }
+
+  async createDepartmentOption(data: any) {
+    const newDept = {
+      id: this.departmentOptions.length + 1,
+      name: data.name,
+      description: data.description,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+    this.departmentOptions.push(newDept);
+    return newDept;
+  }
+
+  // Navadhiti Projects Methods
+  async getNavadhitiProjects() {
+    return this.navadhitiProjects;
+  }
+
+  async getNavadhitiProject(id: number) {
+    return this.navadhitiProjects.find(proj => proj.id === id);
+  }
+
+  async createNavadhitiProject(data: any) {
+    const newProject = {
+      id: this.navadhitiProjects.length + 1,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.navadhitiProjects.push(newProject);
+    return newProject;
+  }
+
+  async updateNavadhitiProject(id: number, data: any) {
+    const index = this.navadhitiProjects.findIndex(proj => proj.id === id);
+    if (index === -1) return null;
+
+    this.navadhitiProjects[index] = {
+      ...this.navadhitiProjects[index],
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+    return this.navadhitiProjects[index];
+  }
+
+  async deleteNavadhitiProject(id: number) {
+    const index = this.navadhitiProjects.findIndex(proj => proj.id === id);
+    if (index === -1) return false;
+    this.navadhitiProjects.splice(index, 1);
+    return true;
+  }
+
+  // Add todo management methods
+  async getTodoLists(userId: number) {
+    // Mock implementation - in real app, would query todo_lists table
+    return this.todoLists.filter(list => list.userId === userId);
+  }
+  async getTodoList(id: number) {
+    return this.todoLists.find(list => list.id === id);
+  }
+
+  async createTodoList(todoList: TodoList) {
+    todoList.id = this.getNextId();
+    this.todoLists.push(todoList);
+    return todoList;
+  }
+
+  async updateTodoList(id: number, updates: Partial<TodoList>) {
+    const list = this.todoLists.find(list => list.id === id);
+    if (!list) return null; // Not found
+
+    Object.assign(list, updates);
+    return list;
+  }
+
+  async deleteTodoList(id: number) {
+    this.todoLists = this.todoLists.filter(list => list.id !== id);
+    return true;
+  }
+
+  async getTodos(listId: number) {
+    // Mock implementation - in real app, would query todos table
+    return this.todoItems.filter(todo => todo.listId === listId);
+  }
+
+  async createTodo(todo: Todo) {
+    todo.id = this.getNextId();
+    this.todoItems.push(todo);
+    return todo;
+  }
+
+  async updateTodo(id: number, updates: Partial<Todo>) {
+    const todo = this.todoItems.find(todo => todo.id === id);
+    if (!todo) return null; // Not found
+
+    Object.assign(todo, updates);
+    return todo;
+  }
+
+  async deleteTodo(id: number) {
+    this.todoItems = this.todoItems.filter(todo => todo.id !== id);
+    return true;
   }
 }
 

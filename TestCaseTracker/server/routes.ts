@@ -4995,6 +4995,272 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Employee Management Routes
+  apiRouter.get("/employees", isAuthenticated, async (req, res) => {
+    try {
+      const employees = await storage.getEmployees();
+      res.json(employees);
+    } catch (error) {
+      console.error("Get employees error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const employeeId = parseInt(req.params.id);
+      const employee = await storage.getEmployee(employeeId);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      res.json(employee);
+    } catch (error) {
+      console.error("Get employee error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/employees", isAuthenticated, async (req, res) => {
+    try {
+      const employeeData = {
+        ...req.body,
+        createdById: req.session.userId,
+      };
+      
+      const employee = await storage.createEmployee(employeeData);
+      
+      res.status(201).json(employee);
+    } catch (error) {
+      console.error("Create employee error:", error);
+      res.status(400).json({ message: "Invalid employee data" });
+    }
+  });
+
+  apiRouter.put("/employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const employeeId = parseInt(req.params.id);
+      const updatedEmployee = await storage.updateEmployee(employeeId, req.body);
+      
+      if (!updatedEmployee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      res.json(updatedEmployee);
+    } catch (error) {
+      console.error("Update employee error:", error);
+      res.status(400).json({ message: "Invalid employee data" });
+    }
+  });
+
+  apiRouter.delete("/employees/:id", isAuthenticated, async (req, res) => {
+    try {
+      const employeeId = parseInt(req.params.id);
+      const success = await storage.deleteEmployee(employeeId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete employee error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Employee Project Mapping Routes
+  apiRouter.get("/employees/:id/projects", isAuthenticated, async (req, res) => {
+    try {
+      const employeeId = parseInt(req.params.id);
+      const projects = await storage.getEmployeeProjects(employeeId);
+      res.json(projects);
+    } catch (error) {
+      console.error("Get employee projects error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/employee-projects", isAuthenticated, async (req, res) => {
+    try {
+      const mapping = await storage.createEmployeeProject(req.body);
+      res.status(201).json(mapping);
+    } catch (error) {
+      console.error("Create employee project mapping error:", error);
+      res.status(400).json({ message: "Invalid mapping data" });
+    }
+  });
+
+  apiRouter.delete("/employee-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const mappingId = parseInt(req.params.id);
+      const success = await storage.deleteEmployeeProject(mappingId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Mapping not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete employee project mapping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Technology Options Routes
+  apiRouter.get("/technology-options", isAuthenticated, async (req, res) => {
+    try {
+      const technologies = await storage.getTechnologyOptions();
+      res.json(technologies);
+    } catch (error) {
+      console.error("Get technology options error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/technology-options", isAuthenticated, async (req, res) => {
+    try {
+      const technology = await storage.createTechnologyOption(req.body);
+      res.status(201).json(technology);
+    } catch (error) {
+      console.error("Create technology option error:", error);
+      res.status(400).json({ message: "Invalid technology data" });
+    }
+  });
+
+  // Department Options Routes
+  apiRouter.get("/department-options", isAuthenticated, async (req, res) => {
+    try {
+      const departments = await storage.getDepartmentOptions();
+      res.json(departments);
+    } catch (error) {
+      console.error("Get department options error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/department-options", isAuthenticated, async (req, res) => {
+    try {
+      const department = await storage.createDepartmentOption(req.body);
+      res.status(201).json(department);
+    } catch (error) {
+      console.error("Create department option error:", error);
+      res.status(400).json({ message: "Invalid department data" });
+    }
+  });
+
+  // Navadhiti Projects Routes
+  apiRouter.get("/navadhiti-projects", isAuthenticated, async (req, res) => {
+    try {
+      const projects = await storage.getNavadhitiProjects();
+      res.json(projects);
+    } catch (error) {
+      console.error("Get navadhiti projects error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const project = await storage.getNavadhitiProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json(project);
+    } catch (error) {
+      console.error("Get navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/navadhiti-projects", isAuthenticated, async (req, res) => {
+    try {
+      const projectData = {
+        ...req.body,
+        createdById: req.session.userId,
+      };
+      
+      const project = await storage.createNavadhitiProject(projectData);
+      res.status(201).json(project);
+    } catch (error) {
+      console.error("Create navadhiti project error:", error);
+      res.status(400).json({ message: "Invalid project data" });
+    }
+  });
+
+  apiRouter.put("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const updatedProject = await storage.updateNavadhitiProject(projectId, req.body);
+      
+      if (!updatedProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json(updatedProject);
+    } catch (error) {
+      console.error("Update navadhiti project error:", error);
+      res.status(400).json({ message: "Invalid project data" });
+    }
+  });
+
+  apiRouter.delete("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const success = await storage.deleteNavadhitiProject(projectId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // CSV Import for Navadhiti Projects
+  apiRouter.post("/navadhiti-projects/import", isAuthenticated, async (req, res) => {
+    try {
+      const { csvData } = req.body;
+      const importedProjects = [];
+      
+      for (const row of csvData) {
+        const projectData = {
+          projectName: row.projectName || row['Project Name'],
+          overallProjectActivity: row.overallProjectActivity || row['Overall Project Activity'],
+          currentSprint: row.currentSprint || row['Current Sprint'],
+          currentIssues: row.currentIssues || row['Current Issues'],
+          weeklyComms: row.weeklyComms || row['Weekly Comms'],
+          immediateActionItems: row.immediateActionItems || row['Immediate Action Items'],
+          supportRequired: row.supportRequired || row['Support Required'],
+          additionalRemarks: row.additionalRemarks || row['Additional Remarks / Inputs'],
+          activityStatus: parseInt(row.activityStatus || row['Activity Status'] || '0'),
+          sprintStatus: parseInt(row.sprintStatus || row['Sprint Status'] || '0'),
+          communicationStatus: parseInt(row.communicationStatus || row['Communication Status'] || '0'),
+          createdById: req.session.userId,
+        };
+        
+        const project = await storage.createNavadhitiProject(projectData);
+        importedProjects.push(project);
+      }
+      
+      res.json({ 
+        success: true, 
+        imported: importedProjects.length,
+        projects: importedProjects 
+      });
+    } catch (error) {
+      console.error("Import navadhiti projects error:", error);
+      res.status(400).json({ message: "Import failed" });
+    }
+  });
+
   // TodoList routes
   apiRouter.get("/todo-lists", isAuthenticated, async (req, res) => {
     try {
