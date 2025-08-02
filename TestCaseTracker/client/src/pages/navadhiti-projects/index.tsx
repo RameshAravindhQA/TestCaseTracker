@@ -487,16 +487,33 @@ export default function NavadhitiProjectsPage() {
                             )}
 
                             {project && (
-                              <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs">
-                                <div className="font-medium text-gray-900 dark:text-gray-100">
-                                  Current: {project.projectName}
+                                <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+                                  <div className="font-medium text-gray-900 dark:text-gray-100">
+                                    Current: {project.projectName}
+                                  </div>
+                                  <div className="text-gray-600 dark:text-gray-400">
+                                    Role: {allocation?.role || 'N/A'}
+                                  </div>
                                 </div>
-                                <div className="text-gray-600 dark:text-gray-400">
-                                  Role: {allocation?.role || 'N/A'}
+                              )}
+
+                              {status === 'available' && (
+                                <div className="mt-2 flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1 text-xs h-7"
+                                    onClick={() => {
+                                      setSelectedEmployees([employee.id]);
+                                      setIsAllocationDialogOpen(true);
+                                    }}
+                                  >
+                                    <UserCheck className="h-3 w-3 mr-1" />
+                                    Quick Allocate
+                                  </Button>
                                 </div>
-                              </div>
-                            )}
-                          </div>
+                              )}
+                            </div>
                         </CardContent>
                       </Card>
                     );
