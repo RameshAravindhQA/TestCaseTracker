@@ -12,7 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { NavadhitiProjectForm } from "@/components/navadhiti/navadhiti-project-form";
 import { CSVImportDialog } from "@/components/navadhiti/csv-import-dialog";
-import { Plus, MoreHorizontal, Edit, Trash2, Upload, Download, Filter, Search, Calendar, DollarSign, Users, TrendingUp } from "lucide-react";
+import { StatusReviewDialog } from "@/components/navadhiti/status-review-dialog";
+import { Plus, MoreHorizontal, Edit, Trash2, Upload, Download, Filter, Search, Calendar, DollarSign, Users, TrendingUp, FileText } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -101,6 +102,17 @@ export default function NavadhitiProjectsPage() {
   const [statusReviewData, setStatusReviewData] = useState<any[]>([]);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [selectedProjectForStatus, setSelectedProjectForStatus] = useState<any>(null);
+
+  // Fetch status reviews for selected date
+  const { data: statusReviews = [] } = useQuery({
+    queryKey: ["/api/navadhiti-projects/status-reviews", selectedDate.toISOString().split('T')[0]],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/navadhiti-projects/status-reviews?date=${selectedDate.toISOString().split('T')[0]}`);
+      if (!res.ok) throw new Error("Failed to fetch status reviews");
+      return res.json();
+    },
+    enabled: activeTab === "statusReview"
+  });
 
   // Fetch projects
   const { data: projects = [], isLoading, error } = useQuery({
@@ -214,6 +226,79 @@ export default function NavadhitiProjectsPage() {
     window.URL.revokeObjectURL(url);
 
     toast({ title: "Projects exported successfully" });
+  };
+
+  const exportStatusReviewToPDF = () => {
+    if (!statusReviews.length) {
+      toast({ title: "No status review data to export", variant: "destructive" });
+      return;
+    }
+
+    // Create PDF content as HTML
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Project Status Review - ${selectedDate.toLocaleDateString()}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .date { color: #666; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            .status-badge { padding: 4px 8px; border-radius: 4px; color: white; font-size: 12px; }
+            .green { background-color: #10b981; }
+            .amber { background-color: #f59e0b; }
+            .red { background-color: #ef4444; }
+            .gray { background-color: #6b7280; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Project Status Review</h1>
+            <p class="date">Date: ${selectedDate.toLocaleDateString()}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Customer Name</th>
+                <th>Project Name</th>
+                <th>Project Lead</th>
+                <th>Overall Status</th>
+                <th>Sprint Status</th>
+                <th>Weekly Comms</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${statusReviews.map(review => `
+                <tr>
+                  <td>${review.customerName || 'N/A'}</td>
+                  <td>${review.projectName}</td>
+                  <td>${review.projectLead || 'N/A'}</td>
+                  <td><span class="status-badge ${review.overallProjectStatus}">${review.overallProjectStatusLabel || review.overallProjectStatus}</span></td>
+                  <td><span class="status-badge ${review.currentSprintStatus}">${review.currentSprintStatusLabel || review.currentSprintStatus}</span></td>
+                  <td><span class="status-badge ${review.weeklyComms}">${review.weeklyCommsLabel || review.weeklyComms}</span></td>
+                  <td>${review.notes || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    // Create and download PDF
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `status-review-${selectedDate.toISOString().split('T')[0]}.html`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    toast({ title: "Status review exported successfully" });
   };
 
   // Calculate summary stats
@@ -545,16 +630,136 @@ export default function NavadhitiProjectsPage() {
             </Dialog>
           </TabsContent>
           <TabsContent value="statusReview">
-            <div className="flex flex-col space-y-4">
-              <h2 className="text-2xl font-bold">Status Review</h2>
-              <DatePicker
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                className="w-full md:w-64"
-              />
-              {/* Additional components for status review go here */}
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">Status Review</h2>
+                  <p className="text-muted-foreground">Review project status for selected date</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={exportStatusReviewToPDF}
+                    disabled={!statusReviews.length}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Export PDF
+                  </Button>
+                </div>
+              </div>
+
+              {/* Date Selection */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Select Review Date:</label>
+                      <DatePicker
+                        selected={selectedDate}
+                        onSelect={(date) => date && setSelectedDate(date)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {statusReviews.length} reviews found for {selectedDate.toLocaleDateString()}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Active Projects Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Active Projects</CardTitle>
+                  <CardDescription>Click on a project to update its status</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {projects.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">No projects available</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Customer Name</TableHead>
+                            <TableHead>Project Name</TableHead>
+                            <TableHead>Project Lead</TableHead>
+                            <TableHead>Overall Status</TableHead>
+                            <TableHead>Sprint Status</TableHead>
+                            <TableHead>Weekly Comms</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {projects.map((project: NavadhitiProject) => {
+                            const review = statusReviews.find(r => r.projectId === project.id);
+                            return (
+                              <TableRow key={project.id}>
+                                <TableCell>{project.clientName || 'N/A'}</TableCell>
+                                <TableCell className="font-medium">{project.projectName}</TableCell>
+                                <TableCell>{project.projectLead || 'N/A'}</TableCell>
+                                <TableCell>
+                                  {review ? (
+                                    <Badge variant="outline" className="text-white" style={{backgroundColor: review.overallProjectStatusColor || '#6b7280'}}>
+                                      {review.overallProjectStatusLabel}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground">No Update</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {review ? (
+                                    <Badge variant="outline" className="text-white" style={{backgroundColor: review.currentSprintStatusColor || '#6b7280'}}>
+                                      {review.currentSprintStatusLabel}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground">No Update</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {review ? (
+                                    <Badge variant="outline" className="text-white" style={{backgroundColor: review.weeklyCommsColor || '#6b7280'}}>
+                                      {review.weeklyCommsLabel}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground">No Update</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedProjectForStatus(project);
+                                      setIsStatusDialogOpen(true);
+                                    }}
+                                  >
+                                    Update Status
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
+
+            {/* Status Review Dialog */}
+            <StatusReviewDialog
+              isOpen={isStatusDialogOpen}
+              onClose={() => {
+                setIsStatusDialogOpen(false);
+                setSelectedProjectForStatus(null);
+              }}
+              project={selectedProjectForStatus}
+              selectedDate={selectedDate}
+            />
           </TabsContent>
         </Tabs>
       </div>

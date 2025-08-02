@@ -422,6 +422,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // GitHub integrations routes
   apiRouter.use("/github", githubIntegrationsRouter);
+
+  // Navadhiti Projects routes
+  apiRouter.get("/navadhiti-projects", isAuthenticated, async (req, res) => {
+    try {
+      const projects = await storage.getNavadhitiProjects();
+      res.json(projects);
+    } catch (error) {
+      console.error("Get navadhiti projects error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const project = await storage.getNavadhitiProject(id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      console.error("Get navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/navadhiti-projects", isAuthenticated, async (req, res) => {
+    try {
+      const projectData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+      const project = await storage.createNavadhitiProject(projectData);
+      res.status(201).json(project);
+    } catch (error) {
+      console.error("Create navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.put("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedProject = await storage.updateNavadhitiProject(id, req.body);
+      if (!updatedProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(updatedProject);
+    } catch (error) {
+      console.error("Update navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteNavadhitiProject(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Status Review endpoints
+  apiRouter.get("/navadhiti-projects/status-reviews", isAuthenticated, async (req, res) => {
+    try {
+      const { date } = req.query;
+      const reviews = await storage.getStatusReviews(date as string);
+      res.json(reviews);
+    } catch (error) {
+      console.error("Get status reviews error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/navadhiti-projects/status-review", isAuthenticated, async (req, res) => {
+    try {
+      const reviewData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+      const review = await storage.createStatusReview(reviewData);
+      res.status(201).json(review);
+    } catch (error) {
+      console.error("Create status review error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
   
   // Auth routes
   apiRouter.post("/auth/register", async (req, res) => {

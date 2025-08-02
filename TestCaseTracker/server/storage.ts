@@ -320,6 +320,7 @@ class MemStorage implements IStorage {
   private technologyOptions = new Map<number, any>();
   private departmentOptions = new Map<number, any>();
   private navadhitiProjects = new Map<number, any>();
+  private statusReviews = new Map<number, any>();
 
   // Initialize todoLists as Map instead of conflicting declarations
   private todoListsMap = new Map<number, any>();
@@ -784,7 +785,7 @@ class MemStorage implements IStorage {
   }
 
   // Document folder operations
-  async createDocumentFolder(data: Omit<DocumentFolder, 'id' | 'createdAt' | 'updatedAt'>): Promise<DocumentFolder> {
+  async createDocumentFolder(data: Omit<Document, 'id' | 'createdAt' | 'updatedAt'>): Promise<DocumentFolder> {
     const id = this.nextId++;
     const now = new Date();
 
@@ -1729,7 +1730,7 @@ class MemStorage implements IStorage {
   }
 
   // Custom marker operations with proper ID handling
-  async createCustomMarker(data: any): Promise<CustomMarker> {
+  async createCustomMarker(data: any): PromiseCustomMarker> {
     const id = this.getNextId();
 
     const marker: CustomMarker = {
@@ -2045,6 +2046,91 @@ class MemStorage implements IStorage {
   // Fix: Add getTodosByListId method
   async getTodosByListId(listId: number): Promise<any[]> {
     return Array.from(this.todosMap.values()).filter(todo => todo.todoListId === listId);
+  }
+  async createTodoList(data: any): Promise<any> {
+    const id = this.getNextId();
+    const todoList = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Initialize data.todoLists if it doesn't exist
+    if (!this.data.todoLists) {
+      this.data.todoLists = [];
+    }
+
+    // Add to both the map and the data array for compatibility
+    this.todoListsMap.set(id, todoList);
+    this.data.todoLists.push(todoList);
+
+    return todoList;
+  }
+
+  // Navadhiti Projects implementation
+  async getNavadhitiProjects(): Promise<any[]> {
+    return Array.from(this.navadhitiProjects.values());
+  }
+
+  async getNavadhitiProject(id: number): Promise<any | undefined> {
+    return this.navadhitiProjects.get(id);
+  }
+
+  async createNavadhitiProject(data: any): Promise<any> {
+    const id = this.getNextId();
+    const project = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.navadhitiProjects.set(id, project);
+    return project;
+  }
+
+  async updateNavadhitiProject(id: number, data: any): Promise<any | null> {
+    const project = this.navadhitiProjects.get(id);
+    if (!project) return null;
+
+    const updatedProject = {
+      ...project,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.navadhitiProjects.set(id, updatedProject);
+    return updatedProject;
+  }
+
+  async deleteNavadhitiProject(id: number): Promise<boolean> {
+    return this.navadhitiProjects.delete(id);
+  }
+
+  // Status Review methods
+  async getStatusReviews(date?: string): Promise<any[]> {
+    let reviews = Array.from(this.statusReviews.values());
+
+    if (date) {
+      const targetDate = new Date(date).toISOString().split('T')[0];
+      reviews = reviews.filter(review => {
+        const reviewDate = new Date(review.reviewDate).toISOString().split('T')[0];
+        return reviewDate === targetDate;
+      });
+    }
+
+    return reviews;
+  }
+
+  async createStatusReview(data: any): Promise<any> {
+    const id = this.getNextId();
+    const review = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.statusReviews.set(id, review);
+    return review;
   }
 
   // Helper method for data persistence
