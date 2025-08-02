@@ -784,9 +784,7 @@ class MemStorage implements IStorage {
   }
 
   // Document folder operations
-  async createDocumentFolder(data: Omit<DocumentFolder, 'id' | 'createdAt' | 'updatedAt'>): PromiseImplemented the getTodosByListId method and helper method for data persistence.
-``````text
-<DocumentFolder> {
+  async createDocumentFolder(data: Omit<DocumentFolder, 'id' | 'createdAt' | 'updatedAt'>): Promise<DocumentFolder> {
     const id = this.nextId++;
     const now = new Date();
 
