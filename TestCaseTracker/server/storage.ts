@@ -674,7 +674,7 @@ class MemStorage implements IStorage {
         .map(id => parseInt(id.replace('BUG-', ''), 10))
         .filter(num => !isNaN(num));
 
-      const nextNumber = existingBugs.length > 0 ? Math.max(...existingBugs) + 1 : 1;
+      const nextNumber = existingBugs.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
       bugId = `BUG-${String(nextNumber).padStart(3, '0')}`;
     }
 
@@ -1729,7 +1729,6 @@ class MemStorage implements IStorage {
   }
 
 ```python
-
   // Matrix operations
   async upsertMatrixCell(cell: any): Promise<any> {
     const key = `${cell.rowModuleId}-${cell.colModuleId}-${cell.projectId}`;
@@ -1845,9 +1844,10 @@ class MemStorage implements IStorage {
           updatedAt: new Date().toISOString() 
         };
         this.matrixCells.set(key, updatedCell);
-        return updatedCell;      }
+        return updatedCell;
+      }
     }
-        return null;
+    return null;
   }
 
   // Additional missing methods for traceability
