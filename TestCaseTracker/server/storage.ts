@@ -301,6 +301,11 @@ class MemStorage implements IStorage {
   private kanbanCards: Map<number, any> = new Map();
   private traceabilityMatrixes: Map<number, any> = new Map();
 
+  // Initialize data property for compatibility
+  private data: any = {
+    todoLists: []
+  };
+
   // Enhanced Chat and Messaging methods
   private conversations = new Map<number, any>();
   private chatMessages = new Map<number, any>(); // Use Map for better indexing
@@ -321,9 +326,6 @@ class MemStorage implements IStorage {
   private departmentOptions = new Map<number, any>();
   private navadhitiProjects = new Map<number, any>();
   private statusReviews = new Map<number, any>();
-
-  // Initialize todoLists as Map instead of conflicting declarations
-  private todoListsMap = new Map<number, any>();
 
   private nextId = 1;
   private testSheetIdCounter = 1;
@@ -1730,7 +1732,7 @@ class MemStorage implements IStorage {
   }
 
   // Custom marker operations with proper ID handling
-  async createCustomMarker(data: any): PromiseCustomMarker> {
+  async createCustomMarker(data: any): Promise<CustomMarker> {
     const id = this.getNextId();
 
     const marker: CustomMarker = {
