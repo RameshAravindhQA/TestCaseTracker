@@ -535,23 +535,214 @@ export default function NavadhitiProjectsPage() {
             </Card>
           </TabsContent>
 
-          {/* Other tabs content would go here */}
+          {/* Projects Tab */}
           <TabsContent value="projects" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Projects</CardTitle>
-                <CardDescription>Manage your Navadhiti projects</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                    Projects management will be displayed here
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    This section contains the project management functionality.
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Briefcase className="h-5 w-5" />
+                      Projects Management
+                    </CardTitle>
+                    <CardDescription>Create and manage your Navadhiti projects</CardDescription>
+                  </div>
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Project
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>
+                          {editingProject ? "Edit Project" : "Create New Project"}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <NavadhitiProjectForm
+                        project={editingProject}
+                        onSubmit={(data) => {
+                          if (editingProject) {
+                            // Update project logic
+                          } else {
+                            // Create project logic
+                          }
+                          setIsDialogOpen(false);
+                          setEditingProject(null);
+                        }}
+                        onCancel={() => {
+                          setIsDialogOpen(false);
+                          setEditingProject(null);
+                        }}
+                      />
+                    </DialogContent>
+                  </Dialog>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Filters and Search */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <div>
+                    <Label htmlFor="project-search" className="text-sm font-medium">Search Projects</Label>
+                    <div className="relative mt-1">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="project-search"
+                        placeholder="Search by name, client..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="status-filter" className="text-sm font-medium">Status</Label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="All Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Completed">Completed</SelectItem>
+                        <SelectItem value="On Hold">On Hold</SelectItem>
+                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="priority-filter" className="text-sm font-medium">Priority</Label>
+                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="All Priorities" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Priorities</SelectItem>
+                        <SelectItem value="High">High</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="Low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Projects Grid */}
+                {isLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                    <p className="mt-2 text-gray-500">Loading projects...</p>
+                  </div>
+                ) : projects.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                      No projects found
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">
+                      Get started by creating your first Navadhiti project.
+                    </p>
+                    <Button 
+                      onClick={() => setIsDialogOpen(true)}
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Your First Project
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {projects.map((project: NavadhitiProject) => (
+                      <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg font-semibold line-clamp-1">
+                                {project.projectName}
+                              </CardTitle>
+                              <CardDescription className="mt-1">
+                                {project.clientName}
+                              </CardDescription>
+                            </div>
+                            <Badge 
+                              className={`text-xs ${
+                                project.status === 'Active' ? 'bg-green-100 text-green-800' :
+                                project.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                                project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                              }`}
+                            >
+                              {project.status}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Calendar className="h-4 w-4" />
+                            <span>
+                              {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - 
+                              {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
+                            </span>
+                          </div>
+
+                          {project.technologies && project.technologies.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {project.technologies.slice(0, 3).map((tech, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {tech}
+                                </Badge>
+                              ))}
+                              {project.technologies.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{project.technologies.length - 3} more
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+
+                          {project.description && (
+                            <p className="text-sm text-gray-600 line-clamp-2">
+                              {project.description}
+                            </p>
+                          )}
+
+                          <div className="flex items-center justify-between pt-2">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-gray-400" />
+                              <span className="text-sm text-gray-600">
+                                {project.assignedEmployees?.length || 0} members
+                              </span>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingProject(project);
+                                  setIsDialogOpen(true);
+                                }}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  // View project details logic
+                                }}
+                              >
+                                View
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
