@@ -1,0 +1,440 @@
+GET https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/api/user/permissions 404 (Not Found)
+apiRequest @ queryClient.ts:40
+queryFn @ sidebar.tsx:381
+fetchFn @ @tanstack_react-query.js?v=6008ec4f:881
+run @ @tanstack_react-query.js?v=6008ec4f:513
+start @ @tanstack_react-query.js?v=6008ec4f:555
+fetch @ @tanstack_react-query.js?v=6008ec4f:969
+executeFetch_fn @ @tanstack_react-query.js?v=6008ec4f:2279
+onSubscribe @ @tanstack_react-query.js?v=6008ec4f:1983
+subscribe @ @tanstack_react-query.js?v=6008ec4f:24
+(anonymous) @ @tanstack_react-query.js?v=6008ec4f:3146
+subscribeToStore @ chunk-RPCDYKBN.js?v=6008ec4f:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=6008ec4f:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=6008ec4f:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=6008ec4f:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=6008ec4f:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=6008ec4f:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=6008ec4f:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19432
+commitRoot @ chunk-RPCDYKBN.js?v=6008ec4f:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=6008ec4f:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18718
+workLoop @ chunk-RPCDYKBN.js?v=6008ec4f:197
+flushWork @ chunk-RPCDYKBN.js?v=6008ec4f:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=6008ec4f:384Understand this error
+queryClient.ts:43 API request failed: GET /api/user/permissions {status: 404, statusText: 'Not Found'}
+apiRequest @ queryClient.ts:43
+await in apiRequest
+queryFn @ sidebar.tsx:381
+fetchFn @ @tanstack_react-query.js?v=6008ec4f:881
+run @ @tanstack_react-query.js?v=6008ec4f:513
+start @ @tanstack_react-query.js?v=6008ec4f:555
+fetch @ @tanstack_react-query.js?v=6008ec4f:969
+executeFetch_fn @ @tanstack_react-query.js?v=6008ec4f:2279
+onSubscribe @ @tanstack_react-query.js?v=6008ec4f:1983
+subscribe @ @tanstack_react-query.js?v=6008ec4f:24
+(anonymous) @ @tanstack_react-query.js?v=6008ec4f:3146
+subscribeToStore @ chunk-RPCDYKBN.js?v=6008ec4f:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=6008ec4f:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=6008ec4f:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=6008ec4f:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=6008ec4f:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=6008ec4f:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=6008ec4f:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19432
+commitRoot @ chunk-RPCDYKBN.js?v=6008ec4f:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=6008ec4f:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18718
+workLoop @ chunk-RPCDYKBN.js?v=6008ec4f:197
+flushWork @ chunk-RPCDYKBN.js?v=6008ec4f:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=6008ec4f:384Understand this error
+sidebar.tsx:387 Failed to fetch permissions: Error: API request failed: GET /api/user/permissions {status: 404, statusText: 'Not Found'}
+    at apiRequest (queryClient.ts:47:11)
+    at async queryFn (sidebar.tsx:381:21)
+queryFn @ sidebar.tsx:387
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=6008ec4f:881
+run @ @tanstack_react-query.js?v=6008ec4f:513
+start @ @tanstack_react-query.js?v=6008ec4f:555
+fetch @ @tanstack_react-query.js?v=6008ec4f:969
+executeFetch_fn @ @tanstack_react-query.js?v=6008ec4f:2279
+onSubscribe @ @tanstack_react-query.js?v=6008ec4f:1983
+subscribe @ @tanstack_react-query.js?v=6008ec4f:24
+(anonymous) @ @tanstack_react-query.js?v=6008ec4f:3146
+subscribeToStore @ chunk-RPCDYKBN.js?v=6008ec4f:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=6008ec4f:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=6008ec4f:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=6008ec4f:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=6008ec4f:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=6008ec4f:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=6008ec4f:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19432
+commitRoot @ chunk-RPCDYKBN.js?v=6008ec4f:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=6008ec4f:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18718
+workLoop @ chunk-RPCDYKBN.js?v=6008ec4f:197
+flushWork @ chunk-RPCDYKBN.js?v=6008ec4f:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=6008ec4f:384Understand this warning
+main.tsx:17 Global error: ReferenceError: Cannot access 'getOverallStatus' before initialization
+    at index.tsx:71:35
+    at Array.filter (<anonymous>)
+    at NavadhitiProjectsPage (index.tsx:70:35)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=6008ec4f:11548:26)
+    at updateFunctionComponent (chunk-RPCDYKBN.js?v=6008ec4f:14582:28)
+    at beginWork (chunk-RPCDYKBN.js?v=6008ec4f:15924:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=6008ec4f:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=6008ec4f:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=6008ec4f:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=6008ec4f:19765:15)
+(anonymous) @ main.tsx:17
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=6008ec4f:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=6008ec4f:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=6008ec4f:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=6008ec4f:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=6008ec4f:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=6008ec4f:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=6008ec4f:18627
+setTimeout
+defaultScheduler @ @tanstack_react-query.js?v=6008ec4f:565
+flush @ @tanstack_react-query.js?v=6008ec4f:589
+batch @ @tanstack_react-query.js?v=6008ec4f:607
+dispatch_fn @ @tanstack_react-query.js?v=6008ec4f:1040
+setData @ @tanstack_react-query.js?v=6008ec4f:718
+onSuccess @ @tanstack_react-query.js?v=6008ec4f:940
+resolve @ @tanstack_react-query.js?v=6008ec4f:475
+Promise.then
+run @ @tanstack_react-query.js?v=6008ec4f:517
+start @ @tanstack_react-query.js?v=6008ec4f:555
+fetch @ @tanstack_react-query.js?v=6008ec4f:969
+executeFetch_fn @ @tanstack_react-query.js?v=6008ec4f:2279
+onSubscribe @ @tanstack_react-query.js?v=6008ec4f:1983
+subscribe @ @tanstack_react-query.js?v=6008ec4f:24
+(anonymous) @ @tanstack_react-query.js?v=6008ec4f:3146
+subscribeToStore @ chunk-RPCDYKBN.js?v=6008ec4f:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=6008ec4f:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=6008ec4f:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=6008ec4f:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=6008ec4f:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=6008ec4f:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=6008ec4f:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19432
+commitRoot @ chunk-RPCDYKBN.js?v=6008ec4f:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=6008ec4f:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18718
+workLoop @ chunk-RPCDYKBN.js?v=6008ec4f:197
+flushWork @ chunk-RPCDYKBN.js?v=6008ec4f:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=6008ec4f:384Understand this error
+index.tsx:71 Uncaught ReferenceError: Cannot access 'getOverallStatus' before initialization
+    at index.tsx:71:35
+    at Array.filter (<anonymous>)
+    at NavadhitiProjectsPage (index.tsx:70:35)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=6008ec4f:11548:26)
+    at updateFunctionComponent (chunk-RPCDYKBN.js?v=6008ec4f:14582:28)
+    at beginWork (chunk-RPCDYKBN.js?v=6008ec4f:15924:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=6008ec4f:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=6008ec4f:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=6008ec4f:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=6008ec4f:19765:15)
+(anonymous) @ index.tsx:71
+NavadhitiProjectsPage @ index.tsx:70
+renderWithHooks @ chunk-RPCDYKBN.js?v=6008ec4f:11548
+updateFunctionComponent @ chunk-RPCDYKBN.js?v=6008ec4f:14582
+beginWork @ chunk-RPCDYKBN.js?v=6008ec4f:15924
+callCallback2 @ chunk-RPCDYKBN.js?v=6008ec4f:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=6008ec4f:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=6008ec4f:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=6008ec4f:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=6008ec4f:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=6008ec4f:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=6008ec4f:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=6008ec4f:18627
+setTimeout
+defaultScheduler @ @tanstack_react-query.js?v=6008ec4f:565
+flush @ @tanstack_react-query.js?v=6008ec4f:589
+batch @ @tanstack_react-query.js?v=6008ec4f:607
+dispatch_fn @ @tanstack_react-query.js?v=6008ec4f:1040
+setData @ @tanstack_react-query.js?v=6008ec4f:718
+onSuccess @ @tanstack_react-query.js?v=6008ec4f:940
+resolve @ @tanstack_react-query.js?v=6008ec4f:475
+Promise.then
+run @ @tanstack_react-query.js?v=6008ec4f:517
+start @ @tanstack_react-query.js?v=6008ec4f:555
+fetch @ @tanstack_react-query.js?v=6008ec4f:969
+executeFetch_fn @ @tanstack_react-query.js?v=6008ec4f:2279
+onSubscribe @ @tanstack_react-query.js?v=6008ec4f:1983
+subscribe @ @tanstack_react-query.js?v=6008ec4f:24
+(anonymous) @ @tanstack_react-query.js?v=6008ec4f:3146
+subscribeToStore @ chunk-RPCDYKBN.js?v=6008ec4f:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=6008ec4f:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=6008ec4f:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=6008ec4f:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=6008ec4f:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=6008ec4f:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=6008ec4f:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19432
+commitRoot @ chunk-RPCDYKBN.js?v=6008ec4f:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=6008ec4f:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18718
+workLoop @ chunk-RPCDYKBN.js?v=6008ec4f:197
+flushWork @ chunk-RPCDYKBN.js?v=6008ec4f:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=6008ec4f:384Understand this error
+main.tsx:17 Global error: ReferenceError: Cannot access 'getOverallStatus' before initialization
+    at index.tsx:71:35
+    at Array.filter (<anonymous>)
+    at NavadhitiProjectsPage (index.tsx:70:35)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=6008ec4f:11548:26)
+    at updateFunctionComponent (chunk-RPCDYKBN.js?v=6008ec4f:14582:28)
+    at beginWork (chunk-RPCDYKBN.js?v=6008ec4f:15924:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=6008ec4f:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=6008ec4f:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=6008ec4f:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=6008ec4f:19765:15)
+(anonymous) @ main.tsx:17
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=6008ec4f:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=6008ec4f:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=6008ec4f:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=6008ec4f:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=6008ec4f:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=6008ec4f:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=6008ec4f:18736
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18879
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=6008ec4f:18627
+setTimeout
+defaultScheduler @ @tanstack_react-query.js?v=6008ec4f:565
+flush @ @tanstack_react-query.js?v=6008ec4f:589
+batch @ @tanstack_react-query.js?v=6008ec4f:607
+dispatch_fn @ @tanstack_react-query.js?v=6008ec4f:1040
+setData @ @tanstack_react-query.js?v=6008ec4f:718
+onSuccess @ @tanstack_react-query.js?v=6008ec4f:940
+resolve @ @tanstack_react-query.js?v=6008ec4f:475
+Promise.then
+run @ @tanstack_react-query.js?v=6008ec4f:517
+start @ @tanstack_react-query.js?v=6008ec4f:555
+fetch @ @tanstack_react-query.js?v=6008ec4f:969
+executeFetch_fn @ @tanstack_react-query.js?v=6008ec4f:2279
+onSubscribe @ @tanstack_react-query.js?v=6008ec4f:1983
+subscribe @ @tanstack_react-query.js?v=6008ec4f:24
+(anonymous) @ @tanstack_react-query.js?v=6008ec4f:3146
+subscribeToStore @ chunk-RPCDYKBN.js?v=6008ec4f:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=6008ec4f:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=6008ec4f:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=6008ec4f:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=6008ec4f:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=6008ec4f:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=6008ec4f:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19432
+commitRoot @ chunk-RPCDYKBN.js?v=6008ec4f:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=6008ec4f:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18718
+workLoop @ chunk-RPCDYKBN.js?v=6008ec4f:197
+flushWork @ chunk-RPCDYKBN.js?v=6008ec4f:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=6008ec4f:384Understand this error
+index.tsx:71 Uncaught ReferenceError: Cannot access 'getOverallStatus' before initialization
+    at index.tsx:71:35
+    at Array.filter (<anonymous>)
+    at NavadhitiProjectsPage (index.tsx:70:35)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=6008ec4f:11548:26)
+    at updateFunctionComponent (chunk-RPCDYKBN.js?v=6008ec4f:14582:28)
+    at beginWork (chunk-RPCDYKBN.js?v=6008ec4f:15924:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=6008ec4f:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=6008ec4f:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=6008ec4f:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=6008ec4f:19765:15)
+(anonymous) @ index.tsx:71
+NavadhitiProjectsPage @ index.tsx:70
+renderWithHooks @ chunk-RPCDYKBN.js?v=6008ec4f:11548
+updateFunctionComponent @ chunk-RPCDYKBN.js?v=6008ec4f:14582
+beginWork @ chunk-RPCDYKBN.js?v=6008ec4f:15924
+callCallback2 @ chunk-RPCDYKBN.js?v=6008ec4f:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=6008ec4f:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=6008ec4f:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=6008ec4f:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=6008ec4f:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=6008ec4f:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=6008ec4f:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=6008ec4f:18736
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18879
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=6008ec4f:18627
+setTimeout
+defaultScheduler @ @tanstack_react-query.js?v=6008ec4f:565
+flush @ @tanstack_react-query.js?v=6008ec4f:589
+batch @ @tanstack_react-query.js?v=6008ec4f:607
+dispatch_fn @ @tanstack_react-query.js?v=6008ec4f:1040
+setData @ @tanstack_react-query.js?v=6008ec4f:718
+onSuccess @ @tanstack_react-query.js?v=6008ec4f:940
+resolve @ @tanstack_react-query.js?v=6008ec4f:475
+Promise.then
+run @ @tanstack_react-query.js?v=6008ec4f:517
+start @ @tanstack_react-query.js?v=6008ec4f:555
+fetch @ @tanstack_react-query.js?v=6008ec4f:969
+executeFetch_fn @ @tanstack_react-query.js?v=6008ec4f:2279
+onSubscribe @ @tanstack_react-query.js?v=6008ec4f:1983
+subscribe @ @tanstack_react-query.js?v=6008ec4f:24
+(anonymous) @ @tanstack_react-query.js?v=6008ec4f:3146
+subscribeToStore @ chunk-RPCDYKBN.js?v=6008ec4f:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=6008ec4f:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=6008ec4f:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=6008ec4f:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=6008ec4f:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=6008ec4f:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=6008ec4f:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19432
+commitRoot @ chunk-RPCDYKBN.js?v=6008ec4f:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=6008ec4f:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18718
+workLoop @ chunk-RPCDYKBN.js?v=6008ec4f:197
+flushWork @ chunk-RPCDYKBN.js?v=6008ec4f:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=6008ec4f:384Understand this error
+chunk-RPCDYKBN.js?v=6008ec4f:14032 The above error occurred in the <NavadhitiProjectsPage> component:
+
+    at NavadhitiProjectsPage (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/src/pages/navadhiti-projects/index.tsx:37:39)
+    at ProtectedRoute (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/src/lib/protected-route.tsx:21:34)
+    at ProtectedComponent (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/src/App.tsx?v=7ndZkpYNhfh025BJNFZWa:81:31)
+    at Route (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/wouter.js?v=6008ec4f:206:16)
+    at Switch (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/wouter.js?v=6008ec4f:262:17)
+    at Router
+    at Provider (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=6008ec4f:38:15)
+    at TooltipProvider (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=6008ec4f:65:5)
+    at V (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/next-themes.js?v=6008ec4f:44:25)
+    at J (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/next-themes.js?v=6008ec4f:42:18)
+    at ThemeProvider (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/src/components/theme/theme-provider.tsx:31:3)
+    at AuthProvider (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/src/hooks/use-auth.tsx:26:32)
+    at AppContent (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/src/App.tsx?v=7ndZkpYNhfh025BJNFZWa:442:53)
+    at SoundProvider (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/src/hooks/use-sound-provider.tsx:21:33)
+    at QueryClientProvider (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/@tanstack_react-query.js?v=6008ec4f:2933:3)
+    at App (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/src/App.tsx?v=7ndZkpYNhfh025BJNFZWa:482:53)
+    at AuthProvider (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/src/hooks/use-auth.tsx?v=7ndZkpYNhfh025BJNFZWa:26:32)
+    at QueryClientProvider (https://c9515313-73d7-4749-a020-7191c63e0237-00-w728lseg2006.pike.replit.dev/@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/@tanstack_react-query.js?v=6008ec4f:2933:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-RPCDYKBN.js?v=6008ec4f:14032
+update.callback @ chunk-RPCDYKBN.js?v=6008ec4f:14052
+callCallback @ chunk-RPCDYKBN.js?v=6008ec4f:11248
+commitUpdateQueue @ chunk-RPCDYKBN.js?v=6008ec4f:11265
+commitLayoutEffectOnFiber @ chunk-RPCDYKBN.js?v=6008ec4f:17093
+commitLayoutMountEffects_complete @ chunk-RPCDYKBN.js?v=6008ec4f:17980
+commitLayoutEffects_begin @ chunk-RPCDYKBN.js?v=6008ec4f:17969
+commitLayoutEffects @ chunk-RPCDYKBN.js?v=6008ec4f:17920
+commitRootImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19353
+commitRoot @ chunk-RPCDYKBN.js?v=6008ec4f:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=6008ec4f:18627
+setTimeout
+defaultScheduler @ @tanstack_react-query.js?v=6008ec4f:565
+flush @ @tanstack_react-query.js?v=6008ec4f:589
+batch @ @tanstack_react-query.js?v=6008ec4f:607
+dispatch_fn @ @tanstack_react-query.js?v=6008ec4f:1040
+setData @ @tanstack_react-query.js?v=6008ec4f:718
+onSuccess @ @tanstack_react-query.js?v=6008ec4f:940
+resolve @ @tanstack_react-query.js?v=6008ec4f:475
+Promise.then
+run @ @tanstack_react-query.js?v=6008ec4f:517
+start @ @tanstack_react-query.js?v=6008ec4f:555
+fetch @ @tanstack_react-query.js?v=6008ec4f:969
+executeFetch_fn @ @tanstack_react-query.js?v=6008ec4f:2279
+onSubscribe @ @tanstack_react-query.js?v=6008ec4f:1983
+subscribe @ @tanstack_react-query.js?v=6008ec4f:24
+(anonymous) @ @tanstack_react-query.js?v=6008ec4f:3146
+subscribeToStore @ chunk-RPCDYKBN.js?v=6008ec4f:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=6008ec4f:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=6008ec4f:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=6008ec4f:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=6008ec4f:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=6008ec4f:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=6008ec4f:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19432
+commitRoot @ chunk-RPCDYKBN.js?v=6008ec4f:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=6008ec4f:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18718
+workLoop @ chunk-RPCDYKBN.js?v=6008ec4f:197
+flushWork @ chunk-RPCDYKBN.js?v=6008ec4f:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=6008ec4f:384Understand this error
+main.tsx:17 Global error: ReferenceError: Cannot access 'getOverallStatus' before initialization
+    at index.tsx:71:35
+    at Array.filter (<anonymous>)
+    at NavadhitiProjectsPage (index.tsx:70:35)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=6008ec4f:11548:26)
+    at updateFunctionComponent (chunk-RPCDYKBN.js?v=6008ec4f:14582:28)
+    at beginWork (chunk-RPCDYKBN.js?v=6008ec4f:15924:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=6008ec4f:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=6008ec4f:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=6008ec4f:19137:13)
+    at renderRootSync (chunk-RPCDYKBN.js?v=6008ec4f:19116:15)
+(anonymous) @ main.tsx:17
+setTimeout
+defaultScheduler @ @tanstack_react-query.js?v=6008ec4f:565
+flush @ @tanstack_react-query.js?v=6008ec4f:589
+batch @ @tanstack_react-query.js?v=6008ec4f:607
+dispatch_fn @ @tanstack_react-query.js?v=6008ec4f:1040
+setData @ @tanstack_react-query.js?v=6008ec4f:718
+onSuccess @ @tanstack_react-query.js?v=6008ec4f:940
+resolve @ @tanstack_react-query.js?v=6008ec4f:475
+Promise.then
+run @ @tanstack_react-query.js?v=6008ec4f:517
+start @ @tanstack_react-query.js?v=6008ec4f:555
+fetch @ @tanstack_react-query.js?v=6008ec4f:969
+executeFetch_fn @ @tanstack_react-query.js?v=6008ec4f:2279
+onSubscribe @ @tanstack_react-query.js?v=6008ec4f:1983
+subscribe @ @tanstack_react-query.js?v=6008ec4f:24
+(anonymous) @ @tanstack_react-query.js?v=6008ec4f:3146
+subscribeToStore @ chunk-RPCDYKBN.js?v=6008ec4f:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=6008ec4f:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=6008ec4f:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=6008ec4f:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=6008ec4f:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=6008ec4f:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=6008ec4f:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6008ec4f:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=6008ec4f:19432
+commitRoot @ chunk-RPCDYKBN.js?v=6008ec4f:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=6008ec4f:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=6008ec4f:18718
+workLoop @ chunk-RPCDYKBN.js?v=6008ec4f:197
+flushWork @ chunk-RPCDYKBN.js?v=6008ec4f:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=6008ec4f:384Understand this error
+chunk-RPCDYKBN.js?v=6008ec4f:9129 Uncaught ReferenceError: Cannot access 'getOverallStatus' before initialization
+    at index.tsx:71:35
+    at Array.filter (<anonymous>)
+    at NavadhitiProjectsPage (index.tsx:70:35)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=6008ec4f:11548:26)
+    at updateFunctionComponent (chunk-RPCDYKBN.js?v=6008ec4f:14582:28)
+    at beginWork (chunk-RPCDYKBN.js?v=6008ec4f:15924:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=6008ec4f:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=6008ec4f:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=6008ec4f:19137:13)
+    at renderRootSync (chunk-RPCDYKBN.js?v=6008ec4f:19116:15)
