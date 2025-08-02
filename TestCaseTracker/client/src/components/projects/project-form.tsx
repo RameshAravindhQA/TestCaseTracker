@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Project } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { DialogFooter } from "@/components/ui/dialog";
@@ -23,6 +23,7 @@ const projectSchema = z.object({
   name: z.string().min(1, { message: "Project name is required" }).max(100, { message: "Project name must be less than 100 characters" }),
   description: z.string().optional(),
   status: z.enum(["Active", "Completed", "On Hold"]),
+  projectLeadId: z.string().optional(),
 });
 
 type ProjectFormValues = z.infer<typeof projectSchema>;
@@ -42,6 +43,15 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
       name: project?.name || "",
       description: project?.description || "",
       status: project?.status || "Active",
+      projectLeadId: project?.projectLeadId?.toString() || "",
+    },
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ["/api/employees"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/employees");
+      return res.json();
     },
   });
 
@@ -111,6 +121,7 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
         description: data.description?.trim() || "",
         status: data.status,
         prefix,
+        projectLeadId: data.projectLeadId ? parseInt(data.projectLeadId) : null,
       };
 
       console.log('Submitting project with prefix:', prefix, 'for project:', data.name);
@@ -185,6 +196,35 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
                   <SelectItem value="Active">Active</SelectItem>
                   <SelectItem value="Completed">Completed</SelectItem>
                   <SelectItem value="On Hold">On Hold</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="projectLeadId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Project Lead</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project lead" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="">No Lead Assigned</SelectItem>
+                  {employees.map((employee: any) => (
+                    <SelectItem key={employee.id} value={employee.id.toString()}>
+                      {employee.firstName} {employee.lastName} ({employee.email})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />

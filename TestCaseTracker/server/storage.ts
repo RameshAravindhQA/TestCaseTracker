@@ -314,8 +314,15 @@ class MemStorage implements IStorage {
   private conversationMessages = new Map<number, any[]>(); // conversationId -> messages array
 
   // Todo management
-  private todoLists = new Map<number, any>();
-  private todos = new Map<number, any>();
+  private todoLists: Map<number, any> = new Map();
+  private todos: Map<number, any> = new Map();
+
+  // Employee Management
+  private employees = new Map<number, any>();
+  private employeeProjects = new Map<number, any>();
+  private technologyOptions = new Map<number, any>();
+  private departmentOptions = new Map<number, any>();
+  private navadhitiProjects = new Map<number, any>();
 
   private nextId = 1;
   private testSheetIdCounter = 1;
@@ -1997,7 +2004,8 @@ class MemStorage implements IStorage {
 
   async getTodoLists(userId: number): Promise<any[]> {
     if (!this.todoLists || typeof this.todoLists.values !== 'function') {
-      console.warn('TodoLists not properly initialized, returning empty array');
+      console.warn('TodoLists not properly initialized, initializing now');
+      this.todoLists = new Map();
       return [];
     }
     return Array.from(this.todoLists.values()).filter(list => list.userId === userId);
