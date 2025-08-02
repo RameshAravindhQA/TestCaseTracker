@@ -224,6 +224,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       href: "/navadhiti-projects",
       icon: <Briefcase className="h-5 w-5" />,
     },
+    {
+      name: "Resource Allocation",
+      href: "/resource-allocation",
+      icon: <Users className="h-5 w-5" />,
+    },
   ], []);
 
   const adminItems: NavItem[] = useMemo(() => [

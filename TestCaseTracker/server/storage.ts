@@ -1735,14 +1735,19 @@ class MemStorage implements IStorage {
     const existingCell = this.matrixCells.get(key);
 
     if (existingCell) {
-      const updatedCell = { ...existingCell, ...cell, updatedAt: new Date() };
+      const updatedCell = { 
+        ...existingCell, 
+        ...cell, 
+        updatedAt: new Date().toISOString() 
+      };
       this.matrixCells.set(key, updatedCell);
       return updatedCell;
     } else {
       const newCell = {
         id: this.getNextId(),
         ...cell,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString() 
       };
       this.matrixCells.set(key, newCell);
       return newCell;
