@@ -1728,8 +1728,7 @@ class MemStorage implements IStorage {
     return this.kanbanCards.delete(id);
   }
 
-```python
-  // Matrix operations
+// Matrix operations
   async upsertMatrixCell(cell: any): Promise<any> {
     const key = `${cell.rowModuleId}-${cell.colModuleId}-${cell.projectId}`;
     const existingCell = this.matrixCells.get(key);

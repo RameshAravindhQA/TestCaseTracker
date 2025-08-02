@@ -1,18 +1,37 @@
 
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+<old_str>import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Grid, List, Users, Plus, Filter, Search } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Users, 
+  Search, 
+  Filter, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  User, 
+  Calendar,
+  MapPin,
+  Phone,
+  Mail,
+  Briefcase,
+  Building,
+  Star,
+  Clock,
+  CheckCircle,
+  Grid3X3,
+  List,
+  Table
+} from 'lucide-react';
 
 interface Employee {
   id: number;
@@ -20,23 +39,21 @@ interface Employee {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
+  position: string;
   department: string;
-  technologies: string[];
-  status: 'Available' | 'Occupied' | 'Busy';
-  avatar?: string;
-}
-
-interface Project {
-  id: number;
-  name: string;
-  status: string;
-  description?: string;
+  skills: string[];
+  status: 'Available' | 'Occupied' | 'On Leave';
+  joinDate: string;
+  profilePicture?: string;
+  location?: string;
+  projects?: EmployeeProject[];
 }
 
 interface EmployeeProject {
   id: number;
-  employeeId: number;
   projectId: number;
+  projectName: string;
   role: string;
   allocation: number; // percentage
   startDate: string;
@@ -44,630 +61,1547 @@ interface EmployeeProject {
   status: 'Active' | 'Completed' | 'On Hold';
 }
 
-interface ResourceAllocation {
-  employee: Employee;
-  projects: Array<{
-    project: Project;
-    allocation: EmployeeProject;
-  }>;
-  totalAllocation: number;
+interface Project {
+  id: number;
+  name: string;
+  status: string;
+  startDate: string;
+  endDate?: string;
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
 }
 
 const ResourceAllocationPage: React.FC = () => {
-  const [viewMode, setViewMode] = useState<'card' | 'table' | 'list'>('card');
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'card' | 'table' | 'list'>('card');
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [assignmentForm, setAssignmentForm] = useState({
-    projectId: '',
-    role: '',
-    allocation: 50,
-    startDate: '',
-    endDate: ''
-  });
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const { toast } = useToast();
 
-  const queryClient = useQueryClient();
+  useEffect(() => {
+    fetchEmployees();
+    fetchProjects();
+  }, []);
 
-  // Fetch employees
-  const { data: employees = [], isLoading: employeesLoading } = useQuery({
-    queryKey: ['employees'],
-    queryFn: async (): Promise<Employee[]> => {
+  const fetchEmployees = async () => {
+    try {
       const response = await fetch('/api/employees');
-      if (!response.ok) throw new Error('Failed to fetch employees');
-      return response.json();
+      if (response.ok) {
+        const employeesData = await response.json();
+        
+        // Fetch project assignments for each employee
+        const employeesWithProjects = await Promise.all(
+          employeesData.map(async (employee: Employee) => {
+            try {
+              const projectsResponse = await fetch(`/api/employee-projects?employeeId=${employee.id}`);
+              if (projectsResponse.ok) {
+                const projects = await projectsResponse.json();
+                return { ...employee, projects };
+              }
+              return { ...employee, projects: [] };
+            } catch (error) {
+              console.error(`Error fetching projects for employee ${employee.id}:`, error);
+              return { ...employee, projects: [] };
+            }
+          })
+        );
+        
+        setEmployees(employeesWithProjects);
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch employees",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  });
+  };
 
-  // Fetch projects
-  const { data: projects = [] } = useQuery({
-    queryKey: ['projects'],
-    queryFn: async (): Promise<Project[]> => {
+  const fetchProjects = async () => {
+    try {
       const response = await fetch('/api/projects');
-      if (!response.ok) throw new Error('Failed to fetch projects');
-      return response.json();
+      if (response.ok) {
+        const projectsData = await response.json();
+        setProjects(projectsData);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
     }
-  });
+  };
 
-  // Fetch employee projects
-  const { data: employeeProjects = [] } = useQuery({
-    queryKey: ['employee-projects'],
-    queryFn: async (): Promise<EmployeeProject[]> => {
-      const response = await fetch('/api/employee-projects');
-      if (!response.ok) throw new Error('Failed to fetch employee projects');
-      return response.json();
-    }
-  });
-
-  // Fetch departments and technologies
-  const { data: departments = [] } = useQuery({
-    queryKey: ['departments'],
-    queryFn: async () => {
-      const response = await fetch('/api/department-options');
-      if (!response.ok) throw new Error('Failed to fetch departments');
-      return response.json();
-    }
-  });
-
-  // Assign employee to project mutation
-  const assignEmployeeMutation = useMutation({
-    mutationFn: async (data: any) => {
+  const handleAssignProject = async (assignment: {
+    employeeId: number;
+    projectId: number;
+    role: string;
+    allocation: number;
+    startDate: string;
+    endDate?: string;
+  }) => {
+    try {
       const response = await fetch('/api/employee-projects', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(assignment),
       });
-      if (!response.ok) throw new Error('Failed to assign employee');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employee-projects'] });
-      toast({ title: 'Success', description: 'Employee assigned to project successfully!' });
-      setIsAssignDialogOpen(false);
-      setAssignmentForm({
-        projectId: '',
-        role: '',
-        allocation: 50,
-        startDate: '',
-        endDate: ''
-      });
-    },
-    onError: () => {
-      toast({ 
-        title: 'Error', 
-        description: 'Failed to assign employee to project',
-        variant: 'destructive'
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Project assigned successfully",
+        });
+        fetchEmployees(); // Refresh data
+        setIsAssignDialogOpen(false);
+      } else {
+        throw new Error('Failed to assign project');
+      }
+    } catch (error) {
+      console.error('Error assigning project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign project",
+        variant: "destructive",
       });
     }
-  });
+  };
 
-  // Process resource allocation data
-  const resourceAllocations: ResourceAllocation[] = employees.map(employee => {
-    const empProjects = employeeProjects
-      .filter(ep => ep.employeeId === employee.id)
-      .map(ep => ({
-        project: projects.find(p => p.id === ep.projectId)!,
-        allocation: ep
-      }))
-      .filter(item => item.project);
-
-    const totalAllocation = empProjects.reduce((sum, item) => sum + item.allocation.allocation, 0);
-
-    return {
-      employee,
-      projects: empProjects,
-      totalAllocation
-    };
-  });
-
-  // Filter allocations
-  const filteredAllocations = resourceAllocations.filter(allocation => {
-    const employee = allocation.employee;
-    const matchesSearch = searchTerm === '' || 
-      `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.employeeId.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredEmployees = employees.filter(employee => {
+    const matchesSearch = 
+      employee.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.position.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesDepartment = departmentFilter === '' || employee.department === departmentFilter;
-    const matchesStatus = statusFilter === '' || employee.status === statusFilter;
-
+    const matchesDepartment = departmentFilter === 'all' || employee.department === departmentFilter;
+    const matchesStatus = statusFilter === 'all' || employee.status === statusFilter;
+    
     return matchesSearch && matchesDepartment && matchesStatus;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Available': return 'bg-green-100 text-green-800';
-      case 'Occupied': return 'bg-yellow-100 text-yellow-800';
-      case 'Busy': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Available': return 'bg-green-500';
+      case 'Occupied': return 'bg-orange-500';
+      case 'On Leave': return 'bg-red-500';
+      default: return 'bg-gray-500';
     }
   };
 
-  const getAllocationColor = (allocation: number) => {
-    if (allocation <= 50) return 'bg-green-500';
-    if (allocation <= 80) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-
-  const handleAssign = () => {
-    if (!selectedEmployee || !assignmentForm.projectId || !assignmentForm.role) {
-      toast({
-        title: 'Error',
-        description: 'Please fill in all required fields',
-        variant: 'destructive'
-      });
-      return;
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'Critical': return 'bg-red-500';
+      case 'High': return 'bg-orange-500';
+      case 'Medium': return 'bg-yellow-500';
+      case 'Low': return 'bg-green-500';
+      default: return 'bg-gray-500';
     }
-
-    assignEmployeeMutation.mutate({
-      employeeId: selectedEmployee.id,
-      projectId: parseInt(assignmentForm.projectId),
-      role: assignmentForm.role,
-      allocation: assignmentForm.allocation,
-      startDate: assignmentForm.startDate,
-      endDate: assignmentForm.endDate || null,
-      status: 'Active'
-    });
   };
 
-  // Card View Component
-  const CardView = () => (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {filteredAllocations.map(allocation => (
-        <Card key={allocation.employee.id} className="hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-center space-x-3">
-              <Avatar>
-                <AvatarImage src={allocation.employee.avatar} />
-                <AvatarFallback>
-                  {allocation.employee.firstName[0]}{allocation.employee.lastName[0]}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <CardTitle className="text-sm font-medium">
-                  {allocation.employee.firstName} {allocation.employee.lastName}
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">{allocation.employee.employeeId}</p>
-              </div>
-              <Badge className={getStatusColor(allocation.employee.status)}>
-                {allocation.employee.status}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium">Department</p>
-                <p className="text-xs text-muted-foreground">{allocation.employee.department}</p>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium">Technologies</p>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {allocation.employee.technologies?.slice(0, 3).map(tech => (
-                    <Badge key={tech} variant="outline" className="text-xs">
-                      {tech}
-                    </Badge>
-                  ))}
-                  {allocation.employee.technologies?.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{allocation.employee.technologies.length - 3}
-                    </Badge>
-                  )}
-                </div>
-              </div>
+  const calculateTotalAllocation = (projects: EmployeeProject[] = []) => {
+    return projects
+      .filter(p => p.status === 'Active')
+      .reduce((total, project) => total + project.allocation, 0);
+  };
 
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm font-medium">Allocation</p>
-                  <span className="text-sm font-medium">{allocation.totalAllocation}%</span>
+  const renderCardView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {filteredEmployees.map((employee) => {
+        const totalAllocation = calculateTotalAllocation(employee.projects);
+        const isOverAllocated = totalAllocation > 100;
+        
+        return (
+          <Card key={employee.id} className="hover:shadow-lg transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex items-center space-x-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={employee.profilePicture} />
+                  <AvatarFallback>
+                    {employee.firstName[0]}{employee.lastName[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm truncate">
+                    {employee.firstName} {employee.lastName}
+                  </h3>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {employee.position}
+                  </p>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${getAllocationColor(allocation.totalAllocation)}`}
-                    style={{ width: `${Math.min(allocation.totalAllocation, 100)}%` }}
-                  />
+                <div className={`w-3 h-3 rounded-full ${getStatusColor(employee.status)}`} />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-3">
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <Building className="h-3 w-3 mr-1" />
+                  {employee.department}
+                </div>
+                
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <Mail className="h-3 w-3 mr-1" />
+                  <span className="truncate">{employee.email}</span>
+                </div>
+
+                {employee.location && (
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    {employee.location}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-medium">Allocation</span>
+                    <span className={`text-xs font-bold ${isOverAllocated ? 'text-red-500' : 'text-green-500'}`}>
+                      {totalAllocation}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full ${isOverAllocated ? 'bg-red-500' : 'bg-green-500'}`}
+                      style={{ width: `${Math.min(totalAllocation, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {employee.projects && employee.projects.length > 0 && (
+                  <div className="space-y-1">
+                    <span className="text-xs font-medium">Active Projects</span>
+                    {employee.projects
+                      .filter(p => p.status === 'Active')
+                      .slice(0, 2)
+                      .map((project) => (
+                        <div key={project.id} className="flex justify-between items-center text-xs">
+                          <span className="truncate">{project.projectName}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {project.allocation}%
+                          </Badge>
+                        </div>
+                      ))}
+                    {employee.projects.filter(p => p.status === 'Active').length > 2 && (
+                      <span className="text-xs text-muted-foreground">
+                        +{employee.projects.filter(p => p.status === 'Active').length - 2} more
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="flex-1 text-xs"
+                    onClick={() => {
+                      setSelectedEmployee(employee);
+                      setIsAssignDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Assign
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-xs">
+                    <Edit className="h-3 w-3" />
+                  </Button>
                 </div>
               </div>
-
-              <div>
-                <p className="text-sm font-medium mb-2">Current Projects ({allocation.projects.length})</p>
-                <div className="space-y-1">
-                  {allocation.projects.slice(0, 2).map(item => (
-                    <div key={item.project.id} className="text-xs p-2 bg-gray-50 rounded">
-                      <p className="font-medium">{item.project.name}</p>
-                      <p className="text-muted-foreground">{item.allocation.role} - {item.allocation.allocation}%</p>
-                    </div>
-                  ))}
-                  {allocation.projects.length > 2 && (
-                    <p className="text-xs text-muted-foreground">+{allocation.projects.length - 2} more projects</p>
-                  )}
-                </div>
-              </div>
-
-              <Button 
-                size="sm" 
-                className="w-full"
-                onClick={() => {
-                  setSelectedEmployee(allocation.employee);
-                  setIsAssignDialogOpen(true);
-                }}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Assign Project
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 
-  // Table View Component
-  const TableView = () => (
-    <Card>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Employee</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Technologies</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Allocation</TableHead>
-              <TableHead>Projects</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredAllocations.map(allocation => (
-              <TableRow key={allocation.employee.id}>
-                <TableCell>
+  const renderTableView = () => (
+    <div className="border rounded-lg overflow-hidden">
+      <table className="w-full">
+        <thead className="bg-muted/50">
+          <tr>
+            <th className="text-left p-3 font-medium">Employee</th>
+            <th className="text-left p-3 font-medium">Department</th>
+            <th className="text-left p-3 font-medium">Status</th>
+            <th className="text-left p-3 font-medium">Allocation</th>
+            <th className="text-left p-3 font-medium">Active Projects</th>
+            <th className="text-left p-3 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredEmployees.map((employee) => {
+            const totalAllocation = calculateTotalAllocation(employee.projects);
+            const isOverAllocated = totalAllocation > 100;
+            
+            return (
+              <tr key={employee.id} className="border-t hover:bg-muted/25">
+                <td className="p-3">
                   <div className="flex items-center space-x-3">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={allocation.employee.avatar} />
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={employee.profilePicture} />
                       <AvatarFallback className="text-xs">
-                        {allocation.employee.firstName[0]}{allocation.employee.lastName[0]}
+                        {employee.firstName[0]}{employee.lastName[0]}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium">{allocation.employee.firstName} {allocation.employee.lastName}</p>
-                      <p className="text-sm text-muted-foreground">{allocation.employee.employeeId}</p>
+                      <div className="font-medium text-sm">
+                        {employee.firstName} {employee.lastName}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {employee.position}
+                      </div>
                     </div>
                   </div>
-                </TableCell>
-                <TableCell>{allocation.employee.department}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {allocation.employee.technologies?.slice(0, 2).map(tech => (
-                      <Badge key={tech} variant="outline" className="text-xs">
-                        {tech}
-                      </Badge>
-                    ))}
-                    {allocation.employee.technologies?.length > 2 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{allocation.employee.technologies.length - 2}
-                      </Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge className={getStatusColor(allocation.employee.status)}>
-                    {allocation.employee.status}
+                </td>
+                <td className="p-3 text-sm">{employee.department}</td>
+                <td className="p-3">
+                  <Badge variant="secondary" className={`${getStatusColor(employee.status)} text-white text-xs`}>
+                    {employee.status}
                   </Badge>
-                </TableCell>
-                <TableCell>
+                </td>
+                <td className="p-3">
                   <div className="flex items-center space-x-2">
-                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                    <div className="w-20 bg-gray-200 rounded-full h-2">
                       <div 
-                        className={`h-2 rounded-full ${getAllocationColor(allocation.totalAllocation)}`}
-                        style={{ width: `${Math.min(allocation.totalAllocation, 100)}%` }}
+                        className={`h-2 rounded-full ${isOverAllocated ? 'bg-red-500' : 'bg-green-500'}`}
+                        style={{ width: `${Math.min(totalAllocation, 100)}%` }}
                       />
                     </div>
-                    <span className="text-sm">{allocation.totalAllocation}%</span>
+                    <span className={`text-xs font-medium ${isOverAllocated ? 'text-red-500' : 'text-green-500'}`}>
+                      {totalAllocation}%
+                    </span>
                   </div>
-                </TableCell>
-                <TableCell>
+                </td>
+                <td className="p-3">
                   <div className="space-y-1">
-                    {allocation.projects.slice(0, 2).map(item => (
-                      <div key={item.project.id} className="text-xs">
-                        <span className="font-medium">{item.project.name}</span>
-                        <span className="text-muted-foreground"> ({item.allocation.allocation}%)</span>
-                      </div>
-                    ))}
-                    {allocation.projects.length > 2 && (
-                      <p className="text-xs text-muted-foreground">+{allocation.projects.length - 2} more</p>
+                    {employee.projects
+                      ?.filter(p => p.status === 'Active')
+                      .slice(0, 2)
+                      .map((project) => (
+                        <div key={project.id} className="text-xs">
+                          {project.projectName} ({project.allocation}%)
+                        </div>
+                      ))}
+                    {employee.projects && employee.projects.filter(p => p.status === 'Active').length > 2 && (
+                      <span className="text-xs text-muted-foreground">
+                        +{employee.projects.filter(p => p.status === 'Active').length - 2} more
+                      </span>
                     )}
                   </div>
-                </TableCell>
-                <TableCell>
+                </td>
+                <td className="p-3">
+                  <div className="flex gap-1">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedEmployee(employee);
+                        setIsAssignDialogOpen(true);
+                      }}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                    <Button size="sm" variant="ghost">
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const renderListView = () => (
+    <div className="space-y-4">
+      {filteredEmployees.map((employee) => {
+        const totalAllocation = calculateTotalAllocation(employee.projects);
+        const isOverAllocated = totalAllocation > 100;
+        
+        return (
+          <Card key={employee.id}>
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-4 flex-1">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={employee.profilePicture} />
+                    <AvatarFallback>
+                      {employee.firstName[0]}{employee.lastName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <h3 className="font-semibold">
+                        {employee.firstName} {employee.lastName}
+                      </h3>
+                      <div className={`w-2 h-2 rounded-full ${getStatusColor(employee.status)}`} />
+                      <Badge variant="secondary" className="text-xs">
+                        {employee.status}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center">
+                        <Briefcase className="h-3 w-3 mr-1" />
+                        {employee.position}
+                      </div>
+                      <div className="flex items-center">
+                        <Building className="h-3 w-3 mr-1" />
+                        {employee.department}
+                      </div>
+                      <div className="flex items-center">
+                        <Mail className="h-3 w-3 mr-1" />
+                        {employee.email}
+                      </div>
+                      {employee.location && (
+                        <div className="flex items-center">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          {employee.location}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Total Allocation</span>
+                        <span className={`text-sm font-bold ${isOverAllocated ? 'text-red-500' : 'text-green-500'}`}>
+                          {totalAllocation}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${isOverAllocated ? 'bg-red-500' : 'bg-green-500'}`}
+                          style={{ width: `${Math.min(totalAllocation, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {employee.projects && employee.projects.length > 0 && (
+                      <div className="space-y-2">
+                        <span className="text-sm font-medium">Active Projects</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {employee.projects
+                            .filter(p => p.status === 'Active')
+                            .map((project) => (
+                              <div key={project.id} className="flex justify-between items-center p-2 bg-muted rounded-md">
+                                <span className="text-sm truncate">{project.projectName}</span>
+                                <div className="flex items-center space-x-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {project.role}
+                                  </Badge>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {project.allocation}%
+                                  </Badge>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex flex-col gap-2">
                   <Button 
                     size="sm" 
                     variant="outline"
                     onClick={() => {
-                      setSelectedEmployee(allocation.employee);
+                      setSelectedEmployee(employee);
                       setIsAssignDialogOpen(true);
                     }}
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="h-3 w-3 mr-1" />
+                    Assign Project
                   </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-
-  // List View Component
-  const ListView = () => (
-    <div className="space-y-4">
-      {filteredAllocations.map(allocation => (
-        <Card key={allocation.employee.id}>
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-4 flex-1">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={allocation.employee.avatar} />
-                  <AvatarFallback>
-                    {allocation.employee.firstName[0]}{allocation.employee.lastName[0]}
-                  </AvatarFallback>
-                </Avatar>
-                
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="font-semibold">{allocation.employee.firstName} {allocation.employee.lastName}</h3>
-                    <Badge className={getStatusColor(allocation.employee.status)}>
-                      {allocation.employee.status}
-                    </Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">ID</p>
-                      <p className="font-medium">{allocation.employee.employeeId}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Department</p>
-                      <p className="font-medium">{allocation.employee.department}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Allocation</p>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-20 bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full ${getAllocationColor(allocation.totalAllocation)}`}
-                            style={{ width: `${Math.min(allocation.totalAllocation, 100)}%` }}
-                          />
-                        </div>
-                        <span className="font-medium">{allocation.totalAllocation}%</span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Projects</p>
-                      <p className="font-medium">{allocation.projects.length} active</p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-3">
-                    <p className="text-sm text-muted-foreground mb-2">Technologies</p>
-                    <div className="flex flex-wrap gap-1">
-                      {allocation.employee.technologies?.map(tech => (
-                        <Badge key={tech} variant="outline" className="text-xs">
-                          {tech}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {allocation.projects.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-sm text-muted-foreground mb-2">Current Projects</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {allocation.projects.map(item => (
-                          <div key={item.project.id} className="text-xs p-2 bg-gray-50 rounded">
-                            <p className="font-medium">{item.project.name}</p>
-                            <p className="text-muted-foreground">{item.allocation.role} - {item.allocation.allocation}%</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <Button size="sm" variant="ghost">
+                    <Edit className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
                 </div>
               </div>
-              
-              <Button 
-                size="sm"
-                onClick={() => {
-                  setSelectedEmployee(allocation.employee);
-                  setIsAssignDialogOpen(true);
-                }}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Assign
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 
-  if (employeesLoading) {
-    return <div className="p-6">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Resource Allocation Dashboard</h1>
-        <p className="text-muted-foreground">
-          Manage employees in project-based resource allocation, skills, and availability
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Resource Allocation</h1>
+          <p className="text-muted-foreground">
+            Manage employee project assignments and workload distribution
+          </p>
+        </div>
+        <Button>
+          <Users className="h-4 w-4 mr-2" />
+          Add Employee
+        </Button>
       </div>
 
-      {/* Filters and Controls */}
+      {/* Filters and Search */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search employees..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
+                  className="pl-10"
                 />
               </div>
-              
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="All Departments" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Departments</SelectItem>
-                  {departments.map((dept: any) => (
-                    <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
-                  <SelectItem value="Available">Available</SelectItem>
-                  <SelectItem value="Occupied">Occupied</SelectItem>
-                  <SelectItem value="Busy">Busy</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
+            
+            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                <SelectItem value="Development">Development</SelectItem>
+                <SelectItem value="Quality Assurance">Quality Assurance</SelectItem>
+                <SelectItem value="DevOps">DevOps</SelectItem>
+                <SelectItem value="UI/UX Design">UI/UX Design</SelectItem>
+                <SelectItem value="Project Management">Project Management</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <div className="flex items-center space-x-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Available">Available</SelectItem>
+                <SelectItem value="Occupied">Occupied</SelectItem>
+                <SelectItem value="On Leave">On Leave</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex border rounded-md">
               <Button
-                variant={viewMode === 'card' ? 'default' : 'outline'}
+                variant={viewMode === 'card' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('card')}
+                className="rounded-r-none"
               >
-                <Grid className="w-4 h-4" />
+                <Grid3X3 className="h-4 w-4" />
               </Button>
               <Button
-                variant={viewMode === 'table' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('table')}
-              >
-                <List className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('list')}
+                className="rounded-none border-x"
               >
-                <Users className="w-4 h-4" />
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className="rounded-l-none"
+              >
+                <Table className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Results Summary */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Showing {filteredAllocations.length} of {resourceAllocations.length} employees
-        </p>
+      {/* Results */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {filteredEmployees.length} of {employees.length} employees
+          </p>
+        </div>
+
+        {viewMode === 'card' && renderCardView()}
+        {viewMode === 'table' && renderTableView()}
+        {viewMode === 'list' && renderListView()}
       </div>
 
-      {/* Content based on view mode */}
-      {viewMode === 'card' && <CardView />}
-      {viewMode === 'table' && <TableView />}
-      {viewMode === 'list' && <ListView />}
-
-      {/* Assign Project Dialog */}
+      {/* Project Assignment Dialog */}
       <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              Assign Project to {selectedEmployee?.firstName} {selectedEmployee?.lastName}
-            </DialogTitle>
+            <DialogTitle>Assign Project</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="project">Project</Label>
-              <Select value={assignmentForm.projectId} onValueChange={(value) => 
-                setAssignmentForm(prev => ({ ...prev, projectId: value }))
-              }>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map(project => (
-                    <SelectItem key={project.id} value={project.id.toString()}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="role">Role</Label>
-              <Input
-                id="role"
-                value={assignmentForm.role}
-                onChange={(e) => setAssignmentForm(prev => ({ ...prev, role: e.target.value }))}
-                placeholder="e.g., Frontend Developer, QA Engineer"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="allocation">Allocation Percentage</Label>
-              <Input
-                id="allocation"
-                type="number"
-                min="1"
-                max="100"
-                value={assignmentForm.allocation}
-                onChange={(e) => setAssignmentForm(prev => ({ ...prev, allocation: parseInt(e.target.value) || 0 }))}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={assignmentForm.startDate}
-                onChange={(e) => setAssignmentForm(prev => ({ ...prev, startDate: e.target.value }))}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="endDate">End Date (Optional)</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={assignmentForm.endDate}
-                onChange={(e) => setAssignmentForm(prev => ({ ...prev, endDate: e.target.value }))}
-              />
-            </div>
-
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAssign} disabled={assignEmployeeMutation.isPending}>
-                {assignEmployeeMutation.isPending ? 'Assigning...' : 'Assign Project'}
-              </Button>
-            </div>
-          </div>
+          
+          {selectedEmployee && (
+            <ProjectAssignmentForm
+              employee={selectedEmployee}
+              projects={projects}
+              onAssign={handleAssignProject}
+              onCancel={() => setIsAssignDialogOpen(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
   );
 };
 
-export default ResourceAllocationPage;
+// Project Assignment Form Component
+const ProjectAssignmentForm: React.FC<{
+  employee: Employee;
+  projects: Project[];
+  onAssign: (assignment: any) => void;
+  onCancel: () => void;
+}> = ({ employee, projects, onAssign, onCancel }) => {
+  const [selectedProject, setSelectedProject] = useState('');
+  const [role, setRole] = useState('');
+  const [allocation, setAllocation] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedProject || !role || !allocation || !startDate) {
+      return;
+    }
+
+    onAssign({
+      employeeId: employee.id,
+      projectId: parseInt(selectedProject),
+      role,
+      allocation: parseInt(allocation),
+      startDate,
+      endDate: endDate || undefined,
+    });
+  };
+
+  const currentAllocation = calculateTotalAllocation(employee.projects);
+  const newTotalAllocation = currentAllocation + parseInt(allocation || '0');
+  const isOverAllocated = newTotalAllocation > 100;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label>Employee</Label>
+        <div className="flex items-center space-x-2 p-2 bg-muted rounded">
+          <Avatar className="h-6 w-6">
+            <AvatarFallback className="text-xs">
+              {employee.firstName[0]}{employee.lastName[0]}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm">
+            {employee.firstName} {employee.lastName}
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="project">Project</Label>
+        <Select value={selectedProject} onValueChange={setSelectedProject}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select project" />
+          </SelectTrigger>
+          <SelectContent>
+            {projects.map((project) => (
+              <SelectItem key={project.id} value={project.id.toString()}>
+                {project.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="role">Role</Label>
+        <Input
+          id="role"
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          placeholder="e.g., Frontend Developer, QA Engineer"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="allocation">Allocation %</Label>
+        <Input
+          id="allocation"
+          type="number"
+          min="1"
+          max="100"
+          value={allocation}
+          onChange={(e) => setAllocation(e.target.value)}
+          placeholder="e.g., 50"
+          required
+        />
+        {allocation && (
+          <div className="text-xs">
+            <span className="text-muted-foreground">Current: {currentAllocation}%</span>
+            <span className={`ml-2 ${isOverAllocated ? 'text-red-500' : 'text-green-500'}`}>
+              New Total: {newTotalAllocation}%
+            </span>
+            {isOverAllocated && (
+              <span className="block text-red-500">⚠️ This will over-allocate the employee</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="startDate">Start Date</Label>
+          <Input
+            id="startDate"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="endDate">End Date (Optional)</Label>
+          <Input
+            id="endDate"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <Button type="submit" className="flex-1">
+          Assign Project
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+export default ResourceAllocationPage;</old_str>
+<new_str>import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Users, 
+  Search, 
+  Filter, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  User, 
+  Calendar,
+  MapPin,
+  Phone,
+  Mail,
+  Briefcase,
+  Building,
+  Star,
+  Clock,
+  CheckCircle,
+  Grid3X3,
+  List,
+  Table
+} from 'lucide-react';
+
+interface Employee {
+  id: number;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  position: string;
+  department: string;
+  skills: string[];
+  status: 'Available' | 'Occupied' | 'On Leave';
+  joinDate: string;
+  profilePicture?: string;
+  location?: string;
+  projects?: EmployeeProject[];
+}
+
+interface EmployeeProject {
+  id: number;
+  projectId: number;
+  projectName: string;
+  role: string;
+  allocation: number; // percentage
+  startDate: string;
+  endDate?: string;
+  status: 'Active' | 'Completed' | 'On Hold';
+}
+
+interface Project {
+  id: number;
+  name: string;
+  status: string;
+  startDate: string;
+  endDate?: string;
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+}
+
+const ResourceAllocationPage: React.FC = () => {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'card' | 'table' | 'list'>('card');
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchEmployees();
+    fetchProjects();
+  }, []);
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await fetch('/api/employees');
+      if (response.ok) {
+        const employeesData = await response.json();
+        
+        // Fetch project assignments for each employee
+        const employeesWithProjects = await Promise.all(
+          employeesData.map(async (employee: Employee) => {
+            try {
+              const projectsResponse = await fetch(`/api/employee-projects?employeeId=${employee.id}`);
+              if (projectsResponse.ok) {
+                const projects = await projectsResponse.json();
+                return { ...employee, projects };
+              }
+              return { ...employee, projects: [] };
+            } catch (error) {
+              console.error(`Error fetching projects for employee ${employee.id}:`, error);
+              return { ...employee, projects: [] };
+            }
+          })
+        );
+        
+        setEmployees(employeesWithProjects);
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch employees",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch('/api/projects');
+      if (response.ok) {
+        const projectsData = await response.json();
+        setProjects(projectsData);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    }
+  };
+
+  const handleAssignProject = async (assignment: {
+    employeeId: number;
+    projectId: number;
+    role: string;
+    allocation: number;
+    startDate: string;
+    endDate?: string;
+  }) => {
+    try {
+      const response = await fetch('/api/employee-projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(assignment),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Project assigned successfully",
+        });
+        fetchEmployees(); // Refresh data
+        setIsAssignDialogOpen(false);
+      } else {
+        throw new Error('Failed to assign project');
+      }
+    } catch (error) {
+      console.error('Error assigning project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign project",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredEmployees = employees.filter(employee => {
+    const matchesSearch = 
+      employee.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.position.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDepartment = departmentFilter === 'all' || employee.department === departmentFilter;
+    const matchesStatus = statusFilter === 'all' || employee.status === statusFilter;
+    
+    return matchesSearch && matchesDepartment && matchesStatus;
+  });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Available': return 'bg-green-500';
+      case 'Occupied': return 'bg-orange-500';
+      case 'On Leave': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'Critical': return 'bg-red-500';
+      case 'High': return 'bg-orange-500';
+      case 'Medium': return 'bg-yellow-500';
+      case 'Low': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const calculateTotalAllocation = (projects: EmployeeProject[] = []) => {
+    return projects
+      .filter(p => p.status === 'Active')
+      .reduce((total, project) => total + project.allocation, 0);
+  };
+
+  const renderCardView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {filteredEmployees.map((employee) => {
+        const totalAllocation = calculateTotalAllocation(employee.projects);
+        const isOverAllocated = totalAllocation > 100;
+        
+        return (
+          <Card key={employee.id} className="hover:shadow-lg transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex items-center space-x-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={employee.profilePicture} />
+                  <AvatarFallback>
+                    {employee.firstName[0]}{employee.lastName[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm truncate">
+                    {employee.firstName} {employee.lastName}
+                  </h3>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {employee.position}
+                  </p>
+                </div>
+                <div className={`w-3 h-3 rounded-full ${getStatusColor(employee.status)}`} />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-3">
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <Building className="h-3 w-3 mr-1" />
+                  {employee.department}
+                </div>
+                
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <Mail className="h-3 w-3 mr-1" />
+                  <span className="truncate">{employee.email}</span>
+                </div>
+
+                {employee.location && (
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    {employee.location}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-medium">Allocation</span>
+                    <span className={`text-xs font-bold ${isOverAllocated ? 'text-red-500' : 'text-green-500'}`}>
+                      {totalAllocation}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full ${isOverAllocated ? 'bg-red-500' : 'bg-green-500'}`}
+                      style={{ width: `${Math.min(totalAllocation, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {employee.projects && employee.projects.length > 0 && (
+                  <div className="space-y-1">
+                    <span className="text-xs font-medium">Active Projects</span>
+                    {employee.projects
+                      .filter(p => p.status === 'Active')
+                      .slice(0, 2)
+                      .map((project) => (
+                        <div key={project.id} className="flex justify-between items-center text-xs">
+                          <span className="truncate">{project.projectName}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {project.allocation}%
+                          </Badge>
+                        </div>
+                      ))}
+                    {employee.projects.filter(p => p.status === 'Active').length > 2 && (
+                      <span className="text-xs text-muted-foreground">
+                        +{employee.projects.filter(p => p.status === 'Active').length - 2} more
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="flex-1 text-xs"
+                    onClick={() => {
+                      setSelectedEmployee(employee);
+                      setIsAssignDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Assign
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-xs">
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+
+  const renderTableView = () => (
+    <div className="border rounded-lg overflow-hidden">
+      <table className="w-full">
+        <thead className="bg-muted/50">
+          <tr>
+            <th className="text-left p-3 font-medium">Employee</th>
+            <th className="text-left p-3 font-medium">Department</th>
+            <th className="text-left p-3 font-medium">Status</th>
+            <th className="text-left p-3 font-medium">Allocation</th>
+            <th className="text-left p-3 font-medium">Active Projects</th>
+            <th className="text-left p-3 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredEmployees.map((employee) => {
+            const totalAllocation = calculateTotalAllocation(employee.projects);
+            const isOverAllocated = totalAllocation > 100;
+            
+            return (
+              <tr key={employee.id} className="border-t hover:bg-muted/25">
+                <td className="p-3">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={employee.profilePicture} />
+                      <AvatarFallback className="text-xs">
+                        {employee.firstName[0]}{employee.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium text-sm">
+                        {employee.firstName} {employee.lastName}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {employee.position}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td className="p-3 text-sm">{employee.department}</td>
+                <td className="p-3">
+                  <Badge variant="secondary" className={`${getStatusColor(employee.status)} text-white text-xs`}>
+                    {employee.status}
+                  </Badge>
+                </td>
+                <td className="p-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-20 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${isOverAllocated ? 'bg-red-500' : 'bg-green-500'}`}
+                        style={{ width: `${Math.min(totalAllocation, 100)}%` }}
+                      />
+                    </div>
+                    <span className={`text-xs font-medium ${isOverAllocated ? 'text-red-500' : 'text-green-500'}`}>
+                      {totalAllocation}%
+                    </span>
+                  </div>
+                </td>
+                <td className="p-3">
+                  <div className="space-y-1">
+                    {employee.projects
+                      ?.filter(p => p.status === 'Active')
+                      .slice(0, 2)
+                      .map((project) => (
+                        <div key={project.id} className="text-xs">
+                          {project.projectName} ({project.allocation}%)
+                        </div>
+                      ))}
+                    {employee.projects && employee.projects.filter(p => p.status === 'Active').length > 2 && (
+                      <span className="text-xs text-muted-foreground">
+                        +{employee.projects.filter(p => p.status === 'Active').length - 2} more
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="p-3">
+                  <div className="flex gap-1">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedEmployee(employee);
+                        setIsAssignDialogOpen(true);
+                      }}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                    <Button size="sm" variant="ghost">
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const renderListView = () => (
+    <div className="space-y-4">
+      {filteredEmployees.map((employee) => {
+        const totalAllocation = calculateTotalAllocation(employee.projects);
+        const isOverAllocated = totalAllocation > 100;
+        
+        return (
+          <Card key={employee.id}>
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-4 flex-1">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={employee.profilePicture} />
+                    <AvatarFallback>
+                      {employee.firstName[0]}{employee.lastName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <h3 className="font-semibold">
+                        {employee.firstName} {employee.lastName}
+                      </h3>
+                      <div className={`w-2 h-2 rounded-full ${getStatusColor(employee.status)}`} />
+                      <Badge variant="secondary" className="text-xs">
+                        {employee.status}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center">
+                        <Briefcase className="h-3 w-3 mr-1" />
+                        {employee.position}
+                      </div>
+                      <div className="flex items-center">
+                        <Building className="h-3 w-3 mr-1" />
+                        {employee.department}
+                      </div>
+                      <div className="flex items-center">
+                        <Mail className="h-3 w-3 mr-1" />
+                        {employee.email}
+                      </div>
+                      {employee.location && (
+                        <div className="flex items-center">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          {employee.location}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Total Allocation</span>
+                        <span className={`text-sm font-bold ${isOverAllocated ? 'text-red-500' : 'text-green-500'}`}>
+                          {totalAllocation}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${isOverAllocated ? 'bg-red-500' : 'bg-green-500'}`}
+                          style={{ width: `${Math.min(totalAllocation, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {employee.projects && employee.projects.length > 0 && (
+                      <div className="space-y-2">
+                        <span className="text-sm font-medium">Active Projects</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {employee.projects
+                            .filter(p => p.status === 'Active')
+                            .map((project) => (
+                              <div key={project.id} className="flex justify-between items-center p-2 bg-muted rounded-md">
+                                <span className="text-sm truncate">{project.projectName}</span>
+                                <div className="flex items-center space-x-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {project.role}
+                                  </Badge>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {project.allocation}%
+                                  </Badge>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedEmployee(employee);
+                      setIsAssignDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Assign Project
+                  </Button>
+                  <Button size="sm" variant="ghost">
+                    <Edit className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Resource Allocation</h1>
+          <p className="text-muted-foreground">
+            Manage employee project assignments and workload distribution
+          </p>
+        </div>
+        <Button>
+          <Users className="h-4 w-4 mr-2" />
+          Add Employee
+        </Button>
+      </div>
+
+      {/* Filters and Search */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search employees..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                <SelectItem value="Development">Development</SelectItem>
+                <SelectItem value="Quality Assurance">Quality Assurance</SelectItem>
+                <SelectItem value="DevOps">DevOps</SelectItem>
+                <SelectItem value="UI/UX Design">UI/UX Design</SelectItem>
+                <SelectItem value="Project Management">Project Management</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Available">Available</SelectItem>
+                <SelectItem value="Occupied">Occupied</SelectItem>
+                <SelectItem value="On Leave">On Leave</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex border rounded-md">
+              <Button
+                variant={viewMode === 'card' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('card')}
+                className="rounded-r-none"
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="rounded-none border-x"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className="rounded-l-none"
+              >
+                <Table className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {filteredEmployees.length} of {employees.length} employees
+          </p>
+        </div>
+
+        {viewMode === 'card' && renderCardView()}
+        {viewMode === 'table' && renderTableView()}
+        {viewMode === 'list' && renderListView()}
+      </div>
+
+      {/* Project Assignment Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Project</DialogTitle>
+          </DialogHeader>
+          
+          {selectedEmployee && (
+            <ProjectAssignmentForm
+              employee={selectedEmployee}
+              projects={projects}
+              onAssign={handleAssignProject}
+              onCancel={() => setIsAssignDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// Project Assignment Form Component
+const ProjectAssignmentForm: React.FC<{
+  employee: Employee;
+  projects: Project[];
+  onAssign: (assignment: any) => void;
+  onCancel: () => void;
+}> = ({ employee, projects, onAssign, onCancel }) => {
+  const [selectedProject, setSelectedProject] = useState('');
+  const [role, setRole] = useState('');
+  const [allocation, setAllocation] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedProject || !role || !allocation || !startDate) {
+      return;
+    }
+
+    onAssign({
+      employeeId: employee.id,
+      projectId: parseInt(selectedProject),
+      role,
+      allocation: parseInt(allocation),
+      startDate,
+      endDate: endDate || undefined,
+    });
+  };
+
+  const calculateTotalAllocation = (projects: EmployeeProject[] = []) => {
+    return projects
+      .filter(p => p.status === 'Active')
+      .reduce((total, project) => total + project.allocation, 0);
+  };
+
+  const currentAllocation = calculateTotalAllocation(employee.projects);
+  const newTotalAllocation = currentAllocation + parseInt(allocation || '0');
+  const isOverAllocated = newTotalAllocation > 100;
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label>Employee</Label>
+        <div className="flex items-center space-x-2 p-2 bg-muted rounded">
+          <Avatar className="h-6 w-6">
+            <AvatarFallback className="text-xs">
+              {employee.firstName[0]}{employee.lastName[0]}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm">
+            {employee.firstName} {employee.lastName}
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="project">Project</Label>
+        <Select value={selectedProject} onValueChange={setSelectedProject}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select project" />
+          </SelectTrigger>
+          <SelectContent>
+            {projects.map((project) => (
+              <SelectItem key={project.id} value={project.id.toString()}>
+                {project.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="role">Role</Label>
+        <Input
+          id="role"
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          placeholder="e.g., Frontend Developer, QA Engineer"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="allocation">Allocation %</Label>
+        <Input
+          id="allocation"
+          type="number"
+          min="1"
+          max="100"
+          value={allocation}
+          onChange={(e) => setAllocation(e.target.value)}
+          placeholder="e.g., 50"
+          required
+        />
+        {allocation && (
+          <div className="text-xs">
+            <span className="text-muted-foreground">Current: {currentAllocation}%</span>
+            <span className={`ml-2 ${isOverAllocated ? 'text-red-500' : 'text-green-500'}`}>
+              New Total: {newTotalAllocation}%
+            </span>
+            {isOverAllocated && (
+              <span className="block text-red-500">⚠️ This will over-allocate the employee</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="startDate">Start Date</Label>
+          <Input
+            id="startDate"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="endDate">End Date (Optional)</Label>
+          <Input
+            id="endDate"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <Button type="submit" className="flex-1">
+          Assign Project
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+export default ResourceAllocationPage;</new_str>
