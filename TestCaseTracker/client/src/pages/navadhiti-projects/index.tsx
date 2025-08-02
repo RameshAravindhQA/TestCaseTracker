@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Calendar, Users, Briefcase, Search, Filter, X, ChevronDown, CheckCircle2, Clock, UserCheck, BookOpen, AlertCircle, Send } from "lucide-react";
+import { Plus, Calendar, Users, Briefcase, Search, Filter, X, ChevronDown, CheckCircle2, Clock, UserCheck, BookOpen, AlertCircle, Send, Download, FileType } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,6 @@ import Papa from 'papaparse';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
-import { Download, FileType, X, Plus } from "lucide-react";
 
 interface NavadhitiProject {
   id: number;
