@@ -16,6 +16,9 @@ import { Plus, MoreHorizontal, Edit, Trash2, Upload, Download, Filter, Search, C
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { MainLayout } from "@/components/layout/main-layout";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DatePicker } from "@/components/ui/date-picker";
+import { ColorPicker } from "@/components/ui/color-picker";
 
 interface NavadhitiProject {
   id: number;
@@ -92,6 +95,12 @@ export default function NavadhitiProjectsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
+  const [editingListId, setEditingListId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState("projects");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [statusReviewData, setStatusReviewData] = useState<any[]>([]);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [selectedProjectForStatus, setSelectedProjectForStatus] = useState<any>(null);
 
   // Fetch projects
   const { data: projects = [], isLoading, error } = useQuery({
@@ -246,288 +255,308 @@ export default function NavadhitiProjectsPage() {
   return (
     <MainLayout>
       <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Navadhiti Projects</h1>
-          <p className="text-muted-foreground">Manage and track project activities</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={exportToCSV}>
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
-          <Button variant="outline" onClick={() => setIsCsvDialogOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" />
-            Import CSV
-          </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Project
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingProject ? "Edit Project" : "Add New Project"}
-                </DialogTitle>
-              </DialogHeader>
-              <NavadhitiProjectForm
-                project={editingProject}
-                onSuccess={handleDialogClose}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="projects">Projects</TabsTrigger>
+            <TabsTrigger value="statusReview">Status Review</TabsTrigger>
+          </TabsList>
+          <TabsContent value="projects">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-3xl font-bold">Navadhiti Projects</h1>
+                <p className="text-muted-foreground">Manage and track project activities</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={exportToCSV}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </Button>
+                <Button variant="outline" onClick={() => setIsCsvDialogOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import CSV
+                </Button>
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Project
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingProject ? "Edit Project" : "Add New Project"}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <NavadhitiProjectForm
+                      project={editingProject}
+                      onSuccess={handleDialogClose}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <TrendingUp className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Total Projects</p>
+                        <p className="text-2xl font-bold">{stats.total}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-4 w-4 text-green-600" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Active</p>
+                        <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Completed</p>
+                        <p className="text-2xl font-bold text-blue-600">{stats.completed}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <DollarSign className="h-4 w-4 text-red-600" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">At Risk</p>
+                        <p className="text-2xl font-bold text-red-600">{stats.atRisk}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Filters */}
+            <Card className="mb-6">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search projects..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="on track">On Track</SelectItem>
+                      <SelectItem value="at risk">At Risk</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="on hold">On Hold</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="All Priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priority</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Projects Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Projects ({filteredProjects.length})</CardTitle>
+                <CardDescription>
+                  Manage your Navadhiti project portfolio
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                      <p className="mt-2 text-muted-foreground">Loading projects...</p>
+                    </div>
+                  </div>
+                ) : filteredProjects.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      {projects.length === 0 ? "No projects found. Create your first project!" : "No projects match your filters."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Image</TableHead>
+                          <TableHead>Project Name</TableHead>
+                          <TableHead>Project Lead</TableHead>
+                          <TableHead>Overall Status</TableHead>
+                          <TableHead>Priority</TableHead>
+                          <TableHead>Current Sprint</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProjects.map((project: NavadhitiProject) => (
+                          <TableRow key={project.id}>
+                            <TableCell>
+                              {project.projectImage ? (
+                                <img
+                                  src={project.projectImage}
+                                  alt={project.projectName}
+                                  className="w-12 h-12 object-cover rounded-lg border"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-gray-100 rounded-lg border flex items-center justify-center">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="h-6 w-6 text-gray-400"
+                                  >
+                                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <polyline points="21 15 16 10 5 21" />
+                                  </svg>
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {project.projectName}
+                            </TableCell>
+                            <TableCell>{project.projectLead}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={getStatusColor(getOverallStatus(project))}
+                              >
+                                {getOverallStatus(project)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={getPriorityColor(project.priority)}
+                              >
+                                {project.priority || 'Medium'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{project.currentSprint || 'N/A'}</TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEdit(project)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDelete(project.id)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* CSV Import Dialog */}
+            <Dialog open={isCsvDialogOpen} onOpenChange={setIsCsvDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Import CSV</DialogTitle>
+                </DialogHeader>
+                <CSVImportDialog onClose={() => setIsCsvDialogOpen(false)} />
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+          <TabsContent value="statusReview">
+            <div className="flex flex-col space-y-4">
+              <h2 className="text-2xl font-bold">Status Review</h2>
+              <DatePicker
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                className="w-full md:w-64"
               />
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-blue-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Projects</p>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4 text-green-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Active</p>
-                  <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-blue-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Completed</p>
-                  <p className="text-2xl font-bold text-blue-600">{stats.completed}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <DollarSign className="h-4 w-4 text-red-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">At Risk</p>
-                  <p className="text-2xl font-bold text-red-600">{stats.atRisk}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search projects..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              {/* Additional components for status review go here */}
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="on track">On Track</SelectItem>
-                <SelectItem value="at risk">At Risk</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="on hold">On Hold</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priority</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Projects Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Projects ({filteredProjects.length})</CardTitle>
-          <CardDescription>
-            Manage your Navadhiti project portfolio
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-2 text-muted-foreground">Loading projects...</p>
-              </div>
-            </div>
-          ) : filteredProjects.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                {projects.length === 0 ? "No projects found. Create your first project!" : "No projects match your filters."}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Image</TableHead>
-                    <TableHead>Project Name</TableHead>
-                    <TableHead>Project Lead</TableHead>
-                    <TableHead>Overall Status</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Current Sprint</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProjects.map((project: NavadhitiProject) => (
-                    <TableRow key={project.id}>
-                      <TableCell>
-                        {project.projectImage ? (
-                          <img
-                            src={project.projectImage}
-                            alt={project.projectName}
-                            className="w-12 h-12 object-cover rounded-lg border"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 bg-gray-100 rounded-lg border flex items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="24"
-                              height="24"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="h-6 w-6 text-gray-400"
-                            >
-                              <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                              <circle cx="8.5" cy="8.5" r="1.5" />
-                              <polyline points="21 15 16 10 5 21" />
-                            </svg>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {project.projectName}
-                      </TableCell>
-                      <TableCell>{project.projectLead}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="outline" 
-                          className={getStatusColor(getOverallStatus(project))}
-                        >
-                          {getOverallStatus(project)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="outline" 
-                          className={getPriorityColor(project.priority)}
-                        >
-                          {project.priority || 'Medium'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{project.currentSprint || 'N/A'}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(project)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDelete(project.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* CSV Import Dialog */}
-      <Dialog open={isCsvDialogOpen} onOpenChange={setIsCsvDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Import CSV</DialogTitle>
-          </DialogHeader>
-          <CSVImportDialog onClose={() => setIsCsvDialogOpen(false)} />
-        </DialogContent>
-      </Dialog>
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );

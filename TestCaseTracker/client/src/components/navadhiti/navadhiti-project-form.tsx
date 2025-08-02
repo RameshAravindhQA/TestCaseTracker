@@ -254,7 +254,7 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
   };
 
   return (
-    <div className="max-h-[80vh] overflow-y-auto">
+    <div className="max-h-[75vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {/* Project Image Section */}
@@ -433,7 +433,7 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
           />
 
           <div>
-            <FormLabel>Assigned Employees</FormLabel>
+            <FormLabel>Project Leads</FormLabel>
             <div className="space-y-2 mt-1">
               <div className="flex flex-wrap gap-2">
                 {selectedEmployees.map((employeeId) => {
@@ -451,7 +451,7 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
               </div>
               <Select onValueChange={(value) => toggleEmployee(parseInt(value))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select employees..." />
+                  <SelectValue placeholder="Select project leads..." />
                 </SelectTrigger>
                 <SelectContent>
                   {employees.map((employee: any) => (
