@@ -1,0 +1,23 @@
+Get navadhiti projects error: TypeError: storage.getNavadhitiProjects is not a function
+    at <anonymous> (/home/runner/workspace/TestCaseTracker/server/routes.ts:5217:38)
+    at Layer.handle [as handle_request] (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/route.js:149:13)
+    at isAuthenticated (/home/runner/workspace/TestCaseTracker/server/routes.ts:78:12)
+    at Layer.handle [as handle_request] (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/layer.js:95:5)
+    at /home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:284:15
+    at Function.process_params (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:280:10)
+    at Function.handle (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:175:3)
+    at router (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:47:12)
+    at Layer.handle [as handle_request] (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/layer.js:95:5)
+    at trim_prefix (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:328:13)
+    at /home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:346:12)
+    at next (/home/runner/workspace/TestCaseTracker/node_modules/express/lib/router/index.js:280:10)
+    at Immediate._onImmediate (/home/runner/workspace/TestCaseTracker/node_modules/express-session/index.js:514:7)
+    at process.processImmediate (node:internal/timers:485:21)
+11:46:12 AM [express] GET /api/navadhiti-projects 500 in 29ms :: {"message":"Server error"}
+11:46:16 AM [vite] Loading client template from: /home/runner/workspace/TestCaseTracker/client/index.html
