@@ -940,7 +940,7 @@ export default function NavadhitiProjectsPage() {
                   </div>
                 </div>
 
-                {/* Projects Grid */}
+                {/* Projects Display */}
                 {isLoading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
@@ -964,151 +964,330 @@ export default function NavadhitiProjectsPage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredProjects.filter(project => project && project.id).map((project: NavadhitiProject) => {
-                      const leadEmployee = employeesData.find((emp: any) => 
-                        project.assignedEmployees?.includes(emp.id)
-                      );
+                  <>
+                    {/* Card View */}
+                    {viewMode === 'card' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredProjects.filter(project => project && project.id).map((project: NavadhitiProject) => {
+                          const leadEmployee = employeesData.find((emp: any) => 
+                            project.assignedEmployees?.includes(emp.id)
+                          );
 
-                      return (
-                        <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
-                          <CardHeader className="relative p-6">
-                            <div className="flex items-center justify-center mb-4">
-                              <div className="relative">
-                                {project.projectImage ? (
-                                  <img 
-                                    src={project.projectImage} 
-                                    alt={`${project.projectName} logo`}
-                                    className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-                                  />
-                                ) : (
-                                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center border-4 border-white shadow-lg">
-                                    <span className="text-white text-2xl font-bold">
-                                      {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
-                                    </span>
+                          return (
+                            <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
+                              <CardHeader className="relative p-6">
+                                <div className="flex items-center justify-center mb-4">
+                                  <div className="relative">
+                                    {project.projectImage ? (
+                                      <img 
+                                        src={project.projectImage} 
+                                        alt={`${project.projectName} logo`}
+                                        className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                                      />
+                                    ) : (
+                                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center border-4 border-white shadow-lg">
+                                        <span className="text-white text-2xl font-bold">
+                                          {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div className="absolute -top-2 -right-2">
+                                      <Badge 
+                                        variant={project.status === 'Active' ? 'default' : 'secondary'}
+                                        className={`${
+                                          project.status === 'Active' 
+                                            ? 'bg-green-500 hover:bg-green-600' 
+                                            : project.status === 'Completed'
+                                            ? 'bg-blue-500 hover:bg-blue-600'
+                                            : project.status === 'On Hold'
+                                            ? 'bg-yellow-500 hover:bg-yellow-600'
+                                            : 'bg-red-500 hover:bg-red-600'
+                                        } text-white text-xs`}
+                                      >
+                                        {project.status}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <div>
+                                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Project Name</Label>
+                                    <CardTitle className="text-lg font-semibold line-clamp-1 mt-1">
+                                      {project.projectName}
+                                    </CardTitle>
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</Label>
+                                    <CardDescription className="mt-1 font-medium">
+                                      {project.clientName}
+                                    </CardDescription>
+                                  </div>
+                                </div>
+                              </CardHeader>
+
+                              <CardContent className="space-y-3">
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>
+                                    {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - 
+                                    {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
+                                  </span>
+                                </div>
+
+                                {/* Technologies */}
+                                {project.technologies && project.technologies.length > 0 && (
+                                  <div>
+                                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Tech</Label>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {project.technologies.slice(0, 3).map((tech, index) => (
+                                        <Badge key={index} variant="secondary" className="text-xs">
+                                          {tech}
+                                        </Badge>
+                                      ))}
+                                      {project.technologies.length > 3 && (
+                                        <Badge variant="outline" className="text-xs">
+                                          +{project.technologies.length - 3} more
+                                        </Badge>
+                                      )}
+                                    </div>
                                   </div>
                                 )}
-                                <div className="absolute -top-2 -right-2">
-                                  <Badge 
-                                    variant={project.status === 'Active' ? 'default' : 'secondary'}
-                                    className={`${
-                                      project.status === 'Active' 
-                                        ? 'bg-green-500 hover:bg-green-600' 
-                                        : project.status === 'Completed'
-                                        ? 'bg-blue-500 hover:bg-blue-600'
-                                        : project.status === 'On Hold'
-                                        ? 'bg-yellow-500 hover:bg-yellow-600'
-                                        : 'bg-red-500 hover:bg-red-600'
-                                    } text-white text-xs`}
-                                  >
-                                    {project.status}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
 
-                            <div className="space-y-2">
-                              <div>
-                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Project Name</Label>
-                                <CardTitle className="text-lg font-semibold line-clamp-1 mt-1">
-                                  {project.projectName}
-                                </CardTitle>
-                              </div>
-                              <div>
-                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</Label>
-                                <CardDescription className="mt-1 font-medium">
-                                  {project.clientName}
-                                </CardDescription>
-                              </div>
-                            </div>
-                          </CardHeader>
-
-                          <CardContent className="space-y-3">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Calendar className="h-4 w-4" />
-                              <span>
-                                {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - 
-                                {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
-                              </span>
-                            </div>
-
-                            {/* Technologies */}
-                            {project.technologies && project.technologies.length > 0 && (
-                              <div>
-                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Tech</Label>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {project.technologies.slice(0, 3).map((tech, index) => (
-                                    <Badge key={index} variant="secondary" className="text-xs">
-                                      {tech}
-                                    </Badge>
-                                  ))}
-                                  {project.technologies.length > 3 && (
-                                    <Badge variant="outline" className="text-xs">
-                                      +{project.technologies.length - 3} more
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Project Lead */}
-                            {leadEmployee && (
-                              <div>
-                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Lead</Label>
-                                <div className="flex items-center gap-2 mt-1">
-                                  {leadEmployee.profilePicture ? (
-                                    <img
-                                      src={leadEmployee.profilePicture}
-                                      alt={`${leadEmployee.firstName} ${leadEmployee.lastName}`}
-                                      className="h-6 w-6 rounded-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="h-6 w-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
-                                      {leadEmployee.firstName?.charAt(0)}{leadEmployee.lastName?.charAt(0)}
+                                {/* Project Lead */}
+                                {leadEmployee && (
+                                  <div>
+                                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Lead</Label>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      {leadEmployee.profilePicture ? (
+                                        <img
+                                          src={leadEmployee.profilePicture}
+                                          alt={`${leadEmployee.firstName} ${leadEmployee.lastName}`}
+                                          className="h-6 w-6 rounded-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="h-6 w-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
+                                          {leadEmployee.firstName?.charAt(0)}{leadEmployee.lastName?.charAt(0)}
+                                        </div>
+                                      )}
+                                      <Badge variant="outline" className="text-xs">
+                                        {leadEmployee.firstName} {leadEmployee.lastName}
+                                      </Badge>
                                     </div>
-                                  )}
-                                  <Badge variant="outline" className="text-xs">
-                                    {leadEmployee.firstName} {leadEmployee.lastName}
-                                  </Badge>
+                                  </div>
+                                )}
+
+                                <div className="flex items-center justify-between pt-2">
+                                  <div className="flex items-center gap-2">
+                                    <Users className="h-4 w-4 text-gray-400" />
+                                    <span className="text-sm text-gray-600">
+                                      {project.assignedEmployees?.length || 0} members
+                                    </span>
+                                  </div>
+
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingProject(project);
+                                        setIsDialogOpen(true);
+                                      }}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        // View project details logic
+                                      }}
+                                    >
+                                      View
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
 
-                            <div className="flex items-center justify-between pt-2">
-                              <div className="flex items-center gap-2">
-                                <Users className="h-4 w-4 text-gray-400" />
-                                <span className="text-sm text-gray-600">
-                                  {project.assignedEmployees?.length || 0} members
-                                </span>
-                              </div>
+                    {/* List View */}
+                    {viewMode === 'list' && (
+                      <div className="space-y-4">
+                        {filteredProjects.filter(project => project && project.id).map((project: NavadhitiProject) => {
+                          const leadEmployee = employeesData.find((emp: any) => 
+                            project.assignedEmployees?.includes(emp.id)
+                          );
 
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setEditingProject(project);
-                                    setIsDialogOpen(true);
-                                  }}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    // View project details logic
-                                  }}
-                                >
-                                  View
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
+                          return (
+                            <Card key={project.id} className="hover:shadow-md transition-shadow duration-200">
+                              <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-4">
+                                    {project.projectImage ? (
+                                      <img 
+                                        src={project.projectImage} 
+                                        alt={`${project.projectName} logo`}
+                                        className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                                      />
+                                    ) : (
+                                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                                        <span className="text-white text-lg font-bold">
+                                          {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div>
+                                      <h3 className="font-semibold text-lg">{project.projectName}</h3>
+                                      <p className="text-gray-600">{project.clientName}</p>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <Badge variant="outline" className="text-xs">
+                                          {project.status}
+                                        </Badge>
+                                        <span className="text-sm text-gray-500">
+                                          {project.assignedEmployees?.length || 0} members
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingProject(project);
+                                        setIsDialogOpen(true);
+                                      }}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        // View project details logic
+                                      }}
+                                    >
+                                      View
+                                    </Button>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Table View */}
+                    {viewMode === 'table' && (
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Project</TableHead>
+                              <TableHead>Client</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Priority</TableHead>
+                              <TableHead>Team</TableHead>
+                              <TableHead>Technologies</TableHead>
+                              <TableHead>Progress</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredProjects.filter(project => project && project.id).map((project: NavadhitiProject) => (
+                              <TableRow key={project.id}>
+                                <TableCell>
+                                  <div className="flex items-center gap-3">
+                                    {project.projectImage ? (
+                                      <img 
+                                        src={project.projectImage} 
+                                        alt={`${project.projectName} logo`}
+                                        className="w-8 h-8 rounded-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                                        <span className="text-white text-sm font-bold">
+                                          {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <span className="font-medium">{project.projectName}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>{project.clientName}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{project.status}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary">{project.priority}</Badge>
+                                </TableCell>
+                                <TableCell>{project.assignedEmployees?.length || 0} members</TableCell>
+                                <TableCell>
+                                  {project.technologies && project.technologies.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {project.technologies.slice(0, 2).map((tech, index) => (
+                                        <Badge key={index} variant="outline" className="text-xs">
+                                          {tech}
+                                        </Badge>
+                                      ))}
+                                      {project.technologies.length > 2 && (
+                                        <Badge variant="outline" className="text-xs">
+                                          +{project.technologies.length - 2}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400">None</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                                      <div 
+                                        className="bg-blue-600 h-2 rounded-full" 
+                                        style={{ width: `${project.completionPercentage || 0}%` }}
+                                      />
+                                    </div>
+                                    <span className="text-sm text-gray-600">
+                                      {project.completionPercentage || 0}%
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingProject(project);
+                                        setIsDialogOpen(true);
+                                      }}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        // View project details logic
+                                      }}
+                                    >
+                                      View
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
