@@ -710,7 +710,7 @@ export default function NavadhitiProjectsPage() {
                                     size="sm"
                                     variant="outline"
                                     className="flex-1 text-xs h-7"
-                                    onClick={() => {
+                                    onClick={()={() => {
                                       setSelectedEmployees([employee.id]);
                                       setIsAllocationDialogOpen(true);
                                     }}
@@ -738,7 +738,7 @@ export default function NavadhitiProjectsPage() {
                                       size="sm"
                                       variant="outline"
                                       className="flex-1 text-xs h-7"
-                                      onClick={() => {
+                                      onClick={()={() => {
                                         setSelectedEmployees([employee.id]);
                                         setIsAllocationDialogOpen(true);
                                       }}
@@ -894,7 +894,7 @@ export default function NavadhitiProjectsPage() {
                       );
 
                       return (
-                        
+
               <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
               <CardHeader className="relative p-6">
                 <div className="flex items-center justify-center mb-4">
@@ -931,24 +931,25 @@ export default function NavadhitiProjectsPage() {
                   </div>
                 </div>
 
-                          <CardHeader className="pb-3">
-                            <div className="space-y-2">
-                              <div>
-                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Project Name</Label>
-                                <CardTitle className="text-lg font-semibold line-clamp-1 mt-1">
-                                  {project.projectName}
-                                </CardTitle>
-                              </div>
-                              <div>
-                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</Label>
-                                <CardDescription className="mt-1 font-medium">
-                                  {project.clientName}
-                                </CardDescription>
-                              </div>
-                            </div>
-                          </CardHeader>
+              
 
-                          <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  <div>
+                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Project Name</Label>
+                    <CardTitle className="text-lg font-semibold line-clamp-1 mt-1">
+                      {project.projectName}
+                    </CardTitle>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</Label>
+                    <CardDescription className="mt-1 font-medium">
+                      {project.clientName}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-3">
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <Calendar className="h-4 w-4" />
                               <span>
