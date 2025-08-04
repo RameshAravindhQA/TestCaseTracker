@@ -788,7 +788,7 @@ export default function NavadhitiProjectsPage() {
                                       size="sm"
                                       variant="outline"
                                       className="flex-1 text-xs h-7"
-                                      onClick={() => {
+                                      onClick={()=> {
                                         setSelectedEmployees([employee.id]);
                                         setIsAllocationDialogOpen(true);
                                       }}
