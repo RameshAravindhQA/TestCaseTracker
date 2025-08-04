@@ -345,6 +345,16 @@ export default function EmployeesPage() {
     }
   };
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileImport(event);
+  };
+
+  const handleImport = () => {
+    if (fileInputRef.current?.files?.[0]) {
+      handleFileImport({ target: { files: fileInputRef.current.files } } as any);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto p-6 space-y-6">
@@ -393,6 +403,25 @@ export default function EmployeesPage() {
                               className="mt-1"
                             />
                           </div>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-6">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setIsImportDialogOpen(false);
+                              if (fileInputRef.current) {
+                                fileInputRef.current.value = '';
+                              }
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleImport}
+                            disabled={!fileInputRef.current?.files?.[0]}
+                          >
+                            Import Employees
+                          </Button>
                         </div>
                       </DialogContent>
                     </Dialog>

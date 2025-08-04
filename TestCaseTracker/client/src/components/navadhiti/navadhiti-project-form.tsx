@@ -104,12 +104,16 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
         assignedEmployees: selectedEmployees,
         technologies: selectedTechnologies,
       });
+      if (!res.ok) throw new Error("Failed to create project");
       return res.json();
     },
     onSuccess: () => {
       toast({ title: "Project created successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
       form.reset();
+      setSelectedEmployees([]);
+      setSelectedTechnologies([]);
+      setProjectImageUrl(null);
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {

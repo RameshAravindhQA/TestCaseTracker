@@ -46,7 +46,11 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
     currentSprintStatus: "",
     weeklyComms: "",
     notes: "",
-    projectLead: ""
+    projectLead: "",
+    currentIssues: "",
+    immediateActionItems: "",
+    supportRequired: "",
+    additionalRemarks: ""
   });
 
   // Status options state
@@ -62,15 +66,22 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
         currentSprintStatus: project?.currentSprintStatus || "",
         weeklyComms: project?.weeklyComms || "",
         notes: project?.notes || "",
-        projectLead: project?.projectLead || ""
+        projectLead: project?.projectLead || "",
+        currentIssues: project?.currentIssues || "",
+        immediateActionItems: project?.immediateActionItems || "",
+        supportRequired: project?.supportRequired || "",
+        additionalRemarks: project?.additionalRemarks || ""
       });
     }
   }, [project]);
 
   const createStatusMutation = useMutation({
     mutationFn: async (statusData: any) => {
-      const res = await apiRequest("POST", "/api/navadhiti-projects/status-review", statusData);
-      if (!res.ok) throw new Error("Failed to save status review");
+      const res = await apiRequest("PUT", `/api/navadhiti-projects/${project.id}`, statusData);
+      if (!res.ok) {
+        const errorData = await res.text();
+        throw new Error(errorData || "Failed to save status review");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -79,9 +90,10 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
       onClose();
     },
     onError: (error: any) => {
+      console.error("Status review save error:", error);
       toast({ 
         title: "Failed to save status review", 
-        description: error.message,
+        description: error.message || "An error occurred while saving",
         variant: "destructive" 
       });
     },
@@ -306,6 +318,57 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
               </div>
             </CardContent>
           </Card>
+
+          {/* Additional Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentIssues">Current Issues</Label>
+              <p className="text-xs text-muted-foreground">Major challenges or risks</p>
+              <textarea
+                id="currentIssues"
+                className="w-full p-3 border rounded-md min-h-[80px] resize-vertical"
+                value={formData.currentIssues}
+                onChange={(e) => setFormData({...formData, currentIssues: e.target.value})}
+                placeholder="Enter major challenges or risks..."
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="immediateActionItems">Immediate Action Items</Label>
+              <textarea
+                id="immediateActionItems"
+                className="w-full p-3 border rounded-md min-h-[80px] resize-vertical"
+                value={formData.immediateActionItems}
+                onChange={(e) => setFormData({...formData, immediateActionItems: e.target.value})}
+                placeholder="Enter immediate action items..."
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="supportRequired">Support Required</Label>
+              <p className="text-xs text-muted-foreground">Specific requests from stakeholders</p>
+              <textarea
+                id="supportRequired"
+                className="w-full p-3 border rounded-md min-h-[80px] resize-vertical"
+                value={formData.supportRequired}
+                onChange={(e) => setFormData({...formData, supportRequired: e.target.value})}
+                placeholder="Enter specific support requests..."
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="additionalRemarks">Additional Remarks / Inputs</Label>
+              <textarea
+                id="additionalRemarks"
+                className="w-full p-3 border rounded-md min-h-[80px] resize-vertical"
+                value={formData.additionalRemarks}
+                onChange={(e) => setFormData({...formData, additionalRemarks: e.target.value})}
+                placeholder="Enter additional remarks or inputs..."
+              />
+            </div>
+          </div>
 
           {/* Notes */}
           <div className="space-y-2">

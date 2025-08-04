@@ -88,10 +88,10 @@ export default function NavadhitiProjectsPage() {
     const matchesSearch = searchTerm === "" || 
       project.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === "all" || project.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || project.priority === priorityFilter;
-    
+
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
@@ -361,11 +361,11 @@ export default function NavadhitiProjectsPage() {
     setIsExporting(true);
     try {
       const doc = new jsPDF('landscape');
-      
+
       // Add title
       doc.setFontSize(18);
       doc.text('Project Status Review Report', 14, 20);
-      
+
       // Add metadata
       doc.setFontSize(10);
       doc.text(`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`, 14, 30);
@@ -892,39 +892,44 @@ export default function NavadhitiProjectsPage() {
                       const leadEmployee = employeesData.find((emp: any) => 
                         project.assignedEmployees?.includes(emp.id)
                       );
-                      
+
                       return (
-                        <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200 overflow-hidden">
-                          {/* Project Image */}
-                          <div className="h-32 bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 relative overflow-hidden">
-                            {project.projectImage ? (
-                              <img 
-                                src={project.projectImage} 
-                                alt={project.projectName}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  // Fallback if image fails to load
-                                  e.currentTarget.style.display = 'none';
-                                  e.currentTarget.nextElementSibling.style.display = 'flex';
-                                }}
-                              />
-                            ) : null}
-                            <div className={`w-full h-full flex items-center justify-center ${project.projectImage ? 'hidden' : ''}`}>
-                              <Briefcase className="h-12 w-12 text-white/80" />
-                            </div>
-                            <div className="absolute top-2 right-2">
-                              <Badge 
-                                className={`text-xs ${
-                                  project.status === 'Active' ? 'bg-green-100 text-green-800' :
-                                  project.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
-                                  project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-red-100 text-red-800'
-                                }`}
-                              >
-                                {project.status}
-                              </Badge>
-                            </div>
-                          </div>
+                        
+              <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
+              <CardHeader className="relative p-6">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="relative">
+                    {project.projectImage ? (
+                      <img 
+                        src={project.projectImage} 
+                        alt={`${project.projectName} logo`}
+                        className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center border-4 border-white shadow-lg">
+                        <span className="text-white text-2xl font-bold">
+                          {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
+                        </span>
+                      </div>
+                    )}
+                    <div className="absolute -top-2 -right-2">
+                      <Badge 
+                        variant={project.status === 'Active' ? 'default' : 'secondary'}
+                        className={`${
+                          project.status === 'Active' 
+                            ? 'bg-green-500 hover:bg-green-600' 
+                            : project.status === 'Completed'
+                            ? 'bg-blue-500 hover:bg-blue-600'
+                            : project.status === 'On Hold'
+                            ? 'bg-yellow-500 hover:bg-yellow-600'
+                            : 'bg-red-500 hover:bg-red-600'
+                        } text-white text-xs`}
+                      >
+                        {project.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
 
                           <CardHeader className="pb-3">
                             <div className="space-y-2">
@@ -942,7 +947,7 @@ export default function NavadhitiProjectsPage() {
                               </div>
                             </div>
                           </CardHeader>
-                          
+
                           <CardContent className="space-y-3">
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <Calendar className="h-4 w-4" />
@@ -1007,7 +1012,7 @@ export default function NavadhitiProjectsPage() {
                                   {project.assignedEmployees?.length || 0} members
                                 </span>
                               </div>
-                              
+
                               <div className="flex gap-2">
                                 <Button
                                   size="sm"
@@ -1192,7 +1197,7 @@ export default function NavadhitiProjectsPage() {
                             const leadEmployee = employeesData.find((emp: any) => 
                               project.assignedEmployees?.includes(emp.id)
                             );
-                            
+
                             return (
                               <TableRow key={project.id}>
                                 <TableCell className="font-medium">{project.clientName}</TableCell>
