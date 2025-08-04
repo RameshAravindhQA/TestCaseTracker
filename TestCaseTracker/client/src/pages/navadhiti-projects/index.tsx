@@ -1082,12 +1082,6 @@ export default function NavadhitiProjectsPage() {
                               </p>
                             )}
 
-                            {project.description && (
-                              <p className="text-sm text-gray-600 line-clamp-2">
-                                {project.description}
-                              </p>
-                            )}
-
                             <div className="flex items-center justify-between pt-2">
                               <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4 text-gray-400" />
