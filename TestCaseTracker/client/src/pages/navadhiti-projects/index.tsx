@@ -796,10 +796,11 @@ export default function NavadhitiProjectsPage() {
                                       <Plus className="h-3 w-3 mr-1" />
                                       Add Project
                                     </Button>
+                                  </div>
                                 )}
                               </div>
                             </div>
-                        </CardContent```text
+                        </CardContent>```text
 
                         </Card>
                     );
