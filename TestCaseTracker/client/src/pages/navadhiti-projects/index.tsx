@@ -798,8 +798,7 @@ export default function NavadhitiProjectsPage() {
                                     </Button>
                                 )}
                               </div>
-                            </div>
-                        </CardContent>
+                            </div>                        </CardContent>
                       </Card>
                     );
                   })}
@@ -1074,12 +1073,6 @@ export default function NavadhitiProjectsPage() {
                                   </Badge>
                                 </div>
                               </div>
-                            )}
-
-                            {project.description && (
-                              <p className="text-sm text-gray-600 line-clamp-2">
-                                {project.description}
-                              </p>
                             )}
 
                             <div className="flex items-center justify-between pt-2">
