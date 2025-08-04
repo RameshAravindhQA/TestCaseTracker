@@ -81,7 +81,7 @@ export default function NavadhitiProjectsPage() {
   const [exportingPDF, setExportingPDF] = useState(false);
   const [statusUpdateProject, setStatusUpdateProject] = useState<NavadhitiProject | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [viewMode, setViewMode] = useState<'card' | 'list' | 'table'>('card');
+  const [viewMode, setViewMode<'card' | 'list' | 'table'>('card');
 
   // Resource Allocation Filters
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
@@ -799,8 +799,9 @@ export default function NavadhitiProjectsPage() {
                                 )}
                               </div>
                             </div>
-                        </CardContent>
-                      </Card>
+                        </CardContent```text
+
+                        </Card>
                     );
                   })}
                 </div>
@@ -970,62 +971,59 @@ export default function NavadhitiProjectsPage() {
                       );
 
                       return (
+                        <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
+                          <CardHeader className="relative p-6">
+                            <div className="flex items-center justify-center mb-4">
+                              <div className="relative">
+                                {project.projectImage ? (
+                                  <img 
+                                    src={project.projectImage} 
+                                    alt={`${project.projectName} logo`}
+                                    className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                                  />
+                                ) : (
+                                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center border-4 border-white shadow-lg">
+                                    <span className="text-white text-2xl font-bold">
+                                      {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="absolute -top-2 -right-2">
+                                  <Badge 
+                                    variant={project.status === 'Active' ? 'default' : 'secondary'}
+                                    className={`${
+                                      project.status === 'Active' 
+                                        ? 'bg-green-500 hover:bg-green-600' 
+                                        : project.status === 'Completed'
+                                        ? 'bg-blue-500 hover:bg-blue-600'
+                                        : project.status === 'On Hold'
+                                        ? 'bg-yellow-500 hover:bg-yellow-600'
+                                        : 'bg-red-500 hover:bg-red-600'
+                                    } text-white text-xs`}
+                                  >
+                                    {project.status}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
 
-              <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
-              <CardHeader className="relative p-6">
-                <div className="flex items-center justify-center mb-4">
-                  <div className="relative">
-                    {project.projectImage ? (
-                      <img 
-                        src={project.projectImage} 
-                        alt={`${project.projectName} logo`}
-                        className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-                      />
-                    ) : (
-                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center border-4 border-white shadow-lg">
-                        <span className="text-white text-2xl font-bold">
-                          {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
-                        </span>
-                      </div>
-                    )}
-                    <div className="absolute -top-2 -right-2">
-                      <Badge 
-                        variant={project.status === 'Active' ? 'default' : 'secondary'}
-                        className={`${
-                          project.status === 'Active' 
-                            ? 'bg-green-500 hover:bg-green-600' 
-                            : project.status === 'Completed'
-                            ? 'bg-blue-500 hover:bg-blue-600'
-                            : project.status === 'On Hold'
-                            ? 'bg-yellow-500 hover:bg-yellow-600'
-                            : 'bg-red-500 hover:bg-red-600'
-                        } text-white text-xs`}
-                      >
-                        {project.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
+                            <div className="space-y-2">
+                              <div>
+                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Project Name</Label>
+                                <CardTitle className="text-lg font-semibold line-clamp-1 mt-1">
+                                  {project.projectName}
+                                </CardTitle>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</Label>
+                                <CardDescription className="mt-1 font-medium">
+                                  {project.clientName}
+                                </CardDescription>
+                              </div>
+                            </div>
+                          </CardHeader>
 
-
-
-                <div className="space-y-2">
-                  <div>
-                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Project Name</Label>
-                    <CardTitle className="text-lg font-semibold line-clamp-1 mt-1">
-                      {project.projectName}
-                    </CardTitle>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</Label>
-                    <CardDescription className="mt-1 font-medium">
-                      {project.clientName}
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-3">
+                          <CardContent className="space-y-3">
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <Calendar className="h-4 w-4" />
                               <span>
