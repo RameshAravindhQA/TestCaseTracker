@@ -81,7 +81,7 @@ export default function NavadhitiProjectsPage() {
   const [exportingPDF, setExportingPDF] = useState(false);
   const [statusUpdateProject, setStatusUpdateProject] = useState<NavadhitiProject | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [viewMode, setViewMode<'card' | 'list' | 'table'>('card');
+  const [viewMode, setViewMode] = useState<'card' | 'list' | 'table'>('card');
 
   // Resource Allocation Filters
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
