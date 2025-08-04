@@ -710,7 +710,7 @@ export default function NavadhitiProjectsPage() {
                                     size="sm"
                                     variant="outline"
                                     className="flex-1 text-xs h-7"
-                                    onClick={()={() => {
+                                    onClick={() => {
                                       setSelectedEmployees([employee.id]);
                                       setIsAllocationDialogOpen(true);
                                     }}
@@ -738,7 +738,7 @@ export default function NavadhitiProjectsPage() {
                                       size="sm"
                                       variant="outline"
                                       className="flex-1 text-xs h-7"
-                                      onClick={()={() => {
+                                      onClick={() => {
                                         setSelectedEmployees([employee.id]);
                                         setIsAllocationDialogOpen(true);
                                       }}
@@ -793,7 +793,7 @@ export default function NavadhitiProjectsPage() {
                     <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle>
-                          {editingProject ? "Edit Project" : "Create New Project"}
+                          {editingProject ?"Edit Project" : "Create New Project"}
                         </DialogTitle>
                       </DialogHeader>
                       <NavadhitiProjectForm
@@ -931,7 +931,7 @@ export default function NavadhitiProjectsPage() {
                   </div>
                 </div>
 
-              
+
 
                 <div className="space-y-2">
                   <div>
