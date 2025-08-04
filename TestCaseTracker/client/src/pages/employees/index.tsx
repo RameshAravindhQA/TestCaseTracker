@@ -30,6 +30,9 @@ export default function EmployeesPage() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ["/api/employees"],
@@ -346,12 +349,42 @@ export default function EmployeesPage() {
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    handleFileImport(event);
+    const file = event.target.files?.[0];
+    setSelectedFile(file);
   };
 
-  const handleImport = () => {
-    if (fileInputRef.current?.files?.[0]) {
-      handleFileImport({ target: { files: fileInputRef.current.files } } as any);
+  const handleImport = async () => {
+    if (!selectedFile) return;
+
+    setIsImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch('/api/employees/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Import successful",
+          description: "Employees have been imported successfully.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
+        setIsImportDialogOpen(false);
+      } else {
+        throw new Error('Import failed');
+      }
+    } catch (error) {
+      toast({
+        title: "Import failed",
+        description: "An error occurred while importing employees.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+      setSelectedFile(null);
     }
   };
 
@@ -371,99 +404,99 @@ export default function EmployeesPage() {
             </div>
           </div>
           <div className="flex gap-2">
-                    <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline">
-                          <Upload className="h-4 w-4 mr-2" />
-                          Import
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Import Employees</DialogTitle>
-                          <DialogDescription>
-                            Upload a CSV or Excel file with employee data. Download the template to see the required format.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="flex gap-2">
-                            <Button variant="outline" onClick={downloadCSVTemplate}>
-                              <Download className="h-4 w-4 mr-2" />
-                              Download Template
-                            </Button>
-                          </div>
-                          <div>
-                            <Label htmlFor="file-upload">Select File (CSV, Excel)</Label>
-                            <Input
-                              id="file-upload"
-                              type="file"
-                              ref={fileInputRef}
-                              accept=".csv,.xlsx,.xls"
-                              onChange={handleFileImport}
-                              className="mt-1"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex justify-end gap-2 mt-6">
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setIsImportDialogOpen(false);
-                              if (fileInputRef.current) {
-                                fileInputRef.current.value = '';
-                              }
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            onClick={handleImport}
-                            disabled={!fileInputRef.current?.files?.[0]}
-                          >
-                            Import Employees
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-
-                    <Button
-                      variant="outline"
-                      onClick={exportToCSV}
-                      disabled={isExporting || !employees?.length}
-                    >
+            <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Import Employees</DialogTitle>
+                  <DialogDescription>
+                    Upload a CSV or Excel file with employee data. Download the template to see the required format.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={downloadCSVTemplate}>
                       <Download className="h-4 w-4 mr-2" />
-                      Export CSV
+                      Download Template
                     </Button>
-
-                    <Button
-                      variant="outline"
-                      onClick={exportToPDF}
-                      disabled={isExporting || !employees?.length}
-                    >
-                      <FileType className="h-4 w-4 mr-2" />
-                      Export PDF
-                    </Button>
-
-                    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                      <DialogTrigger asChild>
-                        <Button>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Employee
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>
-                            {editingEmployee ? "Edit Employee" : "Add New Employee"}
-                          </DialogTitle>
-                        </DialogHeader>
-                        <EmployeeForm
-                          employee={editingEmployee}
-                          onSuccess={handleFormSuccess}
-                        />
-                      </DialogContent>
-                    </Dialog>
                   </div>
+                  <div>
+                    <Label htmlFor="file-upload">Select File (CSV, Excel)</Label>
+                    <Input
+                      id="file-upload"
+                      type="file"
+                      ref={fileInputRef}
+                      accept=".csv,.xlsx,.xls"
+                      onChange={handleFileImport}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsImportDialogOpen(false);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleImport}
+                    disabled={!fileInputRef.current?.files?.[0]}
+                  >
+                    Import Employees
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              variant="outline"
+              onClick={exportToCSV}
+              disabled={isExporting || !employees?.length}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={exportToPDF}
+              disabled={isExporting || !employees?.length}
+            >
+              <FileType className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+
+            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Employee
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingEmployee ? "Edit Employee" : "Add New Employee"}
+                  </DialogTitle>
+                </DialogHeader>
+                <EmployeeForm
+                  employee={editingEmployee}
+                  onSuccess={handleFormSuccess}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
 
         </div>
 

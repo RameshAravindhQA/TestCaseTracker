@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,9 +41,10 @@ type NavadhitiProjectFormValues = z.infer<typeof navadhitiProjectSchema>;
 interface NavadhitiProjectFormProps {
   project?: any;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFormProps) {
+export function NavadhitiProjectForm({ project, onSuccess, onCancel }: NavadhitiProjectFormProps) {
   const { toast } = useToast();
   const isEditing = !!project;
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>(project?.assignedEmployees || []);
@@ -218,7 +218,7 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
 
   const handleImageUpload = async (file: File) => {
     setUploading(true);
-    
+
     try {
       const formData = new FormData();
       formData.append('file', file, file.name);
@@ -234,12 +234,12 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
       }
 
       const data = await response.json();
-      
+
       if (data.fileUrl) {
         const newUrl = `${data.fileUrl}?t=${Date.now()}`;
         setProjectImageUrl(newUrl);
         form.setValue("projectImage", data.fileUrl);
-        
+
         toast({
           title: "Project image uploaded",
           description: "Project image has been updated successfully.",
@@ -275,7 +275,7 @@ export function NavadhitiProjectForm({ project, onSuccess }: NavadhitiProjectFor
                   {form.watch("projectName")?.charAt(0)?.toUpperCase() || 'P'}
                 </AvatarFallback>
               </Avatar>
-              
+
               <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 <Camera className="h-8 w-8 text-white" />
               </div>

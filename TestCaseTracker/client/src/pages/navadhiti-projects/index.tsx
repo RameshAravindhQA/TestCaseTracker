@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Calendar, Users, Briefcase, Search, Filter, X, ChevronDown, CheckCircle2, Clock, UserCheck, BookOpen, AlertCircle, Send, Download, FileType } from "lucide-react";
+import { Plus, Calendar, Users, Briefcase, Search, Filter, X, ChevronDown, CheckCircle2, Clock, UserCheck, BookOpen, AlertCircle, Send, Download, FileType, Grid3X3, List, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +59,7 @@ export default function NavadhitiProjectsPage() {
   const [exportingPDF, setExportingPDF] = useState(false);
   const [statusUpdateProject, setStatusUpdateProject] = useState<NavadhitiProject | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [viewMode, setViewMode] = useState<'card' | 'list' | 'table'>('card');
 
   // Resource Allocation Filters
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
@@ -539,6 +540,33 @@ export default function NavadhitiProjectsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div className="flex border rounded-md">
+                    <Button
+                      variant={viewMode === 'card' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('card')}
+                      className="rounded-r-none"
+                    >
+                      <Grid3X3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className="rounded-none border-x"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'table' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('table')}
+                      className="rounded-l-none"
+                    >
+                      <Table className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Selection Summary */}
@@ -860,6 +888,33 @@ export default function NavadhitiProjectsPage() {
                         <SelectItem value="Low">Low</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="flex border rounded-md">
+                    <Button
+                      variant={viewMode === 'card' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('card')}
+                      className="rounded-r-none"
+                    >
+                      <Grid3X3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className="rounded-none border-x"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'table' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('table')}
+                      className="rounded-l-none"
+                    >
+                      <Table className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
