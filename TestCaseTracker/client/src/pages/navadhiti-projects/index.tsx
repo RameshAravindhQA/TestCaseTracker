@@ -800,8 +800,7 @@ export default function NavadhitiProjectsPage() {
                                 )}
                               </div>
                             </div>
-                        </CardContent>```text
-
+                        </CardContent>
                         </Card>
                     );
                   })}
