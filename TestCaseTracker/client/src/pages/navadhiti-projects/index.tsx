@@ -93,6 +93,7 @@ export default function NavadhitiProjectsPage() {
   const [allocationRole, setAllocationRole] = useState("");
   const [allocationStartDate, setAllocationStartDate] = useState("");
   const [allocationEndDate, setAllocationEndDate] = useState("");
+  const [resourceViewMode, setResourceViewMode] = useState<'card' | 'list' | 'table'>('card');
 
   // Fetch projects
   const { data: projects = [], isLoading, refetch } = useQuery({
@@ -565,25 +566,25 @@ export default function NavadhitiProjectsPage() {
 
                   <div className="flex border rounded-md">
                     <Button
-                      variant={viewMode === 'card' ? 'default' : 'ghost'}
+                      variant={resourceViewMode === 'card' ? 'default' : 'ghost'}
                       size="sm"
-                      onClick={() => setViewMode('card')}
+                      onClick={() => setResourceViewMode('card')}
                       className="rounded-r-none"
                     >
                       <Grid3X3 className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      variant={resourceViewMode === 'list' ? 'default' : 'ghost'}
                       size="sm"
-                      onClick={() => setViewMode('list')}
+                      onClick={() => setResourceViewMode('list')}
                       className="rounded-none border-x"
                     >
                       <List className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant={viewMode === 'table' ? 'default' : 'ghost'}
+                      variant={resourceViewMode === 'table' ? 'default' : 'ghost'}
                       size="sm"
-                      onClick={() => setViewMode('table')}
+                      onClick={() => setResourceViewMode('table')}
                       className="rounded-l-none"
                     >
                       <TableIcon className="h-4 w-4" />
