@@ -103,6 +103,7 @@ export function NavadhitiProjectForm({ project, onSuccess, onCancel }: Navadhiti
         ...data,
         assignedEmployees: selectedEmployees,
         technologies: selectedTechnologies,
+        projectImage: projectImageUrl,
       });
       if (!res.ok) throw new Error("Failed to create project");
       return res.json();
@@ -110,10 +111,12 @@ export function NavadhitiProjectForm({ project, onSuccess, onCancel }: Navadhiti
     onSuccess: () => {
       toast({ title: "Project created successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
+      // Reset form and state
       form.reset();
       setSelectedEmployees([]);
       setSelectedTechnologies([]);
       setProjectImageUrl(null);
+      // Close dialog
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
@@ -132,12 +135,15 @@ export function NavadhitiProjectForm({ project, onSuccess, onCancel }: Navadhiti
         ...data,
         assignedEmployees: selectedEmployees,
         technologies: selectedTechnologies,
+        projectImage: projectImageUrl,
       });
+      if (!res.ok) throw new Error("Failed to update project");
       return res.json();
     },
     onSuccess: () => {
       toast({ title: "Project updated successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
+      // Close dialog
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
@@ -541,6 +547,15 @@ export function NavadhitiProjectForm({ project, onSuccess, onCancel }: Navadhiti
           </div>
 
           <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (onCancel) onCancel();
+              }}
+            >
+              Cancel
+            </Button>
             <Button
               type="submit"
               disabled={createProjectMutation.isPending || updateProjectMutation.isPending}

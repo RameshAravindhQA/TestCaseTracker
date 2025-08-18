@@ -40,6 +40,13 @@ interface NavadhitiProject {
   completionPercentage: number;
   createdAt: string;
   updatedAt: string;
+  projectImage?: string; // Added for project image
+  currentSprint?: string; // Added for status review
+  currentIssues?: string; // Added for status review
+  weeklyComms?: string; // Added for status review
+  immediateActionItems?: string; // Added for status review
+  supportRequired?: string; // Added for status review
+  additionalRemarks?: string; // Added for status review
 }
 
 function TableIcon(props: any) {
@@ -68,6 +75,8 @@ export default function NavadhitiProjectsPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<NavadhitiProject | null>(null);
+  const [viewingProject, setViewingProject] = useState<NavadhitiProject | null>(null); // For viewing project details
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false); // State for the view dialog
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
@@ -102,8 +111,33 @@ export default function NavadhitiProjectsPage() {
       const res = await apiRequest("GET", "/api/navadhiti-projects");
       if (!res.ok) throw new Error("Failed to fetch projects");
       const data = await res.json();
-      console.log('Fetched projects:', data); // Debug log
-      return data;
+      // FIX: Ensure fetched data adheres to NavadhitiProject interface, handling potential missing fields
+      const formattedData = data.map((project: any) => ({
+        ...project,
+        id: project.id || 0,
+        projectName: project.projectName || 'N/A',
+        clientName: project.clientName || 'N/A',
+        projectType: project.projectType || 'N/A',
+        status: project.status || 'Active',
+        priority: project.priority || 'Medium',
+        startDate: project.startDate || '',
+        endDate: project.endDate || '',
+        description: project.description || '',
+        assignedEmployees: project.assignedEmployees || [],
+        technologies: project.technologies || [],
+        budget: project.budget || 0,
+        completionPercentage: project.completionPercentage || 0,
+        createdAt: project.createdAt || '',
+        updatedAt: project.updatedAt || '',
+        projectImage: project.projectImage || undefined, // Ensure projectImage is handled
+        currentSprint: project.currentSprint || 'N/A',
+        currentIssues: project.currentIssues || 'None',
+        weeklyComms: project.weeklyComms || 'Not Set',
+        immediateActionItems: project.immediateActionItems || 'None',
+        supportRequired: project.supportRequired || 'None',
+        additionalRemarks: project.additionalRemarks || 'None',
+      }));
+      return formattedData;
     },
   });
 
@@ -223,6 +257,7 @@ export default function NavadhitiProjectsPage() {
     onSuccess: () => {
       toast({ title: "Project created successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
+      // FIX: The dialog should close and editingProject should be reset after successful creation.
       setIsDialogOpen(false);
       setEditingProject(null);
     },
@@ -1101,7 +1136,8 @@ export default function NavadhitiProjectsPage() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() => {
-                                        // View project details logic
+                                        setViewingProject(project);
+                                        setIsViewDialogOpen(true);
                                       }}
                                     >
                                       View
@@ -1169,7 +1205,8 @@ export default function NavadhitiProjectsPage() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() => {
-                                        // View project details logic
+                                        setViewingProject(project);
+                                        setIsViewDialogOpen(true);
                                       }}
                                     >
                                       View
@@ -1275,7 +1312,8 @@ export default function NavadhitiProjectsPage() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() => {
-                                        // View project details logic
+                                        setViewingProject(project);
+                                        setIsViewDialogOpen(true);
                                       }}
                                     >
                                       View
@@ -1521,6 +1559,182 @@ export default function NavadhitiProjectsPage() {
             setStatusUpdateProject(null);
           }}
         />
+
+        {/* Project View Dialog */}
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{viewingProject?.projectName || 'Project Details'}</DialogTitle>
+            </DialogHeader>
+            {viewingProject ? (
+              <div className="space-y-6">
+                <div className="flex items-center justify-center">
+                  {viewingProject.projectImage ? (
+                    <img 
+                      src={viewingProject.projectImage} 
+                      alt={`${viewingProject.projectName} logo`}
+                      className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+                    />
+                  ) : (
+                    <div className="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center border-4 border-white shadow-lg">
+                      <span className="text-white text-3xl font-bold">
+                        {viewingProject.projectName?.charAt(0)?.toUpperCase() || 'P'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Project Name</Label>
+                    <p className="font-semibold text-lg mt-1">{viewingProject.projectName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Customer Name</Label>
+                    <p className="font-medium text-lg mt-1">{viewingProject.clientName}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Status</Label>
+                    <p className="mt-1">
+                      <Badge 
+                        variant={viewingProject.status === 'Active' ? 'default' : 'secondary'}
+                        className={`${
+                          viewingProject.status === 'Active' 
+                            ? 'bg-green-500 hover:bg-green-600' 
+                            : viewingProject.status === 'Completed'
+                            ? 'bg-blue-500 hover:bg-blue-600'
+                            : viewingProject.status === 'On Hold'
+                            ? 'bg-yellow-500 hover:bg-yellow-600'
+                            : 'bg-red-500 hover:bg-red-600'
+                        } text-white text-xs`}
+                      >
+                        {viewingProject.status}
+                      </Badge>
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Priority</Label>
+                    <p className="mt-1 font-medium">
+                      <Badge variant="secondary">{viewingProject.priority}</Badge>
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm text-gray-500 uppercase tracking-wide">Description</Label>
+                  <p className="mt-1 text-gray-700">{viewingProject.description || 'No description provided.'}</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Start Date</Label>
+                    <p className="mt-1 text-gray-700">
+                      {viewingProject.startDate ? new Date(viewingProject.startDate).toLocaleDateString() : 'Not set'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">End Date</Label>
+                    <p className="mt-1 text-gray-700">
+                      {viewingProject.endDate ? new Date(viewingProject.endDate).toLocaleDateString() : 'Ongoing'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Technologies</Label>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {viewingProject.technologies && viewingProject.technologies.length > 0 ? (
+                        viewingProject.technologies.map((tech, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {tech}
+                          </Badge>
+                        ))
+                      ) : (
+                        <p className="text-gray-500">None</p>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Team Members</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Users className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-700">{viewingProject.assignedEmployees?.length || 0} members</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Budget</Label>
+                    <p className="mt-1 font-medium text-gray-700">
+                      {viewingProject.budget ? `$${viewingProject.budget.toLocaleString()}` : 'Not set'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Progress</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="w-24 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full" 
+                          style={{ width: `${viewingProject.completionPercentage || 0}%` }}
+                        />
+                      </div>
+                      <span className="text-sm text-gray-700">
+                        {viewingProject.completionPercentage || 0}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional details for Status Review */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Current Sprint</Label>
+                    <p className="mt-1 text-gray-700">{viewingProject.currentSprint || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Current Issues</Label>
+                    <p className="mt-1 text-gray-700">{viewingProject.currentIssues || 'None'}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Weekly Comms</Label>
+                    <p className="mt-1 text-gray-700">{viewingProject.weeklyComms || 'Not Set'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Immediate Action Items</Label>
+                    <p className="mt-1 text-gray-700">{viewingProject.immediateActionItems || 'None'}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1">
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Support Required</Label>
+                    <p className="mt-1 text-gray-700">{viewingProject.supportRequired || 'None'}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1">
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Additional Remarks</Label>
+                    <p className="mt-1 text-gray-700">{viewingProject.additionalRemarks || 'None'}</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p>Loading project details...</p>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );

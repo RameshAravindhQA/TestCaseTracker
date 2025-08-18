@@ -76,9 +76,12 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
     }
   }, [project]);
 
-  const createStatusMutation = useMutation({
+  const updateStatusMutation = useMutation({
     mutationFn: async (statusData: any) => {
-      const res = await apiRequest("PUT", `/api/navadhiti-projects/${project.id}`, statusData);
+      const res = await apiRequest("PUT", `/api/navadhiti-projects/${project.id}`, {
+        ...project,
+        ...statusData
+      });
       if (!res.ok) {
         const errorData = await res.text();
         throw new Error(errorData || "Failed to save status review");
@@ -143,13 +146,7 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
       return;
     }
 
-    const statusData = {
-      projectId: project.id,
-      reviewDate: format(selectedDate, 'yyyy-MM-dd'),
-      ...formData
-    };
-
-    createStatusMutation.mutate(statusData);
+    updateStatusMutation.mutate(formData);
   };
 
   const handleSave = async () => {
@@ -431,9 +428,9 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
             </Button>
             <Button 
               onClick={handleSubmit}
-              disabled={createStatusMutation.isPending}
+              disabled={updateStatusMutation.isPending}
             >
-              {createStatusMutation.isPending ? "Saving..." : "Save Status Review"}
+              {updateStatusMutation.isPending ? "Saving..." : "Save Status Review"}
             </Button>
           </div>
         </div>
