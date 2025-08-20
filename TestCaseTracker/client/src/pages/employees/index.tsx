@@ -391,27 +391,64 @@ export default function EmployeesPage() {
                   Import
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Import Employees</DialogTitle>
-                  <DialogDescription>
-                    Upload a CSV or Excel file with employee data. Download the template to see the required format.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={downloadCSVTemplate}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Template
-                    </Button>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Import Employees</DialogTitle>
+              <DialogDescription className="space-y-2">
+                <p>Upload a CSV file with employee data. Download the template to see the required format.</p>
+                <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-md">
+                  <strong>Required Fields:</strong>
+                  <ul className="list-disc list-inside mt-1">
+                    <li><strong>firstName</strong> - Employee's first name</li>
+                    <li><strong>email</strong> - Valid email address</li>
+                  </ul>
+                  <strong className="mt-2 block">Optional Fields:</strong>
+                  <ul className="list-disc list-inside mt-1 text-xs">
+                    <li>lastName, phoneNumber, department, designation</li>
+                    <li>joiningDate, status, technologies, locality, overallExperience</li>
+                  </ul>
+                  <p className="mt-2 text-xs"><strong>Note:</strong> Multiple column name formats are supported (e.g., firstName, first_name, FirstName, First Name)</p>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Create and download a template CSV
+                  const template = `firstName,lastName,email,phoneNumber,department,designation,joiningDate,status,technologies,locality,overallExperience
+John,Doe,john.doe@company.com,1234567890,Engineering,Software Developer,2024-01-15,Active,"JavaScript,React,Node.js",New York,3 years
+Jane,Smith,jane.smith@company.com,0987654321,Marketing,Marketing Manager,2023-06-01,Active,"Digital Marketing,SEO",Los Angeles,5 years
+Mike,Johnson,mike.johnson@company.com,5551234567,Sales,Sales Executive,2023-12-01,Active,"CRM,Sales Strategy",Chicago,2 years`;
+
+                  const blob = new Blob([template], { type: 'text/csv' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'employee_template.csv';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  window.URL.revokeObjectURL(url);
+
+                  toast({
+                    title: "Template Downloaded",
+                    description: "Use this template as a reference for your CSV file format",
+                  });
+                }}
+                className="w-full"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Template
+              </Button>
                   </div>
                   <div>
-                    <Label htmlFor="file-upload">Select File (CSV, Excel)</Label>
+                    <Label htmlFor="file-upload">Select File (CSV)</Label>
                     <Input
                       id="file-upload"
                       type="file"
                       ref={fileInputRef}
-                      accept=".csv,.xlsx,.xls"
+                      accept=".csv"
                       onChange={handleFileUpload}
                       className="mt-1"
                     />

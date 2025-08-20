@@ -5425,7 +5425,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         console.log("Processing employee import request");
         
         if (!req.file) {
-          return res.status(400).json({ message: "No file uploaded" });
+          return res.status(400).json({ 
+            message: "No file uploaded",
+            imported: 0,
+            failed: 0,
+            total: 0,
+            errors: ["Please select a CSV or Excel file to import"]
+          });
         }
         
         // Read the uploaded file
@@ -5434,69 +5440,165 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         
         let employeeData: any[] = [];
         
-        // Parse CSV or Excel file
+        // Parse CSV or Excel file using dynamic imports
         if (req.file.mimetype === 'text/csv' || req.file.originalname.endsWith('.csv')) {
-          // Parse CSV
-          const Papa = require('papaparse');
-          const parsed = Papa.parse(fileContent, { header: true, skipEmptyLines: true });
-          employeeData = parsed.data;
+          // Parse CSV using papaparse (dynamic import for ES modules)
+          try {
+            const Papa = await import('papaparse');
+            const parsed = Papa.default.parse(fileContent, { header: true, skipEmptyLines: true });
+            employeeData = parsed.data;
+          } catch (importError) {
+            console.error("Failed to import papaparse:", importError);
+            // Fallback: simple CSV parsing
+            const lines = fileContent.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            employeeData = lines.slice(1).filter(line => line.trim()).map(line => {
+              const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+              const obj: any = {};
+              headers.forEach((header, index) => {
+                obj[header] = values[index] || '';
+              });
+              return obj;
+            });
+          }
         } else if (req.file.mimetype.includes('spreadsheet') || req.file.originalname.match(/\.(xlsx|xls)$/)) {
-          // Parse Excel
-          const XLSX = require('xlsx');
-          const workbook = XLSX.read(fileContent, { type: 'string' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          employeeData = XLSX.utils.sheet_to_json(worksheet);
+          return res.status(400).json({ 
+            message: "Excel file support is not available. Please use CSV format instead.",
+            imported: 0,
+            failed: 0,
+            total: 0,
+            errors: ["Please convert your Excel file to CSV format and try again"]
+          });
         } else {
-          return res.status(400).json({ message: "Unsupported file format. Please upload CSV or Excel file." });
+          return res.status(400).json({ 
+            message: "Unsupported file format. Please upload a CSV file.",
+            imported: 0,
+            failed: 0,
+            total: 0,
+            errors: ["Only CSV files are supported for employee import"]
+          });
         }
         
         let imported = 0;
         let failed = 0;
         const errors: string[] = [];
+        const detailedErrors: string[] = [];
         
         // Process each employee record
-        for (const row of employeeData) {
+        for (let index = 0; index < employeeData.length; index++) {
+          const row = employeeData[index];
+          const rowNumber = index + 2; // +2 because index starts at 0 and we skip header row
+          
           try {
-            // Map CSV columns to employee fields
+            // Map CSV columns to employee fields with multiple possible column names
             const employee = {
-              employeeId: row.employeeId || row.employee_id || row.EmployeeId || row.Employee_ID,
-              firstName: row.firstName || row.first_name || row.FirstName || row.First_Name,
-              lastName: row.lastName || row.last_name || row.LastName || row.Last_Name,
-              email: row.email || row.Email,
-              phoneNumber: row.phoneNumber || row.phone_number || row.PhoneNumber || row.Phone_Number || row.phone || row.Phone,
-              department: row.department || row.Department,
-              designation: row.designation || row.Designation || row.position || row.Position,
-              joiningDate: row.joiningDate || row.joining_date || row.JoiningDate || row.Joining_Date,
-              status: row.status || row.Status || "Active",
-              technologies: row.technologies || row.Technologies || row.skills || row.Skills || "",
-              locality: row.locality || row.Locality || row.location || row.Location,
-              overallExperience: row.overallExperience || row.overall_experience || row.OverallExperience || row.Overall_Experience || row.experience || row.Experience,
+              employeeId: row.employeeId || row.employee_id || row.EmployeeId || row.Employee_ID || row['Employee ID'] || row['EmployeeID'],
+              firstName: row.firstName || row.first_name || row.FirstName || row.First_Name || row['First Name'] || row['FirstName'],
+              lastName: row.lastName || row.last_name || row.LastName || row.Last_Name || row['Last Name'] || row['LastName'],
+              email: row.email || row.Email || row.EMAIL || row['Email Address'] || row['email_address'],
+              phoneNumber: row.phoneNumber || row.phone_number || row.PhoneNumber || row.Phone_Number || row.phone || row.Phone || row['Phone Number'] || row['Contact Number'],
+              department: row.department || row.Department || row.DEPARTMENT || row['Department Name'] || row.dept || row.Dept,
+              designation: row.designation || row.Designation || row.DESIGNATION || row.position || row.Position || row['Job Title'] || row['Role'],
+              joiningDate: row.joiningDate || row.joining_date || row.JoiningDate || row.Joining_Date || row['Joining Date'] || row['Date of Joining'] || row.dateOfJoining,
+              status: row.status || row.Status || row.STATUS || "Active",
+              technologies: row.technologies || row.Technologies || row.TECHNOLOGIES || row.skills || row.Skills || row.SKILLS || row['Tech Stack'] || row['Technical Skills'] || "",
+              locality: row.locality || row.Locality || row.LOCALITY || row.location || row.Location || row.LOCATION || row['Work Location'] || row.address || row.Address,
+              overallExperience: row.overallExperience || row.overall_experience || row.OverallExperience || row.Overall_Experience || row.experience || row.Experience || row['Years of Experience'] || row.yearsOfExperience,
               createdById: req.session.userId
             };
             
-            // Validate required fields
-            if (!employee.firstName || !employee.email) {
+            // Detailed validation with specific field error messages
+            const missingFields: string[] = [];
+            const invalidFields: string[] = [];
+            
+            // Check required fields
+            if (!employee.firstName || employee.firstName.toString().trim() === '') {
+              missingFields.push('firstName (First Name)');
+            }
+            
+            if (!employee.email || employee.email.toString().trim() === '') {
+              missingFields.push('email (Email Address)');
+            } else {
+              // Validate email format
+              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+              if (!emailRegex.test(employee.email.toString().trim())) {
+                invalidFields.push(`email (Invalid email format: ${employee.email})`);
+              }
+            }
+            
+            // Optional field validations with warnings
+            const warnings: string[] = [];
+            
+            if (!employee.lastName || employee.lastName.toString().trim() === '') {
+              warnings.push('lastName (Last Name) is empty');
+            }
+            
+            if (!employee.department || employee.department.toString().trim() === '') {
+              warnings.push('department is empty');
+            }
+            
+            if (!employee.designation || employee.designation.toString().trim() === '') {
+              warnings.push('designation is empty');
+            }
+            
+            // Build error message if validation fails
+            if (missingFields.length > 0 || invalidFields.length > 0) {
               failed++;
-              errors.push(`Row ${imported + failed}: Missing required fields (firstName, email)`);
+              let errorMsg = `Row ${rowNumber}:`;
+              
+              if (missingFields.length > 0) {
+                errorMsg += ` Missing required fields: ${missingFields.join(', ')}.`;
+              }
+              
+              if (invalidFields.length > 0) {
+                errorMsg += ` Invalid fields: ${invalidFields.join(', ')}.`;
+              }
+              
+              if (warnings.length > 0) {
+                errorMsg += ` Warnings: ${warnings.join(', ')}.`;
+              }
+              
+              errors.push(errorMsg);
+              detailedErrors.push(errorMsg);
               continue;
             }
             
             // Process technologies as array if it's a string
             if (typeof employee.technologies === 'string' && employee.technologies) {
-              employee.technologies = employee.technologies.split(',').map((t: string) => t.trim());
+              employee.technologies = employee.technologies.split(',').map((t: string) => t.trim()).filter(t => t.length > 0);
             } else if (!employee.technologies) {
               employee.technologies = [];
+            }
+            
+            // Clean up data
+            if (employee.firstName) employee.firstName = employee.firstName.toString().trim();
+            if (employee.lastName) employee.lastName = employee.lastName.toString().trim();
+            if (employee.email) employee.email = employee.email.toString().trim().toLowerCase();
+            if (employee.phoneNumber) employee.phoneNumber = employee.phoneNumber.toString().trim();
+            if (employee.department) employee.department = employee.department.toString().trim();
+            if (employee.designation) employee.designation = employee.designation.toString().trim();
+            if (employee.locality) employee.locality = employee.locality.toString().trim();
+            
+            // Generate employeeId if not provided
+            if (!employee.employeeId || employee.employeeId.toString().trim() === '') {
+              employee.employeeId = `EMP${Date.now()}${Math.floor(Math.random() * 1000)}`;
             }
             
             // Create employee
             await storage.createEmployee(employee);
             imported++;
             
+            // Log warnings for successful imports
+            if (warnings.length > 0) {
+              console.log(`Row ${rowNumber} imported with warnings: ${warnings.join(', ')}`);
+            }
+            
           } catch (error: any) {
             failed++;
-            errors.push(`Row ${imported + failed}: ${error.message}`);
-            console.error(`Error importing employee row:`, error);
+            const errorMsg = `Row ${rowNumber}: Failed to create employee - ${error.message}`;
+            errors.push(errorMsg);
+            detailedErrors.push(errorMsg);
+            console.error(`Error importing employee row ${rowNumber}:`, error);
           }
         }
         
@@ -5507,16 +5609,51 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           console.error("Error cleaning up uploaded file:", cleanupError);
         }
         
-        res.json({
+        // Prepare response message
+        let message = `Import completed: ${imported} employees imported successfully`;
+        if (failed > 0) {
+          message += `, ${failed} failed`;
+        }
+        message += ` out of ${employeeData.length} total records.`;
+        
+        if (failed > 0) {
+          message += ` Please check the error details below and fix the data in your CSV file.`;
+        }
+        
+        const response = {
+          message,
           imported,
           failed,
           total: employeeData.length,
-          errors: errors.slice(0, 10) // Limit errors to first 10
-        });
+          errors: errors.slice(0, 20), // Show up to 20 errors
+          success: imported > 0
+        };
+        
+        // Log summary
+        console.log(`Employee import completed: ${imported} successful, ${failed} failed out of ${employeeData.length} total`);
+        
+        res.json(response);
         
       } catch (error: any) {
         console.error("Employee import error:", error);
-        res.status(500).json({ message: "Failed to import employees: " + error.message });
+        
+        // Clean up uploaded file if it exists
+        if (req.file?.path) {
+          try {
+            await fs.promises.unlink(req.file.path);
+          } catch (cleanupError) {
+            console.error("Error cleaning up uploaded file after error:", cleanupError);
+          }
+        }
+        
+        res.status(500).json({ 
+          message: "Failed to import employees due to server error",
+          imported: 0,
+          failed: 0,
+          total: 0,
+          errors: [`Server error: ${error.message}`],
+          success: false
+        });
       }
     }
   );
