@@ -888,7 +888,8 @@ export default function NavadhitiProjectsPage() {
                                 )}
                               </div>
                             </div>
-                        </CardContent>
+                          </CardContent>
+                        </Card>
                       </Card>
                     );
                   })}
