@@ -33,7 +33,6 @@ import {
   Target,
   FileSpreadsheet,
   Briefcase,
-  User,
   ChevronDown,
   ChevronRight,
   BarChart3,
