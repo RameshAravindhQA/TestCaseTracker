@@ -1242,17 +1242,93 @@ export default function NavadhitiProjectsPage() {
                   </div>
                 )}
 
-                {filteredEmployees.length === 0 && resourceViewMode === 'card' && (
-                  <div className="text-center py-12">
-                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                      No employees found
-                    </h3>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      Try adjusting your filters to see more employees.
-                    </p>
-                  </div>
-                )}
+                {/* Employee Allocation Overview */}
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg text-center">Employee Allocation Status</CardTitle>
+                    <CardDescription className="text-center">Overview of employee availability and project assignments</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Employee Status Pie Chart */}
+                      <div className="flex flex-col items-center">
+                        <h4 className="text-md font-medium mb-4 text-center">Employee Status Distribution</h4>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { 
+                                  name: 'Available', 
+                                  value: employeesData.filter((emp: any) => 
+                                    !employeeProjectsData.some((ep: any) => ep.employeeId === emp.id && ep.isActive && ep.status === 'active')
+                                  ).length, 
+                                  color: '#10b981' 
+                                },
+                                { 
+                                  name: 'Occupied', 
+                                  value: employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'active').length, 
+                                  color: '#f59e0b' 
+                                },
+                                { 
+                                  name: 'Learning', 
+                                  value: employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'learning').length, 
+                                  color: '#3b82f6' 
+                                },
+                                { 
+                                  name: 'On Leave', 
+                                  value: employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'leave').length, 
+                                  color: '#6b7280' 
+                                }
+                              ]}
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={80}
+                              dataKey="value"
+                              label={({ name, value }) => `${name}: ${value}`}
+                            >
+                              {[
+                                { color: '#10b981' },
+                                { color: '#f59e0b' },
+                                { color: '#3b82f6' },
+                                { color: '#6b7280' }
+                              ].map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Technology Usage */}
+                      <div className="flex flex-col items-center">
+                        <h4 className="text-md font-medium mb-4 text-center">Technology Usage in Projects</h4>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <BarChart
+                            data={technologyOptions.slice(0, 6).map((tech: any) => ({
+                              technology: tech.name,
+                              projects: projects.filter((p: any) => 
+                                p.technologies && p.technologies.includes(tech.name)
+                              ).length
+                            }))}
+                            margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis 
+                              dataKey="technology"
+                              angle={-45}
+                              textAnchor="end"
+                              height={60}
+                            />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="projects" fill="#8b5cf6" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </CardContent>
             </Card>
           </TabsContent>
@@ -2375,149 +2451,8 @@ export default function NavadhitiProjectsPage() {
                         </ResponsiveContainer>
                       </div>
                     </div>
-                  </Card>
-                )}
-
-                {/* Project Progress Overview */}
-                <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg text-center">Project Progress Overview</CardTitle>
-                    <CardDescription className="text-center">Completion percentage and team size analysis</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={350}>
-                      <AreaChart
-                        data={projects.map((project: any, index) => ({
-                          name: project.projectName?.length > 15 
-                            ? project.projectName.substring(0, 15) + '...' 
-                            : project.projectName || `Project ${index + 1}`,
-                          completion: project.completionPercentage || 0,
-                          teamSize: project.assignedEmployees?.length || 0,
-                          budget: (project.budget || 0) / 1000 // Convert to thousands
-                        }))}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="name" 
-                          angle={-45}
-                          textAnchor="end"
-                          height={100}
-                        />
-                        <YAxis />
-                        <Tooltip 
-                          formatter={(value, name) => {
-                            if (name === 'budget') return [`$${(value * 1000).toLocaleString()}`, 'Budget'];
-                            if (name === 'completion') return [`${value}%`, 'Completion'];
-                            return [value, name];
-                          }}
-                        />
-                        <Legend />
-                        <Area 
-                          type="monotone" 
-                          dataKey="completion" 
-                          stackId="1" 
-                          stroke="#8884d8" 
-                          fill="#8884d8" 
-                          name="Completion %"
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="teamSize" 
-                          stackId="2" 
-                          stroke="#82ca9d" 
-                          fill="#82ca9d" 
-                          name="Team Size"
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="budget" 
-                          stackId="3" 
-                          stroke="#ffc658" 
-                          fill="#ffc658" 
-                          name="Budget (K$)"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
                   </CardContent>
                 </Card>
-
-                {/* Detailed Analytics Table */}
-                <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg text-center">Detailed Project Analytics</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Project</TableHead>
-                            <TableHead>Client</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Team Size</TableHead>
-                            <TableHead>Progress</TableHead>
-                            <TableHead>Technologies</TableHead>
-                            <TableHead>Budget</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {projects.map((project: any) => (
-                            <TableRow key={project.id}>
-                              <TableCell className="font-medium">{project.projectName}</TableCell>
-                              <TableCell>{project.clientName}</TableCell>
-                              <TableCell>
-                                <Badge 
-                                  className={
-                                    project.status === 'Active' ? 'bg-green-100 text-green-800' :
-                                    project.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
-                                    project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-red-100 text-red-800'
-                                  }
-                                >
-                                  {project.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{project.assignedEmployees?.length || 0}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-20 bg-gray-200 rounded-full h-2">
-                                    <div 
-                                      className="bg-blue-600 h-2 rounded-full" 
-                                      style={{ width: `${project.completionPercentage || 0}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-sm">{project.completionPercentage || 0}%</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap gap-1">
-                                  {project.technologies && project.technologies.length > 0 ? (
-                                    project.technologies.slice(0, 2).map((tech: string, index: number) => (
-                                      <Badge key={index} variant="outline" className="text-xs">
-                                        {tech}
-                                      </Badge>
-                                    ))
-                                  ) : (
-                                    <span className="text-gray-400 text-sm">None</span>
-                                  )}
-                                  {project.technologies && project.technologies.length > 2 && (
-                                    <Badge variant="outline" className="text-xs">
-                                      +{project.technologies.length - 2}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                {project.budget ? `$${project.budget.toLocaleString()}` : 'Not set'}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </Card>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
