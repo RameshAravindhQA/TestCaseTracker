@@ -75,8 +75,8 @@ interface NavItem {
 }
 
 // Helper component for sidebar items
-const SidebarItem = ({ icon, label, to, badge }: NavItem & { isActive: boolean }) => {
-  const { location } = useLocation();
+const SidebarItem = ({ icon, label, to, badge }: { icon: React.ReactNode; label: string; to: string; badge?: string }) => {
+  const [location] = useLocation();
   const isActive = location.startsWith(to);
   const { theme } = useColorTheme();
 
