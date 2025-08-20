@@ -36,6 +36,9 @@ import {
   ChevronDown,
   ChevronRight,
   BarChart3,
+  LogOut,
+  Loader2,
+  Play,
 } from "lucide-react";
 import {
   AlertDialog,

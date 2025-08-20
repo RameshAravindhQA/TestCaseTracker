@@ -1,5 +1,8 @@
-// Re-export all types from the main types file to ensure consistency
+// Re-export all types from the main types file
 export * from '../types';
+
+// Specifically export User type to ensure it's available
+export type { User } from '../types';
 
 // This ensures all imports work from both @/types and @/types/index
 
