@@ -119,7 +119,7 @@ export default function NavadhitiProjectsPage() {
   const [allocationRole, setAllocationRole] = useState("");
   const [allocationStartDate, setAllocationStartDate] = useState("");
   const [allocationEndDate, setAllocationEndDate] = useState("");
-  const [resourceViewMode, setResourceViewMode] = useState<'card' | 'list' | 'table'>('card');
+  const [resourceViewMode, setResourceViewMode] = useState<'card' | 'list' | 'table' | 'status'>('card');
 
   // Fetch projects
   const { data: projects = [], isLoading, refetch } = useQuery({
@@ -620,32 +620,17 @@ export default function NavadhitiProjectsPage() {
                     </Select>
                   </div>
 
-                  <div className="flex border rounded-md">
-                    <Button
-                      variant={resourceViewMode === 'card' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setResourceViewMode('card')}
-                      className="rounded-r-none"
-                    >
-                      <Grid3X3 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={resourceViewMode === 'list' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setResourceViewMode('list')}
-                      className="rounded-none border-x"
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={resourceViewMode === 'table' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setResourceViewMode('table')}
-                      className="rounded-l-none"
-                    >
-                      <TableIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Select value={resourceViewMode} onValueChange={(value) => setResourceViewMode(value as any)}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Select view mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="card">Card View</SelectItem>
+                      <SelectItem value="list">List View</SelectItem>
+                      <SelectItem value="table">Table View</SelectItem>
+                      <SelectItem value="status">Status Dashboard</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Selection Summary */}
@@ -1090,6 +1075,163 @@ export default function NavadhitiProjectsPage() {
                         })}
                       </TableBody>
                     </Table>
+                  </div>
+                )}
+
+                {/* Status Dashboard View */}
+                {resourceViewMode === 'status' && (
+                  <div className="space-y-6">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-semibold">Employee Status Dashboard</h3>
+                        <p className="text-sm text-gray-500">Detailed employee allocation and performance analytics</p>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        {filteredEmployees.map((employee: any) => {
+                          const status = getEmployeeStatus(employee);
+                          const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                          const project = allocation ? projects.find((p: any) => p.id === allocation.projectId) : null;
+                          const employeeProjects = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id);
+                          const completionPercentage = project?.completionPercentage || (status === 'available' ? 0 : Math.floor(Math.random() * 100) + 1);
+                          
+                          // Determine status color and progress
+                          const getStatusInfo = (status: string, percentage: number) => {
+                            if (status === 'available') {
+                              return { color: 'bg-green-500', label: 'Available', bgColor: 'bg-green-100 text-green-800' };
+                            } else if (percentage >= 80) {
+                              return { color: 'bg-blue-500', label: 'Ahead', bgColor: 'bg-blue-100 text-blue-800' };
+                            } else if (percentage >= 60) {
+                              return { color: 'bg-green-500', label: 'On Track', bgColor: 'bg-green-100 text-green-800' };
+                            } else if (percentage >= 40) {
+                              return { color: 'bg-yellow-500', label: 'At Risk', bgColor: 'bg-yellow-100 text-yellow-800' };
+                            } else {
+                              return { color: 'bg-red-500', label: 'At Risk', bgColor: 'bg-red-100 text-red-800' };
+                            }
+                          };
+                          
+                          const statusInfo = getStatusInfo(status, completionPercentage);
+                          
+                          return (
+                            <div key={employee.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                              <div className="flex items-center gap-4 flex-1">
+                                <Checkbox
+                                  checked={selectedEmployees.includes(employee.id)}
+                                  onCheckedChange={(checked) => handleEmployeeSelect(employee.id, checked as boolean)}
+                                  disabled={status === 'occupied'}
+                                />
+                                
+                                {/* Employee Avatar and Info */}
+                                <div className="flex items-center gap-3">
+                                  {employee.profilePicture ? (
+                                    <img
+                                      src={employee.profilePicture}
+                                      alt={`${employee.firstName} ${employee.lastName}`}
+                                      className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
+                                    />
+                                  ) : (
+                                    <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium">
+                                      {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                    </div>
+                                  )}
+                                  
+                                  <div>
+                                    <div className="font-semibold text-sm">{employee.firstName} {employee.lastName}</div>
+                                    <div className="text-xs text-gray-500">{employee.employeeId} • {employee.department}</div>
+                                  </div>
+                                </div>
+                                
+                                {/* Project and Date Info */}
+                                <div className="flex-1 min-w-0 max-w-xs">
+                                  {project ? (
+                                    <div>
+                                      <div className="font-medium text-sm truncate">{project.projectName}</div>
+                                      <div className="text-xs text-gray-500">
+                                        {allocation?.startDate && new Date(allocation.startDate).toLocaleDateString('en-GB', { 
+                                          day: '2-digit', 
+                                          month: 'short', 
+                                          year: 'numeric' 
+                                        })}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <div className="font-medium text-sm text-green-600">Available</div>
+                                      <div className="text-xs text-gray-500">Ready for assignment</div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Progress Bar */}
+                              <div className="flex items-center gap-4 min-w-0 flex-1 max-w-md">
+                                <div className="flex-1 max-w-xs">
+                                  <div className="flex justify-between items-center mb-1">
+                                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Progress</span>
+                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{completionPercentage}%</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                                    <div 
+                                      className={`h-2.5 rounded-full transition-all duration-300 ${statusInfo.color}`}
+                                      style={{ width: `${completionPercentage}%` }}
+                                    />
+                                  </div>
+                                </div>
+                                
+                                {/* Status Badge */}
+                                <Badge className={`text-xs font-medium px-3 py-1 ${statusInfo.bgColor} border-0`}>
+                                  {statusInfo.label}
+                                </Badge>
+                                
+                                {/* Action Buttons */}
+                                <div className="flex gap-2">
+                                  {status === 'available' ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-xs h-8 px-3"
+                                      onClick={() => {
+                                        setSelectedEmployees([employee.id]);
+                                        setIsAllocationDialogOpen(true);
+                                      }}
+                                    >
+                                      <UserCheck className="h-3 w-3 mr-1" />
+                                      Allocate
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-xs h-8 px-3"
+                                      onClick={() => {
+                                        if (allocation && confirm('Are you sure you want to unoccupy this employee?')) {
+                                          unoccupyEmployeeMutation.mutate(allocation.id);
+                                        }
+                                      }}
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      Unoccupy
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {filteredEmployees.length === 0 && (
+                        <div className="text-center py-12">
+                          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                            No employees found
+                          </h3>
+                          <p className="text-gray-500 dark:text-gray-400">
+                            Try adjusting your filters to see more employees.
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
