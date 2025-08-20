@@ -866,7 +866,7 @@ export class DatabaseStorage implements IStorage {
     return newSprint;
   }
 
-  async updateSprint(id: number, sprintData: Partial<Sprint>): Promise<Sprint> {
+  async updateSprint(id: number, sprintData: PartialSprint>): Promise<Sprint> {
     const [updatedSprint] = await db.update(sprints)
       .set({ ...sprintData, updatedAt: new Date() })
       .where(eq(sprints.id, id))
