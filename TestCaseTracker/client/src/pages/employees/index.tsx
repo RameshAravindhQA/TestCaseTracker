@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -105,46 +105,24 @@ export default function EmployeesPage() {
     }
   };
 
-  // CSV Import functionality
-  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // Handle file selection (don't auto-import)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
 
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
-    if (fileExtension === 'csv') {
-      Papa.parse(file, {
-        header: true,
-        complete: (results) => {
-          importEmployees(results.data as any[]);
-        },
-        error: (error) => {
-          toast({
-            title: "Import failed",
-            description: `Error parsing CSV: ${error.message}`,
-            variant: "destructive",
-          });
-        }
+    if (fileExtension === 'csv' || fileExtension === 'xlsx' || fileExtension === 'xls') {
+      setSelectedFile(file);
+      toast({
+        title: "File selected",
+        description: `Selected ${file.name}. Click Import to continue.`,
       });
-    } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
-          importEmployees(jsonData as any[]);
-        } catch (error) {
-          toast({
-            title: "Import failed",
-            description: "Error parsing Excel file",
-            variant: "destructive",
-          });
-        }
-      };
-      reader.readAsArrayBuffer(file);
     } else {
+      setSelectedFile(null);
       toast({
         title: "Invalid file format",
         description: "Please select a CSV or Excel file",
@@ -348,11 +326,7 @@ export default function EmployeesPage() {
     }
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    setSelectedFile(file);
-  };
-
+  // Handle file import
   const handleImport = async () => {
     if (!selectedFile) return;
 
@@ -361,30 +335,36 @@ export default function EmployeesPage() {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
+      // Assuming the API endpoint handles parsing and importing
       const response = await fetch('/api/employees/import', {
         method: 'POST',
         body: formData,
       });
 
       if (response.ok) {
+        const result = await response.json();
         toast({
           title: "Import successful",
-          description: "Employees have been imported successfully.",
+          description: `Imported ${result.imported} employees, failed ${result.failed}.`,
         });
         queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
         setIsImportDialogOpen(false);
       } else {
-        throw new Error('Import failed');
+        const errorResult = await response.json();
+        throw new Error(errorResult.message || 'Import failed');
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Import failed",
-        description: "An error occurred while importing employees.",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
       setIsImporting(false);
       setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -432,16 +412,17 @@ export default function EmployeesPage() {
                       type="file"
                       ref={fileInputRef}
                       accept=".csv,.xlsx,.xls"
-                      onChange={handleFileImport}
+                      onChange={handleFileUpload}
                       className="mt-1"
                     />
                   </div>
                 </div>
-                <div className="flex justify-end gap-2 mt-6">
+                <DialogFooter>
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => {
                       setIsImportDialogOpen(false);
+                      setSelectedFile(null);
                       if (fileInputRef.current) {
                         fileInputRef.current.value = '';
                       }
@@ -451,11 +432,11 @@ export default function EmployeesPage() {
                   </Button>
                   <Button
                     onClick={handleImport}
-                    disabled={!fileInputRef.current?.files?.[0]}
+                    disabled={!selectedFile || isImporting}
                   >
-                    Import Employees
+                    {isImporting ? "Importing..." : "Import Employees"}
                   </Button>
-                </div>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
 
@@ -651,5 +632,34 @@ export default function EmployeesPage() {
         )}
       </div>
     </MainLayout>
+  );
+}
+
+// Placeholder for ProjectMappingDialog - replace with actual implementation
+function ProjectMappingDialog({ employee, onClose }: { employee: any; onClose: () => void }) {
+  return (
+    <Dialog open={true} onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Map Projects for {employee.firstName} {employee.lastName}</DialogTitle>
+          <DialogDescription>
+            Assign or unassign projects for this employee.
+          </DialogDescription>
+        </DialogHeader>
+        <Card>
+          <CardHeader>
+            <CardTitle>Assigned Projects</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Project mapping UI would go here */}
+            <p>Project mapping functionality to be implemented.</p>
+          </CardContent>
+        </Card>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Close</Button>
+          {/* Save button for project mapping */}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

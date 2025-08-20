@@ -14,14 +14,14 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { queryClient } from '@/lib/queryClient';
 import MainLayout from '@/components/layout/main-layout';
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  User, 
+import {
+  Users,
+  Search,
+  Filter,
+  Plus,
+  Edit,
+  Trash2,
+  User,
   Calendar,
   MapPin,
   Phone,
@@ -123,7 +123,7 @@ const ResourceAllocationPage: React.FC = () => {
   };
 
   const filteredEmployees = employees.filter((employee: any) => {
-    const matchesSearch = 
+    const matchesSearch =
       employee.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -216,7 +216,7 @@ const ResourceAllocationPage: React.FC = () => {
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
+                    <div
                       className={`h-2 rounded-full ${isOverAllocated ? 'bg-red-500' : 'bg-green-500'}`}
                       style={{ width: `${Math.min(totalAllocation, 100)}%` }}
                     />
@@ -246,9 +246,9 @@ const ResourceAllocationPage: React.FC = () => {
                 )}
 
                 <div className="flex gap-2 pt-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     className="flex-1 text-xs"
                     onClick={() => {
                       setSelectedEmployee(employee);
@@ -317,7 +317,7 @@ const ResourceAllocationPage: React.FC = () => {
                 <td className="p-3">
                   <div className="flex items-center space-x-2">
                     <div className="w-20 bg-gray-200 rounded-full h-2">
-                      <div 
+                      <div
                         className={`h-2 rounded-full ${isOverAllocated ? 'bg-red-500' : 'bg-green-500'}`}
                         style={{ width: `${Math.min(totalAllocation, 100)}%` }}
                       />
@@ -346,8 +346,8 @@ const ResourceAllocationPage: React.FC = () => {
                 </td>
                 <td className="p-3">
                   <div className="flex gap-1">
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="outline"
                       onClick={() => {
                         setSelectedEmployee(employee);
@@ -428,7 +428,7 @@ const ResourceAllocationPage: React.FC = () => {
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
+                        <div
                           className={`h-2 rounded-full ${isOverAllocated ? 'bg-red-500' : 'bg-green-500'}`}
                           style={{ width: `${Math.min(totalAllocation, 100)}%` }}
                         />
@@ -461,8 +461,8 @@ const ResourceAllocationPage: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => {
                       setSelectedEmployee(employee);
@@ -647,7 +647,7 @@ const ProjectAssignmentForm: React.FC<{
   };
 
   const calculateTotalAllocation = (employeeId: number) => {
-    const projects = getEmployeeProjectAllocations(employeeId);
+    const projects = getEmployeeProjectAllocations(employeeId); // This function is defined in the parent scope, assuming it's accessible
     return projects
       .filter((p: any) => p.status !== 'Completed')
       .reduce((total: number, project: any) => total + (project.allocation || 0), 0);

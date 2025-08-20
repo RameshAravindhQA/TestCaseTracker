@@ -12,33 +12,31 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
-  FolderKanban,
-  CheckSquare,
-  BugPlay,
-  FileBarChart,
   FileText,
+  Bug,
+  FolderOpen,
   Users,
   Settings,
-  LogOut,
-  Loader2,
-  Clock,
-  Play,
-  Terminal,
-  Trello,
+  TestTube,
+  BookOpen,
+  MessageSquare,
+  Calendar,
+  ClipboardList,
+  Workflow,
+  GitBranch,
+  BarChart,
+  Upload,
+  Bot,
   Kanban,
-  Monitor,
-  Navigation,
-  RefreshCw,
-  Compass,
-  BoxSelect,
-  FormInput,
-  ListFilter,
-  Star,
-  ExternalLink,
-  ChevronRight,
-  Github,
-  Sparkles,
+  Shield,
+  Calculator,
+  Target,
+  FileSpreadsheet,
   Briefcase,
+  User,
+  ChevronDown,
+  ChevronRight,
+  BarChart3,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -72,6 +70,48 @@ interface NavItem {
   badge?: string;
   children?: NavItem[];
 }
+
+// Helper component for sidebar items
+const SidebarItem = ({ icon, label, to, badge }: NavItem & { isActive: boolean }) => {
+  const { location } = useLocation();
+  const isActive = location.startsWith(to);
+  const { theme } = useColorTheme();
+
+  return (
+    <Link
+      href={to}
+      className={cn(
+        "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-all duration-200",
+        isActive
+          ? "text-white bg-primary shadow-md"
+          : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+      )}
+    >
+      <motion.span
+        className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}
+        whileHover={{ scale: 1.1 }}
+        transition={{ duration: 0.15 }}
+      >
+        {icon}
+      </motion.span>
+      {label}
+      {badge && (
+        <motion.span
+          className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ml-auto"
+          style={{
+            backgroundColor: isActive ? "#ffffff" : theme === "dark" ? "#374151" : "#e5e7eb",
+            color: isActive ? "#111827" : theme === "dark" ? "#d1d5db" : "#1f2937",
+          }}
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          {badge}
+        </motion.span>
+      )}
+    </Link>
+  );
+};
 
 const SidebarComponent = ({ className }: SidebarProps) => {
   const [location] = useLocation();
@@ -132,47 +172,47 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     {
       name: "Projects",
       href: "/projects",
-      icon: <FolderKanban className="h-5 w-5" />,
+      icon: <FolderOpen className="h-5 w-5" />,
     },
     {
       name: "Kanban Board",
       href: "/kanban",
-      icon: <Trello className="h-5 w-5" />,
+      icon: <Kanban className="h-5 w-5" />,
     },
     {
       name: "Test Cases",
       href: "/test-cases",
-      icon: <CheckSquare className="h-5 w-5" />,
+      icon: <TestTube className="h-5 w-5" />,
     },
     {
       name: "AI Generator",
       href: "/ai-generator",
-      icon: <Sparkles className="h-5 w-5" />,
+      icon: <Bot className="h-5 w-5" />,
     },
     {
       name: "Bug Reports",
       href: "/bugs",
-      icon: <BugPlay className="h-5 w-5" />,
+      icon: <Bug className="h-5 w-5" />,
     },
     {
       name: "Messenger",
       href: "/messenger",
-      icon: <Terminal className="h-5 w-5" />,
+      icon: <MessageSquare className="h-5 w-5" />,
     },
     {
       name: "GitHub Integration",
       href: "/github",
-      icon: <Github className="h-5 w-5" />,
+      icon: <GitBranch className="h-5 w-5" />,
     },
     {
       name: "Functional Flow",
       href: "/functional-flow",
-      icon: <BoxSelect className="h-5 w-5" />,
+      icon: <Workflow className="h-5 w-5" />,
     },
     {
       name: "Timesheets",
       href: "/timesheets",
-      icon: <Clock className="h-5 w-5" />,
+      icon: <Calendar className="h-5 w-5" />,
     },
     {
       name: "Documents",
@@ -182,27 +222,27 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     {
       name: "Reports",
       href: "/reports",
-      icon: <FileBarChart className="h-5 w-5" />,
+      icon: <BarChart className="h-5 w-5" />,
     },
     {
       name: "Test Sheets",
       href: "/test-sheets",
-      icon: <FormInput className="h-5 w-5" />,
+      icon: <FileSpreadsheet className="h-5 w-5" />,
     },
     {
       name: "Traceability Matrix",
       href: "/traceability-matrix",
-      icon: <ListFilter className="h-5 w-5" />,
+      icon: <Target className="h-5 w-5" />,
     },
     {
       name: "Notebooks",
       href: "/notebooks",
-      icon: <FileText className="h-5 w-5" />,
+      icon: <BookOpen className="h-5 w-5" />,
     },
     {
       name: "Todo List",
       href: "/todos",
-      icon: <CheckSquare className="h-5 w-5" />,
+      icon: <ClipboardList className="h-5 w-5" />,
     },
     {
       name: "Test Data Generator",
@@ -229,6 +269,12 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       href: "/resource-allocation",
       icon: <Users className="h-5 w-5" />,
     },
+    // Analytics Dashboard added here
+    {
+      name: "Analytics Dashboard",
+      href: "/dashboard/analytics",
+      icon: <BarChart3 className="h-5 w-5" />,
+    },
   ], []);
 
   const adminItems: NavItem[] = useMemo(() => [
@@ -246,8 +292,8 @@ const SidebarComponent = ({ className }: SidebarProps) => {
 
   // Animation variants for sidebar items
   const sidebarItemVariants = {
-    hidden: { 
-      opacity: 0, 
+    hidden: {
+      opacity: 0,
       x: -20,
       scale: 0.95
     },
@@ -264,7 +310,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     hover: {
       x: 5,
       scale: 1.02,
-      transition: { 
+      transition: {
         duration: 0.2,
         ease: "easeInOut"
       }
@@ -290,7 +336,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     {
       name: "My Profile",
       href: "/profile",
-      icon: <Users className="h-5 w-5" />,
+      icon: <User className="h-5 w-5" />,
     },
   ], []);
 
@@ -348,8 +394,8 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     }
 
     try {
-      const avatarData = typeof user.avatarData === 'string' 
-        ? JSON.parse(user.avatarData) 
+      const avatarData = typeof user.avatarData === 'string'
+        ? JSON.parse(user.avatarData)
         : user.avatarData;
 
       return avatarData?.preview || null;
@@ -396,6 +442,12 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Helper function to check permissions
+  const hasPermission = (resource: string, action: string): boolean => {
+    return userPermissions.data?.includes(`${resource}:${action}`) || false;
+  };
+
 
   return (
     <aside
@@ -454,56 +506,27 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       </div>
 
       <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400" ref={sidebarRef}>
-        <motion.div 
+        <motion.div
           className="px-2 py-4 space-y-1"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
-          {useMemo(() => 
-            navItems.map((item, index) => {
-              const isActive = location.startsWith(item.href);
-              return (
-              <div key={item.href}>
-                <motion.div
-                  variants={sidebarItemVariants}
-                  custom={index}
-                  whileHover="hover"
-                  whileTap="tap"
-                >
-                  <Link 
-                    href={item.href}
-                    onClick={() => handleMenuItemClick(item.href)}
-                    className={cn(
-                      "flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md group transition-all duration-200",
-                      isActive
-                        ? "text-white bg-primary shadow-md"
-                        : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
-                    )}
-                  >
-                    <div className="flex items-center">
-                      <motion.span 
-                        className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}
-                        whileHover={{ scale: 1.1 }}
-                        transition={{ duration: 0.15 }}
-                      >
-                        {item.icon}
-                      </motion.span>
-                      {item.name}
-                    </div>
-                    {item.badge && (
-                      <motion.span 
-                        className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: index * 0.05 + 0.3 }}
-                      >
-                        {item.badge}
-                      </motion.span>
-                    )}
-                  </Link>
-                </motion.div>
-
+          {useMemo(() =>
+            navItems.map((item, index) => (
+              <motion.div
+                key={item.href}
+                variants={sidebarItemVariants}
+                custom={index}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                <SidebarItem
+                  icon={item.icon}
+                  label={item.name}
+                  to={item.href}
+                  badge={item.badge}
+                />
                 {/* Render submenu if item has children */}
                 {item.children && item.children.length > 0 && (
                   <div className="pl-9 mt-1 space-y-1">
@@ -526,13 +549,13 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                     ))}
                   </div>
                 )}
-              </div>
-            )}), [navItems, location])}
+              </motion.div>
+            )), [navItems, location])}
         </motion.div>
 
         {/* User account section */}
         <>
-          <motion.div 
+          <motion.div
             className="px-3 py-3"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -543,13 +566,13 @@ const SidebarComponent = ({ className }: SidebarProps) => {
             </h3>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="px-2 space-y-1"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
           >
-            {useMemo(() => 
+            {useMemo(() =>
               userItems.map((item, index) => {
                 const isActive = location.startsWith(item.href);
                 return (
@@ -560,26 +583,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                   whileHover="hover"
                   whileTap="tap"
                 >
-                  <Link 
-                    href={item.href}
-                    ref={isActive ? activeItemRef : null}
-                    onClick={() => handleMenuItemClick(item.href)}
-                    className={cn(
-                      "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-all duration-200",
-                      isActive
-                        ? "text-white bg-primary shadow-md"
-                        : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
-                    )}
-                  >
-                    <motion.span 
-                      className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}
-                      whileHover={{ scale: 1.1 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      {item.icon}
-                    </motion.span>
-                    {item.name}
-                  </Link>
+                  <SidebarItem
+                    icon={item.icon}
+                    label={item.name}
+                    to={item.href}
+                  />
                 </motion.div>
               )}), [userItems, location, navItems.length])}
           </motion.div>
@@ -594,7 +602,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <motion.div 
+              <motion.div
                 className="px-3 py-3"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -605,13 +613,13 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                 </h3>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 className="px-2 space-y-1"
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
               >
-                {useMemo(() => 
+                {useMemo(() =>
                   adminItems.map((item, index) => {
                     const isActive = location.startsWith(item.href);
                     return (
@@ -622,25 +630,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                       whileHover="hover"
                       whileTap="tap"
                     >
-                      <Link 
-                        href={item.href}
-                        onClick={() => handleMenuItemClick(item.href)}
-                        className={cn(
-                          "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-all duration-200",
-                          isActive
-                            ? "text-white bg-primary shadow-md"
-                            : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
-                        )}
-                      >
-                        <motion.span 
-                          className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}
-                          whileHover={{ scale: 1.1 }}
-                          transition={{ duration: 0.15 }}
-                        >
-                          {item.icon}
-                        </motion.span>
-                        {item.name}
-                      </Link>
+                      <SidebarItem
+                        icon={item.icon}
+                        label={item.name}
+                        to={item.href}
+                      />
                     </motion.div>
                   )}), [adminItems, location, navItems.length, userItems.length])}
               </motion.div>
@@ -649,13 +643,13 @@ const SidebarComponent = ({ className }: SidebarProps) => {
         </AnimatePresence>
       </nav>
 
-      <motion.div 
+      <motion.div
         className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-2"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: (navItems.length + userItems.length + (user?.role === "Admin" ? adminItems.length : 0)) * 0.05 + 0.3 }}
       >
-        <motion.div 
+        <motion.div
           className="flex items-center justify-between mb-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

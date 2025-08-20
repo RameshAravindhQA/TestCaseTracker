@@ -47,6 +47,7 @@ import SmoothScroll from '@/components/ui/smooth-scroll';
 import AIGeneratorPage from "@/pages/ai-generator";
 import QAUpdatesPage from "@/pages/qa-updates";
 import ResourceAllocationPage from "./pages/resource-allocation";
+import AnalyticsDashboard from "./pages/dashboard/analytics";
 
 
 // Loading component for Suspense fallback
@@ -123,6 +124,11 @@ function Router() {
 
       {/* Protected routes */}
       <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/dashboard/analytics" element={
+            <ProtectedRoute permissions={[{ resource: 'dashboard', action: 'view' }]}>
+              <AnalyticsDashboard />
+            </ProtectedRoute>
+          } />
       <Route path="/">
         <ProtectedComponent Component={DashboardPage} />
       </Route>
@@ -165,8 +171,11 @@ function Router() {
       <Route path="/navadhiti-projects">
         <ProtectedComponent Component={NavadhitiProjectsPage} />
       </Route>
-      <Route path="/resource-allocation">
-      </Route>
+      <Route path="/resource-allocation" element={
+            <ProtectedRoute permissions={[{ resource: 'resource_allocation', action: 'view' }]}>
+              <ResourceAllocationPage />
+            </ProtectedRoute>
+          } />
       <Route path="/profile">
         <ProtectedComponent Component={ProfilePage} />
       </Route>
