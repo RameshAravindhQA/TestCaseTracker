@@ -1,15 +1,20 @@
-
 // Define all needed types for the application
 
 // User type
 export interface User {
   id: number;
-  name: string;
+  username: string;
   email: string;
-  role: "Tester" | "Developer" | "Admin";
-  verified?: boolean;
-  createdAt: string;
+  name: string;
+  role: string;
+  avatar?: string;
+  profilePicture?: string;
+  permissions?: Permission[];
+  rolePermissions?: RolePermission[];
 }
+
+// Explicit named export for User type
+export type { User };
 
 // Project type
 export interface Project {
@@ -167,38 +172,38 @@ export interface DashboardStats {
   openBugs?: number;
   passRate: number;
   totalDocuments?: number;
-  
+
   testCaseStatusCounts?: {
     passed: number;
     failed: number;
     blocked: number;
     notExecuted: number;
   };
-  
+
   testsByStatus?: {
     label: string;
     value: number;
   }[];
-  
+
   bugSeverityCounts?: {
     low: number;
     medium: number;
     high: number;
     critical: number;
   };
-  
+
   bugsBySeverity?: {
     label: string;
     value: number;
   }[];
-  
+
   bugStatusCounts?: {
     open: number;
     inProgress: number;
     resolved: number;
     closed: number;
   };
-  
+
   recentActivity?: Activity[];
 }
 
