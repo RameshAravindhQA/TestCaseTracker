@@ -44,7 +44,7 @@ interface MainLayoutProps {
   children: ReactNode;
 }
 
-export function MainLayout({ children }: MainLayoutProps) {
+function MainLayout({ children }: MainLayoutProps) {
   const [location, navigate] = useLocation();
   const isMobile = useMobile();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -254,3 +254,6 @@ export function MainLayout({ children }: MainLayoutProps) {
     </div>
   );
 }
+
+export default MainLayout;
+export { MainLayout };
