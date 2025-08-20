@@ -40,6 +40,8 @@ import {
   Area,
   AreaChart
 } from 'recharts';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 
 interface NavadhitiProject {
   id: number;
@@ -103,8 +105,6 @@ export default function NavadhitiProjectsPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [statusReviewData, setStatusReviewData] = useState<any[]>([]);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
-  const [selectedProjectForStatus, setSelectedProjectForStatus] = useState<any>(null);
-  const [exportingPDF, setExportingPDF] = useState(false);
   const [statusUpdateProject, setStatusUpdateProject] = useState<NavadhitiProject | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'list' | 'table'>('card');
@@ -114,8 +114,8 @@ export default function NavadhitiProjectsPage() {
   const [technologyFilter, setTechnologyFilter] = useState<string[]>([]);
   const [statusEmployeeFilter, setStatusEmployeeFilter] = useState<string>("all");
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+  const [selectedProject, setSelectedProject] = useState<any>(null); // State for selected project in allocation dialog
   const [isAllocationDialogOpen, setIsAllocationDialogOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<number | null>(null);
   const [allocationRole, setAllocationRole] = useState("");
   const [allocationStartDate, setAllocationStartDate] = useState("");
   const [allocationEndDate, setAllocationEndDate] = useState("");
@@ -1092,7 +1092,7 @@ export default function NavadhitiProjectsPage() {
                         <h3 className="text-lg font-semibold">Employee Status Dashboard</h3>
                         <p className="text-sm text-gray-500">Detailed employee allocation and performance analytics</p>
                       </div>
-                      
+
                       <div className="space-y-4">
                         {filteredEmployees.map((employee: any) => {
                           const status = getEmployeeStatus(employee);
@@ -1100,7 +1100,7 @@ export default function NavadhitiProjectsPage() {
                           const project = allocation ? projects.find((p: any) => p.id === allocation.projectId) : null;
                           const employeeProjects = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id);
                           const completionPercentage = project?.completionPercentage || (status === 'available' ? 0 : Math.floor(Math.random() * 100) + 1);
-                          
+
                           // Determine status color and progress
                           const getStatusInfo = (status: string, percentage: number) => {
                             if (status === 'available') {
@@ -1115,9 +1115,9 @@ export default function NavadhitiProjectsPage() {
                               return { color: 'bg-red-500', label: 'At Risk', bgColor: 'bg-red-100 text-red-800' };
                             }
                           };
-                          
+
                           const statusInfo = getStatusInfo(status, completionPercentage);
-                          
+
                           return (
                             <div key={employee.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                               <div className="flex items-center gap-4 flex-1">
@@ -1126,7 +1126,7 @@ export default function NavadhitiProjectsPage() {
                                   onCheckedChange={(checked) => handleEmployeeSelect(employee.id, checked as boolean)}
                                   disabled={status === 'occupied'}
                                 />
-                                
+
                                 {/* Employee Avatar and Info */}
                                 <div className="flex items-center gap-3">
                                   {employee.profilePicture ? (
@@ -1140,13 +1140,13 @@ export default function NavadhitiProjectsPage() {
                                       {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
                                     </div>
                                   )}
-                                  
+
                                   <div>
                                     <div className="font-semibold text-sm">{employee.firstName} {employee.lastName}</div>
                                     <div className="text-xs text-gray-500">{employee.employeeId} • {employee.department}</div>
                                   </div>
                                 </div>
-                                
+
                                 {/* Project and Date Info */}
                                 <div className="flex-1 min-w-0 max-w-xs">
                                   {project ? (
@@ -1168,7 +1168,7 @@ export default function NavadhitiProjectsPage() {
                                   )}
                                 </div>
                               </div>
-                              
+
                               {/* Progress Bar */}
                               <div className="flex items-center gap-4 min-w-0 flex-1 max-w-md">
                                 <div className="flex-1 max-w-xs">
@@ -1183,12 +1183,12 @@ export default function NavadhitiProjectsPage() {
                                     />
                                   </div>
                                 </div>
-                                
+
                                 {/* Status Badge */}
                                 <Badge className={`text-xs font-medium px-3 py-1 ${statusInfo.bgColor} border-0`}>
                                   {statusInfo.label}
                                 </Badge>
-                                
+
                                 {/* Action Buttons */}
                                 <div className="flex gap-2">
                                   {status === 'available' ? (
@@ -1225,7 +1225,7 @@ export default function NavadhitiProjectsPage() {
                           );
                         })}
                       </div>
-                      
+
                       {filteredEmployees.length === 0 && (
                         <div className="text-center py-12">
                           <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -1241,7 +1241,7 @@ export default function NavadhitiProjectsPage() {
                   </div>
                 )}
 
-                {filteredEmployees.length === 0 && (
+                {filteredEmployees.length === 0 && resourceViewMode === 'card' && (
                   <div className="text-center py-12">
                     <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
@@ -1256,7 +1256,6 @@ export default function NavadhitiProjectsPage() {
             </Card>
           </TabsContent>
 
-          {/* Projects Tab */}
           <TabsContent value="projects" className="space-y-6">
             <Card>
               <CardHeader>
@@ -1671,22 +1670,22 @@ export default function NavadhitiProjectsPage() {
                                 </TableCell>
                                 <TableCell>{project.assignedEmployees?.length || 0} members</TableCell>
                                 <TableCell>
-                                  {project.technologies && project.technologies.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1">
-                                      {project.technologies.slice(0, 2).map((tech, index) => (
+                                  <div className="flex flex-wrap gap-1">
+                                    {project.technologies && project.technologies.length > 0 ? (
+                                      project.technologies.slice(0, 2).map((tech, index) => (
                                         <Badge key={index} variant="outline" className="text-xs">
                                           {tech}
                                         </Badge>
-                                      ))}
-                                      {project.technologies.length > 2 && (
-                                        <Badge variant="outline" className="text-xs">
-                                          +{project.technologies.length - 2}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className="text-gray-400">None</span>
-                                  )}
+                                      ))
+                                    ) : (
+                                      <span className="text-gray-400">None</span>
+                                    )}
+                                    {project.technologies && project.technologies.length > 2 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{project.technologies.length - 2}
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-2">
@@ -1923,7 +1922,7 @@ export default function NavadhitiProjectsPage() {
                                           </Badge>
                                         );
                                       }
-                                      
+
                                       // Handle predefined status colors
                                       const getSprintStatusBadge = (status: string) => {
                                         switch (status) {
@@ -1953,7 +1952,7 @@ export default function NavadhitiProjectsPage() {
                                             );
                                         }
                                       };
-                                      
+
                                       return getSprintStatusBadge(project.currentSprint);
                                     })()}
                                   </div>
@@ -2175,94 +2174,101 @@ export default function NavadhitiProjectsPage() {
                   <Card>
                     <CardHeader className="pb-4">
                       <CardTitle className="text-lg text-center">Individual Employee Dashboard</CardTitle>
-                      <CardDescription className="text-center">Detailed employee allocation and performance analytics</CardDescription>
+                      <CardDescription className="text-center">Detailed employee allocation and performance analytics with progress indicators</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* Employee Performance Grid - Card Layout like in your screenshot */}
+                      {/* Employee Performance Grid with Enhanced Progress Bars */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {employeesData.filter((employee: any) => {
-                          // Only show employees who have active allocations
-                          return employeeProjectsData.some((ep: any) => ep.employeeId === employee.id && ep.isActive);
-                        }).map((employee: any) => {
-                          const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.isActive);
-                          const project = allocation ? projects.find((p: any) => p.id === allocation.projectId) : null;
-                          const employeeProjects = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id);
-                          
+                        {employeesData.map((employee: any) => {
+                          const allocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                          const totalAllocation = allocations.length * 100; // Assuming 100% per project for now
+                          const occupationPercentage = Math.min(totalAllocation, 100);
+
+                          // Determine color based on occupation percentage
+                          const getOccupationColor = (percentage: number) => {
+                            if (percentage === 0) return { bg: 'bg-gray-200', text: 'text-gray-600', label: 'Available' };
+                            if (percentage <= 10) return { bg: 'bg-red-500', text: 'text-red-600', label: 'Under-utilized' };
+                            if (percentage <= 50) return { bg: 'bg-yellow-500', text: 'text-yellow-600', label: 'Moderate' };
+                            if (percentage <= 80) return { bg: 'bg-orange-500', text: 'text-orange-600', label: 'Good' };
+                            return { bg: 'bg-green-500', text: 'text-green-600', label: 'Fully Occupied' };
+                          };
+
+                          const colorInfo = getOccupationColor(occupationPercentage);
+
                           return (
-                            <Card key={employee.id} className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                              <div className="space-y-3">
-                                {/* Employee Header */}
-                                <div className="flex items-center gap-3">
-                                  {employee.profilePicture ? (
-                                    <img
-                                      src={employee.profilePicture}
-                                      alt={`${employee.firstName} ${employee.lastName}`}
-                                      className="h-12 w-12 rounded-full object-cover border-2 border-gray-200"
-                                    />
-                                  ) : (
-                                    <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm">
-                                      {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                            <Card key={employee.id} className="p-4 hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: colorInfo.bg.replace('bg-', '').includes('gray') ? '#9CA3AF' : colorInfo.bg.includes('red') ? '#EF4444' : colorInfo.bg.includes('yellow') ? '#EAB308' : colorInfo.bg.includes('orange') ? '#F97316' : '#10B981' }}>
+                              <div className="flex items-center space-x-3 mb-3">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarImage src={employee.profilePicture} />
+                                  <AvatarFallback>{employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-sm">{employee.firstName} {employee.lastName}</h4>
+                                  <p className="text-xs text-gray-500">{employee.department}</p>
+                                </div>
+                              </div>
+
+                              {allocations.length > 0 ? (
+                                <div className="space-y-2">
+                                  {allocations.slice(0, 2).map((allocation: any) => {
+                                    const project = projects.find((p: any) => p.id === allocation.projectId);
+                                    return project ? (
+                                      <div key={allocation.id} className="text-xs">
+                                        <div className="font-medium text-blue-600 truncate">
+                                          {project.projectName}
+                                        </div>
+                                        <div className="text-gray-600">
+                                          Role: {allocation.role || 'N/A'}
+                                        </div>
+                                      </div>
+                                    ) : null;
+                                  })}
+                                  {allocations.length > 2 && (
+                                    <div className="text-xs text-gray-500">
+                                      +{allocations.length - 2} more projects
                                     </div>
                                   )}
-                                  <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-sm">{employee.firstName} {employee.lastName}</h3>
-                                    <p className="text-xs text-gray-500">{employee.employeeId}</p>
-                                  </div>
                                 </div>
-
-                                {/* Department and Status */}
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                  <div>
-                                    <span className="text-gray-500">Department:</span>
-                                    <div className="font-medium text-gray-900 dark:text-gray-100">{employee.department}</div>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-500">Status:</span>
-                                    <div className="font-medium text-green-600">Available</div>
-                                  </div>
+                              ) : (
+                                <div className="text-xs text-gray-500 italic">
+                                  Available for new projects
                                 </div>
+                              )}
 
-                                {/* Total Projects */}
-                                <div className="text-xs">
-                                  <span className="text-gray-500">Total Projects:</span>
-                                  <div className="font-medium text-gray-900 dark:text-gray-100">{employeeProjects.length}</div>
+                              <div className="mt-4 pt-3 border-t">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-xs font-medium">Allocation Status</span>
+                                  <span className={`text-xs font-semibold ${colorInfo.text}`}>
+                                    {occupationPercentage}%
+                                  </span>
                                 </div>
-
-                                {/* Available for new projects message */}
-                                <div className="text-xs">
-                                  <span className="text-gray-500">Available for new projects</span>
+                                <div className="w-full bg-gray-200 rounded-full h-3 mb-1">
+                                  <div 
+                                    className={`${colorInfo.bg} h-3 rounded-full transition-all duration-300`} 
+                                    style={{ width: `${occupationPercentage}%` }}
+                                  ></div>
                                 </div>
-
-                                {/* Skills */}
-                                <div className="text-xs">
-                                  <span className="text-gray-500">Skills:</span>
-                                  <div className="mt-1 flex flex-wrap gap-1">
-                                    {employee.technologies && employee.technologies.length > 0 ? (
-                                      employee.technologies.slice(0, 3).map((tech: string, index: number) => (
-                                        <Badge key={index} variant="secondary" className="text-xs px-2 py-0">
-                                          {tech}
-                                        </Badge>
-                                      ))
-                                    ) : (
-                                      <span className="text-gray-400">None</span>
-                                    )}
-                                    {employee.technologies && employee.technologies.length > 3 && (
-                                      <Badge variant="outline" className="text-xs px-2 py-0">
-                                        +{employee.technologies.length - 3}
-                                      </Badge>
-                                    )}
-                                  </div>
+                                <div className={`text-xs font-medium ${colorInfo.text}`}>
+                                  {colorInfo.label}
                                 </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Active Projects: {allocations.length}
+                                </div>
+                              </div>
 
-                                {/* Current Project Info */}
-                                {project && (
-                                  <div className="text-xs border-t pt-2">
-                                    <span className="text-gray-500">Current:</span>
-                                    <div className="font-medium text-blue-600">{project.projectName}</div>
-                                    <div className="text-gray-500">Since: {allocation?.startDate ? new Date(allocation.startDate).toLocaleDateString() : 'N/A'}</div>
-                                    <div className="text-gray-500">Until: {allocation?.endDate ? new Date(allocation.endDate).toLocaleDateString() : 'Ongoing'}</div>
-                                  </div>
-                                )}
+                              <div className="mt-3 flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 text-xs h-7"
+                                  onClick={() => {
+                                    setSelectedEmployee(employee);
+                                    setIsAllocationDialogOpen(true);
+                                  }}
+                                >
+                                  <UserCheck className="h-3 w-3 mr-1" />
+                                  {allocations.length > 0 ? 'Manage' : 'Allocate'}
+                                </Button>
                               </div>
                             </Card>
                           );
@@ -2270,7 +2276,7 @@ export default function NavadhitiProjectsPage() {
                       </div>
 
                       {employeesData.filter((employee: any) => employeeProjectsData.some((ep: any) => ep.employeeId === employee.id && ep.isActive)).length === 0 && (
-                        <div className="text-center py-8">
+                        <div className="text-center py-12">
                           <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                             No allocated employees found
@@ -2369,8 +2375,8 @@ export default function NavadhitiProjectsPage() {
                         </ResponsiveContainer>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </Card>
+                )}
 
                 {/* Project Progress Overview */}
                 <Card>
@@ -2510,8 +2516,8 @@ export default function NavadhitiProjectsPage() {
                         </TableBody>
                       </Table>
                     </div>
-                  </CardContent>
-                </Card>
+                  </Card>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -2609,7 +2615,7 @@ export default function NavadhitiProjectsPage() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm text-gray-500 uppercase tracking-wide">Technologies</Label>
