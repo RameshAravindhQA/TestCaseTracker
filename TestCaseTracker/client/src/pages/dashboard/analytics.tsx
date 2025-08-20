@@ -33,89 +33,101 @@ import {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 export default function AnalyticsDashboard() {
-  // Fetch employees
+  // Fetch users (instead of employees)
   const { data: employees = [] } = useQuery({
-    queryKey: ["/api/employees"],
+    queryKey: ["/api/users"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/employees");
+      const res = await apiRequest("GET", "/api/users");
       return res.json();
     },
   });
 
-  // Fetch employee projects
-  const { data: employeeProjects = [] } = useQuery({
-    queryKey: ["/api/employee-projects"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/employee-projects");
-      return res.json();
-    },
-  });
-
-  // Fetch all projects
+  // Fetch projects
   const { data: allProjects = [] } = useQuery({
-    queryKey: ["/api/projects/mapping-options"],
+    queryKey: ["/api/projects"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/projects/mapping-options");
+      const res = await apiRequest("GET", "/api/projects");
+      return res.json();
+    },
+  });
+
+  // Fetch test cases for analytics
+  const { data: testCases = [] } = useQuery({
+    queryKey: ["/api/test-cases"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/test-cases");
+      return res.json();
+    },
+  });
+
+  // Fetch bugs for analytics
+  const { data: bugs = [] } = useQuery({
+    queryKey: ["/api/bugs"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/bugs");
       return res.json();
     },
   });
 
   // Calculate statistics
-  const totalEmployees = employees.length;
+  const totalUsers = employees.length;
   const totalProjects = allProjects.length;
   const activeProjects = allProjects.filter((p: any) => p.status === 'Active').length;
+  const totalTestCases = testCases.length;
+  const totalBugs = bugs.length;
   
-  // Department distribution
-  const departmentData = employees.reduce((acc: any, emp: any) => {
-    const dept = emp.department || 'Unknown';
-    acc[dept] = (acc[dept] || 0) + 1;
+  // Role distribution (instead of department)
+  const roleData = employees.reduce((acc: any, user: any) => {
+    const role = user.role || 'Unknown';
+    acc[role] = (acc[role] || 0) + 1;
     return acc;
   }, {});
 
-  const departmentChartData = Object.entries(departmentData).map(([name, value]) => ({
+  const roleChartData = Object.entries(roleData).map(([name, value]) => ({
     name,
     value,
-    percentage: ((value as number) / totalEmployees * 100).toFixed(1)
+    percentage: ((value as number) / totalUsers * 100).toFixed(1)
   }));
 
-  // Employee status distribution
-  const statusData = employees.reduce((acc: any, emp: any) => {
-    const status = emp.status || 'Unknown';
+  // Bug status distribution
+  const bugStatusData = bugs.reduce((acc: any, bug: any) => {
+    const status = bug.status || 'Unknown';
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
 
-  const statusChartData = Object.entries(statusData).map(([name, value]) => ({
+  const statusChartData = Object.entries(bugStatusData).map(([name, value]) => ({
     name,
     value
   }));
 
-  // Project allocation data
-  const projectAllocationData = allProjects.map((project: any) => {
-    const assignedEmployees = employeeProjects.filter(
-      (ep: any) => ep.projectId === project.id && ep.status !== 'Completed'
+  // Project test case distribution
+  const projectTestCaseData = allProjects.map((project: any) => {
+    const projectTestCases = testCases.filter(
+      (tc: any) => tc.projectId === project.id
+    );
+    const projectBugs = bugs.filter(
+      (bug: any) => bug.projectId === project.id
     );
     return {
-      name: project.name.length > 15 ? project.name.substring(0, 15) + '...' : project.name,
-      employees: assignedEmployees.length,
-      totalAllocation: assignedEmployees.reduce((sum: number, ep: any) => sum + (ep.allocation || 0), 0)
+      name: project.name && project.name.length > 15 ? project.name.substring(0, 15) + '...' : project.name || 'Unnamed Project',
+      testCases: projectTestCases.length,
+      bugs: projectBugs.length
     };
   });
 
-  // Employee workload data
-  const employeeWorkloadData = employees.map((employee: any) => {
-    const projects = employeeProjects.filter(
-      (ep: any) => ep.employeeId === employee.id && ep.status !== 'Completed'
-    );
-    const totalAllocation = projects.reduce((sum: number, ep: any) => sum + (ep.allocation || 0), 0);
-    
-    return {
-      name: `${employee.firstName} ${employee.lastName}`,
-      allocation: totalAllocation,
-      projects: projects.length,
-      status: totalAllocation > 100 ? 'Overallocated' : totalAllocation > 80 ? 'High' : 'Normal'
-    };
-  }).sort((a, b) => b.allocation - a.allocation);
+  // Test case status data
+  const testCaseStatusData = testCases.reduce((acc: any, tc: any) => {
+    const status = tc.status || 'Not Tested';
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const testCaseWorkloadData = Object.entries(testCaseStatusData).map(([name, value]) => ({
+    name,
+    value,
+    percentage: totalTestCases > 0 ? ((value as number) / totalTestCases * 100).toFixed(1) : 0
+  })).sort((a, b) => b.value - a.value);
 
   // Monthly joining trend (mock data for demo)
   const monthlyJoiningData = [
@@ -143,13 +155,13 @@ export default function AnalyticsDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalEmployees}</div>
+              <div className="text-2xl font-bold">{totalUsers}</div>
               <p className="text-xs text-muted-foreground">
-                Active workforce
+                Registered users
               </p>
             </CardContent>
           </Card>
@@ -169,32 +181,28 @@ export default function AnalyticsDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Allocation</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Test Cases</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {employeeWorkloadData.length > 0 
-                  ? Math.round(employeeWorkloadData.reduce((sum, emp) => sum + emp.allocation, 0) / employeeWorkloadData.length)
-                  : 0}%
-              </div>
+              <div className="text-2xl font-bold">{totalTestCases}</div>
               <p className="text-xs text-muted-foreground">
-                Average employee allocation
+                Total test cases
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Overallocated</CardTitle>
+              <CardTitle className="text-sm font-medium">Open Bugs</CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-500">
-                {employeeWorkloadData.filter(emp => emp.allocation > 100).length}
+                {bugs.filter((bug: any) => bug.status === 'Open').length}
               </div>
               <p className="text-xs text-muted-foreground">
-                Employees over 100%
+                Out of {totalBugs} total bugs
               </p>
             </CardContent>
           </Card>
@@ -202,16 +210,16 @@ export default function AnalyticsDashboard() {
 
         {/* Charts Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Department Distribution */}
+          {/* Role Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle>Employee Distribution by Department</CardTitle>
+              <CardTitle>User Distribution by Role</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={departmentChartData}
+                    data={roleChartData}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
@@ -220,7 +228,7 @@ export default function AnalyticsDashboard() {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {departmentChartData.map((entry, index) => (
+                    {roleChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -230,10 +238,10 @@ export default function AnalyticsDashboard() {
             </CardContent>
           </Card>
 
-          {/* Employee Status */}
+          {/* Bug Status Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle>Employee Status Distribution</CardTitle>
+              <CardTitle>Bug Status Distribution</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -251,62 +259,69 @@ export default function AnalyticsDashboard() {
 
         {/* Charts Row 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Project Allocation */}
+          {/* Project Test Case Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle>Project Resource Allocation</CardTitle>
+              <CardTitle>Project Test Case & Bug Distribution</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={projectAllocationData}>
+                <BarChart data={projectTestCaseData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="employees" fill="#82CA9D" name="Employees" />
-                  <Bar dataKey="totalAllocation" fill="#8884D8" name="Total Allocation %" />
+                  <Bar dataKey="testCases" fill="#82CA9D" name="Test Cases" />
+                  <Bar dataKey="bugs" fill="#FF8042" name="Bugs" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Monthly Joining Trend */}
+          {/* Test Case Status Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle>Monthly Joining Trend</CardTitle>
+              <CardTitle>Test Case Status Distribution</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyJoiningData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
+                <PieChart>
+                  <Pie
+                    data={testCaseWorkloadData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percentage }) => `${name}: ${percentage}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {testCaseWorkloadData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
                   <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="employees" stroke="#8884d8" strokeWidth={2} />
-                </LineChart>
+                </PieChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         </div>
 
-        {/* Employee Workload Chart */}
+        {/* Project Overview Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Individual Employee Workload</CardTitle>
+            <CardTitle>Project Test Coverage Overview</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={employeeWorkloadData.slice(0, 10)} layout="horizontal">
+              <BarChart data={projectTestCaseData.slice(0, 10)}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={150} />
+                <XAxis dataKey="name" />
+                <YAxis />
                 <Tooltip />
-                <Bar 
-                  dataKey="allocation" 
-                  fill={(entry: any) => entry.allocation > 100 ? '#FF6B6B' : entry.allocation > 80 ? '#FFD93D' : '#6BCF7F'}
-                  name="Allocation %"
-                />
+                <Legend />
+                <Bar dataKey="testCases" fill="#6BCF7F" name="Test Cases" />
+                <Bar dataKey="bugs" fill="#FF6B6B" name="Bugs" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
