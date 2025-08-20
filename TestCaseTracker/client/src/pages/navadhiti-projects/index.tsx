@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Calendar, Users, Briefcase, Search, Filter, X, ChevronDown, CheckCircle2, Clock, UserCheck, BookOpen, AlertCircle, Send, Download, FileType, Grid3X3, List } from "lucide-react";
+import { Plus, Calendar, Users, Briefcase, Search, Filter, X, ChevronDown, CheckCircle2, Clock, UserCheck, BookOpen, AlertCircle, Send, Download, FileType, Grid3X3, List, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
