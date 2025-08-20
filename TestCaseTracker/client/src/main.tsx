@@ -31,12 +31,20 @@ import('./lib/globalSoundHandler.js').then(() => {
   console.log('🔊 Global sound handler loaded');
 });
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </QueryClientProvider>
-  </React.StrictMode>
-);
+console.log("🚀 App starting up...");
+
+const root = document.getElementById('root');
+if (!root) {
+  console.error("❌ Root element not found");
+} else {
+  console.log("✅ Root element found, mounting app");
+  ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </QueryClientProvider>
+    </React.StrictMode>,
+  );
+}
