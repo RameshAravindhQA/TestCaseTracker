@@ -6,7 +6,7 @@ import { loginPageVariants, loginHeaderVariants, logoVariants } from "@/lib/anim
 
 export default function LoginPage() {
   console.log("🔄 Rendering LoginPage");
-  
+
   try {
     return (
       <motion.div
