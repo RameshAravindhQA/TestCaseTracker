@@ -7,7 +7,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { logout } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { User } from "@/types";
+import type { User } from "@/types";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -39,6 +39,7 @@ import {
   LogOut,
   Loader2,
   Play,
+  User,
 } from "lucide-react";
 import {
   AlertDialog,
