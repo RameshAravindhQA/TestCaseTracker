@@ -146,7 +146,22 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
       return;
     }
 
-    updateStatusMutation.mutate(formData);
+    // Map form data to project fields
+    const updateData = {
+      ...project,
+      projectLead: formData.projectLead,
+      overallProjectStatus: formData.overallProjectStatus,
+      currentSprint: formData.currentSprintStatus,
+      weeklyComms: formData.weeklyComms,
+      currentIssues: formData.currentIssues,
+      immediateActionItems: formData.immediateActionItems,
+      supportRequired: formData.supportRequired,
+      additionalRemarks: formData.additionalRemarks,
+      notes: formData.notes,
+      updatedAt: new Date().toISOString()
+    };
+
+    updateStatusMutation.mutate(updateData);
   };
 
   const handleSave = async () => {
@@ -154,39 +169,20 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/navadhiti-projects/${project.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...project,
-          overallProjectStatus: formData.overallProjectStatus,
-          currentSprint: formData.currentSprintStatus,
-          weeklyComms: formData.weeklyComms,
-          currentIssues: formData.currentIssues,
-          immediateActionItems: formData.immediateActionItems,
-          supportRequired: formData.supportRequired,
-          additionalRemarks: formData.additionalRemarks,
-          projectLead: formData.projectLead
-        }),
+      // Use the mutation for consistency with the rest of the app
+      await updateStatusMutation.mutateAsync({
+        ...project,
+        overallProjectStatus: formData.overallProjectStatus,
+        currentSprint: formData.currentSprintStatus,
+        weeklyComms: formData.weeklyComms,
+        currentIssues: formData.currentIssues,
+        immediateActionItems: formData.immediateActionItems,
+        supportRequired: formData.supportRequired,
+        additionalRemarks: formData.additionalRemarks,
+        projectLead: formData.projectLead
       });
-
-      if (response.ok) {
-        toast({
-          title: "Status review saved",
-          description: "Project status has been updated successfully.",
-        });
-        onClose();
-      } else {
-        throw new Error('Failed to save status review');
-      }
     } catch (error) {
-      toast({
-        title: "Save failed",
-        description: "Failed to save status review. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Status review save error:', error);
     } finally {
       setSaving(false);
     }

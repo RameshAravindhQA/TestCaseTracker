@@ -670,7 +670,7 @@ class MemStorage implements IStorage {
       // Find the highest existing bug number
       const existingBugs = Array.from(this.bugs.values())
         .map(bug => bug.bugId)
-        .filter(id => id && id.match(/^BUG-(\\d+)$/))
+        .filter(id => id && id.match(/^BUG-(\d+)$/))
         .map(id => parseInt(id.replace('BUG-', ''), 10))
         .filter(num => !isNaN(num));
 
@@ -2248,19 +2248,44 @@ class MemStorage implements IStorage {
 
   async updateNavadhitiProject(id: number, data: any): Promise<any | null> {
     const project = this.navadhitiProjects.get(id);
-    if (!project) return null;
+    if (!project) {
+      return null;
+    }
 
     const updatedProject = {
       ...project,
       ...data,
-      // Ensure customer and client name mapping
-      customer: data.clientName || data.customer || project.customer,
-      clientName: data.clientName || data.customer || project.clientName,
-      // Ensure project lead is properly updated
-      projectLead: data.projectLead || data.assignedEmployees?.[0] || project.projectLead,
       updatedAt: new Date().toISOString()
     };
+
+    // Ensure status review fields are properly mapped
+    if (data.overallProjectStatus) {
+      updatedProject.overallProjectStatus = data.overallProjectStatus;
+    }
+    if (data.currentSprint) {
+      updatedProject.currentSprint = data.currentSprint;
+    }
+    if (data.weeklyComms) {
+      updatedProject.weeklyComms = data.weeklyComms;
+    }
+    if (data.currentIssues) {
+      updatedProject.currentIssues = data.currentIssues;
+    }
+    if (data.immediateActionItems) {
+      updatedProject.immediateActionItems = data.immediateActionItems;
+    }
+    if (data.supportRequired) {
+      updatedProject.supportRequired = data.supportRequired;
+    }
+    if (data.additionalRemarks) {
+      updatedProject.additionalRemarks = data.additionalRemarks;
+    }
+    if (data.projectLead) {
+      updatedProject.projectLead = data.projectLead;
+    }
+
     this.navadhitiProjects.set(id, updatedProject);
+    console.log(`Updated Navadhiti project ${id}:`, updatedProject);
     return updatedProject;
   }
 

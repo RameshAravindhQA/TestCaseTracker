@@ -714,8 +714,9 @@ export default function NavadhitiProjectsPage() {
                   </div>
                 )}
 
-                {/* Employee Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {/* Employee Display based on view mode */}
+                {resourceViewMode === 'card' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {filteredEmployees.map((employee: any) => {
                     const status = getEmployeeStatus(employee);
                     const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.isActive);
@@ -787,6 +788,45 @@ export default function NavadhitiProjectsPage() {
                                   <div className="text-gray-600 dark:text-gray-400">
                                     Role: {allocation?.role || 'N/A'}
                                   </div>
+                                  {allocation?.startDate && (
+                                    <div className="text-gray-500 dark:text-gray-500 mt-1">
+                                      Since: {new Date(allocation.startDate).toLocaleDateString()}
+                                    </div>
+                                  )}
+                                  {allocation?.endDate && (
+                                    <div className="text-gray-500 dark:text-gray-500">
+                                      Until: {new Date(allocation.endDate).toLocaleDateString()}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Show all project allocations */}
+                              {employeeProjectsData
+                                .filter((ep: any) => ep.employeeId === employee.id && ep.isActive)
+                                .map((allocation: any, index: number) => {
+                                  const allocatedProject = projects.find((p: any) => p.id === allocation.projectId);
+                                  return allocatedProject ? (
+                                    <div key={index} className="mt-1 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs border border-blue-200 dark:border-blue-800">
+                                      <div className="font-medium text-blue-900 dark:text-blue-100">
+                                        {allocatedProject.projectName}
+                                      </div>
+                                      <div className="text-blue-700 dark:text-blue-300">
+                                        {allocation.role}
+                                      </div>
+                                      <div className="text-blue-600 dark:text-blue-400 text-xs">
+                                        Status: {allocation.status}
+                                      </div>
+                                    </div>
+                                  ) : null;
+                                })}
+
+                              {/* Show if employee has no current allocations */}
+                              {status === 'available' && (
+                                <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs border border-green-200 dark:border-green-800">
+                                  <div className="text-green-700 dark:text-green-300 font-medium">
+                                    Available for new projects
+                                  </div>
                                 </div>
                               )}
 
@@ -841,6 +881,196 @@ export default function NavadhitiProjectsPage() {
                     );
                   })}
                 </div>
+                )}
+
+                {/* List View */}
+                {resourceViewMode === 'list' && (
+                  <div className="space-y-3">
+                    {filteredEmployees.map((employee: any) => {
+                      const status = getEmployeeStatus(employee);
+                      const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                      const project = allocation ? projects.find((p: any) => p.id === allocation.projectId) : null;
+
+                      return (
+                        <Card key={employee.id} className={`p-4 ${selectedEmployees.includes(employee.id) ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <Checkbox
+                                checked={selectedEmployees.includes(employee.id)}
+                                onCheckedChange={(checked) => handleEmployeeSelect(employee.id, checked as boolean)}
+                                disabled={status === 'occupied'}
+                              />
+                              {employee.profilePicture ? (
+                                <img
+                                  src={employee.profilePicture}
+                                  alt={`${employee.firstName} ${employee.lastName}`}
+                                  className="h-12 w-12 rounded-full object-cover border-2 border-gray-200"
+                                />
+                              ) : (
+                                <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium">
+                                  {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                </div>
+                              )}
+                              <div>
+                                <h3 className="font-semibold">{employee.firstName} {employee.lastName}</h3>
+                                <p className="text-sm text-gray-600">{employee.employeeId} • {employee.department}</p>
+                                {project && (
+                                  <p className="text-sm text-blue-600">Current: {project.projectName}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge className={`text-xs ${getStatusColor(status)}`}>
+                                {getStatusLabel(status)}
+                              </Badge>
+                              {status === 'available' ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedEmployees([employee.id]);
+                                    setIsAllocationDialogOpen(true);
+                                  }}
+                                >
+                                  Quick Allocate
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    if (allocation && confirm('Are you sure you want to unoccupy this employee?')) {
+                                      unoccupyEmployeeMutation.mutate(allocation.id);
+                                    }
+                                  }}
+                                >
+                                  Unoccupy
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Table View */}
+                {resourceViewMode === 'table' && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">Select</TableHead>
+                          <TableHead>Employee</TableHead>
+                          <TableHead>Department</TableHead>
+                          <TableHead>Technologies</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Current Project</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredEmployees.map((employee: any) => {
+                          const status = getEmployeeStatus(employee);
+                          const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                          const project = allocation ? projects.find((p: any) => p.id === allocation.projectId) : null;
+
+                          return (
+                            <TableRow key={employee.id} className={selectedEmployees.includes(employee.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}>
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedEmployees.includes(employee.id)}
+                                  onCheckedChange={(checked) => handleEmployeeSelect(employee.id, checked as boolean)}
+                                  disabled={status === 'occupied'}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  {employee.profilePicture ? (
+                                    <img
+                                      src={employee.profilePicture}
+                                      alt={`${employee.firstName} ${employee.lastName}`}
+                                      className="h-8 w-8 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-medium">
+                                      {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                                    <div className="text-sm text-gray-500">{employee.employeeId}</div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>{employee.department}</TableCell>
+                              <TableCell>
+                                {employee.technologies && employee.technologies.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {employee.technologies.slice(0, 2).map((tech: string, index: number) => (
+                                      <Badge key={index} variant="secondary" className="text-xs">
+                                        {tech}
+                                      </Badge>
+                                    ))}
+                                    {employee.technologies.length > 2 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{employee.technologies.length - 2}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400">None</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={`text-xs ${getStatusColor(status)}`}>
+                                  {getStatusLabel(status)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {project ? (
+                                  <div>
+                                    <div className="font-medium">{project.projectName}</div>
+                                    <div className="text-sm text-gray-500">{allocation?.role}</div>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400">Not assigned</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {status === 'available' ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedEmployees([employee.id]);
+                                      setIsAllocationDialogOpen(true);
+                                    }}
+                                  >
+                                    Allocate
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      if (allocation && confirm('Are you sure you want to unoccupy this employee?')) {
+                                        unoccupyEmployeeMutation.mutate(allocation.id);
+                                      }
+                                    }}
+                                  >
+                                    Unoccupy
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
 
                 {filteredEmployees.length === 0 && (
                   <div className="text-center py-12">
