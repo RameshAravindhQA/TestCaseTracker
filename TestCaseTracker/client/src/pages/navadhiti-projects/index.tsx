@@ -1101,7 +1101,13 @@ export default function NavadhitiProjectsPage() {
                   </div>
                   <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+                      <Button 
+                        className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                        onClick={() => {
+                          setEditingProject(null);
+                          setIsDialogOpen(true);
+                        }}
+                      >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Project
                       </Button>

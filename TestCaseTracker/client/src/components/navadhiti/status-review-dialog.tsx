@@ -64,7 +64,7 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
     if (project) {
       setFormData({
         overallProjectStatus: project?.overallProjectStatus || "",
-        currentSprintStatus: project?.currentSprintStatus || "",
+        currentSprintStatus: project?.currentSprint || "",
         weeklyComms: project?.weeklyComms || "",
         notes: project?.notes || "",
         projectLead: project?.projectLead || "",
@@ -78,10 +78,7 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
 
   const updateStatusMutation = useMutation({
     mutationFn: async (statusData: any) => {
-      const res = await apiRequest("PUT", `/api/navadhiti-projects/${project.id}`, {
-        ...project,
-        ...statusData
-      });
+      const res = await apiRequest("PUT", `/api/navadhiti-projects/${project.id}`, statusData);
       if (!res.ok) {
         const errorData = await res.text();
         throw new Error(errorData || "Failed to save status review");
@@ -146,7 +143,7 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
       return;
     }
 
-    // Map form data to project fields
+    // Map form data to project fields with correct property names
     const updateData = {
       ...project,
       projectLead: formData.projectLead,
