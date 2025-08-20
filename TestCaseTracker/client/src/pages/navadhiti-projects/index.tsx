@@ -120,6 +120,8 @@ export default function NavadhitiProjectsPage() {
   const [allocationStartDate, setAllocationStartDate] = useState("");
   const [allocationEndDate, setAllocationEndDate] = useState("");
   const [resourceViewMode, setResourceViewMode] = useState<'card' | 'list' | 'table' | 'status'>('card');
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
   // Fetch projects
   const { data: projects = [], isLoading, refetch } = useQuery({
@@ -857,14 +859,18 @@ export default function NavadhitiProjectsPage() {
                                       variant="outline"
                                       className="flex-1 text-xs h-7"
                                       onClick={() => {
-                                        if (allocation && confirm('Are you sure you want to unoccupy this employee?')) {
-                                          // Call mutation to unoccupy employee
+                                        const employeeAllocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                                        if (employeeAllocations.length > 1) {
+                                          // Show dialog to select which project to unoccupy
+                                          setSelectedEmployee(employee);
+                                          setIsAllocationDialogOpen(true);
+                                        } else if (allocation && confirm('Are you sure you want to unoccupy this employee?')) {
                                           unoccupyEmployeeMutation.mutate(allocation.id);
                                         }
                                       }}
                                     >
                                       <X className="h-3 w-3 mr-1" />
-                                      Unoccupy
+                                      {employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive).length > 1 ? 'Manage' : 'Unoccupy'}
                                     </Button>
                                     <Button
                                       size="sm"
@@ -1904,57 +1910,68 @@ export default function NavadhitiProjectsPage() {
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  {(() => {
-                                    // Handle custom status display
-                                    if (project.currentSprint?.startsWith('custom_')) {
-                                      return (
-                                        <Badge 
-                                          variant="outline"
-                                          className="bg-blue-50 text-blue-800 border-blue-200"
-                                        >
-                                          Custom Status
-                                        </Badge>
-                                      );
-                                    }
-                                    
-                                    // Handle predefined status colors
-                                    const getSprintStatusBadge = (status: string) => {
-                                      switch (status) {
-                                        case 'green':
-                                          return (
-                                            <Badge className="bg-green-500 text-white border-green-600">
-                                              On Track
-                                            </Badge>
-                                          );
-                                        case 'amber':
-                                          return (
-                                            <Badge className="bg-amber-500 text-white border-amber-600">
-                                              At Risk
-                                            </Badge>
-                                          );
-                                        case 'red':
-                                          return (
-                                            <Badge className="bg-red-500 text-white border-red-600">
-                                              Blocked
-                                            </Badge>
-                                          );
-                                        default:
-                                          return (
-                                            <Badge variant="outline">
-                                              {status || 'Not Set'}
-                                            </Badge>
-                                          );
+                                  <div className="flex flex-col gap-1">
+                                    {(() => {
+                                      // Handle custom status display
+                                      if (project.currentSprint?.startsWith('custom_')) {
+                                        return (
+                                          <Badge 
+                                            variant="outline"
+                                            className="bg-blue-50 text-blue-800 border-blue-200"
+                                          >
+                                            Custom Status
+                                          </Badge>
+                                        );
                                       }
-                                    };
-                                    
-                                    return getSprintStatusBadge(project.currentSprint);
-                                  })()}
+                                      
+                                      // Handle predefined status colors
+                                      const getSprintStatusBadge = (status: string) => {
+                                        switch (status) {
+                                          case 'green':
+                                            return (
+                                              <Badge className="bg-green-500 text-white border-green-600">
+                                                On Track
+                                              </Badge>
+                                            );
+                                          case 'amber':
+                                            return (
+                                              <Badge className="bg-amber-500 text-white border-amber-600">
+                                                At Risk
+                                              </Badge>
+                                            );
+                                          case 'red':
+                                            return (
+                                              <Badge className="bg-red-500 text-white border-red-600">
+                                                Blocked
+                                              </Badge>
+                                            );
+                                          default:
+                                            return (
+                                              <Badge variant="outline">
+                                                {status || 'Not Set'}
+                                              </Badge>
+                                            );
+                                        }
+                                      };
+                                      
+                                      return getSprintStatusBadge(project.currentSprint);
+                                    })()}
+                                  </div>
                                 </TableCell>
                                 <TableCell className="max-w-32 truncate">
                                   {project.currentIssues || 'None'}
                                 </TableCell>
-                                <TableCell className="max-w-32 truncate">
-                                  {project.weeklyComms || 'Not Set'}
+                                <TableCell>
+                                  <div className="flex flex-col gap-1">
+                                    <Badge className={`${
+                                      project.weeklyComms === 'At Risk' ? 'bg-amber-500 text-white' :
+                                      project.weeklyComms === 'On Track' ? 'bg-green-500 text-white' :
+                                      project.weeklyComms === 'Blocked' ? 'bg-red-500 text-white' :
+                                      'bg-gray-500 text-white'
+                                    }`}>
+                                      {project.weeklyComms || 'Not Set'}
+                                    </Badge>
+                                  </div>
                                 </TableCell>
                                 <TableCell className="max-w-32 truncate">
                                   {project.immediateActionItems || 'None'}
@@ -1994,13 +2011,29 @@ export default function NavadhitiProjectsPage() {
           <TabsContent value="dashboardAnalytics" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Dashboard Analytics
-                </CardTitle>
-                <CardDescription>
-                  Comprehensive analytics and insights for Navadhiti projects
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="h-5 w-5" />
+                      Dashboard Analytics
+                    </CardTitle>
+                    <CardDescription>
+                      Comprehensive analytics and insights for Navadhiti projects
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Label htmlFor="analytics-view" className="text-sm font-medium">View by:</Label>
+                    <Select value={viewMode === 'projects' ? 'projects' : 'employees'} onValueChange={(value) => setViewMode(value as any)}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Select view type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="projects">Projects</SelectItem>
+                        <SelectItem value="employees">Employees</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-8">
                 {/* Summary Cards */}
@@ -2137,121 +2170,119 @@ export default function NavadhitiProjectsPage() {
                   </Card>
                 </div>
 
-                {/* Individual Employee Dashboard */}
-                <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg text-center">Individual Employee Dashboard</CardTitle>
-                    <CardDescription className="text-center">Detailed employee allocation and performance analytics</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Employee Performance Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {employeesData.map((employee: any) => {
-                        const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.isActive);
-                        const project = allocation ? projects.find((p: any) => p.id === allocation.projectId) : null;
-                        const employeeProjects = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id);
-                        
-                        return (
-                          <Card key={employee.id} className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-3">
-                                {employee.profilePicture ? (
-                                  <img
-                                    src={employee.profilePicture}
-                                    alt={`${employee.firstName} ${employee.lastName}`}
-                                    className="h-12 w-12 rounded-full object-cover border-2 border-gray-200"
-                                  />
-                                ) : (
-                                  <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium">
-                                    {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
-                                  </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="font-semibold text-sm truncate">{employee.firstName} {employee.lastName}</h3>
-                                  <p className="text-xs text-gray-600">{employee.employeeId}</p>
-                                </div>
-                              </div>
-
-                              <div className="space-y-2">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-xs text-gray-500">Department:</span>
-                                  <Badge variant="outline" className="text-xs">{employee.department}</Badge>
-                                </div>
-
-                                <div className="flex justify-between items-center">
-                                  <span className="text-xs text-gray-500">Status:</span>
-                                  <Badge className={`text-xs ${getStatusColor(getEmployeeStatus(employee))}`}>
-                                    {getStatusLabel(getEmployeeStatus(employee))}
-                                  </Badge>
-                                </div>
-
-                                <div className="flex justify-between items-center">
-                                  <span className="text-xs text-gray-500">Total Projects:</span>
-                                  <span className="text-xs font-medium">{employeeProjects.length}</span>
-                                </div>
-
-                                {project && (
-                                  <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
-                                    <div className="font-medium text-blue-900 dark:text-blue-100">
-                                      Current: {project.projectName}
+                {/* Conditional Dashboard Content */}
+                {viewMode === 'employees' && (
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-lg text-center">Individual Employee Dashboard</CardTitle>
+                      <CardDescription className="text-center">Detailed employee allocation and performance analytics</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Employee Performance Grid - Card Layout like in your screenshot */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {employeesData.filter((employee: any) => {
+                          // Only show employees who have active allocations
+                          return employeeProjectsData.some((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                        }).map((employee: any) => {
+                          const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                          const project = allocation ? projects.find((p: any) => p.id === allocation.projectId) : null;
+                          const employeeProjects = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id);
+                          
+                          return (
+                            <Card key={employee.id} className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                              <div className="space-y-3">
+                                {/* Employee Header */}
+                                <div className="flex items-center gap-3">
+                                  {employee.profilePicture ? (
+                                    <img
+                                      src={employee.profilePicture}
+                                      alt={`${employee.firstName} ${employee.lastName}`}
+                                      className="h-12 w-12 rounded-full object-cover border-2 border-gray-200"
+                                    />
+                                  ) : (
+                                    <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm">
+                                      {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
                                     </div>
-                                    <div className="text-blue-700 dark:text-blue-300">
-                                      Role: {allocation?.role || 'N/A'}
-                                    </div>
-                                    {allocation?.startDate && (
-                                      <div className="text-blue-600 dark:text-blue-400 mt-1">
-                                        Since: {new Date(allocation.startDate).toLocaleDateString()}
-                                      </div>
-                                    )}
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-sm">{employee.firstName} {employee.lastName}</h3>
+                                    <p className="text-xs text-gray-500">{employee.employeeId}</p>
                                   </div>
-                                )}
+                                </div>
 
-                                {!project && getEmployeeStatus(employee) === 'available' && (
-                                  <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs">
-                                    <div className="text-green-700 dark:text-green-300 font-medium">
-                                      Available for new projects
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Employee Skills */}
-                                {employee.technologies && employee.technologies.length > 0 && (
+                                {/* Department and Status */}
+                                <div className="grid grid-cols-2 gap-2 text-xs">
                                   <div>
-                                    <div className="text-xs text-gray-500 mb-1">Skills:</div>
-                                    <div className="flex flex-wrap gap-1">
-                                      {employee.technologies.slice(0, 2).map((tech: string, index: number) => (
-                                        <Badge key={index} variant="secondary" className="text-xs px-1 py-0">
+                                    <span className="text-gray-500">Department:</span>
+                                    <div className="font-medium text-gray-900 dark:text-gray-100">{employee.department}</div>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Status:</span>
+                                    <div className="font-medium text-green-600">Available</div>
+                                  </div>
+                                </div>
+
+                                {/* Total Projects */}
+                                <div className="text-xs">
+                                  <span className="text-gray-500">Total Projects:</span>
+                                  <div className="font-medium text-gray-900 dark:text-gray-100">{employeeProjects.length}</div>
+                                </div>
+
+                                {/* Available for new projects message */}
+                                <div className="text-xs">
+                                  <span className="text-gray-500">Available for new projects</span>
+                                </div>
+
+                                {/* Skills */}
+                                <div className="text-xs">
+                                  <span className="text-gray-500">Skills:</span>
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    {employee.technologies && employee.technologies.length > 0 ? (
+                                      employee.technologies.slice(0, 3).map((tech: string, index: number) => (
+                                        <Badge key={index} variant="secondary" className="text-xs px-2 py-0">
                                           {tech}
                                         </Badge>
-                                      ))}
-                                      {employee.technologies.length > 2 && (
-                                        <Badge variant="outline" className="text-xs px-1 py-0">
-                                          +{employee.technologies.length - 2}
-                                        </Badge>
-                                      )}
-                                    </div>
+                                      ))
+                                    ) : (
+                                      <span className="text-gray-400">None</span>
+                                    )}
+                                    {employee.technologies && employee.technologies.length > 3 && (
+                                      <Badge variant="outline" className="text-xs px-2 py-0">
+                                        +{employee.technologies.length - 3}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Current Project Info */}
+                                {project && (
+                                  <div className="text-xs border-t pt-2">
+                                    <span className="text-gray-500">Current:</span>
+                                    <div className="font-medium text-blue-600">{project.projectName}</div>
+                                    <div className="text-gray-500">Since: {allocation?.startDate ? new Date(allocation.startDate).toLocaleDateString() : 'N/A'}</div>
+                                    <div className="text-gray-500">Until: {allocation?.endDate ? new Date(allocation.endDate).toLocaleDateString() : 'Ongoing'}</div>
                                   </div>
                                 )}
                               </div>
-                            </div>
-                          </Card>
-                        );
-                      })}
-                    </div>
-
-                    {employeesData.length === 0 && (
-                      <div className="text-center py-8">
-                        <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                          No employees found
-                        </h3>
-                        <p className="text-gray-500 dark:text-gray-400">
-                          Import employees to see individual dashboards.
-                        </p>
+                            </Card>
+                          );
+                        })}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+
+                      {employeesData.filter((employee: any) => employeeProjectsData.some((ep: any) => ep.employeeId === employee.id && ep.isActive)).length === 0 && (
+                        <div className="text-center py-8">
+                          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                            No allocated employees found
+                          </h3>
+                          <p className="text-gray-500 dark:text-gray-400">
+                            Allocate employees to projects to see them here.
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Employee Allocation Overview */}
                 <Card>
