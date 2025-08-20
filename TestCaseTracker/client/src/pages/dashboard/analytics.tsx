@@ -35,67 +35,102 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'
 
 export default function AnalyticsDashboard() {
   // Fetch users (instead of employees)
-  const { data: employees = [] } = useQuery({
+  const { data: employees = [], isLoading: isEmployeesLoading, error: employeesError } = useQuery({
     queryKey: ["/api/users"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/users");
-      return res.json();
+      try {
+        const res = await apiRequest("GET", "/api/users");
+        if (!res.ok) throw new Error(`Failed to fetch users: ${res.status}`);
+        return res.json();
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        return [];
+      }
     },
+    retry: 1,
+    staleTime: 30000,
   });
 
   // Fetch projects
-  const { data: allProjects = [] } = useQuery({
+  const { data: allProjects = [], isLoading: isProjectsLoading, error: projectsError } = useQuery({
     queryKey: ["/api/projects"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/projects");
-      return res.json();
+      try {
+        const res = await apiRequest("GET", "/api/projects");
+        if (!res.ok) throw new Error(`Failed to fetch projects: ${res.status}`);
+        return res.json();
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+        return [];
+      }
     },
+    retry: 1,
+    staleTime: 30000,
   });
 
   // Fetch test cases for analytics
-  const { data: testCases = [] } = useQuery({
+  const { data: testCases = [], isLoading: isTestCasesLoading, error: testCasesError } = useQuery({
     queryKey: ["/api/test-cases"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/test-cases");
-      return res.json();
+      try {
+        const res = await apiRequest("GET", "/api/test-cases");
+        if (!res.ok) throw new Error(`Failed to fetch test cases: ${res.status}`);
+        return res.json();
+      } catch (error) {
+        console.error('Error fetching test cases:', error);
+        return [];
+      }
     },
+    retry: 1,
+    staleTime: 30000,
   });
 
   // Fetch bugs for analytics
-  const { data: bugs = [] } = useQuery({
+  const { data: bugs = [], isLoading: isBugsLoading, error: bugsError } = useQuery({
     queryKey: ["/api/bugs"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/bugs");
-      return res.json();
+      try {
+        const res = await apiRequest("GET", "/api/bugs");
+        if (!res.ok) throw new Error(`Failed to fetch bugs: ${res.status}`);
+        return res.json();
+      } catch (error) {
+        console.error('Error fetching bugs:', error);
+        return [];
+      }
     },
+    retry: 1,
+    staleTime: 30000,
   });
 
-  // Calculate statistics
-  const totalUsers = employees.length;
-  const totalProjects = allProjects.length;
-  const activeProjects = allProjects.filter((p: any) => p.status === 'Active').length;
-  const totalTestCases = testCases.length;
-  const totalBugs = bugs.length;
+  const isLoading = isEmployeesLoading || isProjectsLoading || isTestCasesLoading || isBugsLoading;
+  const hasErrors = employeesError || projectsError || testCasesError || bugsError;
+
+  // Calculate statistics with fallbacks
+  const totalUsers = Array.isArray(employees) ? employees.length : 0;
+  const totalProjects = Array.isArray(allProjects) ? allProjects.length : 0;
+  const activeProjects = Array.isArray(allProjects) ? allProjects.filter((p: any) => p?.status === 'Active').length : 0;
+  const totalTestCases = Array.isArray(testCases) ? testCases.length : 0;
+  const totalBugs = Array.isArray(bugs) ? bugs.length : 0;
   
   // Role distribution (instead of department)
-  const roleData = employees.reduce((acc: any, user: any) => {
-    const role = user.role || 'Unknown';
+  const roleData = Array.isArray(employees) ? employees.reduce((acc: any, user: any) => {
+    const role = user?.role || 'Unknown';
     acc[role] = (acc[role] || 0) + 1;
     return acc;
-  }, {});
+  }, {}) : { 'No Data': 1 };
 
   const roleChartData = Object.entries(roleData).map(([name, value]) => ({
     name,
     value,
-    percentage: ((value as number) / totalUsers * 100).toFixed(1)
+    percentage: totalUsers > 0 ? ((value as number) / totalUsers * 100).toFixed(1) : '0'
   }));
 
   // Bug status distribution
-  const bugStatusData = bugs.reduce((acc: any, bug: any) => {
-    const status = bug.status || 'Unknown';
+  const bugStatusData = Array.isArray(bugs) && bugs.length > 0 ? bugs.reduce((acc: any, bug: any) => {
+    const status = bug?.status || 'Unknown';
     acc[status] = (acc[status] || 0) + 1;
     return acc;
-  }, {});
+  }, {}) : { 'No Data': 1 };
 
   const statusChartData = Object.entries(bugStatusData).map(([name, value]) => ({
     name,
@@ -103,31 +138,31 @@ export default function AnalyticsDashboard() {
   }));
 
   // Project test case distribution
-  const projectTestCaseData = allProjects.map((project: any) => {
-    const projectTestCases = testCases.filter(
-      (tc: any) => tc.projectId === project.id
-    );
-    const projectBugs = bugs.filter(
-      (bug: any) => bug.projectId === project.id
-    );
+  const projectTestCaseData = Array.isArray(allProjects) && allProjects.length > 0 ? allProjects.map((project: any) => {
+    const projectTestCases = Array.isArray(testCases) ? testCases.filter(
+      (tc: any) => tc?.projectId === project?.id
+    ) : [];
+    const projectBugs = Array.isArray(bugs) ? bugs.filter(
+      (bug: any) => bug?.projectId === project?.id
+    ) : [];
     return {
-      name: project.name && project.name.length > 15 ? project.name.substring(0, 15) + '...' : project.name || 'Unnamed Project',
+      name: project?.name && project.name.length > 15 ? project.name.substring(0, 15) + '...' : project?.name || 'Unnamed Project',
       testCases: projectTestCases.length,
       bugs: projectBugs.length
     };
-  });
+  }) : [{ name: 'No Projects', testCases: 0, bugs: 0 }];
 
   // Test case status data
-  const testCaseStatusData = testCases.reduce((acc: any, tc: any) => {
-    const status = tc.status || 'Not Tested';
+  const testCaseStatusData = Array.isArray(testCases) && testCases.length > 0 ? testCases.reduce((acc: any, tc: any) => {
+    const status = tc?.status || 'Not Tested';
     acc[status] = (acc[status] || 0) + 1;
     return acc;
-  }, {});
+  }, {}) : { 'No Data': 1 };
 
   const testCaseWorkloadData = Object.entries(testCaseStatusData).map(([name, value]) => ({
     name,
     value,
-    percentage: totalTestCases > 0 ? ((value as number) / totalTestCases * 100).toFixed(1) : 0
+    percentage: totalTestCases > 0 ? ((value as number) / totalTestCases * 100).toFixed(1) : '0'
   })).sort((a, b) => b.value - a.value);
 
   // Monthly joining trend (mock data for demo)
@@ -139,6 +174,74 @@ export default function AnalyticsDashboard() {
     { month: 'May', employees: 2 },
     { month: 'Jun', employees: 3 }
   ];
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
+              <p className="text-muted-foreground">
+                Loading analytics data...
+              </p>
+            </div>
+          </div>
+          
+          {/* Loading skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i}>
+                <CardHeader className="space-y-0 pb-2">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-8 bg-gray-200 rounded animate-pulse mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded animate-pulse"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Show error state
+  if (hasErrors) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
+              <p className="text-muted-foreground text-red-600">
+                Error loading analytics data. Using offline mode.
+              </p>
+            </div>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Connection Issues</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                There seems to be a connection issue. The analytics dashboard is currently showing default data.
+              </p>
+              <div className="mt-4 space-y-2 text-sm">
+                {employeesError && <p className="text-red-600">• Users API error</p>}
+                {projectsError && <p className="text-red-600">• Projects API error</p>}
+                {testCasesError && <p className="text-red-600">• Test Cases API error</p>}
+                {bugsError && <p className="text-red-600">• Bugs API error</p>}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -218,23 +321,29 @@ export default function AnalyticsDashboard() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={roleChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percentage }) => `${name}: ${percentage}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {roleChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
+                {roleChartData.length > 0 ? (
+                  <PieChart>
+                    <Pie
+                      data={roleChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percentage }) => `${name}: ${percentage}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {roleChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">No user data available</p>
+                  </div>
+                )}
               </ResponsiveContainer>
             </CardContent>
           </Card>
