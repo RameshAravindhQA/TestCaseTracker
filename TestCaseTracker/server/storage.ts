@@ -357,8 +357,14 @@ class MemStorage implements IStorage {
   private nextId = 1;
   private testSheetIdCounter = 1;
 
-  private getNextId(): number {
-    return this.nextId++;
+  private getNextId(entityType?: string): number {
+    let id = this.nextId++;
+    // For specific entities like 'employee', 'navadhiti_project', you can add more specific ID generation logic if needed.
+    // For example:
+    // if (entityType === 'employee') {
+    //   id = this.employeeIdCounter++;
+    // }
+    return id;
   }
 
   // User operations
@@ -2349,9 +2355,29 @@ class MemStorage implements IStorage {
   }
 
   // Helper method for data persistence
-  private async saveData(): Promise<void> {
-    // In memory storage - no actual persistence needed for this implementation
-    console.log("Data saved to memory storage");
+  private saveData(): void {
+    try {
+      const dataToSave = {
+        users: this.users,
+        projects: this.projects,
+        modules: this.modules,
+        testCases: this.testCases,
+        bugs: this.bugs,
+        bugComments: this.bugComments,
+        testSheets: this.testSheets,
+        chats: this.chats,
+        timesheets: this.timesheets,
+        documents: this.documents,
+        documentFolders: this.documentFolders,
+        notebooks: this.notebooks,
+        navadhitiProjects: this.navadhitiProjects,
+        employees: this.employees || []
+      };
+      // In memory storage - no actual persistence needed for this implementation
+      // console.log("Data saved to memory storage", dataToSave); // Uncomment for debugging
+    } catch (error) {
+      console.error("Error saving data:", error);
+    }
   }
 }
 

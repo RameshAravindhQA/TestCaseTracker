@@ -36,12 +36,14 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'
 export default function AnalyticsDashboard() {
   // Fetch users (instead of employees)
   const { data: employees = [], isLoading: isEmployeesLoading, error: employeesError } = useQuery({
-    queryKey: ["/api/users"],
+    queryKey: ["users"],
     queryFn: async () => {
       try {
         const res = await apiRequest("GET", "/api/users");
         if (!res.ok) throw new Error(`Failed to fetch users: ${res.status}`);
-        return res.json();
+        const data = await res.json();
+        console.log('Fetched users:', data);
+        return data;
       } catch (error) {
         console.error('Error fetching users:', error);
         return [];
@@ -53,12 +55,14 @@ export default function AnalyticsDashboard() {
 
   // Fetch projects
   const { data: allProjects = [], isLoading: isProjectsLoading, error: projectsError } = useQuery({
-    queryKey: ["/api/projects"],
+    queryKey: ["projects"],
     queryFn: async () => {
       try {
         const res = await apiRequest("GET", "/api/projects");
         if (!res.ok) throw new Error(`Failed to fetch projects: ${res.status}`);
-        return res.json();
+        const data = await res.json();
+        console.log('Fetched projects:', data);
+        return data;
       } catch (error) {
         console.error('Error fetching projects:', error);
         return [];
@@ -70,12 +74,14 @@ export default function AnalyticsDashboard() {
 
   // Fetch test cases for analytics
   const { data: testCases = [], isLoading: isTestCasesLoading, error: testCasesError } = useQuery({
-    queryKey: ["/api/test-cases"],
+    queryKey: ["test-cases"],
     queryFn: async () => {
       try {
         const res = await apiRequest("GET", "/api/test-cases");
         if (!res.ok) throw new Error(`Failed to fetch test cases: ${res.status}`);
-        return res.json();
+        const data = await res.json();
+        console.log('Fetched test cases:', data);
+        return data;
       } catch (error) {
         console.error('Error fetching test cases:', error);
         return [];
@@ -87,12 +93,14 @@ export default function AnalyticsDashboard() {
 
   // Fetch bugs for analytics
   const { data: bugs = [], isLoading: isBugsLoading, error: bugsError } = useQuery({
-    queryKey: ["/api/bugs"],
+    queryKey: ["bugs"],
     queryFn: async () => {
       try {
         const res = await apiRequest("GET", "/api/bugs");
         if (!res.ok) throw new Error(`Failed to fetch bugs: ${res.status}`);
-        return res.json();
+        const data = await res.json();
+        console.log('Fetched bugs:', data);
+        return data;
       } catch (error) {
         console.error('Error fetching bugs:', error);
         return [];
