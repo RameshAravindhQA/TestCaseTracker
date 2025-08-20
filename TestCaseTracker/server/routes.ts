@@ -5356,6 +5356,123 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Employee import endpoint
+  apiRouter.post("/employees/import", isAuthenticated, 
+    (req, res, next) => {
+      console.log("Starting employee import request");
+      console.log("Request headers:", req.headers);
+      console.log("Request content type:", req.headers['content-type']);
+      
+      profilePictureUpload.single('file')(req, res, (err) => {
+        if (err) {
+          console.error("Multer error during employee import:", err);
+          return handleMulterError(err, req, res, next);
+        }
+        console.log("File upload middleware processed successfully for employee import");
+        next();
+      });
+    },
+    async (req, res) => {
+      try {
+        console.log("Processing employee import request");
+        
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+        
+        // Read the uploaded file
+        const filePath = req.file.path;
+        const fileContent = await fs.promises.readFile(filePath, 'utf-8');
+        
+        let employeeData: any[] = [];
+        
+        // Parse CSV or Excel file
+        if (req.file.mimetype === 'text/csv' || req.file.originalname.endsWith('.csv')) {
+          // Parse CSV
+          const Papa = require('papaparse');
+          const parsed = Papa.parse(fileContent, { header: true, skipEmptyLines: true });
+          employeeData = parsed.data;
+        } else if (req.file.mimetype.includes('spreadsheet') || req.file.originalname.match(/\.(xlsx|xls)$/)) {
+          // Parse Excel
+          const XLSX = require('xlsx');
+          const workbook = XLSX.read(fileContent, { type: 'string' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          employeeData = XLSX.utils.sheet_to_json(worksheet);
+        } else {
+          return res.status(400).json({ message: "Unsupported file format. Please upload CSV or Excel file." });
+        }
+        
+        let imported = 0;
+        let failed = 0;
+        const errors: string[] = [];
+        
+        // Process each employee record
+        for (const row of employeeData) {
+          try {
+            // Map CSV columns to employee fields
+            const employee = {
+              employeeId: row.employeeId || row.employee_id || row.EmployeeId || row.Employee_ID,
+              firstName: row.firstName || row.first_name || row.FirstName || row.First_Name,
+              lastName: row.lastName || row.last_name || row.LastName || row.Last_Name,
+              email: row.email || row.Email,
+              phoneNumber: row.phoneNumber || row.phone_number || row.PhoneNumber || row.Phone_Number || row.phone || row.Phone,
+              department: row.department || row.Department,
+              designation: row.designation || row.Designation || row.position || row.Position,
+              joiningDate: row.joiningDate || row.joining_date || row.JoiningDate || row.Joining_Date,
+              status: row.status || row.Status || "Active",
+              technologies: row.technologies || row.Technologies || row.skills || row.Skills || "",
+              locality: row.locality || row.Locality || row.location || row.Location,
+              overallExperience: row.overallExperience || row.overall_experience || row.OverallExperience || row.Overall_Experience || row.experience || row.Experience,
+              createdById: req.session.userId
+            };
+            
+            // Validate required fields
+            if (!employee.firstName || !employee.email) {
+              failed++;
+              errors.push(`Row ${imported + failed}: Missing required fields (firstName, email)`);
+              continue;
+            }
+            
+            // Process technologies as array if it's a string
+            if (typeof employee.technologies === 'string' && employee.technologies) {
+              employee.technologies = employee.technologies.split(',').map((t: string) => t.trim());
+            } else if (!employee.technologies) {
+              employee.technologies = [];
+            }
+            
+            // Create employee
+            await storage.createEmployee(employee);
+            imported++;
+            
+          } catch (error: any) {
+            failed++;
+            errors.push(`Row ${imported + failed}: ${error.message}`);
+            console.error(`Error importing employee row:`, error);
+          }
+        }
+        
+        // Clean up uploaded file
+        try {
+          await fs.promises.unlink(filePath);
+        } catch (cleanupError) {
+          console.error("Error cleaning up uploaded file:", cleanupError);
+        }
+        
+        res.json({
+          imported,
+          failed,
+          total: employeeData.length,
+          errors: errors.slice(0, 10) // Limit errors to first 10
+        });
+        
+      } catch (error: any) {
+        console.error("Employee import error:", error);
+        res.status(500).json({ message: "Failed to import employees: " + error.message });
+      }
+    }
+  );
+
   // Employee Project Mapping Routes
   apiRouter.get("/employees/:id/projects", isAuthenticated, async (req, res) => {
     try {
