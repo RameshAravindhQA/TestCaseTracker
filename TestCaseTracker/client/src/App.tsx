@@ -41,7 +41,7 @@ import NotebooksPage from "@/pages/notebooks/index";
 import TodosPage from "./pages/todos";
 import TestDataGeneratorPage from "./pages/test-data-generator";
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import MainLayout from '@/components/layout/main-layout';
+import { MainLayout } from '@/components/layout/main-layout';
 import PageTransition from '@/components/ui/page-transition';
 import SmoothScroll from '@/components/ui/smooth-scroll';
 import AIGeneratorPage from "@/pages/ai-generator";
