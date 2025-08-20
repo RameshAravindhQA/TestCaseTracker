@@ -1762,9 +1762,51 @@ export default function NavadhitiProjectsPage() {
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant="outline">
-                                    {project.currentSprint || 'Not Set'}
-                                  </Badge>
+                                  {(() => {
+                                    // Handle custom status display
+                                    if (project.currentSprint?.startsWith('custom_')) {
+                                      return (
+                                        <Badge 
+                                          variant="outline"
+                                          className="bg-blue-50 text-blue-800 border-blue-200"
+                                        >
+                                          Custom Status
+                                        </Badge>
+                                      );
+                                    }
+                                    
+                                    // Handle predefined status colors
+                                    const getSprintStatusBadge = (status: string) => {
+                                      switch (status) {
+                                        case 'green':
+                                          return (
+                                            <Badge className="bg-green-500 text-white border-green-600">
+                                              On Track
+                                            </Badge>
+                                          );
+                                        case 'amber':
+                                          return (
+                                            <Badge className="bg-amber-500 text-white border-amber-600">
+                                              At Risk
+                                            </Badge>
+                                          );
+                                        case 'red':
+                                          return (
+                                            <Badge className="bg-red-500 text-white border-red-600">
+                                              Blocked
+                                            </Badge>
+                                          );
+                                        default:
+                                          return (
+                                            <Badge variant="outline">
+                                              {status || 'Not Set'}
+                                            </Badge>
+                                          );
+                                      }
+                                    };
+                                    
+                                    return getSprintStatusBadge(project.currentSprint);
+                                  })()}
                                 </TableCell>
                                 <TableCell className="max-w-32 truncate">
                                   {project.currentIssues || 'None'}
@@ -1877,11 +1919,11 @@ export default function NavadhitiProjectsPage() {
                 {/* Charts Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Project Status Distribution */}
-                  <Card className="p-6">
-                    <CardHeader className="pb-4 text-center">
-                      <CardTitle className="text-lg">Project Status Distribution</CardTitle>
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-lg text-center">Project Status Distribution</CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-0">
+                    <CardContent className="flex justify-center">
                       <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
                           <Pie
@@ -1916,11 +1958,11 @@ export default function NavadhitiProjectsPage() {
                   </Card>
 
                   {/* Department Distribution */}
-                  <Card className="p-6">
-                    <CardHeader className="pb-4 text-center">
-                      <CardTitle className="text-lg">Employee Department Distribution</CardTitle>
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-lg text-center">Employee Department Distribution</CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-0">
+                    <CardContent>
                       <ResponsiveContainer width="100%" height={300}>
                         <BarChart
                           data={departmentOptions.map((dept: any) => ({
@@ -1953,16 +1995,132 @@ export default function NavadhitiProjectsPage() {
                   </Card>
                 </div>
 
-                {/* Employee Allocation Overview */}
-                <Card className="p-6">
+                {/* Individual Employee Dashboard */}
+                <Card>
                   <CardHeader className="pb-4">
-                    <CardTitle className="text-lg">Employee Allocation Status</CardTitle>
-                    <CardDescription>Overview of employee availability and project assignments</CardDescription>
+                    <CardTitle className="text-lg text-center">Individual Employee Dashboard</CardTitle>
+                    <CardDescription className="text-center">Detailed employee allocation and performance analytics</CardDescription>
                   </CardHeader>
-                  <CardContent className="pt-0">
+                  <CardContent className="space-y-6">
+                    {/* Employee Performance Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {employeesData.map((employee: any) => {
+                        const allocation = employeeProjectsData.find((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                        const project = allocation ? projects.find((p: any) => p.id === allocation.projectId) : null;
+                        const employeeProjects = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id);
+                        
+                        return (
+                          <Card key={employee.id} className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-3">
+                                {employee.profilePicture ? (
+                                  <img
+                                    src={employee.profilePicture}
+                                    alt={`${employee.firstName} ${employee.lastName}`}
+                                    className="h-12 w-12 rounded-full object-cover border-2 border-gray-200"
+                                  />
+                                ) : (
+                                  <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium">
+                                    {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-semibold text-sm truncate">{employee.firstName} {employee.lastName}</h3>
+                                  <p className="text-xs text-gray-600">{employee.employeeId}</p>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-500">Department:</span>
+                                  <Badge variant="outline" className="text-xs">{employee.department}</Badge>
+                                </div>
+
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-500">Status:</span>
+                                  <Badge className={`text-xs ${getStatusColor(getEmployeeStatus(employee))}`}>
+                                    {getStatusLabel(getEmployeeStatus(employee))}
+                                  </Badge>
+                                </div>
+
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-500">Total Projects:</span>
+                                  <span className="text-xs font-medium">{employeeProjects.length}</span>
+                                </div>
+
+                                {project && (
+                                  <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
+                                    <div className="font-medium text-blue-900 dark:text-blue-100">
+                                      Current: {project.projectName}
+                                    </div>
+                                    <div className="text-blue-700 dark:text-blue-300">
+                                      Role: {allocation?.role || 'N/A'}
+                                    </div>
+                                    {allocation?.startDate && (
+                                      <div className="text-blue-600 dark:text-blue-400 mt-1">
+                                        Since: {new Date(allocation.startDate).toLocaleDateString()}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {!project && getEmployeeStatus(employee) === 'available' && (
+                                  <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs">
+                                    <div className="text-green-700 dark:text-green-300 font-medium">
+                                      Available for new projects
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Employee Skills */}
+                                {employee.technologies && employee.technologies.length > 0 && (
+                                  <div>
+                                    <div className="text-xs text-gray-500 mb-1">Skills:</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {employee.technologies.slice(0, 2).map((tech: string, index: number) => (
+                                        <Badge key={index} variant="secondary" className="text-xs px-1 py-0">
+                                          {tech}
+                                        </Badge>
+                                      ))}
+                                      {employee.technologies.length > 2 && (
+                                        <Badge variant="outline" className="text-xs px-1 py-0">
+                                          +{employee.technologies.length - 2}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+
+                    {employeesData.length === 0 && (
+                      <div className="text-center py-8">
+                        <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                          No employees found
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-400">
+                          Import employees to see individual dashboards.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Employee Allocation Overview */}
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg text-center">Employee Allocation Status</CardTitle>
+                    <CardDescription className="text-center">Overview of employee availability and project assignments</CardDescription>
+                  </CardHeader>
+                  <CardContent>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Employee Status Pie Chart */}
-                      <div>
+                      <div className="flex flex-col items-center">
                         <h4 className="text-md font-medium mb-4 text-center">Employee Status Distribution</h4>
                         <ResponsiveContainer width="100%" height={250}>
                           <PieChart>
@@ -2012,7 +2170,7 @@ export default function NavadhitiProjectsPage() {
                       </div>
 
                       {/* Technology Usage */}
-                      <div>
+                      <div className="flex flex-col items-center">
                         <h4 className="text-md font-medium mb-4 text-center">Technology Usage in Projects</h4>
                         <ResponsiveContainer width="100%" height={250}>
                           <BarChart
@@ -2022,7 +2180,7 @@ export default function NavadhitiProjectsPage() {
                                 p.technologies && p.technologies.includes(tech.name)
                               ).length
                             }))}
-                            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                            margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis 
@@ -2042,12 +2200,12 @@ export default function NavadhitiProjectsPage() {
                 </Card>
 
                 {/* Project Progress Overview */}
-                <Card className="p-6">
+                <Card>
                   <CardHeader className="pb-4">
-                    <CardTitle className="text-lg">Project Progress Overview</CardTitle>
-                    <CardDescription>Completion percentage and team size analysis</CardDescription>
+                    <CardTitle className="text-lg text-center">Project Progress Overview</CardTitle>
+                    <CardDescription className="text-center">Completion percentage and team size analysis</CardDescription>
                   </CardHeader>
-                  <CardContent className="pt-0">
+                  <CardContent>
                     <ResponsiveContainer width="100%" height={350}>
                       <AreaChart
                         data={projects.map((project: any, index) => ({
@@ -2106,11 +2264,11 @@ export default function NavadhitiProjectsPage() {
                 </Card>
 
                 {/* Detailed Analytics Table */}
-                <Card className="p-6">
+                <Card>
                   <CardHeader className="pb-4">
-                    <CardTitle className="text-lg">Detailed Project Analytics</CardTitle>
+                    <CardTitle className="text-lg text-center">Detailed Project Analytics</CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
+                  <CardContent>
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
