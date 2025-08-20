@@ -586,7 +586,6 @@ export default function AnalyticsDashboard() {
                   </CardContent>
                 </Card>
               )}
-            </div>
           </div>
         </div>
       </MainLayout>
