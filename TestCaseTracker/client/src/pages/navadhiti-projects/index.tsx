@@ -23,6 +23,23 @@ import Papa from 'papaparse';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  Legend,
+  Area,
+  AreaChart
+} from 'recharts';
 
 interface NavadhitiProject {
   id: number;
@@ -510,7 +527,7 @@ export default function NavadhitiProjectsPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="projects" className="flex items-center gap-2">
               <Briefcase className="h-4 w-4" />
               Projects
@@ -522,6 +539,10 @@ export default function NavadhitiProjectsPage() {
             <TabsTrigger value="resourceAllocation" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Resource Allocation
+            </TabsTrigger>
+            <TabsTrigger value="dashboardAnalytics" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Dashboard Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -1781,6 +1802,384 @@ export default function NavadhitiProjectsPage() {
                     </Table>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Dashboard Analytics Tab */}
+          <TabsContent value="dashboardAnalytics" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Dashboard Analytics
+                </CardTitle>
+                <CardDescription>
+                  Comprehensive analytics and insights for Navadhiti projects
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-blue-500 rounded-full">
+                        <Briefcase className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-blue-600 font-medium">Total Projects</p>
+                        <p className="text-2xl font-bold text-blue-700">{projects.length}</p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-green-500 rounded-full">
+                        <CheckCircle2 className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-green-600 font-medium">Active Projects</p>
+                        <p className="text-2xl font-bold text-green-700">
+                          {projects.filter(p => p.status === 'Active').length}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-6 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border-purple-200">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-purple-500 rounded-full">
+                        <Users className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-purple-600 font-medium">Total Employees</p>
+                        <p className="text-2xl font-bold text-purple-700">{employeesData.length}</p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-6 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-orange-500 rounded-full">
+                        <UserCheck className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-orange-600 font-medium">Occupied Employees</p>
+                        <p className="text-2xl font-bold text-orange-700">
+                          {employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'active').length}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Charts Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Project Status Distribution */}
+                  <Card className="p-6">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-lg">Project Status Distribution</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Active', value: projects.filter(p => p.status === 'Active').length, color: '#10b981' },
+                              { name: 'Completed', value: projects.filter(p => p.status === 'Completed').length, color: '#3b82f6' },
+                              { name: 'On Hold', value: projects.filter(p => p.status === 'On Hold').length, color: '#f59e0b' },
+                              { name: 'Cancelled', value: projects.filter(p => p.status === 'Cancelled').length, color: '#ef4444' }
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                            outerRadius={100}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {[
+                              { name: 'Active', value: projects.filter(p => p.status === 'Active').length, color: '#10b981' },
+                              { name: 'Completed', value: projects.filter(p => p.status === 'Completed').length, color: '#3b82f6' },
+                              { name: 'On Hold', value: projects.filter(p => p.status === 'On Hold').length, color: '#f59e0b' },
+                              { name: 'Cancelled', value: projects.filter(p => p.status === 'Cancelled').length, color: '#ef4444' }
+                            ].map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  {/* Department Distribution */}
+                  <Card className="p-6">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-lg">Employee Department Distribution</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart
+                          data={departmentOptions.map((dept: any) => ({
+                            department: dept.name,
+                            employees: employeesData.filter((emp: any) => emp.department === dept.name).length,
+                            occupied: employeeProjectsData.filter((ep: any) => 
+                              ep.isActive && 
+                              ep.status === 'active' && 
+                              employeesData.find((emp: any) => emp.id === ep.employeeId && emp.department === dept.name)
+                            ).length
+                          }))}
+                          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="department" 
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
+                          />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="employees" fill="#8884d8" name="Total Employees" />
+                          <Bar dataKey="occupied" fill="#82ca9d" name="Occupied Employees" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Employee Allocation Overview */}
+                <Card className="p-6">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg">Employee Allocation Status</CardTitle>
+                    <CardDescription>Overview of employee availability and project assignments</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Employee Status Pie Chart */}
+                      <div>
+                        <h4 className="text-md font-medium mb-4">Employee Status Distribution</h4>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { 
+                                  name: 'Available', 
+                                  value: employeesData.filter((emp: any) => 
+                                    !employeeProjectsData.some((ep: any) => ep.employeeId === emp.id && ep.isActive && ep.status === 'active')
+                                  ).length, 
+                                  color: '#10b981' 
+                                },
+                                { 
+                                  name: 'Occupied', 
+                                  value: employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'active').length, 
+                                  color: '#f59e0b' 
+                                },
+                                { 
+                                  name: 'Learning', 
+                                  value: employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'learning').length, 
+                                  color: '#3b82f6' 
+                                },
+                                { 
+                                  name: 'On Leave', 
+                                  value: employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'leave').length, 
+                                  color: '#6b7280' 
+                                }
+                              ]}
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={80}
+                              dataKey="value"
+                              label={({ name, value }) => `${name}: ${value}`}
+                            >
+                              {[
+                                { color: '#10b981' },
+                                { color: '#f59e0b' },
+                                { color: '#3b82f6' },
+                                { color: '#6b7280' }
+                              ].map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Technology Usage */}
+                      <div>
+                        <h4 className="text-md font-medium mb-4">Technology Usage in Projects</h4>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <BarChart
+                            data={technologyOptions.slice(0, 6).map((tech: any) => ({
+                              technology: tech.name,
+                              projects: projects.filter((p: any) => 
+                                p.technologies && p.technologies.includes(tech.name)
+                              ).length
+                            }))}
+                            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis 
+                              dataKey="technology"
+                              angle={-45}
+                              textAnchor="end"
+                              height={60}
+                            />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="projects" fill="#8b5cf6" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Project Progress Overview */}
+                <Card className="p-6">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg">Project Progress Overview</CardTitle>
+                    <CardDescription>Completion percentage and team size analysis</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <ResponsiveContainer width="100%" height={350}>
+                      <AreaChart
+                        data={projects.map((project: any, index) => ({
+                          name: project.projectName?.length > 15 
+                            ? project.projectName.substring(0, 15) + '...' 
+                            : project.projectName || `Project ${index + 1}`,
+                          completion: project.completionPercentage || 0,
+                          teamSize: project.assignedEmployees?.length || 0,
+                          budget: (project.budget || 0) / 1000 // Convert to thousands
+                        }))}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="name" 
+                          angle={-45}
+                          textAnchor="end"
+                          height={100}
+                        />
+                        <YAxis />
+                        <Tooltip 
+                          formatter={(value, name) => {
+                            if (name === 'budget') return [`$${(value * 1000).toLocaleString()}`, 'Budget'];
+                            if (name === 'completion') return [`${value}%`, 'Completion'];
+                            return [value, name];
+                          }}
+                        />
+                        <Legend />
+                        <Area 
+                          type="monotone" 
+                          dataKey="completion" 
+                          stackId="1" 
+                          stroke="#8884d8" 
+                          fill="#8884d8" 
+                          name="Completion %"
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="teamSize" 
+                          stackId="2" 
+                          stroke="#82ca9d" 
+                          fill="#82ca9d" 
+                          name="Team Size"
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="budget" 
+                          stackId="3" 
+                          stroke="#ffc658" 
+                          fill="#ffc658" 
+                          name="Budget (K$)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                {/* Detailed Analytics Table */}
+                <Card className="p-6">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg">Detailed Project Analytics</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Project</TableHead>
+                            <TableHead>Client</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Team Size</TableHead>
+                            <TableHead>Progress</TableHead>
+                            <TableHead>Technologies</TableHead>
+                            <TableHead>Budget</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {projects.map((project: any) => (
+                            <TableRow key={project.id}>
+                              <TableCell className="font-medium">{project.projectName}</TableCell>
+                              <TableCell>{project.clientName}</TableCell>
+                              <TableCell>
+                                <Badge 
+                                  className={
+                                    project.status === 'Active' ? 'bg-green-100 text-green-800' :
+                                    project.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                                    project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-red-100 text-red-800'
+                                  }
+                                >
+                                  {project.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{project.assignedEmployees?.length || 0}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-20 bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className="bg-blue-600 h-2 rounded-full" 
+                                      style={{ width: `${project.completionPercentage || 0}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-sm">{project.completionPercentage || 0}%</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {project.technologies && project.technologies.length > 0 ? (
+                                    project.technologies.slice(0, 2).map((tech: string, index: number) => (
+                                      <Badge key={index} variant="outline" className="text-xs">
+                                        {tech}
+                                      </Badge>
+                                    ))
+                                  ) : (
+                                    <span className="text-gray-400 text-sm">None</span>
+                                  )}
+                                  {project.technologies && project.technologies.length > 2 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{project.technologies.length - 2}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {project.budget ? `$${project.budget.toLocaleString()}` : 'Not set'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
               </CardContent>
             </Card>
           </TabsContent>
