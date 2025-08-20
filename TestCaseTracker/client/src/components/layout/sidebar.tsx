@@ -173,7 +173,6 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       href: "/dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
-    // Analytics Dashboard added here
     {
       name: "Analytics Dashboard",
       href: "/dashboard/analytics",

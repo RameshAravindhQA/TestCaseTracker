@@ -102,6 +102,37 @@ export default function AnalyticsDashboard() {
   
   const { user, isLoading: authLoading } = useAuth();
 
+  // Early return with loading state
+  if (authLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-lg">Loading analytics...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Early return for unauthenticated users
+  if (!user) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Alert className="w-96">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Authentication Required</AlertTitle>
+            <AlertDescription>
+              Please log in to view analytics dashboard.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </MainLayout>
+    );
+  }
+
   console.log('🔍 Analytics Dashboard - Auth state:', {
     user: user ? { id: user.id, email: user.email, role: user.role } : null,
     authLoading
@@ -334,7 +365,7 @@ export default function AnalyticsDashboard() {
     bugsError: bugsError?.message
   });
 
-  // Always render the layout
+  // Main render - always show the layout and content
   return (
     <AnalyticsErrorBoundary>
       <MainLayout>
@@ -362,31 +393,8 @@ export default function AnalyticsDashboard() {
             )}
           </div>
 
-          {/* Handle authentication loading */}
-          {authLoading && (
-            <div className="flex items-center justify-center min-h-[400px]">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-4 text-lg">Loading analytics...</p>
-              </div>
-            </div>
-          )}
-
-          {/* Handle not authenticated */}
-          {!authLoading && !user && (
-            <div className="flex items-center justify-center min-h-[400px]">
-              <Alert className="w-96">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Authentication Required</AlertTitle>
-                <AlertDescription>
-                  Please log in to view analytics dashboard.
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
-
           {/* Handle API errors */}
-          {!authLoading && user && hasErrors && (
+          {hasErrors && (
             <Alert className="mb-6">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Data Loading Issues</AlertTitle>
@@ -403,10 +411,9 @@ export default function AnalyticsDashboard() {
             </Alert>
           )}
 
-          {/* Main content when authenticated */}
-          {!authLoading && user && (
-            <>
-              {/* Summary Cards */}
+          {/* Main content */}
+          <div className="space-y-6">(
+            {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -579,8 +586,8 @@ export default function AnalyticsDashboard() {
                   </CardContent>
                 </Card>
               )}
-            </>
-          )}
+            </div>
+          </div>
         </div>
       </MainLayout>
     </AnalyticsErrorBoundary>
