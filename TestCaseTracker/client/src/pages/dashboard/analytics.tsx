@@ -1,10 +1,12 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { MainLayout } from '@/components/layout/main-layout';
+import { useAuth } from '@/hooks/use-auth';
+import { useLocation } from 'wouter';
 import { 
   BarChart, 
   Bar, 
@@ -34,6 +36,36 @@ import {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 export default function AnalyticsDashboard() {
+  const { user, isLoading: authLoading } = useAuth();
+  const [, navigate] = useLocation();
+
+  // Check authentication
+  useEffect(() => {
+    if (!authLoading && !user) {
+      console.log('Analytics: User not authenticated, redirecting to login');
+      navigate('/login');
+      return;
+    }
+  }, [user, authLoading, navigate]);
+
+  // Don't render anything if not authenticated
+  if (authLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-lg">Checking authentication...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!user) {
+    return null; // This will be handled by the useEffect redirect
+  }
+
   // Fetch users (instead of employees)
   const { data: employees = [], isLoading: isEmployeesLoading, error: employeesError } = useQuery({
     queryKey: ["users"],
@@ -216,33 +248,58 @@ export default function AnalyticsDashboard() {
     );
   }
 
-  // Show error state
+  // Show error state with better information
   if (hasErrors) {
+    const errorDetails = [];
+    if (employeesError) errorDetails.push(`Users: ${employeesError.message || 'Unknown error'}`);
+    if (projectsError) errorDetails.push(`Projects: ${projectsError.message || 'Unknown error'}`);
+    if (testCasesError) errorDetails.push(`Test Cases: ${testCasesError.message || 'Unknown error'}`);
+    if (bugsError) errorDetails.push(`Bugs: ${bugsError.message || 'Unknown error'}`);
+
     return (
       <MainLayout>
-        <div className="space-y-6">
+        <div className="space-y-6 p-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
               <p className="text-muted-foreground text-red-600">
-                Error loading analytics data. Using offline mode.
+                Error loading analytics data. Please check your connection and try again.
               </p>
             </div>
           </div>
           
-          <Card>
+          <Card className="border-red-200">
             <CardHeader>
-              <CardTitle>Connection Issues</CardTitle>
+              <CardTitle className="text-red-700">Connection Issues Detected</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                There seems to be a connection issue. The analytics dashboard is currently showing default data.
+              <p className="text-muted-foreground mb-4">
+                Unable to load analytics data. This could be due to:
               </p>
+              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground mb-4">
+                <li>Authentication issues - please try logging out and back in</li>
+                <li>Server connection problems</li>
+                <li>Network connectivity issues</li>
+              </ul>
               <div className="mt-4 space-y-2 text-sm">
-                {employeesError && <p className="text-red-600">• Users API error</p>}
-                {projectsError && <p className="text-red-600">• Projects API error</p>}
-                {testCasesError && <p className="text-red-600">• Test Cases API error</p>}
-                {bugsError && <p className="text-red-600">• Bugs API error</p>}
+                <p className="font-medium">Error Details:</p>
+                {errorDetails.map((error, index) => (
+                  <p key={index} className="text-red-600">• {error}</p>
+                ))}
+              </div>
+              <div className="mt-4 flex space-x-2">
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Refresh Page
+                </button>
+                <button 
+                  onClick={() => navigate('/login')} 
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  Login Again
+                </button>
               </div>
             </CardContent>
           </Card>
