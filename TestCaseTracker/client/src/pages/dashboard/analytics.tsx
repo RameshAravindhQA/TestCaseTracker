@@ -1,17 +1,16 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { MainLayout } from '@/components/layout/main-layout';
 import { useAuth } from '@/hooks/use-auth';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -20,10 +19,10 @@ import {
   Line,
   Legend
 } from 'recharts';
-import { 
-  Users, 
-  Briefcase, 
-  TrendingUp, 
+import {
+  Users,
+  Briefcase,
+  TrendingUp,
   Activity,
   Calendar,
   Target,
@@ -80,9 +79,9 @@ class AnalyticsErrorBoundary extends React.Component<
             <AlertDescription>
               The analytics dashboard encountered an error. Please refresh the page or try again later.
               <br />
-              <Button 
-                variant="outline" 
-                className="mt-2" 
+              <Button
+                variant="outline"
+                className="mt-2"
                 onClick={() => window.location.reload()}
               >
                 Refresh Page
@@ -99,7 +98,7 @@ class AnalyticsErrorBoundary extends React.Component<
 
 export default function AnalyticsDashboard() {
   console.log('🔍 Analytics Dashboard - Component rendering started');
-  
+
   const { user, isLoading: authLoading } = useAuth();
 
   // Early return with loading state
@@ -139,11 +138,11 @@ export default function AnalyticsDashboard() {
   });
 
   // Fetch users with detailed error handling
-  const { 
-    data: employees = [], 
-    isLoading: isEmployeesLoading, 
+  const {
+    data: employees = [],
+    isLoading: isEmployeesLoading,
     error: employeesError,
-    refetch: refetchEmployees 
+    refetch: refetchEmployees
   } = useQuery({
     queryKey: ["analytics-users"],
     queryFn: async () => {
@@ -151,11 +150,11 @@ export default function AnalyticsDashboard() {
       try {
         const res = await apiRequest("GET", "/api/users");
         console.log('🔍 Analytics - Users API response status:', res.status);
-        
+
         if (!res.ok) {
           throw new Error(`Failed to fetch users: ${res.status} ${res.statusText}`);
         }
-        
+
         const data = await res.json();
         console.log('🔍 Analytics - Fetched users:', data);
         return Array.isArray(data) ? data : [];
@@ -170,11 +169,11 @@ export default function AnalyticsDashboard() {
   });
 
   // Fetch projects
-  const { 
-    data: allProjects = [], 
-    isLoading: isProjectsLoading, 
+  const {
+    data: allProjects = [],
+    isLoading: isProjectsLoading,
     error: projectsError,
-    refetch: refetchProjects 
+    refetch: refetchProjects
   } = useQuery({
     queryKey: ["analytics-projects"],
     queryFn: async () => {
@@ -182,11 +181,11 @@ export default function AnalyticsDashboard() {
       try {
         const res = await apiRequest("GET", "/api/projects");
         console.log('🔍 Analytics - Projects API response status:', res.status);
-        
+
         if (!res.ok) {
           throw new Error(`Failed to fetch projects: ${res.status} ${res.statusText}`);
         }
-        
+
         const data = await res.json();
         console.log('🔍 Analytics - Fetched projects:', data);
         return Array.isArray(data) ? data : [];
@@ -201,11 +200,11 @@ export default function AnalyticsDashboard() {
   });
 
   // Fetch test cases
-  const { 
-    data: testCases = [], 
-    isLoading: isTestCasesLoading, 
+  const {
+    data: testCases = [],
+    isLoading: isTestCasesLoading,
     error: testCasesError,
-    refetch: refetchTestCases 
+    refetch: refetchTestCases
   } = useQuery({
     queryKey: ["analytics-test-cases"],
     queryFn: async () => {
@@ -213,11 +212,11 @@ export default function AnalyticsDashboard() {
       try {
         const res = await apiRequest("GET", "/api/test-cases");
         console.log('🔍 Analytics - Test cases API response status:', res.status);
-        
+
         if (!res.ok) {
           throw new Error(`Failed to fetch test cases: ${res.status} ${res.statusText}`);
         }
-        
+
         const data = await res.json();
         console.log('🔍 Analytics - Fetched test cases:', data);
         return Array.isArray(data) ? data : [];
@@ -232,11 +231,11 @@ export default function AnalyticsDashboard() {
   });
 
   // Fetch bugs
-  const { 
-    data: bugs = [], 
-    isLoading: isBugsLoading, 
+  const {
+    data: bugs = [],
+    isLoading: isBugsLoading,
     error: bugsError,
-    refetch: refetchBugs 
+    refetch: refetchBugs
   } = useQuery({
     queryKey: ["analytics-bugs"],
     queryFn: async () => {
@@ -244,11 +243,11 @@ export default function AnalyticsDashboard() {
       try {
         const res = await apiRequest("GET", "/api/bugs");
         console.log('🔍 Analytics - Bugs API response status:', res.status);
-        
+
         if (!res.ok) {
           throw new Error(`Failed to fetch bugs: ${res.status} ${res.statusText}`);
         }
-        
+
         const data = await res.json();
         console.log('🔍 Analytics - Fetched bugs:', data);
         return Array.isArray(data) ? data : [];
@@ -293,7 +292,7 @@ export default function AnalyticsDashboard() {
   // Role distribution calculation
   const roleChartData = React.useMemo(() => {
     if (!employees || employees.length === 0) return [];
-    
+
     const roleData = employees.reduce((acc: any, user: any) => {
       const role = user?.role || 'Unknown';
       acc[role] = (acc[role] || 0) + 1;
@@ -310,7 +309,7 @@ export default function AnalyticsDashboard() {
   // Bug status distribution
   const statusChartData = React.useMemo(() => {
     if (!bugs || bugs.length === 0) return [];
-    
+
     const bugStatusData = bugs.reduce((acc: any, bug: any) => {
       const status = bug?.status || 'Unknown';
       acc[status] = (acc[status] || 0) + 1;
@@ -326,14 +325,14 @@ export default function AnalyticsDashboard() {
   // Project distribution
   const projectTestCaseData = React.useMemo(() => {
     if (!allProjects || allProjects.length === 0) return [];
-    
+
     return allProjects.map((project: any) => {
       const projectTestCases = testCases?.filter((tc: any) => tc?.projectId === project?.id) || [];
       const projectBugs = bugs?.filter((bug: any) => bug?.projectId === project?.id) || [];
-      
+
       return {
-        name: project?.name && project.name.length > 15 
-          ? project.name.substring(0, 15) + '...' 
+        name: project?.name && project.name.length > 15
+          ? project.name.substring(0, 15) + '...'
           : project?.name || 'Unnamed Project',
         testCases: projectTestCases.length,
         bugs: projectBugs.length
@@ -379,8 +378,8 @@ export default function AnalyticsDashboard() {
               </p>
             </div>
             {hasErrors && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   refetchEmployees();
                   refetchProjects();
@@ -517,7 +516,14 @@ export default function AnalyticsDashboard() {
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={statusChartData}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
+                            <XAxis
+                              dataKey="name"
+                              angle={-45}
+                              textAnchor="end"
+                              height={100}
+                              interval={0}
+                              tick={{ fontSize: 12 }}
+                            />
                             <YAxis />
                             <Tooltip />
                             <Bar dataKey="value" fill="#8884d8" />
@@ -544,7 +550,14 @@ export default function AnalyticsDashboard() {
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={projectTestCaseData.slice(0, 10)}>
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
+                          <XAxis
+                              dataKey="name"
+                              angle={-45}
+                              textAnchor="end"
+                              height={120}
+                              interval={0}
+                              tick={{ fontSize: 11 }}
+                            />
                           <YAxis />
                           <Tooltip />
                           <Legend />
