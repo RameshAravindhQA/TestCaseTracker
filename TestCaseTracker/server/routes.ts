@@ -5356,6 +5356,54 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Configure multer for employee import (CSV/Excel files)
+  const configureEmployeeImportUpload = () => {
+    const { uploadsDir } = createUploadDirectories();
+    const tempDir = path.join(uploadsDir, 'temp');
+    
+    // Create temp directory if it doesn't exist
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir);
+    }
+    
+    const storage = multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, tempDir);
+      },
+      filename: (req, file, cb) => {
+        const timestamp = Date.now();
+        const ext = path.extname(file.originalname);
+        cb(null, `employee-import-${timestamp}${ext}`);
+      }
+    });
+    
+    return multer({
+      storage,
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB max file size
+      },
+      fileFilter: (req, file, cb) => {
+        // Accept CSV and Excel files
+        const allowedTypes = [
+          'text/csv',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        ];
+        
+        const allowedExtensions = ['.csv', '.xls', '.xlsx'];
+        const ext = path.extname(file.originalname).toLowerCase();
+        
+        if (allowedTypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
+          return cb(null, true);
+        }
+        
+        cb(new Error('Only CSV and Excel files are allowed for employee import'));
+      }
+    });
+  };
+
+  const employeeImportUpload = configureEmployeeImportUpload();
+
   // Employee import endpoint
   apiRouter.post("/employees/import", isAuthenticated, 
     (req, res, next) => {
@@ -5363,7 +5411,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       console.log("Request headers:", req.headers);
       console.log("Request content type:", req.headers['content-type']);
       
-      profilePictureUpload.single('file')(req, res, (err) => {
+      employeeImportUpload.single('file')(req, res, (err) => {
         if (err) {
           console.error("Multer error during employee import:", err);
           return handleMulterError(err, req, res, next);
