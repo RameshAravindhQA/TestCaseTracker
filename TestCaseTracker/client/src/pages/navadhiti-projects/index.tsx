@@ -1878,7 +1878,7 @@ export default function NavadhitiProjectsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Project Status Distribution */}
                   <Card className="p-6">
-                    <CardHeader className="pb-4">
+                    <CardHeader className="pb-4 text-center">
                       <CardTitle className="text-lg">Project Status Distribution</CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
@@ -1917,7 +1917,7 @@ export default function NavadhitiProjectsPage() {
 
                   {/* Department Distribution */}
                   <Card className="p-6">
-                    <CardHeader className="pb-4">
+                    <CardHeader className="pb-4 text-center">
                       <CardTitle className="text-lg">Employee Department Distribution</CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
@@ -1932,7 +1932,7 @@ export default function NavadhitiProjectsPage() {
                               employeesData.find((emp: any) => emp.id === ep.employeeId && emp.department === dept.name)
                             ).length
                           }))}
-                          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                          margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis 
@@ -1940,6 +1940,7 @@ export default function NavadhitiProjectsPage() {
                             angle={-45}
                             textAnchor="end"
                             height={80}
+                            interval={0}
                           />
                           <YAxis />
                           <Tooltip />
@@ -1962,7 +1963,7 @@ export default function NavadhitiProjectsPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Employee Status Pie Chart */}
                       <div>
-                        <h4 className="text-md font-medium mb-4">Employee Status Distribution</h4>
+                        <h4 className="text-md font-medium mb-4 text-center">Employee Status Distribution</h4>
                         <ResponsiveContainer width="100%" height={250}>
                           <PieChart>
                             <Pie
@@ -2012,7 +2013,7 @@ export default function NavadhitiProjectsPage() {
 
                       {/* Technology Usage */}
                       <div>
-                        <h4 className="text-md font-medium mb-4">Technology Usage in Projects</h4>
+                        <h4 className="text-md font-medium mb-4 text-center">Technology Usage in Projects</h4>
                         <ResponsiveContainer width="100%" height={250}>
                           <BarChart
                             data={technologyOptions.slice(0, 6).map((tech: any) => ({

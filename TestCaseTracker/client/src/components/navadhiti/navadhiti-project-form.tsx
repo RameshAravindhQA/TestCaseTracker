@@ -34,6 +34,7 @@ const navadhitiProjectSchema = z.object({
   assignedEmployees: z.array(z.number()).optional(),
   technologies: z.array(z.string()).optional(),
   projectImage: z.string().optional(),
+  projectLead: z.string().optional(),
 });
 
 type NavadhitiProjectFormValues = z.infer<typeof navadhitiProjectSchema>;
@@ -67,6 +68,7 @@ export function NavadhitiProjectForm({ project, onSuccess, onCancel }: Navadhiti
       assignedEmployees: project?.assignedEmployees || [],
       technologies: project?.technologies || [],
       projectImage: project?.projectImage || "",
+      projectLead: project?.projectLead || "",
     },
   });
 
@@ -116,8 +118,9 @@ export function NavadhitiProjectForm({ project, onSuccess, onCancel }: Navadhiti
       setSelectedEmployees([]);
       setSelectedTechnologies([]);
       setProjectImageUrl(null);
-      // Close dialog
+      // Close dialog - call both onSuccess and onCancel to ensure dialog closes
       if (onSuccess) onSuccess();
+      if (onCancel) onCancel();
     },
     onError: (error: any) => {
       console.error('Project creation error:', error);
@@ -143,8 +146,9 @@ export function NavadhitiProjectForm({ project, onSuccess, onCancel }: Navadhiti
     onSuccess: () => {
       toast({ title: "Project updated successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
-      // Close dialog
+      // Close dialog - call both onSuccess and onCancel to ensure dialog closes
       if (onSuccess) onSuccess();
+      if (onCancel) onCancel();
     },
     onError: (error: any) => {
       console.error('Project update error:', error);
@@ -185,11 +189,21 @@ export function NavadhitiProjectForm({ project, onSuccess, onCancel }: Navadhiti
   };
 
   const toggleEmployee = (employeeId: number) => {
-    setSelectedEmployees(prev => 
-      prev.includes(employeeId) 
+    setSelectedEmployees(prev => {
+      const newEmployees = prev.includes(employeeId) 
         ? prev.filter(id => id !== employeeId)
-        : [...prev, employeeId]
-    );
+        : [...prev, employeeId];
+      
+      // Auto-populate project lead with first selected employee
+      if (newEmployees.length > 0 && !form.getValues("projectLead")) {
+        const firstEmployee = employees.find((emp: any) => emp.id === newEmployees[0]);
+        if (firstEmployee) {
+          form.setValue("projectLead", `${firstEmployee.firstName} ${firstEmployee.lastName}`);
+        }
+      }
+      
+      return newEmployees;
+    });
   };
 
   const handleProjectImageClick = () => {
@@ -455,6 +469,24 @@ export function NavadhitiProjectForm({ project, onSuccess, onCancel }: Navadhiti
                   <Textarea 
                     placeholder="Project description..." 
                     rows={3}
+                    {...field} 
+                    value={field.value || ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="projectLead"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Project Lead</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Project lead name..." 
                     {...field} 
                     value={field.value || ""}
                   />

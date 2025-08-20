@@ -2265,28 +2265,28 @@ class MemStorage implements IStorage {
     };
 
     // Ensure status review fields are properly mapped
-    if (data.overallProjectStatus) {
+    if (data.overallProjectStatus !== undefined) {
       updatedProject.overallProjectStatus = data.overallProjectStatus;
     }
-    if (data.currentSprint) {
+    if (data.currentSprint !== undefined) {
       updatedProject.currentSprint = data.currentSprint;
     }
-    if (data.weeklyComms) {
+    if (data.weeklyComms !== undefined) {
       updatedProject.weeklyComms = data.weeklyComms;
     }
-    if (data.currentIssues) {
+    if (data.currentIssues !== undefined) {
       updatedProject.currentIssues = data.currentIssues;
     }
-    if (data.immediateActionItems) {
+    if (data.immediateActionItems !== undefined) {
       updatedProject.immediateActionItems = data.immediateActionItems;
     }
-    if (data.supportRequired) {
+    if (data.supportRequired !== undefined) {
       updatedProject.supportRequired = data.supportRequired;
     }
-    if (data.additionalRemarks) {
+    if (data.additionalRemarks !== undefined) {
       updatedProject.additionalRemarks = data.additionalRemarks;
     }
-    if (data.projectLead) {
+    if (data.projectLead !== undefined) {
       updatedProject.projectLead = data.projectLead;
     }
 
