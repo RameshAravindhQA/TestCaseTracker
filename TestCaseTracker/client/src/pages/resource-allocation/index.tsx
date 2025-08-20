@@ -74,7 +74,6 @@ interface Project {
 }
 
 const ResourceAllocationPage: React.FC = () => {
-  const [employees, setEmployees] = useState<Employee[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -159,6 +158,27 @@ const ResourceAllocationPage: React.FC = () => {
     return projects
       .filter((p: any) => p.status !== 'Completed')
       .reduce((total: number, project: any) => total + (project.allocation || 0), 0);
+  };
+
+  // Create assignment mutation
+  const assignProjectMutation = useMutation({
+    mutationFn: async (assignmentData: any) => {
+      const res = await apiRequest("POST", "/api/employee-projects", assignmentData);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Project assigned successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/employee-projects"] });
+      setIsAssignDialogOpen(false);
+      setSelectedEmployee(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to assign project", variant: "destructive" });
+    },
+  });
+
+  const handleAssignProject = (assignment: any) => {
+    assignProjectMutation.mutate(assignment);
   };
 
   const renderCardView = () => (
@@ -607,6 +627,7 @@ const ResourceAllocationPage: React.FC = () => {
               projects={allProjects}
               onAssign={handleAssignProject}
               onCancel={() => setIsAssignDialogOpen(false)}
+              employeeProjects={employeeProjects}
             />
           )}
         </DialogContent>
@@ -622,7 +643,8 @@ const ProjectAssignmentForm: React.FC<{
   projects: Project[];
   onAssign: (assignment: any) => void;
   onCancel: () => void;
-}> = ({ employee, projects, onAssign, onCancel }) => {
+  employeeProjects: any[];
+}> = ({ employee, projects, onAssign, onCancel, employeeProjects }) => {
   const [selectedProject, setSelectedProject] = useState('');
   const [role, setRole] = useState('');
   const [allocation, setAllocation] = useState('');
@@ -639,21 +661,24 @@ const ProjectAssignmentForm: React.FC<{
     onAssign({
       employeeId: employee.id,
       projectId: parseInt(selectedProject),
+      projectType: 'regular',
       role,
       allocation: parseInt(allocation),
       startDate,
       endDate: endDate || undefined,
+      status: 'active',
+      isActive: true
     });
   };
 
-  const calculateTotalAllocation = (employeeId: number) => {
-    const projects = getEmployeeProjectAllocations(employeeId); // This function is defined in the parent scope, assuming it's accessible
-    return projects
+  const calculateCurrentAllocation = (employeeId: number) => {
+    const employeeProjectsData = employeeProjects.filter((ep: any) => ep.employeeId === employeeId && ep.isActive);
+    return employeeProjectsData
       .filter((p: any) => p.status !== 'Completed')
       .reduce((total: number, project: any) => total + (project.allocation || 0), 0);
   };
 
-  const currentAllocation = calculateTotalAllocation(employee.id);
+  const currentAllocation = calculateCurrentAllocation(employee.id);
   const newTotalAllocation = currentAllocation + parseInt(allocation || '0');
   const isOverAllocated = newTotalAllocation > 100;
 
