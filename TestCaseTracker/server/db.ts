@@ -10,13 +10,13 @@ if (!connectionString) {
   export const db = null;
 } else {
   console.log("🔄 Connecting to PostgreSQL database...");
-  
+
   // Create neon client
   const sql = neon(connectionString);
-  
+
   // Create drizzle instance
   export const db = drizzle(sql, { schema });
-  
+
   console.log("✅ Database connection established");
 }
 
@@ -26,7 +26,7 @@ export async function testConnection() {
     console.log("✅ In-memory storage ready");
     return true;
   }
-  
+
   try {
     await db.query.users.findMany({ limit: 1 });
     console.log("✅ Database connection test successful");
