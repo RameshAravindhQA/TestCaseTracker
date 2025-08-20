@@ -4099,6 +4099,77 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
   
+  // Analytics debug endpoint
+  apiRouter.get("/analytics/debug", isAuthenticated, async (req, res) => {
+    try {
+      console.log('🔍 Analytics Debug - Session:', {
+        userId: req.session?.userId,
+        userRole: req.session?.userRole,
+        userEmail: req.session?.userEmail
+      });
+
+      // Test each data source
+      const debugData = {
+        timestamp: new Date().toISOString(),
+        session: {
+          userId: req.session?.userId,
+          userRole: req.session?.userRole,
+          authenticated: !!req.session?.userId
+        },
+        dataStatus: {
+          users: { count: 0, error: null },
+          projects: { count: 0, error: null },
+          testCases: { count: 0, error: null },
+          bugs: { count: 0, error: null }
+        }
+      };
+
+      // Test users
+      try {
+        const users = await storage.getAllUsers();
+        debugData.dataStatus.users.count = users.length;
+      } catch (error: any) {
+        debugData.dataStatus.users.error = error.message;
+      }
+
+      // Test projects
+      try {
+        const projects = req.session.userRole === "Admin" 
+          ? await storage.getProjects()
+          : await storage.getProjectsByUserId(req.session.userId!);
+        debugData.dataStatus.projects.count = projects.length;
+      } catch (error: any) {
+        debugData.dataStatus.projects.error = error.message;
+      }
+
+      // Test test cases
+      try {
+        const testCases = req.session.userRole === "Admin" 
+          ? await storage.getTestCases()
+          : [];
+        debugData.dataStatus.testCases.count = testCases.length;
+      } catch (error: any) {
+        debugData.dataStatus.testCases.error = error.message;
+      }
+
+      // Test bugs
+      try {
+        const bugs = req.session.userRole === "Admin" 
+          ? await storage.getBugs()
+          : [];
+        debugData.dataStatus.bugs.count = bugs.length;
+      } catch (error: any) {
+        debugData.dataStatus.bugs.error = error.message;
+      }
+
+      console.log('🔍 Analytics Debug - Result:', debugData);
+      res.json(debugData);
+    } catch (error) {
+      console.error("Analytics debug error:", error);
+      res.status(500).json({ message: "Analytics debug failed", error: error.message });
+    }
+  });
+
   // Activities routes
   apiRouter.get("/activities", isAuthenticated, async (req, res) => {
     try {

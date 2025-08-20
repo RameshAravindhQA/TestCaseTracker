@@ -40,6 +40,7 @@ import {
   Loader2,
   Play,
   User as UserIcon,
+  TrendingUp,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -172,6 +173,12 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       href: "/dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
+    // Analytics Dashboard added here
+    {
+      name: "Analytics Dashboard",
+      href: "/dashboard/analytics",
+      icon: <BarChart3 className="h-5 w-5" />,
+    },
     {
       name: "Projects",
       href: "/projects",
@@ -271,12 +278,6 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       name: "Resource Allocation",
       href: "/resource-allocation",
       icon: <Users className="h-5 w-5" />,
-    },
-    // Analytics Dashboard added here
-    {
-      name: "Analytics Dashboard",
-      href: "/dashboard/analytics",
-      icon: <BarChart3 className="h-5 w-5" />,
     },
   ], []);
 
