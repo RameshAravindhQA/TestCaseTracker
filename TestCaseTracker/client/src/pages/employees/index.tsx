@@ -441,40 +441,39 @@ Mike,Johnson,mike.johnson@company.com,5551234567,Sales,Sales Executive,2023-12-0
                 <Download className="mr-2 h-4 w-4" />
                 Download Template
               </Button>
-                  </div>
-                  <div>
-                    <Label htmlFor="file-upload">Select File (CSV)</Label>
-                    <Input
-                      id="file-upload"
-                      type="file"
-                      ref={fileInputRef}
-                      accept=".csv"
-                      onChange={handleFileUpload}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setIsImportDialogOpen(false);
-                      setSelectedFile(null);
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = '';
-                      }
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleImport}
-                    disabled={!selectedFile || isImporting}
-                  >
-                    {isImporting ? "Importing..." : "Import Employees"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
+              <div>
+                <Label htmlFor="file-upload">Select File (CSV)</Label>
+                <Input
+                  id="file-upload"
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setIsImportDialogOpen(false);
+                  setSelectedFile(null);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleImport}
+                disabled={!selectedFile || isImporting}
+              >
+                {isImporting ? "Importing..." : "Import Employees"}
+              </Button>
+            </DialogFooter>
+            </DialogContent>
             </Dialog>
 
             <Button
