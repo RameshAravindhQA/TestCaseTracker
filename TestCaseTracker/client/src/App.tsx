@@ -117,10 +117,18 @@ function Router() {
   return (
     <Switch>
       {/* Public routes */}
-      <Route path="/login" component={Login}/>
-      <Route path="/register" component={Register}/>
-      <Route path="/forgot-password" component={ForgotPassword}/>
-      <Route path="/reset-password" component={ResetPassword}/>
+      <Route path="/login">
+        <Login />
+      </Route>
+      <Route path="/register">
+        <Register />
+      </Route>
+      <Route path="/forgot-password">
+        <ForgotPassword />
+      </Route>
+      <Route path="/reset-password">
+        <ResetPassword />
+      </Route>
 
       {/* Protected routes */}
       <Route path="/dashboard" component={DashboardPage} />

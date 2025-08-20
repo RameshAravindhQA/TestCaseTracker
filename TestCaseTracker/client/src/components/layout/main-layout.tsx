@@ -85,8 +85,8 @@ export function MainLayout({ children }: MainLayoutProps) {
     );
   }
 
-  // If this is login, register, or forgot password page, render without sidebar
-  if (location === "/login" || location === "/register" || location === "/forgot-password") {
+  // If this is login, register, forgot password, or reset password page, render without sidebar
+  if (location === "/login" || location === "/register" || location === "/forgot-password" || location === "/reset-password") {
     return <>{children}</>;
   }
 
