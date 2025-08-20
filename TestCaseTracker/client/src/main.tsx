@@ -1,8 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 // Router is handled in App.tsx with wouter
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from './hooks/use-auth';
 import App from './App';
 import './index.css';
 
@@ -15,15 +13,6 @@ window.addEventListener('unhandledrejection', (event) => {
 
 window.addEventListener('error', (event) => {
   console.error('Global error:', event.error);
-});
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      refetchOnWindowFocus: false,
-    },
-  },
 });
 
 // Initialize sound system early
@@ -40,11 +29,7 @@ if (!root) {
   console.log("✅ Root element found, mounting app");
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </QueryClientProvider>
+      <App />
     </React.StrictMode>,
   );
 }
