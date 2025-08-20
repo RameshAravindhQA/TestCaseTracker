@@ -39,7 +39,7 @@ import {
   LogOut,
   Loader2,
   Play,
-  User,
+  User as UserIcon,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -339,7 +339,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     {
       name: "My Profile",
       href: "/profile",
-      icon: <User className="h-5 w-5" />,
+      icon: <UserIcon className="h-5 w-5" />,
     },
   ], []);
 
