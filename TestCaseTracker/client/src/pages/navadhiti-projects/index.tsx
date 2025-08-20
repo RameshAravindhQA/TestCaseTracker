@@ -889,7 +889,7 @@ export default function NavadhitiProjectsPage() {
                               </div>
                             </div>
                         </CardContent>
-                        </Card>
+                      </Card>
                     );
                   })}
                 </div>
@@ -2176,8 +2176,7 @@ export default function NavadhitiProjectsPage() {
                       <CardTitle className="text-lg text-center">Individual Employee Dashboard</CardTitle>
                       <CardDescription className="text-center">Detailed employee allocation and performance analytics with progress indicators</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                      {/* Employee Performance Grid with Enhanced Progress Bars */}
+                    <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {employeesData.map((employee: any) => {
                           const allocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
