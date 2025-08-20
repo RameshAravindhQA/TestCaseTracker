@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './hooks/use-auth';
 import App from './App';
 import './index.css';
-import { MainLayout } from "@/components/layout/main-layout";
 
 // Global error handlers
 window.addEventListener('unhandledrejection', (event) => {

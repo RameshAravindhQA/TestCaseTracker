@@ -1,7 +1,12 @@
-import React from "react";
-import { LoginForm } from "@/components/authentication/login-form";
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
+import { motion } from 'framer-motion';
+import { LoginForm } from '@/components/authentication/login-form';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { NavadhitiLogo } from "@/components/ui/navadhiti-logo";
-import { motion } from "framer-motion";
 import { loginPageVariants, loginHeaderVariants, logoVariants } from "@/lib/animations";
 
 export default function LoginPage() {
@@ -21,7 +26,7 @@ export default function LoginPage() {
             variants={loginHeaderVariants}
             className="text-center"
           >
-            <motion.div 
+            <motion.div
               className="flex justify-center mb-6"
               variants={logoVariants}
               whileHover="hover"
@@ -29,11 +34,11 @@ export default function LoginPage() {
             >
               <NavadhitiLogo size="xl" />
             </motion.div>
-            <motion.h2 
+            <motion.h2
               className="text-3xl font-bold text-gray-900 dark:text-white"
               initial={{ opacity: 0, y: 20 }}
-              animate={{ 
-                opacity: 1, 
+              animate={{
+                opacity: 1,
                 y: 0,
                 transition: { delay: 0.6, duration: 0.5 }
               }}
