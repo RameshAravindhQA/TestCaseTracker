@@ -1240,94 +1240,6 @@ export default function NavadhitiProjectsPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Employee Allocation Overview */}
-                <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg text-center">Employee Allocation Status</CardTitle>
-                    <CardDescription className="text-center">Overview of employee availability and project assignments</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Employee Status Pie Chart */}
-                      <div className="flex flex-col items-center">
-                        <h4 className="text-md font-medium mb-4 text-center">Employee Status Distribution</h4>
-                        <ResponsiveContainer width="100%" height={250}>
-                          <PieChart>
-                            <Pie
-                              data={[
-                                { 
-                                  name: 'Available', 
-                                  value: employeesData.filter((emp: any) => 
-                                    !employeeProjectsData.some((ep: any) => ep.employeeId === emp.id && ep.isActive && ep.status === 'active')
-                                  ).length, 
-                                  color: '#10b981' 
-                                },
-                                { 
-                                  name: 'Occupied', 
-                                  value: employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'active').length, 
-                                  color: '#f59e0b' 
-                                },
-                                { 
-                                  name: 'Learning', 
-                                  value: employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'learning').length, 
-                                  color: '#3b82f6' 
-                                },
-                                { 
-                                  name: 'On Leave', 
-                                  value: employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'leave').length, 
-                                  color: '#6b7280' 
-                                }
-                              ]}
-                              cx="50%"
-                              cy="50%"
-                              outerRadius={80}
-                              dataKey="value"
-                              label={({ name, value }) => `${name}: ${value}`}
-                            >
-                              {[
-                                { color: '#10b981' },
-                                { color: '#f59e0b' },
-                                { color: '#3b82f6' },
-                                { color: '#6b7280' }
-                              ].map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-
-                      {/* Technology Usage */}
-                      <div className="flex flex-col items-center">
-                        <h4 className="text-md font-medium mb-4 text-center">Technology Usage in Projects</h4>
-                        <ResponsiveContainer width="100%" height={250}>
-                          <BarChart
-                            data={technologyOptions.slice(0, 6).map((tech: any) => ({
-                              technology: tech.name,
-                              projects: projects.filter((p: any) => 
-                                p.technologies && p.technologies.includes(tech.name)
-                              ).length
-                            }))}
-                            margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis 
-                              dataKey="technology"
-                              angle={-45}
-                              textAnchor="end"
-                              height={60}
-                            />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey="projects" fill="#8b5cf6" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </CardContent>
             </Card>
           </TabsContent>
@@ -2486,7 +2398,7 @@ export default function NavadhitiProjectsPage() {
                           const navadhitiAllocations = allocations.filter((allocation: any) => {
                             return projects.some((p: any) => p.id === allocation.projectId);
                           });
-                          
+
                           // Calculate percentage based on number of active projects (assuming each project = 25-50% allocation)
                           const baseAllocation = 40; // Base percentage per project
                           const occupationPercentage = Math.min(navadhitiAllocations.length * baseAllocation, 100);
@@ -2677,94 +2589,6 @@ export default function NavadhitiProjectsPage() {
                     </CardContent>
                   </Card>
                 )}
-
-                {/* Employee Allocation Overview */}
-                <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg text-center">Employee Allocation Status</CardTitle>
-                    <CardDescription className="text-center">Overview of employee availability and project assignments</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* Employee Status Pie Chart */}
-                      <div className="flex flex-col items-center">
-                        <h4 className="text-md font-medium mb-4 text-center">Employee Status Distribution</h4>
-                        <ResponsiveContainer width="100%" height={250}>
-                          <PieChart>
-                            <Pie
-                              data={[
-                                { 
-                                  name: 'Available', 
-                                  value: employeesData.filter((emp: any) => 
-                                    !employeeProjectsData.some((ep: any) => ep.employeeId === emp.id && ep.isActive && ep.status === 'active')
-                                  ).length, 
-                                  color: '#10b981' 
-                                },
-                                { 
-                                  name: 'Occupied', 
-                                  value: employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'active').length, 
-                                  color: '#f59e0b' 
-                                },
-                                { 
-                                  name: 'Learning', 
-                                  value: employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'learning').length, 
-                                  color: '#3b82f6' 
-                                },
-                                { 
-                                  name: 'On Leave', 
-                                  value: employeeProjectsData.filter((ep: any) => ep.isActive && ep.status === 'leave').length, 
-                                  color: '#6b7280' 
-                                }
-                              ]}
-                              cx="50%"
-                              cy="50%"
-                              outerRadius={80}
-                              dataKey="value"
-                              label={({ name, value }) => `${name}: ${value}`}
-                            >
-                              {[
-                                { color: '#10b981' },
-                                { color: '#f59e0b' },
-                                { color: '#3b82f6' },
-                                { color: '#6b7280' }
-                              ].map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-
-                      {/* Technology Usage */}
-                      <div className="flex flex-col items-center">
-                        <h4 className="text-md font-medium mb-4 text-center">Technology Usage in Projects</h4>
-                        <ResponsiveContainer width="100%" height={250}>
-                          <BarChart
-                            data={technologyOptions.slice(0, 6).map((tech: any) => ({
-                              technology: tech.name,
-                              projects: projects.filter((p: any) => 
-                                p.technologies && p.technologies.includes(tech.name)
-                              ).length
-                            }))}
-                            margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis 
-                              dataKey="technology"
-                              angle={-45}
-                              textAnchor="end"
-                              height={60}
-                            />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey="projects" fill="#8b5cf6" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </CardContent>
             </Card>
           </TabsContent>
