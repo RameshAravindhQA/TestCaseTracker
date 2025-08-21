@@ -2418,7 +2418,7 @@ export default function NavadhitiProjectsPage() {
                                   <div className="text-xs text-gray-600 dark:text-gray-400">
                                     Duration: {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
                                   </div>
-                                  
+
                                   {/* Team Members Section */}
                                   {project.assignedEmployees && project.assignedEmployees.length > 0 && (
                                     <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
@@ -2765,7 +2765,7 @@ export default function NavadhitiProjectsPage() {
                             </Button>
                           </div>
                         </div>
-                        
+
                         {resourceViewMode === 'list' && (
                           <div className="space-y-3">
                             {filteredEmployees.map((employee: any) => {
@@ -2845,6 +2845,87 @@ export default function NavadhitiProjectsPage() {
                           </div>
                         )}
                       </div>
+
+                      {/* Employee Table View */}
+                      {resourceViewMode === 'table' && (
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Employee</TableHead>
+                                <TableHead>Department</TableHead>
+                                <TableHead>Allocation</TableHead>
+                                <TableHead>Projects</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredEmployees.map((employee: any) => {
+                                const allocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                                const navadhitiAllocations = allocations.filter((allocation: any) => {
+                                  return projects.some((p: any) => p.id === allocation.projectId);
+                                });
+                                const occupationPercentage = Math.min(navadhitiAllocations.length * 40, 100);
+
+                                return (
+                                  <TableRow key={employee.id}>
+                                    <TableCell>
+                                      <div className="flex items-center gap-3">
+                                        <Avatar className="h-8 w-8">
+                                          <AvatarImage src={employee.profilePicture} alt={`${employee.firstName} ${employee.lastName}`} />
+                                          <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium">
+                                            {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                          <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                                          <div className="text-sm text-gray-500">{employee.employeeId}</div>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>{employee.department}</TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                                          <div 
+                                            className="bg-blue-600 h-2 rounded-full" 
+                                            style={{ width: `${occupationPercentage}%` }}
+                                          />
+                                        </div>
+                                        <span className="text-sm text-gray-600">
+                                          {occupationPercentage}%
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant="outline">{navadhitiAllocations.length}</Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant={navadhitiAllocations.length > 0 ? "destructive" : "default"}>
+                                        {navadhitiAllocations.length > 0 ? 'Occupied' : 'Available'}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setSelectedEmployees([employee.id]);
+                                          setIsAllocationDialogOpen(true);
+                                        }}
+                                      >
+                                        <UserCheck className="h-4 w-4 mr-2" />
+                                        {navadhitiAllocations.length > 0 ? 'Manage' : 'Allocate'}
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
 
                       {/* Empty State */}
                       {filteredEmployees.length === 0 ? (
