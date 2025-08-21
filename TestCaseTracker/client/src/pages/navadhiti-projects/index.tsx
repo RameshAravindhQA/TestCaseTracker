@@ -68,6 +68,16 @@ interface NavadhitiProject {
   additionalRemarks?: string; // Added for status review
 }
 
+// Helper function to calculate days worked
+function calculateDaysWorked(startDate: string | null, endDate: string | null): number {
+  if (!startDate) return 0;
+  const start = new Date(startDate);
+  const end = endDate ? new Date(endDate) : new Date(); // If no end date, use today
+  const diffTime = end.getTime() - start.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays >= 0 ? diffDays : 0; // Ensure non-negative result
+}
+
 function TableIcon(props: any) {
   return (
     <svg
@@ -194,6 +204,17 @@ export default function NavadhitiProjectsPage() {
     enabled: activeTab === "resourceAllocation" || activeTab === "dashboardAnalytics" // Ensure employee projects are fetched for dashboard too
   });
 
+  // Fetch employee project history
+  const { data: employeeProjectHistory = [] } = useQuery({
+    queryKey: ["/api/employee-projects-history"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/employee-projects-history");
+      if (!res.ok) throw new Error("Failed to fetch employee project history");
+      return res.json();
+    },
+    enabled: isManageDialogOpen // Fetch history only when the manage dialog is open
+  });
+
   // Fetch technology options
   const { data: technologyOptions = [] } = useQuery({
     queryKey: ["/api/technology-options"],
@@ -244,9 +265,26 @@ export default function NavadhitiProjectsPage() {
     onSuccess: () => {
       toast({ title: "Employee unoccupied successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/employee-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employee-projects-history"] }); // Invalidate history as well
     },
     onError: () => {
       toast({ title: "Failed to unoccupy employee", variant: "destructive" });
+    },
+  });
+
+  // Update employee project allocation mutation (for end date, etc.)
+  const updateEmployeeProjectMutation = useMutation({
+    mutationFn: async ({ allocationId, ...data }: { allocationId: number; endDate: string }) => {
+      const res = await apiRequest("PUT", `/api/employee-projects/${allocationId}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Project allocation updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/employee-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employee-projects-history"] }); // Invalidate history as well
+    },
+    onError: () => {
+      toast({ title: "Failed to update project allocation", variant: "destructive" });
     },
   });
 
@@ -2607,7 +2645,7 @@ export default function NavadhitiProjectsPage() {
                                     {/* Project Info */}
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-2 mb-2">
-                                        <h4 className="font-semibold text-lg text-gray-900 dark:text-gray-100 truncate">
+                                        <h4 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
                                           {project.projectName}
                                         </h4>
                                         <Badge variant="outline" className="text-xs">
@@ -2675,8 +2713,7 @@ export default function NavadhitiProjectsPage() {
                                           backgroundColor: projectHealthInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
                                                           projectHealthInfo.bgColor.includes('red') ? '#FEF2F2' : 
                                                           projectHealthInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
-                                                          projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : 
-                                                          projectHealthInfo.bgColor.includes('green') ? '#F0FDF4' : '#EBF8FF'
+                                                          projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : '#F0FDF4'
                                         }}>
                                           {completionPercentage}%
                                         </Badge>
@@ -3788,67 +3825,184 @@ export default function NavadhitiProjectsPage() {
 
         {/* Manage Employee Dialog */}
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Manage Projects for {selectedEmployee?.firstName} {selectedEmployee?.lastName}</DialogTitle>
+              <DialogTitle>Manage Employee Projects</DialogTitle>
+              <DialogDescription>
+                {selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : ''}
+              </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              {selectedEmployee && employeeProjectsData.filter((ep: any) => ep.employeeId === selectedEmployee.id && ep.isActive).length > 0 ? (
-                employeeProjectsData
-                  .filter((ep: any) => ep.employeeId === selectedEmployee.id && ep.isActive)
-                  .map((allocation: any) => {
-                    const project = projects.find((p: any) => p.id === allocation.projectId);
-                    return (
-                      <div key={allocation.id} className="flex items-center justify-between p-3 border rounded-md">
-                        <div>
-                          <div className="font-medium text-sm">
-                            {project?.projectName || 'Unknown Project'}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Role: {allocation.role || 'N/A'}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {allocation?.startDate && new Date(allocation.startDate).toLocaleDateString()} - {allocation?.endDate && new Date(allocation.endDate).toLocaleDateString()}
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs h-7"
-                          onClick={() => {
-                            if (confirm('Are you sure you want to unoccupy this employee from this project?')) {
-                              unoccupyEmployeeMutation.mutate(allocation.id);
-                              setIsManageDialogOpen(false); // Close dialog after action
-                            }
-                          }}
-                        >
-                          <X className="h-3 w-3 mr-1" />
-                          Unoccupy
-                        </Button>
-                      </div>
-                    );
-                  })
-              ) : (
-                <p className="text-center text-gray-500">No active project allocations found for this employee.</p>
-              )}
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setIsManageDialogOpen(false)}>
-                  Close
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedEmployees([selectedEmployee?.id]);
-                    setIsAllocationDialogOpen(true);
-                    setIsManageDialogOpen(false);
-                  }}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add Project
-                </Button>
+
+            {selectedEmployee && (
+              <div className="space-y-6">
+                {/* Current Active Projects */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Active Projects</h3>
+                  <div className="space-y-3">
+                    {employeeProjectsData
+                      .filter((ep: any) => ep.employeeId === selectedEmployee.id && ep.isActive)
+                      .map((allocation: any) => {
+                        const project = projects.find((p: any) => p.id === allocation.projectId);
+                        const daysWorked = calculateDaysWorked(allocation.startDate, allocation.endDate);
+
+                        return (
+                          <Card key={allocation.id} className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h4 className="font-medium">{project?.projectName || 'Unknown Project'}</h4>
+                                  <Badge variant="secondary">{allocation.role}</Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                                  <div>
+                                    <span className="font-medium">Start Date:</span>{' '}
+                                    {allocation.startDate ? format(new Date(allocation.startDate), 'PP') : 'Not set'}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">End Date:</span>{' '}
+                                    {allocation.endDate ? format(new Date(allocation.endDate), 'PP') : 'Ongoing'}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Days Worked:</span>{' '}
+                                    <Badge variant="outline">{daysWorked} days</Badge>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Status:</span>{' '}
+                                    <Badge className={
+                                      allocation.status === 'active' ? 'bg-green-100 text-green-800' :
+                                      allocation.status === 'learning' ? 'bg-orange-100 text-orange-800' :
+                                      allocation.status === 'leave' ? 'bg-gray-100 text-gray-800' :
+                                      'bg-blue-100 text-blue-800'
+                                    }>
+                                      {allocation.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 ml-4">
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button size="sm" variant="outline">
+                                      <Calendar className="h-4 w-4 mr-1" />
+                                      Update End Date
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Update Project End Date</DialogTitle>
+                                      <DialogDescription>
+                                        Update the end date for {selectedEmployee.firstName} on {project?.projectName}
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <div>
+                                        <Label>Current End Date</Label>
+                                        <Input 
+                                          value={allocation.endDate ? format(new Date(allocation.endDate), 'yyyy-MM-dd') : ''} 
+                                          disabled 
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label>New End Date</Label>
+                                        <Input 
+                                          type="date" 
+                                          id={`endDate-${allocation.id}`}
+                                        />
+                                      </div>
+                                      <div className="flex justify-end gap-2">
+                                        <Button variant="outline">Cancel</Button>
+                                        <Button onClick={() => {
+                                          const newEndDate = (document.getElementById(`endDate-${allocation.id}`) as HTMLInputElement)?.value;
+                                          if (newEndDate) {
+                                            updateEmployeeProjectMutation.mutate({
+                                              allocationId: allocation.id,
+                                              endDate: newEndDate
+                                            });
+                                          }
+                                        }}>
+                                          Update
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => {
+                                    if (confirm('Are you sure you want to unoccupy this employee from this project?')) {
+                                      unoccupyEmployeeMutation.mutate(allocation.id);
+                                      setIsManageDialogOpen(false); // Close dialog after action
+                                    }
+                                  }}
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Unoccupy
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* Project History */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Project History</h3>
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Project</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>End Date</TableHead>
+                          <TableHead>Days Worked</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Last Modified</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {employeeProjectHistory.map((history: any) => {
+                          const project = projects.find((p: any) => p.id === history.projectId);
+                          const daysWorked = calculateDaysWorked(history.startDate, history.endDate);
+
+                          return (
+                            <TableRow key={history.id}>
+                              <TableCell className="font-medium">
+                                {project?.projectName || 'Unknown Project'}
+                              </TableCell>
+                              <TableCell>{history.role}</TableCell>
+                              <TableCell>
+                                {history.startDate ? format(new Date(history.startDate), 'PP') : 'Not set'}
+                              </TableCell>
+                              <TableCell>
+                                {history.endDate ? format(new Date(history.endDate), 'PP') : 'Ongoing'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{daysWorked} days</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={
+                                  history.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                }>
+                                  {history.isActive ? 'Active' : 'Completed'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {history.updatedAt ? format(new Date(history.updatedAt), 'PPp') : 'Not available'}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

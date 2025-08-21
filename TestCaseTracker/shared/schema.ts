@@ -857,11 +857,15 @@ export const employeeProjects = pgTable("employee_projects", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id").notNull(),
   projectId: integer("project_id").notNull(),
+  projectType: text("project_type").default("regular"), // regular or navadhiti
   role: text("role"),
+  allocation: integer("allocation").default(100), // percentage allocation
   startDate: date("start_date"),
   endDate: date("end_date"),
+  status: text("status").$type<"active" | "learning" | "leave" | "completed">().default("active"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Technology Options

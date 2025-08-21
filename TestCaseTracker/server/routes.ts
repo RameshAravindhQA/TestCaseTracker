@@ -525,6 +525,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  apiRouter.put("/employee-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      const updated = await storage.updateEmployeeProject(id, updateData);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update employee project mapping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   apiRouter.delete("/employee-projects/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -532,6 +544,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success });
     } catch (error) {
       console.error("Delete employee project mapping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get employee project history
+  apiRouter.get("/employee-projects/history/:employeeId", isAuthenticated, async (req, res) => {
+    try {
+      const employeeId = parseInt(req.params.employeeId);
+      const history = await storage.getEmployeeProjectHistory(employeeId);
+      res.json(history);
+    } catch (error) {
+      console.error("Get employee project history error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

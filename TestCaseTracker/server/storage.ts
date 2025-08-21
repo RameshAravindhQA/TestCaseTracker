@@ -241,6 +241,8 @@ export interface IStorage {
   getEmployeeProjects(employeeId?: number): Promise<any[]>;
   createEmployeeProject(data: any): Promise<any>;
   deleteEmployeeProject(id: number): Promise<boolean>;
+  updateEmployeeProject(id: number, data: Partial<any>): Promise<any>; // Assuming InsertEmployeeProject type for data
+  getEmployeeProjectHistory(employeeId: number): Promise<any[]>;
 
   // Technology Options
   getTechnologyOptions(): Promise<any[]>;
@@ -2192,6 +2194,26 @@ class MemStorage implements IStorage {
 
   async deleteEmployeeProject(id: number): Promise<boolean> {
     return this.employeeProjects.delete(id);
+  }
+
+  async updateEmployeeProject(id: number, data: Partial<any>): Promise<any> {
+    const employeeProject = this.employeeProjects.get(id);
+    if (!employeeProject) {
+      console.error(`Employee project with ID ${id} not found.`);
+      return null;
+    }
+    const updatedEmployeeProject = {
+      ...employeeProject,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.employeeProjects.set(id, updatedEmployeeProject);
+    return updatedEmployeeProject;
+  }
+
+  async getEmployeeProjectHistory(employeeId: number): Promise<any[]> {
+    return Array.from(this.employeeProjects.values()).filter(ep => ep.employeeId === employeeId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   // Technology Options
