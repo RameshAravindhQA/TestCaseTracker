@@ -180,7 +180,7 @@ export default function NavadhitiProjectsPage() {
       if (!res.ok) throw new Error("Failed to fetch employees");
       return res.json();
     },
-    enabled: activeTab === "resourceAllocation"
+    enabled: activeTab === "resourceAllocation" || activeTab === "dashboardAnalytics" // Ensure employees are fetched for dashboard too
   });
 
   // Fetch employee project mappings
@@ -191,7 +191,7 @@ export default function NavadhitiProjectsPage() {
       if (!res.ok) throw new Error("Failed to fetch employee projects");
       return res.json();
     },
-    enabled: activeTab === "resourceAllocation"
+    enabled: activeTab === "resourceAllocation" || activeTab === "dashboardAnalytics" // Ensure employee projects are fetched for dashboard too
   });
 
   // Fetch technology options
@@ -211,7 +211,7 @@ export default function NavadhitiProjectsPage() {
       const res = await apiRequest("GET", "/api/department-options");
       return res.json();
     },
-    enabled: activeTab === "resourceAllocation"
+    enabled: activeTab === "resourceAllocation" || activeTab === "dashboardAnalytics" // Ensure department options are fetched for dashboard too
   });
 
   // Create allocation mutation
