@@ -2626,7 +2626,7 @@ export default function NavadhitiProjectsPage() {
                               <div className="flex items-center space-x-3 mb-4">
                                 <Avatar className="h-12 w-12 border-2 border-gray-200">
                                   <AvatarImage src={employee.profilePicture} alt={`${employee.firstName} ${employee.lastName}`} />
-                                  <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
+                                  <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-lg">
                                     {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
                                   </AvatarFallback>
                                 </Avatar>
@@ -2646,7 +2646,7 @@ export default function NavadhitiProjectsPage() {
                                   Current Projects
                                 </h5>
                                 {navadhitiAllocations.length > 0 ? (
-                                  <div className="space-y-2">
+                                  <div className="space-y-1">
                                     {navadhitiAllocations.slice(0, 2).map((allocation: any) => {
                                       const project = projects.find((p: any) => p.id === allocation.projectId);
                                       return project ? (
@@ -2655,14 +2655,14 @@ export default function NavadhitiProjectsPage() {
                                             {project.projectName}
                                           </div>
                                           <div className="text-xs text-blue-600 dark:text-blue-400">
-                                            Role: {allocation.role || 'Team Member'}
+                                            {allocation.role || 'Team Member'}
                                           </div>
                                         </div>
                                       ) : null;
                                     })}
                                     {navadhitiAllocations.length > 2 && (
                                       <div className="text-xs text-gray-500 dark:text-gray-400 italic">
-                                        +{navadhitiAllocations.length - 2} more projects
+                                        +{navadhitiAllocations.length - 2} more
                                       </div>
                                     )}
                                   </div>
@@ -2693,19 +2693,19 @@ export default function NavadhitiProjectsPage() {
 
                                 {/* Progress Bar */}
                                 <div className="relative mb-3">
-                                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                                  <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                                     <div 
-                                      className={`${occupationInfo.bgColor} h-4 rounded-full transition-all duration-500 ease-out flex items-center justify-center`}
+                                      className={`${occupationInfo.bgColor} h-3 rounded-full transition-all duration-500 ease-out flex items-center justify-center`}
                                       style={{ width: `${occupationPercentage}%` }}
                                     >
-                                      {occupationPercentage > 20 && (
+                                      {occupationPercentage > 30 && (
                                         <span className="text-xs font-medium text-white">
                                           {occupationPercentage}%
                                         </span>
                                       )}
                                     </div>
                                   </div>
-                                  {occupationPercentage <= 20 && occupationPercentage > 0 && (
+                                  {occupationPercentage <= 30 && occupationPercentage > 0 && (
                                     <span className="absolute right-2 top-0 text-xs font-medium text-gray-600 leading-4">
                                       {occupationPercentage}%
                                     </span>
@@ -2735,7 +2735,7 @@ export default function NavadhitiProjectsPage() {
                                     setIsAllocationDialogOpen(true);
                                   }}
                                 >
-                                  <UserCheck className="h-3 w-3 mr-2" />
+                                  <UserCheck className="h-4 w-4 mr-2" />
                                   {navadhitiAllocations.length > 0 ? 'Manage Projects' : 'Allocate to Project'}
                                 </Button>
                               </div>
@@ -2743,10 +2743,6 @@ export default function NavadhitiProjectsPage() {
                           );
                         })}
                       </div>
-
-                      
-
-                      
 
                       {/* Empty State */}
                       {filteredEmployees.length === 0 ? (
