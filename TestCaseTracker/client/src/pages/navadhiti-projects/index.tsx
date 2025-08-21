@@ -107,7 +107,7 @@ export default function NavadhitiProjectsPage() {
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [statusUpdateProject, setStatusUpdateProject] = useState<NavadhitiProject | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [viewMode, setViewMode] = useState<'card' | 'list' | 'table'>('card');
+  const [viewMode, setViewMode] = useState<'card' | 'list' | 'table' | 'projects' | 'employees'>('projects');
 
   // Resource Allocation Filters
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
@@ -2010,13 +2010,13 @@ export default function NavadhitiProjectsPage() {
                   </div>
                   <div className="flex items-center gap-4">
                     <Label htmlFor="analytics-view" className="text-sm font-medium">View by:</Label>
-                    <Select value={viewMode === 'projects' ? 'projects' : 'employees'} onValueChange={(value) => setViewMode(value as any)}>
+                    <Select value={viewMode === 'employees' ? 'employees' : 'projects'} onValueChange={(value) => setViewMode(value as 'card' | 'list' | 'table' | 'projects' | 'employees')}>
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Select view type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="projects">Projects</SelectItem>
-                        <SelectItem value="employees">Employees</SelectItem>
+                        <SelectItem value="projects">Projects Dashboard</SelectItem>
+                        <SelectItem value="employees">Employees Dashboard</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -2160,7 +2160,7 @@ export default function NavadhitiProjectsPage() {
                 </div>
 
                 {/* Individual Projects Dashboard */}
-                {viewMode === 'projects' && (
+                {(viewMode === 'projects' || viewMode === 'card' || viewMode === 'list' || viewMode === 'table') && viewMode !== 'employees' && (
                   <Card>
                     <CardHeader className="pb-4 text-center">
                       <CardTitle className="text-lg">Individual Project Status Dashboard</CardTitle>
@@ -2391,8 +2391,56 @@ export default function NavadhitiProjectsPage() {
                       <CardDescription className="text-center">Detailed employee allocation and performance analytics with progress indicators</CardDescription>
                     </CardHeader>
                     <CardContent>
+                      {/* Search and Filter Controls for Employee Dashboard */}
+                      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <Label htmlFor="employee-search" className="text-sm font-medium">Search Employees</Label>
+                            <div className="relative mt-1">
+                              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="employee-search"
+                                placeholder="Search by name, email, ID..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor="employee-dept-filter" className="text-sm font-medium">Department</Label>
+                            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="All Departments" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Departments</SelectItem>
+                                {departmentOptions.map((dept: any) => (
+                                  <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="employee-status-filter" className="text-sm font-medium">Status</Label>
+                            <Select value={statusEmployeeFilter} onValueChange={setStatusEmployeeFilter}>
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="All Status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Status</SelectItem>
+                                <SelectItem value="available">Available</SelectItem>
+                                <SelectItem value="occupied">Occupied</SelectItem>
+                                <SelectItem value="learning">Learning</SelectItem>
+                                <SelectItem value="onLeave">On Leave</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {employeesData.map((employee: any) => {
+                        {filteredEmployees.map((employee: any) => {
                           // Calculate occupation percentage more accurately
                           const allocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
                           const navadhitiAllocations = allocations.filter((allocation: any) => {
@@ -2575,17 +2623,19 @@ export default function NavadhitiProjectsPage() {
                       </div>
 
                       {/* Empty State */}
-                      {employeesData.length === 0 && (
-                        <div className="text-center py-12">
+                      {filteredEmployees.length === 0 ? (
+                        <div className="col-span-full text-center py-12">
                           <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                            No employees found
+                            {employeesData.length === 0 ? "No employees found" : "No employees match your search"}
                           </h3>
                           <p className="text-gray-500 dark:text-gray-400">
-                            Import employees to view their allocation status.
+                            {employeesData.length === 0 
+                              ? "Import employees to view their allocation status." 
+                              : `No employees found for "${searchTerm}". Try adjusting your search or filters.`}
                           </p>
                         </div>
-                      )}
+                      ) : null}
                     </CardContent>
                   </Card>
                 )}
