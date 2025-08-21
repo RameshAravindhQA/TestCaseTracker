@@ -107,7 +107,7 @@ export default function NavadhitiProjectsPage() {
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [statusUpdateProject, setStatusUpdateProject] = useState<NavadhitiProject | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [viewMode, setViewMode] = useState<'card' | 'list' | 'table' | 'projects' | 'employees'>('projects');
+  const [viewMode, setViewMode] = useState<'card' | 'list' | 'table' | 'projects' | 'employees'>('card');
 
   // Resource Allocation Filters
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
@@ -809,31 +809,36 @@ export default function NavadhitiProjectsPage() {
                                 </div>
                               )}
 
-                              {/* Show all project allocations */}
+                              {/* Show all project allocations - compact layout */}
                               {employeeProjectsData
                                 .filter((ep: any) => ep.employeeId === employee.id && ep.isActive)
+                                .slice(0, 1) // Show only first allocation to save space
                                 .map((allocation: any, index: number) => {
                                   const allocatedProject = projects.find((p: any) => p.id === allocation.projectId);
                                   return allocatedProject ? (
-                                    <div key={index} className="mt-1 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs border border-blue-200 dark:border-blue-800">
-                                      <div className="font-medium text-blue-900 dark:text-blue-100">
+                                    <div key={index} className="mt-1 p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded text-xs border border-blue-200 dark:border-blue-800">
+                                      <div className="font-medium text-blue-900 dark:text-blue-100 truncate">
                                         {allocatedProject.projectName}
                                       </div>
-                                      <div className="text-blue-700 dark:text-blue-300">
+                                      <div className="text-blue-700 dark:text-blue-300 text-xs truncate">
                                         {allocation.role}
-                                      </div>
-                                      <div className="text-blue-600 dark:text-blue-400 text-xs">
-                                        Status: {allocation.status}
                                       </div>
                                     </div>
                                   ) : null;
                                 })}
 
+                              {/* Show additional project count if more than 1 */}
+                              {employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive).length > 1 && (
+                                <div className="mt-1 text-xs text-gray-500">
+                                  +{employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive).length - 1} more projects
+                                </div>
+                              )}
+
                               {/* Show if employee has no current allocations */}
                               {status === 'available' && (
-                                <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs border border-green-200 dark:border-green-800">
-                                  <div className="text-green-700 dark:text-green-300 font-medium">
-                                    Available for new projects
+                                <div className="mt-1 p-1.5 bg-green-50 dark:bg-green-900/20 rounded text-xs border border-green-200 dark:border-green-800">
+                                  <div className="text-green-700 dark:text-green-300 font-medium text-center">
+                                    Available
                                   </div>
                                 </div>
                               )}
@@ -1899,49 +1904,68 @@ export default function NavadhitiProjectsPage() {
                                 <TableCell>
                                   <div className="flex flex-col gap-1">
                                     {(() => {
-                                      // Handle custom status display
-                                      if (project.currentSprint?.startsWith('custom_')) {
-                                        return (
-                                          <Badge 
-                                            variant="outline"
-                                            className="bg-blue-50 text-blue-800 border-blue-200"
-                                          >
-                                            Custom Status
-                                          </Badge>
-                                        );
-                                      }
-
-                                      // Handle predefined status colors
-                                      const getSprintStatusBadge = (status: string) => {
-                                        switch (status) {
-                                          case 'green':
-                                            return (
-                                              <Badge className="bg-green-500 text-white border-green-600">
-                                                On Track
-                                              </Badge>
-                                            );
-                                          case 'amber':
-                                            return (
-                                              <Badge className="bg-amber-500 text-white border-amber-600">
-                                                At Risk
-                                              </Badge>
-                                            );
-                                          case 'red':
-                                            return (
-                                              <Badge className="bg-red-500 text-white border-red-600">
-                                                Blocked
-                                              </Badge>
-                                            );
-                                          default:
-                                            return (
-                                              <Badge variant="outline">
-                                                {status || 'Not Set'}
-                                              </Badge>
-                                            );
+                                      // Handle predefined status colors and active status
+                                      const getSprintStatusBadge = (status: string, projectStatus: string) => {
+                                        // If project is active, show based on currentSprint
+                                        if (projectStatus === 'Active') {
+                                          switch (status) {
+                                            case 'green':
+                                              return (
+                                                <Badge className="bg-green-500 text-white border-green-600">
+                                                  On Track
+                                                </Badge>
+                                              );
+                                            case 'amber':
+                                              return (
+                                                <Badge className="bg-amber-500 text-white border-amber-600">
+                                                  At Risk
+                                                </Badge>
+                                              );
+                                            case 'red':
+                                              return (
+                                                <Badge className="bg-red-500 text-white border-red-600">
+                                                  Blocked
+                                                </Badge>
+                                              );
+                                            default:
+                                              return (
+                                                <Badge className="bg-green-500 text-white border-green-600">
+                                                  Active
+                                                </Badge>
+                                              );
+                                          }
+                                        } else {
+                                          // For non-active projects, show project status
+                                          switch (projectStatus) {
+                                            case 'Completed':
+                                              return (
+                                                <Badge className="bg-blue-500 text-white border-blue-600">
+                                                  Completed
+                                                </Badge>
+                                              );
+                                            case 'On Hold':
+                                              return (
+                                                <Badge className="bg-yellow-500 text-white border-yellow-600">
+                                                  On Hold
+                                                </Badge>
+                                              );
+                                            case 'Cancelled':
+                                              return (
+                                                <Badge className="bg-red-500 text-white border-red-600">
+                                                  Cancelled
+                                                </Badge>
+                                              );
+                                            default:
+                                              return (
+                                                <Badge variant="outline">
+                                                  {status || 'Not Set'}
+                                                </Badge>
+                                              );
+                                          }
                                         }
                                       };
 
-                                      return getSprintStatusBadge(project.currentSprint);
+                                      return getSprintStatusBadge(project.currentSprint, project.status);
                                     })()}
                                   </div>
                                 </TableCell>
@@ -2167,8 +2191,68 @@ export default function NavadhitiProjectsPage() {
                       <CardDescription>Detailed project progress and team allocation with status indicators</CardDescription>
                     </CardHeader>
                     <CardContent>
+                      {/* Search and Filter Controls for Project Dashboard */}
+                      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div>
+                            <Label htmlFor="project-dashboard-search" className="text-sm font-medium">Search Projects</Label>
+                            <div className="relative mt-1">
+                              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="project-dashboard-search"
+                                placeholder="Search by name, client..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor="project-status-filter" className="text-sm font-medium">Status</Label>
+                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="All Status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Status</SelectItem>
+                                <SelectItem value="Active">Active</SelectItem>
+                                <SelectItem value="Completed">Completed</SelectItem>
+                                <SelectItem value="On Hold">On Hold</SelectItem>
+                                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="project-priority-filter" className="text-sm font-medium">Priority</Label>
+                            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="All Priorities" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Priorities</SelectItem>
+                                <SelectItem value="High">High</SelectItem>
+                                <SelectItem value="Medium">Medium</SelectItem>
+                                <SelectItem value="Low">Low</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="project-technologies-filter" className="text-sm font-medium">Technologies</Label>
+                            <MultiSelect
+                              options={technologyOptions.map((tech: any) => ({
+                                label: tech.name,
+                                value: tech.name
+                              }))}
+                              selected={technologyFilter}
+                              onChange={setTechnologyFilter}
+                              placeholder="Select technologies..."
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {projects.map((project: any) => {
+                        {filteredProjects.map((project: any) => {
                           const projectEmployees = employeeProjectsData.filter((ep: any) => 
                             ep.projectId === project.id && ep.isActive
                           );
@@ -2334,6 +2418,41 @@ export default function NavadhitiProjectsPage() {
                                   <div className="text-xs text-gray-600 dark:text-gray-400">
                                     Duration: {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
                                   </div>
+                                  
+                                  {/* Team Members Section */}
+                                  {project.assignedEmployees && project.assignedEmployees.length > 0 && (
+                                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                                      <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Team Members
+                                      </div>
+                                      <div className="flex -space-x-2 overflow-hidden">
+                                        {project.assignedEmployees.slice(0, 5).map((employeeId: number, index: number) => {
+                                          const employee = employeesData.find((emp: any) => emp.id === employeeId);
+                                          return employee ? (
+                                            <div key={index} className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-gray-300 overflow-hidden">
+                                              {employee.profilePicture ? (
+                                                <img
+                                                  src={employee.profilePicture}
+                                                  alt={`${employee.firstName} ${employee.lastName}`}
+                                                  className="h-full w-full object-cover"
+                                                  title={`${employee.firstName} ${employee.lastName}`}
+                                                />
+                                              ) : (
+                                                <div className="h-full w-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
+                                                  {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                                </div>
+                                              )}
+                                            </div>
+                                          ) : null;
+                                        })}
+                                        {project.assignedEmployees.length > 5 && (
+                                          <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-gray-500 flex items-center justify-center text-white text-xs font-medium">
+                                            +{project.assignedEmployees.length - 5}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* Action Buttons */}
@@ -2355,6 +2474,7 @@ export default function NavadhitiProjectsPage() {
                                     className="flex-1 text-xs h-7"
                                     onClick={() => {
                                       setEditingProject(project);
+                                      setActiveTab("projects");
                                       setIsDialogOpen(true);
                                     }}
                                   >
@@ -2368,14 +2488,16 @@ export default function NavadhitiProjectsPage() {
                       </div>
 
                       {/* Empty State */}
-                      {projects.length === 0 && (
+                      {filteredProjects.length === 0 && (
                         <div className="text-center py-12">
                           <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                             No projects found
                           </h3>
                           <p className="text-gray-500 dark:text-gray-400">
-                            Create your first Navadhiti project to see detailed analytics.
+                            {projects.length === 0 
+                              ? "Create your first Navadhiti project to see detailed analytics."
+                              : "No projects match your current filters. Try adjusting your search criteria."}
                           </p>
                         </div>
                       )}
@@ -2620,6 +2742,108 @@ export default function NavadhitiProjectsPage() {
                             </Card>
                           );
                         })}
+                      </div>
+
+                      {/* Multi-List View for Employee Dashboard */}
+                      <div className="mt-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-semibold">Employee List View</h4>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant={resourceViewMode === 'card' ? 'default' : 'outline'}
+                              onClick={() => setResourceViewMode('card')}
+                            >
+                              Card
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={resourceViewMode === 'list' ? 'default' : 'outline'}
+                              onClick={() => setResourceViewMode('list')}
+                            >
+                              List
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {resourceViewMode === 'list' && (
+                          <div className="space-y-3">
+                            {filteredEmployees.map((employee: any) => {
+                              const allocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                              const navadhitiAllocations = allocations.filter((allocation: any) => {
+                                return projects.some((p: any) => p.id === allocation.projectId);
+                              });
+                              const occupationPercentage = Math.min(navadhitiAllocations.length * 40, 100);
+
+                              return (
+                                <Card key={employee.id} className="p-4 hover:shadow-md transition-shadow">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4 flex-1">
+                                      <Avatar className="h-12 w-12 border-2 border-gray-200">
+                                        <AvatarImage src={employee.profilePicture} alt={`${employee.firstName} ${employee.lastName}`} />
+                                        <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
+                                          {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1">
+                                        <h4 className="font-semibold text-sm">{employee.firstName} {employee.lastName}</h4>
+                                        <p className="text-xs text-gray-600">{employee.employeeId} • {employee.department}</p>
+                                      </div>
+                                      <div className="flex-1 max-w-sm">
+                                        <div className="text-xs text-gray-500 mb-1">Allocation: {occupationPercentage}%</div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                          <div 
+                                            className="bg-blue-600 h-2 rounded-full" 
+                                            style={{ width: `${occupationPercentage}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <Badge variant="outline" className="mb-2">
+                                          {navadhitiAllocations.length} Projects
+                                        </Badge>
+                                        <div className="text-xs text-gray-500">
+                                          {navadhitiAllocations.length > 0 ? 'Occupied' : 'Available'}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="ml-4"
+                                      onClick={() => {
+                                        setSelectedEmployees([employee.id]);
+                                        setIsAllocationDialogOpen(true);
+                                      }}
+                                    >
+                                      <UserCheck className="h-4 w-4 mr-2" />
+                                      {navadhitiAllocations.length > 0 ? 'Manage' : 'Allocate'}
+                                    </Button>
+                                  </div>
+                                  {navadhitiAllocations.length > 0 && (
+                                    <div className="mt-3 pt-3 border-t border-gray-200">
+                                      <div className="flex flex-wrap gap-2">
+                                        {navadhitiAllocations.slice(0, 3).map((allocation: any, index: number) => {
+                                          const project = projects.find((p: any) => p.id === allocation.projectId);
+                                          return project ? (
+                                            <Badge key={index} variant="secondary" className="text-xs">
+                                              {project.projectName} - {allocation.role}
+                                            </Badge>
+                                          ) : null;
+                                        })}
+                                        {navadhitiAllocations.length > 3 && (
+                                          <Badge variant="outline" className="text-xs">
+                                            +{navadhitiAllocations.length - 3} more
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </Card>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
 
                       {/* Empty State */}
