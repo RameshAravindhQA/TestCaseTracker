@@ -548,8 +548,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get employee project history
-  apiRouter.get("/employee-projects/history/:employeeId", isAuthenticated, async (req, res) => {
+  // Get employee project history (all employees)
+  apiRouter.get("/employee-projects-history", isAuthenticated, async (req, res) => {
+    try {
+      const history = await storage.getAllEmployeeProjectHistory();
+      res.json(history);
+    } catch (error) {
+      console.error("Get employee project history error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get employee project history for specific employee
+  apiRouter.get("/employee-projects-history/:employeeId", isAuthenticated, async (req, res) => {
     try {
       const employeeId = parseInt(req.params.employeeId);
       const history = await storage.getEmployeeProjectHistory(employeeId);
@@ -557,6 +568,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get employee project history error:", error);
       res.status(500).json({ message: "Server error" });
+    }
+  });rver error" });
     }
   });
 

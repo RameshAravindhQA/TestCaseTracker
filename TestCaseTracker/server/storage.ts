@@ -243,6 +243,8 @@ export interface IStorage {
   deleteEmployeeProject(id: number): Promise<boolean>;
   updateEmployeeProject(id: number, data: Partial<any>): Promise<any>; // Assuming InsertEmployeeProject type for data
   getEmployeeProjectHistory(employeeId: number): Promise<any[]>;
+  getAllEmployeeProjectHistory(): Promise<any[]>;
+
 
   // Technology Options
   getTechnologyOptions(): Promise<any[]>;
@@ -690,8 +692,8 @@ class MemStorage implements IStorage {
       ...insertBug,
       id,
       bugId,
-      createdAt: now,
-      updatedAt: now
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     this.bugs.set(id, bug);
@@ -2212,9 +2214,36 @@ class MemStorage implements IStorage {
   }
 
   async getEmployeeProjectHistory(employeeId: number): Promise<any[]> {
-    return Array.from(this.employeeProjects.values()).filter(ep => ep.employeeId === employeeId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const query = `
+      SELECT ep.*, 
+             CASE 
+               WHEN ep.projectType = 'navadhiti' THEN np.projectName
+               ELSE p.name 
+             END as projectName
+      FROM employee_projects ep
+      LEFT JOIN projects p ON ep.projectId = p.id AND ep.projectType = 'regular'
+      LEFT JOIN navadhiti_projects np ON ep.projectId = np.id AND ep.projectType = 'navadhiti'
+      WHERE ep.employeeId = ?
+      ORDER BY ep.updatedAt DESC
+    `;
+    return this.db.prepare(query).all(employeeId);
   }
+
+  async getAllEmployeeProjectHistory(): Promise<any[]> {
+    const query = `
+      SELECT ep.*, 
+             CASE 
+               WHEN ep.projectType = 'navadhiti' THEN np.projectName
+               ELSE p.name 
+             END as projectName
+      FROM employee_projects ep
+      LEFT JOIN projects p ON ep.projectId = p.id AND ep.projectType = 'regular'
+      LEFT JOIN navadhiti_projects np ON ep.projectId = np.id AND ep.projectType = 'navadhiti'
+      ORDER BY ep.updatedAt DESC
+    `;
+    return this.db.prepare(query).all();
+  }
+
 
   // Technology Options
   async getTechnologyOptions(): Promise<any[]> {

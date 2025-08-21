@@ -132,6 +132,9 @@ export default function NavadhitiProjectsPage() {
   const [resourceViewMode, setResourceViewMode] = useState<'card' | 'list' | 'table' | 'status'>('card');
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [isEndDateDialogOpen, setIsEndDateDialogOpen] = useState(false);
+  const [selectedAllocation, setSelectedAllocation] = useState<any>(null);
+  const [newEndDate, setNewEndDate] = useState('');
 
   // Fetch projects
   const { data: projects = [], isLoading, refetch } = useQuery({
@@ -3888,52 +3891,18 @@ export default function NavadhitiProjectsPage() {
                                 </div>
                               </div>
                               <div className="flex gap-2 ml-4">
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button size="sm" variant="outline">
-                                      <Calendar className="h-4 w-4 mr-1" />
-                                      Update End Date
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Update Project End Date</DialogTitle>
-                                      <DialogDescription>
-                                        Update the end date for {selectedEmployee.firstName} on {project?.projectName}
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="space-y-4">
-                                      <div>
-                                        <Label>Current End Date</Label>
-                                        <Input 
-                                          value={allocation.endDate ? format(new Date(allocation.endDate), 'yyyy-MM-dd') : ''} 
-                                          disabled 
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label>New End Date</Label>
-                                        <Input 
-                                          type="date" 
-                                          id={`endDate-${allocation.id}`}
-                                        />
-                                      </div>
-                                      <div className="flex justify-end gap-2">
-                                        <Button variant="outline">Cancel</Button>
-                                        <Button onClick={() => {
-                                          const newEndDate = (document.getElementById(`endDate-${allocation.id}`) as HTMLInputElement)?.value;
-                                          if (newEndDate) {
-                                            updateEmployeeProjectMutation.mutate({
-                                              allocationId: allocation.id,
-                                              endDate: newEndDate
-                                            });
-                                          }
-                                        }}>
-                                          Update
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedAllocation(allocation);
+                                    setNewEndDate(allocation.endDate ? format(new Date(allocation.endDate), 'yyyy-MM-dd') : '');
+                                    setIsEndDateDialogOpen(true);
+                                  }}
+                                >
+                                  <Calendar className="h-4 w-4 mr-1" />
+                                  Update End Date
+                                </Button>
 
                                 <Button 
                                   size="sm" 
@@ -3973,14 +3942,13 @@ export default function NavadhitiProjectsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {employeeProjectHistory.map((history: any) => {
-                          const project = projects.find((p: any) => p.id === history.projectId);
+                        {employeeProjectHistory.filter((history: any) => history.employeeId === selectedEmployee.id).map((history: any) => {
                           const daysWorked = calculateDaysWorked(history.startDate, history.endDate);
 
                           return (
                             <TableRow key={history.id}>
                               <TableCell className="font-medium">
-                                {project?.projectName || 'Unknown Project'}
+                                {history.projectName || 'Unknown Project'}
                               </TableCell>
                               <TableCell>{history.role}</TableCell>
                               <TableCell>
@@ -4011,6 +3979,57 @@ export default function NavadhitiProjectsPage() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* End Date Update Dialog */}
+        <Dialog open={isEndDateDialogOpen} onOpenChange={setIsEndDateDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Update Project End Date</DialogTitle>
+              <DialogDescription>
+                Update the end date for {selectedEmployee?.firstName} on {selectedAllocation && projects.find((p: any) => p.id === selectedAllocation.projectId)?.projectName}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Current End Date</Label>
+                <Input 
+                  value={selectedAllocation?.endDate ? format(new Date(selectedAllocation.endDate), 'yyyy-MM-dd') : ''} 
+                  disabled 
+                />
+              </div>
+              <div>
+                <Label>New End Date</Label>
+                <Input 
+                  type="date" 
+                  value={newEndDate}
+                  onChange={(e) => setNewEndDate(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => {
+                  setIsEndDateDialogOpen(false);
+                  setSelectedAllocation(null);
+                  setNewEndDate('');
+                }}>
+                  Cancel
+                </Button>
+                <Button onClick={() => {
+                  if (newEndDate && selectedAllocation) {
+                    updateEmployeeProjectMutation.mutate({
+                      allocationId: selectedAllocation.id,
+                      endDate: newEndDate
+                    });
+                    setIsEndDateDialogOpen(false);
+                    setSelectedAllocation(null);
+                    setNewEndDate('');
+                  }
+                }}>
+                  Update
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
