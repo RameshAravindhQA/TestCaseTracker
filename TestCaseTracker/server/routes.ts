@@ -569,8 +569,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Get employee project history error:", error);
       res.status(500).json({ message: "Server error" });
     }
-  });rver error" });
-    }
   });
 
   apiRouter.post("/navadhiti-projects/status-review", isAuthenticated, async (req, res) => {
