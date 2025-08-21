@@ -2207,9 +2207,17 @@ export default function NavadhitiProjectsPage() {
                               variant={viewMode === 'list' ? 'default' : 'ghost'}
                               size="sm"
                               onClick={() => setViewMode('list')}
-                              className="rounded-l-none px-3"
+                              className="rounded-none border-x px-3"
                             >
                               <List className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant={viewMode === 'table' ? 'default' : 'ghost'}
+                              size="sm"
+                              onClick={() => setViewMode('table')}
+                              className="rounded-l-none px-3"
+                            >
+                              <TableIcon className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
@@ -2729,6 +2737,205 @@ export default function NavadhitiProjectsPage() {
                         </div>
                       )}
 
+                      {/* Table View for Projects */}
+                      {viewMode === 'table' && (
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Project</TableHead>
+                                <TableHead>Client</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Priority</TableHead>
+                                <TableHead>Team Size</TableHead>
+                                <TableHead>Progress</TableHead>
+                                <TableHead>Health Status</TableHead>
+                                <TableHead>Duration</TableHead>
+                                <TableHead>Technologies</TableHead>
+                                <TableHead>Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredProjects.map((project: any) => {
+                                const projectEmployees = employeeProjectsData.filter((ep: any) => 
+                                  ep.projectId === project.id && ep.isActive
+                                );
+                                const teamSize = projectEmployees.length;
+                                const completionPercentage = project.completionPercentage || 0;
+
+                                // Determine project health color
+                                const getProjectHealthInfo = (completion: number, status: string) => {
+                                  if (status === 'Completed') {
+                                    return { 
+                                      bgColor: 'bg-blue-500', 
+                                      textColor: 'text-blue-700', 
+                                      borderColor: 'border-blue-500',
+                                      label: 'Completed',
+                                      healthStatus: 'Project Finished'
+                                    };
+                                  } else if (status === 'Cancelled') {
+                                    return { 
+                                      bgColor: 'bg-gray-500', 
+                                      textColor: 'text-gray-700', 
+                                      borderColor: 'border-gray-500',
+                                      label: 'Cancelled',
+                                      healthStatus: 'Project Cancelled'
+                                    };
+                                  } else if (status === 'On Hold') {
+                                    return { 
+                                      bgColor: 'bg-yellow-500', 
+                                      textColor: 'text-yellow-700', 
+                                      borderColor: 'border-yellow-500',
+                                      label: 'On Hold',
+                                      healthStatus: 'Project Paused'
+                                    };
+                                  } else if (completion >= 80) {
+                                    return { 
+                                      bgColor: 'bg-green-500', 
+                                      textColor: 'text-green-700', 
+                                      borderColor: 'border-green-500',
+                                      label: 'Excellent Progress',
+                                      healthStatus: 'On Track'
+                                    };
+                                  } else if (completion >= 50) {
+                                    return { 
+                                      bgColor: 'bg-orange-500', 
+                                      textColor: 'text-orange-700', 
+                                      borderColor: 'border-orange-500',
+                                      label: 'Good Progress',
+                                      healthStatus: 'Moderate Progress'
+                                    };
+                                  } else if (completion >= 25) {
+                                    return { 
+                                      bgColor: 'bg-yellow-500', 
+                                      textColor: 'text-yellow-700', 
+                                      borderColor: 'border-yellow-500',
+                                      label: 'Slow Progress',
+                                      healthStatus: 'Behind Schedule'
+                                    };
+                                  } else {
+                                    return { 
+                                      bgColor: 'bg-red-500', 
+                                      textColor: 'text-red-700', 
+                                      borderColor: 'border-red-500',
+                                      label: 'Needs Attention',
+                                      healthStatus: 'Critical'
+                                    };
+                                  }
+                                };
+
+                                const projectHealthInfo = getProjectHealthInfo(completionPercentage, project.status);
+
+                                return (
+                                  <TableRow key={project.id}>
+                                    <TableCell>
+                                      <div className="flex items-center gap-3">
+                                        {project.projectImage ? (
+                                          <img 
+                                            src={project.projectImage} 
+                                            alt={`${project.projectName} logo`}
+                                            className="w-8 h-8 rounded-full object-cover"
+                                          />
+                                        ) : (
+                                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                                            <span className="text-white text-sm font-bold">
+                                              {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
+                                            </span>
+                                          </div>
+                                        )}
+                                        <div>
+                                          <div className="font-medium">{project.projectName}</div>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>{project.clientName}</TableCell>
+                                    <TableCell>
+                                      <Badge variant="outline">{project.status}</Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant="secondary">{project.priority}</Badge>
+                                    </TableCell>
+                                    <TableCell>{teamSize} members</TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                                          <div 
+                                            className={`${projectHealthInfo.bgColor} h-2 rounded-full`}
+                                            style={{ width: `${completionPercentage}%` }}
+                                          />
+                                        </div>
+                                        <span className="text-sm text-gray-600">
+                                          {completionPercentage}%
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge className={`text-xs font-semibold px-2 py-1 ${projectHealthInfo.textColor} bg-opacity-20`} style={{
+                                        backgroundColor: projectHealthInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
+                                                        projectHealthInfo.bgColor.includes('red') ? '#FEF2F2' : 
+                                                        projectHealthInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
+                                                        projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : 
+                                                        projectHealthInfo.bgColor.includes('green') ? '#F0FDF4' : '#EBF8FF'
+                                      }}>
+                                        {projectHealthInfo.label}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="text-sm text-gray-600">
+                                        {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex flex-wrap gap-1">
+                                        {project.technologies && project.technologies.length > 0 ? (
+                                          project.technologies.slice(0, 2).map((tech: string, index: number) => (
+                                            <Badge key={index} variant="outline" className="text-xs">
+                                              {tech}
+                                            </Badge>
+                                          ))
+                                        ) : (
+                                          <span className="text-gray-400">None</span>
+                                        )}
+                                        {project.technologies && project.technologies.length > 2 && (
+                                          <Badge variant="outline" className="text-xs">
+                                            +{project.technologies.length - 2}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex gap-1">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setViewingProject(project);
+                                            setIsViewDialogOpen(true);
+                                          }}
+                                        >
+                                          View
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setEditingProject(project);
+                                            setActiveTab("projects");
+                                            setIsDialogOpen(true);
+                                          }}
+                                        >
+                                          Edit
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+
                       {/* Empty State */}
                       {filteredProjects.length === 0 && (
                         <div className="text-center py-12">
@@ -2771,9 +2978,17 @@ export default function NavadhitiProjectsPage() {
                               variant={resourceViewMode === 'list' ? 'default' : 'ghost'}
                               size="sm"
                               onClick={() => setResourceViewMode('list')}
-                              className="rounded-l-none px-3"
+                              className="rounded-none border-x px-3"
                             >
                               <List className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant={resourceViewMode === 'table' ? 'default' : 'ghost'}
+                              size="sm"
+                              onClick={() => setResourceViewMode('table')}
+                              className="rounded-l-none px-3"
+                            >
+                              <TableIcon className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
@@ -3184,6 +3399,194 @@ export default function NavadhitiProjectsPage() {
                               </Card>
                             );
                           })}
+                        </div>
+                      )}
+
+                      {/* Table View for Employees */}
+                      {resourceViewMode === 'table' && (
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Employee</TableHead>
+                                <TableHead>Department</TableHead>
+                                <TableHead>Current Projects</TableHead>
+                                <TableHead>Allocation Status</TableHead>
+                                <TableHead>Occupation %</TableHead>
+                                <TableHead>Active Projects</TableHead>
+                                <TableHead>Technologies</TableHead>
+                                <TableHead>Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredEmployees.map((employee: any) => {
+                                // Calculate occupation percentage more accurately
+                                const allocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                                const navadhitiAllocations = allocations.filter((allocation: any) => {
+                                  return projects.some((p: any) => p.id === allocation.projectId);
+                                });
+
+                                // Calculate percentage based on number of active projects (assuming each project = 25-50% allocation)
+                                const baseAllocation = 40; // Base percentage per project
+                                const occupationPercentage = Math.min(navadhitiAllocations.length * baseAllocation, 100);
+
+                                // Determine color and status based on occupation percentage
+                                const getOccupationInfo = (percentage: number) => {
+                                  if (percentage === 0) {
+                                    return { 
+                                      bgColor: 'bg-gray-300', 
+                                      textColor: 'text-gray-700', 
+                                      borderColor: 'border-gray-400',
+                                      label: 'Available',
+                                      status: 'Not Occupied'
+                                    };
+                                  } else if (percentage <= 10) {
+                                    return { 
+                                      bgColor: 'bg-red-500', 
+                                      textColor: 'text-red-700', 
+                                      borderColor: 'border-red-500',
+                                      label: 'Under-utilized',
+                                      status: '10% Occupied'
+                                    };
+                                  } else if (percentage <= 50) {
+                                    return { 
+                                      bgColor: 'bg-yellow-500', 
+                                      textColor: 'text-yellow-700', 
+                                      borderColor: 'border-yellow-500',
+                                      label: 'Moderate',
+                                      status: '50% Occupied'
+                                    };
+                                  } else if (percentage <= 80) {
+                                    return { 
+                                      bgColor: 'bg-orange-500', 
+                                      textColor: 'text-orange-700', 
+                                      borderColor: 'border-orange-500',
+                                      label: 'Good Load',
+                                      status: '80% Occupied'
+                                    };
+                                  } else {
+                                    return { 
+                                      bgColor: 'bg-green-500', 
+                                      textColor: 'text-green-700', 
+                                      borderColor: 'border-green-500',
+                                      label: 'Fully Occupied',
+                                      status: '100% Occupied'
+                                    };
+                                  }
+                                };
+
+                                const occupationInfo = getOccupationInfo(occupationPercentage);
+
+                                return (
+                                  <TableRow key={employee.id}>
+                                    <TableCell>
+                                      <div className="flex items-center gap-3">
+                                        <Avatar className="h-10 w-10 border-2 border-gray-200">
+                                          <AvatarImage src={employee.profilePicture} alt={`${employee.firstName} ${employee.lastName}`} />
+                                          <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
+                                            {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                          <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                                          <div className="text-sm text-gray-500">{employee.employeeId}</div>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>{employee.department}</TableCell>
+                                    <TableCell>
+                                      {navadhitiAllocations.length > 0 ? (
+                                        <div className="space-y-1">
+                                          {navadhitiAllocations.slice(0, 2).map((allocation: any) => {
+                                            const project = projects.find((p: any) => p.id === allocation.projectId);
+                                            return project ? (
+                                              <div key={allocation.id} className="text-sm">
+                                                <Badge variant="secondary" className="text-xs">
+                                                  {project.projectName}
+                                                </Badge>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                  {allocation.role || 'Team Member'}
+                                                </div>
+                                              </div>
+                                            ) : null;
+                                          })}
+                                          {navadhitiAllocations.length > 2 && (
+                                            <div className="text-xs text-gray-500 italic">
+                                              +{navadhitiAllocations.length - 2} more
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div className="text-sm text-gray-500 italic">
+                                          Available for new projects
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge className={`text-xs font-semibold px-2 py-1 ${occupationInfo.textColor} bg-opacity-20`} style={{
+                                        backgroundColor: occupationInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
+                                                        occupationInfo.bgColor.includes('red') ? '#FEF2F2' : 
+                                                        occupationInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
+                                                        occupationInfo.bgColor.includes('orange') ? '#FFF7ED' : '#F0FDF4'
+                                      }}>
+                                        {occupationInfo.label}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                                          <div 
+                                            className={`${occupationInfo.bgColor} h-2 rounded-full`}
+                                            style={{ width: `${occupationPercentage}%` }}
+                                          />
+                                        </div>
+                                        <span className="text-sm text-gray-600">
+                                          {occupationPercentage}%
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="text-center">
+                                        <div className="font-medium text-sm">{navadhitiAllocations.length}</div>
+                                        <div className="text-xs text-gray-500">projects</div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      {employee.technologies && employee.technologies.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1">
+                                          {employee.technologies.slice(0, 2).map((tech: string, index: number) => (
+                                            <Badge key={index} variant="outline" className="text-xs">
+                                              {tech}
+                                            </Badge>
+                                          ))}
+                                          {employee.technologies.length > 2 && (
+                                            <Badge variant="outline" className="text-xs">
+                                              +{employee.technologies.length - 2}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <span className="text-gray-400 text-sm">None</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setSelectedEmployees([employee.id]);
+                                          setIsAllocationDialogOpen(true);
+                                        }}
+                                      >
+                                        <UserCheck className="h-4 w-4 mr-1" />
+                                        {navadhitiAllocations.length > 0 ? 'Manage' : 'Allocate'}
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
                         </div>
                       )}
 
