@@ -511,6 +511,12 @@ export default function NavadhitiProjectsPage() {
     }
   };
 
+  // Handler for the "Manage" button click
+  const handleManageEmployee = (employee: any) => {
+    setSelectedEmployee(employee);
+    setIsManageDialogOpen(true);
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto p-6 space-y-6">
@@ -858,7 +864,7 @@ export default function NavadhitiProjectsPage() {
                                     Quick Allocate
                                   </Button>
                                 ) : (
-                                  <div className="flex gap-1 w-full">
+                                  <div className="flex gap-1">
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -866,9 +872,7 @@ export default function NavadhitiProjectsPage() {
                                       onClick={() => {
                                         const employeeAllocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
                                         if (employeeAllocations.length > 1) {
-                                          // Show dialog to select which project to unoccupy
-                                          setSelectedEmployee(employee);
-                                          setIsAllocationDialogOpen(true);
+                                          handleManageEmployee(employee);
                                         } else if (allocation && confirm('Are you sure you want to unoccupy this employee?')) {
                                           unoccupyEmployeeMutation.mutate(allocation.id);
                                         }
@@ -1072,12 +1076,15 @@ export default function NavadhitiProjectsPage() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => {
-                                      if (allocation && confirm('Are you sure you want to unoccupy this employee?')) {
+                                      const employeeAllocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                                      if (employeeAllocations.length > 1) {
+                                        handleManageEmployee(employee);
+                                      } else if (allocation && confirm('Are you sure you want to unoccupy this employee?')) {
                                         unoccupyEmployeeMutation.mutate(allocation.id);
                                       }
                                     }}
                                   >
-                                    Unoccupy
+                                    {employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive).length > 1 ? 'Manage' : 'Unoccupy'}
                                   </Button>
                                 )}
                               </TableCell>
@@ -1662,24 +1669,6 @@ export default function NavadhitiProjectsPage() {
                                   <Badge variant="secondary">{project.priority}</Badge>
                                 </TableCell>
                                 <TableCell>{project.assignedEmployees?.length || 0} members</TableCell>
-                                <TableCell>
-                                  <div className="flex flex-wrap gap-1">
-                                    {project.technologies && project.technologies.length > 0 ? (
-                                      project.technologies.slice(0, 2).map((tech, index) => (
-                                        <Badge key={index} variant="outline" className="text-xs">
-                                          {tech}
-                                        </Badge>
-                                      ))
-                                    ) : (
-                                      <span className="text-gray-400">None</span>
-                                    )}
-                                    {project.technologies && project.technologies.length > 2 && (
-                                      <Badge variant="outline" className="text-xs">
-                                        +{project.technologies.length - 2}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-2">
                                     <div className="w-16 bg-gray-200 rounded-full h-2">
@@ -2628,7 +2617,7 @@ export default function NavadhitiProjectsPage() {
                                           {project.priority}
                                         </Badge>
                                       </div>
-                                      
+
                                       <p className="text-gray-600 dark:text-gray-400 mb-2">
                                         Client: {project.clientName}
                                       </p>
@@ -2692,14 +2681,14 @@ export default function NavadhitiProjectsPage() {
                                           {completionPercentage}%
                                         </Badge>
                                       </div>
-                                      
+
                                       <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-3 mx-auto mb-1">
                                         <div 
                                           className={`${projectHealthInfo.bgColor} h-3 rounded-full transition-all duration-500`}
                                           style={{ width: `${completionPercentage}%` }}
                                         />
                                       </div>
-                                      
+
                                       <div className={`text-xs font-medium ${projectHealthInfo.textColor}`}>
                                         {projectHealthInfo.label}
                                       </div>
@@ -2874,8 +2863,7 @@ export default function NavadhitiProjectsPage() {
                                         backgroundColor: projectHealthInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
                                                         projectHealthInfo.bgColor.includes('red') ? '#FEF2F2' : 
                                                         projectHealthInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
-                                                        projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : 
-                                                        projectHealthInfo.bgColor.includes('green') ? '#F0FDF4' : '#EBF8FF'
+                                                        projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : '#F0FDF4'
                                       }}>
                                         {projectHealthInfo.label}
                                       </Badge>
@@ -2888,7 +2876,7 @@ export default function NavadhitiProjectsPage() {
                                     <TableCell>
                                       <div className="flex flex-wrap gap-1">
                                         {project.technologies && project.technologies.length > 0 ? (
-                                          project.technologies.slice(0, 2).map((tech: string, index: number) => (
+                                          project.technologies.slice(0, 2).map((tech, index) => (
                                             <Badge key={index} variant="outline" className="text-xs">
                                               {tech}
                                             </Badge>
@@ -3312,7 +3300,7 @@ export default function NavadhitiProjectsPage() {
                                           {employee.department}
                                         </Badge>
                                       </div>
-                                      
+
                                       <p className="text-gray-600 dark:text-gray-400 mb-2">
                                         ID: {employee.employeeId}
                                       </p>
@@ -3363,18 +3351,18 @@ export default function NavadhitiProjectsPage() {
                                           {occupationPercentage}%
                                         </Badge>
                                       </div>
-                                      
+
                                       <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-3 mx-auto mb-1">
                                         <div 
                                           className={`${occupationInfo.bgColor} h-3 rounded-full transition-all duration-500`}
                                           style={{ width: `${occupationPercentage}%` }}
                                         />
                                       </div>
-                                      
+
                                       <div className={`text-xs font-medium ${occupationInfo.textColor}`}>
                                         {occupationInfo.label}
                                       </div>
-                                      
+
                                       <div className="text-xs text-gray-500 mt-1">
                                         {navadhitiAllocations.length} active project{navadhitiAllocations.length !== 1 ? 's' : ''}
                                       </div>
@@ -3795,6 +3783,72 @@ export default function NavadhitiProjectsPage() {
             ) : (
               <p>Loading project details...</p>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Manage Employee Dialog */}
+        <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Manage Projects for {selectedEmployee?.firstName} {selectedEmployee?.lastName}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedEmployee && employeeProjectsData.filter((ep: any) => ep.employeeId === selectedEmployee.id && ep.isActive).length > 0 ? (
+                employeeProjectsData
+                  .filter((ep: any) => ep.employeeId === selectedEmployee.id && ep.isActive)
+                  .map((allocation: any) => {
+                    const project = projects.find((p: any) => p.id === allocation.projectId);
+                    return (
+                      <div key={allocation.id} className="flex items-center justify-between p-3 border rounded-md">
+                        <div>
+                          <div className="font-medium text-sm">
+                            {project?.projectName || 'Unknown Project'}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Role: {allocation.role || 'N/A'}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {allocation?.startDate && new Date(allocation.startDate).toLocaleDateString()} - {allocation?.endDate && new Date(allocation.endDate).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7"
+                          onClick={() => {
+                            if (confirm('Are you sure you want to unoccupy this employee from this project?')) {
+                              unoccupyEmployeeMutation.mutate(allocation.id);
+                              setIsManageDialogOpen(false); // Close dialog after action
+                            }
+                          }}
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          Unoccupy
+                        </Button>
+                      </div>
+                    );
+                  })
+              ) : (
+                <p className="text-center text-gray-500">No active project allocations found for this employee.</p>
+              )}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setIsManageDialogOpen(false)}>
+                  Close
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedEmployees([selectedEmployee?.id]);
+                    setIsAllocationDialogOpen(true);
+                    setIsManageDialogOpen(false);
+                  }}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Project
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
