@@ -890,7 +890,6 @@ export default function NavadhitiProjectsPage() {
                             </div>
                           </CardContent>
                         </Card>
-                      </Card>
                     );
                   })}
                 </div>
