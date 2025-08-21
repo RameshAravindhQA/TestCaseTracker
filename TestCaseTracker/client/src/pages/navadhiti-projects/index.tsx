@@ -555,6 +555,23 @@ export default function NavadhitiProjectsPage() {
     setIsManageDialogOpen(true);
   };
 
+  // Handler for managing employee projects (used in employee cards)
+  const handleManageEmployeeProjects = (employee: any) => {
+    const employeeAllocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
+    if (employeeAllocations.length > 1) {
+      setSelectedEmployee(employee);
+      setIsManageDialogOpen(true);
+    } else if (employeeAllocations.length === 1) {
+      // If only one allocation, show option to unoccupy or add more projects
+      setSelectedEmployee(employee);
+      setIsManageDialogOpen(true);
+    } else {
+      // If no allocations, open allocation dialog
+      setSelectedEmployees([employee.id]);
+      setIsAllocationDialogOpen(true);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto p-6 space-y-6">
@@ -3239,10 +3256,7 @@ export default function NavadhitiProjectsPage() {
                                     size="sm"
                                     variant="outline"
                                     className="w-full text-xs h-8 mt-2"
-                                    onClick={() => {
-                                      setSelectedEmployees([employee.id]);
-                                      setIsAllocationDialogOpen(true);
-                                    }}
+                                    onClick={() => handleManageEmployeeProjects(employee)}
                                   >
                                     <UserCheck className="h-4 w-4 mr-2" />
                                     {navadhitiAllocations.length > 0 ? 'Manage Projects' : 'Allocate to Project'}
@@ -3410,10 +3424,7 @@ export default function NavadhitiProjectsPage() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => {
-                                          setSelectedEmployees([employee.id]);
-                                          setIsAllocationDialogOpen(true);
-                                        }}
+                                        onClick={() => handleManageEmployeeProjects(employee)}
                                       >
                                         <UserCheck className="h-4 w-4 mr-2" />
                                         {navadhitiAllocations.length > 0 ? 'Manage Projects' : 'Allocate to Project'}
@@ -3598,10 +3609,7 @@ export default function NavadhitiProjectsPage() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => {
-                                          setSelectedEmployees([employee.id]);
-                                          setIsAllocationDialogOpen(true);
-                                        }}
+                                        onClick={() => handleManageEmployeeProjects(employee)}
                                       >
                                         <UserCheck className="h-4 w-4 mr-1" />
                                         {navadhitiAllocations.length > 0 ? 'Manage' : 'Allocate'}
