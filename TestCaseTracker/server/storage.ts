@@ -2214,34 +2214,60 @@ class MemStorage implements IStorage {
   }
 
   async getEmployeeProjectHistory(employeeId: number): Promise<any[]> {
-    const query = `
-      SELECT ep.*, 
-             CASE 
-               WHEN ep.projectType = 'navadhiti' THEN np.projectName
-               ELSE p.name 
-             END as projectName
-      FROM employee_projects ep
-      LEFT JOIN projects p ON ep.projectId = p.id AND ep.projectType = 'regular'
-      LEFT JOIN navadhiti_projects np ON ep.projectId = np.id AND ep.projectType = 'navadhiti'
-      WHERE ep.employeeId = ?
-      ORDER BY ep.updatedAt DESC
-    `;
-    return this.db.prepare(query).all(employeeId);
+    // Get all employee projects for this specific employee
+    const employeeProjects = Array.from(this.employeeProjects.values())
+      .filter(ep => ep.employeeId === employeeId);
+
+    // Enrich with project names
+    const enrichedHistory = employeeProjects.map(ep => {
+      let projectName = 'Unknown Project';
+      
+      if (ep.projectType === 'navadhiti') {
+        const navadhitiProject = this.navadhitiProjects.get(ep.projectId);
+        projectName = navadhitiProject?.projectName || navadhitiProject?.name || 'Unknown Navadhiti Project';
+      } else {
+        const regularProject = this.projects.get(ep.projectId);
+        projectName = regularProject?.name || 'Unknown Regular Project';
+      }
+
+      return {
+        ...ep,
+        projectName
+      };
+    });
+
+    // Sort by updatedAt descending
+    return enrichedHistory.sort((a, b) => 
+      new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
+    );
   }
 
   async getAllEmployeeProjectHistory(): Promise<any[]> {
-    const query = `
-      SELECT ep.*, 
-             CASE 
-               WHEN ep.projectType = 'navadhiti' THEN np.projectName
-               ELSE p.name 
-             END as projectName
-      FROM employee_projects ep
-      LEFT JOIN projects p ON ep.projectId = p.id AND ep.projectType = 'regular'
-      LEFT JOIN navadhiti_projects np ON ep.projectId = np.id AND ep.projectType = 'navadhiti'
-      ORDER BY ep.updatedAt DESC
-    `;
-    return this.db.prepare(query).all();
+    // Get all employee projects
+    const allEmployeeProjects = Array.from(this.employeeProjects.values());
+
+    // Enrich with project names
+    const enrichedHistory = allEmployeeProjects.map(ep => {
+      let projectName = 'Unknown Project';
+      
+      if (ep.projectType === 'navadhiti') {
+        const navadhitiProject = this.navadhitiProjects.get(ep.projectId);
+        projectName = navadhitiProject?.projectName || navadhitiProject?.name || 'Unknown Navadhiti Project';
+      } else {
+        const regularProject = this.projects.get(ep.projectId);
+        projectName = regularProject?.name || 'Unknown Regular Project';
+      }
+
+      return {
+        ...ep,
+        projectName
+      };
+    });
+
+    // Sort by updatedAt descending
+    return enrichedHistory.sort((a, b) => 
+      new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
+    );
   }
 
 
