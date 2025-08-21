@@ -2170,8 +2170,9 @@ export default function NavadhitiProjectsPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Project Status Distribution */}
                   <Card>
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-lg text-center">Project Status Distribution</CardTitle>
+                    <CardHeader className="pb-4 text-center">
+                      <CardTitle className="text-lg">Project Status Distribution</CardTitle>
+                      <CardDescription>Overview of all project statuses</CardDescription>
                     </CardHeader>
                     <CardContent className="flex justify-center">
                       <ResponsiveContainer width="100%" height={300}>
@@ -2209,8 +2210,9 @@ export default function NavadhitiProjectsPage() {
 
                   {/* Department Distribution */}
                   <Card>
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-lg text-center">Employee Department Distribution</CardTitle>
+                    <CardHeader className="pb-4 text-center">
+                      <CardTitle className="text-lg">Employee Department Distribution</CardTitle>
+                      <CardDescription>Total vs occupied employees by department</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ResponsiveContainer width="100%" height={300}>
@@ -2245,7 +2247,231 @@ export default function NavadhitiProjectsPage() {
                   </Card>
                 </div>
 
-                {/* Conditional Dashboard Content */}
+                {/* Individual Projects Dashboard */}
+                {viewMode === 'projects' && (
+                  <Card>
+                    <CardHeader className="pb-4 text-center">
+                      <CardTitle className="text-lg">Individual Project Status Dashboard</CardTitle>
+                      <CardDescription>Detailed project progress and team allocation with status indicators</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {projects.map((project: any) => {
+                          const projectEmployees = employeeProjectsData.filter((ep: any) => 
+                            ep.projectId === project.id && ep.isActive
+                          );
+                          const teamSize = projectEmployees.length;
+                          const completionPercentage = project.completionPercentage || 0;
+
+                          // Determine project health color
+                          const getProjectHealthInfo = (completion: number, status: string) => {
+                            if (status === 'Completed') {
+                              return { 
+                                bgColor: 'bg-blue-500', 
+                                textColor: 'text-blue-700', 
+                                borderColor: 'border-blue-500',
+                                label: 'Completed',
+                                healthStatus: 'Project Finished'
+                              };
+                            } else if (status === 'Cancelled') {
+                              return { 
+                                bgColor: 'bg-gray-500', 
+                                textColor: 'text-gray-700', 
+                                borderColor: 'border-gray-500',
+                                label: 'Cancelled',
+                                healthStatus: 'Project Cancelled'
+                              };
+                            } else if (status === 'On Hold') {
+                              return { 
+                                bgColor: 'bg-yellow-500', 
+                                textColor: 'text-yellow-700', 
+                                borderColor: 'border-yellow-500',
+                                label: 'On Hold',
+                                healthStatus: 'Project Paused'
+                              };
+                            } else if (completion >= 80) {
+                              return { 
+                                bgColor: 'bg-green-500', 
+                                textColor: 'text-green-700', 
+                                borderColor: 'border-green-500',
+                                label: 'Excellent Progress',
+                                healthStatus: 'On Track'
+                              };
+                            } else if (completion >= 50) {
+                              return { 
+                                bgColor: 'bg-orange-500', 
+                                textColor: 'text-orange-700', 
+                                borderColor: 'border-orange-500',
+                                label: 'Good Progress',
+                                healthStatus: 'Moderate Progress'
+                              };
+                            } else if (completion >= 25) {
+                              return { 
+                                bgColor: 'bg-yellow-500', 
+                                textColor: 'text-yellow-700', 
+                                borderColor: 'border-yellow-500',
+                                label: 'Slow Progress',
+                                healthStatus: 'Behind Schedule'
+                              };
+                            } else {
+                              return { 
+                                bgColor: 'bg-red-500', 
+                                textColor: 'text-red-700', 
+                                borderColor: 'border-red-500',
+                                label: 'Needs Attention',
+                                healthStatus: 'Critical'
+                              };
+                            }
+                          };
+
+                          const projectHealthInfo = getProjectHealthInfo(completionPercentage, project.status);
+
+                          return (
+                            <Card key={project.id} className={`relative p-4 hover:shadow-lg transition-all duration-300 border-l-4 ${projectHealthInfo.borderColor}`}>
+                              {/* Project Header */}
+                              <div className="flex items-center space-x-3 mb-4">
+                                {project.projectImage ? (
+                                  <img 
+                                    src={project.projectImage} 
+                                    alt={`${project.projectName} logo`}
+                                    className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center border-2 border-gray-200">
+                                    <span className="text-white text-lg font-bold">
+                                      {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+                                    {project.projectName}
+                                  </h4>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                                    {project.clientName}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Project Details */}
+                              <div className="mb-4 space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-600 dark:text-gray-400">Status:</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {project.status}
+                                  </Badge>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-600 dark:text-gray-400">Team Size:</span>
+                                  <span className="text-xs font-medium">{teamSize} members</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-600 dark:text-gray-400">Priority:</span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {project.priority}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              {/* Progress Status */}
+                              <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                                <div className="flex justify-between items-center mb-3">
+                                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                    Project Progress
+                                  </span>
+                                  <Badge className={`text-xs font-semibold px-2 py-1 ${projectHealthInfo.textColor} bg-opacity-20`} style={{
+                                    backgroundColor: projectHealthInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
+                                                    projectHealthInfo.bgColor.includes('red') ? '#FEF2F2' : 
+                                                    projectHealthInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
+                                                    projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : 
+                                                    projectHealthInfo.bgColor.includes('green') ? '#F0FDF4' : '#EBF8FF'
+                                  }}>
+                                    {completionPercentage}%
+                                  </Badge>
+                                </div>
+
+                                {/* Progress Bar */}
+                                <div className="relative mb-3">
+                                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                                    <div 
+                                      className={`${projectHealthInfo.bgColor} h-4 rounded-full transition-all duration-500 ease-out flex items-center justify-center`}
+                                      style={{ width: `${completionPercentage}%` }}
+                                    >
+                                      {completionPercentage > 20 && (
+                                        <span className="text-xs font-medium text-white">
+                                          {completionPercentage}%
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {completionPercentage <= 20 && completionPercentage > 0 && (
+                                    <span className="absolute right-2 top-0 text-xs font-medium text-gray-600 leading-4">
+                                      {completionPercentage}%
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Status Information */}
+                                <div className="space-y-1 mb-3">
+                                  <div className={`text-xs font-semibold ${projectHealthInfo.textColor}`}>
+                                    {projectHealthInfo.label}
+                                  </div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-500">
+                                    Health: {projectHealthInfo.healthStatus}
+                                  </div>
+                                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                                    Duration: {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1 text-xs h-7"
+                                    onClick={() => {
+                                      setViewingProject(project);
+                                      setIsViewDialogOpen(true);
+                                    }}
+                                  >
+                                    View Details
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1 text-xs h-7"
+                                    onClick={() => {
+                                      setEditingProject(project);
+                                      setIsDialogOpen(true);
+                                    }}
+                                  >
+                                    Edit
+                                  </Button>
+                                </div>
+                              </div>
+                            </Card>
+                          );
+                        })}
+                      </div>
+
+                      {/* Empty State */}
+                      {projects.length === 0 && (
+                        <div className="text-center py-12">
+                          <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                            No projects found
+                          </h3>
+                          <p className="text-gray-500 dark:text-gray-400">
+                            Create your first Navadhiti project to see detailed analytics.
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Individual Employee Dashboard */}
                 {viewMode === 'employees' && (
                   <Card>
                     <CardHeader className="pb-4">
@@ -2253,96 +2479,182 @@ export default function NavadhitiProjectsPage() {
                       <CardDescription className="text-center">Detailed employee allocation and performance analytics with progress indicators</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {employeesData.map((employee: any) => {
+                          // Calculate occupation percentage more accurately
                           const allocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
-                          const totalAllocation = allocations.length * 100; // Assuming 100% per project for now
-                          const occupationPercentage = Math.min(totalAllocation, 100);
+                          const navadhitiAllocations = allocations.filter((allocation: any) => {
+                            return projects.some((p: any) => p.id === allocation.projectId);
+                          });
+                          
+                          // Calculate percentage based on number of active projects (assuming each project = 25-50% allocation)
+                          const baseAllocation = 40; // Base percentage per project
+                          const occupationPercentage = Math.min(navadhitiAllocations.length * baseAllocation, 100);
 
-                          // Determine color based on occupation percentage
-                          const getOccupationColor = (percentage: number) => {
-                            if (percentage === 0) return { bg: 'bg-gray-200', text: 'text-gray-600', label: 'Available' };
-                            if (percentage <= 10) return { bg: 'bg-red-500', text: 'text-red-600', label: 'Under-utilized' };
-                            if (percentage <= 50) return { bg: 'bg-yellow-500', text: 'text-yellow-600', label: 'Moderate' };
-                            if (percentage <= 80) return { bg: 'bg-orange-500', text: 'text-orange-600', label: 'Good' };
-                            return { bg: 'bg-green-500', text: 'text-green-600', label: 'Fully Occupied' };
+                          // Determine color and status based on occupation percentage
+                          const getOccupationInfo = (percentage: number) => {
+                            if (percentage === 0) {
+                              return { 
+                                bgColor: 'bg-gray-300', 
+                                textColor: 'text-gray-700', 
+                                borderColor: 'border-gray-400',
+                                label: 'Available',
+                                status: 'Not Occupied'
+                              };
+                            } else if (percentage <= 10) {
+                              return { 
+                                bgColor: 'bg-red-500', 
+                                textColor: 'text-red-700', 
+                                borderColor: 'border-red-500',
+                                label: 'Under-utilized',
+                                status: '10% Occupied'
+                              };
+                            } else if (percentage <= 50) {
+                              return { 
+                                bgColor: 'bg-yellow-500', 
+                                textColor: 'text-yellow-700', 
+                                borderColor: 'border-yellow-500',
+                                label: 'Moderate',
+                                status: '50% Occupied'
+                              };
+                            } else if (percentage <= 80) {
+                              return { 
+                                bgColor: 'bg-orange-500', 
+                                textColor: 'text-orange-700', 
+                                borderColor: 'border-orange-500',
+                                label: 'Good Load',
+                                status: '80% Occupied'
+                              };
+                            } else {
+                              return { 
+                                bgColor: 'bg-green-500', 
+                                textColor: 'text-green-700', 
+                                borderColor: 'border-green-500',
+                                label: 'Fully Occupied',
+                                status: '100% Occupied'
+                              };
+                            }
                           };
 
-                          const colorInfo = getOccupationColor(occupationPercentage);
+                          const occupationInfo = getOccupationInfo(occupationPercentage);
 
                           return (
-                            <Card key={employee.id} className="p-4 hover:shadow-md transition-shadow border-l-4" style={{ borderLeftColor: colorInfo.bg.replace('bg-', '').includes('gray') ? '#9CA3AF' : colorInfo.bg.includes('red') ? '#EF4444' : colorInfo.bg.includes('yellow') ? '#EAB308' : colorInfo.bg.includes('orange') ? '#F97316' : '#10B981' }}>
-                              <div className="flex items-center space-x-3 mb-3">
-                                <Avatar className="h-10 w-10">
-                                  <AvatarImage src={employee.profilePicture} />
-                                  <AvatarFallback>{employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}</AvatarFallback>
+                            <Card key={employee.id} className={`relative p-4 hover:shadow-lg transition-all duration-300 border-l-4 ${occupationInfo.borderColor}`}>
+                              {/* Employee Header */}
+                              <div className="flex items-center space-x-3 mb-4">
+                                <Avatar className="h-12 w-12 border-2 border-gray-200">
+                                  <AvatarImage src={employee.profilePicture} alt={`${employee.firstName} ${employee.lastName}`} />
+                                  <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
+                                    {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                  </AvatarFallback>
                                 </Avatar>
-                                <div className="flex-1">
-                                  <h4 className="font-medium text-sm">{employee.firstName} {employee.lastName}</h4>
-                                  <p className="text-xs text-gray-500">{employee.department}</p>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+                                    {employee.firstName} {employee.lastName}
+                                  </h4>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                                    {employee.employeeId} • {employee.department}
+                                  </p>
                                 </div>
                               </div>
 
-                              {allocations.length > 0 ? (
-                                <div className="space-y-2">
-                                  {allocations.slice(0, 2).map((allocation: any) => {
-                                    const project = projects.find((p: any) => p.id === allocation.projectId);
-                                    return project ? (
-                                      <div key={allocation.id} className="text-xs">
-                                        <div className="font-medium text-blue-600 truncate">
-                                          {project.projectName}
+                              {/* Current Projects */}
+                              <div className="mb-4 space-y-2">
+                                <h5 className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                                  Current Projects
+                                </h5>
+                                {navadhitiAllocations.length > 0 ? (
+                                  <div className="space-y-2">
+                                    {navadhitiAllocations.slice(0, 2).map((allocation: any) => {
+                                      const project = projects.find((p: any) => p.id === allocation.projectId);
+                                      return project ? (
+                                        <div key={allocation.id} className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                                          <div className="font-medium text-xs text-blue-800 dark:text-blue-200 truncate">
+                                            {project.projectName}
+                                          </div>
+                                          <div className="text-xs text-blue-600 dark:text-blue-400">
+                                            Role: {allocation.role || 'Team Member'}
+                                          </div>
                                         </div>
-                                        <div className="text-gray-600">
-                                          Role: {allocation.role || 'N/A'}
-                                        </div>
+                                      ) : null;
+                                    })}
+                                    {navadhitiAllocations.length > 2 && (
+                                      <div className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                        +{navadhitiAllocations.length - 2} more projects
                                       </div>
-                                    ) : null;
-                                  })}
-                                  {allocations.length > 2 && (
-                                    <div className="text-xs text-gray-500">
-                                      +{allocations.length - 2} more projects
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+                                    <div className="text-xs text-gray-600 dark:text-gray-400 text-center italic">
+                                      Available for new projects
                                     </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Occupation Status */}
+                              <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                                <div className="flex justify-between items-center mb-3">
+                                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                    Allocation Status
+                                  </span>
+                                  <Badge className={`text-xs font-semibold px-2 py-1 ${occupationInfo.textColor} bg-opacity-20`} style={{
+                                    backgroundColor: occupationInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
+                                                    occupationInfo.bgColor.includes('red') ? '#FEF2F2' : 
+                                                    occupationInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
+                                                    occupationInfo.bgColor.includes('orange') ? '#FFF7ED' : '#F0FDF4'
+                                  }}>
+                                    {occupationPercentage}%
+                                  </Badge>
+                                </div>
+
+                                {/* Progress Bar */}
+                                <div className="relative mb-3">
+                                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                                    <div 
+                                      className={`${occupationInfo.bgColor} h-4 rounded-full transition-all duration-500 ease-out flex items-center justify-center`}
+                                      style={{ width: `${occupationPercentage}%` }}
+                                    >
+                                      {occupationPercentage > 20 && (
+                                        <span className="text-xs font-medium text-white">
+                                          {occupationPercentage}%
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {occupationPercentage <= 20 && occupationPercentage > 0 && (
+                                    <span className="absolute right-2 top-0 text-xs font-medium text-gray-600 leading-4">
+                                      {occupationPercentage}%
+                                    </span>
                                   )}
                                 </div>
-                              ) : (
-                                <div className="text-xs text-gray-500 italic">
-                                  Available for new projects
-                                </div>
-                              )}
 
-                              <div className="mt-4 pt-3 border-t">
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-xs font-medium">Allocation Status</span>
-                                  <span className={`text-xs font-semibold ${colorInfo.text}`}>
-                                    {occupationPercentage}%
-                                  </span>
+                                {/* Status Information */}
+                                <div className="space-y-1 mb-3">
+                                  <div className={`text-xs font-semibold ${occupationInfo.textColor}`}>
+                                    {occupationInfo.label}
+                                  </div>
+                                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                                    Active Projects: {navadhitiAllocations.length}
+                                  </div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-500">
+                                    Status: {occupationInfo.status}
+                                  </div>
                                 </div>
-                                <div className="w-full bg-gray-200 rounded-full h-3 mb-1">
-                                  <div 
-                                    className={`${colorInfo.bg} h-3 rounded-full transition-all duration-300`} 
-                                    style={{ width: `${occupationPercentage}%` }}
-                                  ></div>
-                                </div>
-                                <div className={`text-xs font-medium ${colorInfo.text}`}>
-                                  {colorInfo.label}
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Active Projects: {allocations.length}
-                                </div>
-                              </div>
 
-                              <div className="mt-3 flex gap-1">
+                                {/* Action Button */}
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="flex-1 text-xs h-7"
+                                  className="w-full text-xs h-8 mt-2"
                                   onClick={() => {
-                                    setSelectedEmployee(employee);
+                                    setSelectedEmployees([employee.id]);
                                     setIsAllocationDialogOpen(true);
                                   }}
                                 >
-                                  <UserCheck className="h-3 w-3 mr-1" />
-                                  {allocations.length > 0 ? 'Manage' : 'Allocate'}
+                                  <UserCheck className="h-3 w-3 mr-2" />
+                                  {navadhitiAllocations.length > 0 ? 'Manage Projects' : 'Allocate to Project'}
                                 </Button>
                               </div>
                             </Card>
@@ -2350,14 +2662,15 @@ export default function NavadhitiProjectsPage() {
                         })}
                       </div>
 
-                      {employeesData.filter((employee: any) => employeeProjectsData.some((ep: any) => ep.employeeId === employee.id && ep.isActive)).length === 0 && (
+                      {/* Empty State */}
+                      {employeesData.length === 0 && (
                         <div className="text-center py-12">
                           <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                            No allocated employees found
+                            No employees found
                           </h3>
                           <p className="text-gray-500 dark:text-gray-400">
-                            Allocate employees to projects to see them here.
+                            Import employees to view their allocation status.
                           </p>
                         </div>
                       )}
