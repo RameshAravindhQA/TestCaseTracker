@@ -2043,7 +2043,7 @@ export default function NavadhitiProjectsPage() {
                           </p>
                         </div>
                       )}
-                    </>
+                    </div>
                   )}
                 </CardContent>
               </Card>
