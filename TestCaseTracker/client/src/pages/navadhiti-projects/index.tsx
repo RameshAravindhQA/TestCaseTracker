@@ -957,7 +957,10 @@ export default function NavadhitiProjectsPage() {
                                     size="sm"
                                     variant="outline"
                                     className="flex-1 text-xs h-7"
-                                    onClick={() => handleAllocateToProject(employee)}
+                                    onClick={() => {
+                                      setSelectedEmployees([employee.id]);
+                                      setIsAllocationDialogOpen(true);
+                                    }}
                                   >
                                     <UserCheck className="h-3 w-3 mr-1" />
                                     Quick Allocate
@@ -984,7 +987,10 @@ export default function NavadhitiProjectsPage() {
                                       size="sm"
                                       variant="outline"
                                       className="flex-1 text-xs h-7"
-                                      onClick={() => handleAllocateToProject(employee)}
+                                      onClick={() => {
+                                        setSelectedEmployees([employee.id]);
+                                        setIsAllocationDialogOpen(true);
+                                      }}
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
                                       Add Project
@@ -1044,7 +1050,10 @@ export default function NavadhitiProjectsPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleAllocateToProject(employee)}
+                                  onClick={() => {
+                                    setSelectedEmployees([employee.id]);
+                                    setIsAllocationDialogOpen(true);
+                                  }}
                                 >
                                   Quick Allocate
                                 </Button>
@@ -1157,7 +1166,10 @@ export default function NavadhitiProjectsPage() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => handleAllocateToProject(employee)}
+                                    onClick={() => {
+                                      setSelectedEmployees([employee.id]);
+                                      setIsAllocationDialogOpen(true);
+                                    }}
                                   >
                                     Allocate
                                   </Button>
@@ -1312,7 +1324,10 @@ export default function NavadhitiProjectsPage() {
                                       size="sm"
                                       variant="outline"
                                       className="text-xs h-8 px-3"
-                                      onClick={() => handleAllocateToProject(employee)}
+                                      onClick={() => {
+                                        setSelectedEmployees([employee.id]);
+                                        setIsAllocationDialogOpen(true);
+                                      }}
                                     >
                                       <UserCheck className="h-3 w-3 mr-1" />
                                       Allocate
@@ -2514,9 +2529,9 @@ export default function NavadhitiProjectsPage() {
 
                                   {/* Progress Bar */}
                                   <div className="relative mb-3">
-                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                                    <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                                       <div 
-                                        className={`${projectHealthInfo.bgColor} h-4 rounded-full transition-all duration-500 ease-out flex items-center justify-center`}
+                                        className={`${projectHealthInfo.bgColor} h-3 rounded-full transition-all duration-500 ease-out flex items-center justify-center`}
                                         style={{ width: `${completionPercentage}%` }}
                                       >
                                         {completionPercentage > 20 && (
@@ -3769,7 +3784,7 @@ export default function NavadhitiProjectsPage() {
                           (viewingProject.overallProjectStatus === 'On Hold' || viewingProject.overallProjectStatus === 'Planning Phase') ? 'bg-yellow-100 text-yellow-800' :
                           (viewingProject.overallProjectStatus === 'At Risk' || viewingProject.overallProjectStatus === 'Need Attention') ? 'bg-orange-100 text-orange-800' :
                           (viewingProject.overallProjectStatus === 'Behind Schedule' || viewingProject.overallProjectStatus === 'Blocked') ? 'bg-red-100 text-red-800' :
-                          (viewingProject.overallProjectStatus === 'Under Review') ? 'bg-purple-100 text-purple-800' :
+                          (viewingProject.overallProjectStatus === 'UnderReview') ? 'bg-purple-100 text-purple-800' :
                           (viewingProject.overallProjectStatus === 'Cancelled') ? 'bg-gray-100 text-gray-800' :
                           'bg-green-100 text-green-800'
                         } text-xs`}
