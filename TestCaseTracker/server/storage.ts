@@ -2221,7 +2221,7 @@ class MemStorage implements IStorage {
     // Enrich with project names
     const enrichedHistory = employeeProjects.map(ep => {
       let projectName = 'Unknown Project';
-      
+
       if (ep.projectType === 'navadhiti') {
         const navadhitiProject = this.navadhitiProjects.get(ep.projectId);
         projectName = navadhitiProject?.projectName || navadhitiProject?.name || 'Unknown Navadhiti Project';
@@ -2249,7 +2249,7 @@ class MemStorage implements IStorage {
     // Enrich with project names
     const enrichedHistory = allEmployeeProjects.map(ep => {
       let projectName = 'Unknown Project';
-      
+
       if (ep.projectType === 'navadhiti') {
         const navadhitiProject = this.navadhitiProjects.get(ep.projectId);
         projectName = navadhitiProject?.projectName || navadhitiProject?.name || 'Unknown Navadhiti Project';

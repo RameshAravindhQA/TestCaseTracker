@@ -26,6 +26,7 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
+    overallProjectStatus: project?.overallProjectStatus || '',
     currentSprint: project?.currentSprint || '',
     currentIssues: project?.currentIssues || '',
     weeklyComms: project?.weeklyComms || '',
@@ -39,6 +40,7 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
   React.useEffect(() => {
     if (project) {
       setFormData({
+        overallProjectStatus: project.overallProjectStatus || '',
         currentSprint: project.currentSprint || '',
         currentIssues: project.currentIssues || '',
         weeklyComms: project.weeklyComms || '',
@@ -90,16 +92,35 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
   };
 
   // Status options for dropdown
+  const overallProjectStatusOptions = [
+    { value: 'Active', label: 'Active', color: 'green' },
+    { value: 'On Track', label: 'On Track', color: 'green' },
+    { value: 'At Risk', label: 'At Risk', color: 'amber' },
+    { value: 'Behind Schedule', label: 'Behind Schedule', color: 'orange' },
+    { value: 'Blocked', label: 'Blocked', color: 'red' },
+    { value: 'On Hold', label: 'On Hold', color: 'yellow' },
+    { value: 'Completed', label: 'Completed', color: 'blue' },
+    { value: 'Cancelled', label: 'Cancelled', color: 'gray' },
+    { value: 'Under Review', label: 'Under Review', color: 'purple' },
+    { value: 'Planning Phase', label: 'Planning Phase', color: 'indigo' }
+  ];
+
   const sprintStatusOptions = [
     { value: 'On Track', label: 'On Track', color: 'green' },
     { value: 'At Risk', label: 'At Risk', color: 'amber' },
-    { value: 'Blocked', label: 'Blocked', color: 'red' }
+    { value: 'Behind Schedule', label: 'Behind Schedule', color: 'orange' },
+    { value: 'Blocked', label: 'Blocked', color: 'red' },
+    { value: 'Completed', label: 'Completed', color: 'blue' },
+    { value: 'Not Started', label: 'Not Started', color: 'gray' }
   ];
 
   const weeklyCommsOptions = [
     { value: 'On Track', label: 'On Track', color: 'green' },
     { value: 'At Risk', label: 'At Risk', color: 'amber' },
-    { value: 'Blocked', label: 'Blocked', color: 'red' }
+    { value: 'Blocked', label: 'Blocked', color: 'red' },
+    { value: 'Need Attention', label: 'Need Attention', color: 'orange' },
+    { value: 'Good', label: 'Good', color: 'blue' },
+    { value: 'Excellent', label: 'Excellent', color: 'green' }
   ];
 
   // Don't render if no project
@@ -117,6 +138,36 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Overall Project Status */}
+            <div>
+              <Label htmlFor="overallProjectStatus">Overall Project Status</Label>
+              <Select value={formData.overallProjectStatus} onValueChange={(value) => handleInputChange('overallProjectStatus', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select overall project status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {overallProjectStatusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${
+                          option.color === 'green' ? 'bg-green-500' :
+                          option.color === 'amber' ? 'bg-amber-500' :
+                          option.color === 'orange' ? 'bg-orange-500' :
+                          option.color === 'red' ? 'bg-red-500' :
+                          option.color === 'yellow' ? 'bg-yellow-500' :
+                          option.color === 'blue' ? 'bg-blue-500' :
+                          option.color === 'purple' ? 'bg-purple-500' :
+                          option.color === 'indigo' ? 'bg-indigo-500' :
+                          'bg-gray-500'
+                        }`} />
+                        {option.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Current Sprint Status */}
             <div>
               <Label htmlFor="currentSprint">Current Sprint Status</Label>
@@ -130,7 +181,11 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${
                           option.color === 'green' ? 'bg-green-500' :
-                          option.color === 'amber' ? 'bg-amber-500' : 'bg-red-500'
+                          option.color === 'amber' ? 'bg-amber-500' :
+                          option.color === 'orange' ? 'bg-orange-500' :
+                          option.color === 'red' ? 'bg-red-500' :
+                          option.color === 'blue' ? 'bg-blue-500' :
+                          'bg-gray-500'
                         }`} />
                         {option.label}
                       </div>
@@ -153,7 +208,11 @@ export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDia
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${
                           option.color === 'green' ? 'bg-green-500' :
-                          option.color === 'amber' ? 'bg-amber-500' : 'bg-red-500'
+                          option.color === 'amber' ? 'bg-amber-500' :
+                          option.color === 'orange' ? 'bg-orange-500' :
+                          option.color === 'red' ? 'bg-red-500' :
+                          option.color === 'blue' ? 'bg-blue-500' :
+                          'bg-gray-500'
                         }`} />
                         {option.label}
                       </div>

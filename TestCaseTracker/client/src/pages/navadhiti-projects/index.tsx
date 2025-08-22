@@ -60,6 +60,7 @@ interface NavadhitiProject {
   createdAt: string;
   updatedAt: string;
   projectImage?: string; // Added for project image
+  overallProjectStatus?: string; // Added for overall project status
   currentSprint?: string; // Added for status review
   currentIssues?: string; // Added for status review
   weeklyComms?: string; // Added for status review
@@ -162,6 +163,7 @@ export default function NavadhitiProjectsPage() {
         createdAt: project.createdAt || '',
         updatedAt: project.updatedAt || '',
         projectImage: project.projectImage || undefined, // Ensure projectImage is handled
+        overallProjectStatus: project.overallProjectStatus || 'Active',
         currentSprint: project.currentSprint || 'N/A',
         currentIssues: project.currentIssues || 'None',
         weeklyComms: project.weeklyComms || 'Not Set',
@@ -1962,13 +1964,17 @@ export default function NavadhitiProjectsPage() {
                                 <TableCell>
                                   <Badge 
                                     className={
-                                      project.status === 'Active' ? 'bg-green-100 text-green-800' :
-                                      project.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
-                                      project.status === 'On Hold' ? 'bg-yellow-100 text-yellow-800' :
-                                      'bg-red-100 text-red-800'
+                                      (project.overallProjectStatus === 'Active' || project.overallProjectStatus === 'On Track') ? 'bg-green-100 text-green-800' :
+                                      (project.overallProjectStatus === 'Completed') ? 'bg-blue-100 text-blue-800' :
+                                      (project.overallProjectStatus === 'On Hold' || project.overallProjectStatus === 'Planning Phase') ? 'bg-yellow-100 text-yellow-800' :
+                                      (project.overallProjectStatus === 'At Risk' || project.overallProjectStatus === 'Need Attention') ? 'bg-orange-100 text-orange-800' :
+                                      (project.overallProjectStatus === 'Behind Schedule' || project.overallProjectStatus === 'Blocked') ? 'bg-red-100 text-red-800' :
+                                      (project.overallProjectStatus === 'Under Review') ? 'bg-purple-100 text-purple-800' :
+                                      (project.overallProjectStatus === 'Cancelled') ? 'bg-gray-100 text-gray-800' :
+                                      'bg-green-100 text-green-800'
                                     }
                                   >
-                                    {project.status}
+                                    {project.overallProjectStatus || project.status}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
@@ -3726,7 +3732,7 @@ export default function NavadhitiProjectsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label className="text-sm text-gray-500 uppercase tracking-wide">Status</Label>
                     <p className="mt-1">
@@ -3743,6 +3749,25 @@ export default function NavadhitiProjectsPage() {
                         } text-white text-xs`}
                       >
                         {viewingProject.status}
+                      </Badge>
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Overall Project Status</Label>
+                    <p className="mt-1">
+                      <Badge 
+                        className={`${
+                          (viewingProject.overallProjectStatus === 'Active' || viewingProject.overallProjectStatus === 'On Track') ? 'bg-green-100 text-green-800' :
+                          (viewingProject.overallProjectStatus === 'Completed') ? 'bg-blue-100 text-blue-800' :
+                          (viewingProject.overallProjectStatus === 'On Hold' || viewingProject.overallProjectStatus === 'Planning Phase') ? 'bg-yellow-100 text-yellow-800' :
+                          (viewingProject.overallProjectStatus === 'At Risk' || viewingProject.overallProjectStatus === 'Need Attention') ? 'bg-orange-100 text-orange-800' :
+                          (viewingProject.overallProjectStatus === 'Behind Schedule' || viewingProject.overallProjectStatus === 'Blocked') ? 'bg-red-100 text-red-800' :
+                          (viewingProject.overallProjectStatus === 'Under Review') ? 'bg-purple-100 text-purple-800' :
+                          (viewingProject.overallProjectStatus === 'Cancelled') ? 'bg-gray-100 text-gray-800' :
+                          'bg-green-100 text-green-800'
+                        } text-xs`}
+                      >
+                        {viewingProject.overallProjectStatus || 'Not Set'}
                       </Badge>
                     </p>
                   </div>
