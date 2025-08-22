@@ -2044,6 +2044,7 @@ export default function NavadhitiProjectsPage() {
                     </>
                   )}
                 </CardContent>
+              </Card></old_str>
               </Card>
             )}
 
