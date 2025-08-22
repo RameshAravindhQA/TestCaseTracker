@@ -2226,12 +2226,30 @@ class MemStorage implements IStorage {
 
   // Modified getEmployeeProjectHistory to use the project name from the correct source
   async getEmployeeProjectHistory(employeeId: number): Promise<any[]> {
-    // Get all employee projects for this specific employee
+    // Initialize history array if needed
+    if (!this.employeeProjectHistory) {
+      this.employeeProjectHistory = [];
+    }
+
+    // Get extension history records for this employee
+    const historyRecords = this.employeeProjectHistory.filter(hr => hr.employeeId === employeeId);
+
+    // Get current employee projects for this specific employee
     const employeeProjects = Array.from(this.employeeProjects.values())
       .filter(ep => ep.employeeId === employeeId);
 
+    // Combine history records with current projects
+    const combinedHistory = [
+      ...historyRecords,
+      ...employeeProjects.map(ep => ({
+        ...ep,
+        action: ep.isActive ? 'active' : 'completed',
+        status: ep.isActive ? ep.status : 'completed'
+      }))
+    ];
+
     // Enrich with project names
-    const enrichedHistory = employeeProjects.map(ep => {
+    const enrichedHistory = combinedHistory.map(ep => {
       let projectName = 'Unknown Project';
 
       if (ep.projectType === 'navadhiti') {
@@ -2248,7 +2266,14 @@ class MemStorage implements IStorage {
       };
     });
 
-    // Sort by updatedAt descending
+    console.log(`getEmployeeProjectHistory for employee ${employeeId}: returning`, enrichedHistory.length, 'records');
+    console.log('History breakdown:', {
+      extensionHistory: historyRecords.length,
+      currentProjects: employeeProjects.length,
+      total: enrichedHistory.length
+    });
+
+    // Sort by updatedAt/createdAt descending
     return enrichedHistory.sort((a, b) => 
       new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
     );
@@ -2256,11 +2281,29 @@ class MemStorage implements IStorage {
 
   // Modified getAllEmployeeProjectHistory to use the project name from the correct source
   async getAllEmployeeProjectHistory(): Promise<any[]> {
-    // Get all employee projects
+    // Initialize history array if needed
+    if (!this.employeeProjectHistory) {
+      this.employeeProjectHistory = [];
+    }
+
+    // Get all history records (including extensions)
+    const historyRecords = [...this.employeeProjectHistory];
+
+    // Get all active employee projects and add them as history entries
     const allEmployeeProjects = Array.from(this.employeeProjects.values());
+    
+    // Combine history records with active projects
+    const combinedHistory = [
+      ...historyRecords,
+      ...allEmployeeProjects.map(ep => ({
+        ...ep,
+        action: ep.isActive ? 'active' : 'completed',
+        status: ep.isActive ? ep.status : 'completed'
+      }))
+    ];
 
     // Enrich with project names
-    const enrichedHistory = allEmployeeProjects.map(ep => {
+    const enrichedHistory = combinedHistory.map(ep => {
       let projectName = 'Unknown Project';
 
       if (ep.projectType === 'navadhiti') {
@@ -2277,7 +2320,14 @@ class MemStorage implements IStorage {
       };
     });
 
-    // Sort by updatedAt descending
+    console.log('getAllEmployeeProjectHistory: returning', enrichedHistory.length, 'records');
+    console.log('History records breakdown:', {
+      extensionHistory: historyRecords.length,
+      activeProjects: allEmployeeProjects.length,
+      total: enrichedHistory.length
+    });
+
+    // Sort by updatedAt/createdAt descending
     return enrichedHistory.sort((a, b) => 
       new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
     );
@@ -2512,25 +2562,17 @@ class MemStorage implements IStorage {
 
       const previousEndDate = allocation.endDate;
 
-      // Update the allocation with new end date
-      const updatedAllocation = {
-        ...allocation,
-        endDate: newEndDate,
-        updatedAt: new Date().toISOString()
-      };
-
-      this.employeeProjects.set(allocationId, updatedAllocation);
-
-      // Create history record for the extension
+      // Create history record BEFORE updating the allocation
+      const historyId = this.getNextId();
       const historyRecord = {
-        id: Date.now() + Math.random(),
+        id: historyId,
         employeeProjectId: allocationId,
         employeeId: allocation.employeeId,
         projectId: allocation.projectId,
         projectType: allocation.projectType || 'navadhiti',
         role: allocation.role,
         startDate: allocation.startDate,
-        endDate: previousEndDate,
+        endDate: previousEndDate, // Original end date
         isActive: false,
         status: 'extended',
         allocation: allocation.allocation || 100,
@@ -2542,18 +2584,31 @@ class MemStorage implements IStorage {
         updatedAt: new Date().toISOString()
       };
 
-      // Add to history
+      // Initialize history array if needed
       if (!this.employeeProjectHistory) {
         this.employeeProjectHistory = [];
       }
+      
+      // Add to history immediately
       this.employeeProjectHistory.push(historyRecord);
-
       console.log('Created history record for extension:', historyRecord);
+      console.log('Total history records:', this.employeeProjectHistory.length);
+
+      // Now update the allocation with new end date
+      const updatedAllocation = {
+        ...allocation,
+        endDate: newEndDate,
+        updatedAt: new Date().toISOString()
+      };
+
+      this.employeeProjects.set(allocationId, updatedAllocation);
+      console.log('Updated allocation with new end date:', updatedAllocation);
 
       return {
         success: true,
         message: "Project duration extended successfully",
-        allocation: updatedAllocation
+        allocation: updatedAllocation,
+        historyRecord: historyRecord
       };
     } catch (error) {
       console.error('Error extending employee project:', error);
