@@ -2303,7 +2303,7 @@ class MemStorage implements IStorage {
         createdAt: new Date().toISOString()
       };
 
-      // Add to existing history array
+      // Add to history
       if (!this.employeeProjectHistory) {
         this.employeeProjectHistory = [];
       }
@@ -2499,6 +2499,65 @@ class MemStorage implements IStorage {
       // console.log("Data saved to memory storage", dataToSave); // Uncomment for debugging
     } catch (error) {
       console.error("Error saving data:", error);
+    }
+  }
+
+  // Add extend employee project duration route for history management
+  async extendEmployeeProject(allocationId: number, newEndDate: string, extensionDays?: number): Promise<any> {
+    try {
+      const allocation = this.employeeProjects.get(allocationId);
+      if (!allocation) {
+        throw new Error('Project allocation not found');
+      }
+
+      const previousEndDate = allocation.endDate;
+
+      // Update the allocation with new end date
+      const updatedAllocation = {
+        ...allocation,
+        endDate: newEndDate,
+        updatedAt: new Date().toISOString()
+      };
+
+      this.employeeProjects.set(allocationId, updatedAllocation);
+
+      // Create history record for the extension
+      const historyRecord = {
+        id: Date.now() + Math.random(),
+        employeeProjectId: allocationId,
+        employeeId: allocation.employeeId,
+        projectId: allocation.projectId,
+        projectType: allocation.projectType || 'navadhiti',
+        role: allocation.role,
+        startDate: allocation.startDate,
+        endDate: previousEndDate,
+        isActive: false,
+        status: 'extended',
+        allocation: allocation.allocation || 100,
+        action: 'extended',
+        previousEndDate: previousEndDate,
+        newEndDate: newEndDate,
+        extensionDays: extensionDays || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // Add to history
+      if (!this.employeeProjectHistory) {
+        this.employeeProjectHistory = [];
+      }
+      this.employeeProjectHistory.push(historyRecord);
+
+      console.log('Created history record for extension:', historyRecord);
+
+      return {
+        success: true,
+        message: "Project duration extended successfully",
+        allocation: updatedAllocation
+      };
+    } catch (error) {
+      console.error('Error extending employee project:', error);
+      throw error;
     }
   }
 }

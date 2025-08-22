@@ -789,13 +789,8 @@ export default function NavadhitiProjectsPage() {
                         >
                           Clear Selection
                         </Button>
+                        {/* Allocation Dialog */}
                         <Dialog open={isAllocationDialogOpen} onOpenChange={setIsAllocationDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                              <Send className="h-4 w-4 mr-2" />
-                              Allocate to Project
-                            </Button>
-                          </DialogTrigger>
                           <DialogContent className="max-w-2xl">
                             <DialogHeader>
                               <DialogTitle>Allocate Employees to Project</DialogTitle>
@@ -1577,235 +1572,147 @@ export default function NavadhitiProjectsPage() {
                       {/* Card View for Projects */}
                       {viewMode === 'card' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          {filteredProjects.map((project: any) => {
-                            const projectEmployees = employeeProjectsData.filter((ep: any) => 
-                              ep.projectId === project.id && ep.isActive
+                          {filteredProjects.filter(project => project && project.id).map((project: NavadhitiProject) => {
+                            const leadEmployee = employeesData.find((emp: any) => 
+                              project.assignedEmployees?.includes(emp.id)
                             );
-                            const teamSize = projectEmployees.length;
-                            const completionPercentage = project.completionPercentage || 0;
-
-                            // Determine project health color
-                            const getProjectHealthInfo = (completion: number, status: string) => {
-                              if (status === 'Completed') {
-                                return { 
-                                  bgColor: 'bg-blue-500', 
-                                  textColor: 'text-blue-700', 
-                                  borderColor: 'border-blue-500',
-                                  label: 'Completed',
-                                  healthStatus: 'Project Finished'
-                                };
-                              } else if (status === 'Cancelled') {
-                                return { 
-                                  bgColor: 'bg-gray-500', 
-                                  textColor: 'text-gray-700', 
-                                  borderColor: 'border-gray-500',
-                                  label: 'Cancelled',
-                                  healthStatus: 'Project Cancelled'
-                                };
-                              } else if (status === 'On Hold') {
-                                return { 
-                                  bgColor: 'bg-yellow-500', 
-                                  textColor: 'text-yellow-700', 
-                                  borderColor: 'border-yellow-500',
-                                  label: 'On Hold',
-                                  healthStatus: 'Project Paused'
-                                };
-                              } else if (completion >= 80) {
-                                return { 
-                                  bgColor: 'bg-green-500', 
-                                  textColor: 'text-green-700', 
-                                  borderColor: 'border-green-500',
-                                  label: 'Excellent Progress',
-                                  healthStatus: 'On Track'
-                                };
-                              } else if (completion >= 50) {
-                                return { 
-                                  bgColor: 'bg-orange-500', 
-                                  textColor: 'text-orange-700', 
-                                  borderColor: 'border-orange-500',
-                                  label: 'Good Progress',
-                                  healthStatus: 'Moderate Progress'
-                                };
-                              } else if (completion >= 25) {
-                                return { 
-                                  bgColor: 'bg-yellow-500', 
-                                  textColor: 'text-yellow-700', 
-                                  borderColor: 'border-yellow-500',
-                                  label: 'Slow Progress',
-                                  healthStatus: 'Behind Schedule'
-                                };
-                              } else {
-                                return { 
-                                  bgColor: 'bg-red-500', 
-                                  textColor: 'text-red-700', 
-                                  borderColor: 'border-red-500',
-                                  label: 'Needs Attention',
-                                  healthStatus: 'Critical'
-                                };
-                              }
-                            };
-
-                            const projectHealthInfo = getProjectHealthInfo(completionPercentage, project.status);
 
                             return (
-                              <Card key={project.id} className={`relative p-4 hover:shadow-lg transition-all duration-300 border-l-4 ${projectHealthInfo.borderColor}`}>
-                                {/* Project Header */}
-                                <div className="flex items-center space-x-3 mb-4">
-                                  {project.projectImage ? (
-                                    <img 
-                                      src={project.projectImage} 
-                                      alt={`${project.projectName} logo`}
-                                      className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
-                                    />
-                                  ) : (
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center border-2 border-gray-200">
-                                      <span className="text-white text-lg font-bold">
-                                        {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
-                                      </span>
-                                    </div>
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
-                                      {project.projectName}
-                                    </h4>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                                      {project.clientName}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {/* Project Details */}
-                                <div className="mb-4 space-y-2">
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-gray-600 dark:text-gray-400">Status:</span>
-                                    <Badge variant="outline" className="text-xs">
-                                      {project.status}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-gray-600 dark:text-gray-400">Team Size:</span>
-                                    <span className="text-xs font-medium">{teamSize} members</span>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs text-gray-600 dark:text-gray-400">Priority:</span>
-                                    <Badge variant="secondary" className="text-xs">
-                                      {project.priority}
-                                    </Badge>
-                                  </div>
-                                </div>
-
-                                {/* Progress Status */}
-                                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                                  <div className="flex justify-between items-center mb-3">
-                                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                      Project Progress
-                                    </span>
-                                    <Badge className={`text-xs font-semibold px-2 py-1 ${projectHealthInfo.textColor} bg-opacity-20`} style={{
-                                      backgroundColor: projectHealthInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
-                                                      projectHealthInfo.bgColor.includes('red') ? '#FEF2F2' : 
-                                                      projectHealthInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
-                                                      projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : 'F0FDF4'
-                                    }}>
-                                      {completionPercentage}%
-                                    </Badge>
-                                  </div>
-
-                                  {/* Progress Bar */}
-                                  <div className="relative mb-3">
-                                    <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                                      <div 
-                                        className={`${projectHealthInfo.bgColor} h-3 rounded-full transition-all duration-500 ease-out flex items-center justify-center`}
-                                        style={{ width: `${completionPercentage}%` }}
-                                      >
-                                        {completionPercentage > 20 && (
-                                          <span className="text-xs font-medium text-white">
-                                            {completionPercentage}%
+                              <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
+                                <CardHeader className="relative p-6">
+                                  <div className="flex items-center justify-center mb-4">
+                                    <div className="relative">
+                                      {project.projectImage ? (
+                                        <img 
+                                          src={project.projectImage} 
+                                          alt={`${project.projectName} logo`}
+                                          className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                                        />
+                                      ) : (
+                                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center border-4 border-white shadow-lg">
+                                          <span className="text-white text-2xl font-bold">
+                                            {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
                                           </span>
+                                        </div>
+                                      )}
+                                      <div className="absolute -top-2 -right-2">
+                                        <Badge 
+                                          variant={project.status === 'Active' ? 'default' : 'secondary'}
+                                          className={`${
+                                            project.status === 'Active' 
+                                              ? 'bg-green-500 hover:bg-green-600' 
+                                              : project.status === 'Completed'
+                                              ? 'bg-blue-500 hover:bg-blue-600'
+                                              : project.status === 'On Hold'
+                                              ? 'bg-yellow-500 hover:bg-yellow-600'
+                                              : 'bg-red-500 hover:bg-red-600'
+                                          } text-white text-xs`}
+                                        >
+                                          {project.status}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <div>
+                                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Project Name</Label>
+                                      <CardTitle className="text-lg font-semibold line-clamp-1 mt-1">
+                                        {project.projectName}
+                                      </CardTitle>
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</Label>
+                                      <CardDescription className="mt-1 font-medium">
+                                        {project.clientName}
+                                      </CardDescription>
+                                    </div>
+                                  </div>
+                                </CardHeader>
+
+                                <CardContent className="space-y-3">
+                                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <Calendar className="h-4 w-4" />
+                                    <span>
+                                      {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - 
+                                      {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
+                                    </span>
+                                  </div>
+
+                                  {/* Technologies */}
+                                  {project.technologies && project.technologies.length > 0 && (
+                                    <div>
+                                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Tech</Label>
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {project.technologies.slice(0, 3).map((tech, index) => (
+                                          <Badge key={index} variant="secondary" className="text-xs">
+                                            {tech}
+                                          </Badge>
+                                        ))}
+                                        {project.technologies.length > 3 && (
+                                          <Badge variant="outline" className="text-xs">
+                                            +{project.technologies.length - 3} more
+                                          </Badge>
                                         )}
                                       </div>
                                     </div>
-                                    {completionPercentage <= 20 && completionPercentage > 0 && (
-                                      <span className="absolute right-2 top-0 text-xs font-medium text-gray-600 leading-4">
-                                        {completionPercentage}%
-                                      </span>
-                                    )}
-                                  </div>
+                                  )}
 
-                                  {/* Status Information */}
-                                  <div className="space-y-1 mb-3">
-                                    <div className={`text-xs font-medium ${projectHealthInfo.textColor}`}>
-                                      {projectHealthInfo.label}
-                                    </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-500">
-                                      Health: {projectHealthInfo.healthStatus}
-                                    </div>
-                                    <div className="text-xs text-gray-600 dark:text-gray-400">
-                                      Duration: {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
-                                    </div>
-
-                                    {/* Team Members Section */}
-                                    {project.assignedEmployees && project.assignedEmployees.length > 0 && (
-                                      <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                                        <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                          Team Members
-                                        </div>
-                                        <div className="flex -space-x-2 overflow-hidden">
-                                          {project.assignedEmployees.slice(0, 5).map((employeeId: number, index: number) => {
-                                            const employee = employeesData.find((emp: any) => emp.id === employeeId);
-                                            return employee ? (
-                                              <div key={index} className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-gray-300 overflow-hidden">
-                                                {employee.profilePicture ? (
-                                                  <img
-                                                    src={employee.profilePicture}
-                                                    alt={`${employee.firstName} ${employee.lastName}`}
-                                                    className="h-full w-full object-cover"
-                                                    title={`${employee.firstName} ${employee.lastName}`}
-                                                  />
-                                                ) : (
-                                                  <div className="h-full w-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
-                                                    {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
-                                                  </div>
-                                                )}
-                                              </div>
-                                            ) : null;
-                                          })}
-                                          {project.assignedEmployees.length > 5 && (
-                                            <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-gray-500 flex items-center justify-center text-white text-xs font-medium">
-                                              +{project.assignedEmployees.length - 5}
-                                            </div>
-                                          )}
-                                        </div>
+                                  {/* Project Lead */}
+                                  {leadEmployee && (
+                                    <div>
+                                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Lead</Label>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        {leadEmployee.profilePicture ? (
+                                          <img
+                                            src={leadEmployee.profilePicture}
+                                            alt={`${leadEmployee.firstName} ${leadEmployee.lastName}`}
+                                            className="h-6 w-6 rounded-full object-cover"
+                                          />
+                                        ) : (
+                                          <div className="h-6 w-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
+                                            {leadEmployee.firstName?.charAt(0)}{leadEmployee.lastName?.charAt(0)}
+                                          </div>
+                                        )}
+                                        <Badge variant="outline" className="text-xs">
+                                          {leadEmployee.firstName} {leadEmployee.lastName}
+                                        </Badge>
                                       </div>
-                                    )}
-                                  </div>
+                                    </div>
+                                  )}
 
-                                  {/* Action Buttons */}
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="flex-1 text-xs h-7"
-                                      onClick={() => {
-                                        setViewingProject(project);
-                                        setIsViewDialogOpen(true);
-                                      }}
-                                    >
-                                      View Details
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="flex-1 text-xs h-7"
-                                      onClick={() => {
-                                        setEditingProject(project);
-                                        setActiveTab("projects");
-                                        setIsDialogOpen(true);
-                                      }}
-                                    >
-                                      Edit
-                                    </Button>
+                                  <div className="flex items-center justify-between pt-2">
+                                    <div className="flex items-center gap-2">
+                                      <Users className="h-4 w-4 text-gray-400" />
+                                      <span className="text-sm text-gray-600">
+                                        {project.assignedEmployees?.length || 0} members
+                                      </span>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setEditingProject(project);
+                                          setIsDialogOpen(true);
+                                        }}
+                                      >
+                                        Edit
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setViewingProject(project);
+                                          setIsViewDialogOpen(true);
+                                        }}
+                                      >
+                                        View
+                                      </Button>
+                                    </div>
                                   </div>
-                                </div>
+                                </CardContent>
                               </Card>
                             );
                           })}
@@ -1816,185 +1723,52 @@ export default function NavadhitiProjectsPage() {
                       {viewMode === 'list' && (
                         <div className="space-y-4">
                           {filteredProjects.map((project: any) => {
-                            const projectEmployees = employeeProjectsData.filter((ep: any) => 
-                              ep.projectId === project.id && ep.isActive
+                            const leadEmployee = employeesData.find((emp: any) => 
+                              project.assignedEmployees?.includes(emp.id)
                             );
-                            const teamSize = projectEmployees.length;
-                            const completionPercentage = project.completionPercentage || 0;
-
-                            // Determine project health color
-                            const getProjectHealthInfo = (completion: number, status: string) => {
-                              if (status === 'Completed') {
-                                return { 
-                                  bgColor: 'bg-blue-500', 
-                                  textColor: 'text-blue-700', 
-                                  borderColor: 'border-blue-500',
-                                  label: 'Completed',
-                                  healthStatus: 'Project Finished'
-                                };
-                              } else if (status === 'Cancelled') {
-                                return { 
-                                  bgColor: 'bg-gray-500', 
-                                  textColor: 'text-gray-700', 
-                                  borderColor: 'border-gray-500',
-                                  label: 'Cancelled',
-                                  healthStatus: 'Project Cancelled'
-                                };
-                              } else if (status === 'On Hold') {
-                                return { 
-                                  bgColor: 'bg-yellow-500', 
-                                  textColor: 'text-yellow-700', 
-                                  borderColor: 'border-yellow-500',
-                                  label: 'On Hold',
-                                  healthStatus: 'Project Paused'
-                                };
-                              } else if (completion >= 80) {
-                                return { 
-                                  bgColor: 'bg-green-500', 
-                                  textColor: 'text-green-700', 
-                                  borderColor: 'border-green-500',
-                                  label: 'Excellent Progress',
-                                  healthStatus: 'On Track'
-                                };
-                              } else if (completion >= 50) {
-                                return { 
-                                  bgColor: 'bg-orange-500', 
-                                  textColor: 'text-orange-700', 
-                                  borderColor: 'border-orange-500',
-                                  label: 'Good Progress',
-                                  healthStatus: 'Moderate Progress'
-                                };
-                              } else if (completion >= 25) {
-                                return { 
-                                  bgColor: 'bg-yellow-500', 
-                                  textColor: 'text-yellow-700', 
-                                  borderColor: 'border-yellow-500',
-                                  label: 'Slow Progress',
-                                  healthStatus: 'Behind Schedule'
-                                };
-                              } else {
-                                return { 
-                                  bgColor: 'bg-red-500', 
-                                  textColor: 'text-red-700', 
-                                  borderColor: 'border-red-500',
-                                  label: 'Needs Attention',
-                                  healthStatus: 'Critical'
-                                };
-                              }
-                            };
-
-                            const projectHealthInfo = getProjectHealthInfo(completionPercentage, project.status);
 
                             return (
-                              <Card key={project.id} className={`p-4 hover:shadow-md transition-all duration-200 border-l-4 ${projectHealthInfo.borderColor}`}>
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center space-x-4 flex-1">
-                                    {/* Project Image */}
-                                    {project.projectImage ? (
-                                      <img 
-                                        src={project.projectImage} 
-                                        alt={`${project.projectName} logo`}
-                                        className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
-                                      />
-                                    ) : (
-                                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
-                                        <span className="text-white text-xl font-bold">
-                                          {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    {/* Project Info */}
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <h4 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                                          {project.projectName}
-                                        </h4>
-                                        <Badge variant="outline" className="text-xs">
-                                          {project.status}
-                                        </Badge>
-                                        <Badge variant="secondary" className="text-xs">
-                                          {project.priority}
-                                        </Badge>
-                                      </div>
-
-                                      <p className="text-gray-600 dark:text-gray-400 mb-2">
-                                        Client: {project.clientName}
-                                      </p>
-
-                                      <div className="flex items-center gap-6">
-                                        <div className="text-sm text-gray-600">
-                                          Team: {teamSize} members
-                                        </div>
-                                        <div className="text-sm text-gray-600">
-                                          Duration: {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
-                                        </div>
-                                      </div>
-
-                                      {/* Team Members */}
-                                      {project.assignedEmployees && project.assignedEmployees.length > 0 && (
-                                        <div className="flex items-center gap-2 mt-2">
-                                          <span className="text-xs text-gray-500">Team:</span>
-                                          <div className="flex -space-x-1">
-                                            {project.assignedEmployees.slice(0, 4).map((employeeId: number, index: number) => {
-                                              const employee = employeesData.find((emp: any) => emp.id === employeeId);
-                                              return employee ? (
-                                                <div key={index} className="h-6 w-6 rounded-full ring-2 ring-white bg-gray-300 overflow-hidden">
-                                                  {employee.profilePicture ? (
-                                                    <img
-                                                      src={employee.profilePicture}
-                                                      alt={`${employee.firstName} ${employee.lastName}`}
-                                                      className="h-full w-full object-cover"
-                                                      title={`${employee.firstName} ${employee.lastName}`}
-                                                    />
-                                                  ) : (
-                                                    <div className="h-full w-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
-                                                      {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              ) : null;
-                                            })}
-                                            {project.assignedEmployees.length > 4 && (
-                                              <div className="h-6 w-6 rounded-full ring-2 ring-white bg-gray-500 flex items-center justify-center text-white text-xs font-medium">
-                                                +{project.assignedEmployees.length - 4}
-                                              </div>
-                                            )}
-                                          </div>
+                              <Card key={project.id} className="hover:shadow-md transition-shadow duration-200">
+                                <CardContent className="p-6">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                      {project.projectImage ? (
+                                        <img 
+                                          src={project.projectImage} 
+                                          alt={`${project.projectName} logo`}
+                                          className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                                        />
+                                      ) : (
+                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                                          <span className="text-white text-lg font-bold">
+                                            {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
+                                          </span>
                                         </div>
                                       )}
-                                    </div>
-                                  </div>
-
-                                  {/* Progress and Actions */}
-                                  <div className="flex items-center gap-6">
-                                    {/* Progress Section */}
-                                    <div className="text-center min-w-32">
-                                      <div className="mb-2">
-                                        <Badge className={`text-xs font-semibold px-2 py-1 ${projectHealthInfo.textColor} bg-opacity-20`} style={{
-                                          backgroundColor: projectHealthInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
-                                                          projectHealthInfo.bgColor.includes('red') ? '#FEF2F2' : 
-                                                          projectHealthInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
-                                                          projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : '#F0FDF4'
-                                        }}>
-                                          {completionPercentage}%
-                                        </Badge>
-                                      </div>
-
-                                      <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-3 mx-auto mb-1">
-                                        <div 
-                                          className={`${projectHealthInfo.bgColor} h-3 rounded-full transition-all duration-500`}
-                                          style={{ width: `${completionPercentage}%` }}
-                                        />
-                                      </div>
-
-                                      <div className={`text-xs font-medium ${projectHealthInfo.textColor}`}>
-                                        {projectHealthInfo.label}
+                                      <div>
+                                        <h3 className="font-semibold text-lg">{project.projectName}</h3>
+                                        <p className="text-gray-600">{project.clientName}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Badge variant="outline" className="text-xs">
+                                            {project.status}
+                                          </Badge>
+                                          <span className="text-sm text-gray-500">
+                                            {project.assignedEmployees?.length || 0} members
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
-
-                                    {/* Actions */}
                                     <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setEditingProject(project);
+                                          setIsDialogOpen(true);
+                                        }}
+                                      >
+                                        Edit
+                                      </Button>
                                       <Button
                                         size="sm"
                                         variant="outline"
@@ -2003,22 +1777,11 @@ export default function NavadhitiProjectsPage() {
                                           setIsViewDialogOpen(true);
                                         }}
                                       >
-                                        View Details
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          setEditingProject(project);
-                                          setActiveTab("projects");
-                                          setIsDialogOpen(true);
-                                        }}
-                                      >
-                                        Edit
+                                        View
                                       </Button>
                                     </div>
                                   </div>
-                                </div>
+                                </CardContent>
                               </Card>
                             );
                           })}
@@ -5646,8 +5409,7 @@ export default function NavadhitiProjectsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {employeeProjectHistory
-                          .filter((history: any) => {
+                        {employeeProjectHistory                          .filter((history: any) => {
                             const allocation = employeeProjectsData.find((ep: any) => ep.id === history.employeeProjectId);
                             return allocation && allocation.employeeId === selectedEmployee.id;
                           })
