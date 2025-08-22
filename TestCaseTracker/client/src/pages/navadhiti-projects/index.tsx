@@ -583,6 +583,24 @@ export default function NavadhitiProjectsPage() {
     setIsAllocationDialogOpen(true);
   };
 
+  const statusDistribution = [
+    { name: 'Active', value: projects.filter(p => p.status === 'Active').length, color: '#10b981' },
+    { name: 'Completed', value: projects.filter(p => p.status === 'Completed').length, color: '#3b82f6' },
+    { name: 'On Hold', value: projects.filter(p => p.status === 'On Hold').length, color: '#f59e0b' },
+    { name: 'Cancelled', value: projects.filter(p => p.status === 'Cancelled').length, color: '#ef4444' }
+  ];
+
+  const departmentData = departmentOptions.map((dept: any) => ({
+    department: dept.name,
+    employees: employeesData.filter((emp: any) => emp.department === dept.name).length,
+    occupied: employeeProjectsData.filter((ep: any) => 
+      ep.isActive && 
+      ep.status === 'active' && 
+      employeesData.find((emp: any) => emp.id === ep.employeeId && emp.department === dept.name)
+    ).length
+  }));
+
+
   return (
     <MainLayout>
       <div className="container mx-auto p-6 space-y-6">
@@ -2198,31 +2216,25 @@ export default function NavadhitiProjectsPage() {
                       <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
                           <Pie
-                            data={[
-                              { name: 'Active', value: projects.filter(p => p.status === 'Active').length, color: '#10b981' },
-                              { name: 'Completed', value: projects.filter(p => p.status === 'Completed').length, color: '#3b82f6' },
-                              { name: 'On Hold', value: projects.filter(p => p.status === 'On Hold').length, color: '#f59e0b' },
-                              { name: 'Cancelled', value: projects.filter(p => p.status === 'Cancelled').length, color: '#ef4444' }
-                            ]}
+                            data={statusDistribution}
                             cx="50%"
                             cy="50%"
                             labelLine={false}
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                            outerRadius={100}
+                            label={false}
+                            outerRadius={60}
                             fill="#8884d8"
                             dataKey="value"
                           >
-                            {[
-                              { name: 'Active', value: projects.filter(p => p.status === 'Active').length, color: '#10b981' },
-                              { name: 'Completed', value: projects.filter(p => p.status === 'Completed').length, color: '#3b82f6' },
-                              { name: 'On Hold', value: projects.filter(p => p.status === 'On Hold').length, color: '#f59e0b' },
-                              { name: 'Cancelled', value: projects.filter(p => p.status === 'Cancelled').length, color: '#ef4444' }
-                            ].map((entry, index) => (
+                            {statusDistribution.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.color} />
                             ))}
                           </Pie>
-                          <Tooltip />
-                          <Legend />
+                          <Tooltip formatter={(value, name) => [`${value} projects`, name]} />
+                          <Legend 
+                            verticalAlign="bottom" 
+                            height={36}
+                            wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }}
+                          />
                         </PieChart>
                       </ResponsiveContainer>
                     </CardContent>
@@ -2236,18 +2248,7 @@ export default function NavadhitiProjectsPage() {
                     </CardHeader>
                     <CardContent>
                       <ResponsiveContainer width="100%" height={300}>
-                        <BarChart
-                          data={departmentOptions.map((dept: any) => ({
-                            department: dept.name,
-                            employees: employeesData.filter((emp: any) => emp.department === dept.name).length,
-                            occupied: employeeProjectsData.filter((ep: any) => 
-                              ep.isActive && 
-                              ep.status === 'active' && 
-                              employeesData.find((emp: any) => emp.id === ep.employeeId && emp.department === dept.name)
-                            ).length
-                          }))}
-                          margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
-                        >
+                        <BarChart data={departmentData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis 
                             dataKey="department" 
@@ -2255,12 +2256,19 @@ export default function NavadhitiProjectsPage() {
                             textAnchor="end"
                             height={80}
                             interval={0}
+                            fontSize={11}
+                            tick={{ fontSize: 11 }}
                           />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="employees" fill="#8884d8" name="Total Employees" />
-                          <Bar dataKey="occupied" fill="#82ca9d" name="Occupied Employees" />
+                          <YAxis fontSize={11} />
+                          <Tooltip 
+                            contentStyle={{ fontSize: '12px' }}
+                            labelStyle={{ fontSize: '12px' }}
+                          />
+                          <Legend 
+                            wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
+                          />
+                          <Bar dataKey="employees" fill="#3b82f6" name="Total Employees" />
+                          <Bar dataKey="occupied" fill="#ef4444" name="Occupied Employees" />
                         </BarChart>
                       </ResponsiveContainer>
                     </CardContent>
@@ -2498,8 +2506,7 @@ export default function NavadhitiProjectsPage() {
                                       backgroundColor: projectHealthInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
                                                       projectHealthInfo.bgColor.includes('red') ? '#FEF2F2' : 
                                                       projectHealthInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
-                                                      projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : 
-                                                      projectHealthInfo.bgColor.includes('green') ? '#F0FDF4' : '#EBF8FF'
+                                                      projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : 'F0FDF4'
                                     }}>
                                       {completionPercentage}%
                                     </Badge>
@@ -4046,7 +4053,7 @@ export default function NavadhitiProjectsPage() {
             <DialogHeader>
               <DialogTitle>Update Project End Date</DialogTitle>
               <DialogDescription>
-                Update the end date for {selectedEmployee?.firstName} on {selectedAllocation && projects.find((p: any) => p.id === selectedAllocation.projectId)?.projectName}
+                Update the end date for {selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : ''} on {selectedAllocation && projects.find((p: any) => p.id === selectedAllocation.projectId)?.projectName}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
