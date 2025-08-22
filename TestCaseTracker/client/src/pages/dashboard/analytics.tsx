@@ -39,6 +39,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
@@ -125,6 +127,14 @@ export default function AnalyticsDashboard() {
   const queryClient = useQueryClient();
 
   const [isAssigningProject, setIsAssigningProject] = React.useState<Employee | null>(null);
+  const [isAllocationDialogOpen, setIsAllocationDialogOpen] = React.useState(false);
+  const [selectedEmployeeForAllocation, setSelectedEmployeeForAllocation] = React.useState<Employee | null>(null);
+  const [selectedProjectForAllocation, setSelectedProjectForAllocation] = React.useState('');
+  const [allocationRole, setAllocationRole] = React.useState('');
+  const [allocationPercentage, setAllocationPercentage] = React.useState('');
+  const [allocationStartDate, setAllocationStartDate] = React.useState('');
+  const [allocationEndDate, setAllocationEndDate] = React.useState('');
+  const { toast } = useToast();
 
   // Early return with loading state
   if (authLoading) {
@@ -323,12 +333,46 @@ export default function AnalyticsDashboard() {
       queryClient.invalidateQueries({ queryKey: ["project-assignments"] });
       queryClient.invalidateQueries({ queryKey: ["analytics-users"] }); // Invalidate users to potentially update allocation summaries if added
       setIsAssigningProject(null); // Close the form
+      setIsAllocationDialogOpen(false); // Close the dialog
+      toast({ title: "Success", description: "Project allocated successfully!" });
     },
     onError: (error: any) => {
       console.error('🔍 Analytics - Project assignment failed:', error);
-      // Optionally show an error message to the user
+      toast({ title: "Error", description: error.message || "Failed to allocate project", variant: "destructive" });
     },
   });
+
+  // Handler for Allocate to Project button
+  const handleAllocateToProject = (employee: Employee) => {
+    console.log('Allocate button clicked for employee:', employee.id);
+    setSelectedEmployeeForAllocation(employee);
+    setSelectedProjectForAllocation('');
+    setAllocationRole('');
+    setAllocationPercentage('');
+    setAllocationStartDate('');
+    setAllocationEndDate('');
+    setIsAllocationDialogOpen(true);
+  };
+
+  // Handler for submitting allocation
+  const handleSubmitAllocation = () => {
+    if (!selectedEmployeeForAllocation || !selectedProjectForAllocation || !allocationRole || !allocationPercentage || !allocationStartDate) {
+      toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
+      return;
+    }
+
+    assignProjectMutation.mutate({
+      employeeId: selectedEmployeeForAllocation.id,
+      projectId: parseInt(selectedProjectForAllocation),
+      projectType: 'regular',
+      role: allocationRole,
+      allocation: parseInt(allocationPercentage),
+      startDate: allocationStartDate,
+      endDate: allocationEndDate || undefined,
+      status: 'active',
+      isActive: true
+    });
+  };
 
   // Calculate statistics safely
   const stats: DashboardStats = React.useMemo(() => {
@@ -669,14 +713,24 @@ export default function AnalyticsDashboard() {
                               <p className="font-semibold">{totalAllocation}% Allocated</p>
                               <p className="text-xs text-muted-foreground">{employeeAssignments.length} active projects</p>
                             </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setIsAssigningProject(emp)}
-                              disabled={assignProjectMutation.isPending}
-                            >
-                              Manage Projects
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsAssigningProject(emp)}
+                                disabled={assignProjectMutation.isPending}
+                              >
+                                Manage Projects
+                              </Button>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleAllocateToProject(emp)}
+                                disabled={assignProjectMutation.isPending}
+                              >
+                                Allocate to Project
+                              </Button>
+                            </div>
                           </div>
                         );
                       })
@@ -719,6 +773,96 @@ export default function AnalyticsDashboard() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Project Allocation Dialog */}
+              <Dialog open={isAllocationDialogOpen} onOpenChange={setIsAllocationDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Allocate Employee to Project</DialogTitle>
+                    <DialogDescription>
+                      Allocating: {selectedEmployeeForAllocation?.firstName} {selectedEmployeeForAllocation?.lastName}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="project">Project *</Label>
+                      <Select value={selectedProjectForAllocation} onValueChange={setSelectedProjectForAllocation}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select project..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allProjects.map((project) => (
+                            <SelectItem key={project.id} value={project.id.toString()}>
+                              {project.name || project.projectName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="role">Role *</Label>
+                      <Input
+                        id="role"
+                        value={allocationRole}
+                        onChange={(e) => setAllocationRole(e.target.value)}
+                        placeholder="e.g., Frontend Developer, Project Manager"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="allocation">Allocation % *</Label>
+                      <Input
+                        id="allocation"
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={allocationPercentage}
+                        onChange={(e) => setAllocationPercentage(e.target.value)}
+                        placeholder="e.g., 50"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="startDate">Start Date *</Label>
+                        <Input
+                          id="startDate"
+                          type="date"
+                          value={allocationStartDate}
+                          onChange={(e) => setAllocationStartDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="endDate">End Date (Optional)</Label>
+                        <Input
+                          id="endDate"
+                          type="date"
+                          value={allocationEndDate}
+                          onChange={(e) => setAllocationEndDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-4">
+                      <Button 
+                        onClick={handleSubmitAllocation} 
+                        className="flex-1"
+                        disabled={assignProjectMutation.isPending || !selectedProjectForAllocation || !allocationRole || !allocationPercentage || !allocationStartDate}
+                      >
+                        {assignProjectMutation.isPending ? 'Allocating...' : 'Allocate 1 Employee(s)'}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setIsAllocationDialogOpen(false)}
+                        disabled={assignProjectMutation.isPending}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
           </div>
         </div>
       </MainLayout>
