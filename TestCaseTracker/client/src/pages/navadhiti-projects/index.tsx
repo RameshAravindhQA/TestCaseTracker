@@ -1897,7 +1897,7 @@ export default function NavadhitiProjectsPage() {
                                         className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
                                       />
                                     ) : (
-                                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center border-2 border-gray-200">
+                                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
                                         <span className="text-white text-xl font-bold">
                                           {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
                                         </span>
@@ -3217,7 +3217,7 @@ export default function NavadhitiProjectsPage() {
                     {/* List View */}
                     {viewMode === 'list' && (
                       <div className="space-y-4">
-                        {filteredProjects.filter(project => project && project.id).map((project: NavadhitiProject) => {
+                        {filteredProjects.map((project: any) => {
                           const leadEmployee = employeesData.find((emp: any) => 
                             project.assignedEmployees?.includes(emp.id)
                           );
@@ -3300,75 +3300,162 @@ export default function NavadhitiProjectsPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {filteredProjects.filter(project => project && project.id).map((project: NavadhitiProject) => (
-                              <TableRow key={project.id}>
-                                <TableCell>
-                                  <div className="flex items-center gap-3">
-                                    {project.projectImage ? (
-                                      <img 
-                                        src={project.projectImage} 
-                                        alt={`${project.projectName} logo`}
-                                        className="w-8 h-8 rounded-full object-cover"
-                                      />
-                                    ) : (
-                                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
-                                        <span className="text-white text-sm font-bold">
-                                          {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
-                                        </span>
-                                      </div>
-                                    )}
-                                    <span className="font-medium">{project.projectName}</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell>{project.clientName}</TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">{project.status}</Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="secondary">{project.priority}</Badge>
-                                </TableCell>
-                                <TableCell>{project.assignedEmployees?.length || 0} members</TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-16 bg-gray-200 rounded-full h-2">
-                                      <div 
-                                        className="bg-blue-600 h-2 rounded-full" 
-                                        style={{ width: `${project.completionPercentage || 0}%` }}
-                                      />
+                            {filteredProjects.map((project: any) => {
+                              const projectEmployees = employeeProjectsData.filter((ep: any) => 
+                                ep.projectId === project.id && ep.isActive
+                              );
+                              const teamSize = projectEmployees.length;
+                              const completionPercentage = project.completionPercentage || 0;
+
+                              // Determine project health color
+                              const getProjectHealthInfo = (completion: number, status: string) => {
+                                if (status === 'Completed') {
+                                  return { 
+                                    bgColor: 'bg-blue-500', 
+                                    textColor: 'text-blue-700', 
+                                    borderColor: 'border-blue-500',
+                                    label: 'Completed',
+                                    healthStatus: 'Project Finished'
+                                  };
+                                } else if (status === 'Cancelled') {
+                                  return { 
+                                    bgColor: 'bg-gray-500', 
+                                    textColor: 'text-gray-700', 
+                                    borderColor: 'border-gray-500',
+                                    label: 'Cancelled',
+                                    healthStatus: 'Project Cancelled'
+                                  };
+                                } else if (status === 'On Hold') {
+                                  return { 
+                                    bgColor: 'bg-yellow-500', 
+                                    textColor: 'text-yellow-700', 
+                                    borderColor: 'border-yellow-500',
+                                    label: 'On Hold',
+                                    healthStatus: 'Project Paused'
+                                  };
+                                } else if (completion >= 80) {
+                                  return { 
+                                    bgColor: 'bg-green-500', 
+                                    textColor: 'text-green-700', 
+                                    borderColor: 'border-green-500',
+                                    label: 'Excellent Progress',
+                                    healthStatus: 'On Track'
+                                  };
+                                } else if (completion >= 50) {
+                                  return { 
+                                    bgColor: 'bg-orange-500', 
+                                    textColor: 'text-orange-700', 
+                                    borderColor: 'border-orange-500',
+                                    label: 'Good Progress',
+                                    healthStatus: 'Moderate Progress'
+                                  };
+                                } else if (completion >= 25) {
+                                  return { 
+                                    bgColor: 'bg-yellow-500', 
+                                    textColor: 'text-yellow-700', 
+                                    borderColor: 'border-yellow-500',
+                                    label: 'Slow Progress',
+                                    healthStatus: 'Behind Schedule'
+                                  };
+                                } else {
+                                  return { 
+                                    bgColor: 'bg-red-500', 
+                                    textColor: 'text-red-700', 
+                                    borderColor: 'border-red-500',
+                                    label: 'Needs Attention',
+                                    healthStatus: 'Critical'
+                                  };
+                                }
+                              };
+
+                              const projectHealthInfo = getProjectHealthInfo(completionPercentage, project.status);
+
+                              return (
+                                <TableRow key={project.id}>
+                                  <TableCell>
+                                    <div className="flex items-center gap-3">
+                                      {project.projectImage ? (
+                                        <img 
+                                          src={project.projectImage} 
+                                          alt={`${project.projectName} logo`}
+                                          className="w-8 h-8 rounded-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                                          <span className="text-white text-sm font-bold">
+                                            {project.projectName?.charAt(0)?.toUpperCase() || 'P'}
+                                          </span>
+                                        </div>
+                                      )}
+                                      <span className="font-medium">{project.projectName}</span>
                                     </div>
-                                    <span className="text-sm text-gray-600">
-                                      {project.completionPercentage || 0}%
-                                    </span>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        setEditingProject(project);
-                                        setIsDialogOpen(true);
-                                      }}
-                                    >
-                                      Edit
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        setViewingProject(project);
-                                        setIsViewDialogOpen(true);
-                                      }}
-                                    >
-                                      View
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                                  </TableCell>
+                                  <TableCell>{project.clientName}</TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline">{project.status}</Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="secondary">{project.priority}</Badge>
+                                  </TableCell>
+                                  <TableCell>{teamSize} members</TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-16 bg-gray-200 rounded-full h-2">
+                                        <div 
+                                          className={`${projectHealthInfo.bgColor} h-2 rounded-full`}
+                                          style={{ width: `${completionPercentage}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-sm text-gray-600">
+                                        {completionPercentage}%
+                                      </span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-1">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setViewingProject(project);
+                                          setIsViewDialogOpen(true);
+                                        }}
+                                      >
+                                        View
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setEditingProject(project);
+                                          setActiveTab("projects");
+                                          setIsDialogOpen(true);
+                                        }}
+                                      >
+                                        Edit
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
+                      </div>
+                    )}
+
+                    {/* Empty State */}
+                    {filteredProjects.length === 0 && (
+                      <div className="col-span-full text-center py-12">
+                        <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                          No projects found
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-400">
+                          {projects.length === 0 
+                            ? "Create your first Navadhiti project to see detailed analytics."
+                            : "No projects match your current filters. Try adjusting your search criteria."}
+                        </p>
                       </div>
                     )}
                   </>
@@ -5329,7 +5416,7 @@ export default function NavadhitiProjectsPage() {
                     </p>
                   </div>
                   <div>
-                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Overall Project Status</Label>
+                    <Label className="text-smtext-gray-500 uppercase tracking-wide">Overall Project Status</Label>
                     <p className="mt-1">
                       <Badge 
                         className={
@@ -5368,165 +5455,350 @@ export default function NavadhitiProjectsPage() {
                     </p>
                   </div>
                   <div>
-                    <Label className="text-sm text                     <b>Last Modified</b>
-                    </TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {employeeProjectHistory
-                    .filter((history: any) => {
-                      const allocation = employeeProjectsData.find((ep: any) => ep.id === history.employeeProjectId);
-                      return allocation && allocation.employeeId === selectedEmployee.id;
-                    })
-                    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                    .map((history: any) => {
-                      const allocation = employeeProjectsData.find((ep: any) => ep.id === history.employeeProjectId);
-                      const project = allocation ? projects.find((p: any) => p.id === allocation.projectId) : null;
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">End Date</Label>
+                    <p className="mt-1 text-gray-700">
+                      {viewingProject.endDate ? new Date(viewingProject.endDate).toLocaleDateString() : 'Ongoing'}
+                    </p>
+                  </div>
+                </div>
 
-                      return (
-                        <TableRow key={history.id}>
-                          <TableCell className="font-medium">{project?.projectName || 'Unknown Project'}</TableCell>
-                          <TableCell>{allocation?.role || 'N/A'}</TableCell>
-                          <TableCell>
-                            {allocation?.startDate ? new Date(allocation.startDate).toLocaleDateString() : 'Not set'}
-                          </TableCell>
-                          <TableCell>
-                            {allocation?.endDate ? new Date(allocation.endDate).toLocaleDateString() : 'Ongoing'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">
-                              {calculateDaysWorked(allocation?.startDate, allocation?.endDate)} days
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={allocation?.isActive ? "default" : "secondary"}>
-                              {allocation?.status === 'active' ? 'Active' : allocation?.status || 'Unknown'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">
-                              {history.action || 'N/A'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {history.createdAt ? new Date(history.createdAt).toLocaleDateString() : 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => {
-                                if (confirm('Are you sure you want to delete this history record?')) {
-                                  deleteProjectHistoryMutation.mutate(history.id);
-                                }
-                              }}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  {employeeProjectHistory.filter((history: any) => {
-                    const allocation = employeeProjectsData.find((ep: any) => ep.id === history.employeeProjectId);
-                    return allocation && allocation.employeeId === selectedEmployee.id;
-                  }).length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-6 text-gray-500">
-                        No history records found
-                      </TableCell>
-                    </TableRow>
+                <div>
+                  <Label className="text-sm text-gray-500 uppercase tracking-wide">Technologies</Label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {viewingProject.technologies && viewingProject.technologies.length > 0 ? (
+                      viewingProject.technologies.map((tech, index) => (
+                        <Badge key={index} variant="secondary" className="text-sm">
+                          {tech}
+                        </Badge>
+                      ))
+                    ) : (
+                      <p className="text-gray-700">None specified</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm text-gray-500 uppercase tracking-wide">Assigned Team Members</Label>
+                  {viewingProject.assignedEmployees && viewingProject.assignedEmployees.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {viewingProject.assignedEmployees.map((employeeId: number) => {
+                        const employee = employeesData.find((emp: any) => emp.id === employeeId);
+                        return employee ? (
+                          <Badge key={employeeId} variant="outline" className="flex items-center gap-1 text-sm">
+                            {employee.profilePicture ? (
+                              <img
+                                src={employee.profilePicture}
+                                alt={`${employee.firstName} ${employee.lastName}`}
+                                className="h-5 w-5 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-5 w-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
+                                {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                              </div>
+                            )}
+                            <span>{employee.firstName} {employee.lastName}</span>
+                          </Badge>
+                        ) : null;
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-gray-700 mt-1">No team members assigned</p>
                   )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </div>
-      )}
+                </div>
 
-      <div className="flex justify-end gap-2 mt-6">
-        <Button variant="outline" onClick={() => setIsManageDialogOpen(false)}>
-          Close
-        </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Budget</Label>
+                    <p className="mt-1 font-semibold text-lg">
+                      {viewingProject.budget ? `$${viewingProject.budget.toLocaleString()}` : 'Not set'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500 uppercase tracking-wide">Completion Percentage</Label>
+                    <p className="mt-1 font-semibold text-lg">
+                      {viewingProject.completionPercentage || 0}%
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p>Loading project details...</p>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Manage Employee Allocation Dialog */}
+        <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Manage Allocation for {selectedEmployee?.firstName} {selectedEmployee?.lastName}</DialogTitle>
+              <DialogDescription>View project history and manage current allocations.</DialogDescription>
+            </DialogHeader>
+
+            {selectedEmployee && (
+              <div className="space-y-6">
+                {/* Current Allocations Section */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 border-b pb-2">Current Allocations</h3>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Project</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>End Date</TableHead>
+                          <TableHead>Duration</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {employeeProjectsData
+                          .filter((ep: any) => ep.employeeId === selectedEmployee.id && ep.isActive)
+                          .map((allocation: any) => {
+                            const project = projects.find((p: any) => p.id === allocation.projectId);
+                            return (
+                              <TableRow key={allocation.id}>
+                                <TableCell className="font-medium">{project?.projectName || 'Unknown Project'}</TableCell>
+                                <TableCell>{allocation?.role || 'N/A'}</TableCell>
+                                <TableCell>
+                                  {allocation?.startDate ? new Date(allocation.startDate).toLocaleDateString() : 'Not set'}
+                                </TableCell>
+                                <TableCell>
+                                  {allocation?.endDate ? new Date(allocation.endDate).toLocaleDateString() : 'Ongoing'}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary">
+                                    {calculateDaysWorked(allocation?.startDate, allocation?.endDate)} days
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={allocation?.isActive ? "default" : "secondary"}>
+                                    {allocation?.status || 'Unknown'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setSelectedAllocation(allocation);
+                                        setNewEndDate(allocation.endDate || '');
+                                        setIsEndDateDialogOpen(true);
+                                      }}
+                                    >
+                                      <Calendar className="h-4 w-4 mr-1" />
+                                      Extend
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => {
+                                        if (confirm('Are you sure you want to unoccupy this employee from this project?')) {
+                                          unoccupyEmployeeMutation.mutate(allocation.id);
+                                        }
+                                      }}
+                                    >
+                                      <X className="h-4 w-4" />
+                                      Unoccupy
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        {employeeProjectsData.filter((ep: any) => ep.employeeId === selectedEmployee.id && ep.isActive).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-6 text-gray-500">
+                              No active allocations found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* Employee Project History Section */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 border-b pb-2">Project History</h3>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Project</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>End Date</TableHead>
+                          <TableHead>Duration</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Action</TableHead>
+                          <TableHead>Last Modified</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {employeeProjectHistory
+                          .filter((history: any) => {
+                            const allocation = employeeProjectsData.find((ep: any) => ep.id === history.employeeProjectId);
+                            return allocation && allocation.employeeId === selectedEmployee.id;
+                          })
+                          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                          .map((history: any) => {
+                            const allocation = employeeProjectsData.find((ep: any) => ep.id === history.employeeProjectId);
+                            const project = allocation ? projects.find((p: any) => p.id === allocation.projectId) : null;
+
+                            return (
+                              <TableRow key={history.id}>
+                                <TableCell className="font-medium">{project?.projectName || 'Unknown Project'}</TableCell>
+                                <TableCell>{allocation?.role || 'N/A'}</TableCell>
+                                <TableCell>
+                                  {allocation?.startDate ? new Date(allocation.startDate).toLocaleDateString() : 'Not set'}
+                                </TableCell>
+                                <TableCell>
+                                  {allocation?.endDate ? new Date(allocation.endDate).toLocaleDateString() : 'Ongoing'}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary">
+                                    {calculateDaysWorked(allocation?.startDate, allocation?.endDate)} days
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={allocation?.isActive ? "default" : "secondary"}>
+                                    {allocation?.status || 'Unknown'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="capitalize">
+                                    {history.action || 'N/A'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {history.createdAt ? new Date(history.createdAt).toLocaleDateString() : 'N/A'}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => {
+                                      if (confirm('Are you sure you want to delete this history record?')) {
+                                        deleteProjectHistoryMutation.mutate(history.id);
+                                      }
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        {employeeProjectHistory.filter((history: any) => {
+                          const allocation = employeeProjectsData.find((ep: any) => ep.id === history.employeeProjectId);
+                          return allocation && allocation.employeeId === selectedEmployee.id;
+                        }).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={9} className="text-center py-6 text-gray-500">
+                              No history records found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" onClick={() => setIsManageDialogOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Project Extension Dialog */}
+        <Dialog open={isEndDateDialogOpen} onOpenChange={setIsEndDateDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Extend Project Duration</DialogTitle>
+              <DialogDescription>
+                Extend the project duration and create a history record
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedAllocation && (
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <h4 className="font-semibold mb-2">Current Allocation Details</h4>
+                  <div className="space-y-1 text-sm">
+                    <p><span className="font-medium">Project:</span> {projects.find((p: any) => p.id === selectedAllocation.projectId)?.projectName}</p>
+                    <p><span className="font-medium">Current End Date:</span> {selectedAllocation.endDate ? new Date(selectedAllocation.endDate).toLocaleDateString() : 'Not set'}</p>
+                    <p><span className="font-medium">Days Worked:</span> {calculateDaysWorked(selectedAllocation.startDate, selectedAllocation.endDate)} days</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>New End Date</Label>
+                  <Input
+                    type="date"
+                    value={newEndDate}
+                    onChange={(e) => setNewEndDate(e.target.value)}
+                    min={selectedAllocation.endDate || new Date().toISOString().split('T')[0]}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    This will create a history record and update the allocation
+                  </p>
+                </div>
+
+                {newEndDate && newEndDate !== selectedAllocation.endDate && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      <span className="font-medium">Extension:</span> 
+                      {selectedAllocation.endDate 
+                        ? ` ${Math.ceil((new Date(newEndDate).getTime() - new Date(selectedAllocation.endDate).getTime()) / (1000 * 60 * 60 * 24))} additional days`
+                        : ' Setting initial end date'
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setIsEndDateDialogOpen(false);
+                setSelectedAllocation(null);
+                setNewEndDate('');
+              }}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (selectedAllocation && newEndDate) {
+                    extendProjectMutation.mutate({
+                      allocationId: selectedAllocation.id,
+                      newEndDate: newEndDate
+                    });
+                  }
+                }}
+                disabled={!newEndDate || newEndDate === selectedAllocation?.endDate}
+              >
+                <Calendar className="h-4 w-4 mr-1" />
+                Extend Project
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-    </DialogContent>
-  </Dialog>
-
-  {/* Project Extension Dialog */}
-  <Dialog open={isEndDateDialogOpen} onOpenChange={setIsEndDateDialogOpen}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Extend Project Duration</DialogTitle>
-        <DialogDescription>
-          Extend the project duration and create a history record
-        </DialogDescription>
-      </DialogHeader>
-
-      {selectedAllocation && (
-        <div className="space-y-4">
-          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <h4 className="font-semibold mb-2">Current Allocation Details</h4>
-            <div className="space-y-1 text-sm">
-              <p><span className="font-medium">Project:</span> {projects.find((p: any) => p.id === selectedAllocation.projectId)?.projectName}</p>
-              <p><span className="font-medium">Current End Date:</span> {selectedAllocation.endDate ? new Date(selectedAllocation.endDate).toLocaleDateString() : 'Not set'}</p>
-              <p><span className="font-medium">Days Worked:</span> {calculateDaysWorked(selectedAllocation.startDate, selectedAllocation.endDate)} days</p>
-            </div>
-          </div>
-
-          <div>
-            <Label>New End Date</Label>
-            <Input
-              type="date"
-              value={newEndDate}
-              onChange={(e) => setNewEndDate(e.target.value)}
-              min={selectedAllocation.endDate || new Date().toISOString().split('T')[0]}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              This will create a history record and update the allocation
-            </p>
-          </div>
-
-          {newEndDate && newEndDate !== selectedAllocation.endDate && (
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                <span className="font-medium">Extension:</span> 
-                {selectedAllocation.endDate 
-                  ? ` ${Math.ceil((new Date(newEndDate).getTime() - new Date(selectedAllocation.endDate).getTime()) / (1000 * 60 * 60 * 24))} additional days`
-                  : ' Setting initial end date'
-                }
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => {
-          setIsEndDateDialogOpen(false);
-          setSelectedAllocation(null);
-          setNewEndDate('');
-        }}>
-          Cancel
-        </Button>
-        <Button 
-          onClick={() => {
-            if (selectedAllocation && newEndDate) {
-              extendProjectMutation.mutate({
-                allocationId: selectedAllocation.id,
-                newEndDate: newEndDate
-              });
-            }
-          }}
-          disabled={!newEndDate || newEndDate === selectedAllocation?.endDate}
-        >
-          <Calendar className="h-4 w-4 mr-1" />
-          Extend Project
-        </Button>
-      </div>
-    </DialogContent>
-  </Dialog>
-</div>
-</MainLayout>
-);
+    </MainLayout>
+  );
 }
