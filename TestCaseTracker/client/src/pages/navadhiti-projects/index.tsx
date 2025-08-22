@@ -1972,27 +1972,14 @@ export default function NavadhitiProjectsPage() {
                                       </Badge>
                                     </TableCell>
                                     <TableCell>
-                                      <div className="text-sm text-gray-600">
-                                        {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'Not set'} - {project.endDate ? new Date(project.endDate).toLocaleDateString() : 'Ongoing'}
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="flex flex-wrap gap-1">
-                                        {project.technologies && project.technologies.length > 0 ? (
-                                          project.technologies.slice(0, 2).map((tech, index) => (
-                                            <Badge key={index} variant="outline" className="text-xs">
-                                              {tech}
-                                            </Badge>
-                                          ))
-                                        ) : (
-                                          <span className="text-gray-400">None</span>
-                                        )}
-                                        {project.technologies && project.technologies.length > 2 && (
-                                          <Badge variant="outline" className="text-xs">
-                                            +{project.technologies.length - 2}
-                                          </Badge>
-                                        )}
-                                      </div>
+                                      <Badge className={`text-xs font-semibold px-2 py-1 ${projectHealthInfo.textColor} bg-opacity-20`} style={{
+                                        backgroundColor: projectHealthInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
+                                                        projectHealthInfo.bgColor.includes('red') ? '#FEF2F2' : 
+                                                        projectHealthInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
+                                                        projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : '#F0FDF4'
+                                      }}>
+                                        {projectHealthInfo.label}
+                                      </Badge>
                                     </TableCell>
                                     <TableCell>
                                       <div className="flex gap-1">
@@ -2041,13 +2028,10 @@ export default function NavadhitiProjectsPage() {
                           </p>
                         </div>
                       )}
-                    </div>
+                    </>
                   )}
                 </CardContent>
-              </Card>
-            )}
-            </Card>
-          )}</old_str>
+              </Card></old_str>
           )}</old_str>
               </Card>
             )}
