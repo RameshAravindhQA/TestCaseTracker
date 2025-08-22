@@ -3784,7 +3784,7 @@ export default function NavadhitiProjectsPage() {
                           (viewingProject.overallProjectStatus === 'On Hold' || viewingProject.overallProjectStatus === 'Planning Phase') ? 'bg-yellow-100 text-yellow-800' :
                           (viewingProject.overallProjectStatus === 'At Risk' || viewingProject.overallProjectStatus === 'Need Attention') ? 'bg-orange-100 text-orange-800' :
                           (viewingProject.overallProjectStatus === 'Behind Schedule' || viewingProject.overallProjectStatus === 'Blocked') ? 'bg-red-100 text-red-800' :
-                          (viewingProject.overallProjectStatus === 'UnderReview') ? 'bg-purple-100 text-purple-800' :
+                          (viewingProject.overallProjectStatus === 'Under Review') ? 'bg-purple-100 text-purple-800' :
                           (viewingProject.overallProjectStatus === 'Cancelled') ? 'bg-gray-100 text-gray-800' :
                           'bg-green-100 text-green-800'
                         } text-xs`}
