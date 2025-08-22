@@ -802,7 +802,7 @@ export default function NavadhitiProjectsPage() {
                                     })}
                                   </div>
                                 </div>
-                              )}</div>
+                              )}
                               <div>
                                 <Label>Role</Label>
                                 <Input
