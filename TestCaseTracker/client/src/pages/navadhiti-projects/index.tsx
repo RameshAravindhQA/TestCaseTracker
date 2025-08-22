@@ -2041,11 +2041,13 @@ export default function NavadhitiProjectsPage() {
                           </p>
                         </div>
                       )}
-                    </>
+                    </div>
                   )}
                 </CardContent>
               </Card>
-            )}</old_str>
+            )}
+            </Card>
+          )}</old_str>
           )}</old_str>
               </Card>
             )}
