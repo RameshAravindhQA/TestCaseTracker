@@ -1027,10 +1027,7 @@ export default function NavadhitiProjectsPage() {
                                       variant="outline"
                                       className="flex-1 text-xs h-7"
                                       onClick={() => {
-                                        const employeeAllocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
-                                        if (employeeAllocations.length > 1) {
-                                          handleManageEmployee(employee);
-                                        } else if (allocation && confirm('Are you sure you want to unoccupy this employee?')) {
+                                        if (allocation && confirm('Are you sure you want to unoccupy this employee?')) {
                                           unoccupyEmployeeMutation.mutate(allocation.id);
                                         }
                                       }}
@@ -2464,7 +2461,7 @@ export default function NavadhitiProjectsPage() {
                   <Card>
                     <CardHeader className="pb-4 text-center">
                       <CardTitle className="text-lg">Employee Utilization by Department</CardTitle>
-                      <CardDescription className="text-sm">Employee allocation across departments (Occupied/Total)</CardDescription>
+                      <CardDescription>Employee allocation across departments (Occupied/Total)</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ResponsiveContainer width="100%" height={300}>
@@ -2820,7 +2817,7 @@ export default function NavadhitiProjectsPage() {
 
                                   {/* Status Information */}
                                   <div className="space-y-1 mb-3">
-                                    <div className={`text-xs font-semibold ${projectHealthInfo.textColor}`}>
+                                    <div className={`text-xs font-medium ${projectHealthInfo.textColor}`}>
                                       {projectHealthInfo.label}
                                     </div>
                                     <div className="text-xs text-gray-500 dark:text-gray-500">
@@ -3062,7 +3059,7 @@ export default function NavadhitiProjectsPage() {
                                           backgroundColor: projectHealthInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
                                                           projectHealthInfo.bgColor.includes('red') ? '#FEF2F2' : 
                                                           projectHealthInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
-                                                          projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : 'F0FDF4'
+                                                          projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : '#F0FDF4'
                                         }}>
                                           {completionPercentage}%
                                         </Badge>
@@ -3500,7 +3497,7 @@ export default function NavadhitiProjectsPage() {
 
                                 {/* Current Projects */}
                                 <div className="mb-4 space-y-2">
-                                  <h5 className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                                  <h5 className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
                                     Current Projects
                                   </h5>
                                   {navadhitiAllocations.length > 0 ? (
