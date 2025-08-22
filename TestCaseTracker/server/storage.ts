@@ -1045,7 +1045,7 @@ class MemStorage implements IStorage {
 
   // Matrix operations
   async createMatrixCell(data: Omit<MatrixCell, 'id'>): Promise<MatrixCell> {
-    const id = this.nextId++;
+    const id = this.getNextId();
 
     const cell: MatrixCell = {
       ...data,
@@ -1075,7 +1075,7 @@ class MemStorage implements IStorage {
 
   // Project member operations
   async addProjectMember(data: Omit<any, 'id'>): Promise<any> {
-    const id = this.nextId++;
+    const id = this.getNextId();
 
     const member: any = {
       ...data,
@@ -2213,6 +2213,7 @@ class MemStorage implements IStorage {
     return updatedEmployeeProject;
   }
 
+  // Modified getEmployeeProjectHistory to use the project name from the correct source
   async getEmployeeProjectHistory(employeeId: number): Promise<any[]> {
     // Get all employee projects for this specific employee
     const employeeProjects = Array.from(this.employeeProjects.values())
@@ -2242,6 +2243,7 @@ class MemStorage implements IStorage {
     );
   }
 
+  // Modified getAllEmployeeProjectHistory to use the project name from the correct source
   async getAllEmployeeProjectHistory(): Promise<any[]> {
     // Get all employee projects
     const allEmployeeProjects = Array.from(this.employeeProjects.values());

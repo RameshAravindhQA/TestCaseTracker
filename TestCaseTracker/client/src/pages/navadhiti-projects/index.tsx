@@ -293,6 +293,40 @@ export default function NavadhitiProjectsPage() {
     },
   });
 
+  // Mutation to extend project and create history record
+  const extendProjectMutation = useMutation({
+    mutationFn: async ({ allocationId, newEndDate }: { allocationId: number; newEndDate: string }) => {
+      const res = await apiRequest("POST", `/api/employee-projects/${allocationId}/extend`, { newEndDate });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Project extended successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/employee-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employee-projects-history"] }); // Invalidate history as well
+      setIsEndDateDialogOpen(false);
+      setSelectedAllocation(null);
+      setNewEndDate('');
+    },
+    onError: () => {
+      toast({ title: "Failed to extend project", variant: "destructive" });
+    },
+  });
+
+  // Mutation to delete project history record
+  const deleteProjectHistoryMutation = useMutation({
+    mutationFn: async (historyId: number) => {
+      const res = await apiRequest("DELETE", `/api/employee-projects-history/${historyId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "History record deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/employee-projects-history"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete history record", variant: "destructive" });
+    },
+  });
+
   // Update project mutation
   const updateProjectMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
@@ -1437,6 +1471,217 @@ export default function NavadhitiProjectsPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Table View for Employees */}
+                {resourceViewMode === 'table' && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Employee</TableHead>
+                          <TableHead>Department</TableHead>
+                          <TableHead>Current Projects</TableHead>
+                          <TableHead>Allocation Status</TableHead>
+                          <TableHead>Occupation %</TableHead>
+                          <TableHead>Active Projects</TableHead>
+                          <TableHead>Technologies</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredEmployees.map((employee: any) => {
+                          // Calculate occupation percentage more accurately
+                          const allocations = employeeProjectsData.filter((ep: any) => ep.employeeId === employee.id && ep.isActive);
+                          const navadhitiAllocations = allocations.filter((allocation: any) => {
+                            return projects.some((p: any) => p.id === allocation.projectId);
+                          });
+
+                          // Calculate percentage based on number of active projects (assuming each project = 25-50% allocation)
+                          const baseAllocation = 40; // Base percentage per project
+                          const occupationPercentage = Math.min(navadhitiAllocations.length * baseAllocation, 100);
+
+                          // Determine color and status based on occupation percentage
+                          const getOccupationInfo = (percentage: number) => {
+                            if (percentage === 0) {
+                              return { 
+                                bgColor: 'bg-gray-300', 
+                                textColor: 'text-gray-700', 
+                                borderColor: 'border-gray-400',
+                                label: 'Available',
+                                status: 'Not Occupied'
+                              };
+                            } else if (percentage <= 10) {
+                              return { 
+                                bgColor: 'bg-red-500', 
+                                textColor: 'text-red-700', 
+                                borderColor: 'border-red-500',
+                                label: 'Under-utilized',
+                                status: '10% Occupied'
+                              };
+                            } else if (percentage <= 50) {
+                              return { 
+                                bgColor: 'bg-yellow-500', 
+                                textColor: 'text-yellow-700', 
+                                borderColor: 'border-yellow-500',
+                                label: 'Moderate',
+                                status: '50% Occupied'
+                              };
+                            } else if (percentage <= 80) {
+                              return { 
+                                bgColor: 'bg-orange-500', 
+                                textColor: 'text-orange-700', 
+                                borderColor: 'border-orange-500',
+                                label: 'Good Load',
+                                status: '80% Occupied'
+                              };
+                            } else {
+                              return { 
+                                bgColor: 'bg-green-500', 
+                                textColor: 'text-green-700', 
+                                borderColor: 'border-green-500',
+                                label: 'Fully Occupied',
+                                status: '100% Occupied'
+                              };
+                            }
+                          };
+
+                          const occupationInfo = getOccupationInfo(occupationPercentage);
+
+                          return (
+                            <TableRow key={employee.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-10 w-10 border-2 border-gray-200">
+                                    <AvatarImage src={employee.profilePicture} alt={`${employee.firstName} ${employee.lastName}`} />
+                                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
+                                      {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                                    <div className="text-sm text-gray-500">{employee.employeeId}</div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>{employee.department}</TableCell>
+                              <TableCell>
+                                {navadhitiAllocations.length > 0 ? (
+                                  <div className="space-y-1">
+                                    {navadhitiAllocations.slice(0, 2).map((allocation: any) => {
+                                      const project = projects.find((p: any) => p.id === allocation.projectId);
+                                      return project ? (
+                                        <div key={allocation.id} className="text-sm">
+                                          <Badge variant="secondary" className="text-xs">
+                                            {project.projectName}
+                                          </Badge>
+                                          <div className="text-xs text-gray-500 mt-1">
+                                            {allocation.role || 'Team Member'}
+                                          </div>
+                                        </div>
+                                      ) : null;
+                                    })}
+                                    {navadhitiAllocations.length > 2 && (
+                                      <div className="text-xs text-gray-500 italic">
+                                        +{navadhitiAllocations.length - 2} more
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="text-sm text-gray-500 italic">
+                                    Available for new projects
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={`text-xs font-semibold px-2 py-1 ${occupationInfo.textColor} bg-opacity-20`} style={{
+                                  backgroundColor: occupationInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
+                                                  occupationInfo.bgColor.includes('red') ? '#FEF2F2' : 
+                                                  occupationInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
+                                                  occupationInfo.bgColor.includes('orange') ? '#FFF7ED' : '#F0FDF4'
+                                }}>
+                                  {occupationInfo.label}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-16 bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className={`${occupationInfo.bgColor} h-2 rounded-full`}
+                                      style={{ width: `${occupationPercentage}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-sm text-gray-600">
+                                    {occupationPercentage}%
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-center">
+                                  <div className="font-medium text-sm">{navadhitiAllocations.length}</div>
+                                  <div className="text-xs text-gray-500">projects</div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {employee.technologies && employee.technologies.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {employee.technologies.slice(0, 2).map((tech: string, index: number) => (
+                                      <Badge key={index} variant="outline" className="text-xs">
+                                        {tech}
+                                      </Badge>
+                                    ))}
+                                    {employee.technologies.length > 2 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{employee.technologies.length - 2}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 text-sm">None</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    if (navadhitiAllocations.length > 0) {
+                                      handleManageEmployeeProjects(employee);
+                                    } else {
+                                      setSelectedEmployees([employee.id]);
+                                      setSelectedProject(null);
+                                      setAllocationRole("");
+                                      setAllocationStartDate("");
+                                      setAllocationEndDate("");
+                                      setIsAllocationDialogOpen(true);
+                                    }
+                                  }}
+                                >
+                                  <UserCheck className="h-4 w-4 mr-1" />
+                                  {navadhitiAllocations.length > 0 ? 'Manage' : 'Allocate'}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {filteredEmployees.length === 0 ? (
+                  <div className="col-span-full text-center py-12">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                      {employeesData.length === 0 ? "No employees found" : "No employees match your search"}
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {employeesData.length === 0 
+                        ? "Import employees to view their allocation status." 
+                        : `No employees found for "${searchTerm}". Try adjusting your search or filters.`}
+                    </p>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           </TabsContent>
@@ -4216,81 +4461,69 @@ export default function NavadhitiProjectsPage() {
 
         {/* Manage Employee Dialog */}
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Manage Employee Projects</DialogTitle>
+              <DialogTitle>
+                Manage Projects - {selectedEmployee?.firstName} {selectedEmployee?.lastName}
+              </DialogTitle>
               <DialogDescription>
-                {selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : ''}
+                Manage current project allocations and view history
               </DialogDescription>
             </DialogHeader>
 
             {selectedEmployee && (
               <div className="space-y-6">
-                {/* Current Active Projects */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Active Projects</h3>
+                {/* Active Projects Section */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Active Projects</h3>
                   <div className="space-y-3">
                     {employeeProjectsData
                       .filter((ep: any) => ep.employeeId === selectedEmployee.id && ep.isActive)
                       .map((allocation: any) => {
                         const project = projects.find((p: any) => p.id === allocation.projectId);
-                        const daysWorked = calculateDaysWorked(allocation.startDate, allocation.endDate);
-
-                        return (
+                        return project ? (
                           <Card key={allocation.id} className="p-4">
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <h4 className="font-medium">{project?.projectName || 'Unknown Project'}</h4>
-                                  <Badge variant="secondary">{allocation.role}</Badge>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                                <h4 className="font-semibold">{project.projectName}</h4>
+                                <p className="text-sm text-gray-600">Role: {allocation.role}</p>
+                                <div className="grid grid-cols-2 gap-4 mt-2 text-sm text-gray-600">
                                   <div>
-                                    <span className="font-medium">Start Date:</span>{' '}
-                                    {allocation.startDate ? format(new Date(allocation.startDate), 'PP') : 'Not set'}
+                                    <span className="font-medium">Start:</span> {allocation.startDate ? new Date(allocation.startDate).toLocaleDateString() : 'Not set'}
                                   </div>
                                   <div>
-                                    <span className="font-medium">End Date:</span>{' '}
-                                    {allocation.endDate ? format(new Date(allocation.endDate), 'PP') : 'Ongoing'}
+                                    <span className="font-medium">End:</span> {allocation.endDate ? new Date(allocation.endDate).toLocaleDateString() : 'Ongoing'}
                                   </div>
                                   <div>
-                                    <span className="font-medium">Days Worked:</span>{' '}
-                                    <Badge variant="outline">{daysWorked} days</Badge>
+                                    <span className="font-medium">Days Worked:</span> {calculateDaysWorked(allocation.startDate, allocation.endDate)} days
                                   </div>
                                   <div>
-                                    <span className="font-medium">Status:</span>{' '}
-                                    <Badge className={
-                                      allocation.status === 'active' ? 'bg-green-100 text-green-800' :
-                                      allocation.status === 'learning' ? 'bg-orange-100 text-orange-800' :
-                                      allocation.status === 'leave' ? 'bg-gray-100 text-gray-800' :
-                                      'bg-blue-100 text-blue-800'
-                                    }>
-                                      {allocation.status}
+                                    <span className="font-medium">Status:</span> 
+                                    <Badge variant="default" className="ml-1">
+                                      {allocation.status === 'active' ? 'Active' : allocation.status}
                                     </Badge>
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex gap-2 ml-4">
-                                <Button 
-                                  size="sm" 
+                              <div className="flex flex-col gap-2">
+                                <Button
+                                  size="sm"
                                   variant="outline"
                                   onClick={() => {
                                     setSelectedAllocation(allocation);
-                                    setNewEndDate(allocation.endDate ? format(new Date(allocation.endDate), 'yyyy-MM-dd') : '');
+                                    setNewEndDate(allocation.endDate || '');
                                     setIsEndDateDialogOpen(true);
                                   }}
                                 >
                                   <Calendar className="h-4 w-4 mr-1" />
-                                  Update End Date
+                                  Extend Project
                                 </Button>
-
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   variant="destructive"
                                   onClick={() => {
                                     if (confirm('Are you sure you want to unoccupy this employee from this project?')) {
                                       unoccupyEmployeeMutation.mutate(allocation.id);
-                                      setIsManageDialogOpen(false); // Close dialog after action
                                     }
                                   }}
                                 >
@@ -4300,15 +4533,23 @@ export default function NavadhitiProjectsPage() {
                               </div>
                             </div>
                           </Card>
-                        );
+                        ) : null;
                       })}
                   </div>
                 </div>
 
-                {/* Project History */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Project History</h3>
-                  <div className="border rounded-lg">
+                {/* Project History Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">Project History</h3>
+                    <Badge variant="outline">
+                      {employeeProjectHistory.filter((history: any) => {
+                        const allocation = employeeProjectsData.find((ep: any) => ep.id === history.employeeProjectId);
+                        return allocation && allocation.employeeId === selectedEmployee.id;
+                      }).length} records
+                    </Badge>
+                  </div>
+                  <div className="border rounded-lg overflow-hidden">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -4318,97 +4559,161 @@ export default function NavadhitiProjectsPage() {
                           <TableHead>End Date</TableHead>
                           <TableHead>Days Worked</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Action</TableHead>
                           <TableHead>Last Modified</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {employeeProjectHistory.filter((history: any) => history.employeeId === selectedEmployee.id).map((history: any) => {
-                          const daysWorked = calculateDaysWorked(history.startDate, history.endDate);
+                        {employeeProjectHistory
+                          .filter((history: any) => {
+                            const allocation = employeeProjectsData.find((ep: any) => ep.id === history.employeeProjectId);
+                            return allocation && allocation.employeeId === selectedEmployee.id;
+                          })
+                          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                          .map((history: any) => {
+                            const allocation = employeeProjectsData.find((ep: any) => ep.id === history.employeeProjectId);
+                            const project = allocation ? projects.find((p: any) => p.id === allocation.projectId) : null;
 
-                          return (
-                            <TableRow key={history.id}>
-                              <TableCell className="font-medium">
-                                {history.projectName || 'Unknown Project'}
-                              </TableCell>
-                              <TableCell>{history.role}</TableCell>
-                              <TableCell>
-                                {history.startDate ? format(new Date(history.startDate), 'PP') : 'Not set'}
-                              </TableCell>
-                              <TableCell>
-                                {history.endDate ? format(new Date(history.endDate), 'PP') : 'Ongoing'}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline">{daysWorked} days</Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={
-                                  history.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                                }>
-                                  {history.isActive ? 'Active' : 'Completed'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {history.updatedAt ? format(new Date(history.updatedAt), 'PPp') : 'Not available'}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
+                            return (
+                              <TableRow key={history.id}>
+                                <TableCell className="font-medium">{project?.projectName || 'Unknown Project'}</TableCell>
+                                <TableCell>{allocation?.role || 'N/A'}</TableCell>
+                                <TableCell>
+                                  {allocation?.startDate ? new Date(allocation.startDate).toLocaleDateString() : 'Not set'}
+                                </TableCell>
+                                <TableCell>
+                                  {allocation?.endDate ? new Date(allocation.endDate).toLocaleDateString() : 'Ongoing'}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary">
+                                    {calculateDaysWorked(allocation?.startDate, allocation?.endDate)} days
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={allocation?.isActive ? "default" : "secondary"}>
+                                    {allocation?.status === 'active' ? 'Active' : allocation?.status || 'Unknown'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="capitalize">
+                                    {history.action || 'N/A'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {history.createdAt ? new Date(history.createdAt).toLocaleDateString() : 'N/A'}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => {
+                                      if (confirm('Are you sure you want to delete this history record?')) {
+                                        deleteProjectHistoryMutation.mutate(history.id);
+                                      }
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        {employeeProjectHistory.filter((history: any) => {
+                          const allocation = employeeProjectsData.find((ep: any) => ep.id === history.employeeProjectId);
+                          return allocation && allocation.employeeId === selectedEmployee.id;
+                        }).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={9} className="text-center py-6 text-gray-500">
+                              No history records found
+                            </TableCell>
+                          </TableRow>
+                        )}
                       </TableBody>
                     </Table>
                   </div>
                 </div>
               </div>
             )}
+
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" onClick={() => setIsManageDialogOpen(false)}>
+                Close
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
 
-        {/* End Date Update Dialog */}
+        {/* Project Extension Dialog */}
         <Dialog open={isEndDateDialogOpen} onOpenChange={setIsEndDateDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Update Project End Date</DialogTitle>
+              <DialogTitle>Extend Project Duration</DialogTitle>
               <DialogDescription>
-                Update the end date for {selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : ''} on {selectedAllocation && projects.find((p: any) => p.id === selectedAllocation.projectId)?.projectName}
+                Extend the project duration and create a history record
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Current End Date</Label>
-                <Input 
-                  value={selectedAllocation?.endDate ? format(new Date(selectedAllocation.endDate), 'yyyy-MM-dd') : ''} 
-                  disabled 
-                />
+
+            {selectedAllocation && (
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <h4 className="font-semibold mb-2">Current Allocation Details</h4>
+                  <div className="space-y-1 text-sm">
+                    <p><span className="font-medium">Project:</span> {projects.find((p: any) => p.id === selectedAllocation.projectId)?.projectName}</p>
+                    <p><span className="font-medium">Current End Date:</span> {selectedAllocation.endDate ? new Date(selectedAllocation.endDate).toLocaleDateString() : 'Not set'}</p>
+                    <p><span className="font-medium">Days Worked:</span> {calculateDaysWorked(selectedAllocation.startDate, selectedAllocation.endDate)} days</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>New End Date</Label>
+                  <Input
+                    type="date"
+                    value={newEndDate}
+                    onChange={(e) => setNewEndDate(e.target.value)}
+                    min={selectedAllocation.endDate || new Date().toISOString().split('T')[0]}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    This will create a history record and update the allocation
+                  </p>
+                </div>
+
+                {newEndDate && newEndDate !== selectedAllocation.endDate && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      <span className="font-medium">Extension:</span> 
+                      {selectedAllocation.endDate 
+                        ? ` ${Math.ceil((new Date(newEndDate).getTime() - new Date(selectedAllocation.endDate).getTime()) / (1000 * 60 * 60 * 24))} additional days`
+                        : ' Setting initial end date'
+                      }
+                    </p>
+                  </div>
+                )}
               </div>
-              <div>
-                <Label>New End Date</Label>
-                <Input 
-                  type="date" 
-                  value={newEndDate}
-                  onChange={(e) => setNewEndDate(e.target.value)}
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => {
-                  setIsEndDateDialogOpen(false);
-                  setSelectedAllocation(null);
-                  setNewEndDate('');
-                }}>
-                  Cancel
-                </Button>
-                <Button onClick={() => {
-                  if (newEndDate && selectedAllocation) {
-                    updateEmployeeProjectMutation.mutate({
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setIsEndDateDialogOpen(false);
+                setSelectedAllocation(null);
+                setNewEndDate('');
+              }}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (selectedAllocation && newEndDate) {
+                    extendProjectMutation.mutate({
                       allocationId: selectedAllocation.id,
-                      endDate: newEndDate
+                      newEndDate: newEndDate
                     });
-                    setIsEndDateDialogOpen(false);
-                    setSelectedAllocation(null);
-                    setNewEndDate('');
                   }
-                }}>
-                  Update
-                </Button>
-              </div>
+                }}
+                disabled={!newEndDate || newEndDate === selectedAllocation?.endDate}
+              >
+                <Calendar className="h-4 w-4 mr-1" />
+                Extend Project
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
