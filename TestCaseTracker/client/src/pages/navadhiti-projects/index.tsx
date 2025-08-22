@@ -2043,13 +2043,11 @@ export default function NavadhitiProjectsPage() {
                           </p>
                         </div>
                       )}
-                    </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
-            )}
-            </Card>
-          )}</old_str>
+            )}</old_str>
           )}</old_str>
               </Card>
             )}
