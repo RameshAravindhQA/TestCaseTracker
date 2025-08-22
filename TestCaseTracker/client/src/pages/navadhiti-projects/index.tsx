@@ -780,7 +780,7 @@ export default function NavadhitiProjectsPage() {
                                   </SelectContent>
                                 </Select>
                               </div>
-                              
+
                               {/* Show selected employees */}
                               {selectedEmployees.length > 0 && (
                                 <div>
@@ -3046,7 +3046,7 @@ export default function NavadhitiProjectsPage() {
                                           backgroundColor: projectHealthInfo.bgColor.replace('bg-', '').includes('gray') ? '#F3F4F6' : 
                                                           projectHealthInfo.bgColor.includes('red') ? '#FEF2F2' : 
                                                           projectHealthInfo.bgColor.includes('yellow') ? '#FFFBEB' : 
-                                                          projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : '#F0FDF4'
+                                                          projectHealthInfo.bgColor.includes('orange') ? '#FFF7ED' : 'F0FDF4'
                                         }}>
                                           {completionPercentage}%
                                         </Badge>
@@ -3556,7 +3556,7 @@ export default function NavadhitiProjectsPage() {
 
                                   {/* Status Information */}
                                   <div className="space-y-1 mb-3">
-                                    <div className={`text-xs font-semibold ${occupationInfo.textColor}`}>
+                                    <div className={`text-xs font-medium ${occupationInfo.textColor}`}>
                                       {occupationInfo.label}
                                     </div>
                                     <div className="text-xs text-gray-600 dark:text-gray-400">
