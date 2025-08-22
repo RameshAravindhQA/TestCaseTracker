@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -16,7 +16,13 @@ interface StatusReviewDialogProps {
   onClose: () => void;
 }
 
-export function StatusReviewDialog({ project, onClose }: StatusReviewDialogProps) {
+interface StatusReviewDialogProps {
+  project: any;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDialogProps) {
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -29,9 +35,30 @@ export function StatusReviewDialog({ project, onClose }: StatusReviewDialogProps
     completionPercentage: project?.completionPercentage || 0
   });
 
+  // Reset form data when project changes
+  React.useEffect(() => {
+    if (project) {
+      setFormData({
+        currentSprint: project.currentSprint || '',
+        currentIssues: project.currentIssues || '',
+        weeklyComms: project.weeklyComms || '',
+        immediateActionItems: project.immediateActionItems || '',
+        supportRequired: project.supportRequired || '',
+        additionalRemarks: project.additionalRemarks || '',
+        completionPercentage: project.completionPercentage || 0
+      });
+    }
+  }, [project]);
+
   const updateProjectMutation = useMutation({
     mutationFn: async (data: any) => {
+      if (!project?.id) {
+        throw new Error('Project ID is required');
+      }
       const res = await apiRequest("PUT", `/api/navadhiti-projects/${project.id}`, data);
+      if (!res.ok) {
+        throw new Error('Failed to update project');
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -39,8 +66,14 @@ export function StatusReviewDialog({ project, onClose }: StatusReviewDialogProps
       queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
       onClose();
     },
-    onError: () => {
-      toast({ title: "Failed to update status review", variant: "destructive" });
+    onError: (error) => {
+      console.error('Status review update error:', error);
+      toast({ 
+        title: "Failed to update status review", 
+        description: error.message || "Please try again",
+        variant: "destructive" 
+      });
+      // Don't close dialog on error, allow user to retry
     },
   });
 
@@ -69,13 +102,16 @@ export function StatusReviewDialog({ project, onClose }: StatusReviewDialogProps
     { value: 'Blocked', label: 'Blocked', color: 'red' }
   ];
 
+  // Don't render if no project
+  if (!project) return null;
+
   return (
-    <Dialog open onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Update Status Review - {project?.projectName}
+            Update Status Review - {project.projectName}
           </DialogTitle>
         </DialogHeader>
 

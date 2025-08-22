@@ -3680,14 +3680,16 @@ export default function NavadhitiProjectsPage() {
         </Tabs>
 
         {/* Status Review Dialog */}
-        <StatusReviewDialog
-          project={statusUpdateProject}
-          isOpen={isStatusDialogOpen}
-          onClose={() => {
-            setIsStatusDialogOpen(false);
-            setStatusUpdateProject(null);
-          }}
-        />
+        {statusUpdateProject && (
+          <StatusReviewDialog
+            project={statusUpdateProject}
+            isOpen={isStatusDialogOpen}
+            onClose={() => {
+              setIsStatusDialogOpen(false);
+              setStatusUpdateProject(null);
+            }}
+          />
+        )}
 
         {/* Project View Dialog */}
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
