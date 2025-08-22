@@ -1,4 +1,7 @@
-import { useState, useEffect } from "react";
+
+import React, { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,427 +9,197 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, User, AlertCircle, CheckCircle2, Briefcase } from "lucide-react";
-import { format } from "date-fns";
-import { ColorPicker } from "@/components/ui/color-picker";
-import { Separator } from "@/components/ui/separator";
-
-interface StatusOption {
-  id: string;
-  label: string;
-  color: string;
-}
+import { Calendar, Save } from "lucide-react";
 
 interface StatusReviewDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
   project: any;
-  selectedDate: Date;
+  onClose: () => void;
 }
 
-const defaultStatusOptions: StatusOption[] = [
-  { id: "green", label: "On Track", color: "#10b981" },
-  { id: "amber", label: "At Risk", color: "#f59e0b" },
-  { id: "red", label: "Critical", color: "#ef4444" },
-  { id: "gray", label: "No Update", color: "#6b7280" }
-];
-
-export function StatusReviewDialog({ project, isOpen, onClose }: StatusReviewDialogProps) {
+export function StatusReviewDialog({ project, onClose }: StatusReviewDialogProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const selectedDate = new Date();
-
-  // Form state
+  
   const [formData, setFormData] = useState({
-    overallProjectStatus: "",
-    currentSprintStatus: "",
-    weeklyComms: "",
-    notes: "",
-    projectLead: "",
-    currentIssues: "",
-    immediateActionItems: "",
-    supportRequired: "",
-    additionalRemarks: ""
+    currentSprint: project?.currentSprint || '',
+    currentIssues: project?.currentIssues || '',
+    weeklyComms: project?.weeklyComms || '',
+    immediateActionItems: project?.immediateActionItems || '',
+    supportRequired: project?.supportRequired || '',
+    additionalRemarks: project?.additionalRemarks || '',
+    completionPercentage: project?.completionPercentage || 0
   });
-  const [saving, setSaving] = useState(false);
 
-  // Status options state
-  const [statusOptions, setStatusOptions] = useState(defaultStatusOptions);
-  const [newStatusLabel, setNewStatusLabel] = useState("");
-  const [newStatusColor, setNewStatusColor] = useState("#3b82f6");
-
-  // Reset form when project changes
-  useEffect(() => {
-    if (project) {
-      setFormData({
-        overallProjectStatus: project?.overallProjectStatus || "",
-        currentSprintStatus: project?.currentSprint || "",
-        weeklyComms: project?.weeklyComms || "",
-        notes: project?.notes || "",
-        projectLead: project?.projectLead || "",
-        currentIssues: project?.currentIssues || "",
-        immediateActionItems: project?.immediateActionItems || "",
-        supportRequired: project?.supportRequired || "",
-        additionalRemarks: project?.additionalRemarks || ""
-      });
-    }
-  }, [project]);
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async (statusData: any) => {
-      const res = await apiRequest("PUT", `/api/navadhiti-projects/${project.id}`, statusData);
-      if (!res.ok) {
-        const errorData = await res.text();
-        throw new Error(errorData || "Failed to save status review");
-      }
+  const updateProjectMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PUT", `/api/navadhiti-projects/${project.id}`, data);
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Status review saved successfully" });
+      toast({ title: "Status review updated successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/navadhiti-projects"] });
       onClose();
     },
-    onError: (error: any) => {
-      console.error("Status review save error:", error);
-      toast({ 
-        title: "Failed to save status review", 
-        description: error.message || "An error occurred while saving",
-        variant: "destructive" 
-      });
+    onError: () => {
+      toast({ title: "Failed to update status review", variant: "destructive" });
     },
   });
 
-  const addCustomStatus = () => {
-    if (!newStatusLabel.trim()) return;
-
-    const newStatus: StatusOption = {
-      id: `custom_${Date.now()}`,
-      label: newStatusLabel.trim(),
-      color: newStatusColor
-    };
-
-    setStatusOptions([...statusOptions, newStatus]);
-    setNewStatusLabel("");
-    setNewStatusColor("#3b82f6");
-
-    toast({ title: "Custom status added successfully" });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateProjectMutation.mutate(formData);
   };
 
-  const getStatusBadge = (statusId: string) => {
-    const status = statusOptions.find(s => s.id === statusId);
-    if (!status) return null;
-
-    return (
-      <Badge 
-        style={{ 
-          backgroundColor: status.color, 
-          color: 'white',
-          border: `1px solid ${status.color}` 
-        }}
-      >
-        {status.label}
-      </Badge>
-    );
+  const handleInputChange = (field: string, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const handleSubmit = () => {
-    if (!formData.projectLead.trim()) {
-      toast({ 
-        title: "Project Lead Required", 
-        description: "Please enter a project lead name",
-        variant: "destructive" 
-      });
-      return;
-    }
+  // Status options for dropdown
+  const sprintStatusOptions = [
+    { value: 'On Track', label: 'On Track', color: 'green' },
+    { value: 'At Risk', label: 'At Risk', color: 'amber' },
+    { value: 'Blocked', label: 'Blocked', color: 'red' }
+  ];
 
-    // Map form data to project fields with correct property names
-    const updateData = {
-      ...project,
-      projectLead: formData.projectLead,
-      overallProjectStatus: formData.overallProjectStatus,
-      currentSprint: formData.currentSprintStatus,
-      weeklyComms: formData.weeklyComms,
-      currentIssues: formData.currentIssues,
-      immediateActionItems: formData.immediateActionItems,
-      supportRequired: formData.supportRequired,
-      additionalRemarks: formData.additionalRemarks,
-      notes: formData.notes,
-      updatedAt: new Date().toISOString()
-    };
-
-    updateStatusMutation.mutate(updateData);
-  };
-
-  const handleSave = async () => {
-    if (!project) return;
-
-    setSaving(true);
-    try {
-      // Use the mutation for consistency with the rest of the app
-      await updateStatusMutation.mutateAsync({
-        ...project,
-        overallProjectStatus: formData.overallProjectStatus,
-        currentSprint: formData.currentSprintStatus,
-        weeklyComms: formData.weeklyComms,
-        currentIssues: formData.currentIssues,
-        immediateActionItems: formData.immediateActionItems,
-        supportRequired: formData.supportRequired,
-        additionalRemarks: formData.additionalRemarks,
-        projectLead: formData.projectLead
-      });
-    } catch (error) {
-      console.error('Status review save error:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-
-  if (!project) return null;
+  const weeklyCommsOptions = [
+    { value: 'On Track', label: 'On Track', color: 'green' },
+    { value: 'At Risk', label: 'At Risk', color: 'amber' },
+    { value: 'Blocked', label: 'Blocked', color: 'red' }
+  ];
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Status Review - {project.projectName}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Update Status Review - {project?.projectName}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Project Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Project Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><strong>Project:</strong> {project.projectName}</div>
-                <div><strong>Customer:</strong> {project.clientName || project.customer || 'N/A'}</div>
-                <div><strong>Lead:</strong> {project.projectLead || 'N/A'}</div>
-                <div><strong>Review Date:</strong> {selectedDate.toLocaleDateString()}</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Project Lead Field */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="space-y-2">
-                <Label htmlFor="projectLead">Project Lead *</Label>
-                <Input
-                  id="projectLead"
-                  value={formData.projectLead}
-                  onChange={(e) => setFormData({...formData, projectLead: e.target.value})}
-                  placeholder="Enter project lead name"
-                  className="w-full"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Status Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Overall Project Status */}
-            <div className="space-y-2">
-              <Label htmlFor="overallStatus">Overall Project Status *</Label>
-              <Select 
-                value={formData.overallProjectStatus} 
-                onValueChange={(value) => setFormData({...formData, overallProjectStatus: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status.id} value={status.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: status.color }}
-                        />
-                        {status.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {formData.overallProjectStatus && (
-                <div className="mt-2">
-                  {getStatusBadge(formData.overallProjectStatus)}
-                </div>
-              )}
-            </div>
-
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Current Sprint Status */}
-            <div className="space-y-2">
-              <Label htmlFor="sprintStatus">Current Sprint Status *</Label>
-              <Select 
-                value={formData.currentSprintStatus} 
-                onValueChange={(value) => setFormData({...formData, currentSprintStatus: value})}
-              >
+            <div>
+              <Label htmlFor="currentSprint">Current Sprint Status</Label>
+              <Select value={formData.currentSprint} onValueChange={(value) => handleInputChange('currentSprint', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
+                  <SelectValue placeholder="Select sprint status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status.id} value={status.id}>
+                  {sprintStatusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
                       <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: status.color }}
-                        />
-                        {status.label}
+                        <div className={`w-3 h-3 rounded-full ${
+                          option.color === 'green' ? 'bg-green-500' :
+                          option.color === 'amber' ? 'bg-amber-500' : 'bg-red-500'
+                        }`} />
+                        {option.label}
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {formData.currentSprintStatus && (
-                <div className="mt-2">
-                  {getStatusBadge(formData.currentSprintStatus)}
-                </div>
-              )}
             </div>
 
             {/* Weekly Communications */}
-            <div className="space-y-2">
-              <Label htmlFor="weeklyComms">Weekly Communications *</Label>
-              <Select 
-                value={formData.weeklyComms} 
-                onValueChange={(value) => setFormData({...formData, weeklyComms: value})}
-              >
+            <div>
+              <Label htmlFor="weeklyComms">Weekly Communications</Label>
+              <Select value={formData.weeklyComms} onValueChange={(value) => handleInputChange('weeklyComms', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
+                  <SelectValue placeholder="Select communication status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status.id} value={status.id}>
+                  {weeklyCommsOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
                       <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: status.color }}
-                        />
-                        {status.label}
+                        <div className={`w-3 h-3 rounded-full ${
+                          option.color === 'green' ? 'bg-green-500' :
+                          option.color === 'amber' ? 'bg-amber-500' : 'bg-red-500'
+                        }`} />
+                        {option.label}
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {formData.weeklyComms && (
-                <div className="mt-2">
-                  {getStatusBadge(formData.weeklyComms)}
-                </div>
-              )}
+            </div>
+
+            {/* Project Progress */}
+            <div>
+              <Label htmlFor="completionPercentage">Project Progress (%)</Label>
+              <Input
+                id="completionPercentage"
+                type="number"
+                min="0"
+                max="100"
+                value={formData.completionPercentage}
+                onChange={(e) => handleInputChange('completionPercentage', parseInt(e.target.value) || 0)}
+                placeholder="Enter completion percentage"
+              />
             </div>
           </div>
 
-          {/* Custom Status Creation */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Add Custom Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <Label htmlFor="statusLabel">Status Label</Label>
-                  <Input
-                    id="statusLabel"
-                    value={newStatusLabel}
-                    onChange={(e) => setNewStatusLabel(e.target.value)}
-                    placeholder="Enter status label"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="statusColor">Color</Label>
-                  <ColorPicker
-                    value={newStatusColor}
-                    onChange={setNewStatusColor}
-                  />
-                </div>
-                <Button onClick={addCustomStatus} disabled={!newStatusLabel.trim()}>
-                  Add Status
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Additional Fields */}
-          <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="currentIssues">Current Issues</Label>
-                    <textarea
-                      id="currentIssues"
-                      className="w-full p-3 border rounded-md min-h-[80px] resize-vertical"
-                      value={formData.currentIssues}
-                      onChange={(e) => setFormData({...formData, currentIssues: e.target.value})}
-                      placeholder="Enter major challenges or risks..."
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="immediateActionItems">Immediate Action Items</Label>
-                    <textarea
-                      id="immediateActionItems"
-                      className="w-full p-3 border rounded-md min-h-[80px] resize-vertical"
-                      value={formData.immediateActionItems}
-                      onChange={(e) => setFormData({...formData, immediateActionItems: e.target.value})}
-                      placeholder="Enter immediate action items..."
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="supportRequired">Support Required</Label>
-                    <textarea
-                      id="supportRequired"
-                      className="w-full p-3 border rounded-md min-h-[80px] resize-vertical"
-                      value={formData.supportRequired}
-                      onChange={(e) => setFormData({...formData, supportRequired: e.target.value})}
-                      placeholder="Enter specific support requests..."
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="additionalRemarks">Additional Remarks / Inputs</Label>
-                    <textarea
-                      id="additionalRemarks"
-                      className="w-full p-3 border rounded-md min-h-[80px] resize-vertical"
-                      value={formData.additionalRemarks}
-                      onChange={(e) => setFormData({...formData, additionalRemarks: e.target.value})}
-                      placeholder="Enter additional remarks or inputs..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Additional Notes</Label>
-            <textarea
-              id="notes"
-              className="w-full p-3 border rounded-md min-h-[100px] resize-vertical"
-              value={formData.notes}
-              onChange={(e) => setFormData({...formData, notes: e.target.value})}
-              placeholder="Enter any additional notes or comments..."
+          {/* Current Issues */}
+          <div>
+            <Label htmlFor="currentIssues">Current Issues</Label>
+            <Textarea
+              id="currentIssues"
+              value={formData.currentIssues}
+              onChange={(e) => handleInputChange('currentIssues', e.target.value)}
+              placeholder="Describe any current issues or blockers"
+              rows={3}
             />
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={onClose}>
+          {/* Immediate Action Items */}
+          <div>
+            <Label htmlFor="immediateActionItems">Immediate Action Items</Label>
+            <Textarea
+              id="immediateActionItems"
+              value={formData.immediateActionItems}
+              onChange={(e) => handleInputChange('immediateActionItems', e.target.value)}
+              placeholder="List immediate action items required"
+              rows={3}
+            />
+          </div>
+
+          {/* Support Required */}
+          <div>
+            <Label htmlFor="supportRequired">Support Required</Label>
+            <Textarea
+              id="supportRequired"
+              value={formData.supportRequired}
+              onChange={(e) => handleInputChange('supportRequired', e.target.value)}
+              placeholder="Describe any support or resources needed"
+              rows={3}
+            />
+          </div>
+
+          {/* Additional Remarks */}
+          <div>
+            <Label htmlFor="additionalRemarks">Additional Remarks</Label>
+            <Textarea
+              id="additionalRemarks"
+              value={formData.additionalRemarks}
+              onChange={(e) => handleInputChange('additionalRemarks', e.target.value)}
+              placeholder="Any additional comments or remarks"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleSubmit}
-              disabled={updateStatusMutation.isPending}
-            >
-              {updateStatusMutation.isPending ? "Saving..." : "Save Status Review"}
+            <Button type="submit" disabled={updateProjectMutation.isPending}>
+              <Save className="h-4 w-4 mr-2" />
+              {updateProjectMutation.isPending ? 'Updating...' : 'Update Status Review'}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

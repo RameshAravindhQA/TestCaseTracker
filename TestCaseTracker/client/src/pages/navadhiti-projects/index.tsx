@@ -575,6 +575,12 @@ export default function NavadhitiProjectsPage() {
     }
   };
 
+  // Handler for Allocate to Project button
+  const handleAllocateToProject = (employee: any) => {
+    setSelectedEmployees([employee.id]);
+    setIsAllocationDialogOpen(true);
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto p-6 space-y-6">
@@ -887,6 +893,24 @@ export default function NavadhitiProjectsPage() {
                                       <div className="text-blue-700 dark:text-blue-300 text-xs truncate">
                                         {allocation.role}
                                       </div>
+                                      <div className="flex items-center gap-1 mt-1">
+                                        <span className="text-xs">Allocation:</span>
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          max="100"
+                                          value={allocation.allocation || 100}
+                                          className="w-12 h-4 text-xs text-center"
+                                          onChange={(e) => {
+                                            const newAllocation = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                                            updateEmployeeProjectMutation.mutate({ 
+                                              allocationId: allocation.id, 
+                                              allocation: newAllocation
+                                            });
+                                          }}
+                                        />
+                                        <span className="text-xs">%</span>
+                                      </div>
                                     </div>
                                   ) : null;
                                 })}
@@ -913,10 +937,7 @@ export default function NavadhitiProjectsPage() {
                                     size="sm"
                                     variant="outline"
                                     className="flex-1 text-xs h-7"
-                                    onClick={() => {
-                                      setSelectedEmployees([employee.id]);
-                                      setIsAllocationDialogOpen(true);
-                                    }}
+                                    onClick={() => handleAllocateToProject(employee)}
                                   >
                                     <UserCheck className="h-3 w-3 mr-1" />
                                     Quick Allocate
@@ -943,10 +964,7 @@ export default function NavadhitiProjectsPage() {
                                       size="sm"
                                       variant="outline"
                                       className="flex-1 text-xs h-7"
-                                      onClick={()=> {
-                                        setSelectedEmployees([employee.id]);
-                                        setIsAllocationDialogOpen(true);
-                                      }}
+                                      onClick={() => handleAllocateToProject(employee)}
                                     >
                                       <Plus className="h-3 w-3 mr-1" />
                                       Add Project
@@ -1006,10 +1024,7 @@ export default function NavadhitiProjectsPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => {
-                                    setSelectedEmployees([employee.id]);
-                                    setIsAllocationDialogOpen(true);
-                                  }}
+                                  onClick={() => handleAllocateToProject(employee)}
                                 >
                                   Quick Allocate
                                 </Button>
@@ -1122,10 +1137,7 @@ export default function NavadhitiProjectsPage() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => {
-                                      setSelectedEmployees([employee.id]);
-                                      setIsAllocationDialogOpen(true);
-                                    }}
+                                    onClick={() => handleAllocateToProject(employee)}
                                   >
                                     Allocate
                                   </Button>
@@ -1244,12 +1256,26 @@ export default function NavadhitiProjectsPage() {
                                 <div className="flex-1 max-w-xs">
                                   <div className="flex justify-between items-center mb-1">
                                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Progress</span>
-                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{completionPercentage}%</span>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      value={project?.completionPercentage || completionPercentage}
+                                      className="w-16 h-6 text-xs text-center"
+                                      onChange={(e) => {
+                                        const newPercentage = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                                        updateProjectMutation.mutate({ 
+                                          id: project?.id, 
+                                          data: { completionPercentage: newPercentage }
+                                        });
+                                      }}
+                                    />
+                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">%</span>
                                   </div>
                                   <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                                     <div 
                                       className={`h-2.5 rounded-full transition-all duration-300 ${statusInfo.color}`}
-                                      style={{ width: `${completionPercentage}%` }}
+                                      style={{ width: `${project?.completionPercentage || completionPercentage}%` }}
                                     />
                                   </div>
                                 </div>
@@ -1266,10 +1292,7 @@ export default function NavadhitiProjectsPage() {
                                       size="sm"
                                       variant="outline"
                                       className="text-xs h-8 px-3"
-                                      onClick={() => {
-                                        setSelectedEmployees([employee.id]);
-                                        setIsAllocationDialogOpen(true);
-                                      }}
+                                      onClick={() => handleAllocateToProject(employee)}
                                     >
                                       <UserCheck className="h-3 w-3 mr-1" />
                                       Allocate
@@ -1963,21 +1986,29 @@ export default function NavadhitiProjectsPage() {
                                                 </Badge>
                                               );
                                             case 'amber':
+                                            case 'At Risk':
                                               return (
                                                 <Badge className="bg-amber-500 text-white border-amber-600">
                                                   At Risk
                                                 </Badge>
                                               );
                                             case 'red':
+                                            case 'Blocked':
                                               return (
                                                 <Badge className="bg-red-500 text-white border-red-600">
                                                   Blocked
                                                 </Badge>
                                               );
+                                            case 'On Track':
+                                              return (
+                                                <Badge className="bg-green-500 text-white border-green-600">
+                                                  On Track
+                                                </Badge>
+                                              );
                                             default:
                                               return (
                                                 <Badge className="bg-green-500 text-white border-green-600">
-                                                  Active
+                                                  {status || 'Active'}
                                                 </Badge>
                                               );
                                           }
