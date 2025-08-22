@@ -625,7 +625,12 @@ export default function NavadhitiProjectsPage() {
 
   // Handler for Allocate to Project button
   const handleAllocateToProject = (employee: any) => {
+    console.log('Allocate button clicked for employee:', employee.id);
     setSelectedEmployees([employee.id]);
+    setSelectedProject(null);
+    setAllocationRole("");
+    setAllocationStartDate("");
+    setAllocationEndDate("");
     setIsAllocationDialogOpen(true);
   };
 
@@ -1039,6 +1044,7 @@ export default function NavadhitiProjectsPage() {
                                     variant="outline"
                                     className="flex-1 text-xs h-7"
                                     onClick={() => {
+                                      console.log('Allocate button clicked for employee:', employee.id);
                                       setSelectedEmployees([employee.id]);
                                       setSelectedProject(null);
                                       setAllocationRole("");
@@ -1137,6 +1143,7 @@ export default function NavadhitiProjectsPage() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => {
+                                    console.log('Allocate button clicked for employee:', employee.id);
                                     setSelectedEmployees([employee.id]);
                                     setSelectedProject(null);
                                     setAllocationRole("");
@@ -1257,6 +1264,7 @@ export default function NavadhitiProjectsPage() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => {
+                                      console.log('Allocate button clicked for employee:', employee.id);
                                       setSelectedEmployees([employee.id]);
                                       setSelectedProject(null);
                                       setAllocationRole("");
@@ -1420,6 +1428,7 @@ export default function NavadhitiProjectsPage() {
                                       variant="outline"
                                       className="text-xs h-8 px-3"
                                       onClick={() => {
+                                        console.log('Allocate button clicked for employee:', employee.id);
                                         setSelectedEmployees([employee.id]);
                                         setSelectedProject(null);
                                         setAllocationRole("");
@@ -2260,6 +2269,7 @@ export default function NavadhitiProjectsPage() {
                                       if (navadhitiAllocations.length > 0) {
                                         handleManageEmployeeProjects(employee);
                                       } else {
+                                        console.log('Allocate button clicked for employee:', employee.id);
                                         setSelectedEmployees([employee.id]);
                                         setSelectedProject(null);
                                         setAllocationRole("");
@@ -2440,6 +2450,7 @@ export default function NavadhitiProjectsPage() {
                                           if (navadhitiAllocations.length > 0) {
                                             handleManageEmployeeProjects(employee);
                                           } else {
+                                            console.log('Allocate button clicked for employee:', employee.id);
                                             setSelectedEmployees([employee.id]);
                                             setSelectedProject(null);
                                             setAllocationRole("");
@@ -2636,6 +2647,7 @@ export default function NavadhitiProjectsPage() {
                                           if (navadhitiAllocations.length > 0) {
                                             handleManageEmployeeProjects(employee);
                                           } else {
+                                            console.log('Allocate button clicked for employee:', employee.id);
                                             setSelectedEmployees([employee.id]);
                                             setSelectedProject(null);
                                             setAllocationRole("");
@@ -4692,6 +4704,7 @@ export default function NavadhitiProjectsPage() {
                                       if (navadhitiAllocations.length > 0) {
                                         handleManageEmployeeProjects(employee);
                                       } else {
+                                        console.log('Allocate button clicked for employee:', employee.id);
                                         setSelectedEmployees([employee.id]);
                                         setSelectedProject(null);
                                         setAllocationRole("");
@@ -4872,6 +4885,7 @@ export default function NavadhitiProjectsPage() {
                                           if (navadhitiAllocations.length > 0) {
                                             handleManageEmployeeProjects(employee);
                                           } else {
+                                            console.log('Allocate button clicked for employee:', employee.id);
                                             setSelectedEmployees([employee.id]);
                                             setSelectedProject(null);
                                             setAllocationRole("");
@@ -5068,6 +5082,7 @@ export default function NavadhitiProjectsPage() {
                                           if (navadhitiAllocations.length > 0) {
                                             handleManageEmployeeProjects(employee);
                                           } else {
+                                            console.log('Allocate button clicked for employee:', employee.id);
                                             setSelectedEmployees([employee.id]);
                                             setSelectedProject(null);
                                             setAllocationRole("");
@@ -5476,8 +5491,7 @@ export default function NavadhitiProjectsPage() {
                     </Table>
                   </div>
                 </div>
-              </div>
-            )}
+              </div>            )}
 
             <div className="flex justify-end gap-2 mt-6">
               <Button variant="outline" onClick={() => setIsManageDialogOpen(false)}>
