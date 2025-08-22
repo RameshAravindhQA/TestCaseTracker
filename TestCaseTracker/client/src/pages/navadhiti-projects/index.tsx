@@ -4478,11 +4478,12 @@ export default function NavadhitiProjectsPage() {
                             </p>
                           </div>
                         )}
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+                      </CardContent>
+                    </Card>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
               {/* Individual Employee Dashboard */}
               {viewMode === 'employees' && (
