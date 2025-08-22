@@ -245,6 +245,8 @@ export interface IStorage {
   getEmployeeProjectHistory(employeeId: number): Promise<any[]>;
   getAllEmployeeProjectHistory(): Promise<any[]>;
 
+  // Add getEmployeeProjectAllocation method for extension functionality
+  getEmployeeProjectAllocation(allocationId: number): Promise<any | null>;
 
   // Technology Options
   getTechnologyOptions(): Promise<any[]>;
@@ -330,8 +332,7 @@ class MemStorage implements IStorage {
   private departmentOptions = new Map<number, any>();
   private navadhitiProjects = new Map<number, any>();
   private statusReviews = new Map<number, any>();
-
-
+  private employeeProjectHistory: any[] = []; // Added for storing history
 
   private initializeEmployeeDefaults() {
     // Add default technology options
@@ -2195,7 +2196,17 @@ class MemStorage implements IStorage {
   }
 
   async deleteEmployeeProject(id: number): Promise<boolean> {
-    return this.employeeProjects.delete(id);
+    try {
+      const index = this.employeeProjects.findIndex(ep => ep.id === id);
+      if (index !== -1) {
+        this.employeeProjects.delete(id); // Use delete for Maps
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error deleting employee project:', error);
+      throw error;
+    }
   }
 
   async updateEmployeeProject(id: number, data: Partial<any>): Promise<any> {
@@ -2272,6 +2283,38 @@ class MemStorage implements IStorage {
     );
   }
 
+  // Add getEmployeeProjectAllocation method for extension functionality
+  async getEmployeeProjectAllocation(allocationId: number): Promise<any | null> {
+    try {
+      const allocation = this.employeeProjects.get(allocationId);
+      return allocation || null;
+    } catch (error) {
+      console.error('Error getting employee project allocation:', error);
+      throw error;
+    }
+  }
+
+  // Add createEmployeeProjectHistory method
+  async createEmployeeProjectHistory(historyData: any): Promise<any> {
+    try {
+      const history = {
+        id: Date.now() + Math.random(), // Using a simple unique ID generation
+        ...historyData,
+        createdAt: new Date().toISOString()
+      };
+
+      // Add to existing history array
+      if (!this.employeeProjectHistory) {
+        this.employeeProjectHistory = [];
+      }
+      this.employeeProjectHistory.push(history);
+
+      return history;
+    } catch (error) {
+      console.error('Error creating employee project history:', error);
+      throw error;
+    }
+  }
 
   // Technology Options
   async getTechnologyOptions(): Promise<any[]> {

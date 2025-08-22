@@ -22,7 +22,7 @@ import {
   insertTimeSheetFolderSchema,
   insertCustomerSchema,
   insertCustomerProjectSchema,
-  
+
   insertSprintSchema,
   insertKanbanColumnSchema,
   insertKanbanCardSchema,
@@ -38,7 +38,7 @@ import {
   type InsertCustomer,
   type CustomerProject,
   type InsertCustomerProject,
-  
+
   type Sprint,
   type InsertSprint,
   type KanbanColumn,
@@ -96,13 +96,13 @@ const createUploadDirectories = () => {
   const profilePicturesDir = path.join(uploadsDir, 'profile-pictures');
   const documentsDir = path.join(uploadsDir, 'documents');
   const bugAttachmentsDir = path.join(uploadsDir, 'bug-attachment');
-  
+
   // Create uploads directory if it doesn't exist
   if (!fs.existsSync(uploadsDir)) {
     console.log(`Creating uploads directory: ${uploadsDir}`);
     fs.mkdirSync(uploadsDir);
   }
-  
+
   // Create profile pictures directory if it doesn't exist
   if (!fs.existsSync(profilePicturesDir)) {
     console.log(`Creating profile pictures directory: ${profilePicturesDir}`);
@@ -110,7 +110,7 @@ const createUploadDirectories = () => {
   } else {
     console.log(`Profile pictures directory exists: ${profilePicturesDir}`);
   }
-  
+
   // Create documents directory if it doesn't exist
   if (!fs.existsSync(documentsDir)) {
     console.log(`Creating documents directory: ${documentsDir}`);
@@ -118,7 +118,7 @@ const createUploadDirectories = () => {
   } else {
     console.log(`Documents directory exists: ${documentsDir}`);
   }
-  
+
   // Create bug attachments directory if it doesn't exist
   if (!fs.existsSync(bugAttachmentsDir)) {
     console.log(`Creating bug attachments directory: ${bugAttachmentsDir}`);
@@ -126,20 +126,20 @@ const createUploadDirectories = () => {
   } else {
     console.log(`Bug attachments directory exists: ${bugAttachmentsDir}`);
   }
-  
+
   // Write a test file to verify permissions
   try {
     const testFilePath = path.join(profilePicturesDir, 'test.txt');
     fs.writeFileSync(testFilePath, 'Test file to verify write permissions');
     console.log(`Test file created successfully: ${testFilePath}`);
-    
+
     // Clean up test file
     fs.unlinkSync(testFilePath);
     console.log(`Test file removed successfully`);
   } catch (error) {
     console.error(`Error writing test file: ${error}`);
   }
-  
+
   return { uploadsDir, profilePicturesDir, documentsDir, bugAttachmentsDir };
 };
 
@@ -147,7 +147,7 @@ const createUploadDirectories = () => {
 async function testGitHubConnection(owner: string, repo: string, token: string) {
   try {
     console.log(`🔗 Testing GitHub connection for ${owner}/${repo}`);
-    
+
     // Test 1: Verify token by getting user info
     console.log('📋 Step 1: Verifying GitHub token...');
     const userResponse = await fetch('https://api.github.com/user', {
@@ -157,11 +157,11 @@ async function testGitHubConnection(owner: string, repo: string, token: string) 
         'Accept': 'application/vnd.github.v3+json'
       }
     });
-    
+
     if (!userResponse.ok) {
       const errorText = await userResponse.text();
       console.error('❌ GitHub user API error:', userResponse.status, errorText);
-      
+
       if (userResponse.status === 401) {
         return {
           success: false,
@@ -169,17 +169,17 @@ async function testGitHubConnection(owner: string, repo: string, token: string) 
           step: 'token_verification'
         };
       }
-      
+
       return {
         success: false,
         message: `GitHub API error: ${userResponse.status} ${userResponse.statusText}`,
         step: 'token_verification'
       };
     }
-    
+
     const user = await userResponse.json();
     console.log('✅ GitHub user authenticated:', user.login);
-    
+
     // Test 2: Check if repository exists and is accessible
     console.log('📋 Step 2: Checking repository access...');
     const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
@@ -189,11 +189,11 @@ async function testGitHubConnection(owner: string, repo: string, token: string) 
         'Accept': 'application/vnd.github.v3+json'
       }
     });
-    
+
     if (!repoResponse.ok) {
       const errorText = await repoResponse.text();
       console.error('❌ GitHub repo API error:', repoResponse.status, errorText);
-      
+
       if (repoResponse.status === 404) {
         return {
           success: false,
@@ -201,7 +201,7 @@ async function testGitHubConnection(owner: string, repo: string, token: string) 
           step: 'repository_access'
         };
       }
-      
+
       if (repoResponse.status === 403) {
         return {
           success: false,
@@ -209,23 +209,23 @@ async function testGitHubConnection(owner: string, repo: string, token: string) 
           step: 'repository_access'
         };
       }
-      
+
       return {
         success: false,
         message: `Failed to access repository: ${repoResponse.status} ${repoResponse.statusText}`,
         step: 'repository_access'
       };
     }
-    
+
     const repoData = await repoResponse.json();
     console.log('✅ GitHub repository accessible:', repoData.full_name);
-    
+
     // Test 3: Check if we can create issues (requires appropriate permissions)
     console.log('📋 Step 3: Checking issue creation permissions...');
     const hasIssuesPermission = repoData.permissions?.admin || repoData.permissions?.push || repoData.permissions?.maintain;
-    
+
     console.log('🔒 Repository permissions:', repoData.permissions);
-    
+
     if (!hasIssuesPermission) {
       return {
         success: false,
@@ -235,13 +235,13 @@ async function testGitHubConnection(owner: string, repo: string, token: string) 
           user: user.login,
           repo: repoData.full_name,
           permissions: repoData.permissions,
-          hasIssues: repoData.has_issues
+          hasIssues: repoData.has_issues,
         }
       };
     }
-    
+
     console.log('✅ All GitHub connection tests passed!');
-    
+
     return {
       success: true,
       message: 'GitHub connection successful! Repository is accessible and token has required permissions.',
@@ -254,10 +254,10 @@ async function testGitHubConnection(owner: string, repo: string, token: string) 
         tokenScopes: userResponse.headers.get('x-oauth-scopes') || 'unknown'
       }
     };
-    
+
   } catch (error: any) {
     console.error('❌ GitHub connection test failed:', error);
-    
+
     if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
       return {
         success: false,
@@ -265,7 +265,7 @@ async function testGitHubConnection(owner: string, repo: string, token: string) 
         step: 'network_error'
       };
     }
-    
+
     return {
       success: false,
       message: `GitHub API Error: ${error.message || 'Unknown error occurred'}`,
@@ -277,7 +277,7 @@ async function testGitHubConnection(owner: string, repo: string, token: string) 
 // Configure multer for profile picture uploads
 const configureProfilePictureUpload = () => {
   const { profilePicturesDir } = createUploadDirectories();
-  
+
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
       cb(null, profilePicturesDir);
@@ -290,7 +290,7 @@ const configureProfilePictureUpload = () => {
       cb(null, `user-${userId}-${timestamp}${ext}`);
     }
   });
-  
+
   return multer({
     storage,
     limits: {
@@ -309,7 +309,7 @@ const configureProfilePictureUpload = () => {
 // Configure multer for bug attachment uploads
 const configureBugAttachmentUpload = () => {
   const { bugAttachmentsDir } = createUploadDirectories();
-  
+
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
       cb(null, bugAttachmentsDir);
@@ -323,7 +323,7 @@ const configureBugAttachmentUpload = () => {
       cb(null, `bug-${userId}-${sanitizedOriginalName}-${timestamp}${ext}`);
     }
   });
-  
+
   return multer({
     storage,
     limits: {
@@ -345,25 +345,25 @@ const configureBugAttachmentUpload = () => {
         // Archives
         'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'
       ];
-      
+
       console.log(`Received file upload attempt: ${file.originalname}, mimetype: ${file.mimetype}`);
-      
+
       // Accept all files for now - mimetype detection can be unreliable
       // particularly with video files and different browser implementations
       if (!file.mimetype || acceptedTypes.includes(file.mimetype)) {
         return cb(null, true);
       }
-      
+
       // For files with unrecognized mime types, check file extensions
       const ext = path.extname(file.originalname).toLowerCase();
       const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.pdf', '.doc', '.docx',
                           '.xls', '.xlsx', '.txt', '.csv', '.zip', '.mp4', '.webm', '.avi', '.mov',
                           '.mkv', '.flv', '.wmv', '.ogv', '.3gp'];
-      
+
       if (allowedExts.includes(ext)) {
         return cb(null, true);
       }
-      
+
       // If we get here, the file type is not supported
       console.log(`Rejected file: ${file.originalname} with mimetype: ${file.mimetype} and extension: ${ext}`);
       cb(new Error('File type not supported. Please upload an image, video, or document.'));
@@ -376,7 +376,7 @@ const migrateOldDirectories = () => {
   const uploadsDir = path.join(process.cwd(), 'uploads');
   const oldBugAttachmentsDir = path.join(uploadsDir, 'bug-attachments');
   const newBugAttachmentDir = path.join(uploadsDir, 'bug-attachment');
-  
+
   // If the old directory exists and the new one doesn't, rename it
   if (fs.existsSync(oldBugAttachmentsDir) && !fs.existsSync(newBugAttachmentDir)) {
     console.log(`Migrating bug attachments directory from ${oldBugAttachmentsDir} to ${newBugAttachmentDir}`);
@@ -392,17 +392,17 @@ const migrateOldDirectories = () => {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Handle any directory migrations first
   migrateOldDirectories();
-  
+
   // Create upload directories
   createUploadDirectories();
-  
+
   // Configure uploads
   const profilePictureUpload = configureProfilePictureUpload();
   const bugAttachmentUpload = configureBugAttachmentUpload();
-  
+
   // Setup session store
   const SessionStore = MemoryStore(session);
-  
+
   app.use(session({
     secret: process.env.SESSION_SECRET || "test-track-secret",
     resave: false,
@@ -417,9 +417,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       sameSite: 'lax' // Add sameSite for better compatibility
     }
   }));
-  
+
   const apiRouter = Router();
-  
+
   // GitHub integrations routes
   apiRouter.use("/github", githubIntegrationsRouter);
 
@@ -571,6 +571,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add extend project duration route for history management
+  apiRouter.post("/employee-projects/:id/extend", isAuthenticated, async (req, res) => {
+    try {
+      const allocationId = parseInt(req.params.id);
+      const { newEndDate, extensionDays } = req.body;
+
+      // Get current allocation
+      const currentAllocation = await storage.getEmployeeProjectAllocation(allocationId);
+      if (!currentAllocation) {
+        return res.status(404).json({ message: "Project allocation not found" });
+      }
+
+      // Calculate new end date if extension days provided
+      let finalEndDate = newEndDate;
+      if (extensionDays && !newEndDate) {
+        const currentEnd = new Date(currentAllocation.endDate || new Date());
+        currentEnd.setDate(currentEnd.getDate() + parseInt(extensionDays));
+        finalEndDate = currentEnd.toISOString().split('T')[0];
+      }
+
+      // Update the allocation with new end date
+      const updatedAllocation = await storage.updateEmployeeProject(allocationId, {
+        endDate: finalEndDate,
+        updatedAt: new Date(),
+        updatedById: req.session.userId
+      });
+
+      // Create history record for the extension
+      await storage.createEmployeeProjectHistory({
+        employeeProjectId: allocationId,
+        action: 'extended',
+        previousEndDate: currentAllocation.endDate,
+        newEndDate: finalEndDate,
+        extensionDays: extensionDays || null,
+        createdById: req.session.userId,
+        createdAt: new Date()
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Project duration extended successfully",
+        allocation: updatedAllocation 
+      });
+    } catch (error) {
+      console.error("Extend project duration error:", error);
+      res.status(500).json({ message: "Failed to extend project duration" });
+    }
+  });
+
   apiRouter.post("/navadhiti-projects/status-review", isAuthenticated, async (req, res) => {
     try {
       const reviewData = {
@@ -584,32 +633,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Auth routes
   apiRouter.post("/auth/register", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
         return res.status(400).json({ message: "User with this email already exists" });
       }
-      
+
       // Hash password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(userData.password, salt);
-      
+
       // Create user with hashed password
       const user = await storage.createUser({
         ...userData,
         password: hashedPassword,
       });
-      
+
       // Create verification token
       const verificationToken = crypto.randomBytes(32).toString("hex");
       await storage.updateUser(user.id, { verificationToken });
-      
+
       // Send welcome email
       try {
         await emailService.sendWelcomeEmail(user.email, user.firstName);
@@ -618,7 +667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logger.error('Failed to send welcome email:', emailError);
         // Don't fail registration if email fails
       }
-      
+
       // Return user without sensitive data
       const { password, ...userWithoutPassword } = user;
       res.status(201).json(userWithoutPassword);
@@ -627,45 +676,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: "Invalid user data" });
     }
   });
-  
+
   apiRouter.post("/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
-      
+
       if (!email || !password) {
         return res.status(400).json({ message: "Email and password are required" });
       }
-      
+
       // Find user
       const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
-      
+
       // Verify password
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
-      
+
       // Check if user is verified (in a production app)
       // if (!user.verified) {
       //   return res.status(401).json({ message: "Please verify your email before logging in" });
       // }
-      
+
       // Set session data directly without regeneration to avoid session issues
       req.session.userId = user.id;
       req.session.userRole = user.role;
       req.session.userName = user.firstName; // Use firstName since name might not exist
       req.session.userEmail = user.email;
-      
+
       // Save session explicitly and ensure it's properly committed
       req.session.save((saveErr) => {
         if (saveErr) {
           console.error("Session save error:", saveErr);
           return res.status(500).json({ message: "Session save failed" });
         }
-        
+
         console.log("Login successful - Session set and saved:", {
           sessionId: req.sessionID,
           userId: req.session.userId,
@@ -673,13 +722,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userName: req.session.userName,
           userEmail: req.session.userEmail
         });
-        
+
         // Verify session data is set
         if (!req.session.userId) {
           console.error("Session userId not set after save");
           return res.status(500).json({ message: "Session initialization failed" });
         }
-        
+
         // Return user without sensitive data
         const { password: _, ...userWithoutPassword } = user;
         res.json(userWithoutPassword);
@@ -689,7 +738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/auth/logout", (req, res) => {
     req.session.destroy((err) => {
       if (err) {
@@ -698,7 +747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Logged out successfully" });
     });
   });
-  
+
   // Get current user
   apiRouter.get("/auth/user", async (req, res) => {
     try {
@@ -710,19 +759,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasSession: !!req.session,
         sessionKeys: req.session ? Object.keys(req.session) : []
       });
-      
+
       // Check if session exists
       if (!req.session) {
         console.log("No session found");
         return res.status(401).json({ message: "No session found" });
       }
-      
+
       // Check if user is logged in
       if (!req.session.userId) {
         console.log("No userId in session");
         return res.status(401).json({ message: "Not authenticated" });
       }
-      
+
       // Get user from storage
       const user = await storage.getUser(req.session.userId);
       if (!user) {
@@ -733,90 +782,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       console.log(`User authenticated successfully: ${user.email}`);
-      
+
       // Return user without sensitive data
       const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutPassword } = user;
-      
+
       // Set proper cache headers to prevent caching
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
-      
+
       res.json(userWithoutPassword);
     } catch (error) {
       console.error("Get user error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/auth/forgot-password", async (req, res) => {
     try {
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
       }
-      
+
       const user = await storage.getUserByEmail(email);
       if (!user) {
         // Don't reveal that the user doesn't exist
         return res.json({ message: "If your email exists, you will receive a password reset link" });
       }
-      
+
       // Generate token with expiry
       const resetToken = crypto.randomBytes(32).toString("hex");
       const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-      
+
       await storage.updateUser(user.id, {
         resetToken,
         resetTokenExpires,
       });
-      
+
       // In a real app, send reset email here
-      
+
       res.json({ message: "If your email exists, you will receive a password reset link" });
     } catch (error) {
       console.error("Forgot password error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/auth/reset-password", async (req, res) => {
     try {
       const { token, password } = req.body;
-      
+
       if (!token || !password) {
         return res.status(400).json({ message: "Token and password are required" });
       }
-      
+
       // Find user with this token
       const user = Array.from((await storage.getProjects()) as any)
         .find((user: any) => user.resetToken === token && user.resetTokenExpires > new Date());
-      
+
       if (!user) {
         return res.status(400).json({ message: "Invalid or expired token" });
       }
-      
+
       // Hash new password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
-      
+
       // Update user
       await storage.updateUser(user.id, {
         password: hashedPassword,
         resetToken: null,
         resetTokenExpires: null,
       });
-      
+
       res.json({ message: "Password reset successful" });
     } catch (error) {
       console.error("Reset password error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // User profile
   apiRouter.get("/user/current", isAuthenticated, async (req, res) => {
     try {
@@ -824,7 +873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const { password, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
@@ -832,29 +881,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Update user profile
   apiRouter.patch("/user/:id", isAuthenticated, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
-      
+
       // Users can only update their own profile unless they're an admin
       if (userId !== req.session.userId && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "You can only update your own profile" });
       }
-      
+
       const { firstName, lastName, email, role, status, phoneNumber, theme } = req.body;
-      
+
       // Only admins can change roles
       if (role && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "Only admins can change roles" });
       }
-      
+
       // Only admins can change status
       if (status && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "Only admins can change status" });
       }
-      
+
       const updateData: any = {};
       if (firstName) updateData.firstName = firstName;
       if (lastName !== undefined) updateData.lastName = lastName;
@@ -863,18 +912,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (theme) updateData.theme = theme;
       if (role && req.session.userRole === "Admin") updateData.role = role;
       if (status && req.session.userRole === "Admin") updateData.status = status;
-      
+
       const updatedUser = await storage.updateUser(userId, updateData);
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Update session if user is updating their own profile
       if (userId === req.session.userId) {
         if (firstName) req.session.userName = firstName; // Using firstName as userName for now
         if (email) req.session.userEmail = email;
       }
-      
+
       const { password, ...userWithoutPassword } = updatedUser;
       res.json(userWithoutPassword);
     } catch (error) {
@@ -882,20 +931,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
-  
-  
+
+
+
   // Users management endpoints - available only to admins
   apiRouter.get("/users", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
     try {
       const users = await storage.getAllUsers();
-      
+
       // Remove sensitive data
       const sanitizedUsers = users.map(user => {
         const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutSensitiveData } = user;
         return userWithoutSensitiveData;
       });
-      
+
       res.json(sanitizedUsers);
     } catch (error) {
       console.error("Get users error:", error);
@@ -907,7 +956,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/users/public", isAuthenticated, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
-      
+
       // Return minimal user info for messenger functionality
       const publicUsers = users
         .filter(user => user.id !== req.session.userId) // Exclude current user
@@ -923,33 +972,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isOnline: false, // Will be updated by WebSocket
           lastSeen: user.lastLoginAt || user.createdAt
         }));
-      
+
       console.log(`[API] Returning ${publicUsers.length} public users for messenger:`, publicUsers.map(u => ({ id: u.id, name: u.name, email: u.email })));
-      
+
       res.json(publicUsers);
     } catch (error) {
       console.error("Get public users error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/users", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
     try {
       const { firstName, lastName, email, role, phoneNumber, status } = req.body;
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: "User with this email already exists" });
       }
-      
+
       // Generate a temporary password
       const tempPassword = crypto.randomBytes(8).toString("hex");
-      
+
       // Hash the temporary password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(tempPassword, salt);
-      
+
       // Create user with temporary password
       const newUser = await storage.createUser({
         firstName,
@@ -962,7 +1011,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tempPassword: tempPassword, // Store plain temp password for response
         tempPasswordUsed: false
       });
-      
+
       // Send welcome email with temporary password
       try {
         await emailService.sendWelcomeEmail(newUser.email, newUser.firstName, tempPassword);
@@ -971,129 +1020,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logger.error('Failed to send welcome email:', emailError);
         // Don't fail user creation if email fails
       }
-      
+
       // Return user without sensitive data, but include the temporary password
       const { password, ...userResponse } = newUser;
-      
+
       res.status(201).json(userResponse);
     } catch (error) {
       console.error("Create user error:", error);
       res.status(400).json({ message: "Invalid user data" });
     }
   });
-  
+
   apiRouter.get("/users/:id", isAuthenticated, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
-      
+
       // Regular users can only view their own profile
       if (req.session.userRole !== "Admin" && userId !== req.session.userId) {
         return res.status(403).json({ message: "You can only view your own profile" });
       }
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Remove sensitive data
       const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutSensitiveData } = user;
-      
+
       res.json(userWithoutSensitiveData);
     } catch (error) {
       console.error("Get user error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.delete("/users/:id", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
-      
+
       // Prevent admin from deleting themselves
       if (userId === req.session.userId) {
         return res.status(400).json({ message: "You cannot delete your own account" });
       }
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const deleted = await storage.deleteUser(userId);
       if (!deleted) {
         return res.status(500).json({ message: "Failed to delete user" });
       }
-      
+
       res.json({ message: "User deleted successfully" });
     } catch (error) {
       console.error("Delete user error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Generate temporary password for user
   apiRouter.post("/users/:id/generate-temp-password", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
-      
+
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Generate a temporary password
       const tempPassword = crypto.randomBytes(8).toString("hex");
-      
+
       // Hash the temporary password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(tempPassword, salt);
-      
+
       // Update user with temporary password
       const updatedUser = await storage.updateUser(userId, {
         password: hashedPassword,
         tempPassword,
         tempPasswordUsed: false
       });
-      
+
       // In a real app, send email with temp password to the user
-      
+
       res.json({ tempPassword, message: "Temporary password generated successfully" });
     } catch (error) {
       console.error("Generate temp password error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Reset password (for first-time login with temporary password)
   apiRouter.post("/auth/reset-temp-password", isAuthenticated, async (req, res) => {
     try {
       const { newPassword } = req.body;
-      
+
       if (!newPassword) {
         return res.status(400).json({ message: "New password is required" });
       }
-      
+
       const user = await storage.getUser(req.session.userId!);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Check if user is using a temporary password
       if (!user.tempPassword || user.tempPasswordUsed) {
         return res.status(400).json({ message: "Invalid request - no temporary password active" });
       }
-      
+
       // Hash the new password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(newPassword, salt);
-      
+
       // Update user with new password
       await storage.updateUser(user.id, {
         password: hashedPassword,
         tempPasswordUsed: true
       });
-      
+
       res.json({ message: "Password reset successful" });
     } catch (error) {
       console.error("Reset temp password error:", error);
@@ -1102,7 +1151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload profile picture is already configured at the top of the function
-  
+
   // Handle multer errors for uploads globally
   const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
     if (err instanceof multer.MulterError) {
@@ -1132,7 +1181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Starting bug attachment upload request");
       console.log("Request headers:", req.headers);
       console.log("Request content type:", req.headers['content-type']);
-      
+
       bugAttachmentUpload.single('file')(req, res, (err) => {
         if (err) {
           console.error("Multer error during file upload:", err);
@@ -1145,17 +1194,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
     try {
       console.log("Processing bug attachment upload request");
-      
+
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
+
       // Get file path relative to the server root for serving in the browser
       const fileName = path.basename(req.file.path);
-      
+
       // Ensure we use consistent path format for the URL
       const fileUrl = `/uploads/bug-attachment/${fileName}`;
-      
+
       // Return file attachment details with all fields required by the FileAttachment interface
       const fileAttachment = {
         id: parseInt(crypto.randomBytes(4).toString('hex'), 16), // Convert to number for id
@@ -1168,9 +1217,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: 'bug',  // Default to bug since this is for bug attachments
         entityId: 0         // This will be updated when the bug is created or updated
       };
-      
+
       console.log("Uploaded file details:", fileAttachment);
-      
+
       res.status(201).json(fileAttachment);
     } catch (error) {
       console.error("Bug attachment upload error:", error);
@@ -1181,7 +1230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configure multer for document uploads
   const documentUpload = (() => {
     const { documentsDir } = createUploadDirectories();
-    
+
     const storage = multer.diskStorage({
       destination: (req, file, cb) => {
         cb(null, documentsDir);
@@ -1194,7 +1243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cb(null, `document-${uniqueId}-${timestamp}${ext}`);
       }
     });
-    
+
     return multer({
       storage,
       limits: {
@@ -1202,7 +1251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       },
     });
   })();
-  
+
   // Traceability Matrix routes
   apiRouter.get("/projects/:projectId/matrix/markers", isAuthenticated, async (req, res) => {
     try {
@@ -1267,10 +1316,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
     try {
       const cellData = req.body;
-      
+
       // Use createOrUpdateMatrixCell for proper upsert behavior
       const cell = await storage.createOrUpdateMatrixCell(cellData);
-      
+
       if (cell === null) {
         // Cell was deleted (empty value)
         res.status(200).json({ message: "Matrix cell removed" });
@@ -1286,7 +1335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/traceability-matrix/save", isAuthenticated, async (req, res) => {
     try {
       const { projectId, matrixData } = req.body;
-      
+
       if (!projectId || !Array.isArray(matrixData)) {
         return res.status(400).json({ message: "Invalid request data" });
       }
@@ -1319,7 +1368,7 @@ app.get('/api/automation/recordings', isAuthenticated, (req, res) => {
 
 app.post('/api/automation/start-recording', isAuthenticated, (req, res) => {
   const { url, projectId, moduleId, testCaseId } = req.body;
-  
+
   if (!url) {
     return res.status(400).json({ 
       success: false, 
@@ -1345,7 +1394,7 @@ app.post('/api/automation/start-recording', isAuthenticated, (req, res) => {
 
 app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   const { sessionId } = req.body;
-  
+
   res.json({
     success: false,
     message: 'Automation recording feature is currently under development.',
@@ -1356,9 +1405,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
 
   // Error handling middleware for multer (this is used by document uploads)
-  
+
   // AI Test Case Generation endpoints (moved up before document routes)
-  
+
   // Get available AI providers
   apiRouter.get("/ai/providers", isAuthenticated, async (req, res) => {
     try {
@@ -1395,7 +1444,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       };
 
       const providers = EnhancedAIService.getAvailableProviders();
-      
+
       res.json({
         success: true,
         environmentCheck: envCheck,
@@ -1411,7 +1460,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       });
     }
   });
-  
+
   apiRouter.get("/ai/debug-gemini", isAuthenticated, async (req, res) => {
     // Set JSON response headers
     res.setHeader('Content-Type', 'application/json');
@@ -1419,7 +1468,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
     try {
       const hasApiKey = !!process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-gemini-api-key';
-      
+
       if (!hasApiKey) {
         return res.status(200).json({
           configured: false,
@@ -1441,10 +1490,10 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           inputType: 'text' as const,
           images: []
         };
-        
+
         console.log('🧪 Testing Gemini service...');
         const testResponse = await geminiService.generateTestCases(testRequest);
-        
+
         return res.status(200).json({
           configured: true,
           apiKeyPrefix: process.env.GOOGLE_API_KEY.substring(0, 10) + '...',
@@ -1457,7 +1506,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           },
           timestamp: new Date().toISOString()
         });
-        
+
       } catch (serviceError: any) {
         console.error('❌ Gemini service test failed:', serviceError);
         return res.status(200).json({
@@ -1469,7 +1518,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           timestamp: new Date().toISOString()
         });
       }
-      
+
     } catch (error: any) {
       console.error('❌ Gemini debug error:', error);
       return res.status(500).json({
@@ -1493,7 +1542,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       console.log('🤖 Enhanced AI Generation - Handler started');
       console.log('🔍 Session data:', { userId: req.session?.userId, userRole: req.session?.userRole });
       console.log('🔍 Request body:', req.body);
-      
+
       // Validate authentication
       if (!req.session || !req.session.userId) {
         console.error('❌ Authentication failed');
@@ -1503,7 +1552,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           timestamp: new Date().toISOString()
         });
       }
-      
+
       const { 
         requirement, 
         projectContext, 
@@ -1517,7 +1566,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         inputType,
         aiProvider
       } = req.body;
-      
+
       console.log('📋 Request data received:', {
         requirement: requirement?.substring(0, 100) + '...',
         projectContext: projectContext?.substring(0, 50),
@@ -1531,7 +1580,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         hasUserFlows: !!userFlows,
         hasBusinessRules: !!businessRules
       });
-      
+
       // Input validation
       if (!requirement && !websiteUrl) {
         console.error('❌ No input provided');
@@ -1546,7 +1595,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       let aiResponse;
       try {
         console.log(`🔮 Attempting to use ${aiProvider || 'gemini'} AI service...`);
-        
+
         const aiRequest = {
           requirement: requirement || '',
           projectContext: projectContext || '',
@@ -1561,7 +1610,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           aiProvider: aiProvider || 'gemini',
           images: []
         };
-        
+
         console.log('🔮 Calling enhanced AI service with request:', {
           hasRequirement: !!aiRequest.requirement,
           hasModuleContext: !!aiRequest.moduleContext,
@@ -1570,18 +1619,18 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           inputType: aiRequest.inputType,
           provider: aiRequest.aiProvider
         });
-        
+
         aiResponse = await EnhancedAIService.generateTestCases(aiRequest);
-        
+
         console.log('✅ AI response generated successfully:', {
           testCasesCount: aiResponse.testCases?.length || 0,
           source: aiResponse.source,
           provider: aiResponse.provider
         });
-        
+
       } catch (aiError: any) {
         console.error('❌ AI service failed, falling back to mock service:', aiError.message);
-        
+
         // Fall back to mock service
         aiResponse = generateMockResponse(
           requirement || '', 
@@ -1595,7 +1644,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           elementInspection || '', 
           userFlows || ''
         );
-        
+
         console.log('✅ Mock response generated successfully:', {
           testCasesCount: aiResponse.testCases?.length || 0,
           source: aiResponse.source
@@ -1617,14 +1666,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         provider: aiResponse.provider || aiProvider || 'gemini',
         timestamp: new Date().toISOString()
       };
-      
+
       console.log('📤 Sending successful response');
       return res.status(200).json(response);
-      
+
     } catch (handlerError: any) {
       console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
       console.error('❌ Error stack:', handlerError.stack);
-      
+
       // Ensure we always return JSON even in error cases
       const errorResponse = { 
         success: false,
@@ -1632,7 +1681,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
         timestamp: new Date().toISOString()
       };
-      
+
       console.log('📤 Sending error response');
       return res.status(500).json(errorResponse);
     }
@@ -1641,7 +1690,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   // Generate mock response when Gemini fails
   function generateMockResponse(requirement: string, moduleContext: string, testType: string, priority: string, inputType: string, websiteUrl: string, files: any[], businessRules: string, elementInspection: string, userFlows: string) {
     console.log('🎭 Generating mock response for:', { requirement: requirement?.substring(0, 50), inputType });
-    
+
     let mockTestCases = [];
     let analysisResults = {
       coverage: 'Comprehensive',
@@ -1651,7 +1700,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     };
 
     const isRegistrationTest = requirement && requirement.toLowerCase().includes('register');
-    
+
     if (isRegistrationTest || (moduleContext && moduleContext.toLowerCase().includes('registration'))) {
       console.log('🎭 Generating registration test cases');
       mockTestCases = generateRegistrationTestCases(requirement, testType, priority);
@@ -1836,33 +1885,33 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.put("/users/update-avatar", isAuthenticated, async (req, res) => {
     try {
       const { profilePicture, avatarType, avatarData } = req.body;
-      
+
       if (!profilePicture) {
         return res.status(400).json({ message: "Profile picture is required" });
       }
-      
+
       const userId = req.session.userId!;
-      
+
       // Update user with new avatar data
       const updateData: any = {
         profilePicture: profilePicture
       };
-      
+
       // If it's a Lottie avatar, store the additional data
       if (avatarType === 'lottie' && avatarData) {
         updateData.avatarType = avatarType;
         updateData.avatarData = JSON.stringify(avatarData);
       }
-      
+
       const updatedUser = await storage.updateUser(userId, updateData);
-      
+
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Log activity
       await storage.createActivity({
-        userId: userId,
+        userId: req.session.userId!,
         action: "updated",
         entityType: "user",
         entityId: userId,
@@ -1871,10 +1920,10 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           avatarType: avatarType || "image"
         }
       });
-      
+
       // Return user without sensitive data
       const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutPassword } = updatedUser;
-      
+
       res.json(userWithoutPassword);
     } catch (error) {
       console.error("Update avatar error:", error);
@@ -1886,34 +1935,34 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/users/upload-lottie", isAuthenticated, bugAttachmentUpload.single('lottieFile'), async (req, res) => {
     try {
       console.log("Processing Lottie file upload request");
-      
+
       if (!req.file) {
         return res.status(400).json({ message: "No Lottie file uploaded" });
       }
-      
+
       // Validate that it's a JSON file
       if (!req.file.mimetype.includes('json') && !req.file.originalname.endsWith('.json')) {
         return res.status(400).json({ message: "Only JSON files are supported for Lottie animations" });
       }
-      
+
       // Read and validate the Lottie JSON
       try {
         const fileContent = await fs.promises.readFile(req.file.path, 'utf-8');
         const lottieData = JSON.parse(fileContent);
-        
+
         // Basic Lottie validation
         if (!lottieData.v && !lottieData.version) {
           return res.status(400).json({ message: "Invalid Lottie file: missing version" });
         }
-        
+
         if (!lottieData.layers || !Array.isArray(lottieData.layers)) {
           return res.status(400).json({ message: "Invalid Lottie file: missing or invalid layers" });
         }
-        
+
         // Generate file URL
         const fileName = path.basename(req.file.path);
         const fileUrl = `/uploads/bug-attachment/${fileName}`;
-        
+
         // Parse animation data from request
         let animationData = {};
         if (req.body.animationData) {
@@ -1923,7 +1972,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             console.warn("Failed to parse animation data:", e);
           }
         }
-        
+
         res.json({
           success: true,
           message: "Lottie file uploaded successfully",
@@ -1931,12 +1980,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           animationData: animationData,
           lottieData: lottieData
         });
-        
+
       } catch (parseError) {
         console.error("Failed to parse Lottie file:", parseError);
         return res.status(400).json({ message: "Invalid JSON in Lottie file" });
       }
-      
+
     } catch (error) {
       console.error("Lottie file upload error:", error);
       res.status(500).json({ message: "Failed to upload Lottie file" });
@@ -1948,7 +1997,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -1976,49 +2025,49 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/user/change-password", isAuthenticated, async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body;
-      
+
       if (!currentPassword || !newPassword) {
         return res.status(400).json({ message: "Current password and new password are required" });
       }
-      
+
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Verify current password
       const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
       if (!isPasswordValid) {
         return res.status(401).json({ message: "Current password is incorrect" });
       }
-      
+
       // Hash the new password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(newPassword, salt);
-      
+
       // Update user with new password
       const updatedUser = await storage.updateUser(userId, {
         password: hashedPassword
       });
-      
+
       if (!updatedUser) {
         return res.status(500).json({ message: "Failed to update password" });
       }
-      
+
       res.json({ message: "Password updated successfully" });
     } catch (error) {
       console.error("Change password error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/user/upload-profile-picture", isAuthenticated, (req, res, next) => {
     console.log("Processing profile picture upload request");
     console.log("Request headers:", req.headers);
-    console.log("Request content-type:", req.headers['content-type']);
-    
+    console.log("Request content type:", req.headers['content-type']);
+
     profilePictureUpload.single('profilePicture')(req, res, (err) => {
       if (err) {
         console.error("Multer processing error:", err);
@@ -2039,12 +2088,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       console.log("Multer processed request, file:", req.file);
       console.log("Request body:", req.body);
       console.log("Request files:", req.files);
-      
+
       if (!req.file) {
         console.error("No file in request");
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
+
       console.log("File details:", {
         fieldname: req.file.fieldname,
         originalname: req.file.originalname,
@@ -2055,31 +2104,31 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         filename: req.file.filename,
         path: req.file.path
       });
-      
+
       // Get file path relative to the server root for serving in the browser
       const fileName = path.basename(req.file.path);
       // Ensure the path has the correct format for access via the /uploads route
       const relativePath = `/uploads/profile-pictures/${fileName}`;
       console.log("Profile picture path:", relativePath);
       console.log("Full file path:", req.file.path);
-      
+
       // Update user profile with the new picture path
       const updatedUser = await storage.updateUser(req.session.userId!, {
         profilePicture: relativePath
       });
-      
+
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Return the updated profile data
       const { password, ...userWithoutPassword } = updatedUser;
-      
-      // Set strong cache control headers to prevent the browser from caching the API response
+
+      // Set cache control headers to prevent caching issues
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
-      
+
       res.json({
         ...userWithoutPassword,
         message: "Profile picture uploaded successfully",
@@ -2090,7 +2139,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Failed to upload profile picture" });
     }
   });
-  
+
   // Note: GitHub integration endpoints are now handled by the dedicated GitHub router above
 
   // Add a duplicate route for handling bug attachment uploads with /api prefix for client compatibility
@@ -2099,7 +2148,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       console.log('File upload via alternate route detected');
       console.log('Request headers:', req.headers);
       console.log('Request content type:', req.headers['content-type']);
-      
+
       bugAttachmentUpload.single('file')(req, res, (err) => {
         if (err) {
           console.error('Multer error during file upload:', err);
@@ -2112,17 +2161,17 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     async (req, res) => {
       try {
         console.log('Processing bug attachment upload request via /api route');
-        
+
         if (!req.file) {
           return res.status(400).json({ message: 'No file uploaded' });
         }
-        
+
         // Get file path relative to the server root for serving in the browser
         const fileName = path.basename(req.file.path);
-        
+
         // Ensure we use consistent path format for the URL
         const fileUrl = `/uploads/bug-attachment/${fileName}`;
-        
+
         // Return file attachment details with all fields required by the FileAttachment interface
         const fileAttachment = {
           id: parseInt(crypto.randomBytes(4).toString('hex'), 16), // Convert to number for id
@@ -2135,9 +2184,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           entityType: 'bug',  // Default to bug since this is for bug attachments
           entityId: 0         // This will be updated when the bug is created or updated
         };
-        
+
         console.log('Uploaded file details:', fileAttachment);
-        
+
         res.status(201).json(fileAttachment);
       } catch (error) {
         console.error('Bug attachment upload error:', error);
@@ -2163,7 +2212,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const bugId = parseInt(req.params.bugId);
       const { content, parentId, isPrivate, syncToGithub } = req.body;
-      
+
       const comment = await storage.createBugComment({
         bugId,
         content,
@@ -2188,7 +2237,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const commentId = parseInt(req.params.commentId);
       const { content } = req.body;
-      
+
       const comment = await storage.updateBugComment(commentId, { content });
       res.json(comment);
     } catch (error) {
@@ -2212,13 +2261,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const commentId = parseInt(req.params.commentId);
       const { type } = req.body;
-      
+
       const reaction = await storage.addCommentReaction({
         commentId,
         userId: req.session.userId!,
         type
       });
-      
+
       res.json(reaction);
     } catch (error) {
       console.error("Add comment reaction error:", error);
@@ -2251,7 +2300,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         status: 'draft',
         createdAt: new Date().toISOString()
       };
-      
+
       res.status(201).json(script);
     } catch (error) {
       console.error("Create automation script error:", error);
@@ -2280,7 +2329,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         status: 'ready',
         script: '// Generated automation script\nconsole.log("Script executed");'
       };
-      
+
       res.json(script);
     } catch (error) {
       console.error("Stop recording error:", error);
@@ -2339,7 +2388,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/chat/ai", isAuthenticated, async (req, res) => {
     try {
       const { message, context } = req.body;
-      
+
       if (!message) {
         return res.status(400).json({ error: 'Message is required' });
       }
@@ -2360,7 +2409,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
       // Add some intelligence based on message content
       let response = randomResponse;
-      
+
       if (message.toLowerCase().includes('test case')) {
         response = "I can help you create test cases! Test cases should include: 1) Clear test objectives, 2) Preconditions, 3) Test steps, 4) Expected results. Would you like me to guide you through creating a specific test case?";
       } else if (message.toLowerCase().includes('bug')) {
@@ -2411,21 +2460,21 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/chats/direct", isAuthenticated, async (req, res) => {
     try {
       const { targetUserId } = req.body;
-      
+
       // Check if direct conversation already exists
       let conversation = await storage.getDirectConversation(req.session.userId!, targetUserId);
-      
+
       if (!conversation) {
         // Create new direct conversation
         const targetUser = await storage.getUser(targetUserId);
         if (!targetUser) {
           return res.status(404).json({ error: 'Target user not found' });
         }
-        
+
         conversation = await storage.createDirectConversation(req.session.userId!, targetUserId);
         conversation.name = `${targetUser.firstName} ${targetUser.lastName || ''}`.trim();
       }
-      
+
       res.json(conversation);
     } catch (error) {
       console.error('Create direct chat error:', error);
@@ -2436,14 +2485,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/chats/group", isAuthenticated, async (req, res) => {
     try {
       const { name, description, participants } = req.body;
-      
+
       const conversation = await storage.createConversation({
         type: 'group',
         name,
         description,
         participants: [req.session.userId!, ...participants]
       });
-      
+
       res.json(conversation);
     } catch (error) {
       console.error('Create group chat error:', error);
@@ -2455,33 +2504,33 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/messages", isAuthenticated, async (req, res) => {
     try {
       console.log('[API] Creating message with data:', req.body);
-      
+
       const { receiverId, content, conversationId, type, attachments } = req.body;
-      
+
       if (!content || content.trim() === '') {
         return res.status(400).json({ error: 'Message content is required' });
       }
-      
+
       if (!receiverId && !conversationId) {
         return res.status(400).json({ error: 'Either receiverId or conversationId is required' });
       }
-      
+
       let targetConversationId = conversationId;
-      
+
       // If no conversation ID but has receiverId, create/find direct conversation
       if (!targetConversationId && receiverId) {
         let conversation = await storage.getDirectConversation(req.session.userId!, receiverId);
-        
+
         if (!conversation) {
           conversation = await storage.createDirectConversation(req.session.userId!, receiverId);
         }
-        
+
         targetConversationId = conversation.id;
       }
-      
+
       // Get sender info
       const sender = await storage.getUser(req.session.userId!);
-      
+
       const message = await storage.createChatMessage({
         senderId: req.session.userId!,
         userId: req.session.userId!,
@@ -2499,7 +2548,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           profilePicture: sender.profilePicture
         } : null
       });
-      
+
       console.log('[API] Message created successfully:', message.id);
       res.json(message);
     } catch (error) {
@@ -2512,11 +2561,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.get("/messages", isAuthenticated, async (req, res) => {
     try {
       const { userId } = req.query;
-      
+
       if (userId) {
         // Get direct conversation with this user
         const conversation = await storage.getDirectConversation(req.session.userId!, parseInt(userId as string));
-        
+
         if (conversation) {
           const messages = await storage.getMessagesByChat(conversation.id);
           res.json(messages);
@@ -2601,7 +2650,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const projectMembers = await storage.getProjectMembers(projectId);
-      
+
       // Get user details for each member
       const users = await Promise.all(
         projectMembers.map(async (member) => {
@@ -2614,7 +2663,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           };
         })
       );
-      
+
       res.json(users);
     } catch (error) {
       console.error('Get project users error:', error);
@@ -2624,12 +2673,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
     // Log request for debugging
     console.log(`File access request for: ${req.path}`);
-    
+
     // Clean up the path to handle all possible formats
     let cleanPath = req.path;
     // Remove any /uploads prefix if it's included and double slashes
     cleanPath = cleanPath.replace(/^\/uploads\/?/, '').replace(/\/+/g, '/');
-    
+
     // Make sure bug-attachment path is properly handled
     if (cleanPath.startsWith('bug-attachment/')) {
       console.log('Found bug attachment path');
@@ -2641,25 +2690,25 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       cleanPath = `bug-attachment/${filename}`;
       console.log(`Redirected to: ${cleanPath}`);
     }
-    
+
     const filePath = path.join(process.cwd(), 'uploads', cleanPath);
     console.log(`Resolved file path: ${filePath}`);
-    
+
     // Validate the path to prevent directory traversal attacks
     if (!filePath.startsWith(path.join(process.cwd(), 'uploads'))) {
       console.error(`Security protection: Attempted access to unauthorized path: ${filePath}`);
       return res.status(403).json({ message: "Forbidden" });
     }
-    
+
     // Check if file exists
     if (!fs.existsSync(filePath)) {
       console.error(`File not found: ${filePath}`);
       return res.status(404).json({ message: "File not found" });
     }
-    
+
     // Set proper content type based on file extension
     const ext = path.extname(filePath).toLowerCase();
-    
+
     // Define a content type mapping
     const contentTypes: Record<string, string> = {
       // Images
@@ -2670,7 +2719,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       '.webp': 'image/webp',
       '.svg': 'image/svg+xml',
       '.ico': 'image/x-icon',
-      
+
       // Videos
       '.mp4': 'video/mp4',
       '.webm': 'video/webm',
@@ -2683,7 +2732,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       '.3gp': 'video/3gpp',
       '.mpg': 'video/mpeg',
       '.mpeg': 'video/mpeg',
-      
+
       // Documents
       '.pdf': 'application/pdf',
       '.doc': 'application/msword',
@@ -2692,7 +2741,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       '.ppt': 'application/vnd.ms-powerpoint',
       '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      
+
       // Text
       '.txt': 'text/plain',
       '.csv': 'text/csv',
@@ -2703,7 +2752,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       '.ts': 'text/plain',
       '.json': 'application/json',
       '.md': 'text/markdown',
-      
+
       // Archives
       '.zip': 'application/zip',
       '.rar': 'application/x-rar-compressed',
@@ -2711,17 +2760,17 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       '.tar': 'application/x-tar',
       '.gz': 'application/gzip',
     };
-    
+
     // Set the content type if we know it, otherwise let the browser determine it
     if (contentTypes[ext]) {
       res.setHeader('Content-Type', contentTypes[ext]);
     }
-    
+
     // Add cache control headers to prevent caching issues
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    
+
     // Set content disposition to help with downloading files
     // Use "inline" for files that can be viewed in browser
     const inlineTypes = [
@@ -2733,20 +2782,20 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       '.mp4', '.webm', '.ogv'
     ];
     const disposition = inlineTypes.includes(ext) ? 'inline' : 'attachment';
-    
+
     // Only set filename for attachment disposition
     if (disposition === 'attachment') {
       const fileName = path.basename(filePath);
       res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
     }
-    
+
     // Log file access for debugging
     console.log(`Serving file: ${filePath} with content type: ${contentTypes[ext] || 'auto-determined'}`);
-    
+
     // Serve the file
     res.sendFile(filePath);
   });
-  
+
   // Projects routes
   apiRouter.get("/projects", isAuthenticated, async (req, res) => {
     try {
@@ -2759,7 +2808,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         // Non-admins can only see projects they created or are members of
         projects = await storage.getProjectsByUserId(req.session.userId!);
       }
-      
+
       console.log(`[SECURITY] User ${req.session.userId} (${req.session.userRole}) accessing ${projects.length} projects`);
       res.json(projects);
     } catch (error) {
@@ -2767,42 +2816,42 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.get("/projects/:id", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       res.json(project);
     } catch (error) {
       console.error("Get project error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/projects", isAuthenticated, async (req, res) => {
     try {
       console.log("Creating project with data:", req.body);
-      
+
       // Validate required fields
       if (!req.body.name || req.body.name.trim() === '') {
         return res.status(400).json({ message: "Project name is required" });
       }
-      
+
       // Pre-process dates - convert them to ISO strings that Zod expects
       const formData = {
         name: req.body.name.trim(),
@@ -2813,14 +2862,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         startDate: req.body.startDate ? new Date(req.body.startDate).toISOString() : null,
         endDate: req.body.endDate ? new Date(req.body.endDate).toISOString() : null
       };
-      
+
       console.log("Processed form data:", formData);
-      
+
       // Now parse with Zod schema
       const projectData = insertProjectSchema.parse(formData);
-      
+
       const project = await storage.createProject(projectData);
-      
+
       // Add creator as a project member with admin role
       try {
         await storage.addProjectMember({
@@ -2832,7 +2881,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       } catch (memberError) {
         console.warn("Could not add project member:", memberError);
       }
-      
+
       // Log activity
       try {
         await storage.createActivity({
@@ -2845,16 +2894,16 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       } catch (activityError) {
         console.warn("Failed to log activity:", activityError);
       }
-      
+
       // Ensure we return valid JSON
       res.setHeader('Content-Type', 'application/json');
       res.status(201).json(project);
     } catch (error) {
       console.error("Create project error:", error);
-      
+
       // Ensure we always return JSON
       res.setHeader('Content-Type', 'application/json');
-      
+
       if (error instanceof Error) {
         res.status(400).json({ message: error.message });
       } else {
@@ -2862,35 +2911,35 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
     }
   });
-  
+
   apiRouter.put("/projects/:id", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has admin access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const userMembership = projectMembers.find(member => member.userId === req.session.userId);
-        
+
         if ((!userMembership || userMembership.role !== "Admin") && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have permission to update this project" });
         }
       }
-      
+
       // Pre-process dates before updating
       const formData = {
         ...req.body,
         startDate: req.body.startDate ? new Date(req.body.startDate).toISOString() : null,
         endDate: req.body.endDate ? new Date(req.body.endDate).toISOString() : null
       };
-      
+
       const updatedProject = await storage.updateProject(projectId, formData);
-      
+
       // Log activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -2899,35 +2948,35 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         entityId: projectId,
         details: { projectName: project.name }
       });
-      
+
       res.json(updatedProject);
     } catch (error) {
       console.error("Update project error:", error);
       res.status(400).json({ message: "Invalid project data" });
     }
   });
-  
+
   apiRouter.delete("/projects/:id", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has admin access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const userMembership = projectMembers.find(member => member.userId === req.session.userId);
-        
+
         if ((!userMembership || userMembership.role !== "Admin") && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have permission to delete this project" });
         }
       }
-      
+
       const success = await storage.deleteProject(projectId);
-      
+
       if (success) {
         // Log activity
         await storage.createActivity({
@@ -2938,56 +2987,56 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           details: { projectName: project.name }
         });
       }
-      
+
       res.json({ success });
     } catch (error) {
       console.error("Delete project error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Project collaborator management
   apiRouter.post("/projects/:id/collaborators", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const { email, role = "Member" } = req.body;
-      
+
       const project = await storage.getProject(projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has admin access to this project
       if (req.session.userRole !== "Admin" && project.createdById !== req.session.userId) {
         const projectMembers = await storage.getProjectMembers(projectId);
         const userMembership = projectMembers.find(member => member.userId === req.session.userId);
-        
+
         if (!userMembership || userMembership.role !== "Admin") {
           return res.status(403).json({ message: "You don't have permission to add collaborators" });
         }
       }
-      
+
       // Find user by email
       const collaboratorUser = await storage.getUserByEmail(email);
       if (!collaboratorUser) {
         return res.status(404).json({ message: "User not found with this email" });
       }
-      
+
       // Check if user is already a member
       const existingMembers = await storage.getProjectMembers(projectId);
       const existingMember = existingMembers.find(member => member.userId === collaboratorUser.id);
-      
+
       if (existingMember) {
         return res.status(400).json({ message: "User is already a collaborator on this project" });
       }
-      
+
       // Add user as project member
       const newMember = await storage.addProjectMember({
         projectId,
         userId: collaboratorUser.id,
         role,
       });
-      
+
       // Log activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -3000,7 +3049,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           collaboratorRole: role
         }
       });
-      
+
       res.status(201).json({
         member: newMember,
         user: {
@@ -3019,24 +3068,24 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const members = await storage.getProjectMembers(projectId);
       const collaborators = [];
-      
+
       for (const member of members) {
         const user = await storage.getUser(member.userId);
         if (user) {
@@ -3050,7 +3099,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           });
         }
       }
-      
+
       res.json(collaborators);
     } catch (error) {
       console.error("Get collaborators error:", error);
@@ -3063,21 +3112,21 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const members = await storage.getProjectMembers(projectId);
       res.json(members);
     } catch (error) {
@@ -3085,47 +3134,47 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/projects/:id/members", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has admin access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const userMembership = projectMembers.find(member => member.userId === req.session.userId);
-        
+
         if ((!userMembership || userMembership.role !== "Admin") && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have permission to add members to this project" });
         }
       }
-      
+
       const memberData = insertProjectMemberSchema.parse({
         ...req.body,
         projectId,
       });
-      
+
       // Check if user exists
       const user = await storage.getUser(memberData.userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Check if user is already a member
       const projectMembers = await storage.getProjectMembers(projectId);
       const existingMember = projectMembers.find(member => member.userId === memberData.userId);
-      
+
       if (existingMember) {
         return res.status(400).json({ message: "User is already a member of this project" });
       }
-      
+
       const member = await storage.addProjectMember(memberData);
-      
+
       // Log activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -3139,40 +3188,40 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           userName: user.name 
         }
       });
-      
+
       res.status(201).json(member);
     } catch (error) {
       console.error("Add project member error:", error);
       res.status(400).json({ message: "Invalid member data" });
     }
   });
-  
+
   apiRouter.delete("/projects/:projectId/members/:userId", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const userId = parseInt(req.params.userId);
-      
+
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has admin access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const userMembership = projectMembers.find(member => member.userId === req.session.userId);
-        
+
         if ((!userMembership || userMembership.role !== "Admin") && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have permission to remove members from this project" });
         }
       }
-      
+
       // Get user info for activity log
       const user = await storage.getUser(userId);
-      
+
       const success = await storage.removeProjectMember(projectId, userId);
-      
+
       if (success && user) {
         // Log activity
         await storage.createActivity({
@@ -3188,37 +3237,37 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           }
         });
       }
-      
+
       res.json({ success });
     } catch (error) {
       console.error("Remove project member error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Fix module IDs for a project (admin only)
   apiRouter.post("/projects/:projectId/fix-module-ids", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const modules = await storage.getModulesByProject(projectId);
       const sortedModules = modules.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-      
+
       // Get project prefix
       let projectPrefix = project.prefix;
       if (!projectPrefix) {
@@ -3232,11 +3281,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           projectPrefix = cleanProjectName.toUpperCase().padEnd(3, 'X');
         }
       }
-      
+
       console.log(`Fixing module IDs for project "${project.name}" (ID: ${projectId})`);
       console.log(`Using prefix: ${projectPrefix}`);
       console.log(`Found ${sortedModules.length} modules to fix`);
-      
+
       // Update module IDs to start from 01 with project prefix
       const updatedModules = [];
       for (let i = 0; i < sortedModules.length; i++) {
@@ -3245,7 +3294,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         const updatedModule = await storage.updateModule(sortedModules[i].id, { moduleId: newModuleId });
         updatedModules.push(updatedModule);
       }
-      
+
       res.json({ 
         message: `Fixed ${sortedModules.length} module IDs with prefix ${projectPrefix}`, 
         modules: sortedModules.length,
@@ -3263,21 +3312,21 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const modules = await storage.getModules(projectId);
       res.json(modules);
     } catch (error) {
@@ -3285,33 +3334,33 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/projects/:projectId/modules", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const moduleData = insertModuleSchema.parse({
         ...req.body,
         projectId,
       });
-      
+
       const module = await storage.createModule(moduleData);
-      
+
       // Log activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -3324,37 +3373,37 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           moduleName: module.name
         }
       });
-      
+
       res.status(201).json(module);
     } catch (error) {
       console.error("Create module error:", error);
       res.status(400).json({ message: "Invalid module data" });
     }
   });
-  
+
   apiRouter.put("/modules/:id", isAuthenticated, async (req, res) => {
     try {
       const moduleId = parseInt(req.params.id);
       const module = await storage.getModule(moduleId);
-      
+
       if (!module) {
         return res.status(404).json({ message: "Module not found" });
       }
-      
+
       const project = await storage.getProject(module.projectId);
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(module.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project?.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const updatedModule = await storage.updateModule(moduleId, req.body);
-      
+
       // Log activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -3367,37 +3416,37 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           moduleName: module.name
         }
       });
-      
+
       res.json(updatedModule);
     } catch (error) {
       console.error("Update module error:", error);
       res.status(400).json({ message: "Invalid module data" });
     }
   });
-  
+
   apiRouter.delete("/modules/:id", isAuthenticated, async (req, res) => {
     try {
       const moduleId = parseInt(req.params.id);
       const module = await storage.getModule(moduleId);
-      
+
       if (!module) {
         return res.status(404).json({ message: "Module not found" });
       }
-      
+
       const project = await storage.getProject(module.projectId);
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(module.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project?.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const success = await storage.deleteModule(moduleId);
-      
+
       if (success) {
         // Log activity
         await storage.createActivity({
@@ -3412,14 +3461,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           }
         });
       }
-      
+
       res.json({ success });
     } catch (error) {
       console.error("Delete module error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Tag routes
   // Get all tags
   apiRouter.get("/tags", isAuthenticated, async (req, res) => {
@@ -3431,28 +3480,28 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Create a new tag
   apiRouter.post("/tags", isAuthenticated, async (req, res) => {
     try {
       const { name, color } = req.body;
-      
+
       if (!name) {
         return res.status(400).json({ message: "Tag name is required" });
       }
-      
+
       const newTag = await storage.createTag({
         name,
         color: color || "#3b82f6", // Default to blue if no color provided
       });
-      
+
       res.status(201).json(newTag);
     } catch (error) {
       console.error("Create tag error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Get tags for a project
   apiRouter.get("/projects/:projectId/tags", isAuthenticated, async (req, res) => {
     try {
@@ -3465,17 +3514,17 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Create new tags for a project
   apiRouter.post("/projects/:projectId/tags", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const tags = req.body;
-      
+
       if (!Array.isArray(tags)) {
         return res.status(400).json({ message: "Tags must be an array" });
       }
-      
+
       const createdTags = [];
       for (const tag of tags) {
         const newTag = await storage.createTag({
@@ -3485,14 +3534,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         });
         createdTags.push(newTag);
       }
-      
+
       res.status(201).json(createdTags);
     } catch (error) {
       console.error("Create tags error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Test cases routes
   apiRouter.get("/test-cases", isAuthenticated, async (req, res) => {
     try {
@@ -3504,7 +3553,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         // Get projects user has access to
         const userProjects = await storage.getProjectsByUserId(req.session.userId!);
         const projectIds = userProjects.map(p => p.id);
-        
+
         // Get test cases for these projects
         testCases = [];
         for (const projectId of projectIds) {
@@ -3512,14 +3561,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           testCases.push(...projectTestCases);
         }
       }
-      
+
       console.log(`[API] Returning ${testCases.length} test cases for user ${req.session.userId}`);
-      
+
       // Add cache headers for real-time data
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
-      
+
       res.json(testCases);
     } catch (error) {
       console.error("Get test cases error:", error);
@@ -3531,27 +3580,27 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const moduleId = req.query.moduleId ? parseInt(req.query.moduleId as string) : undefined;
-      
+
       console.log(`[API] Fetching test cases for project ${projectId}, module: ${moduleId}`);
-      
+
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         console.log(`[API] Project ${projectId} not found`);
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           console.log(`[API] User ${req.session.userId} doesn't have access to project ${projectId}`);
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       // Use project-specific filtering to ensure test cases belong to this project
       let testCases;
       if (moduleId) {
@@ -3565,69 +3614,69 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       } else {
         testCases = await storage.getTestCasesByProject(projectId);
       }
-      
+
       console.log(`[API] Returning ${testCases.length} test cases for project ${projectId}:`, 
         testCases.map(tc => ({ id: tc.id, testCaseId: tc.testCaseId, feature: tc.feature, projectId: tc.projectId })));
-      
+
       // Add cache headers for real-time data
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
-      
+
       res.json(testCases);
     } catch (error) {
       console.error("Get test cases error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.get("/test-cases/:id", isAuthenticated, async (req, res) => {
     try {
       const testCaseId = parseInt(req.params.id);
       const testCase = await storage.getTestCase(testCaseId);
-      
+
       if (!testCase) {
         return res.status(404).json({ message: "Test case not found" });
       }
-      
+
       const project = await storage.getProject(testCase.projectId);
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(testCase.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project?.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this test case" });
         }
       }
-      
+
       res.json(testCase);
     } catch (error) {
       console.error("Get test case error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/projects/:projectId/test-cases", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       // Check if module exists if provided
       if (req.body.moduleId) {
         const module = await storage.getModule(req.body.moduleId);
@@ -3635,15 +3684,15 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           return res.status(400).json({ message: "Invalid module ID" });
         }
       }
-      
+
       const testCaseData = insertTestCaseSchema.parse({
         ...req.body,
         projectId,
         createdById: req.session.userId,
       });
-      
+
       const testCase = await storage.createTestCase(testCaseData);
-      
+
       // Log activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -3657,7 +3706,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           feature: testCase.feature
         }
       });
-      
+
       // Ensure proper JSON response
       res.status(201).json(testCase);
     } catch (error) {
@@ -3665,33 +3714,33 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(400).json({ message: "Invalid test case data" });
     }
   });
-  
+
   apiRouter.put("/test-cases/:id", isAuthenticated, async (req, res) => {
     try {
       const testCaseId = parseInt(req.params.id);
       const testCase = await storage.getTestCase(testCaseId);
-      
+
       if (!testCase) {
         return res.status(404).json({ message: "Test case not found" });
       }
-      
+
       const project = await storage.getProject(testCase.projectId);
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(testCase.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project?.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this test case" });
         }
       }
-      
+
       // Prevent changing project ID
       if (req.body.projectId && req.body.projectId !== testCase.projectId) {
         return res.status(400).json({ message: "Cannot change project ID" });
       }
-      
+
       // Check if module exists if changed
       if (req.body.moduleId && req.body.moduleId !== testCase.moduleId) {
         const module = await storage.getModule(req.body.moduleId);
@@ -3705,14 +3754,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         ...req.body,
         updatedAt: new Date()
       };
-      
+
       const updatedTestCase = await storage.updateTestCase(testCaseId, updateData);
-      
+
       // Log activity with specific status change if status was updated
       if (req.body.status && req.body.status !== testCase.status) {
         await storage.createActivity({
           userId: req.session.userId!,
-          action: `status changed to ${req.body.status}`,
+          action: "status changed to ${req.body.status}",
           entityType: "testCase",
           entityId: testCaseId,
           details: { 
@@ -3738,42 +3787,42 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           }
         });
       }
-      
+
       // Set cache headers to prevent caching
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
-      
+
       res.json(updatedTestCase);
     } catch (error) {
       console.error("Update test case error:", error);
       res.status(400).json({ message: "Invalid test case data" });
     }
   });
-  
+
   apiRouter.delete("/test-cases/:id", isAuthenticated, async (req, res) => {
     try {
       const testCaseId = parseInt(req.params.id);
       const testCase = await storage.getTestCase(testCaseId);
-      
+
       if (!testCase) {
         return res.status(404).json({ message: "Test case not found" });
       }
-      
+
       const project = await storage.getProject(testCase.projectId);
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(testCase.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project?.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this test case" });
         }
       }
-      
+
       const success = await storage.deleteTestCase(testCaseId);
-      
+
       if (success) {
         // Log activity
         await storage.createActivity({
@@ -3789,14 +3838,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           }
         });
       }
-      
+
       res.json({ success });
     } catch (error) {
       console.error("Delete test case error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Bug routes
   apiRouter.get("/bugs", isAuthenticated, async (req, res) => {
     try {
@@ -3808,7 +3857,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         // Get projects user has access to
         const userProjects = await storage.getProjectsByUserId(req.session.userId!);
         const projectIds = userProjects.map(p => p.id);
-        
+
         // Get bugs for these projects
         bugs = [];
         for (const projectId of projectIds) {
@@ -3816,14 +3865,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           bugs.push(...projectBugs);
         }
       }
-      
+
       console.log(`[API] Returning ${bugs.length} bugs for user ${req.session.userId}`);
-      
+
       // Add cache headers for real-time data
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
-      
+
       res.json(bugs);
     } catch (error) {
       console.error("Get bugs error:", error);
@@ -3835,89 +3884,89 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const moduleId = req.query.moduleId ? parseInt(req.query.moduleId as string) : undefined;
-      
+
       console.log(`[API] Fetching bugs for project ${projectId}, module: ${moduleId}`);
-      
+
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         console.log(`[API] Project ${projectId} not found`);
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           console.log(`[API] User ${req.session.userId} doesn't have access to project ${projectId}`);
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const bugs = await storage.getBugs(projectId, moduleId);
       console.log(`[API] Returning ${bugs.length} bugs for project ${projectId}:`, bugs.map(bug => ({ id: bug.id, title: bug.title, status: bug.status, severity: bug.severity })));
-      
+
       // Add cache headers for real-time data
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
-      
+
       res.json(bugs);
     } catch (error) {
       console.error("Get bugs error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.get("/bugs/:id", isAuthenticated, async (req, res) => {
     try {
       const bugId = parseInt(req.params.id);
       const bug = await storage.getBug(bugId);
-      
+
       if (!bug) {
         return res.status(404).json({ message: "Bug not found" });
       }
-      
+
       const project = await storage.getProject(bug.projectId);
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(bug.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project?.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this bug" });
         }
       }
-      
+
       res.json(bug);
     } catch (error) {
       console.error("Get bug error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/projects/:projectId/bugs", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       // Check if module exists if provided
       if (req.body.moduleId) {
         const module = await storage.getModule(req.body.moduleId);
@@ -3925,7 +3974,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           return res.status(400).json({ message: "Invalid module ID" });
         }
       }
-      
+
       // Check if test case exists if provided
       if (req.body.testCaseId) {
         const testCase = await storage.getTestCase(req.body.testCaseId);
@@ -3933,7 +3982,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           return res.status(400).json({ message: "Invalid test case ID" });
         }
       }
-      
+
       // Prepare bug data with optional fields properly set
       const formData = {
         ...req.body,
@@ -3944,11 +3993,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         // Set screenshotRequired to false by default unless explicitly set to true
         screenshotRequired: req.body.screenshotRequired === true
       };
-      
+
       const bugData = insertBugSchema.parse(formData);
-      
+
       const bug = await storage.createBug(bugData);
-      
+
       // Log activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -3963,7 +4012,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           severity: bug.severity
         }
       });
-      
+
       res.status(201).json(bug);
     } catch (error) {
       console.error("Create bug error:", error);
@@ -3974,33 +4023,33 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
     }
   });
-  
+
   apiRouter.put("/bugs/:id", isAuthenticated, async (req, res) => {
     try {
       const bugId = parseInt(req.params.id);
       const bug = await storage.getBug(bugId);
-      
+
       if (!bug) {
         return res.status(404).json({ message: "Bug not found" });
       }
-      
+
       const project = await storage.getProject(bug.projectId);
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(bug.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project?.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this bug" });
         }
       }
-      
+
       // Prevent changing project ID
       if (req.body.projectId && req.body.projectId !== bug.projectId) {
         return res.status(400).json({ message: "Cannot change project ID" });
       }
-      
+
       // Check if module exists if changed
       if (req.body.moduleId && req.body.moduleId !== bug.moduleId) {
         const module = await storage.getModule(req.body.moduleId);
@@ -4008,7 +4057,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           return res.status(400).json({ message: "Invalid module ID" });
         }
       }
-      
+
       // Check if test case exists if changed
       if (req.body.testCaseId && req.body.testCaseId !== bug.testCaseId) {
         const testCase = await storage.getTestCase(req.body.testCaseId);
@@ -4022,9 +4071,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         ...req.body,
         updatedAt: new Date()
       };
-      
+
       const updatedBug = await storage.updateBug(bugId, updateData);
-      
+
       // Log status change activity specifically
       if (req.body.status && req.body.status !== bug.status) {
         await storage.createActivity({
@@ -4071,12 +4120,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           }
         });
       }
-      
+
       // Set cache headers to prevent caching
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
-      
+
       res.json(updatedBug);
     } catch (error) {
       console.error("Update bug error:", error);
@@ -4087,30 +4136,30 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
     }
   });
-  
+
   apiRouter.delete("/bugs/:id", isAuthenticated, async (req, res) => {
     try {
       const bugId = parseInt(req.params.id);
       const bug = await storage.getBug(bugId);
-      
+
       if (!bug) {
         return res.status(404).json({ message: "Bug not found" });
       }
-      
+
       const project = await storage.getProject(bug.projectId);
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(bug.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project?.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this bug" });
         }
       }
-      
+
       const success = await storage.deleteBug(bugId);
-      
+
       if (success) {
         // Log activity
         await storage.createActivity({
@@ -4126,14 +4175,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           }
         });
       }
-      
+
       res.json({ success });
     } catch (error) {
       console.error("Delete bug error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Analytics debug endpoint
   apiRouter.get("/analytics/debug", isAuthenticated, async (req, res) => {
     try {
@@ -4216,26 +4265,26 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.get("/projects/:projectId/activities", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const activities = await storage.getProjectActivities(projectId, limit);
       res.json(activities);
@@ -4244,7 +4293,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Dashboard stats
   apiRouter.get("/dashboard/stats", isAuthenticated, async (req, res) => {
     try {
@@ -4257,27 +4306,27 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Document Folder Management
   apiRouter.get("/projects/:projectId/document-folders", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project (unless admin)
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const folders = await storage.getDocumentFolders(projectId);
       res.json(folders);
     } catch (error) {
@@ -4285,44 +4334,44 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/document-folders", isAuthenticated, async (req, res) => {
     try {
       const folderData = insertDocumentFolderSchema.parse({
         ...req.body,
         createdById: req.session.userId,
       });
-      
+
       const project = await storage.getProject(folderData.projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project (unless admin)
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(folderData.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       // If parent folder is specified, check if it exists
       if (folderData.parentFolderId) {
         const parentFolder = await storage.getDocumentFolder(folderData.parentFolderId);
         if (!parentFolder) {
           return res.status(404).json({ message: "Parent folder not found" });
         }
-        
+
         // Check if parent folder belongs to the same project
         if (parentFolder.projectId !== folderData.projectId) {
           return res.status(400).json({ message: "Parent folder must be in the same project" });
         }
       }
-      
+
       const folder = await storage.createDocumentFolder(folderData);
-      
+
       // Create activity record
       await storage.createActivity({
         userId: req.session.userId!,
@@ -4334,7 +4383,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           folderName: folder.name,
         },
       });
-      
+
       res.status(201).json(folder);
     } catch (error) {
       console.error("Create document folder error:", error);
@@ -4345,76 +4394,76 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
     }
   });
-  
+
   apiRouter.put("/document-folders/:id", isAuthenticated, async (req, res) => {
     try {
       const folderId = parseInt(req.params.id);
       const folder = await storage.getDocumentFolder(folderId);
-      
+
       if (!folder) {
         return res.status(404).json({ message: "Folder not found" });
       }
-      
+
       // Check if user has access to the project containing this folder
       const project = await storage.getProject(folder.projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(folder.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId && folder.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have permission to update this folder" });
         }
       }
-      
+
       // If parent folder is being changed, validate it
       if (req.body.parentFolderId !== undefined && req.body.parentFolderId !== folder.parentFolderId) {
         // Cannot set folder as its own parent
         if (req.body.parentFolderId === folderId) {
           return res.status(400).json({ message: "Folder cannot be its own parent" });
         }
-        
+
         // If parent folder specified, check if it exists in the same project
         if (req.body.parentFolderId) {
           const parentFolder = await storage.getDocumentFolder(req.body.parentFolderId);
           if (!parentFolder) {
             return res.status(404).json({ message: "Parent folder not found" });
           }
-          
+
           if (parentFolder.projectId !== folder.projectId) {
             return res.status(400).json({ message: "Parent folder must be in the same project" });
           }
-          
+
           // Check for circular reference by ensuring the new parent is not a descendant of this folder
           const getDescendantIds = async (parentId: number, visited = new Set<number>()): Promise<number[]> => {
             if (visited.has(parentId)) return []; // Prevent infinite recursion if there's a circular reference already
             visited.add(parentId);
-            
+
             const children = (await storage.getDocumentFolders(folder.projectId))
               .filter(f => f.parentFolderId === parentId)
               .map(f => f.id);
-            
+
             let descendantIds = [...children];
-            
+
             for (const childId of children) {
               descendantIds = [...descendantIds, ...(await getDescendantIds(childId, visited))];
             }
-            
+
             return descendantIds;
           };
-          
+
           const descendantIds = await getDescendantIds(folderId);
           if (descendantIds.includes(req.body.parentFolderId)) {
             return res.status(400).json({ message: "Circular folder reference detected" });
           }
         }
       }
-      
+
       const updatedFolder = await storage.updateDocumentFolder(folderId, req.body);
-      
+
       // Create activity record
       await storage.createActivity({
         userId: req.session.userId!,
@@ -4426,7 +4475,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           folderName: updatedFolder?.name || folder.name,
         },
       });
-      
+
       res.json(updatedFolder);
     } catch (error) {
       console.error("Update document folder error:", error);
@@ -4437,82 +4486,82 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
     }
   });
-  
+
   // Specific endpoint for drag-and-drop folder moves
   apiRouter.post("/document-folders/:id/move", isAuthenticated, async (req, res) => {
     try {
       const folderId = parseInt(req.params.id);
       const { targetFolderId } = req.body;
-      
+
       // Check if folder exists
       const folder = await storage.getDocumentFolder(folderId);
       if (!folder) {
         return res.status(404).json({ message: "Folder not found" });
       }
-      
+
       // Check if user has access
       const project = await storage.getProject(folder.projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(folder.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId && folder.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have permission to move this folder" });
         }
       }
-      
+
       // targetFolderId can be null (moving to root) or a number
       let newParentFolderId = targetFolderId === null ? null : parseInt(targetFolderId as unknown as string);
-      
+
       // Cannot set folder as its own parent
       if (newParentFolderId === folderId) {
         return res.status(400).json({ message: "Folder cannot be its own parent" });
       }
-      
+
       // If target folder specified, validate it exists in the same project
       if (newParentFolderId !== null) {
         const targetFolder = await storage.getDocumentFolder(newParentFolderId);
         if (!targetFolder) {
           return res.status(404).json({ message: "Target folder not found" });
         }
-        
+
         if (targetFolder.projectId !== folder.projectId) {
           return res.status(400).json({ message: "Target folder must be in the same project" });
         }
-        
+
         // Check for circular reference
         const getDescendantIds = async (parentId: number, visited = new Set<number>()): Promise<number[]> => {
           if (visited.has(parentId)) return [];
           visited.add(parentId);
-          
+
           const children = (await storage.getDocumentFolders(folder.projectId))
             .filter(f => f.parentFolderId === parentId)
             .map(f => f.id);
-          
+
           let descendantIds = [...children];
-          
+
           for (const childId of children) {
             descendantIds = [...descendantIds, ...(await getDescendantIds(childId, visited))];
           }
-          
+
           return descendantIds;
         };
-        
+
         const descendantIds = await getDescendantIds(folderId);
         if (descendantIds.includes(newParentFolderId)) {
           return res.status(400).json({ message: "Cannot move a folder into its own descendant" });
         }
       }
-      
+
       // Update the folder's parent
       const updatedFolder = await storage.updateDocumentFolder(folderId, {
         parentFolderId: newParentFolderId
       });
-      
+
       // Create activity record
       await storage.createActivity({
         userId: req.session.userId!,
@@ -4525,7 +4574,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           newParentId: newParentFolderId
         },
       });
-      
+
       res.json(updatedFolder);
     } catch (error) {
       console.error("Move document folder error:", error);
@@ -4536,22 +4585,22 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
     }
   });
-  
+
   apiRouter.delete("/document-folders/:id", isAuthenticated, async (req, res) => {
     try {
       console.log("DELETE document-folders endpoint called with params:", req.params);
-      
+
       if (!req.params.id) {
         return res.status(400).json({ message: "Missing folder ID parameter" });
       }
-      
+
       // Ensure we have a valid numeric ID
       const folderId = Number(req.params.id);
       if (isNaN(folderId)) {
         console.error("Invalid folder ID received:", req.params.id);
         return res.status(400).json({ message: "Invalid folder ID format" });
       }
-      
+
       // Get all available folder IDs for debugging
       const allFolders = await storage.getDocumentFolders();
       console.log("Available folder IDs:", allFolders.map(f => f.id));
@@ -4560,31 +4609,31 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       // when deleting folders that might not exist in the backend but are shown in the UI
       const folder = await storage.getDocumentFolder(folderId);
       console.log("Found folder:", folder);
-      
+
       if (!folder) {
         console.log(`Folder with ID ${folderId} not found but returning success anyway`);
         // Return success even when folder doesn't exist to ensure UI consistency
         return res.json({ message: "Folder deleted successfully" });
       }
-      
+
       // Check if user has access to the project containing this folder
       const project = await storage.getProject(folder.projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(folder.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId && folder.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have permission to delete this folder" });
         }
       }
-      
+
       // Delete folder and all its contents (handled by storage method)
       await storage.deleteDocumentFolder(folderId);
-      
+
       // Create activity record
       await storage.createActivity({
         userId: req.session.userId!,
@@ -4596,35 +4645,35 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           folderName: folder.name,
         },
       });
-      
+
       res.json({ message: "Folder deleted successfully" });
     } catch (error) {
       console.error("Delete document folder error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Document Management
   apiRouter.get("/projects/:projectId/documents", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const folderId = req.query.folderId ? parseInt(req.query.folderId as string) : undefined;
-      
+
       const project = await storage.getProject(projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project (unless admin)
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const documents = await storage.getDocuments(projectId, folderId);
       res.json(documents);
     } catch (error) {
@@ -4632,23 +4681,23 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Document move/copy operations
   apiRouter.post("/documents/:id/move", isAuthenticated, async (req, res) => {
     try {
       const documentId = parseInt(req.params.id);
       const { targetFolderId } = req.body;
-      
+
       // Validate request
       if (targetFolderId === undefined) {
         return res.status(400).json({ message: "Target folder ID is required" });
       }
-      
+
       const document = await storage.getDocument(documentId);
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
       }
-      
+
       // Check if user has permission (must be admin, project owner, or document uploader)
       if (req.session.userRole !== "Admin" && document.uploadedById !== req.session.userId) {
         const project = await storage.getProject(document.projectId);
@@ -4656,14 +4705,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           return res.status(403).json({ message: "You don't have permission to move this document" });
         }
       }
-      
+
       // If targetFolderId is not null, verify the target folder exists
       if (targetFolderId !== null) {
         const targetFolder = await storage.getDocumentFolder(targetFolderId);
         if (!targetFolder) {
           return res.status(404).json({ message: "Target folder not found" });
         }
-        
+
         // Make sure target folder is in the same project
         if (targetFolder.projectId !== document.projectId) {
           return res.status(400).json({ 
@@ -4671,12 +4720,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           });
         }
       }
-      
+
       // Update document's folder ID
       const updatedDocument = await storage.updateDocument(documentId, { 
         folderId: targetFolderId === null ? null : targetFolderId 
       });
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -4689,30 +4738,30 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           documentName: document.name,
         },
       });
-      
+
       res.json(updatedDocument);
     } catch (error) {
       console.error("Move document error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Document copy operation
   apiRouter.post("/documents/:id/copy", isAuthenticated, async (req, res) => {
     try {
       const documentId = parseInt(req.params.id);
       const { targetFolderId } = req.body;
-      
+
       // Validate request
       if (targetFolderId === undefined) {
         return res.status(400).json({ message: "Target folder ID is required" });
       }
-      
+
       const document = await storage.getDocument(documentId);
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
       }
-      
+
       // Check if user has permission
       if (req.session.userRole !== "Admin" && document.uploadedById !== req.session.userId) {
         const project = await storage.getProject(document.projectId);
@@ -4720,14 +4769,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           return res.status(403).json({ message: "You don't have permission to copy this document" });
         }
       }
-      
+
       // If targetFolderId is not null, verify the target folder exists
       if (targetFolderId !== null) {
         const targetFolder = await storage.getDocumentFolder(targetFolderId);
         if (!targetFolder) {
           return res.status(404).json({ message: "Target folder not found" });
         }
-        
+
         // Make sure target folder is in the same project
         if (targetFolder.projectId !== document.projectId) {
           return res.status(400).json({ 
@@ -4735,7 +4784,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           });
         }
       }
-      
+
       // Create a new document with the same data but in the new folder
       const newDocumentData: InsertDocument = {
         name: document.name + " (Copy)",
@@ -4748,9 +4797,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         projectId: document.projectId,
         uploadedById: req.session.userId!,
       };
-      
+
       const newDocument = await storage.createDocument(newDocumentData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -4763,7 +4812,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           documentName: newDocument.name,
         },
       });
-      
+
       res.status(201).json(newDocument);
     } catch (error) {
       console.error("Copy document error:", error);
@@ -4775,26 +4824,26 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   const configureDocumentUpload = () => {
     const { uploadsDir } = createUploadDirectories();
     const documentsDir = path.join(uploadsDir, 'documents');
-    
+
     // Create documents directory if it doesn't exist
     if (!fs.existsSync(documentsDir)) {
       fs.mkdirSync(documentsDir);
     }
-    
+
     const storage = multer.diskStorage({
       destination: (req, file, cb) => {
         cb(null, documentsDir);
       },
       filename: (req, file, cb) => {
         // Generate unique filename with document details and timestamp
+        const uniqueId = crypto.randomBytes(8).toString('hex');
         const timestamp = Date.now();
-        const originalName = file.originalname;
-        const ext = path.extname(originalName);
-        const baseName = path.basename(originalName, ext).replace(/[^a-zA-Z0-9]/g, '_');
+        const ext = path.extname(file.originalname);
+        const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
         cb(null, `${baseName}-${timestamp}${ext}`);
       }
     });
-    
+
     return multer({
       storage,
       limits: {
@@ -4802,62 +4851,62 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
     });
   };
-  
+
   // documentUpload is already configured above
-  
+
   apiRouter.post("/documents", isAuthenticated, documentUpload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
+
       const { name, description, projectId, folderId, uploadedById } = req.body;
-      
+
       if (!name || !projectId) {
         return res.status(400).json({ message: "Name and project ID are required" });
       }
-      
+
       const numericProjectId = parseInt(projectId);
       const numericFolderId = folderId ? parseInt(folderId) : null;
       const numericUploadedById = uploadedById ? parseInt(uploadedById) : req.session.userId;
-      
+
       // Check if project exists
       const project = await storage.getProject(numericProjectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project (unless admin)
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(numericProjectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       // Check if folder exists and belongs to the project
       if (numericFolderId) {
         const folder = await storage.getDocumentFolder(numericFolderId);
         if (!folder) {
           return res.status(404).json({ message: "Folder not found" });
         }
-        
+
         if (folder.projectId !== numericProjectId) {
           return res.status(400).json({ message: "Folder does not belong to the specified project" });
         }
       }
-      
+
       // Generate file URL
       const fileUrl = `/uploads/documents/${req.file.filename}`;
-      
+
       // Get file type from MIME type
       const fileType = req.file.mimetype;
-      
+
       // Get file size
       const fileSize = req.file.size;
-      
+
       const documentData: InsertDocument = {
         name,
         description: description || null,
@@ -4869,9 +4918,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         projectId: numericProjectId,
         uploadedById: numericUploadedById,
       };
-      
+
       const document = await storage.createDocument(documentData);
-      
+
       // Create activity record
       await storage.createActivity({
         userId: req.session.userId!,
@@ -4884,69 +4933,69 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           folderId: numericFolderId,
         },
       });
-      
+
       res.status(201).json(document);
     } catch (error) {
       console.error("Upload document error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.get("/documents/:id", isAuthenticated, async (req, res) => {
     try {
       const documentId = parseInt(req.params.id);
       const document = await storage.getDocument(documentId);
-      
+
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
       }
-      
+
       // Check if user has access to the project containing this document
       const project = await storage.getProject(document.projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(document.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId && document.uploadedById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have permission to view this document" });
         }
       }
-      
+
       res.json(document);
     } catch (error) {
       console.error("Get document error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.delete("/documents/:id", isAuthenticated, async (req, res) => {
     try {
       const documentId = parseInt(req.params.id);
       const document = await storage.getDocument(documentId);
-      
+
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
       }
-      
+
       // Check if user has access to the project containing this document
       const project = await storage.getProject(document.projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(document.projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId && document.uploadedById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have permission to delete this document" });
         }
       }
-      
+
       // Delete the file from the server
       try {
         const filePath = path.join(process.cwd(), document.fileUrl);
@@ -4955,10 +5004,10 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         console.error("Error deleting file:", fileError);
         // Continue with deleting the document record even if file deletion fails
       }
-      
+
       // Delete document from database
       await storage.deleteDocument(documentId);
-      
+
       // Create activity record
       await storage.createActivity({
         userId: req.session.userId!,
@@ -4970,19 +5019,18 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           documentName: document.name,
         },
       });
-      
+
       res.json({ message: "Document deleted successfully" });
     } catch (error) {
       console.error("Delete document error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Test Sheets routes
   apiRouter.get("/test-sheets", isAuthenticated, async (req, res) => {
     try {
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
-      
       const testSheets = await storage.getTestSheets(projectId);
       res.json(testSheets);
     } catch (error) {
@@ -4995,11 +5043,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const testSheet = await storage.getTestSheet(id);
-      
+
       if (!testSheet) {
         return res.status(404).json({ message: "Test sheet not found" });
       }
-      
+
       res.json(testSheet);
     } catch (error) {
       console.error("Get test sheet error:", error);
@@ -5039,7 +5087,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const testSheet = await storage.getTestSheet(id);
-      
+
       if (!testSheet) {
         return res.status(404).json({ message: "Test sheet not found" });
       }
@@ -5069,7 +5117,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const testSheet = await storage.getTestSheet(id);
-      
+
       if (!testSheet) {
         return res.status(404).json({ message: "Test sheet not found" });
       }
@@ -5143,16 +5191,16 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const notebookId = parseInt(req.params.id);
       const notebook = await (storage as any).getNotebook(notebookId);
-      
+
       if (!notebook) {
         return res.status(404).json({ message: "Notebook not found" });
       }
-      
+
       // Users can only access their own notebooks unless they're admin
       if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "You don't have permission to access this notebook" });
       }
-      
+
       res.json(notebook);
     } catch (error) {
       console.error("Get notebook error:", error);
@@ -5166,9 +5214,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         ...req.body,
         userId: req.session.userId,
       };
-      
+
       const notebook = await storage.createNotebook(notebookData);
-      
+
       // Log activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -5179,7 +5227,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           notebookTitle: notebook.title,
         }
       });
-      
+
       res.status(201).json(notebook);
     } catch (error) {
       console.error("Create notebook error:", error);
@@ -5191,18 +5239,18 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const notebookId = parseInt(req.params.id);
       const notebook = await storage.getNotebook(notebookId);
-      
+
       if (!notebook) {
         return res.status(404).json({ message: "Notebook not found" });
       }
-      
+
       // Users can only update their own notebooks unless they're admin
       if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "You don't have permission to update this notebook" });
       }
-      
+
       const updatedNotebook = await (storage as any).updateNotebook(notebookId, req.body);
-      
+
       // Log activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -5213,7 +5261,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           notebookTitle: updatedNotebook?.title || notebook.title,
         }
       });
-      
+
       res.json(updatedNotebook);
     } catch (error) {
       console.error("Update notebook error:", error);
@@ -5225,18 +5273,18 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const notebookId = parseInt(req.params.id);
       const notebook = await storage.getNotebook(notebookId);
-      
+
       if (!notebook) {
         return res.status(404).json({ message: "Notebook not found" });
       }
-      
+
       // Users can only delete their own notebooks unless they're admin
       if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "You don't have permission to delete this notebook" });
       }
-      
+
       const success = await (storage as any).deleteNotebook(notebookId);
-      
+
       if (success) {
         // Log activity
         await storage.createActivity({
@@ -5249,7 +5297,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           }
         });
       }
-      
+
       res.json({ success });
     } catch (error) {
       console.error("Delete notebook error:", error);
@@ -5331,11 +5379,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const employeeId = parseInt(req.params.id);
       const employee = await storage.getEmployee(employeeId);
-      
+
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
-      
+
       res.json(employee);
     } catch (error) {
       console.error("Get employee error:", error);
@@ -5349,9 +5397,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         ...req.body,
         createdById: req.session.userId,
       };
-      
+
       const employee = await storage.createEmployee(employeeData);
-      
+
       res.status(201).json(employee);
     } catch (error) {
       console.error("Create employee error:", error);
@@ -5363,11 +5411,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const employeeId = parseInt(req.params.id);
       const updatedEmployee = await storage.updateEmployee(employeeId, req.body);
-      
+
       if (!updatedEmployee) {
         return res.status(404).json({ message: "Employee not found" });
       }
-      
+
       res.json(updatedEmployee);
     } catch (error) {
       console.error("Update employee error:", error);
@@ -5379,11 +5427,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const employeeId = parseInt(req.params.id);
       const success = await storage.deleteEmployee(employeeId);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Employee not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error("Delete employee error:", error);
@@ -5395,12 +5443,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   const configureEmployeeImportUpload = () => {
     const { uploadsDir } = createUploadDirectories();
     const tempDir = path.join(uploadsDir, 'temp');
-    
+
     // Create temp directory if it doesn't exist
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir);
     }
-    
+
     const storage = multer.diskStorage({
       destination: (req, file, cb) => {
         cb(null, tempDir);
@@ -5411,7 +5459,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         cb(null, `employee-import-${timestamp}${ext}`);
       }
     });
-    
+
     return multer({
       storage,
       limits: {
@@ -5424,14 +5472,14 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           'application/vnd.ms-excel',
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         ];
-        
+
         const allowedExtensions = ['.csv', '.xls', '.xlsx'];
         const ext = path.extname(file.originalname).toLowerCase();
-        
+
         if (allowedTypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
           return cb(null, true);
         }
-        
+
         cb(new Error('Only CSV and Excel files are allowed for employee import'));
       }
     });
@@ -5445,7 +5493,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       console.log("Starting employee import request");
       console.log("Request headers:", req.headers);
       console.log("Request content type:", req.headers['content-type']);
-      
+
       employeeImportUpload.single('file')(req, res, (err) => {
         if (err) {
           console.error("Multer error during employee import:", err);
@@ -5458,7 +5506,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     async (req, res) => {
       try {
         console.log("Processing employee import request");
-        
+
         if (!req.file) {
           return res.status(400).json({ 
             message: "No file uploaded",
@@ -5468,13 +5516,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             errors: ["Please select a CSV or Excel file to import"]
           });
         }
-        
+
         // Read the uploaded file
         const filePath = req.file.path;
         const fileContent = await fs.promises.readFile(filePath, 'utf-8');
-        
+
         let employeeData: any[] = [];
-        
+
         // Parse CSV or Excel file using dynamic imports
         if (req.file.mimetype === 'text/csv' || req.file.originalname.endsWith('.csv')) {
           // Parse CSV using papaparse (dynamic import for ES modules)
@@ -5513,17 +5561,17 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             errors: ["Only CSV files are supported for employee import"]
           });
         }
-        
+
         let imported = 0;
         let failed = 0;
         const errors: string[] = [];
         const detailedErrors: string[] = [];
-        
+
         // Process each employee record
         for (let index = 0; index < employeeData.length; index++) {
           const row = employeeData[index];
           const rowNumber = index + 2; // +2 because index starts at 0 and we skip header row
-          
+
           try {
             // Map CSV columns to employee fields with multiple possible column names
             const employee = {
@@ -5541,16 +5589,16 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
               overallExperience: row.overallExperience || row.overall_experience || row.OverallExperience || row.Overall_Experience || row.experience || row.Experience || row['Years of Experience'] || row.yearsOfExperience,
               createdById: req.session.userId
             };
-            
+
             // Detailed validation with specific field error messages
             const missingFields: string[] = [];
             const invalidFields: string[] = [];
-            
+
             // Check required fields
             if (!employee.firstName || employee.firstName.toString().trim() === '') {
               missingFields.push('firstName (First Name)');
             }
-            
+
             if (!employee.email || employee.email.toString().trim() === '') {
               missingFields.push('email (Email Address)');
             } else {
@@ -5560,51 +5608,51 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
                 invalidFields.push(`email (Invalid email format: ${employee.email})`);
               }
             }
-            
+
             // Optional field validations with warnings
             const warnings: string[] = [];
-            
+
             if (!employee.lastName || employee.lastName.toString().trim() === '') {
               warnings.push('lastName (Last Name) is empty');
             }
-            
+
             if (!employee.department || employee.department.toString().trim() === '') {
               warnings.push('department is empty');
             }
-            
+
             if (!employee.designation || employee.designation.toString().trim() === '') {
               warnings.push('designation is empty');
             }
-            
+
             // Build error message if validation fails
             if (missingFields.length > 0 || invalidFields.length > 0) {
               failed++;
               let errorMsg = `Row ${rowNumber}:`;
-              
+
               if (missingFields.length > 0) {
                 errorMsg += ` Missing required fields: ${missingFields.join(', ')}.`;
               }
-              
+
               if (invalidFields.length > 0) {
                 errorMsg += ` Invalid fields: ${invalidFields.join(', ')}.`;
               }
-              
+
               if (warnings.length > 0) {
                 errorMsg += ` Warnings: ${warnings.join(', ')}.`;
               }
-              
+
               errors.push(errorMsg);
               detailedErrors.push(errorMsg);
               continue;
             }
-            
+
             // Process technologies as array if it's a string
             if (typeof employee.technologies === 'string' && employee.technologies) {
               employee.technologies = employee.technologies.split(',').map((t: string) => t.trim()).filter(t => t.length > 0);
             } else if (!employee.technologies) {
               employee.technologies = [];
             }
-            
+
             // Clean up data
             if (employee.firstName) employee.firstName = employee.firstName.toString().trim();
             if (employee.lastName) employee.lastName = employee.lastName.toString().trim();
@@ -5613,21 +5661,21 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             if (employee.department) employee.department = employee.department.toString().trim();
             if (employee.designation) employee.designation = employee.designation.toString().trim();
             if (employee.locality) employee.locality = employee.locality.toString().trim();
-            
+
             // Generate employeeId if not provided
             if (!employee.employeeId || employee.employeeId.toString().trim() === '') {
               employee.employeeId = `EMP${Date.now()}${Math.floor(Math.random() * 1000)}`;
             }
-            
+
             // Create employee
             await storage.createEmployee(employee);
             imported++;
-            
+
             // Log warnings for successful imports
             if (warnings.length > 0) {
               console.log(`Row ${rowNumber} imported with warnings: ${warnings.join(', ')}`);
             }
-            
+
           } catch (error: any) {
             failed++;
             const errorMsg = `Row ${rowNumber}: Failed to create employee - ${error.message}`;
@@ -5636,25 +5684,25 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             console.error(`Error importing employee row ${rowNumber}:`, error);
           }
         }
-        
+
         // Clean up uploaded file
         try {
           await fs.promises.unlink(filePath);
         } catch (cleanupError) {
           console.error("Error cleaning up uploaded file:", cleanupError);
         }
-        
+
         // Prepare response message
         let message = `Import completed: ${imported} employees imported successfully`;
         if (failed > 0) {
           message += `, ${failed} failed`;
         }
         message += ` out of ${employeeData.length} total records.`;
-        
+
         if (failed > 0) {
           message += ` Please check the error details below and fix the data in your CSV file.`;
         }
-        
+
         const response = {
           message,
           imported,
@@ -5663,15 +5711,15 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           errors: errors.slice(0, 20), // Show up to 20 errors
           success: imported > 0
         };
-        
+
         // Log summary
         console.log(`Employee import completed: ${imported} successful, ${failed} failed out of ${employeeData.length} total`);
-        
+
         res.json(response);
-        
+
       } catch (error: any) {
         console.error("Employee import error:", error);
-        
+
         // Clean up uploaded file if it exists
         if (req.file?.path) {
           try {
@@ -5680,7 +5728,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             console.error("Error cleaning up uploaded file after error:", cleanupError);
           }
         }
-        
+
         res.status(500).json({ 
           message: "Failed to import employees due to server error",
           imported: 0,
@@ -5710,10 +5758,10 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       // Get regular projects
       const regularProjects = await storage.getProjects();
-      
+
       // Get Navadhiti projects
       const navadhitiProjects = await storage.getNavadhitiProjects();
-      
+
       // Format both types for dropdown
       const projectOptions = [
         ...regularProjects.map(project => ({
@@ -5729,7 +5777,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           status: 'Active'
         }))
       ];
-      
+
       res.json(projectOptions);
     } catch (error) {
       console.error("Get project mapping options error:", error);
@@ -5751,11 +5799,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const mappingId = parseInt(req.params.id);
       const success = await storage.deleteEmployeeProject(mappingId);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Mapping not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error("Delete employee project mapping error:", error);
@@ -5820,11 +5868,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const project = await storage.getNavadhitiProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       res.json(project);
     } catch (error) {
       console.error("Get navadhiti project error:", error);
@@ -5838,7 +5886,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         ...req.body,
         createdById: req.session.userId,
       };
-      
+
       const project = await storage.createNavadhitiProject(projectData);
       res.status(201).json(project);
     } catch (error) {
@@ -5851,11 +5899,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const updatedProject = await storage.updateNavadhitiProject(projectId, req.body);
-      
+
       if (!updatedProject) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       res.json(updatedProject);
     } catch (error) {
       console.error("Update navadhiti project error:", error);
@@ -5867,11 +5915,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
       const success = await storage.deleteNavadhitiProject(projectId);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error("Delete navadhiti project error:", error);
@@ -5884,7 +5932,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const { csvData } = req.body;
       const importedProjects = [];
-      
+
       for (const row of csvData) {
         const projectData = {
           projectName: row.projectName || row['Project Name'],
@@ -5900,11 +5948,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           communicationStatus: parseInt(row.communicationStatus || row['Communication Status'] || '0'),
           createdById: req.session.userId,
         };
-        
+
         const project = await storage.createNavadhitiProject(projectData);
         importedProjects.push(project);
       }
-      
+
       res.json({ 
         success: true, 
         imported: importedProjects.length,
@@ -5931,16 +5979,16 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const listId = parseInt(req.params.id);
       const todoList = await storage.getTodoList(listId);
-      
+
       if (!todoList) {
         return res.status(404).json({ message: "Todo list not found" });
       }
-      
+
       // Users can only access their own todo lists
       if (todoList.userId !== req.session.userId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       res.json(todoList);
     } catch (error) {
       console.error("Get todo list error:", error);
@@ -5951,18 +5999,18 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/todo-lists", isAuthenticated, async (req, res) => {
     try {
       const { name, description, color } = req.body;
-      
+
       if (!name || !name.trim()) {
         return res.status(400).json({ message: "Name is required" });
       }
-      
+
       const todoListData = {
         name: name.trim(),
         description: description || "",
         color: color || "#3b82f6",
         userId: req.session.userId!
       };
-      
+
       const todoList = await storage.createTodoList(todoListData);
       res.status(201).json(todoList);
     } catch (error) {
@@ -5975,13 +6023,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const listId = parseInt(req.params.id);
       const updates = req.body;
-      
+
       const updatedTodoList = await storage.updateTodoList(listId, req.session.userId!, updates);
-      
+
       if (!updatedTodoList) {
         return res.status(404).json({ message: "Todo list not found or access denied" });
       }
-      
+
       res.json(updatedTodoList);
     } catch (error) {
       console.error("Update todo list error:", error);
@@ -5992,13 +6040,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.delete("/todo-lists/:id", isAuthenticated, async (req, res) => {
     try {
       const listId = parseInt(req.params.id);
-      
+
       const success = await storage.deleteTodoList(listId, req.session.userId!);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Todo list not found or access denied" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error("Delete todo list error:", error);
@@ -6010,11 +6058,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const listId = parseInt(req.params.id);
       const todoList = await storage.getTodoList(listId);
-      
+
       if (!todoList || todoList.userId !== req.session.userId) {
         return res.status(404).json({ message: "Todo list not found or access denied" });
       }
-      
+
       const todos = await storage.getTodosByListId(listId);
       res.json(todos);
     } catch (error) {
@@ -6038,16 +6086,16 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const todoId = parseInt(req.params.id);
       const todo = await storage.getTodo(todoId);
-      
+
       if (!todo) {
         return res.status(404).json({ message: "Todo not found" });
       }
-      
+
       // Users can only access their own todos
       if (todo.userId !== req.session.userId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       res.json(todo);
     } catch (error) {
       console.error("Get todo error:", error);
@@ -6058,11 +6106,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/todos", isAuthenticated, async (req, res) => {
     try {
       const { title, description, priority, todoListId } = req.body;
-      
+
       if (!title || !title.trim()) {
         return res.status(400).json({ message: "Title is required" });
       }
-      
+
       // Verify todoList exists and belongs to user if provided
       if (todoListId) {
         const todoList = await storage.getTodoList(todoListId);
@@ -6070,7 +6118,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           return res.status(400).json({ message: "Invalid todo list" });
         }
       }
-      
+
       const todoData = {
         title: title.trim(),
         description: description || "",
@@ -6079,7 +6127,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         userId: req.session.userId!,
         todoListId: todoListId || null
       };
-      
+
       const todo = await storage.createTodo(todoData);
       res.status(201).json(todo);
     } catch (error) {
@@ -6092,13 +6140,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const todoId = parseInt(req.params.id);
       const updates = req.body;
-      
+
       const updatedTodo = await storage.updateTodo(todoId, req.session.userId!, updates);
-      
+
       if (!updatedTodo) {
         return res.status(404).json({ message: "Todo not found or access denied" });
       }
-      
+
       res.json(updatedTodo);
     } catch (error) {
       console.error("Update todo error:", error);
@@ -6109,13 +6157,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.delete("/todos/:id", isAuthenticated, async (req, res) => {
     try {
       const todoId = parseInt(req.params.id);
-      
       const success = await storage.deleteTodo(todoId, req.session.userId!);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Todo not found or access denied" });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error("Delete todo error:", error);
@@ -6126,16 +6173,16 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   // Global error handler for API routes - must be placed at the end
   apiRouter.use((error: any, req: Request, res: Response, next: NextFunction) => {
     console.error('API Error Handler caught:', error);
-    
+
     // Ensure we always return JSON for API routes
     try {
       // Force JSON content type
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Cache-Control', 'no-cache');
-      
+
       const status = error.status || error.statusCode || 500;
       const message = error.message || 'Internal Server Error';
-      
+
       // Don't send headers if already sent
       if (!res.headersSent) {
         res.status(status).json({
@@ -6153,7 +6200,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
     } catch (handlerError) {
       console.error('Error in error handler:', handlerError);
-      
+
       // Last resort - try to send minimal JSON response
       if (!res.headersSent) {
         try {
@@ -6171,44 +6218,44 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.get("/customers", isAuthenticated, async (req, res) => {
     try {
       const { status } = req.query;
-      
+
       let customers;
       if (status) {
         customers = await storage.getCustomersByStatus(status as string);
       } else {
         customers = await storage.getCustomers();
       }
-      
+
       res.json(customers);
     } catch (error) {
       console.error("Get customers error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.get("/customers/:id", isAuthenticated, async (req, res) => {
     try {
       const customerId = parseInt(req.params.id);
-      
+
       const customer = await storage.getCustomer(customerId);
       if (!customer) {
         return res.status(404).json({ message: "Customer not found" });
       }
-      
+
       res.json(customer);
     } catch (error) {
       console.error("Get customer error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/customers", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
     try {
       const customerData = insertCustomerSchema.parse(req.body);
-      
+
       // Set the creator ID to the current user
       customerData.createdById = req.session.userId!;
-      
+
       const customer = await storage.createCustomer(customerData);
       res.status(201).json(customer);
     } catch (error) {
@@ -6216,19 +6263,19 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(400).json({ message: "Invalid customer data" });
     }
   });
-  
+
   apiRouter.patch("/customers/:id", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
     try {
       const customerId = parseInt(req.params.id);
-      
+
       const customer = await storage.getCustomer(customerId);
       if (!customer) {
         return res.status(404).json({ message: "Customer not found" });
       }
-      
+
       // Update customer
       const { name, contactPerson, email, phone, address, status } = req.body;
-      
+
       const updateData: Partial<Customer> = {};
       if (name) updateData.name = name;
       if (contactPerson !== undefined) updateData.contactPerson = contactPerson;
@@ -6236,7 +6283,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       if (phone !== undefined) updateData.phone = phone;
       if (address !== undefined) updateData.address = address;
       if (status) updateData.status = status;
-      
+
       const updatedCustomer = await storage.updateCustomer(customerId, updateData);
       res.json(updatedCustomer);
     } catch (error) {
@@ -6244,29 +6291,29 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.delete("/customers/:id", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
     try {
       const customerId = parseInt(req.params.id);
-      
+
       // Delete customer
       const isDeleted = await storage.deleteCustomer(customerId);
       if (!isDeleted) {
         return res.status(404).json({ message: "Customer not found" });
       }
-      
+
       res.json({ message: "Customer deleted successfully" });
     } catch (error) {
       console.error("Delete customer error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Customer Project routes
   apiRouter.get("/customers/:id/projects", isAuthenticated, async (req, res) => {
     try {
       const customerId = parseInt(req.params.id);
-      
+
       const projects = await storage.getProjectsByCustomerId(customerId);
       res.json(projects);
     } catch (error) {
@@ -6274,11 +6321,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.get("/projects/:id/customers", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.id);
-      
+
       const customers = await storage.getCustomersByProjectId(projectId);
       res.json(customers);
     } catch (error) {
@@ -6286,20 +6333,20 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   apiRouter.post("/customer-projects", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
     try {
       const { customerId, projectId } = req.body;
-      
+
       if (!customerId || !projectId) {
         return res.status(400).json({ message: "Customer ID and Project ID are required" });
       }
-      
+
       const customerProjectData = insertCustomerProjectSchema.parse({
         customerId,
         projectId
       });
-      
+
       const customerProject = await storage.createCustomerProject(customerProjectData);
       res.status(201).json(customerProject);
     } catch (error) {
@@ -6307,24 +6354,24 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(400).json({ message: "Invalid customer-project data" });
     }
   });
-  
+
   apiRouter.delete("/customer-projects/:id", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      
+
       // Delete customer-project association
       const isDeleted = await storage.deleteCustomerProject(id);
       if (!isDeleted) {
         return res.status(404).json({ message: "Customer-project association not found" });
       }
-      
+
       res.json({ message: "Customer-project association deleted successfully" });
     } catch (error) {
       console.error("Delete customer-project error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // TimeSheet Folder routes
   apiRouter.get("/timesheet-folders", isAuthenticated, async (req, res) => {
     try {
@@ -6340,16 +6387,16 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const folderId = parseInt(req.params.id);
       const folder = await storage.getTimeSheetFolder(folderId);
-      
+
       if (!folder) {
         return res.status(404).json({ message: "Folder not found" });
       }
-      
+
       // Users can only access their own folders
       if (folder.userId !== req.session.userId && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "You don't have permission to access this folder" });
       }
-      
+
       res.json(folder);
     } catch (error) {
       console.error("Get timesheet folder error:", error);
@@ -6361,16 +6408,16 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const folderId = parseInt(req.params.id);
       const folder = await storage.getTimeSheetFolder(folderId);
-      
+
       if (!folder) {
         return res.status(404).json({ message: "Folder not found" });
       }
-      
+
       // Users can only access their own folders
       if (folder.userId !== req.session.userId && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "You don't have permission to access this folder" });
       }
-      
+
       const timesheets = await storage.getTimeSheetsByFolder(folderId);
       res.json(timesheets);
     } catch (error) {
@@ -6382,32 +6429,32 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/timesheet-folders", isAuthenticated, async (req, res) => {
     try {
       const folderData = insertTimeSheetFolderSchema.parse(req.body);
-      
+
       // Users can only create folders for themselves
       if (folderData.userId !== req.session.userId && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "You can only create folders for yourself" });
       }
-      
+
       // If parentId is provided, verify it exists and belongs to the user
       if (folderData.parentId) {
         const parentFolder = await storage.getTimeSheetFolder(folderData.parentId);
         if (!parentFolder) {
           return res.status(404).json({ message: "Parent folder not found" });
         }
-        
+
         if (parentFolder.userId !== folderData.userId) {
           return res.status(403).json({ message: "Parent folder doesn't belong to this user" });
         }
-        
+
         // Update path based on parent's path
         folderData.path = `${parentFolder.path}/${folderData.name}`;
       } else {
         // Root folder
         folderData.path = `/${folderData.name}`;
       }
-      
+
       const folder = await storage.createTimeSheetFolder(folderData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -6419,7 +6466,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           path: folder.path
         }
       });
-      
+
       res.status(201).json(folder);
     } catch (error) {
       console.error("Create timesheet folder error:", error);
@@ -6431,11 +6478,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const folderId = parseInt(req.params.id);
       const folder = await storage.getTimeSheetFolder(folderId);
-      
+
       if (!folder) {
         return res.status(404).json({ message: "Folder not found" });
       }
-      
+
       // Users can only update their own folders
       if (folder.userId !== req.session.userId && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "You can only update your own folders" });
@@ -6443,17 +6490,17 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
       const { name, parentId } = req.body;
       const updateData: Partial<TimeSheetFolder> = {};
-      
+
       if (name) updateData.name = name;
-      
+
       // If changing parent folder, update the path
       if (parentId !== undefined) {
         if (parentId === folderId) {
           return res.status(400).json({ message: "A folder cannot be its own parent" });
         }
-        
+
         updateData.parentId = parentId;
-        
+
         // If moving to root level
         if (parentId === null) {
           updateData.path = `/${name || folder.name}`;
@@ -6463,11 +6510,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           if (!parentFolder) {
             return res.status(404).json({ message: "Parent folder not found" });
           }
-          
+
           if (parentFolder.userId !== folder.userId) {
             return res.status(403).json({ message: "Parent folder doesn't belong to this user" });
           }
-          
+
           updateData.path = `${parentFolder.path}/${name || folder.name}`;
         }
       } else if (name) {
@@ -6481,9 +6528,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           updateData.path = `/${name}`;
         }
       }
-      
+
       const updatedFolder = await storage.updateTimeSheetFolder(folderId, updateData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -6495,7 +6542,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           path: updatedFolder!.path
         }
       });
-      
+
       res.json(updatedFolder);
     } catch (error) {
       console.error("Update timesheet folder error:", error);
@@ -6507,19 +6554,19 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const folderId = parseInt(req.params.id);
       const folder = await storage.getTimeSheetFolder(folderId);
-      
+
       if (!folder) {
         return res.status(404).json({ message: "Folder not found" });
       }
-      
+
       // Users can only delete their own folders
       if (folder.userId !== req.session.userId && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "You can only delete your own folders" });
       }
-      
+
       // Delete the folder (this will also delete all subfolders and unassign timesheets)
       await storage.deleteTimeSheetFolder(folderId);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -6531,7 +6578,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           path: folder.path
         }
       });
-      
+
       res.json({ message: "Folder deleted successfully" });
     } catch (error) {
       console.error("Delete timesheet folder error:", error);
@@ -6544,7 +6591,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const { projectId, userId } = req.query;
       let timeSheets;
-      
+
       if (projectId && userId) {
         timeSheets = await storage.getTimeSheets(parseInt(projectId as string), parseInt(userId as string));
       } else if (projectId) {
@@ -6559,7 +6606,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           timeSheets = await storage.getUserTimeSheets(req.session.userId!);
         }
       }
-      
+
       res.json(timeSheets);
     } catch (error) {
       console.error("Get timesheets error:", error);
@@ -6571,22 +6618,22 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const timeSheetId = parseInt(req.params.id);
       const timeSheet = await storage.getTimeSheet(timeSheetId);
-      
+
       if (!timeSheet) {
         return res.status(404).json({ message: "TimeSheet not found" });
       }
-      
-      // Check permissions - users can only view their own timesheets unless they're admin or a project manager
+
+      // Check permissions - users can only view their own timesheets unless they're an admin or a project manager
       if (timeSheet.userId !== req.session.userId && req.session.userRole !== "Admin") {
         // Check if user is a project manager for this project
         const isProjectManager = await storage.getProjectMembers(timeSheet.projectId)
           .then(members => members.some(m => m.userId === req.session.userId && m.role === "Admin"));
-        
+
         if (!isProjectManager) {
           return res.status(403).json({ message: "You don't have permission to view this timesheet" });
         }
       }
-      
+
       res.json(timeSheet);
     } catch (error) {
       console.error("Get timesheet error:", error);
@@ -6597,7 +6644,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/timesheets", isAuthenticated, async (req, res) => {
     try {
       logger.info(`Creating timesheet - Request body: ${JSON.stringify(req.body, null, 2)}`);
-      
+
       // Input validation debug logging
       console.log('Timesheet creation - Raw data:', {
         projectId: req.body.projectId,
@@ -6607,73 +6654,73 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         customerId: req.body.customerId,
         customerType: typeof req.body.customerId
       });
-      
+
       // Pre-process date fields before validation
       const processedData = {
         ...req.body,
         // Ensure hours is a reasonable number
         hours: typeof req.body.hours === 'number' ? Math.min(req.body.hours, 24) : req.body.hours
       };
-      
+
       // Handle IDs explicitly
       if (req.body.projectId !== undefined) {
         // Make sure projectId is a number
         const rawProjectId = req.body.projectId;
         const projectIdAsNumber = Number(rawProjectId);
-        
+
         if (isNaN(projectIdAsNumber) || projectIdAsNumber <= 0) {
           console.error(`Invalid projectId: ${rawProjectId} (${typeof rawProjectId})`);
           return res.status(400).json({ message: "Project ID must be a valid positive number" });
         }
-        
+
         processedData.projectId = projectIdAsNumber;
       } else {
         console.error('Missing required projectId in request');
         return res.status(400).json({ message: "Project ID is required" });
       }
-      
+
       // Handle folderId
       if (req.body.folderId !== undefined) {
         // Make sure folderId is a number
         const rawFolderId = req.body.folderId;
         const folderIdAsNumber = Number(rawFolderId);
-        
+
         if (isNaN(folderIdAsNumber) || folderIdAsNumber <= 0) {
           console.error(`Invalid folderId: ${rawFolderId} (${typeof rawFolderId})`);
           return res.status(400).json({ message: "Folder ID must be a valid positive number" });
         }
-        
+
         processedData.folderId = folderIdAsNumber;
       }
-      
+
       // Explicitly convert date fields before validation
       if (req.body.workDate && typeof req.body.workDate === 'string') {
         processedData.workDate = new Date(req.body.workDate);
       }
-      
+
       if (req.body.startTime && typeof req.body.startTime === 'string') {
         processedData.startTime = new Date(req.body.startTime);
       }
-      
+
       if (req.body.endTime && typeof req.body.endTime === 'string') {
         processedData.endTime = new Date(req.body.endTime);
       }
-      
+
       logger.info(`Processed timesheet data: ${JSON.stringify(processedData, null, 2)}`);
-      
+
       // Now parse with schema validation
       let timeSheetData;
       let project;
-      
+
       try {
         timeSheetData = insertTimeSheetSchema.parse(processedData);
         console.log('Validated timesheet data:', JSON.stringify(timeSheetData, null, 2));
-        
+
         // Users can only create timesheets for themselves
         if (timeSheetData.userId !== req.session.userId && req.session.userRole !== "Admin") {
           return res.status(403).json({ message: "You can only create timesheets for yourself" });
         }
-        
+
         // Handle project ID validation - it could be a number (ID) or string (name)
         if (typeof timeSheetData.projectId === 'number') {
           // If it's a numeric ID, verify the project exists
@@ -6700,27 +6747,27 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           originalData: processedData
         });
       }
-      
+
       // Check if user is a member of the project
       const isProjectMember = await storage.getProjectMembers(project.id)
         .then(members => members.some(m => m.userId === req.session.userId));
-      
+
       if (!isProjectMember && project.createdById !== req.session.userId && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "You must be a member of the project to log time" });
       }
-      
+
       // If folder ID is provided, verify it exists and belongs to the user
       if (timeSheetData.folderId) {
         const folder = await storage.getTimeSheetFolder(timeSheetData.folderId);
         if (!folder) {
           return res.status(404).json({ message: "Folder not found" });
         }
-        
+
         if (folder.userId !== timeSheetData.userId) {
           return res.status(403).json({ message: "The folder doesn't belong to this user" });
         }
       }
-      
+
       // Set default times if missing (handle nulls)
       if (!timeSheetData.startTime) {
         timeSheetData.startTime = "09:00";
@@ -6728,12 +6775,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       if (!timeSheetData.endTime) {
         timeSheetData.endTime = "17:00";
       }
-      
+
       // Calculate hours if not provided
       if (!timeSheetData.hours) {
         let startHours = 9, startMinutes = 0;
         let endHours = 17, endMinutes = 0;
-        
+
         // Parse time strings
         if (typeof timeSheetData.startTime === 'string') {
           const timeMatch = timeSheetData.startTime.match(/^(\d+):(\d+)$/);
@@ -6745,7 +6792,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           startHours = timeSheetData.startTime.getHours();
           startMinutes = timeSheetData.startTime.getMinutes();
         }
-        
+
         if (typeof timeSheetData.endTime === 'string') {
           const timeMatch = timeSheetData.endTime.match(/^(\d+):(\d+)$/);
           if (timeMatch) {
@@ -6756,23 +6803,23 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           endHours = timeSheetData.endTime.getHours();
           endMinutes = timeSheetData.endTime.getMinutes();
         }
-        
+
         // Calculate duration in hours
         let totalStartMinutes = startHours * 60 + startMinutes;
         let totalEndMinutes = endHours * 60 + endMinutes;
-        
+
         // Handle end time being earlier than start time (next day)
         if (totalEndMinutes < totalStartMinutes) {
           totalEndMinutes += 24 * 60; // Add a day worth of minutes
         }
-        
+
         // Calculate difference in hours
         const diffHours = (totalEndMinutes - totalStartMinutes) / 60;
         timeSheetData.hours = Math.max(0, Math.round(diffHours * 10) / 10); // Round to nearest 0.1 hour
       }
-      
+
       const timeSheet = await storage.createTimeSheet(timeSheetData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -6785,12 +6832,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           date: timeSheet.workDate,
         }
       });
-      
+
       res.status(201).json(timeSheet);
     } catch (error) {
       console.error("Create timesheet error:", JSON.stringify(error, null, 2));
       let errorMessage = "Invalid timesheet data";
-      
       // If it's a Zod validation error, provide more details
       if (error && typeof error === 'object' && 'issues' in error) {
         const issues = (error as any).issues;
@@ -6798,7 +6844,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           errorMessage = `Validation error: ${issues[0].message}`;
         }
       }
-      
+
       res.status(400).json({ message: errorMessage });
     }
   });
@@ -6807,7 +6853,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const timeSheetId = parseInt(req.params.id);
       const timeSheet = await storage.getTimeSheet(timeSheetId);
-      
+
       if (!timeSheet) {
         return res.status(404).json({ message: "TimeSheet not found" });
       }
@@ -6816,15 +6862,15 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       if (req.body.status && req.body.status !== timeSheet.status && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "Only admins can change timesheet status" });
       }
-      
+
       // Pre-process the request body
       const processedBody = {...req.body};
-      
+
       // Handle status change specifically for approval
       if (processedBody.status === "Approved") {
         processedBody.approvalDate = new Date().toISOString();
         processedBody.approvedById = req.session.userId;
-        
+
         // Ensure we keep existing data
         processedBody.workDate = timeSheet.workDate;
         processedBody.startTime = timeSheet.startTime;
@@ -6834,38 +6880,38 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         processedBody.userId = timeSheet.userId;
         processedBody.projectId = timeSheet.projectId;
       }
-      
+
       if (processedBody.hours !== undefined) {
         processedBody.hours = typeof processedBody.hours === 'number' ? Math.min(processedBody.hours, 24) : processedBody.hours;
       }
-      
+
       if (req.body.workDate && typeof req.body.workDate === 'string') {
         processedBody.workDate = new Date(req.body.workDate);
       }
-      
+
       // Enhanced time processing for reliable storage and display
       if (req.body.startTime && typeof req.body.startTime === 'string') {
         // Log for debugging
         console.log('[SERVER] Processing startTime:', req.body.startTime);
-        
+
         // Strip extra whitespace and convert to uppercase for consistent processing
         const cleanTime = req.body.startTime.trim().toUpperCase();
-        
+
         // Check if time already has AM/PM designation
         const timeMatch = cleanTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
         if (timeMatch) {
           // Format consistently with properly capitalized AM/PM with space
           const [_, hours, minutes, ampm] = timeMatch;
-          processedBody.startTime = `${hours}:${minutes} ${ampm.toUpperCase()}`;
+          processedBody.startTime = `${hours}:${minutes} ${ampm}`;
         } else {
           // If no AM/PM provided, try to add it based on 24-hour interpretation
           try {
             const [hours, minutes] = cleanTime.split(':');
             if (!hours || !minutes) throw new Error('Invalid time format');
-            
+
             const hour = parseInt(hours, 10);
             if (isNaN(hour)) throw new Error('Invalid hour');
-            
+
             const ampm = hour >= 12 ? 'PM' : 'AM';
             processedBody.startTime = `${hours}:${minutes} ${ampm}`;
           } catch (e) {
@@ -6874,17 +6920,17 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             processedBody.startTime = "09:00 AM";
           }
         }
-        
+
         console.log('[SERVER] Processed startTime:', processedBody.startTime);
       }
-      
+
       if (req.body.endTime && typeof req.body.endTime === 'string') {
         // Log for debugging
         console.log('[SERVER] Processing endTime:', req.body.endTime);
-        
+
         // Strip extra whitespace and convert to uppercase for consistent processing
         const cleanTime = req.body.endTime.trim().toUpperCase();
-        
+
         // Check if time already has AM/PM designation
         const timeMatch = cleanTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
         if (timeMatch) {
@@ -6896,10 +6942,10 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           try {
             const [hours, minutes] = cleanTime.split(':');
             if (!hours || !minutes) throw new Error('Invalid time format');
-            
+
             const hour = parseInt(hours, 10);
             if (isNaN(hour)) throw new Error('Invalid hour');
-            
+
             const ampm = hour >= 12 ? 'PM' : 'AM';
             processedBody.endTime = `${hours}:${minutes} ${ampm}`;
           } catch (e) {
@@ -6908,25 +6954,25 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             processedBody.endTime = "05:00 PM";
           }
         }
-        
+
         console.log('[SERVER] Processed endTime:', processedBody.endTime);
       }
-      
+
       // Use processed body for updates
       req.body = processedBody;
-      
+
       // Users can only update their own timesheets unless they're an admin
       if (timeSheet.userId !== req.session.userId && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "You can only update your own timesheets" });
       }
-      
+
       // Allow admins to edit any timesheet, others can only edit pending ones
       if (timeSheet.status !== "Pending" && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "Only admins can edit approved or rejected timesheets" });
       }
-      
+
       const { description, workDate, startTime, endTime, hours, projectId, moduleId, testCaseId, bugId, folderId, status, tags } = req.body;
-      
+
       const updateData: any = {};
       if (description !== undefined) updateData.description = description;
       if (workDate !== undefined) updateData.workDate = workDate;
@@ -6955,24 +7001,24 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       if (bugId !== undefined) updateData.bugId = bugId;
       if (folderId !== undefined) updateData.folderId = folderId;
       if (status !== undefined) updateData.status = status;
-      
+
       // If folder ID is provided, verify it exists and belongs to the user
       if (folderId !== undefined && folderId !== null) {
         const folder = await storage.getTimeSheetFolder(folderId);
         if (!folder) {
           return res.status(404).json({ message: "Folder not found" });
         }
-        
+
         if (folder.userId !== timeSheet.userId) {
           return res.status(403).json({ message: "The folder doesn't belong to this user" });
         }
       }
-      
+
       // Recalculate hours if start/end time changed but hours didn't
       if ((startTime || endTime) && hours === undefined) {
         let startHours = 9, startMinutes = 0;
         let endHours = 17, endMinutes = 0;
-        
+
         // Parse time for start time (either from update data or existing timesheet)
         if (startTime) {
           if (typeof startTime === 'string') {
@@ -6998,7 +7044,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             startMinutes = timeSheet.startTime.getMinutes();
           }
         }
-        
+
         // Parse time for end time (either from update data or existing timesheet)
         if (endTime) {
           if (typeof endTime === 'string') {
@@ -7024,23 +7070,23 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             endMinutes = timeSheet.endTime.getMinutes();
           }
         }
-        
+
         // Calculate duration in hours
         let totalStartMinutes = startHours * 60 + startMinutes;
         let totalEndMinutes = endHours * 60 + endMinutes;
-        
+
         // Handle end time being earlier than start time (next day)
         if (totalEndMinutes < totalStartMinutes) {
           totalEndMinutes += 24 * 60; // Add a day worth of minutes
         }
-        
+
         // Calculate difference in hours
         const diffHours = (totalEndMinutes - totalStartMinutes) / 60;
         updateData.hours = Math.max(0, Math.round(diffHours * 10) / 10); // Round to nearest 0.1 hour
       }
-      
+
       const updatedTimeSheet = await storage.updateTimeSheet(timeSheetId, updateData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7053,13 +7099,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           date: updatedTimeSheet!.workDate,
         }
       });
-      
+
       res.json(updatedTimeSheet);
     } catch (error) {
       console.error("Update timesheet error:", JSON.stringify(error, null, 2));
       let errorMessage = "Server error";
       let statusCode = 500;
-      
+
       // If it's a Zod validation error, provide more details
       if (error && typeof error === 'object' && 'issues' in error) {
         const issues = (error as any).issues;
@@ -7068,7 +7114,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           statusCode = 400;
         }
       }
-      
+
       res.status(statusCode).json({ message: errorMessage });
     }
   });
@@ -7077,18 +7123,18 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const timeSheetId = parseInt(req.params.id);
       const timeSheet = await storage.getTimeSheet(timeSheetId);
-      
+
       if (!timeSheet) {
         return res.status(404).json({ message: "TimeSheet not found" });
       }
-      
+
       // Don't approve already approved/rejected timesheets
       if (timeSheet.status !== "Pending") {
         return res.status(400).json({ message: `TimeSheet already ${timeSheet.status.toLowerCase()}` });
       }
-      
+
       const approvedTimeSheet = await storage.approveTimeSheet(timeSheetId, req.session.userId!);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7101,7 +7147,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           date: timeSheet.workDate,
         }
       });
-      
+
       res.json(approvedTimeSheet);
     } catch (error) {
       console.error("Approve timesheet error:", error);
@@ -7113,24 +7159,24 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const timeSheetId = parseInt(req.params.id);
       const { reason } = req.body;
-      
+
       if (!reason) {
         return res.status(400).json({ message: "Reason for rejection is required" });
       }
-      
+
       const timeSheet = await storage.getTimeSheet(timeSheetId);
-      
+
       if (!timeSheet) {
         return res.status(404).json({ message: "TimeSheet not found" });
       }
-      
+
       // Don't reject already approved/rejected timesheets
       if (timeSheet.status !== "Pending") {
         return res.status(400).json({ message: `TimeSheet already ${timeSheet.status.toLowerCase()}` });
       }
-      
+
       const rejectedTimeSheet = await storage.rejectTimeSheet(timeSheetId, req.session.userId!, reason);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7144,7 +7190,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           reason: reason,
         }
       });
-      
+
       res.json(rejectedTimeSheet);
     } catch (error) {
       console.error("Reject timesheet error:", error);
@@ -7156,24 +7202,24 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const timeSheetId = parseInt(req.params.id);
       const timeSheet = await storage.getTimeSheet(timeSheetId);
-      
+
       if (!timeSheet) {
         return res.status(404).json({ message: "TimeSheet not found" });
       }
-      
+
       // Users can only delete their own timesheets unless they're an admin
       if (timeSheet.userId !== req.session.userId && req.session.userRole !== "Admin") {
         return res.status(403).json({ message: "You can only delete your own timesheets" });
       }
-      
+
       // Don't allow deleting approved timesheets (unless admin)
       if (timeSheet.status === "Approved" && req.session.userRole !== "Admin") {
         return res.status(400).json({ message: "Cannot delete an approved timesheet" });
       }
-      
+
       // Delete the timesheet
       await storage.deleteTimeSheet(timeSheetId);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7186,7 +7232,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           date: timeSheet.workDate,
         }
       });
-      
+
       res.json({ message: "TimeSheet deleted successfully" });
     } catch (error) {
       console.error("Delete timesheet error:", error);
@@ -7194,7 +7240,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
-  
+
   /*
       console.error("Get automation scripts error:", error);
       res.status(500).json({ message: "Server error" });
@@ -7205,11 +7251,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const scriptId = parseInt(req.params.id);
       const script = await storage.getAutomationScript(scriptId);
-      
+
       if (!script) {
         return res.status(404).json({ message: "Automation script not found" });
       }
-      
+
       res.json(script);
     } catch (error) {
       console.error("Get automation script error:", error);
@@ -7221,9 +7267,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const scriptData = insertAutomationScriptSchema.parse(req.body);
       scriptData.createdById = req.session.userId!;
-      
+
       const script = await storage.createAutomationScript(scriptData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7236,7 +7282,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           projectId: script.projectId
         }
       });
-      
+
       res.status(201).json(script);
     } catch (error) {
       console.error("Create automation script error:", error);
@@ -7248,16 +7294,16 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const scriptId = parseInt(req.params.id);
       const script = await storage.getAutomationScript(scriptId);
-      
+
       if (!script) {
         return res.status(404).json({ message: "Automation script not found" });
       }
-      
+
       const updateData = insertAutomationScriptSchema.partial().parse(req.body);
       updateData.updatedById = req.session.userId!;
-      
+
       const updatedScript = await storage.updateAutomationScript(scriptId, updateData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7269,7 +7315,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           updates: Object.keys(updateData)
         }
       });
-      
+
       res.json(updatedScript);
     } catch (error) {
       console.error("Update automation script error:", error);
@@ -7281,13 +7327,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const scriptId = parseInt(req.params.id);
       const script = await storage.getAutomationScript(scriptId);
-      
+
       if (!script) {
         return res.status(404).json({ message: "Automation script not found" });
       }
-      
+
       await storage.deleteAutomationScript(scriptId);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7299,7 +7345,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           type: script.type
         }
       });
-      
+
       res.json({ message: "Automation script deleted successfully" });
     } catch (error) {
       console.error("Delete automation script error:", error);
@@ -7323,11 +7369,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const runId = parseInt(req.params.id);
       const run = await storage.getAutomationRun(runId);
-      
+
       if (!run) {
         return res.status(404).json({ message: "Automation run not found" });
       }
-      
+
       res.json(run);
     } catch (error) {
       console.error("Get automation run error:", error);
@@ -7340,11 +7386,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const scriptId = parseInt(req.params.id);
       const script = await storage.getAutomationScript(scriptId);
-      
+
       if (!script) {
         return res.status(404).json({ message: "Automation script not found" });
       }
-      
+
       const runData = {
         scriptId,
         status: "Running" as const,
@@ -7353,9 +7399,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         environment: req.body.environment,
         browser: req.body.browser
       };
-      
+
       const run = await storage.createAutomationRun(runData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7367,7 +7413,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           runId: run.id
         }
       });
-      
+
       // In a real implementation, this would trigger the actual execution
       // For simulation purposes, update the run after a delay
       setTimeout(async () => {
@@ -7377,7 +7423,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           const endTime = new Date();
           const duration = Math.floor((endTime.getTime() - run.startTime.getTime()) / 1000);
           const randomStatus = statuses[Math.floor(Math.random() * statuses.length)] as 'Passed' | 'Failed';
-          
+
           await storage.updateAutomationRun(run.id, {
             status: randomStatus,
             endTime,
@@ -7385,7 +7431,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             logs: `Test execution completed with status: ${randomStatus}`,
             errorMessage: randomStatus === 'Failed' ? 'Simulated test failure' : undefined,
           });
-          
+
           // Update the script's last run information
           await storage.updateAutomationScript(scriptId, {
             lastRunStatus: randomStatus,
@@ -7396,7 +7442,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           console.error('Error in delayed test execution update:', error);
         }
       }, 5000); // Simulate 5 second test run
-      
+
       res.status(202).json({
         message: "Script execution started",
         runId: run.id
@@ -7422,11 +7468,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const scheduleId = parseInt(req.params.id);
       const schedule = await storage.getAutomationSchedule(scheduleId);
-      
+
       if (!schedule) {
         return res.status(404).json({ message: "Automation schedule not found" });
       }
-      
+
       res.json(schedule);
     } catch (error) {
       console.error("Get automation schedule error:", error);
@@ -7438,9 +7484,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const scheduleData = insertAutomationScheduleSchema.parse(req.body);
       scheduleData.createdById = req.session.userId!;
-      
+
       const schedule = await storage.createAutomationSchedule(scheduleData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7452,7 +7498,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           scriptCount: (schedule.scriptIds as number[]).length
         }
       });
-      
+
       res.status(201).json(schedule);
     } catch (error) {
       console.error("Create automation schedule error:", error);
@@ -7464,16 +7510,16 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const scheduleId = parseInt(req.params.id);
       const schedule = await storage.getAutomationSchedule(scheduleId);
-      
+
       if (!schedule) {
         return res.status(404).json({ message: "Automation schedule not found" });
       }
-      
+
       const updateData = insertAutomationScheduleSchema.partial().parse(req.body);
       updateData.updatedById = req.session.userId!;
-      
+
       const updatedSchedule = await storage.updateAutomationSchedule(scheduleId, updateData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7485,7 +7531,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           updates: Object.keys(updateData)
         }
       });
-      
+
       res.json(updatedSchedule);
     } catch (error) {
       console.error("Update automation schedule error:", error);
@@ -7497,13 +7543,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const scheduleId = parseInt(req.params.id);
       const schedule = await storage.getAutomationSchedule(scheduleId);
-      
+
       if (!schedule) {
         return res.status(404).json({ message: "Automation schedule not found" });
       }
-      
+
       await storage.deleteAutomationSchedule(scheduleId);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7514,7 +7560,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           name: schedule.name
         }
       });
-      
+
       res.json({ message: "Automation schedule deleted successfully" });
     } catch (error) {
       console.error("Delete automation schedule error:", error);
@@ -7537,11 +7583,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const environmentId = parseInt(req.params.id);
       const environment = await storage.getAutomationEnvironment(environmentId);
-      
+
       if (!environment) {
         return res.status(404).json({ message: "Automation environment not found" });
       }
-      
+
       res.json(environment);
     } catch (error) {
       console.error("Get automation environment error:", error);
@@ -7553,9 +7599,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const environmentData = insertAutomationEnvironmentSchema.parse(req.body);
       environmentData.createdById = req.session.userId!;
-      
+
       const environment = await storage.createAutomationEnvironment(environmentData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7568,7 +7614,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           url: environment.url
         }
       });
-      
+
       res.status(201).json(environment);
     } catch (error) {
       console.error("Create automation environment error:", error);
@@ -7580,15 +7626,15 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const environmentId = parseInt(req.params.id);
       const environment = await storage.getAutomationEnvironment(environmentId);
-      
+
       if (!environment) {
         return res.status(404).json({ message: "Automation environment not found" });
       }
-      
+
       const updateData = insertAutomationEnvironmentSchema.partial().parse(req.body);
-      
+
       const updatedEnvironment = await storage.updateAutomationEnvironment(environmentId, updateData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7600,7 +7646,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           updates: Object.keys(updateData)
         }
       });
-      
+
       res.json(updatedEnvironment);
     } catch (error) {
       console.error("Update automation environment error:", error);
@@ -7612,13 +7658,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const environmentId = parseInt(req.params.id);
       const environment = await storage.getAutomationEnvironment(environmentId);
-      
+
       if (!environment) {
         return res.status(404).json({ message: "Automation environment not found" });
       }
-      
+
       await storage.deleteAutomationEnvironment(environmentId);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7630,7 +7676,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           type: environment.type
         }
       });
-      
+
       res.json({ message: "Automation environment deleted successfully" });
     } catch (error) {
       console.error("Delete automation environment error:", error);
@@ -7647,7 +7693,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.get("/sprints", isAuthenticated, async (req, res) => {
     try {
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
-      
+
       const sprints = await storage.getSprints(projectId);
       res.json(sprints);
     } catch (error) {
@@ -7660,11 +7706,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const sprintId = parseInt(req.params.id);
       const sprint = await storage.getSprint(sprintId);
-      
+
       if (!sprint) {
         return res.status(404).json({ message: "Sprint not found" });
       }
-      
+
       res.json(sprint);
     } catch (error) {
       console.error("Get sprint error:", error);
@@ -7676,9 +7722,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const sprintData = insertSprintSchema.parse(req.body);
       sprintData.createdById = req.session.userId!;
-      
+
       const sprint = await storage.createSprint(sprintData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7690,7 +7736,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           projectId: sprint.projectId
         }
       });
-      
+
       // Create default columns for the sprint
       const defaultColumns = [
         { title: "Backlog", order: 0, color: "#94a3b8" },
@@ -7699,7 +7745,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         { title: "Testing", order: 3, color: "#8b5cf6" },
         { title: "Done", order: 4, color: "#22c55e" }
       ];
-      
+
       for (const column of defaultColumns) {
         await storage.createKanbanColumn({
           title: column.title,
@@ -7711,7 +7757,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           createdById: req.session.userId!
         });
       }
-      
+
       res.status(201).json(sprint);
     } catch (error) {
       console.error("Create sprint error:", error);
@@ -7723,15 +7769,15 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const sprintId = parseInt(req.params.id);
       const sprint = await storage.getSprint(sprintId);
-      
+
       if (!sprint) {
         return res.status(404).json({ message: "Sprint not found" });
       }
-      
+
       const updateData = insertSprintSchema.partial().parse(req.body);
-      
+
       const updatedSprint = await storage.updateSprint(sprintId, updateData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7743,7 +7789,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           status: updatedSprint.status
         }
       });
-      
+
       res.json(updatedSprint);
     } catch (error) {
       console.error("Update sprint error:", error);
@@ -7755,11 +7801,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const sprintId = parseInt(req.params.id);
       const sprint = await storage.getSprint(sprintId);
-      
+
       if (!sprint) {
         return res.status(404).json({ message: "Sprint not found" });
       }
-      
+
       // Check if sprint has associated kanban cards
       const cards = await storage.getKanbanCards(undefined, sprintId);
       if (cards.length > 0) {
@@ -7767,15 +7813,15 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           message: "Cannot delete sprint with associated cards. Please move or delete the cards first." 
         });
       }
-      
+
       // Delete all columns associated with this sprint
       const columns = await storage.getKanbanColumns(undefined, sprintId);
       for (const column of columns) {
         await storage.deleteKanbanColumn(column.id);
       }
-      
+
       await storage.deleteSprint(sprintId);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7786,7 +7832,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           name: sprint.name
         }
       });
-      
+
       res.json({ message: "Sprint and associated columns deleted successfully" });
     } catch (error) {
       console.error("Delete sprint error:", error);
@@ -7799,7 +7845,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
       const sprintId = req.query.sprintId ? parseInt(req.query.sprintId as string) : undefined;
-      
+
       const columns = await storage.getKanbanColumns(projectId, sprintId);
       res.json(columns);
     } catch (error) {
@@ -7812,11 +7858,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const columnId = parseInt(req.params.id);
       const column = await storage.getKanbanColumn(columnId);
-      
+
       if (!column) {
         return res.status(404).json({ message: "Kanban column not found" });
       }
-      
+
       res.json(column);
     } catch (error) {
       console.error("Get kanban column error:", error);
@@ -7828,9 +7874,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const columnData = insertKanbanColumnSchema.parse(req.body);
       columnData.createdById = req.session.userId!;
-      
+
       const column = await storage.createKanbanColumn(columnData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7843,7 +7889,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           sprintId: column.sprintId
         }
       });
-      
+
       res.status(201).json(column);
     } catch (error) {
       console.error("Create kanban column error:", error);
@@ -7855,15 +7901,15 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const columnId = parseInt(req.params.id);
       const column = await storage.getKanbanColumn(columnId);
-      
+
       if (!column) {
         return res.status(404).json({ message: "Kanban column not found" });
       }
-      
+
       const updateData = insertKanbanColumnSchema.partial().parse(req.body);
-      
+
       const updatedColumn = await storage.updateKanbanColumn(columnId, updateData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7875,7 +7921,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           order: updatedColumn.order
         }
       });
-      
+
       res.json(updatedColumn);
     } catch (error) {
       console.error("Update kanban column error:", error);
@@ -7887,11 +7933,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const columnId = parseInt(req.params.id);
       const column = await storage.getKanbanColumn(columnId);
-      
+
       if (!column) {
         return res.status(404).json({ message: "Kanban column not found" });
       }
-      
+
       // Check if column has associated cards
       const cards = await storage.getKanbanCards(column.id);
       if (cards.length > 0) {
@@ -7899,9 +7945,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           message: "Cannot delete column with associated cards. Please move or delete the cards first." 
         });
       }
-      
+
       await storage.deleteKanbanColumn(columnId);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7912,7 +7958,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           title: column.title
         }
       });
-      
+
       res.json({ message: "Kanban column deleted successfully" });
     } catch (error) {
       console.error("Delete kanban column error:", error);
@@ -7926,7 +7972,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       const columnId = req.query.columnId ? parseInt(req.query.columnId as string) : undefined;
       const sprintId = req.query.sprintId ? parseInt(req.query.sprintId as string) : undefined;
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
-      
+
       const cards = await storage.getKanbanCards(columnId, sprintId, projectId);
       res.json(cards);
     } catch (error) {
@@ -7934,7 +7980,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   });
-  
+
   // Endpoint to get sub-cards for a parent card
   apiRouter.get("/kanban/cards/sub/:parentId", isAuthenticated, async (req, res) => {
     try {
@@ -7951,11 +7997,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const cardId = parseInt(req.params.id);
       const card = await storage.getKanbanCard(cardId);
-      
+
       if (!card) {
         return res.status(404).json({ message: "Kanban card not found" });
       }
-      
+
       res.json(card);
     } catch (error) {
       console.error("Get kanban card error:", error);
@@ -7967,9 +8013,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const cardData = insertKanbanCardSchema.parse(req.body);
       cardData.createdById = req.session.userId!;
-      
+
       const card = await storage.createKanbanCard(cardData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -7982,7 +8028,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           priority: card.priority
         }
       });
-      
+
       res.status(201).json(card);
     } catch (error) {
       console.error("Create kanban card error:", error);
@@ -7994,15 +8040,15 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const cardId = parseInt(req.params.id);
       const card = await storage.getKanbanCard(cardId);
-      
+
       if (!card) {
         return res.status(404).json({ message: "Kanban card not found" });
       }
-      
+
       const updateData = insertKanbanCardSchema.partial().parse(req.body);
-      
+
       const updatedCard = await storage.updateKanbanCard(cardId, updateData);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -8014,7 +8060,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           status: `Moved to ${updatedCard.columnId !== card.columnId ? 'new column' : 'same column'}`
         }
       });
-      
+
       res.json(updatedCard);
     } catch (error) {
       console.error("Update kanban card error:", error);
@@ -8026,30 +8072,30 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const cardId = parseInt(req.params.id);
       const card = await storage.getKanbanCard(cardId);
-      
+
       if (!card) {
         return res.status(404).json({ message: "Kanban card not found" });
       }
-      
+
       const { columnId, order } = req.body;
-      
+
       if (typeof columnId !== 'number' || typeof order !== 'number') {
         return res.status(400).json({ message: "columnId and order are required" });
       }
-      
+
       // Check if the column exists
       const column = await storage.getKanbanColumn(columnId);
       if (!column) {
         return res.status(404).json({ message: "Target column not found" });
       }
-      
+
       // Update card position
       const updatedCard = await storage.updateKanbanCard(cardId, { 
         columnId, 
         order,
         updatedAt: new Date() 
       });
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -8063,7 +8109,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           newOrder: order
         }
       });
-      
+
       res.json(updatedCard);
     } catch (error) {
       console.error("Move kanban card error:", error);
@@ -8075,13 +8121,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const cardId = parseInt(req.params.id);
       const card = await storage.getKanbanCard(cardId);
-      
+
       if (!card) {
         return res.status(404).json({ message: "Kanban card not found" });
       }
-      
+
       await storage.deleteKanbanCard(cardId);
-      
+
       // Log the activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -8092,7 +8138,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           title: card.title
         }
       });
-      
+
       res.json({ message: "Kanban card deleted successfully" });
     } catch (error) {
       console.error("Delete kanban card error:", error);
@@ -8105,21 +8151,21 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const markers = await storage.getCustomMarkersByProject(projectId);
       res.json(markers);
     } catch (error) {
@@ -8131,369 +8177,27 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   // Custom Markers CRUD
   apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
     try {
-      const markerData = {
-        ...req.body,
-        createdById: req.session.userId,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      
-      const marker = await storage.createCustomMarker(markerData);
-      res.status(201).json(marker);
-    } catch (error) {
-      console.error("Create custom marker error:", error);
-      res.status(500).json({ message: "Failed to create marker" });
-    }
-  });
-
-  apiRouter.put("/custom-markers/:id", isAuthenticated, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const updateData = {
-        ...req.body,
-        updatedAt: new Date()
-      };
-      
-      const marker = await storage.updateCustomMarker(id, updateData);
-      
-      if (!marker) {
-        return res.status(404).json({ message: "Marker not found" });
-      }
-      
-      res.json(marker);
-    } catch (error) {
-      console.error("Update custom marker error:", error);
-      res.status(500).json({ message: "Failed to update marker" });
-    }
-  });
-
-  apiRouter.delete("/custom-markers/:id", isAuthenticated, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const deleted = await storage.deleteCustomMarker(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ message: "Marker not found" });
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Delete custom marker error:", error);
-      res.status(500).json({ message: "Failed to delete marker" });
-    }
-  });
-
-  // Matrix Cells CRUD
-  apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
-    try {
-      const cellData = {
-        ...req.body,
-        createdById: req.session.userId,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      
-      // Check if cell already exists, if so update it
-      const existingCell = await storage.getMatrixCell(
-        cellData.rowModuleId, 
-        cellData.colModuleId, 
-        cellData.projectId
-      );
-      
-      let cell;
-      if (existingCell) {
-        cell = await storage.updateMatrixCell(existingCell.id, cellData);
-      } else {
-        cell = await storage.createMatrixCell(cellData);
-      }
-      
-      res.status(201).json(cell);
-    } catch (error) {
-      console.error("Create/Update matrix cell error:", error);
-      res.status(500).json({ message: "Failed to update matrix cell" });
-    }
-  });
-
-  apiRouter.delete("/matrix-cells/:rowModuleId/:colModuleId/:projectId", isAuthenticated, async (req, res) => {
-    try {
-      const rowModuleId = parseInt(req.params.rowModuleId);
-      const colModuleId = parseInt(req.params.colModuleId);
-      const projectId = parseInt(req.params.projectId);
-      
-      const deleted = await storage.deleteMatrixCell(rowModuleId, colModuleId, projectId);
-      
-      if (!deleted) {
-        return res.status(404).json({ message: "Matrix cell not found" });
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Delete matrix cell error:", error);
-      res.status(500).json({ message: "Failed to delete matrix cell" });
-    }
-  });
-
-  apiRouter.post("/projects/:projectId/matrix/markers", isAuthenticated, async (req, res) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
-      const project = await storage.getProject(projectId);
-      
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-      
-      // Check if user has access to this project
-      if (req.session.userRole !== "Admin") {
-        const projectMembers = await storage.getProjectMembers(projectId);
-        const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
-        if (!isMember && project.createdById !== req.session.userId) {
-          return res.status(403).json({ message: "You don't have access to this project" });
-        }
-      }
-      
-      const markerData = insertCustomMarkerSchema.parse(req.body);
-      markerData.projectId = projectId;
-      markerData.createdById = req.session.userId!;
-      
-      const marker = await storage.createCustomMarker(markerData);
-      
-      // Log activity
-      await storage.createActivity({
-        userId: req.session.userId!,
-        action: "created",
-        entityType: "custom_marker",
-        entityId: marker.id,
-        details: { 
-          label: marker.label,
-          color: marker.color,
-          projectId
-        }
-      });
-      
-      res.status(201).json(marker);
-    } catch (error) {
-      console.error("Create custom marker error:", error);
-      res.status(400).json({ message: "Invalid custom marker data" });
-    }
-  });
-
-  apiRouter.patch("/projects/:projectId/matrix/markers/:id", isAuthenticated, async (req, res) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
-      const markerId = parseInt(req.params.id);
-      
-      const project = await storage.getProject(projectId);
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-      
-      const marker = await storage.getCustomMarker(markerId);
-      if (!marker) {
-        return res.status(404).json({ message: "Custom marker not found" });
-      }
-      
-      // Verify marker belongs to this project
-      if (marker.projectId !== projectId) {
-        return res.status(403).json({ message: "Marker does not belong to this project" });
-      }
-      
-      // Check if user has access to this project
-      if (req.session.userRole !== "Admin") {
-        const projectMembers = await storage.getProjectMembers(projectId);
-        const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
-        if (!isMember && project.createdById !== req.session.userId) {
-          return res.status(403).json({ message: "You don't have access to this project" });
-        }
-      }
-      
-      const updateData = insertCustomMarkerSchema.partial().parse(req.body);
-      // Prevent changing projectId
-      delete updateData.projectId;
-      
-      const updatedMarker = await storage.updateCustomMarker(markerId, updateData);
-      
-      // Log activity
-      await storage.createActivity({
-        userId: req.session.userId!,
-        action: "updated",
-        entityType: "custom_marker",
-        entityId: markerId,
-        details: { 
-          label: updatedMarker.label,
-          updatedFields: Object.keys(updateData).join(', ')
-        }
-      });
-      
-      res.json(updatedMarker);
-    } catch (error) {
-      console.error("Update custom marker error:", error);
-      res.status(400).json({ message: "Invalid custom marker data" });
-    }
-  });
-
-  apiRouter.delete("/projects/:projectId/matrix/markers/:id", isAuthenticated, async (req, res) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
-      const markerId = parseInt(req.params.id);
-      
-      const project = await storage.getProject(projectId);
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-      
-      const marker = await storage.getCustomMarker(markerId);
-      if (!marker) {
-        return res.status(404).json({ message: "Custom marker not found" });
-      }
-      
-      // Verify marker belongs to this project
-      if (marker.projectId !== projectId) {
-        return res.status(403).json({ message: "Marker does not belong to this project" });
-      }
-      
-      // Check if user has access to this project
-      if (req.session.userRole !== "Admin") {
-        const projectMembers = await storage.getProjectMembers(projectId);
-        const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
-        if (!isMember && project.createdById !== req.session.userId) {
-          return res.status(403).json({ message: "You don't have access to this project" });
-        }
-      }
-      
-      const success = await storage.deleteCustomMarker(markerId);
-      
-      if (success) {
-        // Log activity
-        await storage.createActivity({
-          userId: req.session.userId!,
-          action: "deleted",
-          entityType: "custom_marker",
-          entityId: markerId,
-          details: { 
-            label: marker.label
-          }
-        });
-      }
-      
-      res.json({ success });
-    } catch (error) {
-      console.error("Delete custom marker error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  // Traceability Matrix - Cells
-  apiRouter.get("/projects/:projectId/matrix/cells", isAuthenticated, async (req, res) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
-      const project = await storage.getProject(projectId);
-      
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-      
-      // Check if user has access to this project
-      if (req.session.userRole !== "Admin") {
-        const projectMembers = await storage.getProjectMembers(projectId);
-        const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
-        if (!isMember && project.createdById !== req.session.userId) {
-          return res.status(403).json({ message: "You don't have access to this project" });
-        }
-      }
-      
-      // Check if storage method exists
-      if (typeof storage.getMatrixCellsByProject === 'function') {
-        const cells = await storage.getMatrixCellsByProject(projectId);
-        res.json(cells);
-      } else {
-        // Return empty array if method doesn't exist
-        res.json([]);
-      }
-    } catch (error) {
-      console.error("Get matrix cells error:", error);
-      // Return empty array instead of error to prevent crashes
-      res.json([]);
-    }
-  });
-
-  // Create/Update Matrix Cell
-  apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
-    try {
-      const { rowModuleId, colModuleId, projectId, value, createdById } = req.body;
-      
-      // Check if user has access to this project
-      const project = await storage.getProject(projectId);
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-      
-      if (req.session.userRole !== "Admin") {
-        const projectMembers = await storage.getProjectMembers(projectId);
-        const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
-        if (!isMember && project.createdById !== req.session.userId) {
-          return res.status(403).json({ message: "You don't have access to this project" });
-        }
-      }
-      
-      // Check if storage method exists
-      if (typeof storage.createOrUpdateMatrixCell === 'function') {
-        const cell = await storage.createOrUpdateMatrixCell({
-          rowModuleId,
-          colModuleId,
-          projectId,
-          value,
-          createdById: req.session.userId || createdById
-        });
-        res.json(cell);
-      } else {
-        // Return a mock response if method doesn't exist
-        const mockCell = {
-          id: `cell-${Date.now()}`,
-          rowModuleId,
-          colModuleId,
-          projectId,
-          value,
-          createdById: req.session.userId || createdById,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        res.json(mockCell);
-      }
-    } catch (error) {
-      console.error("Create/update matrix cell error:", error);
-      res.status(500).json({ message: "Failed to create/update matrix cell" });
-    }
-  });
-
-  // Custom Markers CRUD
-  apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
-    try {
       const { label, color, projectId } = req.body;
-      
+
       if (!label || !color || !projectId) {
         return res.status(400).json({ message: "Label, color, and projectId are required" });
       }
-      
+
       // Check if user has access to this project
       const project = await storage.getProject(projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const markerData = {
         markerId: `marker-${Date.now()}`,
         label,
@@ -8502,7 +8206,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         projectId: parseInt(projectId),
         createdById: req.session.userId
       };
-      
+
       const marker = await storage.createCustomMarker(markerData);
       res.status(201).json(marker);
     } catch (error) {
@@ -8513,9 +8217,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
   apiRouter.put("/custom-markers/:id", isAuthenticated, async (req, res) => {
     try {
-      const id = req.params.id;
+      const id = parseInt(req.params.id);
       const { label, color, type } = req.body;
-      
+
       // Check if storage method exists
       if (typeof storage.updateCustomMarker === 'function') {
         const marker = await storage.updateCustomMarker(id, {
@@ -8544,7 +8248,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.delete("/custom-markers/:id", isAuthenticated, async (req, res) => {
     try {
       const id = req.params.id;
-      
+
       // Check if storage method exists
       if (typeof storage.deleteCustomMarker === 'function') {
         await storage.deleteCustomMarker(id);
@@ -8559,31 +8263,81 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Matrix Cells CRUD
+  apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
+    try {
+      const cellData = {
+        ...req.body,
+        createdById: req.session.userId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Check if cell already exists, if so update it
+      const existingCell = await storage.getMatrixCell(
+        cellData.rowModuleId, 
+        cellData.colModuleId, 
+        cellData.projectId
+      );
+
+      let cell;
+      if (existingCell) {
+        cell = await storage.updateMatrixCell(existingCell.id, cellData);
+      } else {
+        cell = await storage.createMatrixCell(cellData);
+      }
+
+      res.status(201).json(cell);
+    } catch (error) {
+      console.error("Create/Update matrix cell error:", error);
+      res.status(500).json({ message: "Failed to create/update matrix cell" });
+    }
+  });
+
+  apiRouter.delete("/matrix-cells/:rowModuleId/:colModuleId/:projectId", isAuthenticated, async (req, res) => {
+    try {
+      const rowModuleId = parseInt(req.params.rowModuleId);
+      const colModuleId = parseInt(req.params.colModuleId);
+      const projectId = parseInt(req.params.projectId);
+
+      const deleted = await storage.deleteMatrixCell(rowModuleId, colModuleId, projectId);
+
+      if (!deleted) {
+        return res.status(404).json({ message: "Matrix cell not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete matrix cell error:", error);
+      res.status(500).json({ message: "Failed to delete matrix cell" });
+    }
+  });
+
   apiRouter.post("/projects/:projectId/matrix/cells", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const cellData = insertMatrixCellSchema.parse(req.body);
       cellData.projectId = projectId;
       cellData.createdById = req.session.userId!;
-      
+
       const cell = await storage.upsertMatrixCell(cellData);
-      
+
       // Log activity (simplified to avoid too much logging for matrix operations)
       if (req.query.logActivity === "true") {
         await storage.createActivity({
@@ -8598,7 +8352,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           }
         });
       }
-      
+
       res.status(201).json(cell);
     } catch (error) {
       console.error("Create/update matrix cell error:", error);
@@ -8611,28 +8365,28 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       const projectId = parseInt(req.params.projectId);
       const rowModuleId = parseInt(req.query.rowModuleId as string);
       const colModuleId = parseInt(req.query.colModuleId as string);
-      
+
       if (isNaN(rowModuleId) || isNaN(colModuleId)) {
         return res.status(400).json({ message: "rowModuleId and colModuleId are required query parameters" });
       }
-      
+
       const project = await storage.getProject(projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
-        
+
         if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
-      
+
       const success = await storage.deleteMatrixCell(rowModuleId, colModuleId, projectId);
-      
+
       res.json({ success });
     } catch (error) {
       console.error("Delete matrix cell error:", error);
@@ -8640,147 +8394,124 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
-  // Traceability Matrix routes
-  apiRouter.get("/traceability/matrix/:projectId", async (req, res) => {
+  // Traceability Matrix - Custom Markers
+  apiRouter.get("/projects/:projectId/matrix/markers", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
-      const matrices = await storage.getTraceabilityMatrix(projectId);
-      res.json(matrices);
-    } catch (error) {
-      logger.error('Error fetching traceability matrices', error);
-      res.status(500).json({ message: "Failed to fetch traceability matrices" });
-    }
-  });
+      const project = await storage.getProject(projectId);
 
-  apiRouter.get("/traceability/matrix/detail/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const matrix = await storage.getTraceabilityMatrixById(id);
-      
-      if (!matrix) {
-        return res.status(404).json({ message: "Traceability matrix not found" });
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
       }
-      
-      res.json(matrix);
-    } catch (error) {
-      logger.error('Error fetching traceability matrix details', error);
-      res.status(500).json({ message: "Failed to fetch traceability matrix details" });
-    }
-  });
 
-  apiRouter.post("/traceability/matrix", async (req, res) => {
-    try {
-      const matrix = await storage.createTraceabilityMatrix(req.body);
-      res.status(201).json(matrix);
-    } catch (error) {
-      logger.error('Error creating traceability matrix', error);
-      res.status(500).json({ message: "Failed to create traceability matrix" });
-    }
-  });
+      // Check if user has access to this project
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
 
-  apiRouter.put("/traceability/matrix/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const updated = await storage.updateTraceabilityMatrix(id, req.body);
-      
-      if (!updated) {
-        return res.status(404).json({ message: "Traceability matrix not found" });
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
       }
-      
-      res.json(updated);
-    } catch (error) {
-      logger.error('Error updating traceability matrix', error);
-      res.status(500).json({ message: "Failed to update traceability matrix" });
-    }
-  });
 
-  apiRouter.delete("/traceability/matrix/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const deleted = await storage.deleteTraceabilityMatrix(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ message: "Traceability matrix not found" });
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      logger.error('Error deleting traceability matrix', error);
-      res.status(500).json({ message: "Failed to delete traceability matrix" });
-    }
-  });
-
-  // Traceability Matrix Markers routes
-  apiRouter.get("/traceability/markers/:projectId", async (req, res) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
-      const markers = await storage.getTraceabilityMarkers(projectId);
+      const markers = await storage.getCustomMarkersByProject(projectId);
       res.json(markers);
     } catch (error) {
-      logger.error('Error fetching traceability markers', error);
-      res.status(500).json({ message: "Failed to fetch traceability markers" });
+      console.error("Get custom markers error:", error);
+      res.status(500).json({ message: "Server error" });
     }
   });
 
-  apiRouter.get("/traceability/markers/detail/:id", async (req, res) => {
+  // Custom Markers CRUD
+  apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const marker = await storage.getTraceabilityMarker(id);
-      
-      if (!marker) {
-        return res.status(404).json({ message: "Traceability marker not found" });
+      const { label, color, projectId } = req.body;
+
+      if (!label || !color || !projectId) {
+        return res.status(400).json({ message: "Label, color, and projectId are required" });
       }
-      
-      res.json(marker);
-    } catch (error) {
-      logger.error('Error fetching traceability marker details', error);
-      res.status(500).json({ message: "Failed to fetch traceability marker details" });
-    }
-  });
 
-  apiRouter.post("/traceability/markers", async (req, res) => {
-    try {
-      const marker = await storage.createTraceabilityMarker(req.body);
+      // Check if user has access to this project
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const markerData = {
+        markerId: `marker-${Date.now()}`,
+        label,
+        color,
+        type: 'custom',
+        projectId: parseInt(projectId),
+        createdById: req.session.userId
+      };
+
+      const marker = await storage.createCustomMarker(markerData);
       res.status(201).json(marker);
     } catch (error) {
-      logger.error('Error creating traceability marker', error);
-      res.status(500).json({ message: "Failed to create traceability marker" });
+      console.error("Create custom marker error:", error);
+      res.status(500).json({ message: "Failed to create custom marker" });
     }
   });
 
-  apiRouter.put("/traceability/markers/:id", async (req, res) => {
+  apiRouter.put("/custom-markers/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updated = await storage.updateTraceabilityMarker(id, req.body);
-      
-      if (!updated) {
-        return res.status(404).json({ message: "Traceability marker not found" });
+      const { label, color, type } = req.body;
+
+      // Check if storage method exists
+      if (typeof storage.updateCustomMarker === 'function') {
+        const marker = await storage.updateCustomMarker(id, {
+          label,
+          color,
+          type
+        });
+        res.json(marker);
+      } else {
+        // Return a mock response if method doesn't exist
+        const mockMarker = {
+          id,
+          label,
+          color,
+          type,
+          updatedAt: new Date().toISOString()
+        };
+        res.json(mockMarker);
       }
-      
-      res.json(updated);
     } catch (error) {
-      logger.error('Error updating traceability marker', error);
-      res.status(500).json({ message: "Failed to update traceability marker" });
+      console.error("Update custom marker error:", error);
+      res.status(500).json({ message: "Failed to update custom marker" });
     }
   });
 
-  apiRouter.delete("/traceability/markers/:id", async (req, res) => {
+  apiRouter.delete("/custom-markers/:id", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const deleted = await storage.deleteTraceabilityMarker(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ message: "Traceability marker not found" });
+      const id = req.params.id;
+
+      // Check if storage method exists
+      if (typeof storage.deleteCustomMarker === 'function') {
+        await storage.deleteCustomMarker(id);
+        res.json({ success: true });
+      } else {
+        // Return success response if method doesn't exist
+        res.json({ success: true });
       }
-      
-      res.json({ success: true });
     } catch (error) {
-      logger.error('Error deleting traceability marker', error);
-      res.status(500).json({ message: "Failed to delete traceability marker" });
+      console.error("Delete custom marker error:", error);
+      res.status(500).json({ message: "Failed to delete custom marker" });
     }
   });
 
-  // Traceability Matrix Cells routes
+  // Traceability Matrix - Cells
   apiRouter.get("/traceability/cells/:matrixId", async (req, res) => {
     try {
       const matrixId = parseInt(req.params.matrixId);
@@ -8806,23 +8537,23 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const updated = await storage.updateTraceabilityMatrixCell(id, req.body);
-      
+
       if (!updated) {
         return res.status(404).json({ message: "Traceability matrix cell not found" });
       }
-      
+
       res.json(updated);
     } catch (error) {
       logger.error('Error updating traceability matrix cell', error);
       res.status(500).json({ message: "Failed to update traceability matrix cell" });
     }
   });
-  
+
   // GitHub sync from GitHub to system endpoint
   apiRouter.post("/github/sync-from-github/:projectId", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
-      
+
       if (!projectId) {
         return res.status(400).json({ message: "Project ID is required" });
       }
@@ -8861,12 +8592,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.post("/github/sync/:bugId", isAuthenticated, async (req, res) => {
     try {
       const bugId = parseInt(req.params.bugId);
-      
+
       // Validate bugId
       if (isNaN(bugId) || bugId <= 0) {
         return res.status(400).json({ message: "Invalid bug ID" });
       }
-      
+
       // Get the bug
       const bug = await storage.getBug(bugId);
       if (!bug) {
@@ -8884,12 +8615,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
       // Check if GitHub issue already exists for this bug
       const existingGithubIssue = await storage.getGitHubIssueByBugId(bugId);
-      
+
       if (existingGithubIssue) {
         try {
           // Sync existing issue status
           const syncResult = await githubService.syncIssueStatus(githubConfig, existingGithubIssue.githubIssueNumber, bugId);
-          
+
           if (syncResult.needsUpdate) {
             // Update bug status in the system
             const updatedBug = await storage.updateBug(bugId, { 
@@ -8943,15 +8674,15 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       } else {
         // Create new GitHub issue
         try {
-          const syncResult = await githubService.syncBugToGitHub(bugId);
-          
+          const syncResult = await githubService.syncBugToGitHub(bug.id);
+
           if (syncResult.created) {
             // Log activity
             await storage.createActivity({
               userId: req.session.userId!,
               action: "created GitHub issue",
               entityType: "bug",
-              entityId: bugId,
+              entityId: bug.id,
               details: { 
                 bugId: bug.bugId,
                 title: bug.title,
@@ -8991,1151 +8722,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
-  // GitHub Integration routes
-  apiRouter.get("/github/integrations", isAuthenticated, async (req, res) => {
-    try {
-      const { getGitHubIntegrations } = await import("./api/github-integrations");
-      await getGitHubIntegrations(req, res);
-    } catch (error) {
-      console.error("Get GitHub integrations error:", error);
-      res.status(500).json({ message: "Failed to fetch GitHub integrations" });
-    }
-  });
-
-  apiRouter.post("/github/integrations", isAuthenticated, async (req, res) => {
-    try {
-      const { createGitHubIntegration } = await import("./api/github-integrations");
-      await createGitHubIntegration(req, res);
-    } catch (error) {
-      console.error("Create GitHub integration error:", error);
-      res.status(500).json({ message: "Failed to create GitHub integration" });
-    }
-  });
-
-  apiRouter.put("/github/integrations/:id", isAuthenticated, async (req, res) => {
-    try {
-      const { updateGitHubIntegration } = await import("./api/github-integrations");
-      await updateGitHubIntegration(req, res);
-    } catch (error) {
-      console.error("Update GitHub integration error:", error);
-      res.status(500).json({ message: "Failed to update GitHub integration" });
-    }
-  });
-
-  apiRouter.delete("/github/integrations/:id", isAuthenticated, async (req, res) => {
-    try {
-      const { deleteGitHubIntegration } = await import("./api/github-integrations");
-      await deleteGitHubIntegration(req, res);
-    } catch (error) {
-      console.error("Delete GitHub integration error:", error);
-      res.status(500).json({ message: "Failed to delete GitHub integration" });
-    }
-  });
-
-  apiRouter.post("/github/test-connection", isAuthenticated, async (req, res) => {
-    try {
-      const { testGitHubConnection } = await import("./api/github-integrations");
-      await testGitHubConnection(req, res);
-    } catch (error) {
-      console.error("Test GitHub connection error:", error);
-      res.status(500).json({ message: "Failed to test GitHub connection" });
-    }
-  });
-
-  apiRouter.get("/github/configs", isAuthenticated, async (req, res) => {
-    try {
-      const configs = await storage.getAllGitHubConfigs();
-      
-      // Don't expose access tokens in the response
-      const safeConfigs = configs.map(({ accessToken, ...config }) => config);
-      
-      res.json(safeConfigs);
-    } catch (error) {
-      console.error("Get all GitHub configs error:", error);
-      res.status(500).json({ message: "Failed to fetch GitHub configurations" });
-    }
-  });
-
-  apiRouter.get("/github/config/:projectId", isAuthenticated, async (req, res) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
-      const config = await storage.getGitHubConfig(projectId);
-      
-      if (!config) {
-        return res.status(404).json({ message: "GitHub configuration not found" });
-      }
-      
-      // Don't expose the access token in the response
-      const { accessToken, ...safeConfig } = config;
-      res.json(safeConfig);
-    } catch (error) {
-      console.error("Get GitHub config error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  apiRouter.post("/github/config", isAuthenticated, async (req, res) => {
-    try {
-      const configData = {
-        ...req.body,
-        createdById: req.session.userId!,
-      };
-      
-      const config = await storage.createGitHubConfig(configData);
-      
-      // Don't expose the access token in the response
-      const { accessToken, ...safeConfig } = config;
-      
-      await storage.createActivity({
-        userId: req.session.userId!,
-        action: "configured",
-        entityType: "github_integration",
-        entityId: config.id,
-        details: { 
-          projectId: config.projectId,
-          repository: `${config.repoOwner}/${config.repoName}`
-        }
-      });
-      
-      res.status(201).json(safeConfig);
-    } catch (error) {
-      console.error("Create GitHub config error:", error);
-      res.status(400).json({ message: "Invalid GitHub configuration data" });
-    }
-  });
-
-  apiRouter.patch("/github/config/:id", isAuthenticated, async (req, res) => {
-    try {
-      const configId = parseInt(req.params.id);
-      const updateData = req.body;
-      
-      const updatedConfig = await storage.updateGitHubConfig(configId, updateData);
-      
-      if (!updatedConfig) {
-        return res.status(404).json({ message: "GitHub configuration not found" });
-      }
-      
-      // Don't expose the access token in the response
-      const { accessToken, ...safeConfig } = updatedConfig;
-      res.json(safeConfig);
-    } catch (error) {
-      console.error("Update GitHub config error:", error);
-      res.status(400).json({ message: "Invalid GitHub configuration data" });
-    }
-  });
-
-  apiRouter.post("/github/test-connection", isAuthenticated, async (req, res) => {
-    try {
-      const { repoOwner, repoName, accessToken } = req.body;
-      
-      const testConfig = {
-        repoOwner,
-        repoName,
-        accessToken,
-        id: 0,
-        projectId: 0,
-        isActive: true,
-        createdById: 0,
-        createdAt: new Date().toISOString()
-      };
-      
-      const { githubService } = await import('./github-service');
-      const isValid = await githubService.validateConnection(testConfig);
-      
-      if (isValid) {
-        res.json({ message: "Connection successful" });
-      } else {
-        res.status(400).json({ message: "Connection failed" });
-      }
-    } catch (error) {
-      console.error("GitHub connection test error:", error);
-      res.status(400).json({ message: "Connection test failed" });
-    }
-  });
-
-  apiRouter.post("/github/issues", isAuthenticated, async (req, res) => {
-    try {
-      const { bugId } = req.body;
-      
-      const bug = await storage.getBug(bugId);
-      if (!bug) {
-        return res.status(404).json({ message: "Bug not found" });
-      }
-      
-      const config = await storage.getGitHubConfig(bug.projectId);
-      if (!config || !config.isActive) {
-        return res.status(400).json({ message: "GitHub integration not configured for this project" });
-      }
-      
-      const { githubService } = await import('./github-service');
-      const issuePayload = githubService.formatBugAsGitHubIssue(bug);
-      
-      const githubIssue = await githubService.createIssue(config, issuePayload);
-      
-      const githubIssueRecord = await storage.createGitHubIssue({
-        bugId: bug.id,
-        githubIssueNumber: githubIssue.number,
-        githubIssueId: githubIssue.id,
-        githubUrl: githubIssue.url,
-        status: githubIssue.state as 'open' | 'closed'
-      });
-      
-      await storage.createActivity({
-        userId: req.session.userId!,
-        action: "created GitHub issue",
-        entityType: "bug",
-        entityId: bugId,
-        details: { 
-          githubIssueNumber: githubIssue.number,
-          githubUrl: githubIssue.url
-        }
-      });
-      
-      res.status(201).json(githubIssueRecord);
-    } catch (error) {
-      console.error("Create GitHub issue error:", error);
-      res.status(500).json({ message: "Failed to create GitHub issue" });
-    }
-  });
-
-  apiRouter.get("/github/issues/bug/:bugId", isAuthenticated, async (req, res) => {
-    try {
-      const bugId = parseInt(req.params.bugId);
-      const issue = await storage.getGitHubIssueByBugId(bugId);
-      
-      if (!issue) {
-        return res.status(404).json({ message: "GitHub issue not found for this bug" });
-      }
-      
-      res.json(issue);
-    } catch (error) {
-      console.error("Get GitHub issue error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  apiRouter.post("/github/issues/:id/sync", isAuthenticated, async (req, res) => {
-    try {
-      const issueId = parseInt(req.params.id);
-      const githubIssue = await storage.getGitHubIssue(issueId);
-      
-      if (!githubIssue) {
-        return res.status(404).json({ message: "GitHub issue not found" });
-      }
-      
-      const bug = await storage.getBug(githubIssue.bugId);
-      if (!bug) {
-        return res.status(404).json({ message: "Associated bug not found" });
-      }
-      
-      const config = await storage.getGitHubConfig(bug.projectId);
-      if (!config) {
-        return res.status(400).json({ message: "GitHub configuration not found" });
-      }
-      
-      const { githubService } = await import('./github-service');
-      const latestIssue = await githubService.getIssue(config, githubIssue.githubIssueNumber);
-      
-      // Update local record with latest GitHub data
-      await storage.updateGitHubIssue(issueId, {
-        status: latestIssue.state as 'open' | 'closed'
-      });
-      
-      res.json({ message: "Issue synced successfully" });
-    } catch (error) {
-      console.error("Sync GitHub issue error:", error);
-      res.status(500).json({ message: "Failed to sync GitHub issue" });
-    }
-  });
-
-  // GitHub sync endpoints
-  apiRouter.post("/github/sync/github-to-system", isAuthenticated, async (req, res) => {
-    try {
-      let syncedCount = 0;
-      
-      // Get all active GitHub configurations
-      const configs = await storage.getAllGitHubConfigs();
-      const activeConfigs = configs.filter(config => config.isActive);
-      
-      if (activeConfigs.length === 0) {
-        return res.status(400).json({ message: "No active GitHub configurations found" });
-      }
-      
-      const { githubService } = await import('./github-service');
-      
-      for (const config of activeConfigs) {
-        try {
-          // Get all GitHub issues for this repository
-          const githubIssues = await githubService.getAllIssues(config);
-          
-          for (const issue of githubIssues) {
-            // Check if we already have this issue in our system
-            const existingIssue = await storage.getGitHubIssueByGitHubId(issue.id);
-            
-            if (existingIssue) {
-              // Update existing issue status if it changed
-              if (existingIssue.status !== issue.state) {
-                await storage.updateGitHubIssue(existingIssue.id, {
-                  status: issue.state as 'open' | 'closed'
-                });
-                syncedCount++;
-              }
-            }
-            // Note: We don't create new bugs from GitHub issues automatically
-            // as that would require more complex mapping logic
-          }
-        } catch (error) {
-          console.error(`Error syncing from GitHub config ${config.id}:`, error);
-        }
-      }
-      
-      await storage.createActivity({
-        userId: req.session.userId!,
-        action: "synced from GitHub",
-        entityType: "github_integration",
-        entityId: 0,
-        details: { 
-          syncedCount,
-          direction: "github-to-system"
-        }
-      });
-      
-      res.json({ 
-        message: "Sync from GitHub completed", 
-        syncedCount,
-        configsProcessed: activeConfigs.length
-      });
-    } catch (error) {
-      console.error("GitHub to system sync error:", error);
-      res.status(500).json({ message: "Failed to sync from GitHub" });
-    }
-  });
-
-  apiRouter.post("/github/sync/system-to-github", isAuthenticated, async (req, res) => {
-    try {
-      let syncedCount = 0;
-      let errors = [];
-      
-      // Get all active GitHub configurations
-      const configs = await storage.getAllGitHubConfigs();
-      const activeConfigs = configs.filter(config => config.isActive);
-      
-      if (activeConfigs.length === 0) {
-        return res.status(400).json({ message: "No active GitHub configurations found" });
-      }
-      
-      const { githubService } = await import('./github-service');
-      
-      for (const config of activeConfigs) {
-        try {
-          // Get all bugs for this project that don't have GitHub issues yet
-          const bugs = await storage.getBugs(config.projectId);
-          const bugsWithoutGitHubIssues = [];
-          
-          for (const bug of bugs) {
-            const existingIssue = await storage.getGitHubIssueByBugId(bug.id);
-            if (!existingIssue) {
-              bugsWithoutGitHubIssues.push(bug);
-            }
-          }
-          
-          logger.info(`Found ${bugsWithoutGitHubIssues.length} bugs without GitHub issues for project ${config.projectId}`);
-          
-          // Create GitHub issues for bugs that don't have them
-          for (const bug of bugsWithoutGitHubIssues) {
-            try {
-              const result = await githubService.syncBugToGitHub(bug.id);
-              if (result.created) {
-                syncedCount++;
-                logger.info(`Successfully created GitHub issue for bug ${bug.id}`);
-              }
-            } catch (error) {
-              console.error(`Error creating GitHub issue for bug ${bug.id}:`, error);
-              errors.push(`Bug ${bug.bugId}: ${error.message}`);
-            }
-          }
-        } catch (error) {
-          console.error(`Error syncing to GitHub config ${config.id}:`, error);
-          errors.push(`Config ${config.id}: ${error.message}`);
-        }
-      }
-      
-      await storage.createActivity({
-        userId: req.session.userId!,
-        action: "synced to GitHub",
-        entityType: "github_integration",
-        entityId: 0,
-        details: { 
-          syncedCount,
-          direction: "system-to-github",
-          errors: errors.length > 0 ? errors : undefined
-        }
-      });
-      
-      res.json({ 
-        message: "Sync to GitHub completed", 
-        syncedCount,
-        configsProcessed: activeConfigs.length,
-        errors: errors.length > 0 ? errors : undefined
-      });
-    } catch (error) {
-      console.error("System to GitHub sync error:", error);
-      res.status(500).json({ message: "Failed to sync to GitHub" });
-    }
-  });
-
-  // Sync from GitHub endpoint - pulls latest GitHub issue status
-  apiRouter.post("/github/sync-from-github/:projectId", isAuthenticated, async (req, res) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
-      
-      if (isNaN(projectId) || projectId <= 0) {
-        return res.status(400).json({ message: "Invalid project ID" });
-      }
-
-      const project = await storage.getProject(projectId);
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-
-      // Get GitHub config for the project
-      const githubConfig = await storage.getGitHubConfig(projectId);
-      if (!githubConfig || !githubConfig.isActive) {
-        return res.status(400).json({ message: "GitHub integration not configured for this project" });
-      }
-
-      const { githubService } = await import('./github-service');
-      
-      // Get all GitHub issues for this repository
-      const githubIssues = await githubService.getAllIssues(githubConfig);
-      
-      let syncedCount = 0;
-      let errors = [];
-
-      for (const githubIssue of githubIssues) {
-        try {
-          // Find existing GitHub issue record in our system
-          const existingGithubIssue = await storage.getGitHubIssueByGitHubId(githubIssue.id);
-          
-          if (existingGithubIssue) {
-            // Update the GitHub issue status if it changed
-            if (existingGithubIssue.status !== githubIssue.state) {
-              await storage.updateGitHubIssue(existingGithubIssue.id, {
-                status: githubIssue.state as 'open' | 'closed'
-              });
-
-              // Also update the corresponding bug status
-              const bug = await storage.getBug(existingGithubIssue.bugId);
-              if (bug) {
-                let newBugStatus = bug.status;
-                
-                if (githubIssue.state === 'closed') {
-                  newBugStatus = 'Resolved';
-                } else if (githubIssue.state === 'open') {
-                  // Check labels to determine status
-                  if (githubIssue.labels.includes('in-progress') || githubIssue.labels.includes('in progress')) {
-                    newBugStatus = 'In Progress';
-                  } else {
-                    newBugStatus = 'Open';
-                  }
-                }
-
-                if (newBugStatus !== bug.status) {
-                  await storage.updateBug(existingGithubIssue.bugId, { 
-                    status: newBugStatus 
-                  });
-
-                  // Log activity
-                  await storage.createActivity({
-                    userId: req.session.userId!,
-                    action: "synced from GitHub",
-                    entityType: "bug",
-                    entityId: existingGithubIssue.bugId,
-                    details: { 
-                      bugId: bug.bugId,
-                      title: bug.title,
-                      oldStatus: bug.status,
-                      newStatus: newBugStatus,
-                      githubIssueNumber: githubIssue.number
-                    }
-                  });
-
-                  syncedCount++;
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.error(`Error syncing GitHub issue #${githubIssue.number}:`, error);
-          errors.push(`Issue #${githubIssue.number}: ${error.message}`);
-        }
-      }
-
-      res.json({
-        message: "Sync from GitHub completed",
-        syncedCount,
-        totalIssues: githubIssues.length,
-        errors: errors.length > 0 ? errors : undefined
-      });
-
-    } catch (error) {
-      console.error("Sync from GitHub error:", error);
-      res.status(500).json({ 
-        message: "Failed to sync from GitHub", 
-        error: error instanceof Error ? error.message : "Unknown error" 
-      });
-    }
-  });
-
-  // GitHub Webhook endpoint
-  apiRouter.post("/github/webhook", async (req, res) => {
-    try {
-      const payload = req.body;
-      const event = req.headers['x-github-event'];
-      
-      if (event === 'issues') {
-        const action = payload.action;
-        const issue = payload.issue;
-        
-        if (action === 'closed' || action === 'reopened') {
-          // Find the GitHub issue record
-          const githubIssue = await storage.getGitHubIssueByGitHubId(issue.id);
-          
-          if (githubIssue) {
-            // Update the status
-            await storage.updateGitHubIssue(githubIssue.id, {
-              status: issue.state as 'open' | 'closed'
-            });
-            
-            // Optionally update the bug status as well
-            if (action === 'closed') {
-              await storage.updateBug(githubIssue.bugId, {
-                status: 'Resolved'
-              });
-            } else if (action === 'reopened') {
-              await storage.updateBug(githubIssue.bugId, {
-                status: 'Reopened'
-              });
-            }
-            
-            logger.info(`GitHub issue ${issue.number} ${action}, updated bug ${githubIssue.bugId}`);
-          }
-        }
-      }
-      
-      res.status(200).json({ message: "Webhook processed" });
-    } catch (error) {
-      console.error("GitHub webhook error:", error);
-      res.status(500).json({ message: "Webhook processing failed" });
-    }
-  });
-
-  // Test Sheets API routes
-  apiRouter.get("/test-sheets", isAuthenticated, async (req, res) => {
-    try {
-      const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
-      const sheets = await storage.getTestSheets(projectId);
-      res.json(sheets);
-    } catch (error) {
-      logger.error('Error fetching test sheets:', error);
-      res.status(500).json({ error: 'Failed to fetch test sheets' });
-    }
-  });
-
-  apiRouter.get("/test-sheets/:id", isAuthenticated, async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      const sheet = await storage.getTestSheet(id);
-      
-      if (!sheet) {
-        return res.status(404).json({ error: 'Test sheet not found' });
-      }
-      
-      res.json(sheet);
-    } catch (error) {
-      logger.error(`Error fetching test sheet ${req.params.id}:`, error);
-      res.status(500).json({ error: 'Failed to fetch test sheet' });
-    }
-  });
-
-  apiRouter.post("/test-sheets", isAuthenticated, async (req, res) => {
-    try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'User not authenticated' });
-      }
-
-      console.log('Creating test sheet with data:', req.body);
-
-      // Simple validation without schema for now
-      const { name, projectId, data, metadata } = req.body;
-      
-      if (!name || !projectId) {
-        return res.status(400).json({ error: 'Name and project ID are required' });
-      }
-
-      const sheetData = {
-        name,
-        projectId: Number(projectId),
-        data: data || {
-          cells: {},
-          rows: 100,
-          cols: 26,
-        },
-        metadata: {
-          version: 1,
-          lastModifiedBy: req.session.userId,
-          collaborators: [],
-          chartConfigs: [],
-          namedRanges: [],
-          ...metadata,
-        },
-        createdById: req.session.userId,
-      };
-
-      const newSheet = await storage.createTestSheet(sheetData);
-      
-      // Log activity
-      await storage.createActivity({
-        userId: req.session.userId,
-        action: "created",
-        entityType: "test_sheet",
-        entityId: newSheet.id,
-        details: {
-          projectId: newSheet.projectId,
-          sheetName: newSheet.name,
-        }
-      });
-      
-      res.status(201).json(newSheet);
-    } catch (error) {
-      console.error('Error creating test sheet:', error);
-      logger.error('Error creating test sheet:', error);
-      res.status(500).json({ error: 'Failed to create test sheet' });
-    }
-  });
-
-  apiRouter.put("/test-sheets/:id", isAuthenticated, async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'User not authenticated' });
-      }
-
-      const existingSheet = await storage.getTestSheet(id);
-      if (!existingSheet) {
-        return res.status(404).json({ error: 'Test sheet not found' });
-      }
-
-      const updateData = {
-        ...req.body,
-        metadata: {
-          ...req.body.metadata,
-          lastModifiedBy: req.session.userId,
-          version: (existingSheet.metadata.version || 1) + 1,
-        }
-      };
-
-      const updatedSheet = await storage.updateTestSheet(id, updateData);
-      
-      // Log activity
-      await storage.createActivity({
-        userId: req.session.userId,
-        action: "updated",
-        entityType: "test_sheet",
-        entityId: id,
-        details: {
-          projectId: updatedSheet.projectId,
-          sheetName: updatedSheet.name,
-        }
-      });
-      
-      res.json(updatedSheet);
-    } catch (error) {
-      logger.error(`Error updating test sheet ${req.params.id}:`, error);
-      res.status(500).json({ error: 'Failed to update test sheet' });
-    }
-  });
-
-  apiRouter.delete("/test-sheets/:id", isAuthenticated, async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'User not authenticated' });
-      }
-
-      const existingSheet = await storage.getTestSheet(id);
-      if (!existingSheet) {
-        return res.status(404).json({ error: 'Test sheet not found' });
-      }
-
-      await storage.deleteTestSheet(id);
-      
-      // Log activity
-      await storage.createActivity({
-        userId: req.session.userId,
-        action: "deleted",
-        entityType: "test_sheet",
-        entityId: id,
-        details: {
-          projectId: existingSheet.projectId,
-          sheetName: existingSheet.name,
-        }
-      });
-      
-      res.status(204).end();
-    } catch (error) {
-      logger.error(`Error deleting test sheet ${req.params.id}:`, error);
-      res.status(500).json({ error: 'Failed to delete test sheet' });
-    }
-  });
-
-  apiRouter.post("/test-sheets/:id/duplicate", isAuthenticated, async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      const { name } = req.body;
-      
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'User not authenticated' });
-      }
-
-      if (!name) {
-        return res.status(400).json({ error: 'Sheet name is required' });
-      }
-
-      const duplicatedSheet = await storage.duplicateTestSheet(id, name, req.session.userId);
-      
-      // Log activity
-      await storage.createActivity({
-        userId: req.session.userId,
-        action: "duplicated",
-        entityType: "test_sheet",
-        entityId: duplicatedSheet.id,
-        details: {
-          projectId: duplicatedSheet.projectId,
-          sheetName: duplicatedSheet.name,
-          originalSheetId: id,
-        }
-      });
-      
-      res.status(201).json(duplicatedSheet);
-    } catch (error) {
-      logger.error(`Error duplicating test sheet ${req.params.id}:`, error);
-      res.status(500).json({ error: 'Failed to duplicate test sheet' });
-    }
-  });
-
-  apiRouter.post("/test-sheets/:id/export", isAuthenticated, async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      const { format } = req.body; // 'csv' | 'xlsx' | 'json'
-      
-      const sheet = await storage.getTestSheet(id);
-      if (!sheet) {
-        return res.status(404).json({ error: 'Test sheet not found' });
-      }
-
-      // Export logic will be implemented in the frontend
-      res.json({ 
-        success: true, 
-        message: 'Export request processed',
-        sheet: sheet 
-      });
-    } catch (error) {
-      logger.error(`Error exporting test sheet ${req.params.id}:`, error);
-      res.status(500).json({ error: 'Failed to export test sheet' });
-    }
-  });
-
-  // Flow Diagrams API routes
-  apiRouter.get("/flow-diagrams", isAuthenticated, async (req, res) => {
-    try {
-      const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
-      const diagrams = await storage.getFlowDiagrams(projectId);
-      res.json(diagrams);
-    } catch (error) {
-      logger.error('Error fetching flow diagrams:', error);
-      res.status(500).json({ error: 'Failed to fetch flow diagrams' });
-    }
-  });
-
-  apiRouter.get("/flow-diagrams/:id", isAuthenticated, async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      const diagram = await storage.getFlowDiagram(id);
-      
-      if (!diagram) {
-        return res.status(404).json({ error: 'Flow diagram not found' });
-      }
-      
-      res.json(diagram);
-    } catch (error) {
-      logger.error(`Error fetching flow diagram ${req.params.id}:`, error);
-      res.status(500).json({ error: 'Failed to fetch flow diagram' });
-    }
-  });
-
-  apiRouter.post("/flow-diagrams", isAuthenticated, async (req, res) => {
-    try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'User not authenticated' });
-      }
-
-      // Add user ID to the diagram data
-      const diagramData = {
-        ...req.body,
-        createdById: req.session.userId
-      };
-
-      // Save the flow diagram
-      const newDiagram = await storage.createFlowDiagram(diagramData);
-      res.status(201).json(newDiagram);
-    } catch (error) {
-      logger.error('Error creating flow diagram:', error);
-      res.status(500).json({ error: 'Failed to create flow diagram' });
-    }
-  });
-
-  apiRouter.put("/flow-diagrams/:id", isAuthenticated, async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'User not authenticated' });
-      }
-
-      // Get the existing diagram to check permissions
-      const existingDiagram = await storage.getFlowDiagram(id);
-      if (!existingDiagram) {
-        return res.status(404).json({ error: 'Flow diagram not found' });
-      }
-
-      // Update the flow diagram
-      const updatedDiagram = await storage.updateFlowDiagram(id, req.body);
-      res.json(updatedDiagram);
-    } catch (error) {
-      logger.error(`Error updating flow diagram ${req.params.id}:`, error);
-      res.status(500).json({ error: 'Failed to update flow diagram' });
-    }
-  });
-
-  apiRouter.delete("/flow-diagrams/:id", isAuthenticated, async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      
-      if (!req.session.userId) {
-        return res.status(401).json({ error: 'User not authenticated' });
-      }
-
-      // Get the existing diagram to check permissions
-      const existingDiagram = await storage.getFlowDiagram(id);
-      if (!existingDiagram) {
-        return res.status(404).json({ error: 'Flow diagram not found' });
-      }
-
-      // Delete the flow diagram
-      await storage.deleteFlowDiagram(id);
-      res.status(204).end();
-    } catch (error) {
-      logger.error(`Error deleting flow diagram ${req.params.id}:`, error);
-      res.status(500).json({ error: 'Failed to delete flow diagram' });
-    }
-  });
-
-  // No need for the separate flow diagrams router since we've already
-  // added those routes directly to the apiRouter
-  
-  // Bug Comments API routes
-  apiRouter.get("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
-    try {
-      const bugId = parseInt(req.params.bugId);
-      const comments = await storage.getBugComments(bugId);
-      res.json(comments);
-    } catch (error) {
-      console.error('Error fetching bug comments:', error);
-      res.status(500).json({ error: 'Failed to fetch bug comments' });
-    }
-  });
-
-  apiRouter.post("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
-    try {
-      const bugId = parseInt(req.params.bugId);
-      const { content } = req.body;
-      
-      if (!content || !content.trim()) {
-        return res.status(400).json({ error: 'Comment content is required' });
-      }
-
-      const comment = await storage.createBugComment({
-        bugId,
-        userId: req.session.userId!,
-        content: content.trim()
-      });
-
-      res.status(201).json(comment);
-    } catch (error) {
-      console.error('Error creating bug comment:', error);
-      res.status(500).json({ error: 'Failed to create bug comment' });
-    }
-  });
-
-  apiRouter.put("/bugs/:bugId/comments/:commentId", isAuthenticated, async (req, res) => {
-    try {
-      const commentId = parseInt(req.params.commentId);
-      const { content } = req.body;
-      
-      if (!content || !content.trim()) {
-        return res.status(400).json({ error: 'Comment content is required' });
-      }
-
-      const comment = await storage.updateBugComment(commentId, req.session.userId!, {
-        content: content.trim()
-      });
-
-      if (!comment) {
-        return res.status(404).json({ error: 'Comment not found' });
-      }
-
-      res.json(comment);
-    } catch (error) {
-      console.error('Error updating bug comment:', error);
-      res.status(500).json({ error: 'Failed to update bug comment' });
-    }
-  });
-
-  // Notebooks API routes
-  apiRouter.get("/notebooks", isAuthenticated, async (req, res) => {
-    try {
-      const notebooks = await storage.getNotebooks(req.session.userId!);
-      res.json(notebooks);
-    } catch (error) {
-      console.error('Error fetching notebooks:', error);
-      res.status(500).json({ error: 'Failed to fetch notebooks' });
-    }
-  });
-
-  apiRouter.post("/notebooks", isAuthenticated, async (req, res) => {
-    try {
-      const { title, content, color = '#ffffff', isPinned = false, isArchived = false, tags = [] } = req.body;
-      
-      if (!title || !title.trim()) {
-        return res.status(400).json({ error: 'Title is required' });
-      }
-
-      const notebook = await storage.createNotebook({
-        title: title.trim(),
-        content: content || '',
-        color,
-        isPinned,
-        isArchived,
-        tags,
-        userId: req.session.userId!
-      });
-
-      res.status(201).json(notebook);
-    } catch (error) {
-      console.error('Error creating notebook:', error);
-      res.status(500).json({ error: 'Failed to create notebook' });
-    }
-  });
-
-  apiRouter.get("/notebooks/:id", isAuthenticated, async (req, res) => {
-    try {
-      const notebook = await storage.getNotebook(parseInt(req.params.id), req.session.userId!);
-      if (!notebook) {
-        return res.status(404).json({ error: 'Notebook not found' });
-      }
-      res.json(notebook);
-    } catch (error) {
-      console.error('Error fetching notebook:', error);
-      res.status(500).json({ error: 'Failed to fetch notebook' });
-    }
-  });
-
-  apiRouter.put("/notebooks/:id", isAuthenticated, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const updates = req.body;
-      
-      const notebook = await storage.updateNotebook(id, req.session.userId!, updates);
-      if (!notebook) {
-        return res.status(404).json({ error: 'Notebook not found' });
-      }
-      
-      res.json(notebook);
-    } catch (error) {
-      console.error('Error updating notebook:', error);
-      res.status(500).json({ error: 'Failed to update notebook' });
-    }
-  });
-
-  apiRouter.delete("/notebooks/:id", isAuthenticated, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteNotebook(id, req.session.userId!);
-      
-      if (!success) {
-        return res.status(404).json({ error: 'Notebook not found' });
-      }
-      
-      res.json({ message: 'Notebook deleted successfully' });
-    } catch (error) {
-      console.error('Error deleting notebook:', error);
-      res.status(500).json({ error: 'Failed to delete notebook' });
-    }
-  });
-
-  // Todo routes
-  apiRouter.get('/todos', isAuthenticated, async (req, res) => {
-    try {
-      const userId = req.session.userId!;
-      const todos = await storage.getUserTodos(userId);
-      res.json(todos);
-    } catch (error) {
-      console.error('Error fetching todos:', error);
-      res.status(500).json({ error: 'Failed to fetch todos' });
-    }
-  });
-
-  apiRouter.post('/todos', isAuthenticated, async (req, res) => {
-    try {
-      const userId = req.session.userId!;
-      const todoData = { ...req.body, userId };
-      const todo = await storage.createTodo(todoData);
-      res.status(201).json(todo);
-    } catch (error) {
-      console.error('Error creating todo:', error);
-      res.status(500).json({ error: 'Failed to create todo' });
-    }
-  });
-
-  apiRouter.put('/todos/:id', isAuthenticated, async (req, res) => {
-    try {
-      const todoId = parseInt(req.params.id);
-      const userId = req.session.userId!;
-      const updated = await storage.updateTodo(todoId, userId, req.body);
-      
-      if (!updated) {
-        return res.status(404).json({ error: 'Todo not found' });
-      }
-      
-      res.json(updated);
-    } catch (error) {
-      console.error('Error updating todo:', error);
-      res.status(500).json({ error: 'Failed to update todo' });
-    }
-  });
-
-  apiRouter.delete('/todos/:id', isAuthenticated, async (req, res) => {
-    try {
-      const todoId = parseInt(req.params.id);
-      const userId = req.session.userId!;
-      const deleted = await storage.deleteTodo(todoId, userId);
-      
-      if (!deleted) {
-        return res.status(404).json({ error: 'Todo not found' });
-      }
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error deleting todo:', error);
-      res.status(500).json({ error: 'Failed to delete todo' });
-    }
-  });
-
-  // Messenger routes
-  apiRouter.get('/chats', isAuthenticated, async (req, res) => {
-    try {
-      const userId = req.session.userId!;
-      const chats = await storage.getUserConversations(userId);
-      res.json(chats);
-    } catch (error) {
-      console.error('Error fetching chats:', error);
-      res.status(500).json({ error: 'Failed to fetch chats' });
-    }
-  });
-
-  apiRouter.post('/chats/direct', isAuthenticated, async (req, res) => {
-    try {
-      const userId = req.session.userId!;
-      const { targetUserId } = req.body;
-      
-      if (!targetUserId) {
-        return res.status(400).json({ error: 'Target user ID is required' });
-      }
-
-      const chat = await storage.createDirectConversation(userId, targetUserId);
-      res.status(201).json(chat);
-    } catch (error) {
-      console.error('Error creating direct chat:', error);
-      res.status(500).json({ error: 'Failed to create direct chat' });
-    }
-  });
-
-  apiRouter.post('/chats/group', isAuthenticated, async (req, res) => {
-    try {
-      const userId = req.session.userId!;
-      const { name, description, participants } = req.body;
-      
-      if (!name || !participants || participants.length === 0) {
-        return res.status(400).json({ error: 'Group name and participants are required' });
-      }
-
-      const chat = await storage.createGroupConversation(userId, name, description, participants);
-      res.status(201).json(chat);
-    } catch (error) {
-      console.error('Error creating group chat:', error);
-      res.status(500).json({ error: 'Failed to create group chat' });
-    }
-  });
-
-  apiRouter.get('/chats/:id/messages', isAuthenticated, async (req, res) => {
-    try {
-      const chatId = parseInt(req.params.id);
-      const messages = await storage.getMessagesByChat(chatId);
-      res.json(messages);
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      res.status(500).json({ error: 'Failed to fetch messages' });
-    }
-  });
-
-  // Public users endpoint for messenger
-  apiRouter.get('/users/public', isAuthenticated, async (req, res) => {
-    try {
-      const users = await storage.getAllUsers();
-      const publicUsers = users.map(user => ({
-        id: user.id,
-        name: user.firstName + ' ' + (user.lastName || ''),
-        email: user.email,
-        isOnline: false,
-        lastSeen: null
-      }));
-      res.json(publicUsers);
-    } catch (error) {
-      console.error('Error fetching public users:', error);
-      res.status(500).json({ error: 'Failed to fetch users' });
-    }
-  });
-
-  apiRouter.post('/messages', isAuthenticated, async (req, res) => {
-    try {
-      const userId = req.session.userId!;
-      const messageData = { ...req.body, senderId: userId };
-      const message = await storage.createChatMessage(messageData);
-      res.status(201).json(message);
-    } catch (error) {
-      console.error('Error creating message:', error);
-      res.status(500).json({ error: 'Failed to create message' });
-    }
-  });
-
   // GitHub Issue Reporter endpoint
   apiRouter.post("/github/create-issue", isAuthenticated, async (req, res) => {
     try {
       console.log('Received GitHub issue creation request');
-      
+
       // Extract data from form submission
       const {
         title,
@@ -10228,7 +8819,7 @@ ${additionalInfo ? `### Additional Information\n${additionalInfo}` : ''}
         action: "created GitHub issue",
         entityType: "bug",
         entityId: bug.id,
-        details: {
+        details: { 
           projectId: parseInt(projectId),
           projectName: project.name,
           bugId: bug.bugId,
@@ -10241,7 +8832,7 @@ ${additionalInfo ? `### Additional Information\n${additionalInfo}` : ''}
 
       // Return success response with mock GitHub issue number for demo
       const mockIssueNumber = Math.floor(Math.random() * 1000) + 100;
-      
+
       res.status(201).json({
         success: true,
         message: "Issue created successfully",
@@ -10265,13 +8856,1052 @@ ${additionalInfo ? `### Additional Information\n${additionalInfo}` : ''}
     }
   });
 
+  // GitHub Integration routes
+  apiRouter.get("/github/integrations", isAuthenticated, async (req, res) => {
+    try {
+      const { getGitHubIntegrations } = await import("./api/github-integrations");
+      await getGitHubIntegrations(req, res);
+    } catch (error) {
+      console.error("Get GitHub integrations error:", error);
+      res.status(500).json({ message: "Failed to fetch GitHub integrations" });
+    }
+  });
+
+  apiRouter.post("/github/integrations", isAuthenticated, async (req, res) => {
+    try {
+      const { createGitHubIntegration } = await import("./api/github-integrations");
+      await createGitHubIntegration(req, res);
+    } catch (error) {
+      console.error("Create GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to create GitHub integration" });
+    }
+  });
+
+  apiRouter.put("/github/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { updateGitHubIntegration } = await import("./api/github-integrations");
+      await updateGitHubIntegration(req, res);
+    } catch (error) {
+      console.error("Update GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to update GitHub integration" });
+    }
+  });
+
+  apiRouter.delete("/github/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { deleteGitHubIntegration } = await import("./api/github-integrations");
+      await deleteGitHubIntegration(req, res);
+    } catch (error) {
+      console.error("Delete GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to delete GitHub integration" });
+    }
+  });
+
+  apiRouter.post("/github/test-connection", isAuthenticated, async (req, res) => {
+    try {
+      const { testGitHubConnection } = await import("./api/github-integrations");
+      await testGitHubConnection(req, res);
+    } catch (error) {
+      console.error("Test GitHub connection error:", error);
+      res.status(500).json({ message: "Failed to test GitHub connection" });
+    }
+  });
+
+  apiRouter.get("/github/configs", isAuthenticated, async (req, res) => {
+    try {
+      const configs = await storage.getAllGitHubConfigs();
+
+      // Don't expose access tokens in the response
+      const safeConfigs = configs.map(({ accessToken, ...config }) => config);
+
+      res.json(safeConfigs);
+    } catch (error) {
+      console.error("Get all GitHub configs error:", error);
+      res.status(500).json({ message: "Failed to fetch GitHub configurations" });
+    }
+  });
+
+  apiRouter.get("/github/config/:projectId", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const config = await storage.getGitHubConfig(projectId);
+
+      if (!config) {
+        return res.status(404).json({ message: "GitHub configuration not found" });
+      }
+
+      // Don't expose the access token in the response
+      const { accessToken, ...safeConfig } = config;
+      res.json(safeConfig);
+    } catch (error) {
+      console.error("Get GitHub config error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/github/config", isAuthenticated, async (req, res) => {
+    try {
+      const configData = {
+        ...req.body,
+        createdById: req.session.userId!,
+      };
+
+      const config = await storage.createGitHubConfig(configData);
+
+      // Don't expose the access token in the response
+      const { accessToken, ...safeConfig } = config;
+
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "configured",
+        entityType: "github_integration",
+        entityId: config.id,
+        details: { 
+          projectId: config.projectId,
+          repository: `${config.repoOwner}/${config.repoName}`
+        }
+      });
+
+      res.status(201).json(safeConfig);
+    } catch (error) {
+      console.error("Create GitHub config error:", error);
+      res.status(400).json({ message: "Invalid GitHub configuration data" });
+    }
+  });
+
+  apiRouter.patch("/github/config/:id", isAuthenticated, async (req, res) => {
+    try {
+      const configId = parseInt(req.params.id);
+      const updateData = req.body;
+
+      const updatedConfig = await storage.updateGitHubConfig(configId, updateData);
+
+      if (!updatedConfig) {
+        return res.status(404).json({ message: "GitHub configuration not found" });
+      }
+
+      // Don't expose the access token in the response
+      const { accessToken, ...safeConfig } = updatedConfig;
+      res.json(safeConfig);
+    } catch (error) {
+      console.error("Update GitHub config error:", error);
+      res.status(400).json({ message: "Invalid GitHub configuration data" });
+    }
+  });
+
+  apiRouter.post("/github/test-connection", isAuthenticated, async (req, res) => {
+    try {
+      const { repoOwner, repoName, accessToken } = req.body;
+
+      const testConfig = {
+        repoOwner,
+        repoName,
+        accessToken,
+        id: 0,
+        projectId: 0,
+        isActive: true,
+        createdById: 0,
+        createdAt: new Date().toISOString()
+      };
+
+      const { githubService } = await import('./github-service');
+      const isValid = await githubService.validateConnection(testConfig);
+
+      if (isValid) {
+        res.json({ message: "Connection successful" });
+      } else {
+        res.status(400).json({ message: "Connection failed" });
+      }
+    } catch (error) {
+      console.error("GitHub connection test error:", error);
+      res.status(400).json({ message: "Connection test failed" });
+    }
+  });
+
+  apiRouter.post("/github/issues", isAuthenticated, async (req, res) => {
+    try {
+      const { bugId } = req.body;
+
+      const bug = await storage.getBug(bugId);
+      if (!bug) {
+        return res.status(404).json({ message: "Bug not found" });
+      }
+
+      const config = await storage.getGitHubConfig(bug.projectId);
+      if (!config || !config.isActive) {
+        return res.status(400).json({ message: "GitHub integration not configured for this project" });
+      }
+
+      const { githubService } = await import('./github-service');
+      const issuePayload = githubService.formatBugAsGitHubIssue(bug);
+
+      const githubIssue = await githubService.createIssue(config, issuePayload);
+
+      const githubIssueRecord = await storage.createGitHubIssue({
+        bugId: bug.id,
+        githubIssueNumber: githubIssue.number,
+        githubIssueId: githubIssue.id,
+        githubUrl: githubIssue.url,
+        status: githubIssue.state as 'open' | 'closed'
+      });
+
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "created GitHub issue",
+        entityType: "bug",
+        entityId: bug.id,
+        details: { 
+          githubIssueNumber: githubIssue.number,
+          githubUrl: githubIssue.url
+        }
+      });
+
+      res.status(201).json(githubIssueRecord);
+    } catch (error) {
+      console.error("Create GitHub issue error:", error);
+      res.status(500).json({ message: "Failed to create GitHub issue" });
+    }
+  });
+
+  apiRouter.get("/github/issues/bug/:bugId", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const issue = await storage.getGitHubIssueByBugId(bugId);
+
+      if (!issue) {
+        return res.status(404).json({ message: "GitHub issue not found for this bug" });
+      }
+
+      res.json(issue);
+    } catch (error) {
+      console.error("Get GitHub issue error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/github/issues/:id/sync", isAuthenticated, async (req, res) => {
+    try {
+      const issueId = parseInt(req.params.id);
+      const githubIssue = await storage.getGitHubIssue(issueId);
+
+      if (!githubIssue) {
+        return res.status(404).json({ message: "GitHub issue not found" });
+      }
+
+      const bug = await storage.getBug(githubIssue.bugId);
+      if (!bug) {
+        return res.status(404).json({ message: "Associated bug not found" });
+      }
+
+      const config = await storage.getGitHubConfig(bug.projectId);
+      if (!config) {
+        return res.status(400).json({ message: "GitHub configuration not found" });
+      }
+
+      const { githubService } = await import('./github-service');
+      const latestIssue = await githubService.getIssue(config, githubIssue.githubIssueNumber);
+
+      // Update local record with latest GitHub data
+      await storage.updateGitHubIssue(issueId, {
+        status: latestIssue.state as 'open' | 'closed'
+      });
+
+      res.json({ message: "Issue synced successfully" });
+    } catch (error) {
+      console.error("Sync GitHub issue error:", error);
+      res.status(500).json({ message: "Failed to sync GitHub issue" });
+    }
+  });
+
+  // GitHub sync endpoints
+  apiRouter.post("/github/sync/github-to-system", isAuthenticated, async (req, res) => {
+    try {
+      let syncedCount = 0;
+      let errors = [];
+
+      // Get all active GitHub configurations
+      const configs = await storage.getAllGitHubConfigs();
+      const activeConfigs = configs.filter(config => config.isActive);
+
+      if (activeConfigs.length === 0) {
+        return res.status(400).json({ message: "No active GitHub configurations found" });
+      }
+
+      const { githubService } = await import('./github-service');
+
+      for (const config of activeConfigs) {
+        try {
+          // Get all GitHub issues for this repository
+          const githubIssues = await githubService.getAllIssues(config);
+
+          for (const issue of githubIssues) {
+            // Check if we already have this issue in our system
+            const existingGithubIssue = await storage.getGitHubIssueByGitHubId(issue.id);
+
+            if (existingGithubIssue) {
+              // Update existing issue status if it changed
+              if (existingGithubIssue.status !== issue.state) {
+                await storage.updateGitHubIssue(existingGithubIssue.id, {
+                  status: issue.state as 'open' | 'closed'
+                });
+                syncedCount++;
+              }
+            }
+            // Note: We don't create new bugs from GitHub issues automatically
+            // as that would require more complex mapping logic
+          }
+        } catch (error) {
+          console.error(`Error syncing from GitHub config ${config.id}:`, error);
+        }
+      }
+
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "synced from GitHub",
+        entityType: "github_integration",
+        entityId: 0,
+        details: { 
+          syncedCount,
+          direction: "github-to-system"
+        }
+      });
+
+      res.json({ 
+        message: "Sync from GitHub completed", 
+        syncedCount,
+        configsProcessed: activeConfigs.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("GitHub to system sync error:", error);
+      res.status(500).json({ message: "Failed to sync from GitHub" });
+    }
+  });
+
+  apiRouter.post("/github/sync/system-to-github", isAuthenticated, async (req, res) => {
+    try {
+      let syncedCount = 0;
+      let errors = [];
+
+      // Get all active GitHub configurations
+      const configs = await storage.getAllGitHubConfigs();
+      const activeConfigs = configs.filter(config => config.isActive);
+
+      if (activeConfigs.length === 0) {
+        return res.status(400).json({ message: "No active GitHub configurations found" });
+      }
+
+      const { githubService } = await import('./github-service');
+
+      for (const config of activeConfigs) {
+        try {
+          // Get all bugs for this project that don't have GitHub issues yet
+          const bugs = await storage.getBugs(config.projectId);
+          const bugsWithoutGitHubIssues = [];
+
+          for (const bug of bugs) {
+            const existingIssue = await storage.getGitHubIssueByBugId(bug.id);
+            if (!existingIssue) {
+              bugsWithoutGitHubIssues.push(bug);
+            }
+          }
+
+          logger.info(`Found ${bugsWithoutGitHubIssues.length} bugs without GitHub issues for project ${config.projectId}`);
+
+          // Create GitHub issues for bugs that don't have them
+          for (const bug of bugsWithoutGitHubIssues) {
+            try {
+              const result = await githubService.syncBugToGitHub(bug.id);
+              if (result.created) {
+                syncedCount++;
+                logger.info(`Successfully created GitHub issue for bug ${bug.id}`);
+              }
+            } catch (error) {
+              console.error(`Error creating GitHub issue for bug ${bug.id}:`, error);
+              errors.push(`Bug ${bug.bugId}: ${error.message}`);
+            }
+          }
+        } catch (error) {
+          console.error(`Error syncing to GitHub config ${config.id}:`, error);
+          errors.push(`Config ${config.id}: ${error.message}`);
+        }
+      }
+
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "synced to GitHub",
+        entityType: "github_integration",
+        entityId: 0,
+        details: { 
+          syncedCount,
+          direction: "system-to-github",
+          errors: errors.length > 0 ? errors : undefined
+        }
+      });
+
+      res.json({ 
+        message: "Sync to GitHub completed", 
+        syncedCount,
+        configsProcessed: activeConfigs.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("System to GitHub sync error:", error);
+      res.status(500).json({ message: "Failed to sync to GitHub" });
+    }
+  });
+
+  // GitHub Webhook endpoint
+  apiRouter.post("/github/webhook", async (req, res) => {
+    try {
+      const payload = req.body;
+      const event = req.headers['x-github-event'];
+
+      if (event === 'issues') {
+        const action = payload.action;
+        const issue = payload.issue;
+
+        if (action === 'closed' || action === 'reopened') {
+          // Find the GitHub issue record
+          const githubIssue = await storage.getGitHubIssueByGitHubId(issue.id);
+
+          if (githubIssue) {
+            // Update the status
+            await storage.updateGitHubIssue(githubIssue.id, {
+              status: issue.state as 'open' | 'closed'
+            });
+
+            // Optionally update the bug status as well
+            if (action === 'closed') {
+              await storage.updateBug(githubIssue.bugId, {
+                status: 'Resolved'
+              });
+            } else if (action === 'reopened') {
+              await storage.updateBug(githubIssue.bugId, {
+                status: 'Reopened'
+              });
+            }
+
+            logger.info(`GitHub issue ${issue.number} ${action}, updated bug ${githubIssue.bugId}`);
+          }
+        }
+      }
+
+      res.status(200).json({ message: "Webhook processed" });
+    } catch (error) {
+      console.error("GitHub webhook error:", error);
+      res.status(500).json({ message: "Webhook processing failed" });
+    }
+  });
+
+  // Test Sheets API routes
+  apiRouter.get("/test-sheets", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
+      const sheets = await storage.getTestSheets(projectId);
+      res.json(sheets);
+    } catch (error) {
+      logger.error('Error fetching test sheets:', error);
+      res.status(500).json({ error: 'Failed to fetch test sheets' });
+    }
+  });
+
+  apiRouter.get("/test-sheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const sheet = await storage.getTestSheet(id);
+
+      if (!sheet) {
+        return res.status(404).json({ error: 'Test sheet not found' });
+      }
+
+      res.json(sheet);
+    } catch (error) {
+      logger.error(`Error fetching test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to fetch test sheet' });
+    }
+  });
+
+  apiRouter.post("/test-sheets", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      console.log('Creating test sheet with data:', req.body);
+
+      // Simple validation without schema for now
+      const { name, projectId, data, metadata } = req.body;
+
+      if (!name || !projectId) {
+        return res.status(400).json({ error: 'Name and project ID are required' });
+      }
+
+      const sheetData = {
+        name,
+        projectId: Number(projectId),
+        data: data || {
+          cells: {},
+          rows: 100,
+          cols: 26,
+        },
+        metadata: {
+          version: 1,
+          lastModifiedBy: req.session.userId,
+          collaborators: [],
+          chartConfigs: [],
+          namedRanges: [],
+          ...metadata,
+        },
+        createdById: req.session.userId,
+      };
+
+      const newSheet = await storage.createTestSheet(sheetData);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId,
+        action: "created",
+        entityType: "test_sheet",
+        entityId: newSheet.id,
+        details: {
+          projectId: newSheet.projectId,
+          sheetName: newSheet.name,
+        }
+      });
+
+      res.status(201).json(newSheet);
+    } catch (error) {
+      console.error('Error creating test sheet:', error);
+      logger.error('Error creating test sheet:', error);
+      res.status(500).json({ error: 'Failed to create test sheet' });
+    }
+  });
+
+  apiRouter.put("/test-sheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      const existingSheet = await storage.getTestSheet(id);
+      if (!existingSheet) {
+        return res.status(404).json({ error: 'Test sheet not found' });
+      }
+
+      const updateData = {
+        ...req.body,
+        metadata: {
+          ...req.body.metadata,
+          lastModifiedBy: req.session.userId,
+          version: (existingSheet.metadata.version || 1) + 1,
+        }
+      };
+
+      const updatedSheet = await storage.updateTestSheet(id, updateData);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId,
+        action: "updated",
+        entityType: "test_sheet",
+        entityId: id,
+        details: {
+          projectId: updatedSheet.projectId,
+          sheetName: updatedSheet.name,
+        }
+      });
+
+      res.json(updatedSheet);
+    } catch (error) {
+      logger.error(`Error updating test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to update test sheet' });
+    }
+  });
+
+  apiRouter.delete("/test-sheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      const existingSheet = await storage.getTestSheet(id);
+      if (!existingSheet) {
+        return res.status(404).json({ error: 'Test sheet not found' });
+      }
+
+      await storage.deleteTestSheet(id);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId,
+        action: "deleted",
+        entityType: "test_sheet",
+        entityId: id,
+        details: {
+          projectId: existingSheet.projectId,
+          sheetName: existingSheet.name,
+        }
+      });
+
+      res.status(204).end();
+    } catch (error) {
+      logger.error(`Error deleting test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to delete test sheet' });
+    }
+  });
+
+  apiRouter.post("/test-sheets/:id/duplicate", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { name } = req.body;
+
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      if (!name) {
+        return res.status(400).json({ error: 'Sheet name is required' });
+      }
+
+      const duplicatedSheet = await storage.duplicateTestSheet(id, name, req.session.userId);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId,
+        action: "duplicated",
+        entityType: "test_sheet",
+        entityId: duplicatedSheet.id,
+        details: {
+          projectId: duplicatedSheet.projectId,
+          sheetName: duplicatedSheet.name,
+          originalSheetId: id,
+        }
+      });
+
+      res.status(201).json(duplicatedSheet);
+    } catch (error) {
+      logger.error(`Error duplicating test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to duplicate test sheet' });
+    }
+  });
+
+  apiRouter.post("/test-sheets/:id/export", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { format } = req.body; // 'csv' | 'xlsx' | 'json'
+
+      const sheet = await storage.getTestSheet(id);
+      if (!sheet) {
+        return res.status(404).json({ error: 'Test sheet not found' });
+      }
+
+      // Export logic will be implemented in the frontend
+      res.json({ 
+        success: true, 
+        message: 'Export request processed',
+        sheet: sheet 
+      });
+    } catch (error) {
+      logger.error(`Error exporting test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to export test sheet' });
+    }
+  });
+
+  // Flow Diagrams API routes
+  apiRouter.get("/flow-diagrams", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
+      const diagrams = await storage.getFlowDiagrams(projectId);
+      res.json(diagrams);
+    } catch (error) {
+      logger.error('Error fetching flow diagrams:', error);
+      res.status(500).json({ error: 'Failed to fetch flow diagrams' });
+    }
+  });
+
+  apiRouter.get("/flow-diagrams/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const diagram = await storage.getFlowDiagram(id);
+
+      if (!diagram) {
+        return res.status(404).json({ error: 'Flow diagram not found' });
+      }
+
+      res.json(diagram);
+    } catch (error) {
+      logger.error(`Error fetching flow diagram ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to fetch flow diagram' });
+    }
+  });
+
+  apiRouter.post("/flow-diagrams", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      // Add user ID to the diagram data
+      const diagramData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+
+      // Save the flow diagram
+      const newDiagram = await storage.createFlowDiagram(diagramData);
+      res.status(201).json(newDiagram);
+    } catch (error) {
+      logger.error('Error creating flow diagram:', error);
+      res.status(500).json({ error: 'Failed to create flow diagram' });
+    }
+  });
+
+  apiRouter.put("/flow-diagrams/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      // Get the existing diagram to check permissions
+      const existingDiagram = await storage.getFlowDiagram(id);
+      if (!existingDiagram) {
+        return res.status(404).json({ error: 'Flow diagram not found' });
+      }
+
+      // Update the flow diagram
+      const updatedDiagram = await storage.updateFlowDiagram(id, req.body);
+      res.json(updatedDiagram);
+    } catch (error) {
+      logger.error(`Error updating flow diagram ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to update flow diagram' });
+    }
+  });
+
+  apiRouter.delete("/flow-diagrams/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      // Get the existing diagram to check permissions
+      const existingDiagram = await storage.getFlowDiagram(id);
+      if (!existingDiagram) {
+        return res.status(404).json({ error: 'Flow diagram not found' });
+      }
+
+      // Delete the flow diagram
+      await storage.deleteFlowDiagram(id);
+      res.status(204).end();
+    } catch (error) {
+      logger.error(`Error deleting flow diagram ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to delete flow diagram' });
+    }
+  });
+
+  // No need for the separate flow diagrams router since we've already
+  // added those routes directly to the apiRouter
+
+  // Bug Comments API routes
+  apiRouter.get("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const comments = await storage.getBugComments(bugId);
+      res.json(comments);
+    } catch (error) {
+      console.error('Error fetching bug comments:', error);
+      res.status(500).json({ error: 'Failed to fetch bug comments' });
+    }
+  });
+
+  apiRouter.post("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const { content } = req.body;
+
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: 'Comment content is required' });
+      }
+
+      const comment = await storage.createBugComment({
+        bugId,
+        userId: req.session.userId!,
+        content: content.trim()
+      });
+
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error('Error creating bug comment:', error);
+      res.status(500).json({ error: 'Failed to create bug comment' });
+    }
+  });
+
+  apiRouter.put("/bugs/:bugId/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const { content } = req.body;
+
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: 'Comment content is required' });
+      }
+
+      const comment = await storage.updateBugComment(commentId, req.session.userId!, {
+        content: content.trim()
+      });
+
+      if (!comment) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+
+      res.json(comment);
+    } catch (error) {
+      console.error('Error updating bug comment:', error);
+      res.status(500).json({ error: 'Failed to update bug comment' });
+    }
+  });
+
+  // Notebooks API routes
+  apiRouter.get("/notebooks", isAuthenticated, async (req, res) => {
+    try {
+      const notebooks = await storage.getNotebooks(req.session.userId!);
+      res.json(notebooks);
+    } catch (error) {
+      console.error('Error fetching notebooks:', error);
+      res.status(500).json({ error: 'Failed to fetch notebooks' });
+    }
+  });
+
+  apiRouter.post("/notebooks", isAuthenticated, async (req, res) => {
+    try {
+      const { title, content, color = '#ffffff', isPinned = false, isArchived = false, tags = [] } = req.body;
+
+      if (!title || !title.trim()) {
+        return res.status(400).json({ error: 'Title is required' });
+      }
+
+      const notebook = await storage.createNotebook({
+        title: title.trim(),
+        content: content || '',
+        color,
+        isPinned,
+        isArchived,
+        tags,
+        userId: req.session.userId!
+      });
+
+      res.status(201).json(notebook);
+    } catch (error) {
+      console.error('Error creating notebook:', error);
+      res.status(500).json({ error: 'Failed to create notebook' });
+    }
+  });
+
+  apiRouter.get("/notebooks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const notebook = await storage.getNotebook(parseInt(req.params.id), req.session.userId!);
+      if (!notebook) {
+        return res.status(404).json({ error: 'Notebook not found' });
+      }
+      res.json(notebook);
+    } catch (error) {
+      console.error('Error fetching notebook:', error);
+      res.status(500).json({ error: 'Failed to fetch notebook' });
+    }
+  });
+
+  apiRouter.put("/notebooks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+
+      const notebook = await storage.updateNotebook(id, req.session.userId!, updates);
+      if (!notebook) {
+        return res.status(404).json({ error: 'Notebook not found' });
+      }
+
+      res.json(notebook);
+    } catch (error) {
+      console.error('Error updating notebook:', error);
+      res.status(500).json({ error: 'Failed to update notebook' });
+    }
+  });
+
+  apiRouter.delete("/notebooks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteNotebook(id, req.session.userId!);
+
+      if (!success) {
+        return res.status(404).json({ error: 'Notebook not found' });
+      }
+
+      res.json({ message: 'Notebook deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting notebook:', error);
+      res.status(500).json({ error: 'Failed to delete notebook' });
+    }
+  });
+
+  // Todo routes
+  apiRouter.get('/todos', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const todos = await storage.getUserTodos(userId);
+      res.json(todos);
+    } catch (error) {
+      console.error('Error fetching todos:', error);
+      res.status(500).json({ error: 'Failed to fetch todos' });
+    }
+  });
+
+  apiRouter.post('/todos', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const todoData = { ...req.body, userId };
+      const todo = await storage.createTodo(todoData);
+      res.status(201).json(todo);
+    } catch (error) {
+      console.error('Error creating todo:', error);
+      res.status(500).json({ error: 'Failed to create todo' });
+    }
+  });
+
+  apiRouter.put('/todos/:id', isAuthenticated, async (req, res) => {
+    try {
+      const todoId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const updated = await storage.updateTodo(todoId, userId, req.body);
+
+      if (!updated) {
+        return res.status(404).json({ error: 'Todo not found' });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating todo:', error);
+      res.status(500).json({ error: 'Failed to update todo' });
+    }
+  });
+
+  apiRouter.delete('/todos/:id', isAuthenticated, async (req, res) => {
+    try {
+      const todoId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const deleted = await storage.deleteTodo(todoId, userId);
+
+      if (!deleted) {
+        return res.status(404).json({ error: 'Todo not found' });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting todo:', error);
+      res.status(500).json({ error: 'Failed to delete todo' });
+    }
+  });
+
+  // Messenger routes
+  apiRouter.get('/chats', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const chats = await storage.getUserConversations(userId);
+      res.json(chats);
+    } catch (error) {
+      console.error('Error fetching chats:', error);
+      res.status(500).json({ error: 'Failed to fetch chats' });
+    }
+  });
+
+  apiRouter.post('/chats/direct', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { targetUserId } = req.body;
+
+      if (!targetUserId) {
+        return res.status(400).json({ error: 'Target user ID is required' });
+      }
+
+      const chat = await storage.createDirectConversation(userId, targetUserId);
+      res.status(201).json(chat);
+    } catch (error) {
+      console.error('Error creating direct chat:', error);
+      res.status(500).json({ error: 'Failed to create direct chat' });
+    }
+  });
+
+  apiRouter.post('/chats/group', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { name, description, participants } = req.body;
+
+      if (!name || !participants || participants.length === 0) {
+        return res.status(400).json({ error: 'Group name and participants are required' });
+      }
+
+      const chat = await storage.createGroupConversation(userId, name, description, participants);
+      res.json(chat);
+    } catch (error) {
+      console.error('Error creating group chat:', error);
+      res.status(500).json({ error: 'Failed to create group chat' });
+    }
+  });
+
+  apiRouter.get('/chats/:id/messages', isAuthenticated, async (req, res) => {
+    try {
+      const chatId = parseInt(req.params.id);
+      const messages = await storage.getMessagesByChat(chatId);
+      res.json(messages);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  });
+
+  // Public users endpoint for messenger
+  apiRouter.get('/users/public', isAuthenticated, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const publicUsers = users.map(user => ({
+        id: user.id,
+        name: user.firstName + ' ' + (user.lastName || ''),
+        email: user.email,
+        isOnline: false,
+        lastSeen: null
+      }));
+      res.json(publicUsers);
+    } catch (error) {
+      console.error('Error fetching public users:', error);
+      res.status(500).json({ error: 'Failed to fetch users' });
+    }
+  });
+
+  apiRouter.post('/messages', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const messageData = { ...req.body, senderId: userId };
+      const message = await storage.createChatMessage(messageData);
+      res.status(201).json(message);
+    } catch (error) {
+      console.error('Error creating message:', error);
+      res.status(500).json({ error: 'Failed to create message' });
+    }
+  });
+
   // Register the main API router
   app.use("/api", apiRouter);
-  
+
   // Create HTTP server
   // Removed Playwright and automation service initialization
 
   const httpServer = createServer(app);
-  
+
   return httpServer;
 }
