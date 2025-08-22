@@ -914,13 +914,14 @@ export default function NavadhitiProjectsPage() {
                                         {allocation.role}
                                       </div>
                                       <div className="flex items-center gap-1 mt-1">
-                                        <span className="text-xs">Allocation:</span>
+                                        <span className="text-xs font-medium">Allocation:</span>
                                         <Input
                                           type="number"
                                           min="0"
                                           max="100"
+                                          step="5"
                                           value={allocation.allocation || 100}
-                                          className="w-12 h-4 text-xs text-center"
+                                          className="w-16 h-6 text-xs text-center border-blue-200 focus:border-blue-500"
                                           onChange={(e) => {
                                             const newAllocation = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
                                             updateEmployeeProjectMutation.mutate({ 
@@ -929,7 +930,13 @@ export default function NavadhitiProjectsPage() {
                                             });
                                           }}
                                         />
-                                        <span className="text-xs">%</span>
+                                        <span className="text-xs font-medium">%</span>
+                                        <div className="w-12 bg-gray-200 rounded-full h-1.5 ml-1">
+                                          <div 
+                                            className="bg-blue-500 h-1.5 rounded-full transition-all duration-300" 
+                                            style={{ width: `${allocation.allocation || 100}%` }}
+                                          />
+                                        </div>
                                       </div>
                                     </div>
                                   ) : null;
@@ -1292,8 +1299,9 @@ export default function NavadhitiProjectsPage() {
                                       type="number"
                                       min="0"
                                       max="100"
+                                      step="5"
                                       value={project?.completionPercentage || completionPercentage}
-                                      className="w-16 h-6 text-xs text-center"
+                                      className="w-16 h-6 text-xs text-center border-blue-200 focus:border-blue-500"
                                       onChange={(e) => {
                                         const newPercentage = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
                                         updateProjectMutation.mutate({ 
@@ -2263,7 +2271,7 @@ export default function NavadhitiProjectsPage() {
                     </CardHeader>
                     <CardContent>
                       <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={departmentData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+                        <BarChart data={departmentData} margin={{ top: 20, right: 30, left: 40, bottom: 80 }}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis 
                             dataKey="department" 
@@ -2274,10 +2282,15 @@ export default function NavadhitiProjectsPage() {
                             fontSize={11}
                             tick={{ fontSize: 11 }}
                           />
-                          <YAxis fontSize={11} />
+                          <YAxis 
+                            fontSize={11}
+                            label={{ value: 'Number of Employees', angle: -90, position: 'insideLeft', style: { fontSize: '11px' } }}
+                            tickFormatter={(value) => `${value}`}
+                          />
                           <Tooltip 
                             contentStyle={{ fontSize: '12px' }}
                             labelStyle={{ fontSize: '12px' }}
+                            formatter={(value, name) => [`${value} employees`, name]}
                           />
                           <Legend 
                             wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
@@ -2314,11 +2327,16 @@ export default function NavadhitiProjectsPage() {
                             interval={0}
                             fontSize={10}
                           />
-                          <YAxis domain={[0, 100]} fontSize={11} />
+                          <YAxis 
+                            domain={[0, 100]} 
+                            fontSize={11}
+                            label={{ value: 'Completion Percentage (%)', angle: -90, position: 'insideLeft', style: { fontSize: '11px' } }}
+                            tickFormatter={(value) => `${value}%`}
+                          />
                           <Tooltip 
                             formatter={(value, name, props) => [
                               `${value}%`, 
-                              'Completion'
+                              'Completion Progress'
                             ]}
                             labelFormatter={(label) => `Project: ${label}`}
                             contentStyle={{ fontSize: '12px' }}
@@ -2363,7 +2381,11 @@ export default function NavadhitiProjectsPage() {
                             interval={0}
                             fontSize={10}
                           />
-                          <YAxis fontSize={11} />
+                          <YAxis 
+                            fontSize={11}
+                            label={{ value: 'Number of Projects', angle: -90, position: 'insideLeft', style: { fontSize: '11px' } }}
+                            tickFormatter={(value) => `${value}`}
+                          />
                           <Tooltip 
                             formatter={(value) => [`${value} projects`, 'Usage Count']}
                             contentStyle={{ fontSize: '12px' }}
@@ -2377,23 +2399,24 @@ export default function NavadhitiProjectsPage() {
                   {/* Employee Utilization */}
                   <Card>
                     <CardHeader className="pb-4 text-center">
-                      <CardTitle className="text-lg">Employee Utilization</CardTitle>
-                      <CardDescription>Employee allocation across departments</CardDescription>
+                      <CardTitle className="text-lg">Employee Utilization by Department</CardTitle>
+                      <CardDescription className="text-sm">Employee allocation across departments (Occupied/Total)</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
                           <Pie
                             data={departmentData.map(dept => ({
-                              name: dept.department,
+                              name: dept.department.length > 12 ? dept.department.substring(0, 12) + '...' : dept.department,
                               value: dept.occupied,
-                              total: dept.employees
+                              total: dept.employees,
+                              fullName: dept.department
                             }))}
                             cx="50%"
                             cy="50%"
                             labelLine={false}
-                            label={({ name, value, total }) => `${name}: ${value}/${total}`}
-                            outerRadius={80}
+                            label={false}
+                            outerRadius={70}
                             fill="#8884d8"
                             dataKey="value"
                           >
@@ -2404,13 +2427,19 @@ export default function NavadhitiProjectsPage() {
                           <Tooltip 
                             formatter={(value, name, props) => [
                               `${value}/${props.payload.total} employees`, 
-                              'Occupied'
+                              'Occupied in ' + props.payload.fullName
                             ]}
+                            contentStyle={{ fontSize: '12px', padding: '8px' }}
                           />
                           <Legend 
                             verticalAlign="bottom" 
-                            height={36}
-                            wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }}
+                            height={60}
+                            wrapperStyle={{ 
+                              paddingTop: '20px', 
+                              fontSize: '11px',
+                              lineHeight: '1.2'
+                            }}
+                            formatter={(value, entry) => `${value} (${entry.payload.value}/${entry.payload.total})`}
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -2447,11 +2476,14 @@ export default function NavadhitiProjectsPage() {
                             interval={0}
                             fontSize={10}
                           />
-                          <YAxis fontSize={11} />
+                          <YAxis 
+                            fontSize={11}
+                            label={{ value: 'Days / Percentage', angle: -90, position: 'insideLeft', style: { fontSize: '11px' } }}
+                          />
                           <Tooltip 
                             formatter={(value, name) => [
                               name === 'duration' ? `${value} days` : `${value}%`,
-                              name === 'duration' ? 'Duration' : 'Progress'
+                              name === 'duration' ? 'Project Duration' : 'Progress Percentage'
                             ]}
                             contentStyle={{ fontSize: '12px' }}
                           />
@@ -2794,6 +2826,17 @@ export default function NavadhitiProjectsPage() {
                                       }}
                                     >
                                       Edit
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      className="flex-1 text-xs h-7 bg-blue-600 hover:bg-blue-700"
+                                      onClick={() => {
+                                        setSelectedProject(project.id);
+                                        setIsAllocationDialogOpen(true);
+                                      }}
+                                    >
+                                      Quick Allocate
                                     </Button>
                                   </div>
                                 </div>
