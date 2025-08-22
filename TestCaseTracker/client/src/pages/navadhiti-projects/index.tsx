@@ -2288,6 +2288,180 @@ export default function NavadhitiProjectsPage() {
                       </ResponsiveContainer>
                     </CardContent>
                   </Card>
+
+                  {/* Project Completion Progress */}
+                  <Card>
+                    <CardHeader className="pb-4 text-center">
+                      <CardTitle className="text-lg">Project Completion Progress</CardTitle>
+                      <CardDescription>Progress overview of all active projects</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart 
+                          data={projects.filter(p => p.status === 'Active').map(p => ({
+                            name: p.projectName.length > 15 ? p.projectName.substring(0, 15) + '...' : p.projectName,
+                            progress: p.completionPercentage || 0,
+                            client: p.clientName
+                          }))} 
+                          margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="name" 
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
+                            interval={0}
+                            fontSize={10}
+                          />
+                          <YAxis domain={[0, 100]} fontSize={11} />
+                          <Tooltip 
+                            formatter={(value, name, props) => [
+                              `${value}%`, 
+                              'Completion'
+                            ]}
+                            labelFormatter={(label) => `Project: ${label}`}
+                            contentStyle={{ fontSize: '12px' }}
+                          />
+                          <Bar dataKey="progress" fill="#10b981" name="Completion %" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  {/* Technology Usage */}
+                  <Card>
+                    <CardHeader className="pb-4 text-center">
+                      <CardTitle className="text-lg">Technology Usage</CardTitle>
+                      <CardDescription>Most used technologies across projects</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart 
+                          data={(() => {
+                            const techCount: Record<string, number> = {};
+                            projects.forEach(p => {
+                              if (p.technologies && Array.isArray(p.technologies)) {
+                                p.technologies.forEach(tech => {
+                                  techCount[tech] = (techCount[tech] || 0) + 1;
+                                });
+                              }
+                            });
+                            return Object.entries(techCount)
+                              .sort(([,a], [,b]) => b - a)
+                              .slice(0, 10)
+                              .map(([tech, count]) => ({ technology: tech, count }));
+                          })()} 
+                          margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="technology" 
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
+                            interval={0}
+                            fontSize={10}
+                          />
+                          <YAxis fontSize={11} />
+                          <Tooltip 
+                            formatter={(value) => [`${value} projects`, 'Usage Count']}
+                            contentStyle={{ fontSize: '12px' }}
+                          />
+                          <Bar dataKey="count" fill="#8b5cf6" name="Projects Using" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  {/* Employee Utilization */}
+                  <Card>
+                    <CardHeader className="pb-4 text-center">
+                      <CardTitle className="text-lg">Employee Utilization</CardTitle>
+                      <CardDescription>Employee allocation across departments</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={departmentData.map(dept => ({
+                              name: dept.department,
+                              value: dept.occupied,
+                              total: dept.employees
+                            }))}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, value, total }) => `${name}: ${value}/${total}`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {departmentData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 60%)`} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            formatter={(value, name, props) => [
+                              `${value}/${props.payload.total} employees`, 
+                              'Occupied'
+                            ]}
+                          />
+                          <Legend 
+                            verticalAlign="bottom" 
+                            height={36}
+                            wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  {/* Project Timeline */}
+                  <Card>
+                    <CardHeader className="pb-4 text-center">
+                      <CardTitle className="text-lg">Project Timeline</CardTitle>
+                      <CardDescription>Project duration and timeline overview</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart 
+                          data={projects
+                            .filter(p => p.startDate && p.endDate)
+                            .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+                            .slice(0, 10)
+                            .map(p => ({
+                              name: p.projectName.length > 12 ? p.projectName.substring(0, 12) + '...' : p.projectName,
+                              duration: p.endDate && p.startDate ? 
+                                Math.ceil((new Date(p.endDate).getTime() - new Date(p.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 0,
+                              progress: p.completionPercentage || 0
+                            }))} 
+                          margin={{ top: 5, right: 30, left: 20, bottom: 80 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="name" 
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
+                            interval={0}
+                            fontSize={10}
+                          />
+                          <YAxis fontSize={11} />
+                          <Tooltip 
+                            formatter={(value, name) => [
+                              name === 'duration' ? `${value} days` : `${value}%`,
+                              name === 'duration' ? 'Duration' : 'Progress'
+                            ]}
+                            contentStyle={{ fontSize: '12px' }}
+                          />
+                          <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                          <Line type="monotone" dataKey="duration" stroke="#3b82f6" name="Duration (days)" />
+                          <Line type="monotone" dataKey="progress" stroke="#10b981" name="Progress %" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
                 </div>
 
                 {/* Individual Projects Dashboard */}
@@ -3318,7 +3492,14 @@ export default function NavadhitiProjectsPage() {
                                     size="sm"
                                     variant="outline"
                                     className="w-full text-xs h-8 mt-2"
-                                    onClick={() => handleManageEmployeeProjects(employee)}
+                                    onClick={() => {
+                                      if (navadhitiAllocations.length > 0) {
+                                        handleManageEmployeeProjects(employee);
+                                      } else {
+                                        setSelectedEmployees([employee.id]);
+                                        setIsAllocationDialogOpen(true);
+                                      }
+                                    }}
                                   >
                                     <UserCheck className="h-4 w-4 mr-2" />
                                     {navadhitiAllocations.length > 0 ? 'Manage Projects' : 'Allocate to Project'}
@@ -3486,7 +3667,14 @@ export default function NavadhitiProjectsPage() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => handleManageEmployeeProjects(employee)}
+                                        onClick={() => {
+                                          if (navadhitiAllocations.length > 0) {
+                                            handleManageEmployeeProjects(employee);
+                                          } else {
+                                            setSelectedEmployees([employee.id]);
+                                            setIsAllocationDialogOpen(true);
+                                          }
+                                        }}
                                       >
                                         <UserCheck className="h-4 w-4 mr-2" />
                                         {navadhitiAllocations.length > 0 ? 'Manage Projects' : 'Allocate to Project'}
@@ -3671,7 +3859,14 @@ export default function NavadhitiProjectsPage() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => handleManageEmployeeProjects(employee)}
+                                        onClick={() => {
+                                          if (navadhitiAllocations.length > 0) {
+                                            handleManageEmployeeProjects(employee);
+                                          } else {
+                                            setSelectedEmployees([employee.id]);
+                                            setIsAllocationDialogOpen(true);
+                                          }
+                                        }}
                                       >
                                         <UserCheck className="h-4 w-4 mr-1" />
                                         {navadhitiAllocations.length > 0 ? 'Manage' : 'Allocate'}
