@@ -753,11 +753,21 @@ export default function NavadhitiProjectsPage() {
                           <DialogContent className="max-w-2xl">
                             <DialogHeader>
                               <DialogTitle>Allocate Employees to Project</DialogTitle>
+                              <DialogDescription>
+                                {selectedProject && projects.find(p => p.id === selectedProject) 
+                                  ? `Allocating to: ${projects.find(p => p.id === selectedProject)?.projectName}`
+                                  : selectedEmployees.length > 0 
+                                  ? `Allocating ${selectedEmployees.length} employee(s)`
+                                  : "Select project and employees to allocate"}
+                              </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4">
                               <div>
                                 <Label>Project</Label>
-                                <Select value={selectedProject?.toString() || ""} onValueChange={(value) => setSelectedProject(parseInt(value))}>
+                                <Select 
+                                  value={selectedProject?.toString() || ""} 
+                                  onValueChange={(value) => setSelectedProject(parseInt(value))}
+                                >
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select project..." />
                                   </SelectTrigger>
@@ -770,6 +780,29 @@ export default function NavadhitiProjectsPage() {
                                   </SelectContent>
                                 </Select>
                               </div>
+                              
+                              {/* Show selected employees */}
+                              {selectedEmployees.length > 0 && (
+                                <div>
+                                  <Label>Selected Employees ({selectedEmployees.length})</Label>
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                    {selectedEmployees.map(employeeId => {
+                                      const employee = employeesData.find((emp: any) => emp.id === employeeId);
+                                      return employee ? (
+                                        <Badge key={employeeId} variant="secondary" className="flex items-center gap-1">
+                                          {employee.firstName} {employee.lastName}
+                                          <button
+                                            onClick={() => setSelectedEmployees(prev => prev.filter(id => id !== employeeId))}
+                                            className="ml-1 text-gray-500 hover:text-gray-700"
+                                          >
+                                            ×
+                                          </button>
+                                        </Badge>
+                                      ) : null;
+                                    })}
+                                  </div>
+                                </div>
+                              )}</div>
                               <div>
                                 <Label>Role</Label>
                                 <Input
@@ -2833,6 +2866,10 @@ export default function NavadhitiProjectsPage() {
                                       className="flex-1 text-xs h-7 bg-blue-600 hover:bg-blue-700"
                                       onClick={() => {
                                         setSelectedProject(project.id);
+                                        setSelectedEmployees([]); // Clear any previous selections
+                                        setAllocationRole(""); // Clear role
+                                        setAllocationStartDate(""); // Clear dates
+                                        setAllocationEndDate("");
                                         setIsAllocationDialogOpen(true);
                                       }}
                                     >
@@ -3540,6 +3577,10 @@ export default function NavadhitiProjectsPage() {
                                         handleManageEmployeeProjects(employee);
                                       } else {
                                         setSelectedEmployees([employee.id]);
+                                        setSelectedProject(null); // Clear project selection
+                                        setAllocationRole(""); // Clear role
+                                        setAllocationStartDate(""); // Clear dates
+                                        setAllocationEndDate("");
                                         setIsAllocationDialogOpen(true);
                                       }
                                     }}
@@ -3715,6 +3756,10 @@ export default function NavadhitiProjectsPage() {
                                             handleManageEmployeeProjects(employee);
                                           } else {
                                             setSelectedEmployees([employee.id]);
+                                            setSelectedProject(null); // Clear project selection
+                                            setAllocationRole(""); // Clear role
+                                            setAllocationStartDate(""); // Clear dates
+                                            setAllocationEndDate("");
                                             setIsAllocationDialogOpen(true);
                                           }
                                         }}
@@ -3907,6 +3952,10 @@ export default function NavadhitiProjectsPage() {
                                             handleManageEmployeeProjects(employee);
                                           } else {
                                             setSelectedEmployees([employee.id]);
+                                            setSelectedProject(null); // Clear project selection
+                                            setAllocationRole(""); // Clear role
+                                            setAllocationStartDate(""); // Clear dates
+                                            setAllocationEndDate("");
                                             setIsAllocationDialogOpen(true);
                                           }
                                         }}
