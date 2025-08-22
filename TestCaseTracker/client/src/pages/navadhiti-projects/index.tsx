@@ -3590,9 +3590,9 @@ export default function NavadhitiProjectsPage() {
                                         handleManageEmployeeProjects(employee);
                                       } else {
                                         setSelectedEmployees([employee.id]);
-                                        setSelectedProject(null); // Clear project selection
-                                        setAllocationRole(""); // Clear role
-                                        setAllocationStartDate(""); // Clear dates
+                                        setSelectedProject(null);
+                                        setAllocationRole("");
+                                        setAllocationStartDate("");
                                         setAllocationEndDate("");
                                         setIsAllocationDialogOpen(true);
                                       }
@@ -3769,9 +3769,9 @@ export default function NavadhitiProjectsPage() {
                                             handleManageEmployeeProjects(employee);
                                           } else {
                                             setSelectedEmployees([employee.id]);
-                                            setSelectedProject(null); // Clear project selection
-                                            setAllocationRole(""); // Clear role
-                                            setAllocationStartDate(""); // Clear dates
+                                            setSelectedProject(null);
+                                            setAllocationRole("");
+                                            setAllocationStartDate("");
                                             setAllocationEndDate("");
                                             setIsAllocationDialogOpen(true);
                                           }
@@ -3965,9 +3965,9 @@ export default function NavadhitiProjectsPage() {
                                             handleManageEmployeeProjects(employee);
                                           } else {
                                             setSelectedEmployees([employee.id]);
-                                            setSelectedProject(null); // Clear project selection
-                                            setAllocationRole(""); // Clear role
-                                            setAllocationStartDate(""); // Clear dates
+                                            setSelectedProject(null);
+                                            setAllocationRole("");
+                                            setAllocationStartDate("");
                                             setAllocationEndDate("");
                                             setIsAllocationDialogOpen(true);
                                           }
