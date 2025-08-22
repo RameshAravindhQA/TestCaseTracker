@@ -2042,9 +2042,10 @@ export default function NavadhitiProjectsPage() {
                         </div>
                       )}
                     </>
-                )}
-              </CardContent>
-            </Card>
+                  )}
+                </CardContent>
+              </Card>
+            )}</old_str>
           )}</old_str>
               </Card>
             )}
