@@ -4484,8 +4484,8 @@ export default function NavadhitiProjectsPage() {
               </Card>
             )}
 
-              {/* Individual Employee Dashboard */}
-              {viewMode === 'employees' && (
+            {/* Individual Employee Dashboard */}
+            {viewMode === 'employees' && (
                 <Card>
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
