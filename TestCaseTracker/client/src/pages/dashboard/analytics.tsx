@@ -298,11 +298,11 @@ export default function AnalyticsDashboard() {
 
   // Fetch project assignments for current employee allocation calculations
   const { data: projectAssignments = [] } = useQuery({
-    queryKey: ["project-assignments"],
+    queryKey: ["/api/employee-projects"],
     queryFn: async () => {
       console.log('🔍 Analytics - Fetching project assignments...');
       try {
-        const res = await apiRequest("GET", "/api/project-assignments");
+        const res = await apiRequest("GET", "/api/employee-projects");
         if (!res.ok) {
           throw new Error(`Failed to fetch project assignments: ${res.status} ${res.statusText}`);
         }
@@ -321,7 +321,7 @@ export default function AnalyticsDashboard() {
   const assignProjectMutation = useMutation({
     mutationFn: async (assignmentData: any) => {
       console.log('🔍 Analytics - Assigning project:', assignmentData);
-      const res = await apiRequest('POST', '/api/project-assignments', assignmentData);
+      const res = await apiRequest('POST', '/api/employee-projects', assignmentData);
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || `Failed to assign project: ${res.statusText}`);
@@ -330,10 +330,10 @@ export default function AnalyticsDashboard() {
     },
     onSuccess: () => {
       console.log('🔍 Analytics - Project assignment successful');
-      queryClient.invalidateQueries({ queryKey: ["project-assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["analytics-users"] }); // Invalidate users to potentially update allocation summaries if added
-      setIsAssigningProject(null); // Close the form
-      setIsAllocationDialogOpen(false); // Close the dialog
+      queryClient.invalidateQueries({ queryKey: ["/api/employee-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics-users"] });
+      setIsAssigningProject(null);
+      setIsAllocationDialogOpen(false);
       toast({ title: "Success", description: "Project allocated successfully!" });
     },
     onError: (error: any) => {
@@ -955,13 +955,13 @@ const ProjectAssignmentForm: React.FC<{
     onAssign({
       employeeId: employee.id,
       projectId: parseInt(selectedProject),
-      projectType: 'regular', // Assuming 'regular' for now, adjust if needed
+      projectType: 'regular',
       role,
       allocation: parseInt(allocation),
       startDate,
-      endDate: endDate || undefined, // Send undefined if no end date
-      status: 'active', // Default status
-      isActive: true // Default active status
+      endDate: endDate || undefined,
+      status: 'active',
+      isActive: true
     });
   };
 
