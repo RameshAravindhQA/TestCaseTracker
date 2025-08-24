@@ -9,6 +9,8 @@ import { logger } from "./logger";
 import { initializeDatabase } from "./matrix-fix";
 import expressWs from "express-ws";
 
+// Force in-memory storage by clearing DATABASE_URL
+process.env.DATABASE_URL = '';
 
 const PORT = process.env.PORT || 5000;
 
