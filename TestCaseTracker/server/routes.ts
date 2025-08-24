@@ -388,7 +388,54 @@ const configureBugAttachmentUpload = () => {
     }
   };
 
-  export async function registerRoutes(app: Express): Promise<Server> {
+  return multer({
+    storage,
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB max file size to accommodate videos
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept images, videos, PDFs, and common document types
+      const acceptedTypes = [
+        // Images
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+        // Videos - expanded list
+        'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-flv',
+        'video/x-matroska', 'video/x-ms-wmv', 'video/3gpp', 'video/mpeg', 'video/avi', 'video/x-ms-asf',
+        // Documents
+        'application/pdf', 
+        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // Word
+        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // Excel
+        'text/plain', 'text/csv',
+        // Archives
+        'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'
+      ];
+
+      console.log(`Received file upload attempt: ${file.originalname}, mimetype: ${file.mimetype}`);
+
+      // Accept all files for now - mimetype detection can be unreliable
+      // particularly with video files and different browser implementations
+      if (!file.mimetype || acceptedTypes.includes(file.mimetype)) {
+        return cb(null, true);
+      }
+
+      // For files with unrecognized mime types, check file extensions
+      const ext = path.extname(file.originalname).toLowerCase();
+      const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.pdf', '.doc', '.docx',
+                          '.xls', '.xlsx', '.txt', '.csv', '.zip', '.mp4', '.webm', '.avi', '.mov',
+                          '.mkv', '.flv', '.wmv', '.ogv', '.3gp'];
+
+      if (allowedExts.includes(ext)) {
+        return cb(null, true);
+      }
+
+      // If we get here, the file type is not supported
+      console.log(`Rejected file: ${file.originalname} with mimetype: ${file.mimetype} and extension: ${ext}`);
+      cb(new Error('File type not supported. Please upload an image, video, or document.'));
+    }
+  });
+};
+
+export async function registerRoutes(app: Express): Promise<Server> {
     // Handle any directory migrations first
     migrateOldDirectories();
 
