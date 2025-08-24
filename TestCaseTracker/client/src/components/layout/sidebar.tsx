@@ -41,6 +41,7 @@ import {
   Play,
   User as UserIcon,
   TrendingUp,
+  Brain,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -78,7 +79,6 @@ interface NavItem {
 // Helper component for sidebar items
 const SidebarItem = ({ icon, label, to, badge }: { icon: React.ReactNode; label: string; to: string; badge?: string }) => {
   const [location] = useLocation();
-  const isActive = location.startsWith(to);
   const { theme } = useColorTheme();
 
   return (
@@ -86,13 +86,13 @@ const SidebarItem = ({ icon, label, to, badge }: { icon: React.ReactNode; label:
       href={to}
       className={cn(
         "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-all duration-200",
-        isActive
+        location.startsWith(to)
           ? "text-white bg-primary shadow-md"
           : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
       )}
     >
       <motion.span
-        className={cn("mr-3", isActive ? "text-white" : "text-gray-500 dark:text-gray-400")}
+        className={cn("mr-3", location.startsWith(to) ? "text-white" : "text-gray-500 dark:text-gray-400")}
         whileHover={{ scale: 1.1 }}
         transition={{ duration: 0.15 }}
       >
@@ -103,8 +103,8 @@ const SidebarItem = ({ icon, label, to, badge }: { icon: React.ReactNode; label:
         <motion.span
           className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ml-auto"
           style={{
-            backgroundColor: isActive ? "#ffffff" : theme === "dark" ? "#374151" : "#e5e7eb",
-            color: isActive ? "#111827" : theme === "dark" ? "#d1d5db" : "#1f2937",
+            backgroundColor: location.startsWith(to) ? "#ffffff" : theme === "dark" ? "#374151" : "#e5e7eb",
+            color: location.startsWith(to) ? "#111827" : theme === "dark" ? "#d1d5db" : "#1f2937",
           }}
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -207,6 +207,13 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       name: "Messenger",
       href: "/messenger",
       icon: <MessageSquare className="h-5 w-5" />,
+      badge: "New",
+    },
+    {
+      name: "AI Assistant",
+      href: "/ai-assistant",
+      icon: <Brain className="h-5 w-5" />,
+      badge: "AI",
     },
     {
       name: "GitHub Integration",
