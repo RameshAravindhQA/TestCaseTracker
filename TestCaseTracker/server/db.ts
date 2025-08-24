@@ -5,8 +5,8 @@ import * as schema from "../shared/schema";
 // Create the database connection
 let connectionString = process.env.DATABASE_URL;
 
-if (!connectionString || connectionString.trim() === '') {
-  console.log("⚠️  DATABASE_URL not found or cleared, using in-memory storage");
+if (!connectionString) {
+  console.log("⚠️  DATABASE_URL not found, using in-memory storage");
   export const db = null;
 } else {
   console.log("🔄 Connecting to PostgreSQL database...");

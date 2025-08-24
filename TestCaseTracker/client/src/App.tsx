@@ -48,8 +48,6 @@ import AIGeneratorPage from "@/pages/ai-generator";
 import QAUpdatesPage from "@/pages/qa-updates";
 import ResourceAllocationPage from "./pages/resource-allocation";
 import AnalyticsDashboard from "./pages/dashboard/analytics";
-import MessengerPage from './pages/messenger';
-import AIAssistantPage from './pages/ai-assistant';
 
 
 // Loading component for Suspense fallback
@@ -108,7 +106,7 @@ function SoundIntegrationSetup() {
     if (window.globalSoundHandler) {
       console.log('✅ Global sound handler is available');
     } else {
-      console.warn('⚠️ Sound handler not available, will be initialized by sound manager');
+      console.warn('⚠️ Global sound handler not available, will be initialized by sound manager');
     }
   }, []);
 
@@ -208,8 +206,9 @@ function Router() {
       <Route path="/notebooks">
         <ProtectedComponent Component={NotebooksPage} />
       </Route>
-      <Route path="/messenger" element={<MessengerPage />} />
-      <Route path="/ai-assistant" element={<AIAssistantPage />} />
+      <Route path="/messenger">
+        <ProtectedLazyComponent Component={lazy(() => import("./pages/messenger/index"))} />
+      </Route>
       <Route path="/todos">
         <ProtectedLazyComponent Component={lazy(() => import("./pages/todos"))} />
       </Route>

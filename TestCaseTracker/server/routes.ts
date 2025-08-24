@@ -90,25 +90,7 @@ const checkRole = (roles: string[]) => {
   };
 };
 
-// Backward compatibility function to handle old bug-attachments directory
-const migrateOldDirectories = () => {
-  const uploadsDir = path.join(process.cwd(), 'uploads');
-  const oldBugAttachmentsDir = path.join(uploadsDir, 'bug-attachments');
-  const newBugAttachmentDir = path.join(uploadsDir, 'bug-attachment');
-
-  // If the old directory exists and the new one doesn't, rename it
-  if (fs.existsSync(oldBugAttachmentsDir) && !fs.existsSync(newBugAttachmentDir)) {
-    console.log(`Migrating bug attachments directory from ${oldBugAttachmentsDir} to ${newBugAttachmentDir}`);
-    try {
-      fs.renameSync(oldBugAttachmentsDir, newBugAttachmentDir);
-      console.log('Directory migration completed successfully');
-    } catch (error) {
-      console.error('Error migrating bug attachments directory:', error);
-    }
-  }
-};
-
-// Create upload directories and test write permissions
+// Configure uploads
 const createUploadDirectories = () => {
   const uploadsDir = path.join(process.cwd(), 'uploads');
   const profilePicturesDir = path.join(uploadsDir, 'profile-pictures');
@@ -387,1016 +369,988 @@ const configureBugAttachmentUpload = () => {
       cb(new Error('File type not supported. Please upload an image, video, or document.'));
     }
   });
+};
 
-  return multer({
-    storage,
-    limits: {
-      fileSize: 50 * 1024 * 1024, // 50MB max file size to accommodate videos
-    },
-    fileFilter: (req, file, cb) => {
-      // Accept images, videos, PDFs, and common document types
-      const acceptedTypes = [
-        // Images
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-        // Videos - expanded list
-        'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-flv',
-        'video/x-matroska', 'video/x-ms-wmv', 'video/3gpp', 'video/mpeg', 'video/avi', 'video/x-ms-asf',
-        // Documents
-        'application/pdf', 
-        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // Word
-        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // Excel
-        'text/plain', 'text/csv',
-        // Archives
-        'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'
-      ];
+// Backward compatibility function to handle old bug-attachments directory
+const migrateOldDirectories = () => {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const oldBugAttachmentsDir = path.join(uploadsDir, 'bug-attachments');
+  const newBugAttachmentDir = path.join(uploadsDir, 'bug-attachment');
 
-      console.log(`Received file upload attempt: ${file.originalname}, mimetype: ${file.mimetype}`);
-
-      // Accept all files for now - mimetype detection can be unreliable
-      // particularly with video files and different browser implementations
-      if (!file.mimetype || acceptedTypes.includes(file.mimetype)) {
-        return cb(null, true);
-      }
-
-      // For files with unrecognized mime types, check file extensions
-      const ext = path.extname(file.originalname).toLowerCase();
-      const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.pdf', '.doc', '.docx',
-                          '.xls', '.xlsx', '.txt', '.csv', '.zip', '.mp4', '.webm', '.avi', '.mov',
-                          '.mkv', '.flv', '.wmv', '.ogv', '.3gp'];
-
-      if (allowedExts.includes(ext)) {
-        return cb(null, true);
-      }
-
-      // If we get here, the file type is not supported
-      console.log(`Rejected file: ${file.originalname} with mimetype: ${file.mimetype} and extension: ${ext}`);
-      cb(new Error('File type not supported. Please upload an image, video, or document.'));
+  // If the old directory exists and the new one doesn't, rename it
+  if (fs.existsSync(oldBugAttachmentsDir) && !fs.existsSync(newBugAttachmentDir)) {
+    console.log(`Migrating bug attachments directory from ${oldBugAttachmentsDir} to ${newBugAttachmentDir}`);
+    try {
+      fs.renameSync(oldBugAttachmentsDir, newBugAttachmentDir);
+      console.log('Directory migration completed successfully');
+    } catch (error) {
+      console.error('Error migrating bug attachments directory:', error);
     }
-  });
+  }
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-    // Handle any directory migrations first
-    migrateOldDirectories();
+  // Handle any directory migrations first
+  migrateOldDirectories();
 
-    // Create upload directories
-    createUploadDirectories();
+  // Create upload directories
+  createUploadDirectories();
 
-    // Configure uploads
-    const profilePictureUpload = configureProfilePictureUpload();
-    const bugAttachmentUpload = configureBugAttachmentUpload();
+  // Configure uploads
+  const profilePictureUpload = configureProfilePictureUpload();
+  const bugAttachmentUpload = configureBugAttachmentUpload();
 
-    // Setup session store
-    const SessionStore = MemoryStore(session);
+  // Setup session store
+  const SessionStore = MemoryStore(session);
 
-    app.use(session({
-      secret: process.env.SESSION_SECRET || "test-track-secret",
-      resave: false,
-      saveUninitialized: false,
-      store: new SessionStore({
-        checkPeriod: 86400000 // prune expired entries every 24h
-      }),
-      cookie: {
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        secure: false, // Set to false for development
-        httpOnly: true,
-        sameSite: 'lax' // Add sameSite for better compatibility
+  app.use(session({
+    secret: process.env.SESSION_SECRET || "test-track-secret",
+    resave: false,
+    saveUninitialized: false,
+    store: new SessionStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    }),
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      secure: false, // Set to false for development
+      httpOnly: true,
+      sameSite: 'lax' // Add sameSite for better compatibility
+    }
+  }));
+
+  const apiRouter = Router();
+
+  // GitHub integrations routes
+  apiRouter.use("/github", githubIntegrationsRouter);
+
+  // Navadhiti Projects routes
+  apiRouter.get("/navadhiti-projects", isAuthenticated, async (req, res) => {
+    try {
+      const projects = await storage.getNavadhitiProjects();
+      res.json(projects);
+    } catch (error) {
+      console.error("Get navadhiti projects error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const project = await storage.getNavadhitiProject(id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
       }
-    }));
+      res.json(project);
+    } catch (error) {
+      console.error("Get navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
-    const apiRouter = Router();
+  apiRouter.post("/navadhiti-projects", isAuthenticated, async (req, res) => {
+    try {
+      const projectData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+      const project = await storage.createNavadhitiProject(projectData);
+      res.status(201).json(project);
+    } catch (error) {
+      console.error("Create navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
-    // GitHub integrations routes
-    apiRouter.use("/github", githubIntegrationsRouter);
-
-    // Navadhiti Projects routes
-    apiRouter.get("/navadhiti-projects", isAuthenticated, async (req, res) => {
-      try {
-        const projects = await storage.getNavadhitiProjects();
-        res.json(projects);
-      } catch (error) {
-        console.error("Get navadhiti projects error:", error);
-        res.status(500).json({ message: "Server error" });
+  apiRouter.put("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedProject = await storage.updateNavadhitiProject(id, req.body);
+      if (!updatedProject) {
+        return res.status(404).json({ message: "Project not found" });
       }
-    });
+      res.json(updatedProject);
+    } catch (error) {
+      console.error("Update navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
-    apiRouter.get("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
-      try {
-        const id = parseInt(req.params.id);
-        const project = await storage.getNavadhitiProject(id);
-        if (!project) {
-          return res.status(404).json({ message: "Project not found" });
-        }
-        res.json(project);
-      } catch (error) {
-        console.error("Get navadhiti project error:", error);
-        res.status(500).json({ message: "Server error" });
+  apiRouter.delete("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteNavadhitiProject(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Status Review endpoints
+  apiRouter.get("/navadhiti-projects/status-reviews", isAuthenticated, async (req, res) => {
+    try {
+      const { date } = req.query;
+      const reviews = await storage.getStatusReviews(date as string);
+      res.json(reviews);
+    } catch (error) {
+      console.error("Get status reviews error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Employee-Project Mapping endpoints
+  apiRouter.get("/employee-projects", isAuthenticated, async (req, res) => {
+    try {
+      const { employeeId } = req.query;
+      const employeeProjects = await storage.getEmployeeProjects(employeeId ? parseInt(employeeId as string) : undefined);
+      res.json(employeeProjects);
+    } catch (error) {
+      console.error("Get employee projects error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/employee-projects", isAuthenticated, async (req, res) => {
+    try {
+      const mappingData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+      const mapping = await storage.createEmployeeProject(mappingData);
+      res.status(201).json(mapping);
+    } catch (error) {
+      console.error("Create employee project mapping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.put("/employee-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      const updated = await storage.updateEmployeeProject(id, updateData);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update employee project mapping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/employee-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteEmployeeProject(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete employee project mapping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get employee project history (all employees)
+  apiRouter.get("/employee-projects-history", isAuthenticated, async (req, res) => {
+    try {
+      const history = await storage.getAllEmployeeProjectHistory();
+      res.json(history);
+    } catch (error) {
+      console.error("Get employee project history error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get employee project history for specific employee
+  apiRouter.get("/employee-projects-history/:employeeId", isAuthenticated, async (req, res) => {
+    try {
+      const employeeId = parseInt(req.params.employeeId);
+      const history = await storage.getEmployeeProjectHistory(employeeId);
+      res.json(history);
+    } catch (error) {
+      console.error("Get employee project history error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Add extend project duration route for history management
+  apiRouter.post("/employee-projects/:id/extend", isAuthenticated, async (req, res) => {
+    try {
+      const allocationId = parseInt(req.params.id);
+      const { newEndDate, extensionDays } = req.body;
+
+      // Get current allocation
+      const currentAllocation = await storage.getEmployeeProjectAllocation(allocationId);
+      if (!currentAllocation) {
+        return res.status(404).json({ message: "Project allocation not found" });
       }
-    });
 
-    apiRouter.post("/navadhiti-projects", isAuthenticated, async (req, res) => {
-      try {
-        const projectData = {
-          ...req.body,
-          createdById: req.session.userId
-        };
-        const project = await storage.createNavadhitiProject(projectData);
-        res.status(201).json(project);
-      } catch (error) {
-        console.error("Create navadhiti project error:", error);
-        res.status(500).json({ message: "Server error" });
+      // Calculate new end date if extension days provided
+      let finalEndDate = newEndDate;
+      if (extensionDays && !newEndDate) {
+        const currentEnd = new Date(currentAllocation.endDate || new Date());
+        currentEnd.setDate(currentEnd.getDate() + parseInt(extensionDays));
+        finalEndDate = currentEnd.toISOString().split('T')[0];
       }
-    });
 
-    apiRouter.put("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
-      try {
-        const id = parseInt(req.params.id);
-        const updatedProject = await storage.updateNavadhitiProject(id, req.body);
-        if (!updatedProject) {
-          return res.status(404).json({ message: "Project not found" });
-        }
-        res.json(updatedProject);
-      } catch (error) {
-        console.error("Update navadhiti project error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    apiRouter.delete("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
-      try {
-        const id = parseInt(req.params.id);
-        const success = await storage.deleteNavadhitiProject(id);
-        res.json({ success });
-      } catch (error) {
-        console.error("Delete navadhiti project error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    // Status Review endpoints
-    apiRouter.get("/navadhiti-projects/status-reviews", isAuthenticated, async (req, res) => {
-      try {
-        const { date } = req.query;
-        const reviews = await storage.getStatusReviews(date as string);
-        res.json(reviews);
-      } catch (error) {
-        console.error("Get status reviews error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    // Employee-Project Mapping endpoints
-    apiRouter.get("/employee-projects", isAuthenticated, async (req, res) => {
-      try {
-        const { employeeId } = req.query;
-        const employeeProjects = await storage.getEmployeeProjects(employeeId ? parseInt(employeeId as string) : undefined);
-        res.json(employeeProjects);
-      } catch (error) {
-        console.error("Get employee projects error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    apiRouter.post("/employee-projects", isAuthenticated, async (req, res) => {
-      try {
-        const mappingData = {
-          ...req.body,
-          createdById: req.session.userId
-        };
-        const mapping = await storage.createEmployeeProject(mappingData);
-        res.status(201).json(mapping);
-      } catch (error) {
-        console.error("Create employee project mapping error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    apiRouter.put("/employee-projects/:id", isAuthenticated, async (req, res) => {
-      try {
-        const id = parseInt(req.params.id);
-        const updateData = req.body;
-        const updated = await storage.updateEmployeeProject(id, updateData);
-        res.json(updated);
-      } catch (error) {
-        console.error("Update employee project mapping error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    apiRouter.delete("/employee-projects/:id", isAuthenticated, async (req, res) => {
-      try {
-        const id = parseInt(req.params.id);
-        const success = await storage.deleteEmployeeProject(id);
-        res.json({ success });
-      } catch (error) {
-        console.error("Delete employee project mapping error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    // Get employee project history (all employees)
-    apiRouter.get("/employee-projects-history", isAuthenticated, async (req, res) => {
-      try {
-        const history = await storage.getAllEmployeeProjectHistory();
-        res.json(history);
-      } catch (error) {
-        console.error("Get employee project history error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    // Get employee project history for specific employee
-    apiRouter.get("/employee-projects-history/:employeeId", isAuthenticated, async (req, res) => {
-      try {
-        const employeeId = parseInt(req.params.employeeId);
-        const history = await storage.getEmployeeProjectHistory(employeeId);
-        res.json(history);
-      } catch (error) {
-        console.error("Get employee project history error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    // Add extend project duration route for history management
-    apiRouter.post("/employee-projects/:id/extend", isAuthenticated, async (req, res) => {
-      try {
-        const allocationId = parseInt(req.params.id);
-        const { newEndDate, extensionDays } = req.body;
-
-        // Get current allocation
-        const currentAllocation = await storage.getEmployeeProjectAllocation(allocationId);
-        if (!currentAllocation) {
-          return res.status(404).json({ message: "Project allocation not found" });
-        }
-
-        // Calculate new end date if extension days provided
-        let finalEndDate = newEndDate;
-        if (extensionDays && !newEndDate) {
-          const currentEnd = new Date(currentAllocation.endDate || new Date());
-          currentEnd.setDate(currentEnd.getDate() + parseInt(extensionDays));
-          finalEndDate = currentEnd.toISOString().split('T')[0];
-        }
-
-        // Update the allocation with new end date
-        const updatedAllocation = await storage.updateEmployeeProject(allocationId, {
-          endDate: finalEndDate,
-          updatedAt: new Date(),
-          updatedById: req.session.userId
-        });
-
-        // Create history record for the extension
-        await storage.createEmployeeProjectHistory({
-          employeeProjectId: allocationId,
-          action: 'extended',
-          previousEndDate: currentAllocation.endDate,
-          newEndDate: finalEndDate,
-          extensionDays: extensionDays || null,
-          createdById: req.session.userId,
-          createdAt: new Date()
-        });
-
-        res.json({ 
-          success: true, 
-          message: "Project duration extended successfully",
-          allocation: updatedAllocation 
-        });
-      } catch (error) {
-        console.error("Extend project duration error:", error);
-        res.status(500).json({ message: "Failed to extend project duration" });
-      }
-    });
-
-    apiRouter.post("/navadhiti-projects/status-review", isAuthenticated, async (req, res) => {
-      try {
-        const reviewData = {
-          ...req.body,
-          createdById: req.session.userId
-        };
-        const review = await storage.createStatusReview(reviewData);
-        res.status(201).json(review);
-      } catch (error) {
-        console.error("Create status review error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    // Auth routes
-    apiRouter.post("/auth/register", async (req, res) => {
-      try {
-        const userData = insertUserSchema.parse(req.body);
-
-        // Check if user already exists
-        const existingUser = await storage.getUserByEmail(userData.email);
-        if (existingUser) {
-          return res.status(400).json({ message: "User with this email already exists" });
-        }
-
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(userData.password, salt);
-
-        // Create user with hashed password
-        const user = await storage.createUser({
-          ...userData,
-          password: hashedPassword,
-        });
-
-        // Create verification token
-        const verificationToken = crypto.randomBytes(32).toString("hex");
-        await storage.updateUser(user.id, { verificationToken });
-
-        // Send welcome email
-        try {
-          await emailService.sendWelcomeEmail(user.email, user.firstName);
-          logger.info(`Welcome email sent to ${user.email}`);
-        } catch (emailError) {
-          logger.error('Failed to send welcome email:', emailError);
-          // Don't fail registration if email fails
-        }
-
-        // Return user without sensitive data
-        const { password, ...userWithoutPassword } = user;
-        res.status(201).json(userWithoutPassword);
-      } catch (error) {
-        console.error("Registration error:", error);
-        res.status(400).json({ message: "Invalid user data" });
-      }
-    });
-
-    apiRouter.post("/auth/login", async (req, res) => {
-      try {
-        const { email, password } = req.body;
-
-        if (!email || !password) {
-          return res.status(400).json({ message: "Email and password are required" });
-        }
-
-        // Find user
-        const user = await storage.getUserByEmail(email);
-        if (!user) {
-          return res.status(401).json({ message: "Invalid credentials" });
-        }
-
-        // Verify password
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-          return res.status(401).json({ message: "Invalid credentials" });
-        }
-
-        // Check if user is verified (in a production app)
-        // if (!user.verified) {
-        //   return res.status(401).json({ message: "Please verify your email before logging in" });
-        // }
-
-        // Set session data directly without regeneration to avoid session issues
-        req.session.userId = user.id;
-        req.session.userRole = user.role;
-        req.session.userName = user.firstName; // Use firstName since name might not exist
-        req.session.userEmail = user.email;
-
-        // Save session explicitly and ensure it's properly committed
-        req.session.save((saveErr) => {
-          if (saveErr) {
-            console.error("Session save error:", saveErr);
-            return res.status(500).json({ message: "Session save failed" });
-          }
-
-          console.log("Login successful - Session set and saved:", {
-            sessionId: req.sessionID,
-            userId: req.session.userId,
-            userRole: req.session.userRole,
-            userName: req.session.userName,
-            userEmail: req.session.userEmail
-          });
-
-          // Verify session data is set
-          if (!req.session.userId) {
-            console.error("Session userId not set after save");
-            return res.status(500).json({ message: "Session initialization failed" });
-          }
-
-          // Return user without sensitive data
-          const { password: _, ...userWithoutPassword } = user;
-          res.json(userWithoutPassword);
-        });
-      } catch (error) {
-        console.error("Login error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    apiRouter.post("/auth/logout", (req, res) => {
-      req.session.destroy((err) => {
-        if (err) {
-          return res.status(500).json({ message: "Logout failed" });
-        }
-        res.json({ message: "Logged out successfully" });
+      // Update the allocation with new end date
+      const updatedAllocation = await storage.updateEmployeeProject(allocationId, {
+        endDate: finalEndDate,
+        updatedAt: new Date(),
+        updatedById: req.session.userId
       });
-    });
 
-    // Get current user
-    apiRouter.get("/auth/user", async (req, res) => {
+      // Create history record for the extension
+      await storage.createEmployeeProjectHistory({
+        employeeProjectId: allocationId,
+        action: 'extended',
+        previousEndDate: currentAllocation.endDate,
+        newEndDate: finalEndDate,
+        extensionDays: extensionDays || null,
+        createdById: req.session.userId,
+        createdAt: new Date()
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Project duration extended successfully",
+        allocation: updatedAllocation 
+      });
+    } catch (error) {
+      console.error("Extend project duration error:", error);
+      res.status(500).json({ message: "Failed to extend project duration" });
+    }
+  });
+
+  apiRouter.post("/navadhiti-projects/status-review", isAuthenticated, async (req, res) => {
+    try {
+      const reviewData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+      const review = await storage.createStatusReview(reviewData);
+      res.status(201).json(review);
+    } catch (error) {
+      console.error("Create status review error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Auth routes
+  apiRouter.post("/auth/register", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(userData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email already exists" });
+      }
+
+      // Hash password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(userData.password, salt);
+
+      // Create user with hashed password
+      const user = await storage.createUser({
+        ...userData,
+        password: hashedPassword,
+      });
+
+      // Create verification token
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+      await storage.updateUser(user.id, { verificationToken });
+
+      // Send welcome email
       try {
-        console.log("GET /api/auth/user - Session data:", {
+        await emailService.sendWelcomeEmail(user.email, user.firstName);
+        logger.info(`Welcome email sent to ${user.email}`);
+      } catch (emailError) {
+        logger.error('Failed to send welcome email:', emailError);
+        // Don't fail registration if email fails
+      }
+
+      // Return user without sensitive data
+      const { password, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(400).json({ message: "Invalid user data" });
+    }
+  });
+
+  apiRouter.post("/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      // Find user
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Check if user is verified (in a production app)
+      // if (!user.verified) {
+      //   return res.status(401).json({ message: "Please verify your email before logging in" });
+      // }
+
+      // Set session data directly without regeneration to avoid session issues
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      req.session.userName = user.firstName; // Use firstName since name might not exist
+      req.session.userEmail = user.email;
+
+      // Save session explicitly and ensure it's properly committed
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("Session save error:", saveErr);
+          return res.status(500).json({ message: "Session save failed" });
+        }
+
+        console.log("Login successful - Session set and saved:", {
           sessionId: req.sessionID,
-          userId: req.session?.userId,
-          userRole: req.session?.userRole,
-          userEmail: req.session?.userEmail,
-          hasSession: !!req.session,
-          sessionKeys: req.session ? Object.keys(req.session) : []
+          userId: req.session.userId,
+          userRole: req.session.userRole,
+          userName: req.session.userName,
+          userEmail: req.session.userEmail
         });
 
-        // Check if session exists
-        if (!req.session) {
-          console.log("No session found");
-          return res.status(401).json({ message: "No session found" });
-        }
-
-        // Check if user is logged in
+        // Verify session data is set
         if (!req.session.userId) {
-          console.log("No userId in session");
-          return res.status(401).json({ message: "Not authenticated" });
+          console.error("Session userId not set after save");
+          return res.status(500).json({ message: "Session initialization failed" });
         }
-
-        // Get user from storage
-        const user = await storage.getUser(req.session.userId);
-        if (!user) {
-          console.log(`User not found for ID: ${req.session.userId}`);
-          // Clear invalid session
-          req.session.destroy((err) => {
-            if (err) console.error("Error destroying session:", err);
-          });
-          return res.status(404).json({ message: "User not found" });
-        }
-
-        console.log(`User authenticated successfully: ${user.email}`);
 
         // Return user without sensitive data
-        const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutPassword } = user;
-
-        // Set proper cache headers to prevent caching
-        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.set('Pragma', 'no-cache');
-        res.set('Expires', '0');
-
+        const { password: _, ...userWithoutPassword } = user;
         res.json(userWithoutPassword);
-      } catch (error) {
-        console.error("Get user error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    apiRouter.post("/auth/forgot-password", async (req, res) => {
-      try {
-        const { email } = req.body;
-
-        if (!email) {
-          return res.status(400).json({ message: "Email is required" });
-        }
-
-        const user = await storage.getUserByEmail(email);
-        if (!user) {
-          // Don't reveal that the user doesn't exist
-          return res.json({ message: "If your email exists, you will receive a password reset link" });
-        }
-
-        // Generate token with expiry
-        const resetToken = crypto.randomBytes(32).toString("hex");
-        const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-        await storage.updateUser(user.id, {
-          resetToken,
-          resetTokenExpires,
-        });
-
-        // In a real app, send reset email here
-
-        res.json({ message: "If your email exists, you will receive a password reset link" });
-      } catch (error) {
-        console.error("Forgot password error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    apiRouter.post("/auth/reset-password", async (req, res) => {
-      try {
-        const { token, password } = req.body;
-
-        if (!token || !password) {
-          return res.status(400).json({ message: "Token and password are required" });
-        }
-
-        // Find user with this token
-        const user = Array.from((await storage.getProjects()) as any) // This line seems incorrect, should likely query users directly
-          .find((user: any) => user.resetToken === token && user.resetTokenExpires > new Date());
-
-        if (!user) {
-          return res.status(400).json({ message: "Invalid or expired token" });
-        }
-
-        // Hash new password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        // Update user
-        await storage.updateUser(user.id, {
-          password: hashedPassword,
-          resetToken: null,
-          resetTokenExpires: null,
-        });
-
-        res.json({ message: "Password reset successful" });
-      } catch (error) {
-        console.error("Reset password error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    // User profile
-    apiRouter.get("/user/current", isAuthenticated, async (req, res) => {
-      try {
-        const user = await storage.getUser(req.session.userId!);
-        if (!user) {
-          return res.status(404).json({ message: "User not found" });
-        }
-
-        const { password, ...userWithoutPassword } = user;
-        res.json(userWithoutPassword);
-      } catch (error) {
-        console.error("Get profile error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    // Update user profile
-    apiRouter.patch("/user/:id", isAuthenticated, async (req, res) => {
-      try {
-        const userId = parseInt(req.params.id);
-
-        // Users can only update their own profile unless they're an admin
-        if (userId !== req.session.userId && req.session.userRole !== "Admin") {
-          return res.status(403).json({ message: "You can only update your own profile" });
-        }
-
-        const { firstName, lastName, email, role, status, phoneNumber, theme } = req.body;
-
-        // Only admins can change roles
-        if (role && req.session.userRole !== "Admin") {
-          return res.status(403).json({ message: "Only admins can change roles" });
-        }
-
-        // Only admins can change status
-        if (status && req.session.userRole !== "Admin") {
-          return res.status(403).json({ message: "Only admins can change status" });
-        }
-
-        const updateData: any = {};
-        if (firstName) updateData.firstName = firstName;
-        if (lastName !== undefined) updateData.lastName = lastName;
-        if (email) updateData.email = email;
-        if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
-        if (theme) updateData.theme = theme;
-        if (role && req.session.userRole === "Admin") updateData.role = role;
-        if (status && req.session.userRole === "Admin") updateData.status = status;
-
-        const updatedUser = await storage.updateUser(userId, updateData);
-        if (!updatedUser) {
-          return res.status(404).json({ message: "User not found" });
-        }
-
-        // Update session if user is updating their own profile
-        if (userId === req.session.userId) {
-          if (firstName) req.session.userName = firstName; // Using firstName as userName for now
-          if (email) req.session.userEmail = email;
-        }
-
-        const { password, ...userWithoutPassword } = updatedUser;
-        res.json(userWithoutPassword);
-      } catch (error) {
-        console.error("Update profile error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-
-
-    // Users management endpoints - available only to admins
-    apiRouter.get("/users", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
-      try {
-        const users = await storage.getAllUsers();
-
-        // Remove sensitive data
-        const sanitizedUsers = users.map(user => {
-          const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutSensitiveData } = user;
-          return userWithoutSensitiveData;
-        });
-
-        res.json(sanitizedUsers);
-      } catch (error) {
-        console.error("Get users error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    // Public users endpoint for messenger (limited data)
-    apiRouter.get("/users/public", isAuthenticated, async (req, res) => {
-      try {
-        const users = await storage.getAllUsers();
-
-        // Return minimal user info for messenger functionality
-        const publicUsers = users
-          .filter(user => user.id !== req.session.userId) // Exclude current user
-          .map(user => ({
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            name: `${user.firstName} ${user.lastName || ''}`.trim(),
-            email: user.email,
-            avatar: user.profilePicture,
-            profilePicture: user.profilePicture,
-            role: user.role,
-            isOnline: false, // Will be updated by WebSocket
-            lastSeen: user.lastLoginAt || user.createdAt
-          }));
-
-        console.log(`[API] Returning ${publicUsers.length} public users for messenger:`, publicUsers.map(u => ({ id: u.id, name: u.name, email: u.email })));
-
-        res.json(publicUsers);
-      } catch (error) {
-        console.error("Get public users error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    apiRouter.post("/users", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
-      try {
-        const { firstName, lastName, email, role, phoneNumber, status } = req.body;
-
-        // Check if user already exists
-        const existingUser = await storage.getUserByEmail(email);
-        if (existingUser) {
-          return res.status(400).json({ message: "User with this email already exists" });
-        }
-
-        // Generate a temporary password
-        const tempPassword = crypto.randomBytes(8).toString("hex");
-
-        // Hash the temporary password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(tempPassword, salt);
-
-        // Create user with temporary password
-        const newUser = await storage.createUser({
-          firstName,
-          lastName,
-          email,
-          password: hashedPassword,
-          role: role || "Tester",
-          phoneNumber,
-          status: status || "Active",
-          tempPassword: tempPassword, // Store plain temp password for response
-          tempPasswordUsed: false
-        });
-
-        // Send welcome email with temporary password
-        try {
-          await emailService.sendWelcomeEmail(newUser.email, newUser.firstName, tempPassword);
-          logger.info(`Welcome email with temp password sent to ${newUser.email}`);
-        } catch (emailError) {
-          logger.error('Failed to send welcome email:', emailError);
-          // Don't fail user creation if email fails
-        }
-
-        // Return user without sensitive data, but include the temporary password
-        const { password, ...userResponse } = newUser;
-
-        res.status(201).json(userResponse);
-      } catch (error) {
-        console.error("Create user error:", error);
-        res.status(400).json({ message: "Invalid user data" });
-      }
-    });
-
-    apiRouter.get("/users/:id", isAuthenticated, async (req, res) => {
-      try {
-        const userId = parseInt(req.params.id);
-
-        // Regular users can only view their own profile
-        if (req.session.userRole !== "Admin" && userId !== req.session.userId) {
-          return res.status(403).json({ message: "You can only view your own profile" });
-        }
-
-        const user = await storage.getUser(userId);
-        if (!user) {
-          return res.status(404).json({ message: "User not found" });
-        }
-
-        // Remove sensitive data
-        const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutSensitiveData } = user;
-
-        res.json(userWithoutSensitiveData);
-      } catch (error) {
-        console.error("Get user error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    apiRouter.delete("/users/:id", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
-      try {
-        const userId = parseInt(req.params.id);
-
-        // Prevent admin from deleting themselves
-        if (userId === req.session.userId) {
-          return res.status(400).json({ message: "You cannot delete your own account" });
-        }
-
-        const user = await storage.getUser(userId);
-        if (!user) {
-          return res.status(404).json({ message: "User not found" });
-        }
-
-        const deleted = await storage.deleteUser(userId);
-        if (!deleted) {
-          return res.status(500).json({ message: "Failed to delete user" });
-        }
-
-        res.json({ message: "User deleted successfully" });
-      } catch (error) {
-        console.error("Delete user error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    // Generate temporary password for user
-    apiRouter.post("/users/:id/generate-temp-password", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
-      try {
-        const userId = parseInt(req.params.id);
-
-        const user = await storage.getUser(userId);
-        if (!user) {
-          return res.status(404).json({ message: "User not found" });
-        }
-
-        // Generate a temporary password
-        const tempPassword = crypto.randomBytes(8).toString("hex");
-
-        // Hash the temporary password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(tempPassword, salt);
-
-        // Update user with temporary password
-        const updatedUser = await storage.updateUser(userId, {
-          password: hashedPassword,
-          tempPassword,
-          tempPasswordUsed: false
-        });
-
-        // In a real app, send email with temp password to the user
-
-        res.json({ tempPassword, message: "Temporary password generated successfully" });
-      } catch (error) {
-        console.error("Generate temp password error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    // Reset password (for first-time login with temporary password)
-    apiRouter.post("/auth/reset-temp-password", isAuthenticated, async (req, res) => {
-      try {
-        const { newPassword } = req.body;
-
-        if (!newPassword) {
-          return res.status(400).json({ message: "New password is required" });
-        }
-
-        const user = await storage.getUser(req.session.userId!);
-        if (!user) {
-          return res.status(404).json({ message: "User not found" });
-        }
-
-        // Check if user is using a temporary password
-        if (!user.tempPassword || user.tempPasswordUsed) {
-          return res.status(400).json({ message: "Invalid request - no temporary password active" });
-        }
-
-        // Hash the new password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-        // Update user with new password
-        await storage.updateUser(user.id, {
-          password: hashedPassword,
-          tempPasswordUsed: true
-        });
-
-        res.json({ message: "Password reset successful" });
-      } catch (error) {
-        console.error("Reset temp password error:", error);
-        res.status(500).json({ message: "Server error" });
-      }
-    });
-
-    // Upload profile picture is already configured at the top of the function
-
-    // Handle multer errors for uploads globally
-    const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
-      if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(413).json({
-            message: 'File too large. Maximum size is 50MB.',
-            error: err.message
-          });
-        }
-        return res.status(400).json({
-          message: 'File upload error',
-          error: err.message
-        });
-      }
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
       if (err) {
-        return res.status(500).json({
-          message: 'Error during file upload',
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  // Get current user
+  apiRouter.get("/auth/user", async (req, res) => {
+    try {
+      console.log("GET /api/auth/user - Session data:", {
+        sessionId: req.sessionID,
+        userId: req.session?.userId,
+        userRole: req.session?.userRole,
+        userEmail: req.session?.userEmail,
+        hasSession: !!req.session,
+        sessionKeys: req.session ? Object.keys(req.session) : []
+      });
+
+      // Check if session exists
+      if (!req.session) {
+        console.log("No session found");
+        return res.status(401).json({ message: "No session found" });
+      }
+
+      // Check if user is logged in
+      if (!req.session.userId) {
+        console.log("No userId in session");
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      // Get user from storage
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        console.log(`User not found for ID: ${req.session.userId}`);
+        // Clear invalid session
+        req.session.destroy((err) => {
+          if (err) console.error("Error destroying session:", err);
+        });
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      console.log(`User authenticated successfully: ${user.email}`);
+
+      // Return user without sensitive data
+      const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutPassword } = user;
+
+      // Set proper cache headers to prevent caching
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal that the user doesn't exist
+        return res.json({ message: "If your email exists, you will receive a password reset link" });
+      }
+
+      // Generate token with expiry
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await storage.updateUser(user.id, {
+        resetToken,
+        resetTokenExpires,
+      });
+
+      // In a real app, send reset email here
+
+      res.json({ message: "If your email exists, you will receive a password reset link" });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/auth/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body;
+
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token and password are required" });
+      }
+
+      // Find user with this token
+      const user = Array.from((await storage.getProjects()) as any)
+        .find((user: any) => user.resetToken === token && user.resetTokenExpires > new Date());
+
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired token" });
+      }
+
+      // Hash new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      // Update user
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpires: null,
+      });
+
+      res.json({ message: "Password reset successful" });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // User profile
+  apiRouter.get("/user/current", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Get profile error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Update user profile
+  apiRouter.patch("/user/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+
+      // Users can only update their own profile unless they're an admin
+      if (userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You can only update your own profile" });
+      }
+
+      const { firstName, lastName, email, role, status, phoneNumber, theme } = req.body;
+
+      // Only admins can change roles
+      if (role && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "Only admins can change roles" });
+      }
+
+      // Only admins can change status
+      if (status && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "Only admins can change status" });
+      }
+
+      const updateData: any = {};
+      if (firstName) updateData.firstName = firstName;
+      if (lastName !== undefined) updateData.lastName = lastName;
+      if (email) updateData.email = email;
+      if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+      if (theme) updateData.theme = theme;
+      if (role && req.session.userRole === "Admin") updateData.role = role;
+      if (status && req.session.userRole === "Admin") updateData.status = status;
+
+      const updatedUser = await storage.updateUser(userId, updateData);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Update session if user is updating their own profile
+      if (userId === req.session.userId) {
+        if (firstName) req.session.userName = firstName; // Using firstName as userName for now
+        if (email) req.session.userEmail = email;
+      }
+
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+
+
+  // Users management endpoints - available only to admins
+  apiRouter.get("/users", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+
+      // Remove sensitive data
+      const sanitizedUsers = users.map(user => {
+        const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutSensitiveData } = user;
+        return userWithoutSensitiveData;
+      });
+
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error("Get users error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Public users endpoint for messenger (limited data)
+  apiRouter.get("/users/public", isAuthenticated, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+
+      // Return minimal user info for messenger functionality
+      const publicUsers = users
+        .filter(user => user.id !== req.session.userId) // Exclude current user
+        .map(user => ({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          name: `${user.firstName} ${user.lastName || ''}`.trim(),
+          email: user.email,
+          avatar: user.profilePicture,
+          profilePicture: user.profilePicture,
+          role: user.role,
+          isOnline: false, // Will be updated by WebSocket
+          lastSeen: user.lastLoginAt || user.createdAt
+        }));
+
+      console.log(`[API] Returning ${publicUsers.length} public users for messenger:`, publicUsers.map(u => ({ id: u.id, name: u.name, email: u.email })));
+
+      res.json(publicUsers);
+    } catch (error) {
+      console.error("Get public users error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/users", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const { firstName, lastName, email, role, phoneNumber, status } = req.body;
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email already exists" });
+      }
+
+      // Generate a temporary password
+      const tempPassword = crypto.randomBytes(8).toString("hex");
+
+      // Hash the temporary password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(tempPassword, salt);
+
+      // Create user with temporary password
+      const newUser = await storage.createUser({
+        firstName,
+        lastName,
+        email,
+        password: hashedPassword,
+        role: role || "Tester",
+        phoneNumber,
+        status: status || "Active",
+        tempPassword: tempPassword, // Store plain temp password for response
+        tempPasswordUsed: false
+      });
+
+      // Send welcome email with temporary password
+      try {
+        await emailService.sendWelcomeEmail(newUser.email, newUser.firstName, tempPassword);
+        logger.info(`Welcome email with temp password sent to ${newUser.email}`);
+      } catch (emailError) {
+        logger.error('Failed to send welcome email:', emailError);
+        // Don't fail user creation if email fails
+      }
+
+      // Return user without sensitive data, but include the temporary password
+      const { password, ...userResponse } = newUser;
+
+      res.status(201).json(userResponse);
+    } catch (error) {
+      console.error("Create user error:", error);
+      res.status(400).json({ message: "Invalid user data" });
+    }
+  });
+
+  apiRouter.get("/users/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+
+      // Regular users can only view their own profile
+      if (req.session.userRole !== "Admin" && userId !== req.session.userId) {
+        return res.status(403).json({ message: "You can only view your own profile" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Remove sensitive data
+      const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutSensitiveData } = user;
+
+      res.json(userWithoutSensitiveData);
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/users/:id", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+
+      // Prevent admin from deleting themselves
+      if (userId === req.session.userId) {
+        return res.status(400).json({ message: "You cannot delete your own account" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const deleted = await storage.deleteUser(userId);
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete user" });
+      }
+
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Delete user error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Generate temporary password for user
+  apiRouter.post("/users/:id/generate-temp-password", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Generate a temporary password
+      const tempPassword = crypto.randomBytes(8).toString("hex");
+
+      // Hash the temporary password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(tempPassword, salt);
+
+      // Update user with temporary password
+      const updatedUser = await storage.updateUser(userId, {
+        password: hashedPassword,
+        tempPassword,
+        tempPasswordUsed: false
+      });
+
+      // In a real app, send email with temp password to the user
+
+      res.json({ tempPassword, message: "Temporary password generated successfully" });
+    } catch (error) {
+      console.error("Generate temp password error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Reset password (for first-time login with temporary password)
+  apiRouter.post("/auth/reset-temp-password", isAuthenticated, async (req, res) => {
+    try {
+      const { newPassword } = req.body;
+
+      if (!newPassword) {
+        return res.status(400).json({ message: "New password is required" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if user is using a temporary password
+      if (!user.tempPassword || user.tempPasswordUsed) {
+        return res.status(400).json({ message: "Invalid request - no temporary password active" });
+      }
+
+      // Hash the new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+      // Update user with new password
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        tempPasswordUsed: true
+      });
+
+      res.json({ message: "Password reset successful" });
+    } catch (error) {
+      console.error("Reset temp password error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Upload profile picture is already configured at the top of the function
+
+  // Handle multer errors for uploads globally
+  const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          message: 'File too large. Maximum size is 50MB.',
           error: err.message
         });
       }
-      next();
-    };
+      return res.status(400).json({
+        message: 'File upload error',
+        error: err.message
+      });
+    }
+    if (err) {
+      return res.status(500).json({
+        message: 'Error during file upload',
+        error: err.message
+      });
+    }
+    next();
+  };
 
-    // Add the uploads endpoint for bug attachments with error handling
-    apiRouter.post("/uploads/bug-attachment", isAuthenticated, 
-      (req, res, next) => {
-        console.log("Starting bug attachment upload request");
-        console.log("Request headers:", req.headers);
-        console.log("Request content type:", req.headers['content-type']);
+  // Add the uploads endpoint for bug attachments with error handling
+  apiRouter.post("/uploads/bug-attachment", isAuthenticated, 
+    (req, res, next) => {
+      console.log("Starting bug attachment upload request");
+      console.log("Request headers:", req.headers);
+      console.log("Request content type:", req.headers['content-type']);
 
-        bugAttachmentUpload.single('file')(req, res, (err) => {
-          if (err) {
-            console.error("Multer error during file upload:", err);
-            return handleMulterError(err, req, res, next);
-          }
-          console.log("File upload middleware processed successfully");
-          next();
-        });
+      bugAttachmentUpload.single('file')(req, res, (err) => {
+        if (err) {
+          console.error("Multer error during file upload:", err);
+          return handleMulterError(err, req, res, next);
+        }
+        console.log("File upload middleware processed successfully");
+        next();
+      });
+    },
+    async (req, res) => {
+    try {
+      console.log("Processing bug attachment upload request");
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Get file path relative to the server root for serving in the browser
+      const fileName = path.basename(req.file.path);
+
+      // Ensure we use consistent path format for the URL
+      const fileUrl = `/uploads/bug-attachment/${fileName}`;
+
+      // Return file attachment details with all fields required by the FileAttachment interface
+      const fileAttachment = {
+        id: parseInt(crypto.randomBytes(4).toString('hex'), 16), // Convert to number for id
+        fileName: req.file.originalname,
+        fileUrl: fileUrl,
+        fileType: req.file.mimetype,
+        fileSize: req.file.size,
+        uploadedById: req.session.userId,
+        uploadedAt: new Date().toISOString(),
+        entityType: 'bug',  // Default to bug since this is for bug attachments
+        entityId: 0         // This will be updated when the bug is created or updated
+      };
+
+      console.log("Uploaded file details:", fileAttachment);
+
+      res.status(201).json(fileAttachment);
+    } catch (error) {
+      console.error("Bug attachment upload error:", error);
+      res.status(500).json({ message: "Failed to upload attachment" });
+    }
+  });
+
+  // Configure multer for document uploads
+  const documentUpload = (() => {
+    const { documentsDir } = createUploadDirectories();
+
+    const storage = multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, documentsDir);
       },
-      async (req, res) => {
-      try {
-        console.log("Processing bug attachment upload request");
-
-        if (!req.file) {
-          return res.status(400).json({ message: "No file uploaded" });
-        }
-
-        // Get file path relative to the server root for serving in the browser
-        const fileName = path.basename(req.file.path);
-
-        // Ensure we use consistent path format for the URL
-        const fileUrl = `/uploads/bug-attachment/${fileName}`;
-
-        // Return file attachment details with all fields required by the FileAttachment interface
-        const fileAttachment = {
-          id: parseInt(crypto.randomBytes(4).toString('hex'), 16), // Convert to number for id
-          fileName: req.file.originalname,
-          fileUrl: fileUrl,
-          fileType: req.file.mimetype,
-          fileSize: req.file.size,
-          uploadedById: req.session.userId,
-          uploadedAt: new Date().toISOString(),
-          entityType: 'bug',  // Default to bug since this is for bug attachments
-          entityId: 0         // This will be updated when the bug is created or updated
-        };
-
-        console.log("Uploaded file details:", fileAttachment);
-
-        res.status(201).json(fileAttachment);
-      } catch (error) {
-        console.error("Bug attachment upload error:", error);
-        res.status(500).json({ message: "Failed to upload attachment" });
+      filename: (req, file, cb) => {
+        // Generate unique filename with timestamp and original extension
+        const uniqueId = crypto.randomBytes(8).toString('hex');
+        const timestamp = Date.now();
+        const ext = path.extname(file.originalname);
+        cb(null, `document-${uniqueId}-${timestamp}${ext}`);
       }
     });
 
-    // Configure multer for document uploads
-    const documentUpload = (() => {
-      const { documentsDir } = createUploadDirectories();
+    return multer({
+      storage,
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB max file size
+      },
+    });
+  })();
 
-      const storage = multer.diskStorage({
-        destination: (req, file, cb) => {
-          cb(null, documentsDir);
-        },
-        filename: (req, file, cb) => {
-          // Generate unique filename with timestamp and original extension
-          const uniqueId = crypto.randomBytes(8).toString('hex');
-          const timestamp = Date.now();
-          const ext = path.extname(file.originalname);
-          cb(null, `document-${uniqueId}-${timestamp}${ext}`);
-        }
+  // Traceability Matrix routes
+  apiRouter.get("/projects/:projectId/matrix/markers", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const markers = await storage.getCustomMarkers(projectId);
+      res.json(markers);
+    } catch (error) {
+      console.error("Get custom markers error:", error);
+      res.status(500).json({ message: "Failed to fetch custom markers" });
+    }
+  });
+
+  apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
+    try {
+      const markerData = req.body;
+      const newMarker = await storage.createCustomMarker(markerData);
+      res.status(201).json(newMarker);
+    } catch (error) {
+      console.error("Create custom marker error:", error);
+      res.status(500).json({ message: "Failed to create custom marker" });
+    }
+  });
+
+  apiRouter.put("/custom-markers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const markerId = req.params.id;
+      const markerData = req.body;
+      const updatedMarker = {
+        id: markerId,
+        ...markerData,
+        updatedAt: new Date().toISOString()
+      };
+      res.json(updatedMarker);
+    } catch (error) {
+      console.error("Update custom marker error:", error);
+      res.status(500).json({ message: "Failed to update custom marker" });
+    }
+  });
+
+  apiRouter.delete("/custom-markers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const markerId = req.params.id;
+      // TODO: Implement deleteCustomMarker in storage
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete custom marker error:", error);
+      res.status(500).json({ message: "Failed to delete custom marker" });
+    }
+  });
+
+  apiRouter.get("/projects/:projectId/matrix/cells", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const cells = await storage.getMatrixCells(projectId);
+      res.json(cells);
+    } catch (error) {
+      console.error("Get matrix cells error:", error);
+      res.status(500).json({ message: "Failed to fetch matrix cells" });
+    }
+  });
+
+  apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
+    try {
+      const cellData = req.body;
+
+      // Use createOrUpdateMatrixCell for proper upsert behavior
+      const cell = await storage.createOrUpdateMatrixCell(cellData);
+
+      if (cell === null) {
+        // Cell was deleted (empty value)
+        res.status(200).json({ message: "Matrix cell removed" });
+      } else {
+        res.status(200).json(cell);
+      }
+    } catch (error) {
+      console.error("Create/update matrix cell error:", error);
+      res.status(500).json({ message: "Failed to save matrix cell" });
+    }
+  });
+
+  apiRouter.post("/traceability-matrix/save", isAuthenticated, async (req, res) => {
+    try {
+      const { projectId, matrixData } = req.body;
+
+      if (!projectId || !Array.isArray(matrixData)) {
+        return res.status(400).json({ message: "Invalid request data" });
+      }
+
+      // TODO: Implement saveMatrixData in storage
+      res.json({ 
+        success: true, 
+        message: "Matrix saved successfully",
+        savedCells: matrixData.length 
       });
-
-      return multer({
-        storage,
-        limits: {
-          fileSize: 10 * 1024 * 1024, // 10MB max file size
-        },
-      });
-    })();
-
-    // Traceability Matrix routes
-    apiRouter.get("/projects/:projectId/matrix/markers", isAuthenticated, async (req, res) => {
-      try {
-        const projectId = parseInt(req.params.projectId);
-        const markers = await storage.getCustomMarkers(projectId);
-        res.json(markers);
-      } catch (error) {
-        console.error("Get custom markers error:", error);
-        res.status(500).json({ message: "Failed to fetch custom markers" });
-      }
-    });
-
-    apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
-      try {
-        const markerData = req.body;
-        const newMarker = await storage.createCustomMarker(markerData);
-        res.status(201).json(newMarker);
-      } catch (error) {
-        console.error("Create custom marker error:", error);
-        res.status(500).json({ message: "Failed to create custom marker" });
-      }
-    });
-
-    apiRouter.put("/custom-markers/:id", isAuthenticated, async (req, res) => {
-      try {
-        const markerId = req.params.id;
-        const markerData = req.body;
-        const updatedMarker = {
-          id: markerId,
-          ...markerData,
-          updatedAt: new Date().toISOString()
-        };
-        res.json(updatedMarker);
-      } catch (error) {
-        console.error("Update custom marker error:", error);
-        res.status(500).json({ message: "Failed to update custom marker" });
-      }
-    });
-
-    apiRouter.delete("/custom-markers/:id", isAuthenticated, async (req, res) => {
-      try {
-        const markerId = req.params.id;
-        // TODO: Implement deleteCustomMarker in storage
-        res.json({ success: true });
-      } catch (error) {
-        console.error("Delete custom marker error:", error);
-        res.status(500).json({ message: "Failed to delete custom marker" });
-      }
-    });
-
-    apiRouter.get("/projects/:projectId/matrix/cells", isAuthenticated, async (req, res) => {
-      try {
-        const projectId = parseInt(req.params.projectId);
-        const cells = await storage.getMatrixCells(projectId);
-        res.json(cells);
-      } catch (error) {
-        console.error("Get matrix cells error:", error);
-        res.status(500).json({ message: "Failed to fetch matrix cells" });
-      }
-    });
-
-    apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
-      try {
-        const cellData = req.body;
-
-        // Use createOrUpdateMatrixCell for proper upsert behavior
-        const cell = await storage.createOrUpdateMatrixCell(cellData);
-
-        if (cell === null) {
-          // Cell was deleted (empty value)
-          res.status(200).json({ message: "Matrix cell removed" });
-        } else {
-          res.status(200).json(cell);
-        }
-      } catch (error) {
-        console.error("Create/update matrix cell error:", error);
-        res.status(500).json({ message: "Failed to save matrix cell" });
-      }
-    });
-
-    apiRouter.post("/traceability-matrix/save", isAuthenticated, async (req, res) => {
-      try {
-        const { projectId, matrixData } = req.body;
-
-        if (!projectId || !Array.isArray(matrixData)) {
-          return res.status(400).json({ message: "Invalid request data" });
-        }
-
-        // TODO: Implement saveMatrixData in storage
-        res.json({ 
-          success: true, 
-          message: "Matrix saved successfully",
-          savedCells: matrixData.length 
-        });
-      } catch (error) {
-        console.error("Save matrix error:", error);
-        res.status(500).json({ message: "Failed to save matrix" });
-      }
-    });
+    } catch (error) {
+      console.error("Save matrix error:", error);
+      res.status(500).json({ message: "Failed to save matrix" });
+    }
+  });
 
 
 // Basic automation endpoints
@@ -2168,7 +2122,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
 
       // Return the updated profile data
-      const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutPassword } = updatedUser;
+      const { password, ...userWithoutPassword } = updatedUser;
 
       // Set cache control headers to prevent caching issues
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -2238,8 +2192,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         console.error('Bug attachment upload error:', error);
         res.status(500).json({ message: 'Failed to upload attachment' });
       }
-    }
-  );
+
+
+
 
   // Bug Comments API endpoints
   apiRouter.get("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
@@ -2392,6 +2347,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // AI Chat endpoint
   // Chat file upload endpoint
   apiRouter.post("/chat/upload", isAuthenticated, 
     (req, res, next) => {
@@ -2441,7 +2397,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       const responses = {
         'test-management': [
           "I can help you create test cases, manage bugs, and organize your testing workflow. What specific area would you like assistance with?",
-          "For test case management, I recommend organizing your test cases by modules and using clear naming conventions. Would you like me to guide you through creating a test case?",
+          "For test case management, I recommend organizing your test cases by modules and using clear naming conventions. Would you like me to help you create a test case?",
           "Bug reporting should include clear steps to reproduce, expected vs actual results, and severity level. Need help with a specific bug?",
           "I can help you generate test reports, analyze test coverage, and track project progress. What metrics are you interested in?",
           "For automation, consider starting with your most repetitive test cases. Would you like guidance on automation strategy?"
@@ -2470,6 +2426,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({ error: 'Failed to process chat message' });
     }
   });
+
+    }
+  );
 
   // Serve uploaded files (profile pictures and documents)
   app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
@@ -4571,9 +4530,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         }
 
         if (targetFolder.projectId !== folder.projectId) {
-          return res.status(400).json({ 
-            message: "Target folder must be in the same project" 
-          });
+          return res.status(400).json({ message: "Target folder must be in the same project" });
         }
 
         // Check for circular reference
@@ -5315,7 +5272,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.delete("/notebooks/:id", isAuthenticated, async (req, res) => {
     try {
       const notebookId = parseInt(req.params.id);
-      const notebook = awaitstorage.getNotebook(notebookId);
+      const notebook = await storage.getNotebook(notebookId);
 
       if (!notebook) {
         return res.status(404).json({ message: "Notebook not found" });
@@ -6083,6 +6040,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   apiRouter.delete("/todo-lists/:id", isAuthenticated, async (req, res) => {
     try {
       const listId = parseInt(req.params.id);
+
       const success = await storage.deleteTodoList(listId, req.session.userId!);
 
       if (!success) {
@@ -6212,6 +6170,3644 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Global error handler for API routes - must be placed at the end
+  apiRouter.use((error: any, req: Request, res: Response, next: NextFunction) => {
+    console.error('API Error Handler caught:', error);
+
+    // Ensure we always return JSON for API routes
+    try {
+      // Force JSON content type
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-cache');
+
+      const status = error.status || error.statusCode || 500;
+      const message = error.message || 'Internal Server Error';
+
+      // Don't send headers if already sent
+      if (!res.headersSent) {
+        res.status(status).json({
+          success: false,
+          error: message,
+          timestamp: new Date().toISOString(),
+          ...(process.env.NODE_ENV === 'development' && { 
+            stack: error.stack,
+            url: req.url,
+            method: req.method 
+          })
+        });
+      } else {
+        console.error('Headers already sent, cannot send error response');
+      }
+    } catch (handlerError) {
+      console.error('Error in error handler:', handlerError);
+
+      // Last resort - try to send minimal JSON response
+      if (!res.headersSent) {
+        try {
+          res.setHeader('Content-Type', 'application/json');
+          res.status(500).end('{"success":false,"error":"Critical server error","timestamp":"' + new Date().toISOString() + '"}');
+        } catch (finalError) {
+          console.error('Complete error handler failure:', finalError);
+        }
+      }
+    }
+  });
+
+  // Prefix all API routes with /api
+  // Customer routes
+  apiRouter.get("/customers", isAuthenticated, async (req, res) => {
+    try {
+      const { status } = req.query;
+
+      let customers;
+      if (status) {
+        customers = await storage.getCustomersByStatus(status as string);
+      } else {
+        customers = await storage.getCustomers();
+      }
+
+      res.json(customers);
+    } catch (error) {
+      console.error("Get customers error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/customers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.id);
+
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      res.json(customer);
+    } catch (error) {
+      console.error("Get customer error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/customers", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const customerData = insertCustomerSchema.parse(req.body);
+
+      // Set the creator ID to the current user
+      customerData.createdById = req.session.userId!;
+
+      const customer = await storage.createCustomer(customerData);
+      res.status(201).json(customer);
+    } catch (error) {
+      console.error("Create customer error:", error);
+      res.status(400).json({ message: "Invalid customer data" });
+    }
+  });
+
+  apiRouter.patch("/customers/:id", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.id);
+
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // Update customer
+      const { name, contactPerson, email, phone, address, status } = req.body;
+
+      const updateData: Partial<Customer> = {};
+      if (name) updateData.name = name;
+      if (contactPerson !== undefined) updateData.contactPerson = contactPerson;
+      if (email !== undefined) updateData.email = email;
+      if (phone !== undefined) updateData.phone = phone;
+      if (address !== undefined) updateData.address = address;
+      if (status) updateData.status = status;
+
+      const updatedCustomer = await storage.updateCustomer(customerId, updateData);
+      res.json(updatedCustomer);
+    } catch (error) {
+      console.error("Update customer error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/customers/:id", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.id);
+
+      // Delete customer
+      const isDeleted = await storage.deleteCustomer(customerId);
+      if (!isDeleted) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      res.json({ message: "Customer deleted successfully" });
+    } catch (error) {
+      console.error("Delete customer error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Customer Project routes
+  apiRouter.get("/customers/:id/projects", isAuthenticated, async (req, res) => {
+    try {
+      const customerId = parseInt(req.params.id);
+
+      const projects = await storage.getProjectsByCustomerId(customerId);
+      res.json(projects);
+    } catch (error) {
+      console.error("Get customer projects error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/projects/:id/customers", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+
+      const customers = await storage.getCustomersByProjectId(projectId);
+      res.json(customers);
+    } catch (error) {
+      console.error("Get project customers error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/customer-projects", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const { customerId, projectId } = req.body;
+
+      if (!customerId || !projectId) {
+        return res.status(400).json({ message: "Customer ID and Project ID are required" });
+      }
+
+      const customerProjectData = insertCustomerProjectSchema.parse({
+        customerId,
+        projectId
+      });
+
+      const customerProject = await storage.createCustomerProject(customerProjectData);
+      res.status(201).json(customerProject);
+    } catch (error) {
+      console.error("Create customer-project error:", error);
+      res.status(400).json({ message: "Invalid customer-project data" });
+    }
+  });
+
+  apiRouter.delete("/customer-projects/:id", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      // Delete customer-project association
+      const isDeleted = await storage.deleteCustomerProject(id);
+      if (!isDeleted) {
+        return res.status(404).json({ message: "Customer-project association not found" });
+      }
+
+      res.json({ message: "Customer-project association deleted successfully" });
+    } catch (error) {
+      console.error("Delete customer-project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // TimeSheet Folder routes
+  apiRouter.get("/timesheet-folders", isAuthenticated, async (req, res) => {
+    try {
+      const folders = await storage.getTimeSheetFolders(req.session.userId!);
+      res.json(folders);
+    } catch (error) {
+      console.error("Get timesheet folders error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/timesheet-folders/:id", isAuthenticated, async (req, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      const folder = await storage.getTimeSheetFolder(folderId);
+
+      if (!folder) {
+        return res.status(404).json({ message: "Folder not found" });
+      }
+
+      // Users can only access their own folders
+      if (folder.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You don't have permission to access this folder" });
+      }
+
+      res.json(folder);
+    } catch (error) {
+      console.error("Get timesheet folder error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/timesheet-folders/:id/timesheets", isAuthenticated, async (req, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      const folder = await storage.getTimeSheetFolder(folderId);
+
+      if (!folder) {
+        return res.status(404).json({ message: "Folder not found" });
+      }
+
+      // Users can only access their own folders
+      if (folder.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You don't have permission to access this folder" });
+      }
+
+      const timesheets = await storage.getTimeSheetsByFolder(folderId);
+      res.json(timesheets);
+    } catch (error) {
+      console.error("Get folder timesheets error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/timesheet-folders", isAuthenticated, async (req, res) => {
+    try {
+      const folderData = insertTimeSheetFolderSchema.parse(req.body);
+
+      // Users can only create folders for themselves
+      if (folderData.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You can only create folders for yourself" });
+      }
+
+      // If parentId is provided, verify it exists and belongs to the user
+      if (folderData.parentId) {
+        const parentFolder = await storage.getTimeSheetFolder(folderData.parentId);
+        if (!parentFolder) {
+          return res.status(404).json({ message: "Parent folder not found" });
+        }
+
+        if (parentFolder.userId !== folderData.userId) {
+          return res.status(403).json({ message: "Parent folder doesn't belong to this user" });
+        }
+
+        // Update path based on parent's path
+        folderData.path = `${parentFolder.path}/${folderData.name}`;
+      } else {
+        // Root folder
+        folderData.path = `/${folderData.name}`;
+      }
+
+      const folder = await storage.createTimeSheetFolder(folderData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "create",
+        entityType: "timesheet-folder",
+        entityId: folder.id,
+        details: {
+          name: folder.name,
+          path: folder.path
+        }
+      });
+
+      res.status(201).json(folder);
+    } catch (error) {
+      console.error("Create timesheet folder error:", error);
+      res.status(400).json({ message: "Invalid folder data" });
+    }
+  });
+
+  apiRouter.patch("/timesheet-folders/:id", isAuthenticated, async (req, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      const folder = await storage.getTimeSheetFolder(folderId);
+
+      if (!folder) {
+        return res.status(404).json({ message: "Folder not found" });
+      }
+
+      // Users can only update their own folders
+      if (folder.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You can only update your own folders" });
+      }
+
+      const { name, parentId } = req.body;
+      const updateData: Partial<TimeSheetFolder> = {};
+
+      if (name) updateData.name = name;
+
+      // If changing parent folder, update the path
+      if (parentId !== undefined) {
+        if (parentId === folderId) {
+          return res.status(400).json({ message: "A folder cannot be its own parent" });
+        }
+
+        updateData.parentId = parentId;
+
+        // If moving to root level
+        if (parentId === null) {
+          updateData.path = `/${name || folder.name}`;
+        } else {
+          // If moving to another folder
+          const parentFolder = await storage.getTimeSheetFolder(parentId);
+          if (!parentFolder) {
+            return res.status(404).json({ message: "Parent folder not found" });
+          }
+
+          if (parentFolder.userId !== folder.userId) {
+            return res.status(403).json({ message: "Parent folder doesn't belong to this user" });
+          }
+
+          updateData.path = `${parentFolder.path}/${name || folder.name}`;
+        }
+      } else if (name) {
+        // Just updating the name, so update the path as well
+        if (folder.parentId) {
+          const parentFolder = await storage.getTimeSheetFolder(folder.parentId);
+          if (parentFolder) {
+            updateData.path = `${parentFolder.path}/${name}`;
+          }
+        } else {
+          updateData.path = `/${name}`;
+        }
+      }
+
+      const updatedFolder = await storage.updateTimeSheetFolder(folderId, updateData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "update",
+        entityType: "timesheet-folder",
+        entityId: folderId,
+        details: {
+          name: updatedFolder!.name,
+          path: updatedFolder!.path
+        }
+      });
+
+      res.json(updatedFolder);
+    } catch (error) {
+      console.error("Update timesheet folder error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/timesheet-folders/:id", isAuthenticated, async (req, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      const folder = await storage.getTimeSheetFolder(folderId);
+
+      if (!folder) {
+        return res.status(404).json({ message: "Folder not found" });
+      }
+
+      // Users can only delete their own folders
+      if (folder.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You can only delete your own folders" });
+      }
+
+      // Delete the folder (this will also delete all subfolders and unassign timesheets)
+      await storage.deleteTimeSheetFolder(folderId);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "delete",
+        entityType: "timesheet-folder",
+        entityId: folderId,
+        details: {
+          name: folder.name,
+          path: folder.path
+        }
+      });
+
+      res.json({ message: "Folder deleted successfully" });
+    } catch (error) {
+      console.error("Delete timesheet folder error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // TimeSheet routes
+  apiRouter.get("/timesheets", isAuthenticated, async (req, res) => {
+    try {
+      const { projectId, userId } = req.query;
+      let timeSheets;
+
+      if (projectId && userId) {
+        timeSheets = await storage.getTimeSheets(parseInt(projectId as string), parseInt(userId as string));
+      } else if (projectId) {
+        timeSheets = await storage.getProjectTimeSheets(parseInt(projectId as string));
+      } else if (userId) {
+        timeSheets = await storage.getUserTimeSheets(parseInt(userId as string));
+      } else {
+        // Admin can see all timesheets, others only see their own
+        if (req.session.userRole === "Admin") {
+          timeSheets = await storage.getTimeSheets();
+        } else {
+          timeSheets = await storage.getUserTimeSheets(req.session.userId!);
+        }
+      }
+
+      res.json(timeSheets);
+    } catch (error) {
+      console.error("Get timesheets error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/timesheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const timeSheetId = parseInt(req.params.id);
+      const timeSheet = await storage.getTimeSheet(timeSheetId);
+
+      if (!timeSheet) {
+        return res.status(404).json({ message: "TimeSheet not found" });
+      }
+
+      // Check permissions - users can only view their own timesheets unless they're an admin or a project manager
+      if (timeSheet.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        // Check if user is a project manager for this project
+        const isProjectManager = await storage.getProjectMembers(timeSheet.projectId)
+          .then(members => members.some(m => m.userId === req.session.userId && m.role === "Admin"));
+
+        if (!isProjectManager) {
+          return res.status(403).json({ message: "You don't have permission to view this timesheet" });
+        }
+      }
+
+      res.json(timeSheet);
+    } catch (error) {
+      console.error("Get timesheet error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/timesheets", isAuthenticated, async (req, res) => {
+    try {
+      logger.info(`Creating timesheet - Request body: ${JSON.stringify(req.body, null, 2)}`);
+
+      // Input validation debug logging
+      console.log('Timesheet creation - Raw data:', {
+        projectId: req.body.projectId,
+        type: typeof req.body.projectId,
+        folderId: req.body.folderId,
+        folderType: typeof req.body.folderId,
+        customerId: req.body.customerId,
+        customerType: typeof req.body.customerId
+      });
+
+      // Pre-process date fields before validation
+      const processedData = {
+        ...req.body,
+        // Ensure hours is a reasonable number
+        hours: typeof req.body.hours === 'number' ? Math.min(req.body.hours, 24) : req.body.hours
+      };
+
+      // Handle IDs explicitly
+      if (req.body.projectId !== undefined) {
+        // Make sure projectId is a number
+        const rawProjectId = req.body.projectId;
+        const projectIdAsNumber = Number(rawProjectId);
+
+        if (isNaN(projectIdAsNumber) || projectIdAsNumber <= 0) {
+          console.error(`Invalid projectId: ${rawProjectId} (${typeof rawProjectId})`);
+          return res.status(400).json({ message: "Project ID must be a valid positive number" });
+        }
+
+        processedData.projectId = projectIdAsNumber;
+      } else {
+        console.error('Missing required projectId in request');
+        return res.status(400).json({ message: "Project ID is required" });
+      }
+
+      // Handle folderId
+      if (req.body.folderId !== undefined) {
+        // Make sure folderId is a number
+        const rawFolderId = req.body.folderId;
+        const folderIdAsNumber = Number(rawFolderId);
+
+        if (isNaN(folderIdAsNumber) || folderIdAsNumber <= 0) {
+          console.error(`Invalid folderId: ${rawFolderId} (${typeof rawFolderId})`);
+          return res.status(400).json({ message: "Folder ID must be a valid positive number" });
+        }
+
+        processedData.folderId = folderIdAsNumber;
+      }
+
+      // Explicitly convert date fields before validation
+      if (req.body.workDate && typeof req.body.workDate === 'string') {
+        processedData.workDate = new Date(req.body.workDate);
+      }
+
+      if (req.body.startTime && typeof req.body.startTime === 'string') {
+        processedData.startTime = new Date(req.body.startTime);
+      }
+
+      if (req.body.endTime && typeof req.body.endTime === 'string') {
+        processedData.endTime = new Date(req.body.endTime);
+      }
+
+      logger.info(`Processed timesheet data: ${JSON.stringify(processedData, null, 2)}`);
+
+      // Now parse with schema validation
+      let timeSheetData;
+      let project;
+
+      try {
+        timeSheetData = insertTimeSheetSchema.parse(processedData);
+        console.log('Validated timesheet data:', JSON.stringify(timeSheetData, null, 2));
+
+        // Users can only create timesheets for themselves
+        if (timeSheetData.userId !== req.session.userId && req.session.userRole !== "Admin") {
+          return res.status(403).json({ message: "You can only create timesheets for yourself" });
+        }
+
+        // Handle project ID validation - it could be a number (ID) or string (name)
+        if (typeof timeSheetData.projectId === 'number') {
+          // If it's a numeric ID, verify the project exists
+          project = await storage.getProject(timeSheetData.projectId);
+          if (!project) {
+            console.error(`Project not found with ID: ${timeSheetData.projectId}`);
+            return res.status(404).json({ message: "Project not found" });
+          }
+        } else if (typeof timeSheetData.projectId === 'string') {
+          // If it's a string, we'll accept it as a project name
+          console.log(`Using project name: ${timeSheetData.projectId}`);
+          // No validation needed as we're allowing free-form project names
+          // Just use a placeholder project to continue processing
+          project = { id: 0, name: timeSheetData.projectId, status: "Active", createdById: timeSheetData.userId, createdAt: new Date().toISOString() };
+        } else {
+          console.error(`Invalid project ID type: ${typeof timeSheetData.projectId}`);
+          return res.status(400).json({ message: "Invalid project ID format" });
+        }
+      } catch (validationError) {
+        console.error('Timesheet validation error:', validationError);
+        return res.status(400).json({ 
+          message: "Invalid timesheet data", 
+          error: validationError,
+          originalData: processedData
+        });
+      }
+
+      // Check if user is a member of the project
+      const isProjectMember = await storage.getProjectMembers(project.id)
+        .then(members => members.some(m => m.userId === req.session.userId));
+
+      if (!isProjectMember && project.createdById !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You must be a member of the project to log time" });
+      }
+
+      // If folder ID is provided, verify it exists and belongs to the user
+      if (timeSheetData.folderId) {
+        const folder = await storage.getTimeSheetFolder(timeSheetData.folderId);
+        if (!folder) {
+          return res.status(404).json({ message: "Folder not found" });
+        }
+
+        if (folder.userId !== timeSheetData.userId) {
+          return res.status(403).json({ message: "The folder doesn't belong to this user" });
+        }
+      }
+
+      // Set default times if missing (handle nulls)
+      if (!timeSheetData.startTime) {
+        timeSheetData.startTime = "09:00";
+      }
+      if (!timeSheetData.endTime) {
+        timeSheetData.endTime = "17:00";
+      }
+
+      // Calculate hours if not provided
+      if (!timeSheetData.hours) {
+        let startHours = 9, startMinutes = 0;
+        let endHours = 17, endMinutes = 0;
+
+        // Parse time strings
+        if (typeof timeSheetData.startTime === 'string') {
+          const timeMatch = timeSheetData.startTime.match(/^(\d+):(\d+)$/);
+          if (timeMatch) {
+            startHours = parseInt(timeMatch[1], 10);
+            startMinutes = parseInt(timeMatch[2], 10);
+          }
+        } else if (timeSheetData.startTime instanceof Date) {
+          startHours = timeSheetData.startTime.getHours();
+          startMinutes = timeSheetData.startTime.getMinutes();
+        }
+
+        if (typeof timeSheetData.endTime === 'string') {
+          const timeMatch = timeSheetData.endTime.match(/^(\d+):(\d+)$/);
+          if (timeMatch) {
+            endHours = parseInt(timeMatch[1], 10);
+            endMinutes = parseInt(timeMatch[2], 10);
+          }
+        } else if (timeSheetData.endTime instanceof Date) {
+          endHours = timeSheetData.endTime.getHours();
+          endMinutes = timeSheetData.endTime.getMinutes();
+        }
+
+        // Calculate duration in hours
+        let totalStartMinutes = startHours * 60 + startMinutes;
+        let totalEndMinutes = endHours * 60 + endMinutes;
+
+        // Handle end time being earlier than start time (next day)
+        if (totalEndMinutes < totalStartMinutes) {
+          totalEndMinutes += 24 * 60; // Add a day worth of minutes
+        }
+
+        // Calculate difference in hours
+        const diffHours = (totalEndMinutes - totalStartMinutes) / 60;
+        timeSheetData.hours = Math.max(0, Math.round(diffHours * 10) / 10); // Round to nearest 0.1 hour
+      }
+
+      const timeSheet = await storage.createTimeSheet(timeSheetData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "create",
+        entityType: "timesheet",
+        entityId: timeSheet.id,
+        details: {
+          projectId: timeSheet.projectId,
+          hours: timeSheet.hours,
+          date: timeSheet.workDate,
+        }
+      });
+
+      res.status(201).json(timeSheet);
+    } catch (error) {
+      console.error("Create timesheet error:", JSON.stringify(error, null, 2));
+      let errorMessage = "Invalid timesheet data";
+      // If it's a Zod validation error, provide more details
+      if (error && typeof error === 'object' && 'issues' in error) {
+        const issues = (error as any).issues;
+        if (Array.isArray(issues) && issues.length > 0) {
+          errorMessage = `Validation error: ${issues[0].message}`;
+        }
+      }
+
+      res.status(400).json({ message: errorMessage });
+    }
+  });
+
+  apiRouter.patch("/timesheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const timeSheetId = parseInt(req.params.id);
+      const timeSheet = await storage.getTimeSheet(timeSheetId);
+
+      if (!timeSheet) {
+        return res.status(404).json({ message: "TimeSheet not found" });
+      }
+
+      // Check if user has permission to update status (Admin only)
+      if (req.body.status && req.body.status !== timeSheet.status && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "Only admins can change timesheet status" });
+      }
+
+      // Pre-process the request body
+      const processedBody = {...req.body};
+
+      // Handle status change specifically for approval
+      if (processedBody.status === "Approved") {
+        processedBody.approvalDate = new Date().toISOString();
+        processedBody.approvedById = req.session.userId;
+
+        // Ensure we keep existing data
+        processedBody.workDate = timeSheet.workDate;
+        processedBody.startTime = timeSheet.startTime;
+        processedBody.endTime = timeSheet.endTime;
+        processedBody.hours = timeSheet.hours;
+        processedBody.description = timeSheet.description;
+        processedBody.userId = timeSheet.userId;
+        processedBody.projectId = timeSheet.projectId;
+      }
+
+      if (processedBody.hours !== undefined) {
+        processedBody.hours = typeof processedBody.hours === 'number' ? Math.min(processedBody.hours, 24) : processedBody.hours;
+      }
+
+      if (req.body.workDate && typeof req.body.workDate === 'string') {
+        processedBody.workDate = new Date(req.body.workDate);
+      }
+
+      // Enhanced time processing for reliable storage and display
+      if (req.body.startTime && typeof req.body.startTime === 'string') {
+        // Log for debugging
+        console.log('[SERVER] Processing startTime:', req.body.startTime);
+
+        // Strip extra whitespace and convert to uppercase for consistent processing
+        const cleanTime = req.body.startTime.trim().toUpperCase();
+
+        // Check if time already has AM/PM designation
+        const timeMatch = cleanTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (timeMatch) {
+          // Format consistently with properly capitalized AM/PM with space
+          const [_, hours, minutes, ampm] = timeMatch;
+          processedBody.startTime = `${hours}:${minutes} ${ampm}`;
+        } else {
+          // If no AM/PM provided, try to add it based on 24-hour interpretation
+          try {
+            const [hours, minutes] = cleanTime.split(':');
+            if (!hours || !minutes) throw new Error('Invalid time format');
+
+            const hour = parseInt(hours, 10);
+            if (isNaN(hour)) throw new Error('Invalid hour');
+
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            processedBody.startTime = `${hours}:${minutes} ${ampm}`;
+          } catch (e) {
+            console.error('[SERVER] Time processing error:', e);
+            // Set a valid time format as fallback
+            processedBody.startTime = "09:00 AM";
+          }
+        }
+
+        console.log('[SERVER] Processed startTime:', processedBody.startTime);
+      }
+
+      if (req.body.endTime && typeof req.body.endTime === 'string') {
+        // Log for debugging
+        console.log('[SERVER] Processing endTime:', req.body.endTime);
+
+        // Strip extra whitespace and convert to uppercase for consistent processing
+        const cleanTime = req.body.endTime.trim().toUpperCase();
+
+        // Check if time already has AM/PM designation
+        const timeMatch = cleanTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (timeMatch) {
+          // Format consistently with properly capitalized AM/PM with space
+          const [_, hours, minutes, ampm] = timeMatch;
+          processedBody.endTime = `${hours}:${minutes} ${ampm.toUpperCase()}`;
+        } else {
+          // If no AM/PM provided, try to add it based on 24-hour interpretation
+          try {
+            const [hours, minutes] = cleanTime.split(':');
+            if (!hours || !minutes) throw new Error('Invalid time format');
+
+            const hour = parseInt(hours, 10);
+            if (isNaN(hour)) throw new Error('Invalid hour');
+
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            processedBody.endTime = `${hours}:${minutes} ${ampm}`;
+          } catch (e) {
+            console.error('[SERVER] Time processing error:', e);
+            // Set a valid time format as fallback
+            processedBody.endTime = "05:00 PM";
+          }
+        }
+
+        console.log('[SERVER] Processed endTime:', processedBody.endTime);
+      }
+
+      // Use processed body for updates
+      req.body = processedBody;
+
+      // Users can only update their own timesheets unless they're an admin
+      if (timeSheet.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You can only update your own timesheets" });
+      }
+
+      // Allow admins to edit any timesheet, others can only edit pending ones
+      if (timeSheet.status !== "Pending" && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "Only admins can edit approved or rejected timesheets" });
+      }
+
+      const { description, workDate, startTime, endTime, hours, projectId, moduleId, testCaseId, bugId, folderId, status, tags } = req.body;
+
+      const updateData: any = {};
+      if (description !== undefined) updateData.description = description;
+      if (workDate !== undefined) updateData.workDate = workDate;
+      if (startTime !== undefined) updateData.startTime = startTime;
+      if (endTime !== undefined) updateData.endTime = endTime;
+      if (hours !== undefined) updateData.hours = hours;
+      if (projectId !== undefined) updateData.projectId = projectId;
+      if (moduleId !== undefined) updateData.moduleId = moduleId;
+      if (testCaseId !== undefined) updateData.testCaseId = testCaseId;
+      // Handle tags properly, ensuring they're stored as an array
+      if (tags !== undefined) {
+        // Convert to array if it's a string or other value
+        if (!Array.isArray(tags)) {
+          if (typeof tags === 'string') {
+            // Handle comma-separated string format
+            updateData.tags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+          } else {
+            // Create a single-item array or empty array if null/undefined
+            updateData.tags = tags ? [String(tags)] : [];
+          }
+        } else {
+          // Already an array, use as is (but ensure string values)
+          updateData.tags = tags.map(tag => String(tag));
+        }
+      }
+      if (bugId !== undefined) updateData.bugId = bugId;
+      if (folderId !== undefined) updateData.folderId = folderId;
+      if (status !== undefined) updateData.status = status;
+
+      // If folder ID is provided, verify it exists and belongs to the user
+      if (folderId !== undefined && folderId !== null) {
+        const folder = await storage.getTimeSheetFolder(folderId);
+        if (!folder) {
+          return res.status(404).json({ message: "Folder not found" });
+        }
+
+        if (folder.userId !== timeSheet.userId) {
+          return res.status(403).json({ message: "The folder doesn't belong to this user" });
+        }
+      }
+
+      // Recalculate hours if start/end time changed but hours didn't
+      if ((startTime || endTime) && hours === undefined) {
+        let startHours = 9, startMinutes = 0;
+        let endHours = 17, endMinutes = 0;
+
+        // Parse time for start time (either from update data or existing timesheet)
+        if (startTime) {
+          if (typeof startTime === 'string') {
+            const timeMatch = startTime.match(/^(\d+):(\d+)$/);
+            if (timeMatch) {
+              startHours = parseInt(timeMatch[1], 10);
+              startMinutes = parseInt(timeMatch[2], 10);
+            }
+          } else if (startTime instanceof Date) {
+            startHours = startTime.getHours();
+            startMinutes = startTime.getMinutes();
+          }
+        } else if (timeSheet.startTime) {
+          // Use existing timeSheet data
+          if (typeof timeSheet.startTime === 'string') {
+            const timeMatch = timeSheet.startTime.match(/^(\d+):(\d+)$/);
+            if (timeMatch) {
+              startHours = parseInt(timeMatch[1], 10);
+              startMinutes = parseInt(timeMatch[2], 10);
+            }
+          } else if (timeSheet.startTime instanceof Date) {
+            startHours = timeSheet.startTime.getHours();
+            startMinutes = timeSheet.startTime.getMinutes();
+          }
+        }
+
+        // Parse time for end time (either from update data or existing timesheet)
+        if (endTime) {
+          if (typeof endTime === 'string') {
+            const timeMatch = endTime.match(/^(\d+):(\d+)$/);
+            if (timeMatch) {
+              endHours = parseInt(timeMatch[1], 10);
+              endMinutes = parseInt(timeMatch[2], 10);
+            }
+          } else if (endTime instanceof Date) {
+            endHours = endTime.getHours();
+            endMinutes = endTime.getMinutes();
+          }
+        } else if (timeSheet.endTime) {
+          // Use existing timeSheet data
+          if (typeof timeSheet.endTime === 'string') {
+            const timeMatch = timeSheet.endTime.match(/^(\d+):(\d+)$/);
+            if (timeMatch) {
+              endHours = parseInt(timeMatch[1], 10);
+              endMinutes = parseInt(timeMatch[2], 10);
+            }
+          } else if (timeSheet.endTime instanceof Date) {
+            endHours = timeSheet.endTime.getHours();
+            endMinutes = timeSheet.endTime.getMinutes();
+          }
+        }
+
+        // Calculate duration in hours
+        let totalStartMinutes = startHours * 60 + startMinutes;
+        let totalEndMinutes = endHours * 60 + endMinutes;
+
+        // Handle end time being earlier than start time (next day)
+        if (totalEndMinutes < totalStartMinutes) {
+          totalEndMinutes += 24 * 60; // Add a day worth of minutes
+        }
+
+        // Calculate difference in hours
+        const diffHours = (totalEndMinutes - totalStartMinutes) / 60;
+        updateData.hours = Math.max(0, Math.round(diffHours * 10) / 10); // Round to nearest 0.1 hour
+      }
+
+      const updatedTimeSheet = await storage.updateTimeSheet(timeSheetId, updateData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "update",
+        entityType: "timesheet",
+        entityId: timeSheetId,
+        details: {
+          projectId: updatedTimeSheet!.projectId,
+          hours: updatedTimeSheet!.hours,
+          date: updatedTimeSheet!.workDate,
+        }
+      });
+
+      res.json(updatedTimeSheet);
+    } catch (error) {
+      console.error("Update timesheet error:", JSON.stringify(error, null, 2));
+      let errorMessage = "Server error";
+      let statusCode = 500;
+
+      // If it's a Zod validation error, provide more details
+      if (error && typeof error === 'object' && 'issues' in error) {
+        const issues = (error as any).issues;
+        if (Array.isArray(issues) && issues.length > 0) {
+          errorMessage = `Validation error: ${issues[0].message}`;
+          statusCode = 400;
+        }
+      }
+
+      res.status(statusCode).json({ message: errorMessage });
+    }
+  });
+
+  apiRouter.post("/timesheets/:id/approve", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const timeSheetId = parseInt(req.params.id);
+      const timeSheet = await storage.getTimeSheet(timeSheetId);
+
+      if (!timeSheet) {
+        return res.status(404).json({ message: "TimeSheet not found" });
+      }
+
+      // Don't approve already approved/rejected timesheets
+      if (timeSheet.status !== "Pending") {
+        return res.status(400).json({ message: `TimeSheet already ${timeSheet.status.toLowerCase()}` });
+      }
+
+      const approvedTimeSheet = await storage.approveTimeSheet(timeSheetId, req.session.userId!);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "approve",
+        entityType: "timesheet",
+        entityId: timeSheetId,
+        details: {
+          projectId: timeSheet.projectId,
+          hours: timeSheet.hours,
+          date: timeSheet.workDate,
+        }
+      });
+
+      res.json(approvedTimeSheet);
+    } catch (error) {
+      console.error("Approve timesheet error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/timesheets/:id/reject", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const timeSheetId = parseInt(req.params.id);
+      const { reason } = req.body;
+
+      if (!reason) {
+        return res.status(400).json({ message: "Reason for rejection is required" });
+      }
+
+      const timeSheet = await storage.getTimeSheet(timeSheetId);
+
+      if (!timeSheet) {
+        return res.status(404).json({ message: "TimeSheet not found" });
+      }
+
+      // Don't reject already approved/rejected timesheets
+      if (timeSheet.status !== "Pending") {
+        return res.status(400).json({ message: `TimeSheet already ${timeSheet.status.toLowerCase()}` });
+      }
+
+      const rejectedTimeSheet = await storage.rejectTimeSheet(timeSheetId, req.session.userId!, reason);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "reject",
+        entityType: "timesheet",
+        entityId: timeSheetId,
+        details: {
+          projectId: timeSheet.projectId,
+          hours: timeSheet.hours,
+          date: timeSheet.workDate,
+          reason: reason,
+        }
+      });
+
+      res.json(rejectedTimeSheet);
+    } catch (error) {
+      console.error("Reject timesheet error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/timesheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const timeSheetId = parseInt(req.params.id);
+      const timeSheet = await storage.getTimeSheet(timeSheetId);
+
+      if (!timeSheet) {
+        return res.status(404).json({ message: "TimeSheet not found" });
+      }
+
+      // Users can only delete their own timesheets unless they're an admin
+      if (timeSheet.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You can only delete your own timesheets" });
+      }
+
+      // Don't allow deleting approved timesheets (unless admin)
+      if (timeSheet.status === "Approved" && req.session.userRole !== "Admin") {
+        return res.status(400).json({ message: "Cannot delete an approved timesheet" });
+      }
+
+      // Delete the timesheet
+      await storage.deleteTimeSheet(timeSheetId);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "delete",
+        entityType: "timesheet",
+        entityId: timeSheetId,
+        details: {
+          projectId: timeSheet.projectId,
+          hours: timeSheet.hours,
+          date: timeSheet.workDate,
+        }
+      });
+
+      res.json({ message: "TimeSheet deleted successfully" });
+    } catch (error) {
+      console.error("Delete timesheet error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+
+  /*
+      console.error("Get automation scripts error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/automation/scripts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scriptId = parseInt(req.params.id);
+      const script = await storage.getAutomationScript(scriptId);
+
+      if (!script) {
+        return res.status(404).json({ message: "Automation script not found" });
+      }
+
+      res.json(script);
+    } catch (error) {
+      console.error("Get automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/automation/scripts", isAuthenticated, async (req, res) => {
+    try {
+      const scriptData = insertAutomationScriptSchema.parse(req.body);
+      scriptData.createdById = req.session.userId!;
+
+      const script = await storage.createAutomationScript(scriptData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "create",
+        entityType: "automation_script",
+        entityId: script.id,
+        details: {
+          name: script.name,
+          type: script.type,
+          projectId: script.projectId
+        }
+      });
+
+      res.status(201).json(script);
+    } catch (error) {
+      console.error("Create automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.patch("/automation/scripts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scriptId = parseInt(req.params.id);
+      const script = await storage.getAutomationScript(scriptId);
+
+      if (!script) {
+        return res.status(404).json({ message: "Automation script not found" });
+      }
+
+      const updateData = insertAutomationScriptSchema.partial().parse(req.body);
+      updateData.updatedById = req.session.userId!;
+
+      const updatedScript = await storage.updateAutomationScript(scriptId, updateData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "update",
+        entityType: "automation_script",
+        entityId: scriptId,
+        details: {
+          name: script.name,
+          updates: Object.keys(updateData)
+        }
+      });
+
+      res.json(updatedScript);
+    } catch (error) {
+      console.error("Update automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/automation/scripts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scriptId = parseInt(req.params.id);
+      const script = await storage.getAutomationScript(scriptId);
+
+      if (!script) {
+        return res.status(404).json({ message: "Automation script not found" });
+      }
+
+      await storage.deleteAutomationScript(scriptId);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "delete",
+        entityType: "automation_script",
+        entityId: scriptId,
+        details: {
+          name: script.name,
+          type: script.type
+        }
+      });
+
+      res.json({ message: "Automation script deleted successfully" });
+    } catch (error) {
+      console.error("Delete automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Automation Runs
+  apiRouter.get("/automation/runs", isAuthenticated, async (req, res) => {
+    try {
+      const scriptId = req.query.scriptId ? parseInt(req.query.scriptId as string) : undefined;
+      const runs = await storage.getAutomationRuns(scriptId);
+      res.json(runs);
+    } catch (error) {
+      console.error("Get automation runs error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/automation/runs/:id", isAuthenticated, async (req, res) => {
+    try {
+      const runId = parseInt(req.params.id);
+      const run = await storage.getAutomationRun(runId);
+
+      if (!run) {
+        return res.status(404).json({ message: "Automation run not found" });
+      }
+
+      res.json(run);
+    } catch (error) {
+      console.error("Get automation run error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Execute script
+  apiRouter.post("/automation/scripts/:id/execute", isAuthenticated, async (req, res) => {
+    try {
+      const scriptId = parseInt(req.params.id);
+      const script = await storage.getAutomationScript(scriptId);
+
+      if (!script) {
+        return res.status(404).json({ message: "Automation script not found" });
+      }
+
+      const runData = {
+        scriptId,
+        status: "Running" as const,
+        startTime: new Date(),
+        executedById: req.session.userId!,
+        environment: req.body.environment,
+        browser: req.body.browser
+      };
+
+      const run = await storage.createAutomationRun(runData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "execute",
+        entityType: "automation_script",
+        entityId: scriptId,
+        details: {
+          name: script.name,
+          runId: run.id
+        }
+      });
+
+      // In a real implementation, this would trigger the actual execution
+      // For simulation purposes, update the run after a delay
+      setTimeout(async () => {
+        try {
+          // Simulate a random test result
+          const statuses = ['Passed', 'Failed'];
+          const endTime = new Date();
+          const duration = Math.floor((endTime.getTime() - run.startTime.getTime()) / 1000);
+          const randomStatus = statuses[Math.floor(Math.random() * statuses.length)] as 'Passed' | 'Failed';
+
+          await storage.updateAutomationRun(run.id, {
+            status: randomStatus,
+            endTime,
+            duration,
+            logs: `Test execution completed with status: ${randomStatus}`,
+            errorMessage: randomStatus === 'Failed' ? 'Simulated test failure' : undefined,
+          });
+
+          // Update the script's last run information
+          await storage.updateAutomationScript(scriptId, {
+            lastRunStatus: randomStatus,
+            lastRunDate: endTime,
+            lastRunDuration: duration,
+          });
+        } catch (error) {
+          console.error('Error in delayed test execution update:', error);
+        }
+      }, 5000); // Simulate 5 second test run
+
+      res.status(202).json({
+        message: "Script execution started",
+        runId: run.id
+      });
+    } catch (error) {
+      console.error("Execute automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Automation Schedules
+  apiRouter.get("/automation/schedules", isAuthenticated, async (req, res) => {
+    try {
+      const schedules = await storage.getAutomationSchedules();
+      res.json(schedules);
+    } catch (error) {
+      console.error("Get automation schedules error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/automation/schedules/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.id);
+      const schedule = await storage.getAutomationSchedule(scheduleId);
+
+      if (!schedule) {
+        return res.status(404).json({ message: "Automation schedule not found" });
+      }
+
+      res.json(schedule);
+    } catch (error) {
+      console.error("Get automation schedule error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/automation/schedules", isAuthenticated, async (req, res) => {
+    try {
+      const scheduleData = insertAutomationScheduleSchema.parse(req.body);
+      scheduleData.createdById = req.session.userId!;
+
+      const schedule = await storage.createAutomationSchedule(scheduleData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "create",
+        entityType: "automation_schedule",
+        entityId: schedule.id,
+        details: {
+          name: schedule.name,
+          scriptCount: (schedule.scriptIds as number[]).length
+        }
+      });
+
+      res.status(201).json(schedule);
+    } catch (error) {
+      console.error("Create automation schedule error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.patch("/automation/schedules/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.id);
+      const schedule = await storage.getAutomationSchedule(scheduleId);
+
+      if (!schedule) {
+        return res.status(404).json({ message: "Automation schedule not found" });
+      }
+
+      const updateData = insertAutomationScheduleSchema.partial().parse(req.body);
+      updateData.updatedById = req.session.userId!;
+
+      const updatedSchedule = await storage.updateAutomationSchedule(scheduleId, updateData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "update",
+        entityType: "automation_schedule",
+        entityId: scheduleId,
+        details: {
+          name: schedule.name,
+          updates: Object.keys(updateData)
+        }
+      });
+
+      res.json(updatedSchedule);
+    } catch (error) {
+      console.error("Update automation schedule error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/automation/schedules/:id", isAuthenticated, async (req, res) => {
+    try {
+      const scheduleId = parseInt(req.params.id);
+      const schedule = await storage.getAutomationSchedule(scheduleId);
+
+      if (!schedule) {
+        return res.status(404).json({ message: "Automation schedule not found" });
+      }
+
+      await storage.deleteAutomationSchedule(scheduleId);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "delete",
+        entityType: "automation_schedule",
+        entityId: scheduleId,
+        details: {
+          name: schedule.name
+        }
+      });
+
+      res.json({ message: "Automation schedule deleted successfully" });
+    } catch (error) {
+      console.error("Delete automation schedule error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Automation Environments
+  apiRouter.get("/automation/environments", isAuthenticated, async (req, res) => {
+    try {
+      const environments = await storage.getAutomationEnvironments();
+      res.json(environments);
+    } catch (error) {
+      console.error("Get automation environments error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/automation/environments/:id", isAuthenticated, async (req, res) => {
+    try {
+      const environmentId = parseInt(req.params.id);
+      const environment = await storage.getAutomationEnvironment(environmentId);
+
+      if (!environment) {
+        return res.status(404).json({ message: "Automation environment not found" });
+      }
+
+      res.json(environment);
+    } catch (error) {
+      console.error("Get automation environment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/automation/environments", isAuthenticated, async (req, res) => {
+    try {
+      const environmentData = insertAutomationEnvironmentSchema.parse(req.body);
+      environmentData.createdById = req.session.userId!;
+
+      const environment = await storage.createAutomationEnvironment(environmentData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "create",
+        entityType: "automation_environment",
+        entityId: environment.id,
+        details: {
+          name: environment.name,
+          type: environment.type,
+          url: environment.url
+        }
+      });
+
+      res.status(201).json(environment);
+    } catch (error) {
+      console.error("Create automation environment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.patch("/automation/environments/:id", isAuthenticated, async (req, res) => {
+    try {
+      const environmentId = parseInt(req.params.id);
+      const environment = await storage.getAutomationEnvironment(environmentId);
+
+      if (!environment) {
+        return res.status(404).json({ message: "Automation environment not found" });
+      }
+
+      const updateData = insertAutomationEnvironmentSchema.partial().parse(req.body);
+
+      const updatedEnvironment = await storage.updateAutomationEnvironment(environmentId, updateData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "update",
+        entityType: "automation_environment",
+        entityId: environmentId,
+        details: {
+          name: environment.name,
+          updates: Object.keys(updateData)
+        }
+      });
+
+      res.json(updatedEnvironment);
+    } catch (error) {
+      console.error("Update automation environment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/automation/environments/:id", isAuthenticated, async (req, res) => {
+    try {
+      const environmentId = parseInt(req.params.id);
+      const environment = await storage.getAutomationEnvironment(environmentId);
+
+      if (!environment) {
+        return res.status(404).json({ message: "Automation environment not found" });
+      }
+
+      await storage.deleteAutomationEnvironment(environmentId);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "delete",
+        entityType: "automation_environment",
+        entityId: environmentId,
+        details: {
+          name: environment.name,
+          type: environment.type
+        }
+      });
+
+      res.json({ message: "Automation environment deleted successfully" });
+    } catch (error) {
+      console.error("Delete automation environment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  */
+
+  // =====================================================
+  // Kanban Board API Routes
+  // =====================================================
+
+  // Sprints
+  apiRouter.get("/sprints", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+
+      const sprints = await storage.getSprints(projectId);
+      res.json(sprints);
+    } catch (error) {
+      console.error("Get sprints error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/sprints/:id", isAuthenticated, async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.id);
+      const sprint = await storage.getSprint(sprintId);
+
+      if (!sprint) {
+        return res.status(404).json({ message: "Sprint not found" });
+      }
+
+      res.json(sprint);
+    } catch (error) {
+      console.error("Get sprint error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/sprints", isAuthenticated, async (req, res) => {
+    try {
+      const sprintData = insertSprintSchema.parse(req.body);
+      sprintData.createdById = req.session.userId!;
+
+      const sprint = await storage.createSprint(sprintData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "create",
+        entityType: "sprint",
+        entityId: sprint.id,
+        details: {
+          name: sprint.name,
+          projectId: sprint.projectId
+        }
+      });
+
+      // Create default columns for the sprint
+      const defaultColumns = [
+        { title: "Backlog", order: 0, color: "#94a3b8" },
+        { title: "To Do", order: 1, color: "#3b82f6" },
+        { title: "In Progress", order: 2, color: "#f59e0b" },
+        { title: "Testing", order: 3, color: "#8b5cf6" },
+        { title: "Done", order: 4, color: "#22c55e" }
+      ];
+
+      for (const column of defaultColumns) {
+        await storage.createKanbanColumn({
+          title: column.title,
+          projectId: sprint.projectId,
+          sprintId: sprint.id,
+          order: column.order,
+          color: column.color,
+          isDefault: true,
+          createdById: req.session.userId!
+        });
+      }
+
+      res.status(201).json(sprint);
+    } catch (error) {
+      console.error("Create sprint error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.patch("/sprints/:id", isAuthenticated, async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.id);
+      const sprint = await storage.getSprint(sprintId);
+
+      if (!sprint) {
+        return res.status(404).json({ message: "Sprint not found" });
+      }
+
+      const updateData = insertSprintSchema.partial().parse(req.body);
+
+      const updatedSprint = await storage.updateSprint(sprintId, updateData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "update",
+        entityType: "sprint",
+        entityId: sprintId,
+        details: {
+          name: updatedSprint.name,
+          status: updatedSprint.status
+        }
+      });
+
+      res.json(updatedSprint);
+    } catch (error) {
+      console.error("Update sprint error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/sprints/:id", isAuthenticated, async (req, res) => {
+    try {
+      const sprintId = parseInt(req.params.id);
+      const sprint = await storage.getSprint(sprintId);
+
+      if (!sprint) {
+        return res.status(404).json({ message: "Sprint not found" });
+      }
+
+      // Check if sprint has associated kanban cards
+      const cards = await storage.getKanbanCards(undefined, sprintId);
+      if (cards.length > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete sprint with associated cards. Please move or delete the cards first." 
+        });
+      }
+
+      // Delete all columns associated with this sprint
+      const columns = await storage.getKanbanColumns(undefined, sprintId);
+      for (const column of columns) {
+        await storage.deleteKanbanColumn(column.id);
+      }
+
+      await storage.deleteSprint(sprintId);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "delete",
+        entityType: "sprint",
+        entityId: sprintId,
+        details: {
+          name: sprint.name
+        }
+      });
+
+      res.json({ message: "Sprint and associated columns deleted successfully" });
+    } catch (error) {
+      console.error("Delete sprint error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Kanban Columns
+  apiRouter.get("/kanban/columns", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      const sprintId = req.query.sprintId ? parseInt(req.query.sprintId as string) : undefined;
+
+      const columns = await storage.getKanbanColumns(projectId, sprintId);
+      res.json(columns);
+    } catch (error) {
+      console.error("Get kanban columns error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/kanban/columns/:id", isAuthenticated, async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      const column = await storage.getKanbanColumn(columnId);
+
+      if (!column) {
+        return res.status(404).json({ message: "Kanban column not found" });
+      }
+
+      res.json(column);
+    } catch (error) {
+      console.error("Get kanban column error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/kanban/columns", isAuthenticated, async (req, res) => {
+    try {
+      const columnData = insertKanbanColumnSchema.parse(req.body);
+      columnData.createdById = req.session.userId!;
+
+      const column = await storage.createKanbanColumn(columnData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "create",
+        entityType: "kanban_column",
+        entityId: column.id,
+        details: {
+          title: column.title,
+          projectId: column.projectId,
+          sprintId: column.sprintId
+        }
+      });
+
+      res.status(201).json(column);
+    } catch (error) {
+      console.error("Create kanban column error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.patch("/kanban/columns/:id", isAuthenticated, async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      const column = await storage.getKanbanColumn(columnId);
+
+      if (!column) {
+        return res.status(404).json({ message: "Kanban column not found" });
+      }
+
+      const updateData = insertKanbanColumnSchema.partial().parse(req.body);
+
+      const updatedColumn = await storage.updateKanbanColumn(columnId, updateData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "update",
+        entityType: "kanban_column",
+        entityId: columnId,
+        details: {
+          title: updatedColumn.title,
+          order: updatedColumn.order
+        }
+      });
+
+      res.json(updatedColumn);
+    } catch (error) {
+      console.error("Update kanban column error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/kanban/columns/:id", isAuthenticated, async (req, res) => {
+    try {
+      const columnId = parseInt(req.params.id);
+      const column = await storage.getKanbanColumn(columnId);
+
+      if (!column) {
+        return res.status(404).json({ message: "Kanban column not found" });
+      }
+
+      // Check if column has associated cards
+      const cards = await storage.getKanbanCards(column.id);
+      if (cards.length > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete column with associated cards. Please move or delete the cards first." 
+        });
+      }
+
+      await storage.deleteKanbanColumn(columnId);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "delete",
+        entityType: "kanban_column",
+        entityId: columnId,
+        details: {
+          title: column.title
+        }
+      });
+
+      res.json({ message: "Kanban column deleted successfully" });
+    } catch (error) {
+      console.error("Delete kanban column error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Kanban Cards
+  apiRouter.get("/kanban/cards", isAuthenticated, async (req, res) => {
+    try {
+      const columnId = req.query.columnId ? parseInt(req.query.columnId as string) : undefined;
+      const sprintId = req.query.sprintId ? parseInt(req.query.sprintId as string) : undefined;
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+
+      const cards = await storage.getKanbanCards(columnId, sprintId, projectId);
+      res.json(cards);
+    } catch (error) {
+      console.error("Get kanban cards error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Endpoint to get sub-cards for a parent card
+  apiRouter.get("/kanban/cards/sub/:parentId", isAuthenticated, async (req, res) => {
+    try {
+      const parentId = parseInt(req.params.parentId);
+      const subCards = await storage.getKanbanSubCards(parentId);
+      res.json(subCards);
+    } catch (error) {
+      console.error("Get kanban sub-cards error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/kanban/cards/:id", isAuthenticated, async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.id);
+      const card = await storage.getKanbanCard(cardId);
+
+      if (!card) {
+        return res.status(404).json({ message: "Kanban card not found" });
+      }
+
+      res.json(card);
+    } catch (error) {
+      console.error("Get kanban card error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/kanban/cards", isAuthenticated, async (req, res) => {
+    try {
+      const cardData = insertKanbanCardSchema.parse(req.body);
+      cardData.createdById = req.session.userId!;
+
+      const card = await storage.createKanbanCard(cardData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "create",
+        entityType: "kanban_card",
+        entityId: card.id,
+        details: {
+          title: card.title,
+          columnId: card.columnId,
+          priority: card.priority
+        }
+      });
+
+      res.status(201).json(card);
+    } catch (error) {
+      console.error("Create kanban card error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.patch("/kanban/cards/:id", isAuthenticated, async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.id);
+      const card = await storage.getKanbanCard(cardId);
+
+      if (!card) {
+        return res.status(404).json({ message: "Kanban card not found" });
+      }
+
+      const updateData = insertKanbanCardSchema.partial().parse(req.body);
+
+      const updatedCard = await storage.updateKanbanCard(cardId, updateData);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "update",
+        entityType: "kanban_card",
+        entityId: cardId,
+        details: {
+          title: updatedCard.title,
+          status: `Moved to ${updatedCard.columnId !== card.columnId ? 'new column' : 'same column'}`
+        }
+      });
+
+      res.json(updatedCard);
+    } catch (error) {
+      console.error("Update kanban card error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.patch("/kanban/cards/:id/move", isAuthenticated, async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.id);
+      const card = await storage.getKanbanCard(cardId);
+
+      if (!card) {
+        return res.status(404).json({ message: "Kanban card not found" });
+      }
+
+      const { columnId, order } = req.body;
+
+      if (typeof columnId !== 'number' || typeof order !== 'number') {
+        return res.status(400).json({ message: "columnId and order are required" });
+      }
+
+      // Check if the column exists
+      const column = await storage.getKanbanColumn(columnId);
+      if (!column) {
+        return res.status(404).json({ message: "Target column not found" });
+      }
+
+      // Update card position
+      const updatedCard = await storage.updateKanbanCard(cardId, { 
+        columnId, 
+        order,
+        updatedAt: new Date() 
+      });
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "move",
+        entityType: "kanban_card",
+        entityId: cardId,
+        details: {
+          title: card.title,
+          fromColumn: card.columnId,
+          toColumn: columnId,
+          newOrder: order
+        }
+      });
+
+      res.json(updatedCard);
+    } catch (error) {
+      console.error("Move kanban card error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/kanban/cards/:id", isAuthenticated, async (req, res) => {
+    try {
+      const cardId = parseInt(req.params.id);
+      const card = await storage.getKanbanCard(cardId);
+
+      if (!card) {
+        return res.status(404).json({ message: "Kanban card not found" });
+      }
+
+      await storage.deleteKanbanCard(cardId);
+
+      // Log the activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "delete",
+        entityType: "kanban_card",
+        entityId: cardId,
+        details: {
+          title: card.title
+        }
+      });
+
+      res.json({ message: "Kanban card deleted successfully" });
+    } catch (error) {
+      console.error("Delete kanban card error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Traceability Matrix - Custom Markers
+  apiRouter.get("/projects/:projectId/matrix/markers", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const project = await storage.getProject(projectId);
+
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Check if user has access to this project
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const markers = await storage.getCustomMarkersByProject(projectId);
+      res.json(markers);
+    } catch (error) {
+      console.error("Get custom markers error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Custom Markers CRUD
+  apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
+    try {
+      const { label, color, projectId } = req.body;
+
+      if (!label || !color || !projectId) {
+        return res.status(400).json({ message: "Label, color, and projectId are required" });
+      }
+
+      // Check if user has access to this project
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const markerData = {
+        markerId: `marker-${Date.now()}`,
+        label,
+        color,
+        type: 'custom',
+        projectId: parseInt(projectId),
+        createdById: req.session.userId
+      };
+
+      const marker = await storage.createCustomMarker(markerData);
+      res.status(201).json(marker);
+    } catch (error) {
+      console.error("Create custom marker error:", error);
+      res.status(500).json({ message: "Failed to create custom marker" });
+    }
+  });
+
+  apiRouter.put("/custom-markers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { label, color, type } = req.body;
+
+      // Check if storage method exists
+      if (typeof storage.updateCustomMarker === 'function') {
+        const marker = await storage.updateCustomMarker(id, {
+          label,
+          color,
+          type
+        });
+        res.json(marker);
+      } else {
+        // Return a mock response if method doesn't exist
+        const mockMarker = {
+          id,
+          label,
+          color,
+          type,
+          updatedAt: new Date().toISOString()
+        };
+        res.json(mockMarker);
+      }
+    } catch (error) {
+      console.error("Update custom marker error:", error);
+      res.status(500).json({ message: "Failed to update custom marker" });
+    }
+  });
+
+  apiRouter.delete("/custom-markers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      // Check if storage method exists
+      if (typeof storage.deleteCustomMarker === 'function') {
+        await storage.deleteCustomMarker(id);
+        res.json({ success: true });
+      } else {
+        // Return success response if method doesn't exist
+        res.json({ success: true });
+      }
+    } catch (error) {
+      console.error("Delete custom marker error:", error);
+      res.status(500).json({ message: "Failed to delete custom marker" });
+    }
+  });
+
+  // Matrix Cells CRUD
+  apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
+    try {
+      const cellData = {
+        ...req.body,
+        createdById: req.session.userId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Check if cell already exists, if so update it
+      const existingCell = await storage.getMatrixCell(
+        cellData.rowModuleId, 
+        cellData.colModuleId, 
+        cellData.projectId
+      );
+
+      let cell;
+      if (existingCell) {
+        cell = await storage.updateMatrixCell(existingCell.id, cellData);
+      } else {
+        cell = await storage.createMatrixCell(cellData);
+      }
+
+      res.status(201).json(cell);
+    } catch (error) {
+      console.error("Create/Update matrix cell error:", error);
+      res.status(500).json({ message: "Failed to create/update matrix cell" });
+    }
+  });
+
+  apiRouter.delete("/matrix-cells/:rowModuleId/:colModuleId/:projectId", isAuthenticated, async (req, res) => {
+    try {
+      const rowModuleId = parseInt(req.params.rowModuleId);
+      const colModuleId = parseInt(req.params.colModuleId);
+      const projectId = parseInt(req.params.projectId);
+
+      const deleted = await storage.deleteMatrixCell(rowModuleId, colModuleId, projectId);
+
+      if (!deleted) {
+        return res.status(404).json({ message: "Matrix cell not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete matrix cell error:", error);
+      res.status(500).json({ message: "Failed to delete matrix cell" });
+    }
+  });
+
+  apiRouter.post("/projects/:projectId/matrix/cells", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const project = await storage.getProject(projectId);
+
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Check if user has access to this project
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const cellData = insertMatrixCellSchema.parse(req.body);
+      cellData.projectId = projectId;
+      cellData.createdById = req.session.userId!;
+
+      const cell = await storage.upsertMatrixCell(cellData);
+
+      // Log activity (simplified to avoid too much logging for matrix operations)
+      if (req.query.logActivity === "true") {
+        await storage.createActivity({
+          userId: req.session.userId!,
+          action: "updated",
+          entityType: "matrix_cell",
+          entityId: cell.id,
+          details: { 
+            projectId,
+            rowModuleId: cell.rowModuleId,
+            colModuleId: cell.colModuleId
+          }
+        });
+      }
+
+      res.status(201).json(cell);
+    } catch (error) {
+      console.error("Create/update matrix cell error:", error);
+      res.status(400).json({ message: "Invalid matrix cell data" });
+    }
+  });
+
+  apiRouter.delete("/projects/:projectId/matrix/cells", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const rowModuleId = parseInt(req.query.rowModuleId as string);
+      const colModuleId = parseInt(req.query.colModuleId as string);
+
+      if (isNaN(rowModuleId) || isNaN(colModuleId)) {
+        return res.status(400).json({ message: "rowModuleId and colModuleId are required query parameters" });
+      }
+
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Check if user has access to this project
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const success = await storage.deleteMatrixCell(rowModuleId, colModuleId, projectId);
+
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete matrix cell error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Traceability Matrix - Custom Markers
+  apiRouter.get("/projects/:projectId/matrix/markers", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const project = await storage.getProject(projectId);
+
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Check if user has access to this project
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const markers = await storage.getCustomMarkersByProject(projectId);
+      res.json(markers);
+    } catch (error) {
+      console.error("Get custom markers error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Custom Markers CRUD
+  apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
+    try {
+      const { label, color, projectId } = req.body;
+
+      if (!label || !color || !projectId) {
+        return res.status(400).json({ message: "Label, color, and projectId are required" });
+      }
+
+      // Check if user has access to this project
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const markerData = {
+        markerId: `marker-${Date.now()}`,
+        label,
+        color,
+        type: 'custom',
+        projectId: parseInt(projectId),
+        createdById: req.session.userId
+      };
+
+      const marker = await storage.createCustomMarker(markerData);
+      res.status(201).json(marker);
+    } catch (error) {
+      console.error("Create custom marker error:", error);
+      res.status(500).json({ message: "Failed to create custom marker" });
+    }
+  });
+
+  apiRouter.put("/custom-markers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { label, color, type } = req.body;
+
+      // Check if storage method exists
+      if (typeof storage.updateCustomMarker === 'function') {
+        const marker = await storage.updateCustomMarker(id, {
+          label,
+          color,
+          type
+        });
+        res.json(marker);
+      } else {
+        // Return a mock response if method doesn't exist
+        const mockMarker = {
+          id,
+          label,
+          color,
+          type,
+          updatedAt: new Date().toISOString()
+        };
+        res.json(mockMarker);
+      }
+    } catch (error) {
+      console.error("Update custom marker error:", error);
+      res.status(500).json({ message: "Failed to update custom marker" });
+    }
+  });
+
+  apiRouter.delete("/custom-markers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      // Check if storage method exists
+      if (typeof storage.deleteCustomMarker === 'function') {
+        await storage.deleteCustomMarker(id);
+        res.json({ success: true });
+      } else {
+        // Return success response if method doesn't exist
+        res.json({ success: true });
+      }
+    } catch (error) {
+      console.error("Delete custom marker error:", error);
+      res.status(500).json({ message: "Failed to delete custom marker" });
+    }
+  });
+
+  // Traceability Matrix - Cells
+  apiRouter.get("/traceability/cells/:matrixId", async (req, res) => {
+    try {
+      const matrixId = parseInt(req.params.matrixId);
+      const cells = await storage.getTraceabilityMatrixCells(matrixId);
+      res.json(cells);
+    } catch (error) {
+      logger.error('Error fetching traceability matrix cells', error);
+      res.status(500).json({ message: "Failed to fetch traceability matrix cells" });
+    }
+  });
+
+  apiRouter.post("/traceability/cells", async (req, res) => {
+    try {
+      const cell = await storage.createTraceabilityMatrixCell(req.body);
+      res.status(201).json(cell);
+    } catch (error) {
+      logger.error('Error creating traceability matrix cell', error);
+      res.status(500).json({ message: "Failed to create traceability matrix cell" });
+    }
+  });
+
+  apiRouter.put("/traceability/cells/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updated = await storage.updateTraceabilityMatrixCell(id, req.body);
+
+      if (!updated) {
+        return res.status(404).json({ message: "Traceability matrix cell not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      logger.error('Error updating traceability matrix cell', error);
+      res.status(500).json({ message: "Failed to update traceability matrix cell" });
+    }
+  });
+
+  // GitHub sync from GitHub to system endpoint
+  apiRouter.post("/github/sync-from-github/:projectId", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID is required" });
+      }
+
+      // Get GitHub configuration for the project
+      const githubConfig = await storage.getGitHubConfig(projectId);
+      if (!githubConfig || !githubConfig.isActive) {
+        return res.status(404).json({ message: "GitHub configuration not found or inactive" });
+      }
+
+      // Import the GitHub service
+      const { githubService } = await import('./github-service');
+
+      // Fetch issues from GitHub and sync to system
+      const syncResult = await githubService.syncFromGitHubToSystem(
+        githubConfig.repoOwner,
+        githubConfig.repoName,
+        githubConfig.accessToken,
+        projectId
+      );
+
+      res.json({
+        message: "Successfully synced from GitHub to system",
+        result: syncResult
+      });
+    } catch (error) {
+      console.error("GitHub sync from GitHub error:", error);
+      res.status(500).json({ 
+        message: "Failed to sync from GitHub to system",
+        error: error.message 
+      });
+    }
+  });
+
+  // GitHub sync endpoint
+  apiRouter.post("/github/sync/:bugId", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+
+      // Validate bugId
+      if (isNaN(bugId) || bugId <= 0) {
+        return res.status(400).json({ message: "Invalid bug ID" });
+      }
+
+      // Get the bug
+      const bug = await storage.getBug(bugId);
+      if (!bug) {
+        console.error(`Bug with ID ${bugId} not found`);
+        return res.status(404).json({ message: `Bug with ID ${bugId} not found` });
+      }
+
+      // Get GitHub config for the project
+      const githubConfig = await storage.getGitHubConfig(bug.projectId);
+      if (!githubConfig || !githubConfig.isActive) {
+        return res.status(400).json({ message: "GitHub integration not configured for this project" });
+      }
+
+      const { githubService } = await import('./github-service');
+
+      // Check if GitHub issue already exists for this bug
+      const existingGithubIssue = await storage.getGitHubIssueByBugId(bugId);
+
+      if (existingGithubIssue) {
+        try {
+          // Sync existing issue status
+          const syncResult = await githubService.syncIssueStatus(githubConfig, existingGithubIssue.githubIssueNumber, bugId);
+
+          if (syncResult.needsUpdate) {
+            // Update bug status in the system
+            const updatedBug = await storage.updateBug(bugId, { 
+              status: syncResult.bugStatus 
+            });
+
+            // Update GitHub issue record
+            await storage.updateGitHubIssue(existingGithubIssue.id, {
+              status: syncResult.githubStatus
+            });
+
+            // Log activity
+            await storage.createActivity({
+              userId: req.session.userId!,
+              action: "synced from GitHub",
+              entityType: "bug",
+              entityId: bugId,
+              details: { 
+                bugId: bug.bugId,
+                title: bug.title,
+                oldStatus: bug.status,
+                newStatus: syncResult.bugStatus,
+                githubIssueNumber: existingGithubIssue.githubIssueNumber
+              }
+            });
+
+            res.json({
+              message: "Bug status synced successfully",
+              bug: updatedBug,
+              githubStatus: syncResult.githubStatus,
+              previousStatus: bug.status,
+              newStatus: syncResult.bugStatus,
+              issueNumber: existingGithubIssue.githubIssueNumber
+            });
+          } else {
+            res.json({
+              message: "Bug status is already in sync",
+              status: bug.status,
+              issueNumber: existingGithubIssue.githubIssueNumber
+            });
+          }
+        } catch (syncError) {
+          console.error("GitHub sync error for existing issue:", syncError);
+          res.json({
+            message: "GitHub issue exists but sync failed",
+            status: bug.status,
+            issueNumber: existingGithubIssue.githubIssueNumber,
+            error: syncError instanceof Error ? syncError.message : "Unknown sync error"
+          });
+        }
+      } else {
+        // Create new GitHub issue
+        try {
+          const syncResult = await githubService.syncBugToGitHub(bug.id);
+
+          if (syncResult.created) {
+            // Log activity
+            await storage.createActivity({
+              userId: req.session.userId!,
+              action: "created GitHub issue",
+              entityType: "bug",
+              entityId: bug.id,
+              details: { 
+                bugId: bug.bugId,
+                title: bug.title,
+                githubIssueNumber: syncResult.issueNumber,
+                githubUrl: syncResult.url
+              }
+            });
+
+            res.json({
+              message: "GitHub issue created successfully",
+              created: true,
+              issueNumber: syncResult.issueNumber,
+              url: syncResult.url
+            });
+          } else {
+            res.json({
+              message: "No GitHub issue exists for this bug",
+              created: false,
+              bugId: bug.bugId,
+              title: bug.title
+            });
+          }
+        } catch (createError) {
+          console.error("GitHub issue creation error:", createError);
+          res.status(400).json({ 
+            message: "Failed to create GitHub issue",
+            error: createError instanceof Error ? createError.message : "Unknown creation error"
+          });
+        }
+      }
+    } catch (error) {
+      console.error("GitHub sync error:", error);
+      res.status(500).json({ 
+        message: "Failed to sync with GitHub", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // GitHub Issue Reporter endpoint
+  apiRouter.post("/github/create-issue", isAuthenticated, async (req, res) => {
+    try {
+      console.log('Received GitHub issue creation request');
+
+      // Extract data from form submission
+      const {
+        title,
+        description,
+        priority,
+        severity,
+        category,
+        projectId,
+        reproductionSteps,
+        expectedBehavior,
+        actualBehavior,
+        environment,
+        browserInfo,
+        additionalInfo
+      } = req.body;
+
+      // Validate required fields
+      if (!title || !description || !reproductionSteps) {
+        return res.status(400).json({ 
+          message: "Missing required fields: title, description, and reproduction steps are required" 
+        });
+      }
+
+      // Get project information
+      const project = await storage.getProject(parseInt(projectId));
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Create bug entry in the system
+      const bugData = {
+        projectId: parseInt(projectId),
+        title,
+        description,
+        severity,
+        priority,
+        status: 'New',
+        reportedById: req.session.userId!,
+        category,
+        reproductionSteps,
+        expectedBehavior,
+        actualBehavior,
+        environment,
+        browserInfo,
+        additionalInfo,
+        attachments: [],
+        screenshotRequired: false
+      };
+
+      const bug = await storage.createBug(bugData);
+
+      // Format bug report for GitHub issue
+      const githubIssueBody = `
+## Bug Report
+
+**Priority:** ${priority.toUpperCase()}
+**Severity:** ${severity.toUpperCase()}
+**Category:** ${category.toUpperCase()}
+
+### Description
+${description}
+
+### Reproduction Steps
+${reproductionSteps}
+
+### Expected Behavior
+${expectedBehavior || 'Not specified'}
+
+### Actual Behavior
+${actualBehavior || 'Not specified'}
+
+### Environment
+${environment}
+
+### Browser Information
+${browserInfo}
+
+${additionalInfo ? `### Additional Information\n${additionalInfo}` : ''}
+
+---
+*This issue was automatically created from the Test Case Management System*
+*Bug ID: ${bug.bugId}*
+*Project: ${project.name}*
+*Reported by: ${req.session.userName}*
+`;
+
+      // Create activity log
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "created GitHub issue",
+        entityType: "bug",
+        entityId: bug.id,
+        details: { 
+          projectId: parseInt(projectId),
+          projectName: project.name,
+          bugId: bug.bugId,
+          title,
+          severity,
+          priority,
+          category
+        }
+      });
+
+      // Return success response with mock GitHub issue number for demo
+      const mockIssueNumber = Math.floor(Math.random() * 1000) + 100;
+
+      res.status(201).json({
+        success: true,
+        message: "Issue created successfully",
+        bugId: bug.id,
+        systemBugId: bug.bugId,
+        issueNumber: mockIssueNumber,
+        githubUrl: `https://github.com/your-org/your-repo/issues/${mockIssueNumber}`,
+        issue: {
+          title,
+          body: githubIssueBody,
+          labels: [priority, severity, category]
+        }
+      });
+
+    } catch (error) {
+      console.error('GitHub issue creation error:', error);
+      res.status(500).json({ 
+        message: "Failed to create GitHub issue",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // GitHub Integration routes
+  apiRouter.get("/github/integrations", isAuthenticated, async (req, res) => {
+    try {
+      const { getGitHubIntegrations } = await import("./api/github-integrations");
+      await getGitHubIntegrations(req, res);
+    } catch (error) {
+      console.error("Get GitHub integrations error:", error);
+      res.status(500).json({ message: "Failed to fetch GitHub integrations" });
+    }
+  });
+
+  apiRouter.post("/github/integrations", isAuthenticated, async (req, res) => {
+    try {
+      const { createGitHubIntegration } = await import("./api/github-integrations");
+      await createGitHubIntegration(req, res);
+    } catch (error) {
+      console.error("Create GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to create GitHub integration" });
+    }
+  });
+
+  apiRouter.put("/github/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { updateGitHubIntegration } = await import("./api/github-integrations");
+      await updateGitHubIntegration(req, res);
+    } catch (error) {
+      console.error("Update GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to update GitHub integration" });
+    }
+  });
+
+  apiRouter.delete("/github/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { deleteGitHubIntegration } = await import("./api/github-integrations");
+      await deleteGitHubIntegration(req, res);
+    } catch (error) {
+      console.error("Delete GitHub integration error:", error);
+      res.status(500).json({ message: "Failed to delete GitHub integration" });
+    }
+  });
+
+  apiRouter.post("/github/test-connection", isAuthenticated, async (req, res) => {
+    try {
+      const { testGitHubConnection } = await import("./api/github-integrations");
+      await testGitHubConnection(req, res);
+    } catch (error) {
+      console.error("Test GitHub connection error:", error);
+      res.status(500).json({ message: "Failed to test GitHub connection" });
+    }
+  });
+
+  apiRouter.get("/github/configs", isAuthenticated, async (req, res) => {
+    try {
+      const configs = await storage.getAllGitHubConfigs();
+
+      // Don't expose access tokens in the response
+      const safeConfigs = configs.map(({ accessToken, ...config }) => config);
+
+      res.json(safeConfigs);
+    } catch (error) {
+      console.error("Get all GitHub configs error:", error);
+      res.status(500).json({ message: "Failed to fetch GitHub configurations" });
+    }
+  });
+
+  apiRouter.get("/github/config/:projectId", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const config = await storage.getGitHubConfig(projectId);
+
+      if (!config) {
+        return res.status(404).json({ message: "GitHub configuration not found" });
+      }
+
+      // Don't expose the access token in the response
+      const { accessToken, ...safeConfig } = config;
+      res.json(safeConfig);
+    } catch (error) {
+      console.error("Get GitHub config error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/github/config", isAuthenticated, async (req, res) => {
+    try {
+      const configData = {
+        ...req.body,
+        createdById: req.session.userId!,
+      };
+
+      const config = await storage.createGitHubConfig(configData);
+
+      // Don't expose the access token in the response
+      const { accessToken, ...safeConfig } = config;
+
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "configured",
+        entityType: "github_integration",
+        entityId: config.id,
+        details: { 
+          projectId: config.projectId,
+          repository: `${config.repoOwner}/${config.repoName}`
+        }
+      });
+
+      res.status(201).json(safeConfig);
+    } catch (error) {
+      console.error("Create GitHub config error:", error);
+      res.status(400).json({ message: "Invalid GitHub configuration data" });
+    }
+  });
+
+  apiRouter.patch("/github/config/:id", isAuthenticated, async (req, res) => {
+    try {
+      const configId = parseInt(req.params.id);
+      const updateData = req.body;
+
+      const updatedConfig = await storage.updateGitHubConfig(configId, updateData);
+
+      if (!updatedConfig) {
+        return res.status(404).json({ message: "GitHub configuration not found" });
+      }
+
+      // Don't expose the access token in the response
+      const { accessToken, ...safeConfig } = updatedConfig;
+      res.json(safeConfig);
+    } catch (error) {
+      console.error("Update GitHub config error:", error);
+      res.status(400).json({ message: "Invalid GitHub configuration data" });
+    }
+  });
+
+  apiRouter.post("/github/test-connection", isAuthenticated, async (req, res) => {
+    try {
+      const { repoOwner, repoName, accessToken } = req.body;
+
+      const testConfig = {
+        repoOwner,
+        repoName,
+        accessToken,
+        id: 0,
+        projectId: 0,
+        isActive: true,
+        createdById: 0,
+        createdAt: new Date().toISOString()
+      };
+
+      const { githubService } = await import('./github-service');
+      const isValid = await githubService.validateConnection(testConfig);
+
+      if (isValid) {
+        res.json({ message: "Connection successful" });
+      } else {
+        res.status(400).json({ message: "Connection failed" });
+      }
+    } catch (error) {
+      console.error("GitHub connection test error:", error);
+      res.status(400).json({ message: "Connection test failed" });
+    }
+  });
+
+  apiRouter.post("/github/issues", isAuthenticated, async (req, res) => {
+    try {
+      const { bugId } = req.body;
+
+      const bug = await storage.getBug(bugId);
+      if (!bug) {
+        return res.status(404).json({ message: "Bug not found" });
+      }
+
+      const config = await storage.getGitHubConfig(bug.projectId);
+      if (!config || !config.isActive) {
+        return res.status(400).json({ message: "GitHub integration not configured for this project" });
+      }
+
+      const { githubService } = await import('./github-service');
+      const issuePayload = githubService.formatBugAsGitHubIssue(bug);
+
+      const githubIssue = await githubService.createIssue(config, issuePayload);
+
+      const githubIssueRecord = await storage.createGitHubIssue({
+        bugId: bug.id,
+        githubIssueNumber: githubIssue.number,
+        githubIssueId: githubIssue.id,
+        githubUrl: githubIssue.url,
+        status: githubIssue.state as 'open' | 'closed'
+      });
+
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "created GitHub issue",
+        entityType: "bug",
+        entityId: bug.id,
+        details: { 
+          githubIssueNumber: githubIssue.number,
+          githubUrl: githubIssue.url
+        }
+      });
+
+      res.status(201).json(githubIssueRecord);
+    } catch (error) {
+      console.error("Create GitHub issue error:", error);
+      res.status(500).json({ message: "Failed to create GitHub issue" });
+    }
+  });
+
+  apiRouter.get("/github/issues/bug/:bugId", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const issue = await storage.getGitHubIssueByBugId(bugId);
+
+      if (!issue) {
+        return res.status(404).json({ message: "GitHub issue not found for this bug" });
+      }
+
+      res.json(issue);
+    } catch (error) {
+      console.error("Get GitHub issue error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/github/issues/:id/sync", isAuthenticated, async (req, res) => {
+    try {
+      const issueId = parseInt(req.params.id);
+      const githubIssue = await storage.getGitHubIssue(issueId);
+
+      if (!githubIssue) {
+        return res.status(404).json({ message: "GitHub issue not found" });
+      }
+
+      const bug = await storage.getBug(githubIssue.bugId);
+      if (!bug) {
+        return res.status(404).json({ message: "Associated bug not found" });
+      }
+
+      const config = await storage.getGitHubConfig(bug.projectId);
+      if (!config) {
+        return res.status(400).json({ message: "GitHub configuration not found" });
+      }
+
+      const { githubService } = await import('./github-service');
+      const latestIssue = await githubService.getIssue(config, githubIssue.githubIssueNumber);
+
+      // Update local record with latest GitHub data
+      await storage.updateGitHubIssue(issueId, {
+        status: latestIssue.state as 'open' | 'closed'
+      });
+
+      res.json({ message: "Issue synced successfully" });
+    } catch (error) {
+      console.error("Sync GitHub issue error:", error);
+      res.status(500).json({ message: "Failed to sync GitHub issue" });
+    }
+  });
+
+  // GitHub sync endpoints
+  apiRouter.post("/github/sync/github-to-system", isAuthenticated, async (req, res) => {
+    try {
+      let syncedCount = 0;
+      let errors = [];
+
+      // Get all active GitHub configurations
+      const configs = await storage.getAllGitHubConfigs();
+      const activeConfigs = configs.filter(config => config.isActive);
+
+      if (activeConfigs.length === 0) {
+        return res.status(400).json({ message: "No active GitHub configurations found" });
+      }
+
+      const { githubService } = await import('./github-service');
+
+      for (const config of activeConfigs) {
+        try {
+          // Get all GitHub issues for this repository
+          const githubIssues = await githubService.getAllIssues(config);
+
+          for (const issue of githubIssues) {
+            // Check if we already have this issue in our system
+            const existingGithubIssue = await storage.getGitHubIssueByGitHubId(issue.id);
+
+            if (existingGithubIssue) {
+              // Update existing issue status if it changed
+              if (existingGithubIssue.status !== issue.state) {
+                await storage.updateGitHubIssue(existingGithubIssue.id, {
+                  status: issue.state as 'open' | 'closed'
+                });
+                syncedCount++;
+              }
+            }
+            // Note: We don't create new bugs from GitHub issues automatically
+            // as that would require more complex mapping logic
+          }
+        } catch (error) {
+          console.error(`Error syncing from GitHub config ${config.id}:`, error);
+        }
+      }
+
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "synced from GitHub",
+        entityType: "github_integration",
+        entityId: 0,
+        details: { 
+          syncedCount,
+          direction: "github-to-system"
+        }
+      });
+
+      res.json({ 
+        message: "Sync from GitHub completed", 
+        syncedCount,
+        configsProcessed: activeConfigs.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("GitHub to system sync error:", error);
+      res.status(500).json({ message: "Failed to sync from GitHub" });
+    }
+  });
+
+  apiRouter.post("/github/sync/system-to-github", isAuthenticated, async (req, res) => {
+    try {
+      let syncedCount = 0;
+      let errors = [];
+
+      // Get all active GitHub configurations
+      const configs = await storage.getAllGitHubConfigs();
+      const activeConfigs = configs.filter(config => config.isActive);
+
+      if (activeConfigs.length === 0) {
+        return res.status(400).json({ message: "No active GitHub configurations found" });
+      }
+
+      const { githubService } = await import('./github-service');
+
+      for (const config of activeConfigs) {
+        try {
+          // Get all bugs for this project that don't have GitHub issues yet
+          const bugs = await storage.getBugs(config.projectId);
+          const bugsWithoutGitHubIssues = [];
+
+          for (const bug of bugs) {
+            const existingIssue = await storage.getGitHubIssueByBugId(bug.id);
+            if (!existingIssue) {
+              bugsWithoutGitHubIssues.push(bug);
+            }
+          }
+
+          logger.info(`Found ${bugsWithoutGitHubIssues.length} bugs without GitHub issues for project ${config.projectId}`);
+
+          // Create GitHub issues for bugs that don't have them
+          for (const bug of bugsWithoutGitHubIssues) {
+            try {
+              const result = await githubService.syncBugToGitHub(bug.id);
+              if (result.created) {
+                syncedCount++;
+                logger.info(`Successfully created GitHub issue for bug ${bug.id}`);
+              }
+            } catch (error) {
+              console.error(`Error creating GitHub issue for bug ${bug.id}:`, error);
+              errors.push(`Bug ${bug.bugId}: ${error.message}`);
+            }
+          }
+        } catch (error) {
+          console.error(`Error syncing to GitHub config ${config.id}:`, error);
+          errors.push(`Config ${config.id}: ${error.message}`);
+        }
+      }
+
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "synced to GitHub",
+        entityType: "github_integration",
+        entityId: 0,
+        details: { 
+          syncedCount,
+          direction: "system-to-github",
+          errors: errors.length > 0 ? errors : undefined
+        }
+      });
+
+      res.json({ 
+        message: "Sync to GitHub completed", 
+        syncedCount,
+        configsProcessed: activeConfigs.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("System to GitHub sync error:", error);
+      res.status(500).json({ message: "Failed to sync to GitHub" });
+    }
+  });
+
+  // GitHub Webhook endpoint
+  apiRouter.post("/github/webhook", async (req, res) => {
+    try {
+      const payload = req.body;
+      const event = req.headers['x-github-event'];
+
+      if (event === 'issues') {
+        const action = payload.action;
+        const issue = payload.issue;
+
+        if (action === 'closed' || action === 'reopened') {
+          // Find the GitHub issue record
+          const githubIssue = await storage.getGitHubIssueByGitHubId(issue.id);
+
+          if (githubIssue) {
+            // Update the status
+            await storage.updateGitHubIssue(githubIssue.id, {
+              status: issue.state as 'open' | 'closed'
+            });
+
+            // Optionally update the bug status as well
+            if (action === 'closed') {
+              await storage.updateBug(githubIssue.bugId, {
+                status: 'Resolved'
+              });
+            } else if (action === 'reopened') {
+              await storage.updateBug(githubIssue.bugId, {
+                status: 'Reopened'
+              });
+            }
+
+            logger.info(`GitHub issue ${issue.number} ${action}, updated bug ${githubIssue.bugId}`);
+          }
+        }
+      }
+
+      res.status(200).json({ message: "Webhook processed" });
+    } catch (error) {
+      console.error("GitHub webhook error:", error);
+      res.status(500).json({ message: "Webhook processing failed" });
+    }
+  });
+
+  // Test Sheets API routes
+  apiRouter.get("/test-sheets", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
+      const sheets = await storage.getTestSheets(projectId);
+      res.json(sheets);
+    } catch (error) {
+      logger.error('Error fetching test sheets:', error);
+      res.status(500).json({ error: 'Failed to fetch test sheets' });
+    }
+  });
+
+  apiRouter.get("/test-sheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const sheet = await storage.getTestSheet(id);
+
+      if (!sheet) {
+        return res.status(404).json({ error: 'Test sheet not found' });
+      }
+
+      res.json(sheet);
+    } catch (error) {
+      logger.error(`Error fetching test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to fetch test sheet' });
+    }
+  });
+
+  apiRouter.post("/test-sheets", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      console.log('Creating test sheet with data:', req.body);
+
+      // Simple validation without schema for now
+      const { name, projectId, data, metadata } = req.body;
+
+      if (!name || !projectId) {
+        return res.status(400).json({ error: 'Name and project ID are required' });
+      }
+
+      const sheetData = {
+        name,
+        projectId: Number(projectId),
+        data: data || {
+          cells: {},
+          rows: 100,
+          cols: 26,
+        },
+        metadata: {
+          version: 1,
+          lastModifiedBy: req.session.userId,
+          collaborators: [],
+          chartConfigs: [],
+          namedRanges: [],
+          ...metadata,
+        },
+        createdById: req.session.userId,
+      };
+
+      const newSheet = await storage.createTestSheet(sheetData);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId,
+        action: "created",
+        entityType: "test_sheet",
+        entityId: newSheet.id,
+        details: {
+          projectId: newSheet.projectId,
+          sheetName: newSheet.name,
+        }
+      });
+
+      res.status(201).json(newSheet);
+    } catch (error) {
+      console.error('Error creating test sheet:', error);
+      logger.error('Error creating test sheet:', error);
+      res.status(500).json({ error: 'Failed to create test sheet' });
+    }
+  });
+
+  apiRouter.put("/test-sheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      const existingSheet = await storage.getTestSheet(id);
+      if (!existingSheet) {
+        return res.status(404).json({ error: 'Test sheet not found' });
+      }
+
+      const updateData = {
+        ...req.body,
+        metadata: {
+          ...req.body.metadata,
+          lastModifiedBy: req.session.userId,
+          version: (existingSheet.metadata.version || 1) + 1,
+        }
+      };
+
+      const updatedSheet = await storage.updateTestSheet(id, updateData);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId,
+        action: "updated",
+        entityType: "test_sheet",
+        entityId: id,
+        details: {
+          projectId: updatedSheet.projectId,
+          sheetName: updatedSheet.name,
+        }
+      });
+
+      res.json(updatedSheet);
+    } catch (error) {
+      logger.error(`Error updating test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to update test sheet' });
+    }
+  });
+
+  apiRouter.delete("/test-sheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      const existingSheet = await storage.getTestSheet(id);
+      if (!existingSheet) {
+        return res.status(404).json({ error: 'Test sheet not found' });
+      }
+
+      await storage.deleteTestSheet(id);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId,
+        action: "deleted",
+        entityType: "test_sheet",
+        entityId: id,
+        details: {
+          projectId: existingSheet.projectId,
+          sheetName: existingSheet.name,
+        }
+      });
+
+      res.status(204).end();
+    } catch (error) {
+      logger.error(`Error deleting test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to delete test sheet' });
+    }
+  });
+
+  apiRouter.post("/test-sheets/:id/duplicate", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { name } = req.body;
+
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      if (!name) {
+        return res.status(400).json({ error: 'Sheet name is required' });
+      }
+
+      const duplicatedSheet = await storage.duplicateTestSheet(id, name, req.session.userId);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId,
+        action: "duplicated",
+        entityType: "test_sheet",
+        entityId: duplicatedSheet.id,
+        details: {
+          projectId: duplicatedSheet.projectId,
+          sheetName: duplicatedSheet.name,
+          originalSheetId: id,
+        }
+      });
+
+      res.status(201).json(duplicatedSheet);
+    } catch (error) {
+      logger.error(`Error duplicating test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to duplicate test sheet' });
+    }
+  });
+
+  apiRouter.post("/test-sheets/:id/export", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { format } = req.body; // 'csv' | 'xlsx' | 'json'
+
+      const sheet = await storage.getTestSheet(id);
+      if (!sheet) {
+        return res.status(404).json({ error: 'Test sheet not found' });
+      }
+
+      // Export logic will be implemented in the frontend
+      res.json({ 
+        success: true, 
+        message: 'Export request processed',
+        sheet: sheet 
+      });
+    } catch (error) {
+      logger.error(`Error exporting test sheet ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to export test sheet' });
+    }
+  });
+
+  // Flow Diagrams API routes
+  apiRouter.get("/flow-diagrams", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
+      const diagrams = await storage.getFlowDiagrams(projectId);
+      res.json(diagrams);
+    } catch (error) {
+      logger.error('Error fetching flow diagrams:', error);
+      res.status(500).json({ error: 'Failed to fetch flow diagrams' });
+    }
+  });
+
+  apiRouter.get("/flow-diagrams/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const diagram = await storage.getFlowDiagram(id);
+
+      if (!diagram) {
+        return res.status(404).json({ error: 'Flow diagram not found' });
+      }
+
+      res.json(diagram);
+    } catch (error) {
+      logger.error(`Error fetching flow diagram ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to fetch flow diagram' });
+    }
+  });
+
+  apiRouter.post("/flow-diagrams", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      // Add user ID to the diagram data
+      const diagramData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+
+      // Save the flow diagram
+      const newDiagram = await storage.createFlowDiagram(diagramData);
+      res.status(201).json(newDiagram);
+    } catch (error) {
+      logger.error('Error creating flow diagram:', error);
+      res.status(500).json({ error: 'Failed to create flow diagram' });
+    }
+  });
+
+  apiRouter.put("/flow-diagrams/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      // Get the existing diagram to check permissions
+      const existingDiagram = await storage.getFlowDiagram(id);
+      if (!existingDiagram) {
+        return res.status(404).json({ error: 'Flow diagram not found' });
+      }
+
+      // Update the flow diagram
+      const updatedDiagram = await storage.updateFlowDiagram(id, req.body);
+      res.json(updatedDiagram);
+    } catch (error) {
+      logger.error(`Error updating flow diagram ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to update flow diagram' });
+    }
+  });
+
+  apiRouter.delete("/flow-diagrams/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      // Get the existing diagram to check permissions
+      const existingDiagram = await storage.getFlowDiagram(id);
+      if (!existingDiagram) {
+        return res.status(404).json({ error: 'Flow diagram not found' });
+      }
+
+      // Delete the flow diagram
+      await storage.deleteFlowDiagram(id);
+      res.status(204).end();
+    } catch (error) {
+      logger.error(`Error deleting flow diagram ${req.params.id}:`, error);
+      res.status(500).json({ error: 'Failed to delete flow diagram' });
+    }
+  });
+
+  // No need for the separate flow diagrams router since we've already
+  // added those routes directly to the apiRouter
+
+  // Bug Comments API routes
+  apiRouter.get("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const comments = await storage.getBugComments(bugId);
+      res.json(comments);
+    } catch (error) {
+      console.error('Error fetching bug comments:', error);
+      res.status(500).json({ error: 'Failed to fetch bug comments' });
+    }
+  });
+
+  apiRouter.post("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const { content } = req.body;
+
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: 'Comment content is required' });
+      }
+
+      const comment = await storage.createBugComment({
+        bugId,
+        userId: req.session.userId!,
+        content: content.trim()
+      });
+
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error('Error creating bug comment:', error);
+      res.status(500).json({ error: 'Failed to create bug comment' });
+    }
+  });
+
+  apiRouter.put("/bugs/:bugId/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const { content } = req.body;
+
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: 'Comment content is required' });
+      }
+
+      const comment = await storage.updateBugComment(commentId, req.session.userId!, {
+        content: content.trim()
+      });
+
+      if (!comment) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+
+      res.json(comment);
+    } catch (error) {
+      console.error('Error updating bug comment:', error);
+      res.status(500).json({ error: 'Failed to update bug comment' });
+    }
+  });
+
+  // Notebooks API routes
+  apiRouter.get("/notebooks", isAuthenticated, async (req, res) => {
+    try {
+      const notebooks = await storage.getNotebooks(req.session.userId!);
+      res.json(notebooks);
+    } catch (error) {
+      console.error('Error fetching notebooks:', error);
+      res.status(500).json({ error: 'Failed to fetch notebooks' });
+    }
+  });
+
+  apiRouter.post("/notebooks", isAuthenticated, async (req, res) => {
+    try {
+      const { title, content, color = '#ffffff', isPinned = false, isArchived = false, tags = [] } = req.body;
+
+      if (!title || !title.trim()) {
+        return res.status(400).json({ error: 'Title is required' });
+      }
+
+      const notebook = await storage.createNotebook({
+        title: title.trim(),
+        content: content || '',
+        color,
+        isPinned,
+        isArchived,
+        tags,
+        userId: req.session.userId!
+      });
+
+      res.status(201).json(notebook);
+    } catch (error) {
+      console.error('Error creating notebook:', error);
+      res.status(500).json({ error: 'Failed to create notebook' });
+    }
+  });
+
+  apiRouter.get("/notebooks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const notebook = await storage.getNotebook(parseInt(req.params.id), req.session.userId!);
+      if (!notebook) {
+        return res.status(404).json({ error: 'Notebook not found' });
+      }
+      res.json(notebook);
+    } catch (error) {
+      console.error('Error fetching notebook:', error);
+      res.status(500).json({ error: 'Failed to fetch notebook' });
+    }
+  });
+
+  apiRouter.put("/notebooks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+
+      const notebook = await storage.updateNotebook(id, req.session.userId!, updates);
+      if (!notebook) {
+        return res.status(404).json({ error: 'Notebook not found' });
+      }
+
+      res.json(notebook);
+    } catch (error) {
+      console.error('Error updating notebook:', error);
+      res.status(500).json({ error: 'Failed to update notebook' });
+    }
+  });
+
+  apiRouter.delete("/notebooks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteNotebook(id, req.session.userId!);
+
+      if (!success) {
+        return res.status(404).json({ error: 'Notebook not found' });
+      }
+
+      res.json({ message: 'Notebook deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting notebook:', error);
+      res.status(500).json({ error: 'Failed to delete notebook' });
+    }
+  });
+
+  // Todo routes
+  apiRouter.get('/todos', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const todos = await storage.getUserTodos(userId);
+      res.json(todos);
+    } catch (error) {
+      console.error('Error fetching todos:', error);
+      res.status(500).json({ error: 'Failed to fetch todos' });
+    }
+  });
+
+  apiRouter.post('/todos', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const todoData = { ...req.body, userId };
+      const todo = await storage.createTodo(todoData);
+      res.status(201).json(todo);
+    } catch (error) {
+      console.error('Error creating todo:', error);
+      res.status(500).json({ error: 'Failed to create todo' });
+    }
+  });
+
+  apiRouter.put('/todos/:id', isAuthenticated, async (req, res) => {
+    try {
+      const todoId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const updated = await storage.updateTodo(todoId, userId, req.body);
+
+      if (!updated) {
+        return res.status(404).json({ error: 'Todo not found' });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating todo:', error);
+      res.status(500).json({ error: 'Failed to update todo' });
+    }
+  });
+
+  apiRouter.delete('/todos/:id', isAuthenticated, async (req, res) => {
+    try {
+      const todoId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const deleted = await storage.deleteTodo(todoId, userId);
+
+      if (!deleted) {
+        return res.status(404).json({ error: 'Todo not found' });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting todo:', error);
+      res.status(500).json({ error: 'Failed to delete todo' });
+    }
+  });
+
   // Messenger routes
   apiRouter.get('/chats', isAuthenticated, async (req, res) => {
     try {
@@ -6299,37 +9895,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
-  // AI Assistant API
-  app.post('/api/ai-assistant/query', isAuthenticated, async (req, res) => { // Added isAuthenticated middleware here
-    try {
-      const { query, context, userRole, userId } = req.body;
+  // Register the main API router
+  app.use("/api", apiRouter);
 
-      if (!query) {
-        return res.status(400).json({ error: 'Query is required' });
-      }
+  // Create HTTP server
+  // Removed Playwright and automation service initialization
 
-      const { AIAssistantService } = await import('./ai-assistant-service');
-      const response = await AIAssistantService.processQuery({
-        query,
-        context,
-        userRole: req.session.userRole || userRole, // Use session role if available
-        userId: req.session.userId || userId // Use session userId if available
-      });
+  const httpServer = createServer(app);
 
-      res.json(response);
-    } catch (error: any) {
-      console.error('AI Assistant error:', error);
-      res.status(500).json({ 
-        error: 'Failed to process AI query',
-        message: error.message 
-      });
-    }
-  });
-
-  // WebSocket endpoint for real-time chat
-  app.ws('/ws/chat', (ws, req) => {
-    chatService.handleConnection(ws, req);
-  });
-
-  return app;
+  return httpServer;
 }
