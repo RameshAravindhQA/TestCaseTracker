@@ -361,6 +361,18 @@ export default function AnalyticsDashboard() {
       return;
     }
 
+    const currentAllocation = calculateCurrentAllocation(selectedEmployeeForAllocation.id);
+    const newTotalAllocation = currentAllocation + parseInt(allocationPercentage);
+    
+    if (newTotalAllocation > 100) {
+      toast({ 
+        title: "Warning", 
+        description: `This allocation will exceed 100% (Current: ${currentAllocation}%, New Total: ${newTotalAllocation}%)`,
+        variant: "destructive" 
+      });
+      return;
+    }
+
     assignProjectMutation.mutate({
       employeeId: selectedEmployeeForAllocation.id,
       projectId: parseInt(selectedProjectForAllocation),
@@ -372,6 +384,14 @@ export default function AnalyticsDashboard() {
       status: 'active',
       isActive: true
     });
+  };
+
+  // Calculate current allocation for an employee (reusing logic from Resource Allocation)
+  const calculateCurrentAllocation = (employeeId: number) => {
+    const employeeProjectsData = projectAssignments.filter((ep: any) => ep.employeeId === employeeId && ep.isActive);
+    return employeeProjectsData
+      .filter((p: any) => p.status !== 'Completed')
+      .reduce((total: number, project: any) => total + (project.allocation || 0), 0);
   };
 
   // Calculate statistics safely
@@ -784,6 +804,22 @@ export default function AnalyticsDashboard() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
+                    {/* Employee Info Display */}
+                    <div className="space-y-2">
+                      <Label>Employee</Label>
+                      <div className="flex items-center space-x-2 p-2 bg-muted rounded">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={selectedEmployeeForAllocation?.profilePictureUrl} />
+                          <AvatarFallback className="text-xs">
+                            {selectedEmployeeForAllocation?.firstName?.[0]}{selectedEmployeeForAllocation?.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">
+                          {selectedEmployeeForAllocation?.firstName} {selectedEmployeeForAllocation?.lastName}
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="project">Project *</Label>
                       <Select value={selectedProjectForAllocation} onValueChange={setSelectedProjectForAllocation}>
@@ -821,6 +857,23 @@ export default function AnalyticsDashboard() {
                         onChange={(e) => setAllocationPercentage(e.target.value)}
                         placeholder="e.g., 50"
                       />
+                      {allocationPercentage && selectedEmployeeForAllocation && (
+                        <div className="text-xs">
+                          <span className="text-muted-foreground">
+                            Current: {calculateCurrentAllocation(selectedEmployeeForAllocation.id)}%
+                          </span>
+                          <span className={`ml-2 ${
+                            calculateCurrentAllocation(selectedEmployeeForAllocation.id) + parseInt(allocationPercentage) > 100 
+                              ? 'text-red-500' 
+                              : 'text-green-500'
+                          }`}>
+                            New Total: {calculateCurrentAllocation(selectedEmployeeForAllocation.id) + parseInt(allocationPercentage)}%
+                          </span>
+                          {calculateCurrentAllocation(selectedEmployeeForAllocation.id) + parseInt(allocationPercentage) > 100 && (
+                            <span className="block text-red-500">⚠️ This will over-allocate the employee</span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -848,9 +901,17 @@ export default function AnalyticsDashboard() {
                       <Button 
                         onClick={handleSubmitAllocation} 
                         className="flex-1"
-                        disabled={assignProjectMutation.isPending || !selectedProjectForAllocation || !allocationRole || !allocationPercentage || !allocationStartDate}
+                        disabled={
+                          assignProjectMutation.isPending || 
+                          !selectedProjectForAllocation || 
+                          !allocationRole || 
+                          !allocationPercentage || 
+                          !allocationStartDate ||
+                          (selectedEmployeeForAllocation && 
+                           calculateCurrentAllocation(selectedEmployeeForAllocation.id) + parseInt(allocationPercentage || '0') > 100)
+                        }
                       >
-                        {assignProjectMutation.isPending ? 'Allocating...' : 'Allocate 1 Employee(s)'}
+                        {assignProjectMutation.isPending ? 'Allocating...' : 'Assign Project'}
                       </Button>
                       <Button 
                         variant="outline" 
