@@ -90,6 +90,24 @@ const checkRole = (roles: string[]) => {
   };
 };
 
+// Backward compatibility function to handle old bug-attachments directory
+const migrateOldDirectories = () => {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const oldBugAttachmentsDir = path.join(uploadsDir, 'bug-attachments');
+  const newBugAttachmentDir = path.join(uploadsDir, 'bug-attachment');
+
+  // If the old directory exists and the new one doesn't, rename it
+  if (fs.existsSync(oldBugAttachmentsDir) && !fs.existsSync(newBugAttachmentDir)) {
+    console.log(`Migrating bug attachments directory from ${oldBugAttachmentsDir} to ${newBugAttachmentDir}`);
+    try {
+      fs.renameSync(oldBugAttachmentsDir, newBugAttachmentDir);
+      console.log('Directory migration completed successfully');
+    } catch (error) {
+      console.error('Error migrating bug attachments directory:', error);
+    }
+  }
+};
+
 // Create upload directories and test write permissions
 const createUploadDirectories = () => {
   const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -369,24 +387,6 @@ const configureBugAttachmentUpload = () => {
       cb(new Error('File type not supported. Please upload an image, video, or document.'));
     }
   });
-
-  // Backward compatibility function to handle old bug-attachments directory
-  const migrateOldDirectories = () => {
-    const uploadsDir = path.join(process.cwd(), 'uploads');
-    const oldBugAttachmentsDir = path.join(uploadsDir, 'bug-attachments');
-    const newBugAttachmentDir = path.join(uploadsDir, 'bug-attachment');
-
-    // If the old directory exists and the new one doesn't, rename it
-    if (fs.existsSync(oldBugAttachmentsDir) && !fs.existsSync(newBugAttachmentDir)) {
-      console.log(`Migrating bug attachments directory from ${oldBugAttachmentsDir} to ${newBugAttachmentDir}`);
-      try {
-        fs.renameSync(oldBugAttachmentsDir, newBugAttachmentDir);
-        console.log('Directory migration completed successfully');
-      } catch (error) {
-        console.error('Error migrating bug attachments directory:', error);
-      }
-    }
-  };
 
   return multer({
     storage,
