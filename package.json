@@ -7,6 +7,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
     "dotenv": "^17.2.0",
+    "express-ws": "^5.0.2",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.23.6",
     "html2canvas": "^1.4.1",
@@ -22,5 +23,8 @@
     "reactflow": "^11.11.4",
     "recharts": "^3.1.2",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/express-ws": "^3.0.5"
   }
 }

@@ -7,6 +7,7 @@ import path from "path";
 import { createServer } from "http";
 import { logger } from "./logger";
 import { initializeDatabase } from "./matrix-fix";
+import expressWs from "express-ws";
 
 
 const PORT = process.env.PORT || 5000;
@@ -15,6 +16,10 @@ async function startServer() {
   try {
     console.log("🚀 Starting Test Case Management System...");
     const app = express();
+    
+    // Initialize WebSocket support
+    const expressWsInstance = expressWs(app);
+    console.log("🔌 WebSocket support initialized");
 
     // Basic middleware
     app.use(express.json({ limit: '50mb' }));
