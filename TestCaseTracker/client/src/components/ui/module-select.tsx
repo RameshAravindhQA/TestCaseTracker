@@ -1,4 +1,3 @@
-
 import { Module } from "@/types";
 import { 
   Select,
@@ -52,31 +51,26 @@ export function ModuleSelect({
           <SelectItem value="loading" disabled>
             Loading modules...
           </SelectItem>
-        ) : (
+        ) : modules && modules.length > 0 ? (
           <>
             {includeAllOption && (
-              <SelectItem value="all">All modules</SelectItem>
+              <SelectItem value="all">All Modules</SelectItem>
             )}
-            {modules && modules.length > 0 ? (
-              modules.map((module) => (
-                <SelectItem 
-                  key={module.id} 
-                  value={module.id.toString()}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span>{module.name}</span>
-                    {module.status && (
-                      <StatusBadge status={module.status} className="ml-2" />
-                    )}
-                  </div>
-                </SelectItem>
-              ))
-            ) : (
-              <SelectItem value="empty" disabled>
-                No modules found
+            {modules.map((module) => (
+              <SelectItem key={module.id} value={module.id.toString()}>
+                <div className="flex items-center justify-between w-full">
+                  <span>{module.name}</span>
+                  {module.status && (
+                    <StatusBadge status={module.status} className="ml-2" />
+                  )}
+                </div>
               </SelectItem>
-            )}
+            ))}
           </>
+        ) : (
+          <SelectItem value="no-modules" disabled>
+            No modules found
+          </SelectItem>
         )}
       </SelectContent>
     </Select>

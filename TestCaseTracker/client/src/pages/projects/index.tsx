@@ -50,6 +50,7 @@ export default function ProjectsPage() {
   // Fetch projects
   const { data: projects, isLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
+    initialData: [],
   });
 
   // Delete project mutation

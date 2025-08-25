@@ -52,7 +52,7 @@ export function ProjectSelect({
             </SelectItem>
           ))
         ) : (
-          <SelectItem value="empty" disabled>
+          <SelectItem value="no-projects" disabled>
             No projects found
           </SelectItem>
         )}
