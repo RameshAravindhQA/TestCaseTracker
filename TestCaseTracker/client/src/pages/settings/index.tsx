@@ -75,7 +75,7 @@ export default function SettingsPage() {
       timezone: "UTC",
       dateFormat: "MM/DD/YYYY",
       autoSave: true,
-      defaultProject: "",
+      defaultProject: "none",
     },
   });
 
@@ -584,7 +584,7 @@ export default function SettingsPage() {
                             <SelectValue placeholder="Select default project" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">No default project</SelectItem>
+                            <SelectItem value="none">No default project</SelectItem>
                             <SelectItem value="1">Current Project</SelectItem>
                           </SelectContent>
                         </Select>
