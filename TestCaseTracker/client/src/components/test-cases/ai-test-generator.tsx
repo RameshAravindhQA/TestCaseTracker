@@ -40,6 +40,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("text");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [selectedModuleId, setSelectedModuleId] = useState<number>();
@@ -51,6 +52,10 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   const [projectContext, setProjectContext] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+
+  // Generated test cases and selection
+  const [generatedTestCases, setGeneratedTestCases] = useState<GeneratedTestCase[]>([]);
+  const [selectedTestCases, setSelectedTestCases] = useState<Set<number>>(new Set());
 
   // AI Provider selection
   const [aiProvider, setAiProvider] = useState<string>("gemini");
