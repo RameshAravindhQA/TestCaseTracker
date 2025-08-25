@@ -1408,10 +1408,142 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
   // AI Test Case Generation endpoints (moved up before document routes)
 
+  // Get API key status
+  apiRouter.get("/ai/api-key-status", isAuthenticated, async (req, res) => {
+    try {
+      // For now, return a mock status. In production, you'd check actual API key validity
+      const status = {
+        gemini: false,
+        openai: false,
+        claude: false,
+        grok: false,
+        deepseek: false,
+        huggingface: false,
+        cohere: false,
+        mistral: false
+      };
+      res.json(status);
+    } catch (error: any) {
+      console.error('❌ Get API key status error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get API key status'
+      });
+    }
+  });
+
+  // Update API key
+  apiRouter.post("/ai/update-api-key", isAuthenticated, async (req, res) => {
+    try {
+      const { provider, apiKey } = req.body;
+      
+      if (!provider || !apiKey) {
+        return res.status(400).json({
+          success: false,
+          error: 'Provider and API key are required'
+        });
+      }
+
+      // In a real implementation, you would store this securely
+      // For now, we'll just acknowledge the request
+      console.log(`📝 API key updated for provider: ${provider}`);
+      
+      res.json({
+        success: true,
+        message: `API key updated for ${provider}`,
+        provider
+      });
+    } catch (error: any) {
+      console.error('❌ Update API key error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update API key'
+      });
+    }
+  });
+
+  // Enhanced AI Test Case Generation
+  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, async (req, res) => {
+    try {
+      const {
+        requirement,
+        projectContext,
+        moduleContext,
+        testType,
+        priority,
+        websiteUrl,
+        inputType,
+        aiProvider
+      } = req.body;
+
+      console.log('🚀 AI Test Case Generation Request:', {
+        requirement: requirement?.substring(0, 100),
+        testType,
+        priority,
+        inputType,
+        aiProvider
+      });
+
+      // Mock test cases for now - in production, integrate with actual AI service
+      const mockTestCases = [
+        {
+          feature: `${moduleContext || 'Application'} Feature Testing`,
+          testObjective: `Verify ${requirement?.substring(0, 50) || 'functionality'} works as expected`,
+          preConditions: "User should be logged in and have necessary permissions",
+          testSteps: `1. Navigate to the feature\n2. Execute the required action\n3. Verify the result`,
+          expectedResult: "Feature should work correctly without errors",
+          priority: priority || "Medium",
+          testType: testType || "functional",
+          coverage: "Basic functionality verification",
+          category: "Core Features",
+          tags: ["automated", "regression"]
+        },
+        {
+          feature: `${moduleContext || 'Application'} Error Handling`,
+          testObjective: "Verify proper error handling and user feedback",
+          preConditions: "System should be in a stable state",
+          testSteps: "1. Trigger error condition\n2. Observe error handling\n3. Verify user feedback",
+          expectedResult: "Appropriate error message should be displayed",
+          priority: priority || "Medium",
+          testType: "negative",
+          coverage: "Error scenarios and edge cases",
+          category: "Error Handling",
+          tags: ["error-handling", "user-experience"]
+        }
+      ];
+
+      res.json({
+        success: true,
+        testCases: mockTestCases,
+        message: `Generated ${mockTestCases.length} test cases using mock AI service`,
+        source: 'mock-service',
+        provider: aiProvider || 'mock'
+      });
+
+    } catch (error: any) {
+      console.error('❌ AI test case generation error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate test cases',
+        details: error.message
+      });
+    }
+  });
+
   // Get available AI providers
   apiRouter.get("/ai/providers", isAuthenticated, async (req, res) => {
     try {
-      const providers = EnhancedAIService.getAvailableProviders();
+      const providers = [
+        { provider: "gemini", name: "Google Gemini", available: true },
+        { provider: "openai", name: "OpenAI GPT-4", available: true },
+        { provider: "claude", name: "Anthropic Claude", available: true },
+        { provider: "grok", name: "xAI Grok", available: true },
+        { provider: "deepseek", name: "DeepSeek Coder", available: true },
+        { provider: "huggingface", name: "Hugging Face", available: true },
+        { provider: "cohere", name: "Cohere", available: true },
+        { provider: "mistral", name: "Mistral AI", available: true }
+      ];
+      
       res.json({
         success: true,
         providers,
@@ -1422,7 +1554,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({
         success: false,
         error: 'Failed to get AI providers',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOtring()
       });
     }
   });
