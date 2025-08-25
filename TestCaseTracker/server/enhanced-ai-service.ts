@@ -325,8 +325,19 @@ export class EnhancedAIService {
         default:
           throw new Error(`Unsupported AI provider: ${provider}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`❌ ${provider} AI failed, falling back to mock service:`, error);
+      
+      // If it's a quota error, try OpenAI as fallback before mock
+      if (error.status === 429 && provider === 'gemini') {
+        console.log('🔄 Quota exceeded for Gemini, trying OpenAI...');
+        try {
+          return await this.generateWithOpenAI(request);
+        } catch (openaiError) {
+          console.error('❌ OpenAI also failed, using mock service:', openaiError);
+        }
+      }
+      
       return this.getMockResponse(request);
     }
   }
@@ -352,13 +363,30 @@ export class EnhancedAIService {
 
     try {
       console.log('🔮 Attempting Gemini generation...');
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const prompt = this.buildPrompt(request);
       
       console.log('📝 Sending prompt to Gemini:', prompt.substring(0, 100) + '...');
       
-      const result = await model.generateContent(prompt);
-      console.log('📥 Gemini result received, processing response...');
+      let result;
+      let retryCount = 0;
+      const maxRetries = 2;
+      
+      while (retryCount <= maxRetries) {
+        try {
+          result = await model.generateContent(prompt);
+          console.log('📥 Gemini result received, processing response...');
+          break;
+        } catch (error: any) {
+          if (error.status === 429 && retryCount < maxRetries) {
+            console.log(`🔄 Quota exceeded, retrying in ${Math.pow(2, retryCount + 1)} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount + 1) * 1000));
+            retryCount++;
+            continue;
+          }
+          throw error;
+        }
+      }
       
       const response = await result.response;
       const text = response.text();
