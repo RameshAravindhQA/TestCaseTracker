@@ -1,3 +1,139 @@
+
+// Test endpoint for mock AI service
+apiRouter.post("/ai/test-mock-generation", isAuthenticated, async (req, res) => {
+  try {
+    console.log('🧪 Testing mock AI generation service...');
+    
+    const testRequest = {
+      requirement: req.body.requirement || 'Test mock AI generation functionality',
+      projectContext: 'Test Project',
+      moduleContext: 'Test Module',
+      testType: req.body.testType || 'functional',
+      priority: req.body.priority || 'Medium',
+      inputType: 'text' as const,
+      aiProvider: req.body.aiProvider || 'gemini' as const
+    };
+
+    console.log('🔮 Calling EnhancedAIService.generateTestCases with test request...');
+    const result = await EnhancedAIService.generateTestCases(testRequest);
+    
+    console.log('✅ Mock generation test completed:', {
+      success: true,
+      testCasesCount: result.testCases?.length || 0,
+      source: result.source,
+      provider: result.provider
+    });
+
+    res.json({
+      success: true,
+      result,
+      testInfo: {
+        testCasesGenerated: result.testCases?.length || 0,
+        source: result.source,
+        provider: result.provider,
+        message: result.message
+      }
+    });
+
+  } catch (error: any) {
+    console.error('❌ Mock generation test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Mock generation test failed',
+      details: error.message
+    });
+  }
+});
+
+
+
+// Add comprehensive AI debugging endpoint
+apiRouter.get("/ai/debug-comprehensive", isAuthenticated, async (req, res) => {
+  try {
+    console.log('🔍 Comprehensive AI Debug Check Started');
+    
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      environment: {
+        nodeEnv: process.env.NODE_ENV,
+        platform: process.platform,
+        nodeVersion: process.version
+      },
+      gemini: {
+        hasClient: !!genAI,
+        initError: geminiInitError,
+        hasApiKey: !!process.env.GOOGLE_API_KEY,
+        keyFormat: process.env.GOOGLE_API_KEY?.startsWith('AIza') || false,
+        keyLength: process.env.GOOGLE_API_KEY?.length || 0,
+        keyPreview: process.env.GOOGLE_API_KEY ? `${process.env.GOOGLE_API_KEY.substring(0, 15)}...` : 'NONE'
+      },
+      openai: {
+        hasClient: !!openai,
+        initError: openaiInitError,
+        hasApiKey: !!process.env.OPENAI_API_KEY,
+        keyFormat: process.env.OPENAI_API_KEY?.startsWith('sk-') || false,
+        keyLength: process.env.OPENAI_API_KEY?.length || 0,
+        keyPreview: process.env.OPENAI_API_KEY ? `${process.env.OPENAI_API_KEY.substring(0, 15)}...` : 'NONE'
+      },
+      availableProviders: EnhancedAIService.getAvailableProviders(),
+      testGeneration: {
+        mockServiceWorking: true,
+        fallbackMechanism: true
+      }
+    };
+
+    // Test mock generation
+    try {
+      const testRequest = {
+        requirement: 'Test debug generation',
+        testType: 'functional',
+        priority: 'Medium',
+        inputType: 'text' as const,
+        aiProvider: 'gemini' as const
+      };
+      
+      console.log('🧪 Testing mock generation...');
+      const mockResult = await EnhancedAIService.generateTestCases(testRequest);
+      debugInfo.testGeneration = {
+        mockServiceWorking: mockResult.testCases.length > 0,
+        fallbackMechanism: mockResult.source === 'mock-service',
+        testCasesGenerated: mockResult.testCases.length,
+        source: mockResult.source,
+        provider: mockResult.provider
+      };
+      console.log('✅ Mock generation test successful');
+    } catch (testError) {
+      console.error('❌ Mock generation test failed:', testError);
+      debugInfo.testGeneration = {
+        mockServiceWorking: false,
+        fallbackMechanism: false,
+        error: testError.message
+      };
+    }
+
+    res.json({
+      success: true,
+      debug: debugInfo,
+      recommendations: [
+        debugInfo.gemini.hasApiKey ? '✅ Gemini API key configured' : '❌ Configure Gemini API key',
+        debugInfo.openai.hasApiKey ? '✅ OpenAI API key configured' : '❌ Configure OpenAI API key',
+        debugInfo.testGeneration.mockServiceWorking ? '✅ Mock service working' : '❌ Mock service failed',
+        '💡 Mock service should always work as fallback',
+        '💡 At least one AI provider should be configured for best results'
+      ]
+    });
+
+  } catch (error) {
+    console.error('❌ Debug endpoint failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Debug check failed',
+      details: error.message
+    });
+  }
+});
+
+
 import { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -1944,25 +2080,58 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         });
 
       } catch (aiError: any) {
-        console.error('❌ AI service failed, falling back to mock service:', aiError.message);
+        console.error('❌ AI service failed, falling back to mock service:', {
+          error: aiError.message,
+          status: aiError.status,
+          code: aiError.code,
+          provider: aiProvider,
+          requirement: requirement?.substring(0, 50) + '...'
+        });
 
-        // Fall back to mock service
-        aiResponse = generateMockResponse(
-          requirement || '', 
-          moduleContext || '', 
-          testType || 'functional', 
-          priority || 'Medium', 
-          inputType || 'text', 
-          websiteUrl || '', 
-          [], 
-          businessRules || '', 
-          elementInspection || '', 
-          userFlows || ''
-        );
+        // Create a more comprehensive fallback response
+        aiResponse = {
+          success: true,
+          testCases: [
+            {
+              feature: `${requirement || 'System Feature'} - Primary Flow`,
+              testObjective: `Verify successful ${(requirement || 'system functionality').toLowerCase()} with valid inputs`,
+              preConditions: "System is accessible and all required components are functional",
+              testSteps: "1. Navigate to the feature/module\n2. Enter valid test data\n3. Execute the primary action\n4. Verify successful completion\n5. Validate all expected outcomes",
+              expectedResult: "System should process the request successfully and return expected results without errors",
+              priority: (priority as 'High' | 'Medium' | 'Low') || "High",
+              testType: testType || "functional",
+              coverage: "Core Functionality",
+              category: "Primary Testing",
+              tags: ["fallback-generated", "core-functionality", "positive-testing"]
+            },
+            {
+              feature: `${requirement || 'System Feature'} - Input Validation`,
+              testObjective: `Verify input validation and error handling for ${(requirement || 'system functionality').toLowerCase()}`,
+              preConditions: "System is accessible",
+              testSteps: "1. Navigate to the feature/module\n2. Enter invalid or boundary test data\n3. Attempt to execute action\n4. Verify proper validation occurs\n5. Check appropriate error messages are displayed",
+              expectedResult: "System should validate inputs properly and display clear, helpful error messages for invalid data",
+              priority: (priority as 'High' | 'Medium' | 'Low') || "Medium",
+              testType: testType || "functional",
+              coverage: "Input Validation & Error Handling",
+              category: "Validation Testing",
+              tags: ["fallback-generated", "validation", "negative-testing", "error-handling"]
+            }
+          ],
+          analysis: {
+            coverage: 'Basic but essential',
+            complexity: 'Medium',
+            focusAreas: 'Core functionality and input validation',
+            suggestions: ['Add performance testing', 'Include security validation', 'Consider edge cases']
+          },
+          message: `Generated ${2} fallback test cases (AI service failed: ${aiError.message})`,
+          source: 'fallback-service',
+          provider: aiProvider || 'gemini'
+        };
 
-        console.log('✅ Mock response generated successfully:', {
+        console.log('✅ Fallback response generated successfully:', {
           testCasesCount: aiResponse.testCases?.length || 0,
-          source: aiResponse.source
+          source: aiResponse.source,
+          provider: aiResponse.provider
         });
       }
 

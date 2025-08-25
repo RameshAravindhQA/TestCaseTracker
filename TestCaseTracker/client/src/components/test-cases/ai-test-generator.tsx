@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Upload, Globe, Type, Wand2, CheckCircle2, Download, Merge, Settings, Loader2 } from "lucide-react";
+import { Sparkles, Upload, Globe, Type, Wand2, CheckCircle2, Download, Merge, Settings, Loader2, Bug } from "lucide-react";
 import type { Module, TestCase } from "@/types";
 
 interface AITestGeneratorProps {
@@ -239,9 +239,32 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
           };
         }
 
-      } catch (error) {
-        console.error("💥 Request failed:", error);
-        throw error;
+      } catch (error: any) {
+        console.error("❌ API call failed:", {
+          error: error.message,
+          status: error.status,
+          type: typeof error,
+          fullError: error
+        });
+
+        // Try to extract error message with more context
+        let errorMessage = "Failed to generate test cases";
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        }
+
+        // Add helpful context for common errors
+        if (error.message?.includes('network') || error.message?.includes('fetch')) {
+          errorMessage += " (Network error - check your connection)";
+        } else if (error.message?.includes('timeout')) {
+          errorMessage += " (Request timeout - try again)";
+        } else if (error.message?.includes('401') || error.message?.includes('403')) {
+          errorMessage += " (Authentication error - please refresh and try again)";
+        }
+
+        throw new Error(errorMessage);
       }
     },
     onSuccess: (data) => {
@@ -496,24 +519,40 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                 variant="outline"
                 size="sm"
                 onClick={async () => {
+                  console.log("🔍 Client Debug Info:", {
+                    apiKeys: apiKeyStatus, // Use apiKeyStatus here
+                    selectedProvider: aiProvider, // Use aiProvider here
+                    // formData: form.getValues(), // form is not defined, so this needs to be removed or handled differently
+                    debugInfo: {
+                      timestamp: new Date().toISOString(),
+                      userAgent: navigator.userAgent,
+                      url: window.location.href
+                    }
+                  });
+
+                  // Fetch comprehensive debug info from server
                   try {
-                    const response = await fetch('/api/ai/debug-status');
-                    const data = await response.json();
-                    console.log('🔍 AI Debug Status:', data);
-                    toast({
-                      title: "Debug Status",
-                      description: `Gemini: ${data.environmentCheck.geminiKey.present ? 'Configured' : 'Not configured'}. Check console for details.`,
+                    const response = await fetch('/api/ai/debug-comprehensive', {
+                      credentials: 'include'
                     });
+                    const debugData = await response.json();
+                    console.log("🔍 Server Debug Info:", debugData);
+
+                    // Show user-friendly debug info
+                    alert(`Debug Info:
+
+Gemini: ${debugData.debug?.gemini?.hasApiKey ? '✅ Configured' : '❌ Not configured'}
+OpenAI: ${debugData.debug?.openai?.hasApiKey ? '✅ Configured' : '❌ Not configured'}
+Mock Service: ${debugData.debug?.testGeneration?.mockServiceWorking ? '✅ Working' : '❌ Failed'}
+
+Check console for detailed information.`);
                   } catch (error) {
-                    console.error('Debug status error:', error);
-                    toast({
-                      title: "Debug Error",
-                      description: "Failed to get debug status",
-                      variant: "destructive",
-                    });
+                    console.error("❌ Failed to fetch debug info:", error);
+                    alert("Debug info available in console. Server debug fetch failed.");
                   }
                 }}
               >
+                <Bug className="h-4 w-4 mr-2" />
                 Debug
               </Button>
               <Button

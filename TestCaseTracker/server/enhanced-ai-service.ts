@@ -303,8 +303,23 @@ export class EnhancedAIService {
       inputType: request.inputType,
       requirement: request.requirement?.substring(0, 50) + '...',
       hasGemini: !!genAI && !geminiInitError,
-      hasOpenAI: !!openai && !openaiInitError
+      hasOpenAI: !!openai && !openaiInitError,
+      geminiError: geminiInitError,
+      openaiError: openaiInitError,
+      requestData: {
+        requirement: !!request.requirement,
+        projectContext: !!request.projectContext,
+        moduleContext: !!request.moduleContext,
+        testType: request.testType,
+        priority: request.priority
+      }
     });
+
+    // Validate request data
+    if (!request.requirement || request.requirement.trim() === '') {
+      console.log('⚠️ No requirement provided, using default');
+      request.requirement = 'Basic system functionality test';
+    }
 
     // Check if the requested provider is available, if not try alternatives
     if (provider === 'gemini' && (!genAI || geminiInitError)) {
@@ -364,10 +379,16 @@ export class EnhancedAIService {
           if (openai && !openaiInitError) {
             return await this.generateWithOpenAI(request);
           }
-          throw new Error(`No AI providers available`);
+          console.log('🎭 No AI providers available, using mock service');
+          return this.getMockResponse(request);
       }
     } catch (error: any) {
-      console.error(`❌ ${provider} AI failed:`, error.message);
+      console.error(`❌ ${provider} AI failed:`, {
+        error: error.message,
+        status: error.status,
+        code: error.code,
+        stack: error.stack?.substring(0, 200)
+      });
       
       // Smart fallback logic
       if (provider === 'gemini' && openai && !openaiInitError) {
@@ -783,6 +804,58 @@ Ensure the response is valid JSON only, no additional text.`;
     });
 
     const mockTestCases = this.generateMockTestCases(request);
+    
+    // Ensure we always have at least some test cases
+    if (!mockTestCases || mockTestCases.length === 0) {
+      console.log('⚠️ No mock test cases generated, creating fallback cases');
+      const fallbackTestCases = [
+        {
+          feature: `${request.requirement || 'System Feature'} - Happy Path`,
+          testObjective: `Verify successful ${(request.requirement || 'system functionality').toLowerCase()} with valid data`,
+          preConditions: "System is accessible and feature is available",
+          testSteps: "1. Access the system/feature\n2. Enter valid input data\n3. Submit the form/execute action\n4. Verify successful completion\n5. Validate expected results",
+          expectedResult: "System should process the request successfully and return expected results",
+          priority: (request.priority as 'High' | 'Medium' | 'Low') || "High",
+          testType: request.testType || "functional",
+          coverage: "Core Functionality",
+          category: "Primary Flow",
+          tags: ["mock-generated", "core-functionality", "positive-testing"]
+        },
+        {
+          feature: `${request.requirement || 'System Feature'} - Error Handling`,
+          testObjective: `Verify proper error handling for ${(request.requirement || 'system functionality').toLowerCase()}`,
+          preConditions: "System is accessible",
+          testSteps: "1. Access the system/feature\n2. Enter invalid or malformed data\n3. Submit the form/execute action\n4. Verify error handling\n5. Check error messages are displayed",
+          expectedResult: "System should handle errors gracefully and display appropriate error messages",
+          priority: (request.priority as 'High' | 'Medium' | 'Low') || "Medium",
+          testType: request.testType || "functional",
+          coverage: "Error Handling",
+          category: "Negative Testing",
+          tags: ["mock-generated", "error-handling", "negative-testing"]
+        }
+      ];
+      
+      const availableProviders = [];
+      if (genAI && !geminiInitError) availableProviders.push('Gemini');
+      if (openai && !openaiInitError) availableProviders.push('OpenAI');
+      
+      const message = availableProviders.length > 0 
+        ? `Generated ${fallbackTestCases.length} test cases using mock service (${availableProviders.join(', ')} failed)`
+        : `Generated ${fallbackTestCases.length} test cases using mock service (no AI providers available)`;
+
+      return {
+        testCases: fallbackTestCases,
+        analysis: {
+          coverage: 'Basic',
+          complexity: this.getComplexityLevel(request),
+          focusAreas: this.getFocusAreas(request),
+          suggestions: this.getSuggestions(request)
+        },
+        message,
+        source: 'mock-service',
+        provider: request.aiProvider || 'gemini'
+      };
+    }
     
     const availableProviders = [];
     if (genAI && !geminiInitError) availableProviders.push('Gemini');
