@@ -538,17 +538,31 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                     const debugData = await response.json();
                     console.log("🔍 Server Debug Info:", debugData);
 
+                    // Extract proper status from debug data
+                    const availableProviders = debugData.debug?.availableProviders || [];
+                    const geminiStatus = availableProviders.includes('gemini') || apiKeyStatus.gemini;
+                    const openaiStatus = availableProviders.includes('openai') || apiKeyStatus.openai;
+                    const mockStatus = debugData.debug?.testGeneration?.mockServiceWorking || false;
+
                     // Show user-friendly debug info
                     alert(`Debug Info:
 
-Gemini: ${debugData.debug?.gemini?.hasApiKey ? '✅ Configured' : '❌ Not configured'}
-OpenAI: ${debugData.debug?.openai?.hasApiKey ? '✅ Configured' : '❌ Not configured'}
-Mock Service: ${debugData.debug?.testGeneration?.mockServiceWorking ? '✅ Working' : '❌ Failed'}
+Gemini: ${geminiStatus ? '✅ Configured & Working' : '❌ Not configured'}
+OpenAI: ${openaiStatus ? '✅ Configured & Working' : '❌ Not configured'}
+Mock Service: ${mockStatus ? '✅ Working' : '❌ Failed'}
+
+Selected Provider: ${aiProvider}
+API Keys Status: ${JSON.stringify(apiKeyStatus)}
 
 Check console for detailed information.`);
                   } catch (error) {
                     console.error("❌ Failed to fetch debug info:", error);
-                    alert("Debug info available in console. Server debug fetch failed.");
+                    alert(`Debug info available in console. Server debug fetch failed.
+                    
+Client API Status:
+${Object.entries(apiKeyStatus).map(([key, value]) => `${key}: ${value ? '✅' : '❌'}`).join('\n')}
+
+Selected Provider: ${aiProvider}`);
                   }
                 }}
               >
