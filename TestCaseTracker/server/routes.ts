@@ -2741,9 +2741,6 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
-    }
-  );
-
   // Serve uploaded files (profile pictures and documents)
   app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
 
