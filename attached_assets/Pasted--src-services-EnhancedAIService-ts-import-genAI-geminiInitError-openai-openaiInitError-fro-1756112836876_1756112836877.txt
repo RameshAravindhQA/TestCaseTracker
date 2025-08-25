@@ -1,0 +1,241 @@
+// src/services/EnhancedAIService.ts
+import { genAI, geminiInitError, openai, openaiInitError } from "./aiProviders";
+
+export interface TestCaseGenerationRequest {
+  requirement: string;
+  projectContext?: string;
+  moduleContext?: string;
+  testType?: string;
+  priority?: string;
+  websiteUrl?: string;
+  elementInspection?: string;
+  userFlows?: string;
+  businessRules?: string;
+  inputType?: string;
+  aiProvider?: "gemini" | "openai";
+  images?: string[];
+}
+
+export interface TestCase {
+  feature: string;
+  testObjective: string;
+  preConditions: string;
+  testSteps: string;
+  expectedResult: string;
+  priority: string;
+  testType: string;
+  coverage: string;
+  category: string;
+  tags: string[];
+}
+
+export interface TestCaseGenerationResponse {
+  testCases: TestCase[];
+  analysis: {
+    coverage: string;
+    complexity: string;
+    focusAreas: string;
+    suggestions: string[];
+  };
+  message: string;
+  source: string;
+  provider: string;
+  success: boolean;
+}
+
+export class EnhancedAIService {
+  static async generateTestCases(
+    request: TestCaseGenerationRequest
+  ): Promise<TestCaseGenerationResponse> {
+    const provider = request.aiProvider || "gemini";
+
+    console.log(`🚀 Starting test case generation with ${provider}...`);
+
+    // Check available providers
+    const availableProviders: string[] = [];
+    if (genAI && !geminiInitError) availableProviders.push("gemini");
+    if (openai && !openaiInitError) availableProviders.push("openai");
+
+    if (availableProviders.length === 0) {
+      console.log("⚠️ No AI providers available - returning mock");
+      const mockResponse = EnhancedAIService.getMockResponse(request);
+      mockResponse.message =
+        "Generated using mock service (No AI providers configured)";
+      return mockResponse;
+    }
+
+    // Try the requested provider
+    if (availableProviders.includes(provider)) {
+      try {
+        if (provider === "gemini") {
+          return await EnhancedAIService.generateWithGemini(request);
+        } else if (provider === "openai") {
+          return await EnhancedAIService.generateWithOpenAI(request);
+        }
+      } catch (error: any) {
+        console.error(`❌ Provider ${provider} failed:`, error.message);
+      }
+    }
+
+    console.log("🎭 All providers failed, using mock service");
+    return EnhancedAIService.getMockResponse(request);
+  }
+
+  private static async generateWithGemini(
+    request: TestCaseGenerationRequest
+  ): Promise<TestCaseGenerationResponse> {
+    if (!genAI || geminiInitError) {
+      throw new Error(`Gemini initialization error: ${geminiInitError}`);
+    }
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 3000,
+      },
+    });
+
+    const prompt = EnhancedAIService.buildPrompt(request);
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    const testCases = EnhancedAIService.parseAIResponse(text);
+
+    return {
+      testCases,
+      analysis: {
+        coverage: "Comprehensive AI Analysis",
+        complexity: EnhancedAIService.getComplexityLevel(request),
+        focusAreas: EnhancedAIService.getFocusAreas(request),
+        suggestions: EnhancedAIService.getSuggestions(request),
+      },
+      message: `Generated ${testCases.length} test cases using Google Gemini AI`,
+      source: "gemini-ai",
+      provider: "gemini",
+      success: true,
+    };
+  }
+
+  private static async generateWithOpenAI(
+    request: TestCaseGenerationRequest
+  ): Promise<TestCaseGenerationResponse> {
+    if (!openai || openaiInitError) {
+      throw new Error(`OpenAI initialization error: ${openaiInitError}`);
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // Or whichever model you want
+      messages: [{ role: "user", content: EnhancedAIService.buildPrompt(request) }],
+      temperature: 0.7,
+    });
+
+    const text = completion.choices[0]?.message?.content || "[]";
+    const testCases = EnhancedAIService.parseAIResponse(text);
+
+    return {
+      testCases,
+      analysis: {
+        coverage: "Comprehensive AI Analysis",
+        complexity: EnhancedAIService.getComplexityLevel(request),
+        focusAreas: EnhancedAIService.getFocusAreas(request),
+        suggestions: EnhancedAIService.getSuggestions(request),
+      },
+      message: `Generated ${testCases.length} test cases using OpenAI`,
+      source: "openai-ai",
+      provider: "openai",
+      success: true,
+    };
+  }
+
+  private static buildPrompt(request: TestCaseGenerationRequest): string {
+    return `Generate comprehensive test cases based on this requirement:
+
+REQUIREMENT: ${request.requirement}
+${request.projectContext ? `PROJECT: ${request.projectContext}` : ""}
+${request.moduleContext ? `MODULE: ${request.moduleContext}` : ""}
+TEST TYPE: ${request.testType || "functional"}
+PRIORITY: ${request.priority || "Medium"}
+
+Generate 3-5 detailed test cases that cover:
+1. Happy path scenarios
+2. Edge cases and boundary conditions
+3. Error scenarios and validation
+4. Integration points
+
+Return ONLY a valid JSON array with this exact structure:
+[
+  {
+    "feature": "Clear feature name",
+    "testObjective": "Specific test objective",
+    "preConditions": "Required prerequisites",
+    "testSteps": "1. Step one\\n2. Step two\\n3. Step three",
+    "expectedResult": "Expected outcome",
+    "priority": "High",
+    "testType": "${request.testType || "functional"}",
+    "coverage": "What this test covers",
+    "category": "Test category",
+    "tags": ["tag1", "tag2"]
+  }
+]
+
+Return ONLY valid JSON, no other text.`;
+  }
+
+  private static parseAIResponse(aiText: string): TestCase[] {
+    try {
+      return JSON.parse(aiText) as TestCase[];
+    } catch (e) {
+      console.error("❌ Failed to parse AI response:", e);
+      return [];
+    }
+  }
+
+  private static getComplexityLevel(
+    request: TestCaseGenerationRequest
+  ): string {
+    return request.requirement.length > 100 ? "High" : "Medium";
+  }
+
+  private static getFocusAreas(request: TestCaseGenerationRequest): string {
+    return request.moduleContext || "General Coverage";
+  }
+
+  private static getSuggestions(request: TestCaseGenerationRequest): string[] {
+    return ["Consider adding negative test cases", "Add integration coverage"];
+  }
+
+  private static getMockResponse(
+    request: TestCaseGenerationRequest
+  ): TestCaseGenerationResponse {
+    return {
+      testCases: [
+        {
+          feature: "Mock Login",
+          testObjective: "Verify mock login flow",
+          preConditions: "App is running",
+          testSteps: "1. Enter username\n2. Enter password\n3. Click login",
+          expectedResult: "User is logged in",
+          priority: "Medium",
+          testType: "functional",
+          coverage: "Login validation",
+          category: "Authentication",
+          tags: ["mock", "login"],
+        },
+      ],
+      analysis: {
+        coverage: "Basic",
+        complexity: "Low",
+        focusAreas: "Authentication",
+        suggestions: ["Set up real AI providers"],
+      },
+      message: "Generated mock test cases",
+      source: "mock-service",
+      provider: "mock",
+      success: true,
+    };
+  }
+}
