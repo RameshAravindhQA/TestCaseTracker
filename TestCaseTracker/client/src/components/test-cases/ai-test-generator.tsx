@@ -283,10 +283,24 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
           toastMessage += ` (${message})`;
         }
 
-        toast({
-          title: "Test Cases Generated! 🎉",
-          description: toastMessage,
-        });
+        // Show appropriate message based on AI source
+        if (source === 'mock-service') {
+          toast({
+            title: "Test Cases Generated",
+            description: "Test cases generated using mock service (AI providers not available)",
+            variant: "warning",
+          });
+        } else if (data.provider) {
+          toast({
+            title: "Test Cases Generated! 🎉",
+            description: `${toastMessage} using ${data.provider}!`,
+          });
+        } else {
+          toast({
+            title: "Test Cases Generated! 🎉",
+            description: toastMessage,
+          });
+        }
       } else {
         console.error("❌ No test cases in response:", data);
         toast({
@@ -551,14 +565,11 @@ Gemini: ${geminiStatus ? '✅ Configured & Working' : '❌ Not configured'}
 OpenAI: ${openaiStatus ? '✅ Configured & Working' : '❌ Not configured'}
 Mock Service: ${mockStatus ? '✅ Working' : '❌ Failed'}
 
-Selected Provider: ${aiProvider}
-API Keys Status: ${JSON.stringify(apiKeyStatus)}
-
 Check console for detailed information.`);
                   } catch (error) {
                     console.error("❌ Failed to fetch debug info:", error);
                     alert(`Debug info available in console. Server debug fetch failed.
-                    
+
 Client API Status:
 ${Object.entries(apiKeyStatus).map(([key, value]) => `${key}: ${value ? '✅' : '❌'}`).join('\n')}
 

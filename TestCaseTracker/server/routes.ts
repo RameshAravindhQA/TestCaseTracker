@@ -422,29 +422,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const apiRouter = Router();
 
-  // Test endpoint for mock AI service
-  apiRouter.post("/ai/test-mock-generation", isAuthenticated, async (req, res) => {
+  // Test endpoint for AI service functionality
+  apiRouter.post("/ai/test-generation", isAuthenticated, async (req, res) => {
     try {
-      console.log('🧪 Testing mock AI generation service...');
+      console.log('🧪 Testing AI generation service...');
       
       const testRequest = {
-        requirement: req.body.requirement || 'Test mock AI generation functionality',
+        requirement: req.body.requirement || 'Test user registration form with email validation',
         projectContext: 'Test Project',
-        moduleContext: 'Test Module',
+        moduleContext: 'Registration Module',
         testType: req.body.testType || 'functional',
-        priority: req.body.priority || 'Medium',
+        priority: req.body.priority || 'High',
         inputType: 'text' as const,
         aiProvider: req.body.aiProvider || 'gemini' as const
       };
 
       console.log('🔮 Calling EnhancedAIService.generateTestCases with test request...');
+      console.log('📋 Test request details:', testRequest);
+
       const result = await EnhancedAIService.generateTestCases(testRequest);
       
-      console.log('✅ Mock generation test completed:', {
-        success: true,
+      console.log('✅ AI generation test completed:', {
+        success: result.success,
         testCasesCount: result.testCases?.length || 0,
         source: result.source,
-        provider: result.provider
+        provider: result.provider,
+        isRealAI: result.source !== 'mock-service'
       });
 
       res.json({
@@ -454,16 +457,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           testCasesGenerated: result.testCases?.length || 0,
           source: result.source,
           provider: result.provider,
-          message: result.message
+          message: result.message,
+          isRealAI: result.source !== 'mock-service',
+          aiStatus: EnhancedAIService.getProviderStatus()
         }
       });
 
     } catch (error: any) {
-      console.error('❌ Mock generation test failed:', error);
+      console.error('❌ AI generation test failed:', error);
       res.status(500).json({
         success: false,
-        error: 'Mock generation test failed',
-        details: error.message
+        error: 'AI generation test failed',
+        details: error.message,
+        aiStatus: EnhancedAIService.getProviderStatus()
       });
     }
   });
