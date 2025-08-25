@@ -90,19 +90,14 @@ try {
   } else {
     try {
       genAI = new GoogleGenerativeAI(geminiApiKey);
+      geminiInitError = null; // Clear any previous errors
       console.log('✅ Gemini AI initialized successfully with key:', geminiApiKey.substring(0, 15) + '...');
-
-      // Test the API key by making a simple request
-      console.log('🧪 Testing Gemini API key...');
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-      // We'll test this later to avoid blocking startup
-
-    } catch (initError) {
+    } catch (initError: any) {
       geminiInitError = `Failed to initialize GoogleGenerativeAI: ${initError.message}`;
       console.error('❌ GoogleGenerativeAI initialization failed:', initError);
     }
   }
-} catch (error) {
+} catch (error: any) {
   geminiInitError = `Gemini initialization failed: ${error.message}`;
   console.error('❌ Gemini initialization error:', error);
 }
@@ -118,10 +113,16 @@ try {
   });
 
   if (openaiApiKey && openaiApiKey !== 'your-openai-api-key' && openaiApiKey.trim() !== '' && openaiApiKey.startsWith('sk-')) {
-    openai = new OpenAI({
-      apiKey: openaiApiKey,
-    });
-    console.log('✅ OpenAI initialized successfully');
+    try {
+      openai = new OpenAI({
+        apiKey: openaiApiKey,
+      });
+      openaiInitError = null; // Clear any previous errors
+      console.log('✅ OpenAI initialized successfully');
+    } catch (initError: any) {
+      openaiInitError = `Failed to create OpenAI client: ${initError.message}`;
+      console.error('❌ OpenAI client creation failed:', initError);
+    }
   } else {
     openaiInitError = `OpenAI API key not configured or invalid format. Key: ${openaiApiKey ? 'PROVIDED' : 'MISSING'}`;
     console.warn('❌ OpenAI API key issue:', {
@@ -130,7 +131,7 @@ try {
       keyLength: openaiApiKey?.length || 0
     });
   }
-} catch (error) {
+} catch (error: any) {
   openaiInitError = `OpenAI initialization failed: ${error.message}`;
   console.error('❌ OpenAI initialization error:', error);
 }
@@ -233,6 +234,50 @@ try {
 
 export class EnhancedAIService {
 
+  static getProviderStatus() {
+    return {
+      gemini: {
+        ready: !!genAI && !geminiInitError,
+        error: geminiInitError
+      },
+      openai: {
+        ready: !!openai && !openaiInitError,
+        error: openaiInitError
+      },
+      claude: {
+        ready: !claudeInitError,
+        error: claudeInitError
+      }
+    };
+  }
+
+  static async testProvider(provider: AIProvider): Promise<boolean> {
+    try {
+      const testRequest: TestCaseGenerationRequest = {
+        requirement: 'Test API connectivity',
+        testType: 'functional',
+        priority: 'Medium',
+        inputType: 'text'
+      };
+
+      switch (provider) {
+        case 'gemini':
+          if (!genAI || geminiInitError) return false;
+          await EnhancedAIService.generateWithGemini(testRequest);
+          return true;
+        case 'openai':
+          if (!openai || openaiInitError) return false;
+          await EnhancedAIService.generateWithOpenAI(testRequest);
+          return true;
+        default:
+          return false;
+      }
+    } catch (error) {
+      console.error(`❌ Provider ${provider} test failed:`, error);
+      return false;
+    }
+  }
+
   static getAvailableProviders(): { provider: AIProvider; name: string; available: boolean; error?: string; isFree?: boolean }[] {
     return [
       {
@@ -304,14 +349,7 @@ export class EnhancedAIService {
       hasGemini: !!genAI && !geminiInitError,
       hasOpenAI: !!openai && !openaiInitError,
       geminiError: geminiInitError,
-      openaiError: openaiInitError,
-      requestData: {
-        requirement: !!request.requirement,
-        projectContext: !!request.projectContext,
-        moduleContext: !!request.moduleContext,
-        testType: request.testType,
-        priority: request.priority
-      }
+      openaiError: openaiInitError
     });
 
     // Validate request data
@@ -320,43 +358,31 @@ export class EnhancedAIService {
       request.requirement = 'Basic system functionality test';
     }
 
-    // Check if the requested provider is available, if not try alternatives
-    if (provider === 'gemini' && (!genAI || geminiInitError)) {
-      console.log('🔄 Gemini not available, trying OpenAI...');
-      if (openai && !openaiInitError) {
-        try {
-          return await EnhancedAIService.generateWithOpenAI(request);
-        } catch (error) {
-          console.error('❌ OpenAI fallback failed:', error);
-          return EnhancedAIService.getMockResponse(request);
-        }
-      }
-    }
-
-    if (provider === 'openai' && (!openai || openaiInitError)) {
-      console.log('🔄 OpenAI not available, trying Gemini...');
-      if (genAI && !geminiInitError) {
-        try {
-          return await EnhancedAIService.generateWithGemini(request);
-        } catch (error) {
-          console.error('❌ Gemini fallback failed:', error);
-          return EnhancedAIService.getMockResponse(request);
-        }
-      }
-    }
-
+    // Force use real AI providers first - don't go to mock immediately
     try {
+      console.log(`🔮 Attempting ${provider} generation with validated credentials...`);
+      
       switch (provider) {
         case 'gemini':
           if (!genAI || geminiInitError) {
-            throw new Error(geminiInitError || 'Gemini not initialized');
+            console.log('🔄 Gemini not available, trying OpenAI...');
+            if (openai && !openaiInitError) {
+              return await EnhancedAIService.generateWithOpenAI(request);
+            }
+            throw new Error(geminiInitError || 'Gemini not initialized and OpenAI not available');
           }
           return await EnhancedAIService.generateWithGemini(request);
+          
         case 'openai':
           if (!openai || openaiInitError) {
-            throw new Error(openaiInitError || 'OpenAI not initialized');
+            console.log('🔄 OpenAI not available, trying Gemini...');
+            if (genAI && !geminiInitError) {
+              return await EnhancedAIService.generateWithGemini(request);
+            }
+            throw new Error(openaiInitError || 'OpenAI not initialized and Gemini not available');
           }
           return await EnhancedAIService.generateWithOpenAI(request);
+          
         case 'claude':
           return await EnhancedAIService.generateWithClaude(request);
         case 'grok':
@@ -369,44 +395,52 @@ export class EnhancedAIService {
           return await EnhancedAIService.generateWithCohere(request);
         case 'mistral':
           return await EnhancedAIService.generateWithMistral(request);
+          
         default:
           console.log('🔄 Unknown provider, trying available providers...');
-          // Try available providers in order
+          // Try available providers in order of preference
           if (genAI && !geminiInitError) {
+            console.log('✅ Using Gemini as fallback...');
             return await EnhancedAIService.generateWithGemini(request);
           }
           if (openai && !openaiInitError) {
+            console.log('✅ Using OpenAI as fallback...');
             return await EnhancedAIService.generateWithOpenAI(request);
           }
-          console.log('🎭 No AI providers available, using mock service');
-          return EnhancedAIService.getMockResponse(request);
+          throw new Error('No AI providers available');
       }
     } catch (error: any) {
-      console.error(`❌ ${provider} AI failed:`, {
+      console.error(`❌ Primary ${provider} AI failed:`, {
         error: error.message,
         status: error.status,
-        code: error.code,
-        stack: error.stack?.substring(0, 200)
+        code: error.code
       });
 
-      // Smart fallback logic
-      if (provider === 'gemini' && openai && !openaiInitError) {
-        console.log('🔄 Gemini failed, trying OpenAI...');
-        try {
+      // Smart fallback to other AI providers before going to mock
+      try {
+        if (provider === 'gemini' && openai && !openaiInitError) {
+          console.log('🔄 Gemini failed, trying OpenAI as backup...');
           return await EnhancedAIService.generateWithOpenAI(request);
-        } catch (openaiError) {
-          console.error('❌ OpenAI fallback also failed:', openaiError);
-        }
-      } else if (provider === 'openai' && genAI && !geminiInitError) {
-        console.log('🔄 OpenAI failed, trying Gemini...');
-        try {
+        } else if (provider === 'openai' && genAI && !geminiInitError) {
+          console.log('🔄 OpenAI failed, trying Gemini as backup...');
           return await EnhancedAIService.generateWithGemini(request);
-        } catch (geminiError) {
-          console.error('❌ Gemini fallback also failed:', geminiError);
+        } else {
+          // Try any available provider
+          if (genAI && !geminiInitError && provider !== 'gemini') {
+            console.log('🔄 Trying Gemini as last resort...');
+            return await EnhancedAIService.generateWithGemini(request);
+          }
+          if (openai && !openaiInitError && provider !== 'openai') {
+            console.log('🔄 Trying OpenAI as last resort...');
+            return await EnhancedAIService.generateWithOpenAI(request);
+          }
         }
+      } catch (fallbackError: any) {
+        console.error('❌ All AI fallbacks failed:', fallbackError.message);
       }
 
-      console.log('🎭 Using mock service as final fallback');
+      // Only use mock service as absolute last resort
+      console.log('🎭 All AI providers failed, using mock service as final fallback');
       return EnhancedAIService.getMockResponse(request);
     }
   }

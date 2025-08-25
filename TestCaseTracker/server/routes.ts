@@ -2101,13 +2101,16 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
     try {
       console.log('🤖 Enhanced AI Generation - Handler started');
-      console.log('🔍 Session data:', { userId: req.session?.userId, userRole: req.session?.userRole });
-      console.log('🔍 Request body:', req.body);
+      console.log('🔍 Provider Status at Request Time:', {
+        gemini: { available: !!genAI && !geminiInitError, error: geminiInitError },
+        openai: { available: !!openai && !openaiInitError, error: openaiInitError },
+        requestedProvider: req.body.aiProvider || 'gemini'
+      });
       console.log('🔍 Environment check at request time:', {
         hasGoogleKey: !!process.env.GOOGLE_API_KEY,
-        keyPreview: process.env.GOOGLE_API_KEY ? `${process.env.GOOGLE_API_KEY.substring(0, 15)}...` : 'MISSING',
-        keyLength: process.env.GOOGLE_API_KEY?.length || 0,
-        keyFormat: process.env.GOOGLE_API_KEY?.startsWith('AIza') ? 'VALID' : 'INVALID'
+        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+        googleKeyFormat: process.env.GOOGLE_API_KEY?.startsWith('AIza') ? 'VALID' : 'INVALID',
+        openaiKeyFormat: process.env.OPENAI_API_KEY?.startsWith('sk-') ? 'VALID' : 'INVALID'
       });
 
       // Validate authentication
