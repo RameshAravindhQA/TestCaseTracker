@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { logger } from './logger';
@@ -74,7 +73,7 @@ try {
     startsWithAIza: geminiApiKey?.startsWith('AIza') || false,
     preview: geminiApiKey ? `${geminiApiKey.substring(0, 15)}...` : 'NONE'
   });
-  
+
   // Check if API key is properly set
   if (!geminiApiKey) {
     geminiInitError = 'Google Gemini API key is not set in environment variables';
@@ -92,12 +91,12 @@ try {
     try {
       genAI = new GoogleGenerativeAI(geminiApiKey);
       console.log('✅ Gemini AI initialized successfully with key:', geminiApiKey.substring(0, 15) + '...');
-      
+
       // Test the API key by making a simple request
       console.log('🧪 Testing Gemini API key...');
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
       // We'll test this later to avoid blocking startup
-      
+
     } catch (initError) {
       geminiInitError = `Failed to initialize GoogleGenerativeAI: ${initError.message}`;
       console.error('❌ GoogleGenerativeAI initialization failed:', initError);
@@ -117,7 +116,7 @@ try {
     startsWithSk: openaiApiKey?.startsWith('sk-') || false,
     preview: openaiApiKey ? `${openaiApiKey.substring(0, 15)}...` : 'NONE'
   });
-  
+
   if (openaiApiKey && openaiApiKey !== 'your-openai-api-key' && openaiApiKey.trim() !== '' && openaiApiKey.startsWith('sk-')) {
     openai = new OpenAI({
       apiKey: openaiApiKey,
@@ -145,7 +144,7 @@ try {
     startsWithSk: claudeApiKey?.startsWith('sk-') || false,
     preview: claudeApiKey ? `${claudeApiKey.substring(0, 15)}...` : 'NONE'
   });
-  
+
   if (claudeApiKey && claudeApiKey !== 'your-claude-api-key' && claudeApiKey.trim() !== '') {
     // Claude client would be initialized here when package is available
     console.log('✅ Claude configuration ready (package needed)');
@@ -169,7 +168,7 @@ try {
     keyLength: grokApiKey?.length || 0,
     preview: grokApiKey ? `${grokApiKey.substring(0, 15)}...` : 'NONE'
   });
-  
+
   if (grokApiKey && grokApiKey !== 'your-grok-api-key' && grokApiKey.trim() !== '') {
     // Grok client would be initialized here when package is available
     console.log('✅ Grok configuration ready (package needed)');
@@ -193,7 +192,7 @@ try {
     keyLength: deepseekApiKey?.length || 0,
     preview: deepseekApiKey ? `${deepseekApiKey.substring(0, 15)}...` : 'NONE'
   });
-  
+
   if (deepseekApiKey && deepseekApiKey !== 'your-deepseek-api-key' && deepseekApiKey.trim() !== '') {
     // DeepSeek client would be initialized here when package is available
     console.log('✅ DeepSeek configuration ready (package needed)');
@@ -217,7 +216,7 @@ try {
     keyLength: huggingfaceApiKey?.length || 0,
     preview: huggingfaceApiKey ? `${huggingfaceApiKey.substring(0, 15)}...` : 'NONE'
   });
-  
+
   if (huggingfaceApiKey && huggingfaceApiKey !== 'your-huggingface-api-key' && huggingfaceApiKey.trim() !== '') {
     console.log('✅ Hugging Face configuration ready (package needed)');
   } else {
@@ -233,7 +232,7 @@ try {
 }
 
 export class EnhancedAIService {
-  
+
   static getAvailableProviders(): { provider: AIProvider; name: string; available: boolean; error?: string; isFree?: boolean }[] {
     return [
       {
@@ -297,7 +296,7 @@ export class EnhancedAIService {
 
   static async generateTestCases(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     const provider = request.aiProvider || 'gemini';
-    
+
     console.log(`🚀 Starting test case generation with ${provider}...`, {
       provider,
       inputType: request.inputType,
@@ -326,10 +325,10 @@ export class EnhancedAIService {
       console.log('🔄 Gemini not available, trying OpenAI...');
       if (openai && !openaiInitError) {
         try {
-          return await this.generateWithOpenAI(request);
+          return await EnhancedAIService.generateWithOpenAI(request);
         } catch (error) {
           console.error('❌ OpenAI fallback failed:', error);
-          return this.getMockResponse(request);
+          return EnhancedAIService.getMockResponse(request);
         }
       }
     }
@@ -338,10 +337,10 @@ export class EnhancedAIService {
       console.log('🔄 OpenAI not available, trying Gemini...');
       if (genAI && !geminiInitError) {
         try {
-          return await this.generateWithGemini(request);
+          return await EnhancedAIService.generateWithGemini(request);
         } catch (error) {
           console.error('❌ Gemini fallback failed:', error);
-          return this.getMockResponse(request);
+          return EnhancedAIService.getMockResponse(request);
         }
       }
     }
@@ -352,35 +351,35 @@ export class EnhancedAIService {
           if (!genAI || geminiInitError) {
             throw new Error(geminiInitError || 'Gemini not initialized');
           }
-          return await this.generateWithGemini(request);
+          return await EnhancedAIService.generateWithGemini(request);
         case 'openai':
           if (!openai || openaiInitError) {
             throw new Error(openaiInitError || 'OpenAI not initialized');
           }
-          return await this.generateWithOpenAI(request);
+          return await EnhancedAIService.generateWithOpenAI(request);
         case 'claude':
-          return await this.generateWithClaude(request);
+          return await EnhancedAIService.generateWithClaude(request);
         case 'grok':
-          return await this.generateWithGrok(request);
+          return await EnhancedAIService.generateWithGrok(request);
         case 'deepseek':
-          return await this.generateWithDeepSeek(request);
+          return await EnhancedAIService.generateWithDeepSeek(request);
         case 'huggingface':
-          return await this.generateWithHuggingFace(request);
+          return await EnhancedAIService.generateWithHuggingFace(request);
         case 'cohere':
-          return await this.generateWithCohere(request);
+          return await EnhancedAIService.generateWithCohere(request);
         case 'mistral':
-          return await this.generateWithMistral(request);
+          return await EnhancedAIService.generateWithMistral(request);
         default:
           console.log('🔄 Unknown provider, trying available providers...');
           // Try available providers in order
           if (genAI && !geminiInitError) {
-            return await this.generateWithGemini(request);
+            return await EnhancedAIService.generateWithGemini(request);
           }
           if (openai && !openaiInitError) {
-            return await this.generateWithOpenAI(request);
+            return await EnhancedAIService.generateWithOpenAI(request);
           }
           console.log('🎭 No AI providers available, using mock service');
-          return this.getMockResponse(request);
+          return EnhancedAIService.getMockResponse(request);
       }
     } catch (error: any) {
       console.error(`❌ ${provider} AI failed:`, {
@@ -389,39 +388,30 @@ export class EnhancedAIService {
         code: error.code,
         stack: error.stack?.substring(0, 200)
       });
-      
+
       // Smart fallback logic
       if (provider === 'gemini' && openai && !openaiInitError) {
         console.log('🔄 Gemini failed, trying OpenAI...');
         try {
-          return await this.generateWithOpenAI(request);
+          return await EnhancedAIService.generateWithOpenAI(request);
         } catch (openaiError) {
           console.error('❌ OpenAI fallback also failed:', openaiError);
         }
       } else if (provider === 'openai' && genAI && !geminiInitError) {
         console.log('🔄 OpenAI failed, trying Gemini...');
         try {
-          return await this.generateWithGemini(request);
+          return await EnhancedAIService.generateWithGemini(request);
         } catch (geminiError) {
           console.error('❌ Gemini fallback also failed:', geminiError);
         }
       }
-      
+
       console.log('🎭 Using mock service as final fallback');
-      return this.getMockResponse(request);
+      return EnhancedAIService.getMockResponse(request);
     }
   }
 
   private static async generateWithGemini(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
-    console.log('🔍 Gemini debug check:', {
-      hasGenAI: !!genAI,
-      initError: geminiInitError,
-      apiKeyPresent: !!process.env.GOOGLE_API_KEY,
-      apiKeyFormat: process.env.GOOGLE_API_KEY?.startsWith('AIza') || false,
-      apiKeyLength: process.env.GOOGLE_API_KEY?.length || 0,
-      apiKeyPreview: process.env.GOOGLE_API_KEY ? `${process.env.GOOGLE_API_KEY.substring(0, 15)}...` : 'NONE'
-    });
-
     if (!genAI) {
       throw new Error('Gemini client not initialized');
     }
@@ -441,28 +431,28 @@ export class EnhancedAIService {
           maxOutputTokens: 2048,
         }
       });
-      
-      const prompt = this.buildPrompt(request);
+
+      const prompt = EnhancedAIService.buildPrompt(request);
       console.log('📝 Sending prompt to Gemini:', prompt.substring(0, 100) + '...');
-      
+
       const result = await model.generateContent(prompt);
       console.log('📥 Gemini result received, processing response...');
-      
+
       const response = await result.response;
       const text = response.text();
-      
+
       console.log('🤖 Gemini raw response:', text.substring(0, 300) + '...');
-      
+
       // Clean the response text to extract JSON
       let cleanedText = text.trim();
-      
+
       // Remove markdown code blocks if present
       if (cleanedText.startsWith('```json')) {
         cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
       } else if (cleanedText.startsWith('```')) {
         cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
-      
+
       // Try to parse JSON response
       let testCases;
       try {
@@ -471,7 +461,7 @@ export class EnhancedAIService {
       } catch (parseError) {
         console.error('❌ Failed to parse Gemini response as JSON:', parseError);
         console.log('📄 Cleaned response text:', cleanedText);
-        
+
         // Try to extract JSON from the response if it's wrapped in other text
         const jsonMatch = cleanedText.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
@@ -485,25 +475,25 @@ export class EnhancedAIService {
           throw new Error(`Gemini returned invalid JSON: ${parseError.message}`);
         }
       }
-      
+
       if (!Array.isArray(testCases)) {
         console.error('❌ Gemini response is not an array:', typeof testCases);
         throw new Error('Gemini response is not a valid test case array');
       }
-      
+
       if (testCases.length === 0) {
         throw new Error('Gemini returned empty test case array');
       }
-      
+
       console.log(`✅ Gemini successfully generated ${testCases.length} test cases`);
-      
+
       return {
         testCases: testCases,
         analysis: {
           coverage: 'Comprehensive',
-          complexity: this.getComplexityLevel(request),
-          focusAreas: this.getFocusAreas(request),
-          suggestions: this.getSuggestions(request)
+          complexity: EnhancedAIService.getComplexityLevel(request),
+          focusAreas: EnhancedAIService.getFocusAreas(request),
+          suggestions: EnhancedAIService.getSuggestions(request)
         },
         message: `Generated ${testCases.length} test cases using Google Gemini AI`,
         source: 'gemini-ai',
@@ -517,7 +507,7 @@ export class EnhancedAIService {
         details: error.details || 'No additional details',
         type: typeof error
       });
-      
+
       // Provide more specific error messages
       if (error.status === 429) {
         throw new Error('Gemini API quota exceeded. Please try again later or use OpenAI.');
@@ -536,16 +526,16 @@ export class EnhancedAIService {
       throw new Error(openaiInitError || 'OpenAI not initialized');
     }
 
-    const prompt = this.buildPrompt(request);
-    
+    const prompt = EnhancedAIService.buildPrompt(request);
+
     // Try different OpenAI models in order of preference
     const models = ["gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"];
     let lastError: Error | null = null;
-    
+
     for (const model of models) {
       try {
         console.log(`🔮 Trying OpenAI model: ${model}`);
-        
+
         const completion = await openai.chat.completions.create({
           model: model,
           messages: [
@@ -568,36 +558,36 @@ export class EnhancedAIService {
         }
 
         console.log(`🤖 OpenAI response received using ${model}:`, content.substring(0, 200) + '...');
-        
+
         const testCases = JSON.parse(content);
-        
+
         return {
           testCases: testCases,
           analysis: {
             coverage: 'Comprehensive',
-            complexity: this.getComplexityLevel(request),
-            focusAreas: this.getFocusAreas(request),
-            suggestions: this.getSuggestions(request)
+            complexity: EnhancedAIService.getComplexityLevel(request),
+            focusAreas: EnhancedAIService.getFocusAreas(request),
+            suggestions: EnhancedAIService.getSuggestions(request)
           },
           message: `Generated ${testCases.length} test cases using OpenAI ${model}`,
           source: 'openai',
           provider: 'openai'
         };
-        
+
       } catch (error: any) {
         console.error(`❌ OpenAI model ${model} failed:`, error.message);
         lastError = error;
-        
+
         // If it's a model not found error, try the next model
         if (error.status === 404 || error.code === 'model_not_found') {
           continue;
         }
-        
+
         // For other errors, break and throw
         break;
       }
     }
-    
+
     // If we get here, all models failed
     throw new Error(`All OpenAI models failed. Last error: ${lastError?.message || 'Unknown error'}`);
   }
@@ -605,7 +595,7 @@ export class EnhancedAIService {
   private static async generateWithClaude(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     console.log('🔮 Attempting Claude generation...');
     // For now, return mock response with Claude branding
-    const mockResponse = this.getMockResponse(request);
+    const mockResponse = EnhancedAIService.getMockResponse(request);
     return {
       ...mockResponse,
       message: `Generated ${mockResponse.testCases.length} test cases using Claude (Mock Service - API integration pending)`,
@@ -617,7 +607,7 @@ export class EnhancedAIService {
   private static async generateWithGrok(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     console.log('🔮 Attempting Grok generation...');
     // For now, return mock response with Grok branding
-    const mockResponse = this.getMockResponse(request);
+    const mockResponse = EnhancedAIService.getMockResponse(request);
     return {
       ...mockResponse,
       message: `Generated ${mockResponse.testCases.length} test cases using Grok (Mock Service - API integration pending)`,
@@ -630,7 +620,7 @@ export class EnhancedAIService {
     console.log('🔮 Attempting DeepSeek generation...');
     // DeepSeek uses OpenAI-compatible API
     const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
-    
+
     if (!deepseekApiKey || deepseekApiKey === 'your-deepseek-api-key') {
       throw new Error('DeepSeek API key not configured');
     }
@@ -652,7 +642,7 @@ export class EnhancedAIService {
             },
             {
               role: 'user',
-              content: this.buildPrompt(request)
+              content: EnhancedAIService.buildPrompt(request)
             }
           ],
           temperature: 0.7,
@@ -666,20 +656,20 @@ export class EnhancedAIService {
 
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content;
-      
+
       if (!content) {
         throw new Error('No response from DeepSeek');
       }
 
       const testCases = JSON.parse(content);
-      
+
       return {
         testCases: testCases,
         analysis: {
           coverage: 'Comprehensive',
-          complexity: this.getComplexityLevel(request),
-          focusAreas: this.getFocusAreas(request),
-          suggestions: this.getSuggestions(request)
+          complexity: EnhancedAIService.getComplexityLevel(request),
+          focusAreas: EnhancedAIService.getFocusAreas(request),
+          suggestions: EnhancedAIService.getSuggestions(request)
         },
         message: `Generated ${testCases.length} test cases using DeepSeek AI`,
         source: 'deepseek',
@@ -694,7 +684,7 @@ export class EnhancedAIService {
   private static async generateWithHuggingFace(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     console.log('🔮 Attempting Hugging Face generation...');
     const hfApiKey = process.env.HUGGINGFACE_API_KEY;
-    
+
     if (!hfApiKey || hfApiKey === 'your-huggingface-api-key') {
       throw new Error('Hugging Face API key not configured');
     }
@@ -708,7 +698,7 @@ export class EnhancedAIService {
           'Authorization': `Bearer ${hfApiKey}`
         },
         body: JSON.stringify({
-          inputs: this.buildPrompt(request),
+          inputs: EnhancedAIService.buildPrompt(request),
           parameters: {
             max_length: 1000,
             temperature: 0.7
@@ -721,9 +711,9 @@ export class EnhancedAIService {
       }
 
       const data = await response.json();
-      
+
       // For now, return mock response as HF free models may not be suitable for structured JSON
-      const mockResponse = this.getMockResponse(request);
+      const mockResponse = EnhancedAIService.getMockResponse(request);
       return {
         ...mockResponse,
         message: `Generated ${mockResponse.testCases.length} test cases using Hugging Face (Free Tier)`,
@@ -739,7 +729,7 @@ export class EnhancedAIService {
   private static async generateWithCohere(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     console.log('🔮 Attempting Cohere generation...');
     // For now, return mock response with Cohere branding
-    const mockResponse = this.getMockResponse(request);
+    const mockResponse = EnhancedAIService.getMockResponse(request);
     return {
       ...mockResponse,
       message: `Generated ${mockResponse.testCases.length} test cases using Cohere (Free Tier - Mock Service)`,
@@ -751,7 +741,7 @@ export class EnhancedAIService {
   private static async generateWithMistral(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     console.log('🔮 Attempting Mistral generation...');
     // For now, return mock response with Mistral branding
-    const mockResponse = this.getMockResponse(request);
+    const mockResponse = EnhancedAIService.getMockResponse(request);
     return {
       ...mockResponse,
       message: `Generated ${mockResponse.testCases.length} test cases using Mistral AI (Mock Service - API integration pending)`,
@@ -803,8 +793,8 @@ Ensure the response is valid JSON only, no additional text.`;
       openai: { available: !!openai && !openaiInitError, error: openaiInitError }
     });
 
-    const mockTestCases = this.generateMockTestCases(request);
-    
+    const mockTestCases = EnhancedAIService.generateMockTestCases(request);
+
     // Ensure we always have at least some test cases
     if (!mockTestCases || mockTestCases.length === 0) {
       console.log('⚠️ No mock test cases generated, creating fallback cases');
@@ -834,11 +824,11 @@ Ensure the response is valid JSON only, no additional text.`;
           tags: ["mock-generated", "error-handling", "negative-testing"]
         }
       ];
-      
+
       const availableProviders = [];
       if (genAI && !geminiInitError) availableProviders.push('Gemini');
       if (openai && !openaiInitError) availableProviders.push('OpenAI');
-      
+
       const message = availableProviders.length > 0 
         ? `Generated ${fallbackTestCases.length} test cases using mock service (${availableProviders.join(', ')} failed)`
         : `Generated ${fallbackTestCases.length} test cases using mock service (no AI providers available)`;
@@ -847,20 +837,20 @@ Ensure the response is valid JSON only, no additional text.`;
         testCases: fallbackTestCases,
         analysis: {
           coverage: 'Basic',
-          complexity: this.getComplexityLevel(request),
-          focusAreas: this.getFocusAreas(request),
-          suggestions: this.getSuggestions(request)
+          complexity: EnhancedAIService.getComplexityLevel(request),
+          focusAreas: EnhancedAIService.getFocusAreas(request),
+          suggestions: EnhancedAIService.getSuggestions(request)
         },
         message,
         source: 'mock-service',
         provider: request.aiProvider || 'gemini'
       };
     }
-    
+
     const availableProviders = [];
     if (genAI && !geminiInitError) availableProviders.push('Gemini');
     if (openai && !openaiInitError) availableProviders.push('OpenAI');
-    
+
     const message = availableProviders.length > 0 
       ? `Generated ${mockTestCases.length} test cases using mock service (${availableProviders.join(', ')} failed)`
       : `Generated ${mockTestCases.length} test cases using mock service (no AI providers available)`;
@@ -869,9 +859,9 @@ Ensure the response is valid JSON only, no additional text.`;
       testCases: mockTestCases,
       analysis: {
         coverage: 'Comprehensive',
-        complexity: this.getComplexityLevel(request),
-        focusAreas: this.getFocusAreas(request),
-        suggestions: this.getSuggestions(request)
+        complexity: EnhancedAIService.getComplexityLevel(request),
+        focusAreas: EnhancedAIService.getFocusAreas(request),
+        suggestions: EnhancedAIService.getSuggestions(request)
       },
       message,
       source: 'mock-service',
@@ -884,10 +874,10 @@ Ensure the response is valid JSON only, no additional text.`;
                               request.moduleContext?.toLowerCase().includes('registration');
 
     if (isRegistrationTest) {
-      return this.getRegistrationTestCases(request);
+      return EnhancedAIService.getRegistrationTestCases(request);
     }
 
-    return this.getDefaultTestCases(request);
+    return EnhancedAIService.getDefaultTestCases(request);
   }
 
   private static getRegistrationTestCases(request: TestCaseGenerationRequest): GeneratedTestCase[] {
@@ -987,5 +977,151 @@ Ensure the response is valid JSON only, no additional text.`;
     }
 
     return suggestions;
+  }
+
+  private static parseGeminiResponse(text: string, provider: string): TestCaseGenerationResponse {
+    console.log('📄 Parsing Gemini response (length: ' + text.length + ')');
+
+    try {
+      // Clean up the response text more thoroughly
+      let cleanText = text.trim();
+
+      // Remove markdown code block markers
+      cleanText = cleanText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+      cleanText = cleanText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+
+      // Remove any leading/trailing text that's not JSON
+      const jsonStart = cleanText.indexOf('[');
+      const jsonEnd = cleanText.lastIndexOf(']');
+
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        cleanText = cleanText.substring(jsonStart, jsonEnd + 1);
+      }
+
+      // Additional cleanup for common issues
+      cleanText = cleanText
+        .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+        .replace(/([^"])\s*:\s*([^"\[\{0-9true false null])/g, '$1: "$2"') // Quote unquoted string values
+        .trim();
+
+      console.log('🧹 Cleaned text for parsing:', cleanText.substring(0, 200) + '...');
+
+      const testCases: TestCase[] = JSON.parse(cleanText);
+
+      if (!Array.isArray(testCases)) {
+        throw new Error('Parsed response is not an array');
+      }
+
+      if (testCases.length === 0) {
+        throw new Error('No test cases found in response');
+      }
+
+      // Validate and enhance test cases
+      const validTestCases = testCases.map((tc, index) => {
+        // Ensure all required fields are present
+        const enhanced: TestCase = {
+          feature: tc.feature || `Test Case ${index + 1}`,
+          testObjective: tc.testObjective || 'Verify system functionality',
+          preConditions: tc.preConditions || 'System is ready for testing',
+          testSteps: tc.testSteps || '1. Execute test\n2. Verify results',
+          expectedResult: tc.expectedResult || 'System functions correctly',
+          priority: tc.priority || 'Medium',
+          testType: tc.testType || 'functional',
+          coverage: tc.coverage || 'Core functionality',
+          category: tc.category || 'AI Generated',
+          tags: Array.isArray(tc.tags) ? tc.tags : ['ai-generated', 'gemini']
+        };
+
+        return enhanced;
+      }).filter(tc => tc.feature && tc.testObjective && tc.testSteps && tc.expectedResult);
+
+      if (validTestCases.length === 0) {
+        throw new Error('No valid test cases after filtering');
+      }
+
+      console.log('✅ Successfully parsed Gemini JSON response');
+      console.log(`✅ Gemini successfully generated ${validTestCases.length} valid test cases`);
+
+      return {
+        testCases: validTestCases,
+        analysis: {
+          coverage: validTestCases.length > 3 ? 'Comprehensive' : 'Moderate',
+          complexity: validTestCases.length > 5 ? 'High' : 'Medium',
+          focusAreas: 'Core functionality, validation, error handling',
+          suggestions: [
+            'Consider adding performance tests',
+            'Include security validation',
+            'Add boundary condition tests'
+          ]
+        },
+        message: `Successfully generated ${validTestCases.length} test cases using Gemini AI`,
+        source: 'gemini-ai',
+        provider: provider
+      };
+
+    } catch (parseError: any) {
+      console.error('❌ JSON parsing failed:', parseError.message);
+      console.log('📄 Raw response that failed to parse:', text.substring(0, 1000));
+
+      // Try to extract test case information manually from the text
+      const manuallyExtracted = EnhancedAIService.extractTestCasesManually(text);
+
+      if (manuallyExtracted.length > 0) {
+        console.log(`✅ Manually extracted ${manuallyExtracted.length} test cases from Gemini response`);
+        return {
+          testCases: manuallyExtracted,
+          analysis: {
+            coverage: 'Basic',
+            complexity: 'Medium',
+            focusAreas: 'Manual extraction from AI response',
+            suggestions: ['Review and enhance extracted test cases']
+          },
+          message: `Extracted ${manuallyExtracted.length} test cases from Gemini response (JSON parsing failed)`,
+          source: 'gemini-manual-extraction',
+          provider: provider
+        };
+      }
+
+      // Final fallback
+      throw new Error(`Failed to parse Gemini response: ${parseError.message}`);
+    }
+  }
+
+  private static extractTestCasesManually(text: string): TestCase[] {
+    const testCases: TestCase[] = [];
+
+    try {
+      // Look for common patterns in AI responses
+      const sections = text.split(/(?:\d+\.|\*|\-)\s*(?:Test Case|Feature|Scenario)/i);
+
+      for (let i = 1; i < sections.length; i++) {
+        const section = sections[i].trim();
+
+        // Try to extract key information
+        const featureMatch = section.match(/(?:feature|title|name):\s*([^\n]+)/i);
+        const objectiveMatch = section.match(/(?:objective|purpose|description):\s*([^\n]+)/i);
+        const stepsMatch = section.match(/(?:steps|test steps|procedure):\s*([\s\S]*?)(?=(?:expected|result|priority)|$)/i);
+        const resultMatch = section.match(/(?:expected result|result|outcome):\s*([^\n]+)/i);
+
+        if (featureMatch || objectiveMatch) {
+          testCases.push({
+            feature: featureMatch?.[1]?.trim() || `Manual Test Case ${i}`,
+            testObjective: objectiveMatch?.[1]?.trim() || 'Verify system functionality',
+            preConditions: 'System is ready for testing',
+            testSteps: stepsMatch?.[1]?.trim() || '1. Execute test functionality\n2. Verify results',
+            expectedResult: resultMatch?.[1]?.trim() || 'System functions correctly',
+            priority: 'Medium',
+            testType: 'functional',
+            coverage: 'Basic',
+            category: 'AI Generated - Manual Extract',
+            tags: ['ai-generated', 'manual-extract']
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Manual extraction failed:', error);
+    }
+
+    return testCases;
   }
 }

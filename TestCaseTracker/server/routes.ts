@@ -1818,7 +1818,175 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
-  // AI Service Debug endpoint
+  // Comprehensive AI Service Diagnostic endpoint
+  apiRouter.get("/ai/diagnostic", isAuthenticated, async (req, res) => {
+    try {
+      console.log('🔧 Starting comprehensive AI diagnostic...');
+      
+      const diagnostic = {
+        timestamp: new Date().toISOString(),
+        environment: {
+          nodeVersion: process.version,
+          platform: process.platform
+        },
+        apiKeys: {
+          gemini: {
+            configured: !!process.env.GOOGLE_API_KEY,
+            isDefault: process.env.GOOGLE_API_KEY === 'your-gemini-api-key',
+            hasValidFormat: !!(process.env.GOOGLE_API_KEY?.startsWith('AIza')),
+            length: process.env.GOOGLE_API_KEY?.length || 0,
+            preview: process.env.GOOGLE_API_KEY ? `${process.env.GOOGLE_API_KEY.substring(0, 10)}...` : 'NONE'
+          },
+          openai: {
+            configured: !!process.env.OPENAI_API_KEY,
+            isDefault: process.env.OPENAI_API_KEY === 'your-openai-api-key',
+            hasValidFormat: !!(process.env.OPENAI_API_KEY?.startsWith('sk-')),
+            length: process.env.OPENAI_API_KEY?.length || 0,
+            preview: process.env.OPENAI_API_KEY ? `${process.env.OPENAI_API_KEY.substring(0, 10)}...` : 'NONE'
+          }
+        },
+        service: {
+          availableProviders: EnhancedAIService.getAvailableProviders(),
+          providerStatus: EnhancedAIService.getProviderStatus(),
+          isReady: EnhancedAIService.getAvailableProviders().length > 0
+        },
+        tests: {
+          gemini: null,
+          openai: null,
+          mock: null
+        }
+      };
+
+      // Test each provider
+      if (diagnostic.service.providerStatus.gemini.ready) {
+        try {
+          console.log('🧪 Testing Gemini provider...');
+          diagnostic.tests.gemini = {
+            success: await EnhancedAIService.testProvider('gemini'),
+            tested: true,
+            timestamp: new Date().toISOString()
+          };
+        } catch (testError: any) {
+          diagnostic.tests.gemini = {
+            success: false,
+            tested: true,
+            error: testError.message,
+            timestamp: new Date().toISOString()
+          };
+        }
+      } else {
+        diagnostic.tests.gemini = {
+          success: false,
+          tested: false,
+          reason: 'Provider not ready'
+        };
+      }
+
+      if (diagnostic.service.providerStatus.openai.ready) {
+        try {
+          console.log('🧪 Testing OpenAI provider...');
+          diagnostic.tests.openai = {
+            success: await EnhancedAIService.testProvider('openai'),
+            tested: true,
+            timestamp: new Date().toISOString()
+          };
+        } catch (testError: any) {
+          diagnostic.tests.openai = {
+            success: false,
+            tested: true,
+            error: testError.message,
+            timestamp: new Date().toISOString()
+          };
+        }
+      } else {
+        diagnostic.tests.openai = {
+          success: false,
+          tested: false,
+          reason: 'Provider not ready'
+        };
+      }
+
+      // Test mock service
+      try {
+        console.log('🧪 Testing mock service...');
+        const mockRequest = {
+          requirement: 'Test mock service functionality',
+          testType: 'functional',
+          priority: 'Medium',
+          inputType: 'text' as const,
+          aiProvider: 'gemini' as const // This will fallback to mock if real providers fail
+        };
+
+        const mockResult = await EnhancedAIService.generateTestCases(mockRequest);
+        diagnostic.tests.mock = {
+          success: mockResult.success && mockResult.source.includes('mock'),
+          tested: true,
+          source: mockResult.source,
+          testCasesGenerated: mockResult.testCases.length,
+          timestamp: new Date().toISOString()
+        };
+      } catch (mockError: any) {
+        diagnostic.tests.mock = {
+          success: false,
+          tested: true,
+          error: mockError.message,
+          timestamp: new Date().toISOString()
+        };
+      }
+
+      // Generate recommendations
+      const recommendations = [];
+      if (!diagnostic.service.isReady) {
+        recommendations.push('❌ No AI providers are ready. Configure API keys in environment variables.');
+      }
+      if (!diagnostic.apiKeys.gemini.configured) {
+        recommendations.push('💡 Configure GOOGLE_API_KEY for Gemini support');
+      } else if (!diagnostic.apiKeys.gemini.hasValidFormat) {
+        recommendations.push('⚠️ Gemini API key format invalid (should start with "AIza")');
+      }
+      if (!diagnostic.apiKeys.openai.configured) {
+        recommendations.push('💡 Configure OPENAI_API_KEY for OpenAI support');
+      } else if (!diagnostic.apiKeys.openai.hasValidFormat) {
+        recommendations.push('⚠️ OpenAI API key format invalid (should start with "sk-")');
+      }
+      if (diagnostic.tests.mock?.success) {
+        recommendations.push('✅ Mock service is working as fallback');
+      }
+
+      diagnostic.recommendations = recommendations;
+
+      console.log('🔧 AI diagnostic completed:', {
+        providersReady: diagnostic.service.availableProviders.length,
+        geminiReady: diagnostic.service.providerStatus.gemini.ready,
+        openaiReady: diagnostic.service.providerStatus.openai.ready,
+        mockWorking: diagnostic.tests.mock?.success
+      });
+
+      res.json({
+        success: true,
+        diagnostic,
+        summary: {
+          status: diagnostic.service.isReady ? 'READY' : 'NOT_READY',
+          activeProviders: diagnostic.service.availableProviders,
+          workingProviders: Object.entries(diagnostic.tests)
+            .filter(([_, test]: [string, any]) => test?.success)
+            .map(([provider, _]) => provider),
+          recommendationsCount: recommendations.length
+        }
+      });
+
+    } catch (error: any) {
+      console.error('❌ AI diagnostic failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Diagnostic failed',
+        details: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // AI Service Debug endpoint (kept for backward compatibility)
   apiRouter.get("/ai/debug-status", isAuthenticated, async (req, res) => {
     try {
       const envCheck = {
@@ -1837,44 +2005,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
       const providers = EnhancedAIService.getAvailableProviders();
 
-      // Test Gemini connection if key is present
-      let geminiTestResult = null;
-      if (process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY.startsWith('AIza')) {
-        try {
-          const testRequest = {
-            requirement: 'Test simple login functionality',
-            projectContext: 'Test project',
-            moduleContext: 'Authentication',
-            testType: 'functional',
-            priority: 'Medium',
-            inputType: 'text' as const,
-            images: [],
-            aiProvider: 'gemini' as const
-          };
-
-          console.log('🧪 Testing Gemini service directly...');
-          const testResponse = await EnhancedAIService.generateTestCases(testRequest);
-
-          geminiTestResult = {
-            success: true,
-            testCasesGenerated: testResponse.testCases?.length || 0,
-            source: testResponse.source,
-            provider: testResponse.provider
-          };
-        } catch (testError: any) {
-          geminiTestResult = {
-            success: false,
-            error: testError.message,
-            stack: testError.stack
-          };
-        }
-      }
-
       res.json({
         success: true,
         environmentCheck: envCheck,
         providers,
-        geminiTestResult,
+        providerStatus: EnhancedAIService.getProviderStatus(),
         timestamp: new Date().toISOString()
       });
     } catch (error: any) {
