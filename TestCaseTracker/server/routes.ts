@@ -438,8 +438,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       console.log('🔮 Calling EnhancedAIService.generateTestCases with test request...');
-      console.log('📋 Test request details:', testRequest);
-
       const result = await EnhancedAIService.generateTestCases(testRequest);
       
       console.log('✅ AI generation test completed:', {
@@ -447,7 +445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         testCasesCount: result.testCases?.length || 0,
         source: result.source,
         provider: result.provider,
-        isRealAI: result.source !== 'mock-service'
+        isRealAI: !result.source.includes('mock') && !result.source.includes('fallback')
       });
 
       res.json({
@@ -458,7 +456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           source: result.source,
           provider: result.provider,
           message: result.message,
-          isRealAI: result.source !== 'mock-service',
+          isRealAI: !result.source.includes('mock') && !result.source.includes('fallback'),
           aiStatus: EnhancedAIService.getProviderStatus()
         }
       });
@@ -470,6 +468,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'AI generation test failed',
         details: error.message,
         aiStatus: EnhancedAIService.getProviderStatus()
+      });
+    }
+  });
+
+  // Simple AI provider test endpoint
+  apiRouter.get("/ai/test-providers", isAuthenticated, async (req, res) => {
+    try {
+      console.log('🔍 Testing AI providers individually...');
+      
+      const results = {
+        gemini: { available: false, error: null, tested: false },
+        openai: { available: false, error: null, tested: false }
+      };
+
+      // Test Gemini
+      if (EnhancedAIService.getProviderStatus().gemini.ready) {
+        try {
+          results.gemini.tested = true;
+          await EnhancedAIService.testProvider('gemini');
+          results.gemini.available = true;
+          console.log('✅ Gemini test passed');
+        } catch (error: any) {
+          results.gemini.error = error.message;
+          console.log('❌ Gemini test failed:', error.message);
+        }
+      } else {
+        results.gemini.error = EnhancedAIService.getProviderStatus().gemini.error;
+      }
+
+      // Test OpenAI
+      if (EnhancedAIService.getProviderStatus().openai.ready) {
+        try {
+          results.openai.tested = true;
+          await EnhancedAIService.testProvider('openai');
+          results.openai.available = true;
+          console.log('✅ OpenAI test passed');
+        } catch (error: any) {
+          results.openai.error = error.message;
+          console.log('❌ OpenAI test failed:', error.message);
+        }
+      } else {
+        results.openai.error = EnhancedAIService.getProviderStatus().openai.error;
+      }
+
+      res.json({
+        success: true,
+        results,
+        summary: {
+          workingProviders: Object.entries(results).filter(([_, r]) => r.available).length,
+          totalProviders: Object.keys(results).length
+        },
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('❌ Provider test failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Provider test failed',
+        details: error.message,
+        timestamp: new Date().toISOString()
       });
     }
   });
@@ -2107,18 +2166,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
     try {
       console.log('🤖 Enhanced AI Generation - Handler started');
-      console.log('🔍 Provider Status at Request Time:', {
-        gemini: { available: !!genAI && !geminiInitError, error: geminiInitError },
-        openai: { available: !!openai && !openaiInitError, error: openaiInitError },
-        requestedProvider: req.body.aiProvider || 'gemini'
-      });
-      console.log('🔍 Environment check at request time:', {
-        hasGoogleKey: !!process.env.GOOGLE_API_KEY,
-        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-        googleKeyFormat: process.env.GOOGLE_API_KEY?.startsWith('AIza') ? 'VALID' : 'INVALID',
-        openaiKeyFormat: process.env.OPENAI_API_KEY?.startsWith('sk-') ? 'VALID' : 'INVALID'
-      });
-
+      
       // Validate authentication
       if (!req.session || !req.session.userId) {
         console.error('❌ Authentication failed');
@@ -2144,17 +2192,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       } = req.body;
 
       console.log('📋 Request data received:', {
-        requirement: requirement?.substring(0, 100) + '...',
-        projectContext: projectContext?.substring(0, 50),
+        requirement: requirement?.substring(0, 100),
         moduleContext,
         testType,
         priority,
         inputType,
-        aiProvider: aiProvider || 'gemini',
-        hasWebsiteUrl: !!websiteUrl,
-        hasElementInspection: !!elementInspection,
-        hasUserFlows: !!userFlows,
-        hasBusinessRules: !!businessRules
+        aiProvider: aiProvider || 'gemini'
       });
 
       // Input validation
@@ -2167,98 +2210,31 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         });
       }
 
-      // Use enhanced AI service with provider selection
-      let aiResponse;
-      try {
-        console.log(`🔮 Attempting to use ${aiProvider || 'gemini'} AI service...`);
+      // Prepare AI request
+      const aiRequest = {
+        requirement: requirement || '',
+        projectContext: projectContext || '',
+        moduleContext: moduleContext || '',
+        testType: testType || 'functional',
+        priority: priority || 'Medium',
+        websiteUrl: websiteUrl || '',
+        elementInspection: elementInspection || '',
+        userFlows: userFlows || '',
+        businessRules: businessRules || '',
+        inputType: inputType || 'text',
+        aiProvider: aiProvider || 'gemini',
+        images: []
+      };
 
-        const aiRequest = {
-          requirement: requirement || '',
-          projectContext: projectContext || '',
-          moduleContext: moduleContext || '',
-          testType: testType || 'functional',
-          priority: priority || 'Medium',
-          websiteUrl: websiteUrl || '',
-          elementInspection: elementInspection || '',
-          userFlows: userFlows || '',
-          businessRules: businessRules || '',
-          inputType: inputType || 'text',
-          aiProvider: aiProvider || 'gemini',
-          images: []
-        };
+      console.log('🔮 Calling enhanced AI service...');
+      const aiResponse = await EnhancedAIService.generateTestCases(aiRequest);
 
-        console.log('🔮 Calling enhanced AI service with request:', {
-          hasRequirement: !!aiRequest.requirement,
-          hasModuleContext: !!aiRequest.moduleContext,
-          testType: aiRequest.testType,
-          priority: aiRequest.priority,
-          inputType: aiRequest.inputType,
-          provider: aiRequest.aiProvider
-        });
-
-        aiResponse = await EnhancedAIService.generateTestCases(aiRequest);
-
-        console.log('✅ AI response generated successfully:', {
-          testCasesCount: aiResponse.testCases?.length || 0,
-          source: aiResponse.source,
-          provider: aiResponse.provider
-        });
-
-      } catch (aiError: any) {
-        console.error('❌ AI service failed, falling back to mock service:', {
-          error: aiError.message,
-          status: aiError.status,
-          code: aiError.code,
-          provider: aiProvider,
-          requirement: requirement?.substring(0, 50) + '...'
-        });
-
-        // Create a more comprehensive fallback response
-        aiResponse = {
-          success: true,
-          testCases: [
-            {
-              feature: `${requirement || 'System Feature'} - Primary Flow`,
-              testObjective: `Verify successful ${(requirement || 'system functionality').toLowerCase()} with valid inputs`,
-              preConditions: "System is accessible and all required components are functional",
-              testSteps: "1. Navigate to the feature/module\n2. Enter valid test data\n3. Execute the primary action\n4. Verify successful completion\n5. Validate all expected outcomes",
-              expectedResult: "System should process the request successfully and return expected results without errors",
-              priority: (priority as 'High' | 'Medium' | 'Low') || "High",
-              testType: testType || "functional",
-              coverage: "Core Functionality",
-              category: "Primary Testing",
-              tags: ["fallback-generated", "core-functionality", "positive-testing"]
-            },
-            {
-              feature: `${requirement || 'System Feature'} - Input Validation`,
-              testObjective: `Verify input validation and error handling for ${(requirement || 'system functionality').toLowerCase()}`,
-              preConditions: "System is accessible",
-              testSteps: "1. Navigate to the feature/module\n2. Enter invalid or boundary test data\n3. Attempt to execute action\n4. Verify proper validation occurs\n5. Check appropriate error messages are displayed",
-              expectedResult: "System should validate inputs properly and display clear, helpful error messages for invalid data",
-              priority: (priority as 'High' | 'Medium' | 'Low') || "Medium",
-              testType: testType || "functional",
-              coverage: "Input Validation & Error Handling",
-              category: "Validation Testing",
-              tags: ["fallback-generated", "validation", "negative-testing", "error-handling"]
-            }
-          ],
-          analysis: {
-            coverage: 'Basic but essential',
-            complexity: 'Medium',
-            focusAreas: 'Core functionality and input validation',
-            suggestions: ['Add performance testing', 'Include security validation', 'Consider edge cases']
-          },
-          message: `Generated ${2} fallback test cases (AI service failed: ${aiError.message})`,
-          source: 'fallback-service',
-          provider: aiProvider || 'gemini'
-        };
-
-        console.log('✅ Fallback response generated successfully:', {
-          testCasesCount: aiResponse.testCases?.length || 0,
-          source: aiResponse.source,
-          provider: aiResponse.provider
-        });
-      }
+      console.log('✅ AI response received:', {
+        testCasesCount: aiResponse.testCases?.length || 0,
+        source: aiResponse.source,
+        provider: aiResponse.provider,
+        success: aiResponse.success
+      });
 
       // Prepare final response
       const response = {
@@ -2276,12 +2252,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         timestamp: new Date().toISOString()
       };
 
-      console.log(' পাঠানোর হচ্ছে সফল প্রতিক্রিয়া');
+      console.log('✅ Sending successful response');
       return res.status(200).json(response);
 
     } catch (handlerError: any) {
       console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
-      console.error('❌ Error stack:', handlerError.stack);
 
       // Ensure we always return JSON even in error cases
       const errorResponse = { 
@@ -2291,7 +2266,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         timestamp: new Date().toISOString()
       };
 
-      console.log(' পাঠানোর হচ্ছে ত্রুটির প্রতিক্রিয়া');
+      console.log('❌ Sending error response');
       return res.status(500).json(errorResponse);
     }
   });

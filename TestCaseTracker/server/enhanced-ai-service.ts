@@ -208,25 +208,41 @@ export class EnhancedAIService {
       request.requirement = 'Basic system functionality test';
     }
 
-    // Try real AI providers first with aggressive retry logic
+    // Check which providers are actually available
     const availableProviders = [];
     if (genAI && !geminiInitError) availableProviders.push('gemini');
     if (openai && !openaiInitError) availableProviders.push('openai');
 
     console.log(`🔍 Available real AI providers: ${availableProviders.join(', ')}`);
 
-    // Force try the requested provider first
+    // If no real providers are available, return mock immediately with clear message
+    if (availableProviders.length === 0) {
+      console.log('⚠️ No AI providers available - API keys may not be configured correctly');
+      const mockResponse = EnhancedAIService.getMockResponse(request);
+      mockResponse.message = 'Generated using mock service (No AI providers configured - please check API keys)';
+      return mockResponse;
+    }
+
+    // Try the requested provider first if it's available
     if (availableProviders.includes(provider)) {
       try {
         console.log(`🎯 Trying requested provider: ${provider}`);
 
         if (provider === 'gemini') {
-          return await EnhancedAIService.generateWithGemini(request);
+          const result = await EnhancedAIService.generateWithGemini(request);
+          console.log(`✅ Successfully generated with Gemini: ${result.testCases.length} test cases`);
+          return result;
         } else if (provider === 'openai') {
-          return await EnhancedAIService.generateWithOpenAI(request);
+          const result = await EnhancedAIService.generateWithOpenAI(request);
+          console.log(`✅ Successfully generated with OpenAI: ${result.testCases.length} test cases`);
+          return result;
         }
       } catch (error: any) {
-        console.error(`❌ Requested provider ${provider} failed:`, error.message);
+        console.error(`❌ Requested provider ${provider} failed:`, {
+          error: error.message,
+          status: error.status,
+          code: error.code
+        });
 
         // Try other available providers as fallback
         for (const fallbackProvider of availableProviders) {
@@ -235,9 +251,13 @@ export class EnhancedAIService {
               console.log(`🔄 Trying fallback provider: ${fallbackProvider}`);
 
               if (fallbackProvider === 'gemini') {
-                return await EnhancedAIService.generateWithGemini(request);
+                const result = await EnhancedAIService.generateWithGemini(request);
+                console.log(`✅ Fallback successful with Gemini: ${result.testCases.length} test cases`);
+                return result;
               } else if (fallbackProvider === 'openai') {
-                return await EnhancedAIService.generateWithOpenAI(request);
+                const result = await EnhancedAIService.generateWithOpenAI(request);
+                console.log(`✅ Fallback successful with OpenAI: ${result.testCases.length} test cases`);
+                return result;
               }
             } catch (fallbackError: any) {
               console.error(`❌ Fallback provider ${fallbackProvider} failed:`, fallbackError.message);
@@ -245,11 +265,34 @@ export class EnhancedAIService {
           }
         }
       }
+    } else {
+      console.log(`⚠️ Requested provider ${provider} not available, trying others...`);
+      
+      // Try any available provider
+      for (const availableProvider of availableProviders) {
+        try {
+          console.log(`🔄 Trying available provider: ${availableProvider}`);
+
+          if (availableProvider === 'gemini') {
+            const result = await EnhancedAIService.generateWithGemini(request);
+            console.log(`✅ Successfully generated with Gemini: ${result.testCases.length} test cases`);
+            return result;
+          } else if (availableProvider === 'openai') {
+            const result = await EnhancedAIService.generateWithOpenAI(request);
+            console.log(`✅ Successfully generated with OpenAI: ${result.testCases.length} test cases`);
+            return result;
+          }
+        } catch (error: any) {
+          console.error(`❌ Provider ${availableProvider} failed:`, error.message);
+        }
+      }
     }
 
-    // If no providers are available or all failed, use mock service
-    console.log('🎭 All real AI providers failed or unavailable, using mock service');
-    return EnhancedAIService.getMockResponse(request);
+    // If all real providers failed, use mock service with informative message
+    console.log('🎭 All real AI providers failed, using mock service');
+    const mockResponse = EnhancedAIService.getMockResponse(request);
+    mockResponse.message = `Generated using mock service (AI providers failed - ${availableProviders.join(', ')} attempted)`;
+    return mockResponse;
   }
 
   private static async generateWithGemini(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
