@@ -3824,7 +3824,7 @@ export default function NavadhitiProjectsPage() {
                                       }}
                                     >
                                       <UserCheck className="h-4 w-4 mr-1" />
-                                      {navadhitiAllocations.length > 0 ? 'Manage Projects' : 'Allocate'}
+                                      {navadhitiAllocations.length > 0 ? 'Manage' : 'Allocate'}
                                     </Button>
                                   </TableCell>
                                 </TableRow>
