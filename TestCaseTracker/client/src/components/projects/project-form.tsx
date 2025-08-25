@@ -43,7 +43,7 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
       name: project?.name || "",
       description: project?.description || "",
       status: project?.status || "Active",
-      projectLeadId: project?.projectLeadId?.toString() || "",
+      projectLeadId: project?.projectLeadId?.toString() || "no-lead",
     },
   });
 
@@ -121,7 +121,7 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
         description: data.description?.trim() || "",
         status: data.status,
         prefix,
-        projectLeadId: data.projectLeadId ? parseInt(data.projectLeadId) : null,
+        projectLeadId: data.projectLeadId && data.projectLeadId !== "no-lead" ? parseInt(data.projectLeadId) : null,
       };
 
       console.log('Submitting project with prefix:', prefix, 'for project:', data.name);
@@ -219,7 +219,7 @@ export function ProjectForm({ project, onSuccess }: ProjectFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">No Lead Assigned</SelectItem>
+                  <SelectItem value="no-lead">No Lead Assigned</SelectItem>
                   {employees.map((employee: any) => (
                     <SelectItem key={employee.id} value={employee.id.toString()}>
                       {employee.firstName} {employee.lastName} ({employee.email})
