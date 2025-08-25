@@ -3997,7 +3997,6 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
 
       // Generate testCaseId if not provided
-      const project = await storage.getProject(projectId);
       let testCaseId = req.body.testCaseId;
 
       if (!testCaseId) {
