@@ -72,19 +72,37 @@ try {
     hasKey: !!geminiApiKey,
     keyLength: geminiApiKey?.length || 0,
     startsWithAIza: geminiApiKey?.startsWith('AIza') || false,
-    preview: geminiApiKey ? `${geminiApiKey.substring(0, 10)}...` : 'NONE'
+    preview: geminiApiKey ? `${geminiApiKey.substring(0, 15)}...` : 'NONE',
+    fullKey: geminiApiKey || 'MISSING' // For debugging - remove in production
   });
   
-  if (geminiApiKey && geminiApiKey !== 'your-gemini-api-key' && geminiApiKey.trim() !== '' && geminiApiKey.startsWith('AIza')) {
-    genAI = new GoogleGenerativeAI(geminiApiKey);
-    console.log('✅ Gemini AI initialized successfully');
+  // Check if API key is properly set
+  if (!geminiApiKey) {
+    geminiInitError = 'Google Gemini API key is not set in environment variables';
+    console.warn('❌ No GOOGLE_API_KEY environment variable found');
+  } else if (geminiApiKey === 'your-gemini-api-key') {
+    geminiInitError = 'Google Gemini API key is still set to placeholder value';
+    console.warn('❌ GOOGLE_API_KEY is still placeholder');
+  } else if (geminiApiKey.trim() === '') {
+    geminiInitError = 'Google Gemini API key is empty';
+    console.warn('❌ GOOGLE_API_KEY is empty');
+  } else if (!geminiApiKey.startsWith('AIza')) {
+    geminiInitError = `Google Gemini API key has invalid format. Expected to start with 'AIza', got: ${geminiApiKey.substring(0, 10)}...`;
+    console.warn('❌ GOOGLE_API_KEY has invalid format');
   } else {
-    geminiInitError = `Google Gemini API key not configured or invalid format. Key: ${geminiApiKey ? 'PROVIDED' : 'MISSING'}`;
-    console.warn('❌ Google Gemini API key issue:', {
-      hasKey: !!geminiApiKey,
-      keyFormat: geminiApiKey?.startsWith('AIza') ? 'CORRECT' : 'INCORRECT',
-      keyLength: geminiApiKey?.length || 0
-    });
+    try {
+      genAI = new GoogleGenerativeAI(geminiApiKey);
+      console.log('✅ Gemini AI initialized successfully with key:', geminiApiKey.substring(0, 15) + '...');
+      
+      // Test the API key by making a simple request
+      console.log('🧪 Testing Gemini API key...');
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      // We'll test this later to avoid blocking startup
+      
+    } catch (initError) {
+      geminiInitError = `Failed to initialize GoogleGenerativeAI: ${initError.message}`;
+      console.error('❌ GoogleGenerativeAI initialization failed:', initError);
+    }
   }
 } catch (error) {
   geminiInitError = `Gemini initialization failed: ${error.message}`;
@@ -315,6 +333,15 @@ export class EnhancedAIService {
   }
 
   private static async generateWithGemini(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
+    console.log('🔍 Gemini debug check:', {
+      hasGenAI: !!genAI,
+      initError: geminiInitError,
+      apiKeyPresent: !!process.env.GOOGLE_API_KEY,
+      apiKeyFormat: process.env.GOOGLE_API_KEY?.startsWith('AIza') || false,
+      apiKeyLength: process.env.GOOGLE_API_KEY?.length || 0,
+      apiKeyPreview: process.env.GOOGLE_API_KEY ? `${process.env.GOOGLE_API_KEY.substring(0, 15)}...` : 'NONE'
+    });
+
     if (!genAI || geminiInitError) {
       console.error('🚨 Gemini initialization issue:', {
         hasGenAI: !!genAI,
@@ -329,13 +356,33 @@ export class EnhancedAIService {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
       const prompt = this.buildPrompt(request);
       
+      console.log('📝 Sending prompt to Gemini:', prompt.substring(0, 100) + '...');
+      
       const result = await model.generateContent(prompt);
+      console.log('📥 Gemini result received, processing response...');
+      
       const response = await result.response;
       const text = response.text();
       
-      console.log('🤖 Gemini response received:', text.substring(0, 200) + '...');
+      console.log('🤖 Gemini raw response:', text.substring(0, 300) + '...');
       
-      const testCases = JSON.parse(text);
+      // Try to parse JSON response
+      let testCases;
+      try {
+        testCases = JSON.parse(text);
+        console.log('✅ Successfully parsed Gemini JSON response');
+      } catch (parseError) {
+        console.error('❌ Failed to parse Gemini response as JSON:', parseError);
+        console.log('📄 Full response text:', text);
+        throw new Error(`Gemini returned invalid JSON: ${parseError.message}`);
+      }
+      
+      if (!Array.isArray(testCases)) {
+        console.error('❌ Gemini response is not an array:', typeof testCases);
+        throw new Error('Gemini response is not a valid test case array');
+      }
+      
+      console.log(`✅ Gemini successfully generated ${testCases.length} test cases`);
       
       return {
         testCases: testCases,
@@ -354,7 +401,8 @@ export class EnhancedAIService {
         error: error.message,
         status: error.status,
         code: error.code,
-        details: error.details
+        details: error.details,
+        stack: error.stack
       });
       throw error;
     }

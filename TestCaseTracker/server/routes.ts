@@ -8,6 +8,7 @@ import { emailService } from "./email-service";
 import githubIntegrationsRouter from "./api/github-integrations";
 import { geminiService } from "./gemini-service";
 import { EnhancedAIService } from "./enhanced-ai-service";
+import { aiConfigStorage } from "./ai-config-storage";
 import { 
   insertUserSchema, 
   insertProjectSchema, 
@@ -1411,18 +1412,33 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
   // Get API key status
   apiRouter.get("/ai/api-key-status", isAuthenticated, async (req, res) => {
     try {
-      // For now, return a mock status. In production, you'd check actual API key validity
-      const status = {
-        gemini: false,
-        openai: false,
-        claude: false,
-        grok: false,
-        deepseek: false,
-        huggingface: false,
-        cohere: false,
-        mistral: false
+      const status = aiConfigStorage.getStatus();
+      
+      // Also check environment variables as fallback
+      const envStatus = {
+        gemini: !!process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-gemini-api-key',
+        openai: !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your-openai-api-key',
+        claude: !!process.env.CLAUDE_API_KEY && process.env.CLAUDE_API_KEY !== 'your-claude-api-key',
+        grok: !!process.env.GROK_API_KEY && process.env.GROK_API_KEY !== 'your-grok-api-key',
+        deepseek: !!process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !== 'your-deepseek-api-key',
+        huggingface: !!process.env.HUGGINGFACE_API_KEY && process.env.HUGGINGFACE_API_KEY !== 'your-huggingface-api-key',
+        cohere: !!process.env.COHERE_API_KEY && process.env.COHERE_API_KEY !== 'your-cohere-api-key',
+        mistral: !!process.env.MISTRAL_API_KEY && process.env.MISTRAL_API_KEY !== 'your-mistral-api-key'
       };
-      res.json(status);
+
+      // Combine storage and environment status
+      const combinedStatus: Record<string, boolean> = {};
+      Object.keys(status).forEach(provider => {
+        combinedStatus[provider] = status[provider] || envStatus[provider as keyof typeof envStatus];
+      });
+
+      console.log('🔍 API Key Status Check:', {
+        storageStatus: status,
+        envStatus,
+        combinedStatus
+      });
+
+      res.json(combinedStatus);
     } catch (error: any) {
       console.error('❌ Get API key status error:', error);
       res.status(500).json({
@@ -1554,7 +1570,44 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       res.status(500).json({
         success: false,
         error: 'Failed to get AI providers',
-        timestamp: new Date().toISOtring()
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Check environment variables
+  apiRouter.get("/ai/env-check", isAuthenticated, async (req, res) => {
+    try {
+      const envVars = {
+        GOOGLE_API_KEY: {
+          exists: !!process.env.GOOGLE_API_KEY,
+          length: process.env.GOOGLE_API_KEY?.length || 0,
+          preview: process.env.GOOGLE_API_KEY ? `${process.env.GOOGLE_API_KEY.substring(0, 15)}...` : 'MISSING',
+          format: process.env.GOOGLE_API_KEY?.startsWith('AIza') ? 'VALID' : 'INVALID'
+        },
+        OPENAI_API_KEY: {
+          exists: !!process.env.OPENAI_API_KEY,
+          length: process.env.OPENAI_API_KEY?.length || 0,
+          preview: process.env.OPENAI_API_KEY ? `${process.env.OPENAI_API_KEY.substring(0, 15)}...` : 'MISSING',
+          format: process.env.OPENAI_API_KEY?.startsWith('sk-') ? 'VALID' : 'INVALID'
+        },
+        NODE_ENV: process.env.NODE_ENV || 'undefined',
+        PORT: process.env.PORT || 'undefined'
+      };
+
+      console.log('🔍 Environment Variables Check:', envVars);
+
+      res.json({
+        success: true,
+        environment: envVars,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Environment check error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
       });
     }
   });
@@ -1601,33 +1654,37 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         });
       }
 
-      // Map provider to environment variable name
-      const envVarMap: Record<string, string> = {
-        gemini: 'GOOGLE_API_KEY',
-        openai: 'OPENAI_API_KEY',
-        claude: 'CLAUDE_API_KEY',
-        grok: 'GROK_API_KEY',
-        deepseek: 'DEEPSEEK_API_KEY',
-        huggingface: 'HUGGINGFACE_API_KEY',
-        cohere: 'COHERE_API_KEY',
-        mistral: 'MISTRAL_API_KEY'
-      };
-
-      const envVarName = envVarMap[provider];
-      if (!envVarName) {
+      const validProviders = ['gemini', 'openai', 'claude', 'grok', 'deepseek', 'huggingface', 'cohere', 'mistral'];
+      if (!validProviders.includes(provider)) {
         return res.status(400).json({
           success: false,
           error: 'Invalid AI provider'
         });
       }
 
-      // Set environment variable (note: this only affects the current process)
-      process.env[envVarName] = apiKey;
+      // Validate API key format for specific providers
+      if (provider === 'gemini' && !apiKey.startsWith('AIza')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid Gemini API key format. Should start with "AIza"'
+        });
+      }
+
+      if (provider === 'openai' && !apiKey.startsWith('sk-')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid OpenAI API key format. Should start with "sk-"'
+        });
+      }
+
+      // Store the API key
+      aiConfigStorage.setApiKey(provider, apiKey, req.session.userId!);
+
+      console.log(`🔑 API key updated for ${provider} by user ${req.session.userId}`);
 
       res.json({
         success: true,
         message: `${provider} API key updated successfully`,
-        note: 'API key set for current session. For persistent storage, add to environment variables.',
         timestamp: new Date().toISOString()
       });
 
@@ -1653,16 +1710,51 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         geminiKey: {
           present: !!process.env.GOOGLE_API_KEY,
           format: process.env.GOOGLE_API_KEY?.startsWith('AIza') || false,
-          length: process.env.GOOGLE_API_KEY?.length || 0
+          length: process.env.GOOGLE_API_KEY?.length || 0,
+          preview: process.env.GOOGLE_API_KEY ? `${process.env.GOOGLE_API_KEY.substring(0, 15)}...` : 'NONE'
         }
       };
 
       const providers = EnhancedAIService.getAvailableProviders();
 
+      // Test Gemini connection if key is present
+      let geminiTestResult = null;
+      if (process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY.startsWith('AIza')) {
+        try {
+          const testRequest = {
+            requirement: 'Test simple login functionality',
+            projectContext: 'Test project',
+            moduleContext: 'Authentication',
+            testType: 'functional',
+            priority: 'Medium',
+            inputType: 'text' as const,
+            images: [],
+            aiProvider: 'gemini' as const
+          };
+          
+          console.log('🧪 Testing Gemini service directly...');
+          const testResponse = await EnhancedAIService.generateTestCases(testRequest);
+          
+          geminiTestResult = {
+            success: true,
+            testCasesGenerated: testResponse.testCases?.length || 0,
+            source: testResponse.source,
+            provider: testResponse.provider
+          };
+        } catch (testError: any) {
+          geminiTestResult = {
+            success: false,
+            error: testError.message,
+            stack: testError.stack
+          };
+        }
+      }
+
       res.json({
         success: true,
         environmentCheck: envCheck,
         providers,
+        geminiTestResult,
         timestamp: new Date().toISOString()
       });
     } catch (error: any) {
@@ -1756,6 +1848,12 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       console.log('🤖 Enhanced AI Generation - Handler started');
       console.log('🔍 Session data:', { userId: req.session?.userId, userRole: req.session?.userRole });
       console.log('🔍 Request body:', req.body);
+      console.log('🔍 Environment check at request time:', {
+        hasGoogleKey: !!process.env.GOOGLE_API_KEY,
+        keyPreview: process.env.GOOGLE_API_KEY ? `${process.env.GOOGLE_API_KEY.substring(0, 15)}...` : 'MISSING',
+        keyLength: process.env.GOOGLE_API_KEY?.length || 0,
+        keyFormat: process.env.GOOGLE_API_KEY?.startsWith('AIza') ? 'VALID' : 'INVALID'
+      });
 
       // Validate authentication
       if (!req.session || !req.session.userId) {

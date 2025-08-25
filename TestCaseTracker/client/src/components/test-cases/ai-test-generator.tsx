@@ -482,17 +482,42 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             <Badge variant="secondary">
               {availableProviders.find(p => p.provider === aiProvider)?.name ?? aiProvider}
             </Badge>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setSelectedProviderForKey(aiProvider);
-                setShowApiKeyDialog(true);
-              }}
-              className="ml-auto"
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
+            <div className="flex gap-2 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/ai/debug-status');
+                    const data = await response.json();
+                    console.log('🔍 AI Debug Status:', data);
+                    toast({
+                      title: "Debug Status",
+                      description: `Gemini: ${data.environmentCheck.geminiKey.present ? 'Configured' : 'Not configured'}. Check console for details.`,
+                    });
+                  } catch (error) {
+                    console.error('Debug status error:', error);
+                    toast({
+                      title: "Debug Error",
+                      description: "Failed to get debug status",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Debug
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  setSelectedProviderForKey(aiProvider);
+                  setShowApiKeyDialog(true);
+                }}
+              >
+                <Settings className="h-5 w-5" />
+              </Button>
+            </div>
           </DialogTitle>
         </DialogHeader>
 
