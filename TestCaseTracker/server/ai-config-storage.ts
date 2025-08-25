@@ -1,5 +1,4 @@
 
-<line_number>1</line_number>
 // Simple in-memory storage for AI API keys
 // In production, this should be stored in a secure database or environment variables
 
