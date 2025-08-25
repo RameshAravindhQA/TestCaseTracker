@@ -72,8 +72,7 @@ try {
     hasKey: !!geminiApiKey,
     keyLength: geminiApiKey?.length || 0,
     startsWithAIza: geminiApiKey?.startsWith('AIza') || false,
-    preview: geminiApiKey ? `${geminiApiKey.substring(0, 15)}...` : 'NONE',
-    fullKey: geminiApiKey || 'MISSING' // For debugging - remove in production
+    preview: geminiApiKey ? `${geminiApiKey.substring(0, 15)}...` : 'NONE'
   });
   
   // Check if API key is properly set
