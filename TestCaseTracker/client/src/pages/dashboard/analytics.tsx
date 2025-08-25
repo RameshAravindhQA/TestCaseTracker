@@ -734,22 +734,16 @@ export default function AnalyticsDashboard() {
                               <p className="text-xs text-muted-foreground">{employeeAssignments.length} active projects</p>
                             </div>
                             <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setIsAssigningProject(emp)}
-                                disabled={assignProjectMutation.isPending}
-                              >
-                                Manage Projects
-                              </Button>
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => handleAllocateToProject(emp)}
-                                disabled={assignProjectMutation.isPending}
-                              >
-                                Allocate to Project
-                              </Button>
+                              {employeeAssignments.length > 0 && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setIsAssigningProject(emp)}
+                                  disabled={assignProjectMutation.isPending}
+                                >
+                                  Manage Projects
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );
