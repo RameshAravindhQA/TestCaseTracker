@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { logger } from './logger';
 
-export type AIProvider = 'gemini' | 'openai';
+export type AIProvider = 'gemini' | 'openai' | 'claude' | 'grok' | 'deepseek' | 'perplexity' | 'together' | 'groq';
 
 export interface TestCaseGenerationRequest {
   requirement: string;
@@ -42,85 +42,265 @@ export interface TestCaseGenerationResponse {
     suggestions: string[];
   };
   message: string;
-  source: 'gemini-ai' | 'openai' | 'mock-service';
+  source: string;
   provider: AIProvider;
+}
+
+export interface AIProviderConfig {
+  provider: AIProvider;
+  name: string;
+  description: string;
+  keyFormat: string;
+  baseUrl?: string;
+  available: boolean;
+  error?: string;
+  isFree: boolean;
 }
 
 // Initialize AI services
 let genAI: GoogleGenerativeAI | null = null;
 let openai: OpenAI | null = null;
-let geminiInitError: string | null = null;
-let openaiInitError: string | null = null;
+let claude: any = null;
+let grok: OpenAI | null = null;
+let deepseek: OpenAI | null = null;
+let perplexity: OpenAI | null = null;
+let together: OpenAI | null = null;
+let groq: OpenAI | null = null;
 
-// Initialize Google Gemini
-try {
-  const geminiApiKey = process.env.GOOGLE_API_KEY;
-  console.log('🔧 Gemini API Key Check:', {
-    hasKey: !!geminiApiKey,
-    keyLength: geminiApiKey?.length || 0,
-    startsWithAIza: geminiApiKey?.startsWith('AIza') || false,
-    preview: geminiApiKey ? `${geminiApiKey.substring(0, 10)}...` : 'NONE'
-  });
-  
-  if (geminiApiKey && geminiApiKey !== 'your-gemini-api-key' && geminiApiKey.trim() !== '' && geminiApiKey.startsWith('AIza')) {
-    genAI = new GoogleGenerativeAI(geminiApiKey);
-    console.log('✅ Gemini AI initialized successfully');
-  } else {
-    geminiInitError = `Google Gemini API key not configured or invalid format. Key: ${geminiApiKey ? 'PROVIDED' : 'MISSING'}`;
-    console.warn('❌ Google Gemini API key issue:', {
-      hasKey: !!geminiApiKey,
-      keyFormat: geminiApiKey?.startsWith('AIza') ? 'CORRECT' : 'INCORRECT',
-      keyLength: geminiApiKey?.length || 0
-    });
+// Error tracking
+const initErrors: Record<AIProvider, string | null> = {
+  gemini: null,
+  openai: null,
+  claude: null,
+  grok: null,
+  deepseek: null,
+  perplexity: null,
+  together: null,
+  groq: null
+};
+
+// Initialize all AI services
+function initializeAIServices() {
+  // Google Gemini
+  try {
+    const geminiApiKey = process.env.GOOGLE_API_KEY;
+    if (geminiApiKey && geminiApiKey !== 'your-gemini-api-key' && geminiApiKey.trim() !== '' && geminiApiKey.startsWith('AIza')) {
+      genAI = new GoogleGenerativeAI(geminiApiKey);
+      console.log('✅ Gemini AI initialized successfully');
+    } else {
+      initErrors.gemini = 'Google Gemini API key not configured or invalid format';
+      console.warn('❌ Google Gemini API key issue');
+    }
+  } catch (error: any) {
+    initErrors.gemini = `Gemini initialization failed: ${error.message}`;
+    console.error('❌ Gemini initialization error:', error);
   }
-} catch (error) {
-  geminiInitError = `Gemini initialization failed: ${error.message}`;
-  console.error('❌ Gemini initialization error:', error);
+
+  // OpenAI
+  try {
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    if (openaiApiKey && openaiApiKey !== 'your-openai-api-key' && openaiApiKey.trim() !== '' && openaiApiKey.startsWith('sk-')) {
+      openai = new OpenAI({ apiKey: openaiApiKey });
+      console.log('✅ OpenAI initialized successfully');
+    } else {
+      initErrors.openai = 'OpenAI API key not configured or invalid format';
+      console.warn('❌ OpenAI API key issue');
+    }
+  } catch (error: any) {
+    initErrors.openai = `OpenAI initialization failed: ${error.message}`;
+    console.error('❌ OpenAI initialization error:', error);
+  }
+
+  // Claude (Anthropic)
+  try {
+    const claudeApiKey = process.env.CLAUDE_API_KEY;
+    if (claudeApiKey && claudeApiKey !== 'your-claude-api-key' && claudeApiKey.trim() !== '' && claudeApiKey.startsWith('sk-ant-')) {
+      claude = new OpenAI({
+        apiKey: claudeApiKey,
+        baseURL: 'https://api.anthropic.com/v1',
+        defaultHeaders: {
+          'anthropic-version': '2023-06-01',
+        },
+      });
+      console.log('✅ Claude AI initialized successfully');
+    } else {
+      initErrors.claude = 'Claude API key not configured or invalid format';
+      console.warn('❌ Claude API key issue');
+    }
+  } catch (error: any) {
+    initErrors.claude = `Claude initialization failed: ${error.message}`;
+    console.error('❌ Claude initialization error:', error);
+  }
+
+  // Grok (xAI)
+  try {
+    const grokApiKey = process.env.GROK_API_KEY;
+    if (grokApiKey && grokApiKey !== 'your-grok-api-key' && grokApiKey.trim() !== '') {
+      grok = new OpenAI({
+        apiKey: grokApiKey,
+        baseURL: 'https://api.x.ai/v1',
+      });
+      console.log('✅ Grok AI initialized successfully');
+    } else {
+      initErrors.grok = 'Grok API key not configured';
+      console.warn('❌ Grok API key issue');
+    }
+  } catch (error: any) {
+    initErrors.grok = `Grok initialization failed: ${error.message}`;
+    console.error('❌ Grok initialization error:', error);
+  }
+
+  // DeepSeek
+  try {
+    const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+    if (deepseekApiKey && deepseekApiKey !== 'your-deepseek-api-key' && deepseekApiKey.trim() !== '') {
+      deepseek = new OpenAI({
+        apiKey: deepseekApiKey,
+        baseURL: 'https://api.deepseek.com/v1',
+      });
+      console.log('✅ DeepSeek AI initialized successfully');
+    } else {
+      initErrors.deepseek = 'DeepSeek API key not configured';
+      console.warn('❌ DeepSeek API key issue');
+    }
+  } catch (error: any) {
+    initErrors.deepseek = `DeepSeek initialization failed: ${error.message}`;
+    console.error('❌ DeepSeek initialization error:', error);
+  }
+
+  // Perplexity
+  try {
+    const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
+    if (perplexityApiKey && perplexityApiKey !== 'your-perplexity-api-key' && perplexityApiKey.trim() !== '') {
+      perplexity = new OpenAI({
+        apiKey: perplexityApiKey,
+        baseURL: 'https://api.perplexity.ai',
+      });
+      console.log('✅ Perplexity AI initialized successfully');
+    } else {
+      initErrors.perplexity = 'Perplexity API key not configured';
+      console.warn('❌ Perplexity API key issue');
+    }
+  } catch (error: any) {
+    initErrors.perplexity = `Perplexity initialization failed: ${error.message}`;
+    console.error('❌ Perplexity initialization error:', error);
+  }
+
+  // Together AI
+  try {
+    const togetherApiKey = process.env.TOGETHER_API_KEY;
+    if (togetherApiKey && togetherApiKey !== 'your-together-api-key' && togetherApiKey.trim() !== '') {
+      together = new OpenAI({
+        apiKey: togetherApiKey,
+        baseURL: 'https://api.together.xyz/v1',
+      });
+      console.log('✅ Together AI initialized successfully');
+    } else {
+      initErrors.together = 'Together AI API key not configured';
+      console.warn('❌ Together AI API key issue');
+    }
+  } catch (error: any) {
+    initErrors.together = `Together AI initialization failed: ${error.message}`;
+    console.error('❌ Together AI initialization error:', error);
+  }
+
+  // Groq
+  try {
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (groqApiKey && groqApiKey !== 'your-groq-api-key' && groqApiKey.trim() !== '') {
+      groq = new OpenAI({
+        apiKey: groqApiKey,
+        baseURL: 'https://api.groq.com/openai/v1',
+      });
+      console.log('✅ Groq AI initialized successfully');
+    } else {
+      initErrors.groq = 'Groq API key not configured';
+      console.warn('❌ Groq API key issue');
+    }
+  } catch (error: any) {
+    initErrors.groq = `Groq initialization failed: ${error.message}`;
+    console.error('❌ Groq initialization error:', error);
+  }
 }
 
-// Initialize OpenAI
-try {
-  const openaiApiKey = process.env.OPENAI_API_KEY;
-  console.log('🔧 OpenAI API Key Check:', {
-    hasKey: !!openaiApiKey,
-    keyLength: openaiApiKey?.length || 0,
-    startsWithSk: openaiApiKey?.startsWith('sk-') || false,
-    preview: openaiApiKey ? `${openaiApiKey.substring(0, 15)}...` : 'NONE'
-  });
-  
-  if (openaiApiKey && openaiApiKey !== 'your-openai-api-key' && openaiApiKey.trim() !== '' && openaiApiKey.startsWith('sk-')) {
-    openai = new OpenAI({
-      apiKey: openaiApiKey,
-    });
-    console.log('✅ OpenAI initialized successfully');
-  } else {
-    openaiInitError = `OpenAI API key not configured or invalid format. Key: ${openaiApiKey ? 'PROVIDED' : 'MISSING'}`;
-    console.warn('❌ OpenAI API key issue:', {
-      hasKey: !!openaiApiKey,
-      keyFormat: openaiApiKey?.startsWith('sk-') ? 'CORRECT' : 'INCORRECT',
-      keyLength: openaiApiKey?.length || 0
-    });
-  }
-} catch (error) {
-  openaiInitError = `OpenAI initialization failed: ${error.message}`;
-  console.error('❌ OpenAI initialization error:', error);
-}
+// Initialize all services
+initializeAIServices();
 
 export class EnhancedAIService {
   
-  static getAvailableProviders(): { provider: AIProvider; name: string; available: boolean; error?: string }[] {
+  static getAvailableProviders(): AIProviderConfig[] {
     return [
       {
         provider: 'gemini',
         name: 'Google Gemini',
-        available: !!genAI && !geminiInitError,
-        error: geminiInitError || undefined
+        description: 'Google\'s advanced AI model with multimodal capabilities',
+        keyFormat: 'AIza...',
+        available: !!genAI && !initErrors.gemini,
+        error: initErrors.gemini || undefined,
+        isFree: true
       },
       {
         provider: 'openai',
         name: 'OpenAI GPT-4',
-        available: !!openai && !openaiInitError,
-        error: openaiInitError || undefined
+        description: 'OpenAI\'s powerful language model',
+        keyFormat: 'sk-...',
+        available: !!openai && !initErrors.openai,
+        error: initErrors.openai || undefined,
+        isFree: false
+      },
+      {
+        provider: 'claude',
+        name: 'Anthropic Claude',
+        description: 'Anthropic\'s constitutional AI assistant',
+        keyFormat: 'sk-ant-...',
+        available: !!claude && !initErrors.claude,
+        error: initErrors.claude || undefined,
+        isFree: false
+      },
+      {
+        provider: 'grok',
+        name: 'xAI Grok',
+        description: 'Elon Musk\'s witty AI assistant',
+        keyFormat: 'xai-...',
+        available: !!grok && !initErrors.grok,
+        error: initErrors.grok || undefined,
+        isFree: true
+      },
+      {
+        provider: 'deepseek',
+        name: 'DeepSeek',
+        description: 'Chinese AI model with strong reasoning capabilities',
+        keyFormat: 'sk-...',
+        available: !!deepseek && !initErrors.deepseek,
+        error: initErrors.deepseek || undefined,
+        isFree: true
+      },
+      {
+        provider: 'perplexity',
+        name: 'Perplexity AI',
+        description: 'Search-focused AI with real-time information',
+        keyFormat: 'pplx-...',
+        available: !!perplexity && !initErrors.perplexity,
+        error: initErrors.perplexity || undefined,
+        isFree: true
+      },
+      {
+        provider: 'together',
+        name: 'Together AI',
+        description: 'Open-source AI models platform',
+        keyFormat: 'together-...',
+        available: !!together && !initErrors.together,
+        error: initErrors.together || undefined,
+        isFree: true
+      },
+      {
+        provider: 'groq',
+        name: 'Groq',
+        description: 'Ultra-fast AI inference platform',
+        keyFormat: 'gsk_...',
+        available: !!groq && !initErrors.groq,
+        error: initErrors.groq || undefined,
+        isFree: true
       }
     ];
   }
@@ -128,11 +308,7 @@ export class EnhancedAIService {
   static async generateTestCases(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     const provider = request.aiProvider || 'gemini';
     
-    console.log(`🚀 Starting test case generation with ${provider}...`, {
-      provider,
-      inputType: request.inputType,
-      requirement: request.requirement?.substring(0, 50) + '...'
-    });
+    console.log(`🚀 Starting test case generation with ${provider}...`);
 
     try {
       switch (provider) {
@@ -140,6 +316,18 @@ export class EnhancedAIService {
           return await this.generateWithGemini(request);
         case 'openai':
           return await this.generateWithOpenAI(request);
+        case 'claude':
+          return await this.generateWithClaude(request);
+        case 'grok':
+          return await this.generateWithGrok(request);
+        case 'deepseek':
+          return await this.generateWithDeepSeek(request);
+        case 'perplexity':
+          return await this.generateWithPerplexity(request);
+        case 'together':
+          return await this.generateWithTogether(request);
+        case 'groq':
+          return await this.generateWithGroq(request);
         default:
           throw new Error(`Unsupported AI provider: ${provider}`);
       }
@@ -150,120 +338,251 @@ export class EnhancedAIService {
   }
 
   private static async generateWithGemini(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
-    if (!genAI || geminiInitError) {
-      console.error('🚨 Gemini initialization issue:', {
-        hasGenAI: !!genAI,
-        initError: geminiInitError,
-        apiKeyPresent: !!process.env.GOOGLE_API_KEY
-      });
-      throw new Error(geminiInitError || 'Gemini not initialized');
+    if (!genAI || initErrors.gemini) {
+      throw new Error(initErrors.gemini || 'Gemini not initialized');
     }
 
-    try {
-      console.log('🔮 Attempting Gemini generation...');
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-      const prompt = this.buildPrompt(request);
-      
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      console.log('🤖 Gemini response received:', text.substring(0, 200) + '...');
-      
-      const testCases = JSON.parse(text);
-      
-      return {
-        testCases: testCases,
-        analysis: {
-          coverage: 'Comprehensive',
-          complexity: this.getComplexityLevel(request),
-          focusAreas: this.getFocusAreas(request),
-          suggestions: this.getSuggestions(request)
-        },
-        message: `Generated ${testCases.length} test cases using Google Gemini AI`,
-        source: 'gemini-ai',
-        provider: 'gemini'
-      };
-    } catch (error: any) {
-      console.error('🚨 Gemini generation failed:', {
-        error: error.message,
-        status: error.status,
-        code: error.code,
-        details: error.details
-      });
-      throw error;
-    }
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const prompt = this.buildPrompt(request);
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    const testCases = JSON.parse(text);
+    
+    return {
+      testCases: testCases,
+      analysis: this.getAnalysis(request),
+      message: `Generated ${testCases.length} test cases using Google Gemini AI`,
+      source: 'gemini-ai',
+      provider: 'gemini'
+    };
   }
 
   private static async generateWithOpenAI(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
-    if (!openai || openaiInitError) {
-      throw new Error(openaiInitError || 'OpenAI not initialized');
+    if (!openai || initErrors.openai) {
+      throw new Error(initErrors.openai || 'OpenAI not initialized');
     }
 
     const prompt = this.buildPrompt(request);
-    
-    // Try different OpenAI models in order of preference
     const models = ["gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"];
-    let lastError: Error | null = null;
     
     for (const model of models) {
       try {
-        console.log(`🔮 Trying OpenAI model: ${model}`);
-        
         const completion = await openai.chat.completions.create({
           model: model,
           messages: [
-            {
-              role: "system",
-              content: "You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only, no additional text or explanations."
-            },
-            {
-              role: "user",
-              content: prompt
-            }
+            { role: "system", content: "You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only." },
+            { role: "user", content: prompt }
           ],
           temperature: 0.7,
           max_tokens: 3000,
         });
 
-    const content = completion.choices[0]?.message?.content;
-        if (!content) {
-          throw new Error(`No response from OpenAI using model ${model}`);
-        }
+        const content = completion.choices[0]?.message?.content;
+        if (!content) throw new Error(`No response from OpenAI using model ${model}`);
 
-        console.log(`🤖 OpenAI response received using ${model}:`, content.substring(0, 200) + '...');
-        
         const testCases = JSON.parse(content);
         
         return {
           testCases: testCases,
-          analysis: {
-            coverage: 'Comprehensive',
-            complexity: this.getComplexityLevel(request),
-            focusAreas: this.getFocusAreas(request),
-            suggestions: this.getSuggestions(request)
-          },
+          analysis: this.getAnalysis(request),
           message: `Generated ${testCases.length} test cases using OpenAI ${model}`,
           source: 'openai',
           provider: 'openai'
         };
-        
       } catch (error: any) {
-        console.error(`❌ OpenAI model ${model} failed:`, error.message);
-        lastError = error;
-        
-        // If it's a model not found error, try the next model
-        if (error.status === 404 || error.code === 'model_not_found') {
-          continue;
-        }
-        
-        // For other errors, break and throw
-        break;
+        if (error.status === 404) continue;
+        throw error;
       }
     }
+    throw new Error('All OpenAI models failed');
+  }
+
+  private static async generateWithClaude(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
+    if (!claude || initErrors.claude) {
+      throw new Error(initErrors.claude || 'Claude not initialized');
+    }
+
+    const prompt = this.buildPrompt(request);
     
-    // If we get here, all models failed
-    throw new Error(`All OpenAI models failed. Last error: ${lastError?.message || 'Unknown error'}`);
+    const completion = await claude.chat.completions.create({
+      model: "claude-3-5-sonnet-20241022",
+      messages: [
+        { role: "system", content: "You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only." },
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 3000,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) throw new Error('No response from Claude');
+
+    const testCases = JSON.parse(content);
+    
+    return {
+      testCases: testCases,
+      analysis: this.getAnalysis(request),
+      message: `Generated ${testCases.length} test cases using Anthropic Claude`,
+      source: 'claude',
+      provider: 'claude'
+    };
+  }
+
+  private static async generateWithGrok(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
+    if (!grok || initErrors.grok) {
+      throw new Error(initErrors.grok || 'Grok not initialized');
+    }
+
+    const prompt = this.buildPrompt(request);
+    
+    const completion = await grok.chat.completions.create({
+      model: "grok-beta",
+      messages: [
+        { role: "system", content: "You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 3000,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) throw new Error('No response from Grok');
+
+    const testCases = JSON.parse(content);
+    
+    return {
+      testCases: testCases,
+      analysis: this.getAnalysis(request),
+      message: `Generated ${testCases.length} test cases using xAI Grok`,
+      source: 'grok',
+      provider: 'grok'
+    };
+  }
+
+  private static async generateWithDeepSeek(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
+    if (!deepseek || initErrors.deepseek) {
+      throw new Error(initErrors.deepseek || 'DeepSeek not initialized');
+    }
+
+    const prompt = this.buildPrompt(request);
+    
+    const completion = await deepseek.chat.completions.create({
+      model: "deepseek-chat",
+      messages: [
+        { role: "system", content: "You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 3000,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) throw new Error('No response from DeepSeek');
+
+    const testCases = JSON.parse(content);
+    
+    return {
+      testCases: testCases,
+      analysis: this.getAnalysis(request),
+      message: `Generated ${testCases.length} test cases using DeepSeek AI`,
+      source: 'deepseek',
+      provider: 'deepseek'
+    };
+  }
+
+  private static async generateWithPerplexity(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
+    if (!perplexity || initErrors.perplexity) {
+      throw new Error(initErrors.perplexity || 'Perplexity not initialized');
+    }
+
+    const prompt = this.buildPrompt(request);
+    
+    const completion = await perplexity.chat.completions.create({
+      model: "llama-3.1-sonar-large-128k-online",
+      messages: [
+        { role: "system", content: "You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 3000,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) throw new Error('No response from Perplexity');
+
+    const testCases = JSON.parse(content);
+    
+    return {
+      testCases: testCases,
+      analysis: this.getAnalysis(request),
+      message: `Generated ${testCases.length} test cases using Perplexity AI`,
+      source: 'perplexity',
+      provider: 'perplexity'
+    };
+  }
+
+  private static async generateWithTogether(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
+    if (!together || initErrors.together) {
+      throw new Error(initErrors.together || 'Together AI not initialized');
+    }
+
+    const prompt = this.buildPrompt(request);
+    
+    const completion = await together.chat.completions.create({
+      model: "meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo",
+      messages: [
+        { role: "system", content: "You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 3000,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) throw new Error('No response from Together AI');
+
+    const testCases = JSON.parse(content);
+    
+    return {
+      testCases: testCases,
+      analysis: this.getAnalysis(request),
+      message: `Generated ${testCases.length} test cases using Together AI`,
+      source: 'together',
+      provider: 'together'
+    };
+  }
+
+  private static async generateWithGroq(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
+    if (!groq || initErrors.groq) {
+      throw new Error(initErrors.groq || 'Groq not initialized');
+    }
+
+    const prompt = this.buildPrompt(request);
+    
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-70b-versatile",
+      messages: [
+        { role: "system", content: "You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 3000,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) throw new Error('No response from Groq');
+
+    const testCases = JSON.parse(content);
+    
+    return {
+      testCases: testCases,
+      analysis: this.getAnalysis(request),
+      message: `Generated ${testCases.length} test cases using Groq`,
+      source: 'groq',
+      provider: 'groq'
+    };
   }
 
   private static buildPrompt(request: TestCaseGenerationRequest): string {
@@ -302,19 +621,21 @@ Return ONLY a valid JSON array with the following structure:
 Ensure the response is valid JSON only, no additional text.`;
   }
 
-  private static getMockResponse(request: TestCaseGenerationRequest): TestCaseGenerationResponse {
-    console.log('🎭 Generating comprehensive mock response...');
+  private static getAnalysis(request: TestCaseGenerationRequest) {
+    return {
+      coverage: 'Comprehensive',
+      complexity: this.getComplexityLevel(request),
+      focusAreas: this.getFocusAreas(request),
+      suggestions: this.getSuggestions(request)
+    };
+  }
 
+  private static getMockResponse(request: TestCaseGenerationRequest): TestCaseGenerationResponse {
     const mockTestCases = this.generateMockTestCases(request);
 
     return {
       testCases: mockTestCases,
-      analysis: {
-        coverage: 'Comprehensive',
-        complexity: this.getComplexityLevel(request),
-        focusAreas: this.getFocusAreas(request),
-        suggestions: this.getSuggestions(request)
-      },
+      analysis: this.getAnalysis(request),
       message: `Generated ${mockTestCases.length} comprehensive test cases using intelligent mock service`,
       source: 'mock-service',
       provider: request.aiProvider || 'gemini'
@@ -322,58 +643,6 @@ Ensure the response is valid JSON only, no additional text.`;
   }
 
   private static generateMockTestCases(request: TestCaseGenerationRequest): GeneratedTestCase[] {
-    const isRegistrationTest = request.requirement?.toLowerCase().includes('registration') || 
-                              request.moduleContext?.toLowerCase().includes('registration');
-
-    if (isRegistrationTest) {
-      return this.getRegistrationTestCases(request);
-    }
-
-    return this.getDefaultTestCases(request);
-  }
-
-  private static getRegistrationTestCases(request: TestCaseGenerationRequest): GeneratedTestCase[] {
-    return [
-      {
-        feature: "User Registration - Valid Data Entry",
-        testObjective: "Verify successful user registration with valid data",
-        preConditions: "Registration page is accessible and all required fields are displayed",
-        testSteps: "1. Navigate to registration page\n2. Enter valid first name (e.g., 'John')\n3. Enter valid last name (e.g., 'Doe')\n4. Enter valid email address\n5. Enter strong password\n6. Confirm password\n7. Accept terms and conditions\n8. Click 'Register' button\n9. Verify success message\n10. Check user receives confirmation email",
-        expectedResult: "User should be successfully registered, receive confirmation message, and get verification email",
-        priority: "High",
-        testType: request.testType || "functional",
-        coverage: "Positive Testing",
-        category: "Registration - Happy Path",
-        tags: ["registration", "positive-testing", "user-creation", "email-verification"]
-      },
-      {
-        feature: "User Registration - Email Validation",
-        testObjective: "Verify email field validation with invalid email formats",
-        preConditions: "Registration page is loaded",
-        testSteps: "1. Navigate to registration page\n2. Enter valid first and last name\n3. Enter invalid email formats:\n   - Missing @ symbol\n   - Missing domain\n   - Invalid characters\n   - Empty email field\n4. Attempt to register\n5. Verify validation error messages",
-        expectedResult: "Appropriate error messages should be displayed for each invalid email format",
-        priority: request.priority || "High",
-        testType: request.testType || "functional",
-        coverage: "Input Validation",
-        category: "Registration - Validation",
-        tags: ["registration", "negative-testing", "email-validation", "error-handling"]
-      },
-      {
-        feature: "User Registration - Password Security",
-        testObjective: "Verify password field validation and security requirements",
-        preConditions: "Registration page is accessible",
-        testSteps: "1. Navigate to registration page\n2. Fill valid details except password\n3. Test weak passwords:\n   - Too short (< 8 characters)\n   - No uppercase letters\n   - No special characters\n   - Common passwords\n4. Test password confirmation mismatch\n5. Verify validation messages\n6. Test strong password acceptance",
-        expectedResult: "Weak passwords should be rejected with specific error messages. Strong passwords should be accepted",
-        priority: "High",
-        testType: "security",
-        coverage: "Password Security",
-        category: "Registration - Security",
-        tags: ["registration", "password-security", "validation", "security-testing"]
-      }
-    ];
-  }
-
-  private static getDefaultTestCases(request: TestCaseGenerationRequest): GeneratedTestCase[] {
     const feature = request.requirement || 'Application functionality';
     return [
       {
@@ -382,7 +651,7 @@ Ensure the response is valid JSON only, no additional text.`;
         preConditions: "Application is accessible and feature is available",
         testSteps: "1. Navigate to the feature\n2. Enter valid input data\n3. Submit the form\n4. Verify successful completion",
         expectedResult: "Feature should work correctly with valid input",
-        priority: request.priority || "High",
+        priority: request.priority as any || "High",
         testType: request.testType || "functional",
         coverage: "Happy Path",
         category: "Core Functionality",
@@ -394,7 +663,7 @@ Ensure the response is valid JSON only, no additional text.`;
         preConditions: "Feature is accessible",
         testSteps: "1. Navigate to the feature\n2. Enter invalid data formats\n3. Submit form\n4. Verify validation messages\n5. Test boundary conditions",
         expectedResult: "Appropriate validation messages should be displayed",
-        priority: request.priority || "High",
+        priority: request.priority as any || "High",
         testType: request.testType || "functional",
         coverage: "Input Validation",
         category: "Data Validation",
@@ -429,5 +698,43 @@ Ensure the response is valid JSON only, no additional text.`;
     }
 
     return suggestions;
+  }
+
+  // API Key Management
+  static async updateAPIKey(provider: AIProvider, apiKey: string): Promise<boolean> {
+    try {
+      // In a real application, you would save this to a secure database
+      // For now, we'll update the environment variable temporarily
+      process.env[`${provider.toUpperCase()}_API_KEY`] = apiKey;
+      
+      // Reinitialize the specific service
+      initializeAIServices();
+      
+      return true;
+    } catch (error) {
+      console.error(`Failed to update ${provider} API key:`, error);
+      return false;
+    }
+  }
+
+  static getAPIKeyStatus(provider: AIProvider): { configured: boolean; format: string } {
+    const envKey = `${provider.toUpperCase()}_API_KEY`;
+    const apiKey = process.env[envKey];
+    
+    const formats: Record<AIProvider, string> = {
+      gemini: 'AIza...',
+      openai: 'sk-...',
+      claude: 'sk-ant-...',
+      grok: 'xai-...',
+      deepseek: 'sk-...',
+      perplexity: 'pplx-...',
+      together: 'together-...',
+      groq: 'gsk_...'
+    };
+
+    return {
+      configured: !!apiKey && apiKey !== `your-${provider}-api-key`,
+      format: formats[provider]
+    };
   }
 }

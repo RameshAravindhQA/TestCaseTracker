@@ -1427,6 +1427,69 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Update AI provider API key
+  apiRouter.post("/ai/update-key", isAuthenticated, async (req, res) => {
+    try {
+      const { provider, apiKey } = req.body;
+
+      if (!provider || !apiKey) {
+        return res.status(400).json({
+          success: false,
+          error: 'Provider and API key are required',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      const success = await EnhancedAIService.updateAPIKey(provider, apiKey);
+
+      if (success) {
+        res.json({
+          success: true,
+          message: `${provider} API key updated successfully`,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: `Failed to update ${provider} API key`,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Update API key error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update API key',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Get API key status for providers
+  apiRouter.get("/ai/key-status", isAuthenticated, async (req, res) => {
+    try {
+      const providers = ['gemini', 'openai', 'claude', 'grok', 'deepseek', 'perplexity', 'together', 'groq'];
+      const status: Record<string, any> = {};
+
+      providers.forEach(provider => {
+        status[provider] = EnhancedAIService.getAPIKeyStatus(provider as any);
+      });
+
+      res.json({
+        success: true,
+        status,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Get API key status error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get API key status',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // AI Service Debug endpoint
   apiRouter.get("/ai/debug-status", isAuthenticated, async (req, res) => {
     try {
