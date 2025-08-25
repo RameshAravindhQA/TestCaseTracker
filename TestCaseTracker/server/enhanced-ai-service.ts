@@ -301,14 +301,47 @@ export class EnhancedAIService {
     console.log(`🚀 Starting test case generation with ${provider}...`, {
       provider,
       inputType: request.inputType,
-      requirement: request.requirement?.substring(0, 50) + '...'
+      requirement: request.requirement?.substring(0, 50) + '...',
+      hasGemini: !!genAI && !geminiInitError,
+      hasOpenAI: !!openai && !openaiInitError
     });
+
+    // Check if the requested provider is available, if not try alternatives
+    if (provider === 'gemini' && (!genAI || geminiInitError)) {
+      console.log('🔄 Gemini not available, trying OpenAI...');
+      if (openai && !openaiInitError) {
+        try {
+          return await this.generateWithOpenAI(request);
+        } catch (error) {
+          console.error('❌ OpenAI fallback failed:', error);
+          return this.getMockResponse(request);
+        }
+      }
+    }
+
+    if (provider === 'openai' && (!openai || openaiInitError)) {
+      console.log('🔄 OpenAI not available, trying Gemini...');
+      if (genAI && !geminiInitError) {
+        try {
+          return await this.generateWithGemini(request);
+        } catch (error) {
+          console.error('❌ Gemini fallback failed:', error);
+          return this.getMockResponse(request);
+        }
+      }
+    }
 
     try {
       switch (provider) {
         case 'gemini':
+          if (!genAI || geminiInitError) {
+            throw new Error(geminiInitError || 'Gemini not initialized');
+          }
           return await this.generateWithGemini(request);
         case 'openai':
+          if (!openai || openaiInitError) {
+            throw new Error(openaiInitError || 'OpenAI not initialized');
+          }
           return await this.generateWithOpenAI(request);
         case 'claude':
           return await this.generateWithClaude(request);
@@ -323,21 +356,37 @@ export class EnhancedAIService {
         case 'mistral':
           return await this.generateWithMistral(request);
         default:
-          throw new Error(`Unsupported AI provider: ${provider}`);
+          console.log('🔄 Unknown provider, trying available providers...');
+          // Try available providers in order
+          if (genAI && !geminiInitError) {
+            return await this.generateWithGemini(request);
+          }
+          if (openai && !openaiInitError) {
+            return await this.generateWithOpenAI(request);
+          }
+          throw new Error(`No AI providers available`);
       }
     } catch (error: any) {
-      console.error(`❌ ${provider} AI failed, falling back to mock service:`, error);
+      console.error(`❌ ${provider} AI failed:`, error.message);
       
-      // If it's a quota error, try OpenAI as fallback before mock
-      if (error.status === 429 && provider === 'gemini') {
-        console.log('🔄 Quota exceeded for Gemini, trying OpenAI...');
+      // Smart fallback logic
+      if (provider === 'gemini' && openai && !openaiInitError) {
+        console.log('🔄 Gemini failed, trying OpenAI...');
         try {
           return await this.generateWithOpenAI(request);
         } catch (openaiError) {
-          console.error('❌ OpenAI also failed, using mock service:', openaiError);
+          console.error('❌ OpenAI fallback also failed:', openaiError);
+        }
+      } else if (provider === 'openai' && genAI && !geminiInitError) {
+        console.log('🔄 OpenAI failed, trying Gemini...');
+        try {
+          return await this.generateWithGemini(request);
+        } catch (geminiError) {
+          console.error('❌ Gemini fallback also failed:', geminiError);
         }
       }
       
+      console.log('🎭 Using mock service as final fallback');
       return this.getMockResponse(request);
     }
   }
@@ -352,61 +401,77 @@ export class EnhancedAIService {
       apiKeyPreview: process.env.GOOGLE_API_KEY ? `${process.env.GOOGLE_API_KEY.substring(0, 15)}...` : 'NONE'
     });
 
-    if (!genAI || geminiInitError) {
-      console.error('🚨 Gemini initialization issue:', {
-        hasGenAI: !!genAI,
-        initError: geminiInitError,
-        apiKeyPresent: !!process.env.GOOGLE_API_KEY
-      });
-      throw new Error(geminiInitError || 'Gemini not initialized');
+    if (!genAI) {
+      throw new Error('Gemini client not initialized');
+    }
+
+    if (geminiInitError) {
+      throw new Error(`Gemini initialization error: ${geminiInitError}`);
     }
 
     try {
       console.log('🔮 Attempting Gemini generation...');
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = this.buildPrompt(request);
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 2048,
+        }
+      });
       
+      const prompt = this.buildPrompt(request);
       console.log('📝 Sending prompt to Gemini:', prompt.substring(0, 100) + '...');
       
-      let result;
-      let retryCount = 0;
-      const maxRetries = 2;
-      
-      while (retryCount <= maxRetries) {
-        try {
-          result = await model.generateContent(prompt);
-          console.log('📥 Gemini result received, processing response...');
-          break;
-        } catch (error: any) {
-          if (error.status === 429 && retryCount < maxRetries) {
-            console.log(`🔄 Quota exceeded, retrying in ${Math.pow(2, retryCount + 1)} seconds...`);
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount + 1) * 1000));
-            retryCount++;
-            continue;
-          }
-          throw error;
-        }
-      }
+      const result = await model.generateContent(prompt);
+      console.log('📥 Gemini result received, processing response...');
       
       const response = await result.response;
       const text = response.text();
       
       console.log('🤖 Gemini raw response:', text.substring(0, 300) + '...');
       
+      // Clean the response text to extract JSON
+      let cleanedText = text.trim();
+      
+      // Remove markdown code blocks if present
+      if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
       // Try to parse JSON response
       let testCases;
       try {
-        testCases = JSON.parse(text);
+        testCases = JSON.parse(cleanedText);
         console.log('✅ Successfully parsed Gemini JSON response');
       } catch (parseError) {
         console.error('❌ Failed to parse Gemini response as JSON:', parseError);
-        console.log('📄 Full response text:', text);
-        throw new Error(`Gemini returned invalid JSON: ${parseError.message}`);
+        console.log('📄 Cleaned response text:', cleanedText);
+        
+        // Try to extract JSON from the response if it's wrapped in other text
+        const jsonMatch = cleanedText.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          try {
+            testCases = JSON.parse(jsonMatch[0]);
+            console.log('✅ Successfully extracted and parsed JSON from response');
+          } catch (extractError) {
+            throw new Error(`Could not parse JSON from Gemini response: ${parseError.message}`);
+          }
+        } else {
+          throw new Error(`Gemini returned invalid JSON: ${parseError.message}`);
+        }
       }
       
       if (!Array.isArray(testCases)) {
         console.error('❌ Gemini response is not an array:', typeof testCases);
         throw new Error('Gemini response is not a valid test case array');
+      }
+      
+      if (testCases.length === 0) {
+        throw new Error('Gemini returned empty test case array');
       }
       
       console.log(`✅ Gemini successfully generated ${testCases.length} test cases`);
@@ -428,10 +493,20 @@ export class EnhancedAIService {
         error: error.message,
         status: error.status,
         code: error.code,
-        details: error.details,
-        stack: error.stack
+        details: error.details || 'No additional details',
+        type: typeof error
       });
-      throw error;
+      
+      // Provide more specific error messages
+      if (error.status === 429) {
+        throw new Error('Gemini API quota exceeded. Please try again later or use OpenAI.');
+      } else if (error.status === 403) {
+        throw new Error('Gemini API access forbidden. Please check your API key permissions.');
+      } else if (error.status === 400) {
+        throw new Error('Gemini API request was invalid. Please check the input data.');
+      } else {
+        throw new Error(`Gemini API error: ${error.message}`);
+      }
     }
   }
 
@@ -701,9 +776,21 @@ Ensure the response is valid JSON only, no additional text.`;
   }
 
   private static getMockResponse(request: TestCaseGenerationRequest): TestCaseGenerationResponse {
-    console.log('🎭 Generating comprehensive mock response...');
+    console.log('🎭 Generating mock response as fallback...');
+    console.log('🔍 Provider availability check:', {
+      gemini: { available: !!genAI && !geminiInitError, error: geminiInitError },
+      openai: { available: !!openai && !openaiInitError, error: openaiInitError }
+    });
 
     const mockTestCases = this.generateMockTestCases(request);
+    
+    const availableProviders = [];
+    if (genAI && !geminiInitError) availableProviders.push('Gemini');
+    if (openai && !openaiInitError) availableProviders.push('OpenAI');
+    
+    const message = availableProviders.length > 0 
+      ? `Generated ${mockTestCases.length} test cases using mock service (${availableProviders.join(', ')} failed)`
+      : `Generated ${mockTestCases.length} test cases using mock service (no AI providers available)`;
 
     return {
       testCases: mockTestCases,
@@ -713,7 +800,7 @@ Ensure the response is valid JSON only, no additional text.`;
         focusAreas: this.getFocusAreas(request),
         suggestions: this.getSuggestions(request)
       },
-      message: `Generated ${mockTestCases.length} comprehensive test cases using intelligent mock service`,
+      message,
       source: 'mock-service',
       provider: request.aiProvider || 'gemini'
     };
