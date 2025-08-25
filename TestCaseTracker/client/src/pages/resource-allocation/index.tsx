@@ -129,18 +129,51 @@ const ResourceAllocationPage: React.FC = () => {
       employee.position?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesDepartment = departmentFilter === 'all' || employee.department === departmentFilter;
-    const matchesStatus = statusFilter === 'all' || employee.status === statusFilter;
+    const employeeStatus = getEmployeeStatus(employee.id);
+    const matchesStatus = statusFilter === 'all' || employeeStatus === statusFilter;
 
     return matchesSearch && matchesDepartment && matchesStatus;
   });
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Available': return 'bg-green-500';
-      case 'Occupied': return 'bg-orange-500';
-      case 'On Leave': return 'bg-red-500';
-      default: return 'bg-gray-500';
+    switch (status.toLowerCase()) {
+      case 'active': return 'bg-blue-500';
+      case 'learning': return 'bg-purple-500';
+      case 'leave': return 'bg-red-500';
+      case 'completed': return 'bg-gray-500';
+      case 'available': return 'bg-green-500';
+      default: return 'bg-gray-400';
     }
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'learning': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'leave': return 'bg-red-100 text-red-800 border-red-200';
+      case 'completed': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'available': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getEmployeeStatus = (employeeId: number) => {
+    const activeAllocations = employeeProjectsData.filter((ep: any) => 
+      ep.employeeId === employeeId && ep.isActive && ep.status !== 'completed'
+    );
+    
+    if (activeAllocations.length === 0) return 'available';
+    
+    // Check if any allocation is on leave
+    if (activeAllocations.some((ep: any) => ep.status === 'leave')) return 'leave';
+    
+    // Check if any allocation is learning
+    if (activeAllocations.some((ep: any) => ep.status === 'learning')) return 'learning';
+    
+    // If has active allocations, status is active
+    if (activeAllocations.some((ep: any) => ep.status === 'active')) return 'active';
+    
+    return 'available';
   };
 
   const getPriorityColor = (priority: string) => {
@@ -187,6 +220,7 @@ const ResourceAllocationPage: React.FC = () => {
         const totalAllocation = calculateTotalAllocation(employee.id);
         const isOverAllocated = totalAllocation > 100;
         const employeeProjectsData = getEmployeeProjectAllocations(employee.id);
+        const employeeStatus = getEmployeeStatus(employee.id);
 
         return (
           <Card key={employee.id} className="hover:shadow-lg transition-shadow">
@@ -206,7 +240,12 @@ const ResourceAllocationPage: React.FC = () => {
                     {employee.position}
                   </p>
                 </div>
-                <div className={`w-3 h-3 rounded-full ${getStatusColor(employee.status)}`} />
+                <div className="flex flex-col items-end">
+                  <div className={`w-3 h-3 rounded-full ${getStatusColor(employeeStatus)} mb-1`} />
+                  <Badge variant="secondary" className={`text-xs ${getStatusBadgeColor(employeeStatus)}`}>
+                    {employeeStatus.charAt(0).toUpperCase() + employeeStatus.slice(1)}
+                  </Badge>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pt-0">
@@ -308,6 +347,7 @@ const ResourceAllocationPage: React.FC = () => {
             const totalAllocation = calculateTotalAllocation(employee.id);
             const isOverAllocated = totalAllocation > 100;
             const employeeProjectsData = getEmployeeProjectAllocations(employee.id);
+            const employeeStatus = getEmployeeStatus(employee.id);
             return (
               <tr key={employee.id} className="border-t hover:bg-muted/25">
                 <td className="p-3">
@@ -330,8 +370,8 @@ const ResourceAllocationPage: React.FC = () => {
                 </td>
                 <td className="p-3 text-sm">{employee.department}</td>
                 <td className="p-3">
-                  <Badge variant="secondary" className={`${getStatusColor(employee.status)} text-white text-xs`}>
-                    {employee.status}
+                  <Badge variant="secondary" className={`${getStatusBadgeColor(employeeStatus)} text-xs`}>
+                    {employeeStatus.charAt(0).toUpperCase() + employeeStatus.slice(1)}
                   </Badge>
                 </td>
                 <td className="p-3">
@@ -395,6 +435,7 @@ const ResourceAllocationPage: React.FC = () => {
         const totalAllocation = calculateTotalAllocation(employee.id);
         const isOverAllocated = totalAllocation > 100;
         const employeeProjectsData = getEmployeeProjectAllocations(employee.id);
+        const employeeStatus = getEmployeeStatus(employee.id);
 
         return (
           <Card key={employee.id}>
@@ -413,9 +454,9 @@ const ResourceAllocationPage: React.FC = () => {
                       <h3 className="font-semibold">
                         {employee.firstName} {employee.lastName}
                       </h3>
-                      <div className={`w-2 h-2 rounded-full ${getStatusColor(employee.status)}`} />
-                      <Badge variant="secondary" className="text-xs">
-                        {employee.status}
+                      <div className={`w-2 h-2 rounded-full ${getStatusColor(employeeStatus)}`} />
+                      <Badge variant="secondary" className={`text-xs ${getStatusBadgeColor(employeeStatus)}`}>
+                        {employeeStatus.charAt(0).toUpperCase() + employeeStatus.slice(1)}
                       </Badge>
                     </div>
 
@@ -565,9 +606,11 @@ const ResourceAllocationPage: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Available">Available</SelectItem>
-                <SelectItem value="Occupied">Occupied</SelectItem>
-                <SelectItem value="On Leave">On Leave</SelectItem>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="learning">Learning</SelectItem>
+                <SelectItem value="leave">On Leave</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>
 
