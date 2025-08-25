@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,13 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Upload, Globe, Type, Wand2, CheckCircle2, Download, Merge } from "lucide-react";
+import { Sparkles, Upload, Globe, Type, Wand2, CheckCircle2, Download, Merge, Settings, Loader2 } from "lucide-react";
 import type { Module, TestCase } from "@/types";
 
 interface AITestGeneratorProps {
@@ -52,18 +53,17 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
 
   // AI Provider selection
-  const [aiProvider, setAiProvider] = useState("google-gemini");
-
-  // Results
-  const [generatedTestCases, setGeneratedTestCases] = useState<GeneratedTestCase[]>([]);
-  const [selectedTestCases, setSelectedTestCases] = useState<Set<number>>(new Set());
+  const [aiProvider, setAiProvider] = useState<string>("gemini");
   const [showResults, setShowResults] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [generatedResults, setGeneratedResults] = useState<any>(null);
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+  const [selectedProviderForKey, setSelectedProviderForKey] = useState<string>("");
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [apiKeyStatus, setApiKeyStatus] = useState<Record<string, boolean>>({});
 
   const availableProviders = [
     {
-      provider: "google-gemini",
+      provider: "gemini",
       name: "Google Gemini",
       available: true,
     },
@@ -72,7 +72,103 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       name: "OpenAI GPT-4",
       available: true,
     },
+    {
+      provider: "claude",
+      name: "Anthropic Claude",
+      available: true,
+    },
+    {
+      provider: "grok",
+      name: "xAI Grok",
+      available: true,
+    },
+    {
+      provider: "deepseek",
+      name: "DeepSeek Coder",
+      available: true,
+    },
+    {
+      provider: "huggingface",
+      name: "Hugging Face",
+      available: true,
+    },
+    {
+      provider: "cohere",
+      name: "Cohere",
+      available: true,
+    },
+    {
+      provider: "mistral",
+      name: "Mistral AI",
+      available: true,
+    },
   ];
+
+  // Fetch API Key Status
+  const fetchApiKeyStatus = async () => {
+    try {
+      const response = await fetch('/api/ai/api-key-status');
+      if (!response.ok) {
+        throw new Error('Failed to fetch API key status');
+      }
+      const data: Record<string, boolean> = await response.json();
+      setApiKeyStatus(data);
+    } catch (error) {
+      console.error("Error fetching API key status:", error);
+      toast({
+        title: "API Key Status Error",
+        description: "Could not retrieve API key status.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Update API Key Mutation
+  const updateApiKeyMutation = useMutation({
+    mutationFn: async (data: { provider: string; apiKey: string }) => {
+      const response = await fetch('/api/ai/update-api-key', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Failed to update API key for ${data.provider}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "API Key Updated",
+        description: `API key for ${availableProviders.find(p => p.provider === selectedProviderForKey)?.name} updated successfully.`,
+      });
+      fetchApiKeyStatus(); // Refresh status
+      setShowApiKeyDialog(false);
+      setApiKeyInput("");
+    },
+    onError: (error: any) => {
+      console.error("Error updating API key:", error);
+      toast({
+        title: "API Key Update Failed",
+        description: error.message || "Please check your API key and try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveApiKey = () => {
+    if (!selectedProviderForKey || !apiKeyInput.trim()) {
+      toast({
+        title: "Input Error",
+        description: "Please select a provider and enter an API key.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateApiKeyMutation.mutate({ provider: selectedProviderForKey, apiKey: apiKeyInput });
+  };
 
   // AI Generation Mutation
   const generateMutation = useMutation({
@@ -360,6 +456,11 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
     }
   };
 
+  // Fetch API key status on mount
+  React.useEffect(() => {
+    fetchApiKeyStatus();
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -374,8 +475,19 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             <Wand2 className="h-5 w-5 text-purple-600" />
             AI Test Case Generator Pro
             <Badge variant="secondary">
-              {aiProvider === "google-gemini" ? "Powered by Google Gemini" : "Powered by OpenAI"}
+              {availableProviders.find(p => p.provider === aiProvider)?.name ?? aiProvider}
             </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setSelectedProviderForKey(aiProvider);
+                setShowApiKeyDialog(true);
+              }}
+              className="ml-auto"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
           </DialogTitle>
         </DialogHeader>
 
@@ -395,17 +507,17 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                     </SelectTrigger>
                     <SelectContent>
                       {availableProviders.map((provider) => (
-                        <SelectItem 
-                          key={provider.provider} 
+                        <SelectItem
+                          key={provider.provider}
                           value={provider.provider}
                           disabled={!provider.available}
                         >
                           <div className="flex items-center justify-between w-full">
                             <span>{provider.name}</span>
-                            {provider.available ? (
-                              <Badge variant="secondary" className="ml-2">Available</Badge>
+                            {apiKeyStatus[provider.provider] ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-500 ml-2" />
                             ) : (
-                              <Badge variant="destructive" className="ml-2">Unavailable</Badge>
+                              <p className="text-xs text-gray-400 ml-2">API Key Needed</p>
                             )}
                           </div>
                         </SelectItem>
@@ -413,10 +525,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                     </SelectContent>
                   </Select>
                   <p className="text-sm text-gray-500 mt-1">
-                    {aiProvider === "google-gemini" ? 
-                      "Using Google Gemini AI for intelligent test case generation" : 
-                      "Using OpenAI GPT-4 for comprehensive test case analysis"
-                    }
+                    {availableProviders.find(p => p.provider === aiProvider)?.name ?? aiProvider} is currently selected.
                   </p>
                 </div>
               </CardContent>
@@ -684,6 +793,88 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
           </div>
         )}
       </DialogContent>
+
+      {/* API Key Configuration Dialog */}
+      <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configure API Key</DialogTitle>
+            <DialogDescription>
+              Enter your {availableProviders.find(p => p.provider === selectedProviderForKey)?.name} API key
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="api-key">API Key</Label>
+              <Input
+                id="api-key"
+                type="password"
+                placeholder="Enter your API key..."
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+              />
+              <p className="text-xs text-gray-500">
+                Your API key will be stored securely and used only for test generation
+              </p>
+            </div>
+
+            {/* Provider-specific instructions */}
+            <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded">
+              <div className="font-medium mb-1">Where to get your API key:</div>
+              {selectedProviderForKey === 'gemini' && (
+                <p>Visit Google AI Studio (makersuite.google.com) to create an API key</p>
+              )}
+              {selectedProviderForKey === 'openai' && (
+                <p>Visit OpenAI Platform (platform.openai.com) → API Keys</p>
+              )}
+              {selectedProviderForKey === 'claude' && (
+                <p>Visit Anthropic Console (console.anthropic.com) → API Keys</p>
+              )}
+              {selectedProviderForKey === 'grok' && (
+                <p>Visit xAI Console (console.x.ai) → API Keys</p>
+              )}
+              {selectedProviderForKey === 'deepseek' && (
+                <p>Visit DeepSeek Platform (platform.deepseek.com) → API Keys (Free tier available)</p>
+              )}
+              {selectedProviderForKey === 'huggingface' && (
+                <p>Visit Hugging Face (huggingface.co) → Settings → Access Tokens (Free tier available)</p>
+              )}
+              {selectedProviderForKey === 'cohere' && (
+                <p>Visit Cohere Dashboard (dashboard.cohere.ai) → API Keys (Free tier available)</p>
+              )}
+              {selectedProviderForKey === 'mistral' && (
+                <p>Visit Mistral AI Console (console.mistral.ai) → API Keys</p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowApiKeyDialog(false);
+                  setApiKeyInput("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveApiKey}
+                disabled={updateApiKeyMutation.isPending || !apiKeyInput.trim()}
+              >
+                {updateApiKeyMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Key'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

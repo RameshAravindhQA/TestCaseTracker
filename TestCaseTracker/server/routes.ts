@@ -1427,6 +1427,88 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // AI API Key Management
+  apiRouter.get("/ai/api-keys", isAuthenticated, async (req, res) => {
+    try {
+      // Only return which keys are configured, not the actual keys
+      const keyStatus = {
+        gemini: !!process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-gemini-api-key',
+        openai: !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your-openai-api-key',
+        claude: !!process.env.CLAUDE_API_KEY && process.env.CLAUDE_API_KEY !== 'your-claude-api-key',
+        grok: !!process.env.GROK_API_KEY && process.env.GROK_API_KEY !== 'your-grok-api-key',
+        deepseek: !!process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !== 'your-deepseek-api-key',
+        huggingface: !!process.env.HUGGINGFACE_API_KEY && process.env.HUGGINGFACE_API_KEY !== 'your-huggingface-api-key',
+        cohere: !!process.env.COHERE_API_KEY && process.env.COHERE_API_KEY !== 'your-cohere-api-key',
+        mistral: !!process.env.MISTRAL_API_KEY && process.env.MISTRAL_API_KEY !== 'your-mistral-api-key'
+      };
+
+      res.json({
+        success: true,
+        keyStatus,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('❌ Get API keys status error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get API keys status',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  apiRouter.post("/ai/api-keys/:provider", isAuthenticated, async (req, res) => {
+    try {
+      const { provider } = req.params;
+      const { apiKey } = req.body;
+
+      if (!apiKey || typeof apiKey !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'API key is required'
+        });
+      }
+
+      // Map provider to environment variable name
+      const envVarMap: Record<string, string> = {
+        gemini: 'GOOGLE_API_KEY',
+        openai: 'OPENAI_API_KEY',
+        claude: 'CLAUDE_API_KEY',
+        grok: 'GROK_API_KEY',
+        deepseek: 'DEEPSEEK_API_KEY',
+        huggingface: 'HUGGINGFACE_API_KEY',
+        cohere: 'COHERE_API_KEY',
+        mistral: 'MISTRAL_API_KEY'
+      };
+
+      const envVarName = envVarMap[provider];
+      if (!envVarName) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid AI provider'
+        });
+      }
+
+      // Set environment variable (note: this only affects the current process)
+      process.env[envVarName] = apiKey;
+
+      res.json({
+        success: true,
+        message: `${provider} API key updated successfully`,
+        note: 'API key set for current session. For persistent storage, add to environment variables.',
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error(`❌ Update ${req.params.provider} API key error:`, error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update API key',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // AI Service Debug endpoint
   apiRouter.get("/ai/debug-status", isAuthenticated, async (req, res) => {
     try {
