@@ -174,11 +174,6 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
     {
-      name: "Analytics Dashboard",
-      href: "/dashboard/analytics",
-      icon: <BarChart3 className="h-5 w-5" />,
-    },
-    {
       name: "Projects",
       href: "/projects",
       icon: <FolderOpen className="h-5 w-5" />,

@@ -132,9 +132,6 @@ function Router() {
 
       {/* Protected routes */}
       <Route path="/dashboard" component={DashboardPage} />
-      <Route path="/dashboard/analytics">
-        <ProtectedComponent Component={AnalyticsDashboard} />
-      </Route>
       <Route path="/">
         <ProtectedComponent Component={DashboardPage} />
       </Route>
