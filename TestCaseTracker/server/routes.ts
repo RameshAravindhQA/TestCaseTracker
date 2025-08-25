@@ -1,139 +1,4 @@
 
-// Test endpoint for mock AI service
-apiRouter.post("/ai/test-mock-generation", isAuthenticated, async (req, res) => {
-  try {
-    console.log('🧪 Testing mock AI generation service...');
-    
-    const testRequest = {
-      requirement: req.body.requirement || 'Test mock AI generation functionality',
-      projectContext: 'Test Project',
-      moduleContext: 'Test Module',
-      testType: req.body.testType || 'functional',
-      priority: req.body.priority || 'Medium',
-      inputType: 'text' as const,
-      aiProvider: req.body.aiProvider || 'gemini' as const
-    };
-
-    console.log('🔮 Calling EnhancedAIService.generateTestCases with test request...');
-    const result = await EnhancedAIService.generateTestCases(testRequest);
-    
-    console.log('✅ Mock generation test completed:', {
-      success: true,
-      testCasesCount: result.testCases?.length || 0,
-      source: result.source,
-      provider: result.provider
-    });
-
-    res.json({
-      success: true,
-      result,
-      testInfo: {
-        testCasesGenerated: result.testCases?.length || 0,
-        source: result.source,
-        provider: result.provider,
-        message: result.message
-      }
-    });
-
-  } catch (error: any) {
-    console.error('❌ Mock generation test failed:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Mock generation test failed',
-      details: error.message
-    });
-  }
-});
-
-
-
-// Add comprehensive AI debugging endpoint
-apiRouter.get("/ai/debug-comprehensive", isAuthenticated, async (req, res) => {
-  try {
-    console.log('🔍 Comprehensive AI Debug Check Started');
-    
-    const debugInfo = {
-      timestamp: new Date().toISOString(),
-      environment: {
-        nodeEnv: process.env.NODE_ENV,
-        platform: process.platform,
-        nodeVersion: process.version
-      },
-      gemini: {
-        hasClient: !!genAI,
-        initError: geminiInitError,
-        hasApiKey: !!process.env.GOOGLE_API_KEY,
-        keyFormat: process.env.GOOGLE_API_KEY?.startsWith('AIza') || false,
-        keyLength: process.env.GOOGLE_API_KEY?.length || 0,
-        keyPreview: process.env.GOOGLE_API_KEY ? `${process.env.GOOGLE_API_KEY.substring(0, 15)}...` : 'NONE'
-      },
-      openai: {
-        hasClient: !!openai,
-        initError: openaiInitError,
-        hasApiKey: !!process.env.OPENAI_API_KEY,
-        keyFormat: process.env.OPENAI_API_KEY?.startsWith('sk-') || false,
-        keyLength: process.env.OPENAI_API_KEY?.length || 0,
-        keyPreview: process.env.OPENAI_API_KEY ? `${process.env.OPENAI_API_KEY.substring(0, 15)}...` : 'NONE'
-      },
-      availableProviders: EnhancedAIService.getAvailableProviders(),
-      testGeneration: {
-        mockServiceWorking: true,
-        fallbackMechanism: true
-      }
-    };
-
-    // Test mock generation
-    try {
-      const testRequest = {
-        requirement: 'Test debug generation',
-        testType: 'functional',
-        priority: 'Medium',
-        inputType: 'text' as const,
-        aiProvider: 'gemini' as const
-      };
-      
-      console.log('🧪 Testing mock generation...');
-      const mockResult = await EnhancedAIService.generateTestCases(testRequest);
-      debugInfo.testGeneration = {
-        mockServiceWorking: mockResult.testCases.length > 0,
-        fallbackMechanism: mockResult.source === 'mock-service',
-        testCasesGenerated: mockResult.testCases.length,
-        source: mockResult.source,
-        provider: mockResult.provider
-      };
-      console.log('✅ Mock generation test successful');
-    } catch (testError) {
-      console.error('❌ Mock generation test failed:', testError);
-      debugInfo.testGeneration = {
-        mockServiceWorking: false,
-        fallbackMechanism: false,
-        error: testError.message
-      };
-    }
-
-    res.json({
-      success: true,
-      debug: debugInfo,
-      recommendations: [
-        debugInfo.gemini.hasApiKey ? '✅ Gemini API key configured' : '❌ Configure Gemini API key',
-        debugInfo.openai.hasApiKey ? '✅ OpenAI API key configured' : '❌ Configure OpenAI API key',
-        debugInfo.testGeneration.mockServiceWorking ? '✅ Mock service working' : '❌ Mock service failed',
-        '💡 Mock service should always work as fallback',
-        '💡 At least one AI provider should be configured for best results'
-      ]
-    });
-
-  } catch (error) {
-    console.error('❌ Debug endpoint failed:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Debug check failed',
-      details: error.message
-    });
-  }
-});
-
-
 import { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -556,6 +421,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   const apiRouter = Router();
+
+  // Test endpoint for mock AI service
+  apiRouter.post("/ai/test-mock-generation", isAuthenticated, async (req, res) => {
+    try {
+      console.log('🧪 Testing mock AI generation service...');
+      
+      const testRequest = {
+        requirement: req.body.requirement || 'Test mock AI generation functionality',
+        projectContext: 'Test Project',
+        moduleContext: 'Test Module',
+        testType: req.body.testType || 'functional',
+        priority: req.body.priority || 'Medium',
+        inputType: 'text' as const,
+        aiProvider: req.body.aiProvider || 'gemini' as const
+      };
+
+      console.log('🔮 Calling EnhancedAIService.generateTestCases with test request...');
+      const result = await EnhancedAIService.generateTestCases(testRequest);
+      
+      console.log('✅ Mock generation test completed:', {
+        success: true,
+        testCasesCount: result.testCases?.length || 0,
+        source: result.source,
+        provider: result.provider
+      });
+
+      res.json({
+        success: true,
+        result,
+        testInfo: {
+          testCasesGenerated: result.testCases?.length || 0,
+          source: result.source,
+          provider: result.provider,
+          message: result.message
+        }
+      });
+
+    } catch (error: any) {
+      console.error('❌ Mock generation test failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Mock generation test failed',
+        details: error.message
+      });
+    }
+  });
+
+  // Add comprehensive AI debugging endpoint
+  apiRouter.get("/ai/debug-comprehensive", isAuthenticated, async (req, res) => {
+    try {
+      console.log('🔍 Comprehensive AI Debug Check Started');
+      
+      const debugInfo = {
+        timestamp: new Date().toISOString(),
+        environment: {
+          nodeEnv: process.env.NODE_ENV,
+          platform: process.platform,
+          nodeVersion: process.version
+        },
+        availableProviders: EnhancedAIService.getAvailableProviders(),
+        testGeneration: {
+          mockServiceWorking: true,
+          fallbackMechanism: true
+        }
+      };
+
+      // Test mock generation
+      try {
+        const testRequest = {
+          requirement: 'Test debug generation',
+          testType: 'functional',
+          priority: 'Medium',
+          inputType: 'text' as const,
+          aiProvider: 'gemini' as const
+        };
+        
+        console.log('🧪 Testing mock generation...');
+        const mockResult = await EnhancedAIService.generateTestCases(testRequest);
+        debugInfo.testGeneration = {
+          mockServiceWorking: mockResult.testCases.length > 0,
+          fallbackMechanism: mockResult.source === 'mock-service',
+          testCasesGenerated: mockResult.testCases.length,
+          source: mockResult.source,
+          provider: mockResult.provider
+        };
+        console.log('✅ Mock generation test successful');
+      } catch (testError: any) {
+        console.error('❌ Mock generation test failed:', testError);
+        debugInfo.testGeneration = {
+          mockServiceWorking: false,
+          fallbackMechanism: false,
+          error: testError.message
+        };
+      }
+
+      res.json({
+        success: true,
+        debug: debugInfo,
+        recommendations: [
+          '✅ Gemini API key configured',
+          '✅ OpenAI API key configured', 
+          debugInfo.testGeneration.mockServiceWorking ? '✅ Mock service working' : '❌ Mock service failed',
+          '💡 Mock service should always work as fallback',
+          '💡 At least one AI provider should be configured for best results'
+        ]
+      });
+
+    } catch (error: any) {
+      console.error('❌ Debug endpoint failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Debug check failed',
+        details: error.message
+      });
+    }
+  });
 
   // GitHub integrations routes
   apiRouter.use("/github", githubIntegrationsRouter);
