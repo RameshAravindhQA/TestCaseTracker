@@ -5596,7 +5596,8 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
-  apiRouter.delete("/notebooks/:id", isAuthenticated, async (req, res) => {    try {
+  apiRouter.delete("/notebooks/:id", isAuthenticated, async (req, res) => {
+    try {
       const notebookId = parseInt(req.params.id);
       const notebook = await storage.getNotebook(notebookId);
 
