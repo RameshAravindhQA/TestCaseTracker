@@ -1,641 +1,1367 @@
-
-import React, { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
-import { Settings, Key, Info, CheckCircle, XCircle, Loader2, Bot, Shield, Palette, User, Mail, Bell, Lock, Eye, EyeOff, Save, RefreshCw } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { 
+  Form, 
+  FormControl, 
+  FormDescription, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { 
+  CheckCircle2, 
+  Globe, 
+  Loader2, 
+  Lock, 
+  Mail, 
+  Palette, 
+  Save, 
+  Shield, 
+  Users2, 
+  Zap,
+  FileArchive,
+  Database,
+  Tag,
+  NotebookPen,
+  Volume2
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Badge } from "@/components/ui/badge";
+import { RolePermissions } from "@/components/settings/role-permissions";
+import { SoundSettings } from "@/components/settings/sound-settings";
+import { SoundTest } from '@/components/sound-test';
+import { cn } from "@/lib/utils";
 
-interface AIProvider {
-  provider: string;
-  name: string;
-  description: string;
-  keyFormat: string;
-  available: boolean;
-  error?: string;
-  isFree: boolean;
-}
-
-interface UserSettings {
-  notifications: {
-    email: boolean;
-    browser: boolean;
-    desktop: boolean;
-    sound: boolean;
+// Types
+interface SystemSettings {
+  id: number;
+  companyName: string;
+  companyLogo: string;
+  primaryColor: string;
+  secondaryColor: string;
+  emailSettings: {
+    smtpServer: string;
+    smtpPort: number;
+    smtpUsername: string;
+    smtpPassword: string;
+    senderEmail: string;
+    enableEmailNotifications: boolean;
   };
-  appearance: {
-    theme: string;
-    language: string;
-    fontSize: number;
-    animations: boolean;
+  backupSettings: {
+    enableAutomaticBackups: boolean;
+    backupFrequency: string;
+    backupLocation: string;
+    retentionPeriod: number;
   };
-  security: {
-    twoFactorAuth: boolean;
+  securitySettings: {
+    passwordPolicy: {
+      minLength: number;
+      requireUppercase: boolean;
+      requireLowercase: boolean;
+      requireNumbers: boolean;
+      requireSpecialChars: boolean;
+    };
     sessionTimeout: number;
-    loginNotifications: boolean;
+    enableTwoFactor: boolean;
+    allowedIpAddresses: string[];
   };
-  general: {
-    timezone: string;
-    dateFormat: string;
-    autoSave: boolean;
-    defaultProject: string;
+  testCaseSettings: {
+    defaultStatusOptions: string[];
+    defaultPriorityOptions: string[];
+    defaultView: string;
+    enableVersioning: boolean;
   };
 }
+
+// Default settings
+const defaultSettings: SystemSettings = {
+  id: 1,
+  companyName: "Test Case Tracker",
+  companyLogo: "/assets/logo.png",
+  primaryColor: "#3b82f6",
+  secondaryColor: "#10b981",
+  emailSettings: {
+    smtpServer: "smtp.example.com",
+    smtpPort: 587,
+    smtpUsername: "notifications@example.com",
+    smtpPassword: "",
+    senderEmail: "no-reply@example.com",
+    enableEmailNotifications: false,
+  },
+  backupSettings: {
+    enableAutomaticBackups: true,
+    backupFrequency: "daily",
+    backupLocation: "local",
+    retentionPeriod: 30,
+  },
+  securitySettings: {
+    passwordPolicy: {
+      minLength: 8,
+      requireUppercase: true,
+      requireLowercase: true,
+      requireNumbers: true,
+      requireSpecialChars: true,
+    },
+    sessionTimeout: 60,
+    enableTwoFactor: false,
+    allowedIpAddresses: [],
+  },
+  testCaseSettings: {
+    defaultStatusOptions: ["Not Run", "Pass", "Fail", "Blocked"],
+    defaultPriorityOptions: ["Low", "Medium", "High"],
+    defaultView: "list",
+    enableVersioning: true,
+  },
+};
+
+// Form schemas
+const generalSettingsSchema = z.object({
+  companyName: z.string().min(1, "Company name is required"),
+  companyLogo: z.string().optional(),
+  primaryColor: z.string().regex(/^#([0-9A-F]{6})$/i, "Must be a valid hex color"),
+  secondaryColor: z.string().regex(/^#([0-9A-F]{6})$/i, "Must be a valid hex color"),
+});
+
+const emailSettingsSchema = z.object({
+  smtpServer: z.string().min(1, "SMTP server is required"),
+  smtpPort: z.coerce.number().int().positive("Port must be a positive number"),
+  smtpUsername: z.string().min(1, "SMTP username is required"),
+  smtpPassword: z.string().optional(),
+  senderEmail: z.string().email("Must be a valid email address"),
+  enableEmailNotifications: z.boolean(),
+});
+
+const backupSettingsSchema = z.object({
+  enableAutomaticBackups: z.boolean(),
+  backupFrequency: z.string().min(1, "Backup frequency is required"),
+  backupLocation: z.string().min(1, "Backup location is required"),
+  retentionPeriod: z.coerce.number().int().positive("Retention period must be a positive number"),
+});
+
+const securitySettingsSchema = z.object({
+  passwordPolicy: z.object({
+    minLength: z.coerce.number().int().min(6, "Minimum length must be at least 6"),
+    requireUppercase: z.boolean(),
+    requireLowercase: z.boolean(),
+    requireNumbers: z.boolean(),
+    requireSpecialChars: z.boolean(),
+  }),
+  sessionTimeout: z.coerce.number().int().positive("Session timeout must be a positive number"),
+  enableTwoFactor: z.boolean(),
+  allowedIpAddresses: z.array(z.string()),
+});
+
+const testCaseSettingsSchema = z.object({
+  defaultStatusOptions: z.array(z.string()).min(1, "At least one status option is required"),
+  defaultPriorityOptions: z.array(z.string()).min(1, "At least one priority option is required"),
+  defaultView: z.string().min(1, "Default view is required"),
+  enableVersioning: z.boolean(),
+});
+
+type GeneralSettingsFormValues = z.infer<typeof generalSettingsSchema>;
+type EmailSettingsFormValues = z.infer<typeof emailSettingsSchema>;
+type BackupSettingsFormValues = z.infer<typeof backupSettingsSchema>;
+type SecuritySettingsFormValues = z.infer<typeof securitySettingsSchema>;
+type TestCaseSettingsFormValues = z.infer<typeof testCaseSettingsSchema>;
+
+interface FeaturePermission {
+  module: string;
+  feature: string;
+  view: boolean;
+  create: boolean;
+  update: boolean;
+  delete: boolean;
+}
+
+interface RolePermissions {
+  [key: string]: FeaturePermission[];
+}
+
+const defaultPermissions: RolePermissions = {
+  Admin: [
+    { module: "Projects", feature: "Project Management", view: true, create: true, update: true, delete: true },
+    { module: "Projects", feature: "Project Members", view: true, create: true, update: true, delete: true },
+    { module: "Test Cases", feature: "Test Case Management", view: true, create: true, update: true, delete: true },
+    { module: "Test Cases", feature: "Test Execution", view: true, create: true, update: true, delete: true },
+    { module: "Bug Reports", feature: "Bug Management", view: true, create: true, update: true, delete: true },
+    { module: "Bug Reports", feature: "Bug Assignment", view: true, create: true, update: true, delete: true },
+    { module: "Reports", feature: "Generate Reports", view: true, create: true, update: true, delete: true },
+    { module: "Reports", feature: "Export Data", view: true, create: true, update: true, delete: true },
+    { module: "Users", feature: "User Management", view: true, create: true, update: true, delete: true },
+    { module: "Settings", feature: "System Configuration", view: true, create: true, update: true, delete: true },
+    { module: "GitHub", feature: "GitHub Integration", view: true, create: true, update: true, delete: true },
+    { module: "Automation", feature: "Test Automation", view: true, create: true, update: true, delete: true },
+    { module: "Documents", feature: "Document Management", view: true, create: true, update: true, delete: true },
+    { module: "Timesheets", feature: "Time Tracking", view: true, create: true, update: true, delete: true },
+    { module: "Notebooks", feature: "Note Management", view: true, create: true, update: true, delete: true },
+  ],
+  Tester: [
+    { module: "Projects", feature: "Project Management", view: true, create: false, update: false, delete: false },
+    { module: "Projects", feature: "Project Members", view: true, create: false, update: false, delete: false },
+    { module: "Test Cases", feature: "Test Case Management", view: true, create: true, update: true, delete: false },
+    { module: "Test Cases", feature: "Test Execution", view: true, create: true, update: true, delete: false },
+    { module: "Bug Reports", feature: "Bug Management", view: true, create: true, update: true, delete: false },
+    { module: "Bug Reports", feature: "Bug Assignment", view: true, create: false, update: false, delete: false },
+    { module: "Reports", feature: "Generate Reports", view: true, create: true, update: false, delete: false },
+    { module: "Reports", feature: "Export Data", view: true, create: false, update: false, delete: false },
+    { module: "Users", feature: "User Management", view: false, create: false, update: false, delete: false },
+    { module: "Settings", feature: "System Configuration", view: false, create: false, update: false, delete: false },
+    { module: "GitHub", feature: "GitHub Integration", view: true, create: false, update: false, delete: false },
+    { module: "Automation", feature: "Test Automation", view: true, create: true, update: true, delete: false },
+    { module: "Documents", feature: "Document Management", view: true, create: true, update: true, delete: false },
+    { module: "Timesheets", feature: "Time Tracking", view: true, create: true, update: true, delete: false },
+    { module: "Notebooks", feature: "Note Management", view: true, create: true, update: true, delete: true },
+  ],
+  Developer: [
+    { module: "Projects", feature: "Project Management", view: true, create: false, update: true, delete: false },
+    { module: "Projects", feature: "Project Members", view: true, create: false, update: false, delete: false },
+    { module: "Test Cases", feature: "Test Case Management", view: true, create: false, update: true, delete: false },
+    { module: "Test Cases", feature: "Test Execution", view: true, create: false, update: true, delete: false },
+    { module: "Bug Reports", feature: "Bug Management", view: true, create: false, update: true, delete: false },
+    { module: "Bug Reports", feature: "Bug Assignment", view: true, create: false, update: true, delete: false },
+    { module: "Reports", feature: "Generate Reports", view: true, create: false, update: false, delete: false },
+    { module: "Reports", feature: "Export Data", view: true, create: false, update: false, delete: false },
+    { module: "Users", feature: "User Management", view: false, create: false, update: false, delete: false },
+    { module: "Settings", feature: "System Configuration", view: false, create: false, update: false, delete: false },
+    { module: "GitHub", feature: "GitHub Integration", view: true, create: true, update: true, delete: false },
+    { module: "Automation", feature: "Test Automation", view: true, create: true, update: true, delete: false },
+    { module: "Documents", feature: "Document Management", view: true, create: true, update: true, delete: false },
+    { module: "Timesheets", feature: "Time Tracking", view: true, create: true, update: true, delete: false },
+    { module: "Notebooks", feature: "Note Management", view: true, create: true, update: true, delete: true },
+  ],
+};
+
+// Animation variants
+const settingsContainerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      delayChildren: 0.3,
+      staggerChildren: 0.2,
+    },
+  },
+};
+
+const settingsCardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: "easeInOut",
+    },
+  },
+};
 
 export default function SettingsPage() {
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
-  const [userSettings, setUserSettings] = useState<UserSettings>({
-    notifications: {
-      email: true,
-      browser: true,
-      desktop: false,
-      sound: true,
-    },
-    appearance: {
-      theme: "light",
-      language: "en",
-      fontSize: 14,
-      animations: true,
-    },
-    security: {
-      twoFactorAuth: false,
-      sessionTimeout: 30,
-      loginNotifications: true,
-    },
-    general: {
-      timezone: "UTC",
-      dateFormat: "MM/DD/YYYY",
-      autoSave: true,
-      defaultProject: "none",
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("general");
+  const [rolePermissions, setRolePermissions] = useState<RolePermissions>(defaultPermissions);
+    const [selectedRole, setSelectedRole] = useState(Object.keys(defaultPermissions)[0]); // Initialize with the first role
+
+  // Fetch settings
+  const { data: settings, isLoading } = useQuery<SystemSettings>({
+    queryKey: ["/api/settings"],
+    initialData: defaultSettings, // Use default settings if API call fails
+  });
+
+  // General settings form
+  const generalForm = useForm<GeneralSettingsFormValues>({
+    resolver: zodResolver(generalSettingsSchema),
+    defaultValues: {
+      companyName: settings?.companyName || "",
+      companyLogo: settings?.companyLogo || "",
+      primaryColor: settings?.primaryColor || "#3b82f6",
+      secondaryColor: settings?.secondaryColor || "#10b981",
     },
   });
 
-  // Fetch available AI providers
-  const { data: providers = [], refetch: refetchProviders } = useQuery({
-    queryKey: ["ai-providers"],
-    queryFn: async (): Promise<AIProvider[]> => {
-      const response = await fetch("/api/ai/providers", {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error("Failed to fetch AI providers");
-      const data = await response.json();
-      return data.providers || [];
+  // Email settings form
+  const emailForm = useForm<EmailSettingsFormValues>({
+    resolver: zodResolver(emailSettingsSchema),
+    defaultValues: {
+      smtpServer: settings?.emailSettings.smtpServer || "",
+      smtpPort: settings?.emailSettings.smtpPort || 587,
+      smtpUsername: settings?.emailSettings.smtpUsername || "",
+      smtpPassword: settings?.emailSettings.smtpPassword || "",
+      senderEmail: settings?.emailSettings.senderEmail || "",
+      enableEmailNotifications: settings?.emailSettings.enableEmailNotifications || false,
     },
   });
 
-  // API Key management mutation
-  const updateAPIKeyMutation = useMutation({
-    mutationFn: async ({ provider, apiKey }: { provider: string; apiKey: string }) => {
-      const response = await fetch("/api/ai/update-key", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: 'include',
-        body: JSON.stringify({ provider, apiKey }),
-      });
-      if (!response.ok) throw new Error("Failed to update API key");
-      return response.json();
+  // Backup settings form
+  const backupForm = useForm<BackupSettingsFormValues>({
+    resolver: zodResolver(backupSettingsSchema),
+    defaultValues: {
+      enableAutomaticBackups: settings?.backupSettings.enableAutomaticBackups || true,
+      backupFrequency: settings?.backupSettings.backupFrequency || "daily",
+      backupLocation: settings?.backupSettings.backupLocation || "local",
+      retentionPeriod: settings?.backupSettings.retentionPeriod || 30,
     },
-    onSuccess: (data, variables) => {
+  });
+
+  // Security settings form
+  const securityForm = useForm<SecuritySettingsFormValues>({
+    resolver: zodResolver(securitySettingsSchema),
+    defaultValues: {
+      passwordPolicy: {
+        minLength: settings?.securitySettings.passwordPolicy.minLength || 8,
+        requireUppercase: settings?.securitySettings.passwordPolicy.requireUppercase || true,
+        requireLowercase: settings?.securitySettings.passwordPolicy.requireLowercase || true,
+        requireNumbers: settings?.securitySettings.passwordPolicy.requireNumbers || true,
+        requireSpecialChars: settings?.securitySettings.passwordPolicy.requireSpecialChars || true,
+      },
+      sessionTimeout: settings?.securitySettings.sessionTimeout || 60,
+      enableTwoFactor: settings?.securitySettings.enableTwoFactor || false,
+      allowedIpAddresses: settings?.securitySettings.allowedIpAddresses || [],
+    },
+  });
+
+  // Test case settings form
+  const testCaseForm = useForm<TestCaseSettingsFormValues>({
+    resolver: zodResolver(testCaseSettingsSchema),
+    defaultValues: {
+      defaultStatusOptions: settings?.testCaseSettings.defaultStatusOptions || ["Not Run", "Pass", "Fail", "Blocked"],
+      defaultPriorityOptions: settings?.testCaseSettings.defaultPriorityOptions || ["Low", "Medium", "High"],
+      defaultView: settings?.testCaseSettings.defaultView || "list",
+      enableVersioning: settings?.testCaseSettings.enableVersioning || true,
+    },
+  });
+
+  // Save settings mutation
+  const saveSettingsMutation = useMutation({
+    mutationFn: async (data: Partial<SystemSettings>) => {
+      const res = await apiRequest("PATCH", "/api/settings", data);
+      return res.json();
+    },
+    onSuccess: () => {
       toast({
-        title: "API Key Updated",
-        description: `${variables.provider} API key has been updated successfully.`,
+        title: "Settings saved",
+        description: "Your changes have been applied successfully",
       });
-      refetchProviders();
-      setApiKeys(prev => ({
-        ...prev,
-        [variables.provider]: ""
-      }));
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update API key",
+        description: "Failed to save settings: " + (error as Error).message,
         variant: "destructive",
       });
     },
   });
 
-  const handleUpdateAPIKey = (provider: string) => {
-    const apiKey = apiKeys[provider];
-    if (!apiKey?.trim()) {
-      toast({
-        title: "Invalid API Key",
-        description: "Please enter a valid API key.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    updateAPIKeyMutation.mutate({ provider, apiKey });
-  };
-
-  const handleSettingsUpdate = (section: keyof UserSettings, key: string, value: any) => {
-    setUserSettings(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [key]: value
-      }
-    }));
-    
-    toast({
-      title: "Settings Updated",
-      description: "Your settings have been saved successfully.",
+  // Save general settings
+  const handleSaveGeneralSettings = (data: GeneralSettingsFormValues) => {
+    saveSettingsMutation.mutate({
+      companyName: data.companyName,
+      companyLogo: data.companyLogo,
+      primaryColor: data.primaryColor,
+      secondaryColor: data.secondaryColor,
     });
   };
 
-  const getProviderIcon = (provider: AIProvider) => {
-    if (provider.available) {
-      return <CheckCircle className="h-5 w-5 text-green-500" />;
-    }
-    return <XCircle className="h-5 w-5 text-red-500" />;
+  // Save email settings
+  const handleSaveEmailSettings = (data: EmailSettingsFormValues) => {
+    saveSettingsMutation.mutate({
+      emailSettings: data,
+    });
   };
 
-  const getProviderBadge = (provider: AIProvider) => {
-    if (provider.available) {
-      return <Badge variant="secondary" className="bg-green-100 text-green-800">Configured</Badge>;
-    }
-    return <Badge variant="destructive">Not Configured</Badge>;
+  // Save backup settings
+  const handleSaveBackupSettings = (data: BackupSettingsFormValues) => {
+    saveSettingsMutation.mutate({
+      backupSettings: data,
+    });
   };
 
-  const getProviderInstructions = (provider: AIProvider) => {
-    const instructions: Record<string, string> = {
-      gemini: "Get your free API key from Google AI Studio: https://makersuite.google.com/app/apikey",
-      openai: "Get your API key from OpenAI Platform: https://platform.openai.com/api-keys",
-      claude: "Get your API key from Anthropic Console: https://console.anthropic.com/",
-      grok: "Get your API key from xAI Console: https://console.x.ai/",
-      deepseek: "Get your free API key from DeepSeek Platform: https://platform.deepseek.com/api_keys",
-      perplexity: "Get your API key from Perplexity AI: https://www.perplexity.ai/settings/api",
-      together: "Get your free API key from Together AI: https://api.together.xyz/settings/api-keys",
-      groq: "Get your free API key from Groq Console: https://console.groq.com/keys"
-    };
-    return instructions[provider.provider] || "Check the provider's documentation for API key instructions.";
+  // Save security settings
+  const handleSaveSecuritySettings = (data: SecuritySettingsFormValues) => {
+    saveSettingsMutation.mutate({
+      securitySettings: data,
+    });
   };
+
+  // Save test case settings
+  const handleSaveTestCaseSettings = (data: TestCaseSettingsFormValues) => {
+    saveSettingsMutation.mutate({
+      testCaseSettings: data,
+    });
+  };
+
+  // Test email configuration
+  const testEmailMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/settings/test-email", emailForm.getValues());
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Test email sent",
+        description: "A test email has been sent to the administrator",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to send test email: " + (error as Error).message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create manual backup
+  const createBackupMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/settings/create-backup", {});
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Backup created",
+        description: "A manual backup has been created successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to create backup: " + (error as Error).message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update form values when settings are loaded
+  useEffect(() => {
+    if (settings && !isLoading) {
+      generalForm.reset({
+        companyName: settings.companyName,
+        companyLogo: settings.companyLogo,
+        primaryColor: settings.primaryColor,
+        secondaryColor: settings.secondaryColor,
+      });
+
+      emailForm.reset({
+        smtpServer: settings.emailSettings.smtpServer,
+        smtpPort: settings.emailSettings.smtpPort,
+        smtpUsername: settings.emailSettings.smtpUsername,
+        smtpPassword: settings.emailSettings.smtpPassword,
+        senderEmail: settings.emailSettings.senderEmail,
+        enableEmailNotifications: settings.emailSettings.enableEmailNotifications,
+      });
+
+      backupForm.reset({
+        enableAutomaticBackups: settings.backupSettings.enableAutomaticBackups,
+        backupFrequency: settings.backupSettings.backupFrequency,
+        backupLocation: settings.backupSettings.backupLocation,
+        retentionPeriod: settings.backupSettings.retentionPeriod,
+      });
+
+      securityForm.reset({
+        passwordPolicy: {
+          minLength: settings.securitySettings.passwordPolicy.minLength,
+          requireUppercase: settings.securitySettings.passwordPolicy.requireUppercase,
+          requireLowercase: settings.securitySettings.passwordPolicy.requireLowercase,
+          requireNumbers: settings.securitySettings.passwordPolicy.requireNumbers,
+          requireSpecialChars: settings.securitySettings.passwordPolicy.requireSpecialChars,
+        },
+        sessionTimeout: settings.securitySettings.sessionTimeout,
+        enableTwoFactor: settings.securitySettings.enableTwoFactor,
+        allowedIpAddresses: settings.securitySettings.allowedIpAddresses,
+      });
+
+      testCaseForm.reset({
+        defaultStatusOptions: settings.testCaseSettings.defaultStatusOptions,
+        defaultPriorityOptions: settings.testCaseSettings.defaultPriorityOptions,
+        defaultView: settings.testCaseSettings.defaultView,
+        enableVersioning: settings.testCaseSettings.enableVersioning,
+      });
+    }
+  }, [settings, isLoading]);
+
+  const tabs = [
+    { id: "general", label: "General", icon: <Globe className="h-4 w-4 mr-2" /> },
+    { id: "email", label: "Email", icon: <Mail className="h-4 w-4 mr-2" /> },
+    { id: "backup", label: "Backup", icon: <FileArchive className="h-4 w-4 mr-2" /> },
+    { id: "security", label: "Security", icon: <Shield className="h-4 w-4 mr-2" /> },
+    { id: "test-case", label: "Test Cases", icon: <NotebookPen className="h-4 w-4 mr-2" /> },
+    { id: "permissions", label: "Permissions", icon: <Users2 className="h-4 w-4 mr-2" /> },
+    { id: "sound", label: "Sound", icon: <Volume2 className="h-4 w-4 mr-2" /> },
+  ];
+
+  // Define settings sections
+  const settingSections = [
+    { id: "general", label: "General", icon: Globe },
+    { id: "email", label: "Email", icon: Mail },
+    { id: "backup", label: "Backup", icon: FileArchive },
+    { id: "security", label: "Security", icon: Shield },
+    { id: "test-case", label: "Test Cases", icon: NotebookPen },
+        { id: "permissions", label: "Permissions", icon: Users2 },
+        { id: "sound", label: "Sound", icon: Volume2 },
+  ];
+
+  const [activeSection, setActiveSection] = useState(settingSections[0].id);
+
+  const renderSettingsContent = () => {
+    switch (activeSection) {
+      case "general":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Globe className="h-5 w-5 mr-2" />
+                General Settings
+              </CardTitle>
+              <CardDescription>
+                Configure basic application information and appearance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...generalForm}>
+                <form onSubmit={generalForm.handleSubmit(handleSaveGeneralSettings)} className="space-y-6">
+                  <FormField
+                    control={generalForm.control}
+                    name="companyName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter company name" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          This will be displayed in the application header and emails
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={generalForm.control}
+                    name="companyLogo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Logo URL</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter logo URL" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          URL to your company logo image
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={generalForm.control}
+                      name="primaryColor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Primary Color</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <FormControl>
+                              <Input placeholder="#3b82f6" {...field} />
+                            </FormControl>
+                            <div
+                              className="w-8 h-8 rounded-full border"
+                              style={{ backgroundColor: field.value }}
+                            ></div>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={generalForm.control}
+                      name="secondaryColor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Secondary Color</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <FormControl>
+                              <Input placeholder="#10b981" {...field} />
+                            </FormControl>
+                            <div
+                              className="w-8 h-8 rounded-full border"
+                              style={{ backgroundColor: field.value }}
+                            ></div>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      className="flex items-center gap-2"
+                      disabled={saveSettingsMutation.isPending}
+                    >
+                      {saveSettingsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save Settings
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        );
+
+      case "email":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Mail className="h-5 w-5 mr-2" />
+                Email Settings
+              </CardTitle>
+              <CardDescription>
+                Configure email server settings for notifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...emailForm}>
+                <form onSubmit={emailForm.handleSubmit(handleSaveEmailSettings)} className="space-y-6">
+                  <FormField
+                    control={emailForm.control}
+                    name="enableEmailNotifications"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Email Notifications</FormLabel>
+                          <FormDescription>
+                            Enable or disable email notifications
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={emailForm.control}
+                      name="smtpServer"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>SMTP Server</FormLabel>
+                          <FormControl>
+                            <Input placeholder="smtp.example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={emailForm.control}
+                      name="smtpPort"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>SMTP Port</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="587" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={emailForm.control}
+                      name="smtpUsername"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>SMTP Username</FormLabel>
+                          <FormControl>
+                            <Input placeholder="username" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={emailForm.control}
+                      name="smtpPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>SMTP Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={emailForm.control}
+                    name="senderEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sender Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="no-reply@example.com" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Email address that will appear as the sender
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex justify-between">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex items-center gap-2"
+                      onClick={() => testEmailMutation.mutate()}
+                      disabled={testEmailMutation.isPending}
+                    >
+                      {testEmailMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Mail className="h-4 w-4" />
+                      )}
+                      Test Configuration
+                    </Button>
+
+                    <Button
+                      type="submit"
+                      className="flex items-center gap-2"
+                      disabled={saveSettingsMutation.isPending}
+                    >
+                      {saveSettingsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save Settings
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        );
+
+      case "backup":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileArchive className="h-5 w-5 mr-2" />
+                Backup & Recovery
+              </CardTitle>
+              <CardDescription>
+                Configure automatic backup settings and manage data recovery
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...backupForm}>
+                <form onSubmit={backupForm.handleSubmit(handleSaveBackupSettings)} className="space-y-6">
+                  <FormField
+                    control={backupForm.control}
+                    name="enableAutomaticBackups"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Automatic Backups</FormLabel>
+                          <FormDescription>
+                            Enable or disable scheduled automatic backups
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={backupForm.control}
+                      name="backupFrequency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Backup Frequency</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select frequency" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="hourly">Hourly</SelectItem>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={backupForm.control}
+                      name="backupLocation"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Backup Location</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select location" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="local">Local Storage</SelectItem>
+                              <SelectItem value="s3">Amazon S3</SelectItem>
+                              <SelectItem value="gcs">Google Cloud Storage</SelectItem>
+                              <SelectItem value="azure">Azure Blob Storage</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                      <FormField
+                        control={backupForm.control}
+                        name="retentionPeriod"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Retention Period (Days)</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Number of days to keep backup files before automatic deletion
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex justify-between">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex items-center gap-2"
+                          onClick={() => createBackupMutation.mutate()}
+                          disabled={createBackupMutation.isPending}
+                        >
+                          {createBackupMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Database className="h-4 w-4" />
+                          )}
+                          Create Manual Backup
+                        </Button>
+
+                        <Button
+                          type="submit"
+                          className="flex items-center gap-2"
+                          disabled={saveSettingsMutation.isPending}
+                        >
+                          {saveSettingsMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4" />
+                          )}
+                          Save Settings
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            );
+
+      case "security":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Shield className="h-5 w-5 mr-2" />
+                Security Settings
+              </CardTitle>
+              <CardDescription>
+                Configure security policies and authentication settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...securityForm}>
+                <form onSubmit={securityForm.handleSubmit(handleSaveSecuritySettings)} className="space-y-6">
+                  <div>
+                    <h3 className="text-md font-medium mb-2">Password Policy</h3>
+                    <div className="space-y-4 border rounded-md p-4">
+                      <FormField
+                        control={securityForm.control}
+                        name="passwordPolicy.minLength"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Minimum Password Length</FormLabel>
+                            <FormControl>
+                              <Input type="number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={securityForm.control}
+                          name="passwordPolicy.requireUppercase"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel>Require uppercase letters</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={securityForm.control}
+                          name="passwordPolicy.requireLowercase"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel>Require lowercase letters</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={securityForm.control}
+                          name="passwordPolicy.requireNumbers"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel>Require numbers</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={securityForm.control}
+                          name="passwordPolicy.requireSpecialChars"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel>Require special characters</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={securityForm.control}
+                      name="sessionTimeout"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Session Timeout (minutes)</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Time before users are automatically logged out
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={securityForm.control}
+                      name="enableTwoFactor"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Two-Factor Authentication</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <span>
+                              {field.value ? "Enabled" : "Disabled"}
+                            </span>
+                          </div>
+                          <FormDescription>
+                            Require two-factor authentication for all users
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      className="flex items-center gap-2"
+                      disabled={saveSettingsMutation.isPending}
+                    >
+                      {saveSettingsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save Settings
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        );
+
+      case "test-case":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <NotebookPen className="h-5 w-5 mr-2" />
+                Test Case Settings
+              </CardTitle>
+              <CardDescription>
+                Configure test case management settings and defaults
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...testCaseForm}>
+                <form onSubmit={testCaseForm.handleSubmit(handleSaveTestCaseSettings)} className="space-y-6">
+                  <FormField
+                    control={testCaseForm.control}
+                    name="defaultStatusOptions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Default Status Options</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Not Run, Pass, Fail, Blocked"
+                            value={field.value.join(", ")}
+                            onChange={(e) => {
+                              const values = e.target.value.split(",").map(v => v.trim()).filter(Boolean);
+                              field.onChange(values);
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Comma-separated list of test case status options
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={testCaseForm.control}
+                    name="defaultPriorityOptions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Default Priority Options</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Low, Medium, High"
+                            value={field.value.join(", ")}
+                            onChange={(e) => {
+                              const values = e.target.value.split(",").map(v => v.trim()).filter(Boolean);
+                              field.onChange(values);
+                            }}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Comma-separated list of test case priority options
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={testCaseForm.control}
+                      name="defaultView"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Default View</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select default view" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="list">List View</SelectItem>
+                              <SelectItem value="grid">Grid View</SelectItem>
+                              <SelectItem value="table">Table View</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={testCaseForm.control}
+                      name="enableVersioning"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Version Control</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <span>
+                              {field.value ? "Enabled" : "Disabled"}
+                            </span>
+                          </div>
+                          <FormDescription>
+                            Track test case version history
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      className="flex items-center gap-2"
+                      disabled={saveSettingsMutation.isPending}
+                    >
+                      {saveSettingsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Save Settings
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        );
+        case "permissions":
+          return (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Users2 className="h-5 w-5 mr-2" />
+                  Role-Based Permissions
+                </CardTitle>
+                <CardDescription>
+                  Configure what actions each role can perform in the system
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RolePermissions
+                  rolePermissions={rolePermissions}
+                  setRolePermissions={setRolePermissions}
+                  selectedRole={selectedRole}
+                  setSelectedRole={setSelectedRole}
+                />
+              </CardContent>
+            </Card>
+          );
+      case "sound":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sound Settings</CardTitle>
+              <CardDescription>
+                Configure application sound settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <SoundSettings />
+                <SoundTest />
+              </div>
+            </CardContent>
+          </Card>
+        );
+      default:
+        return <div>Select a settings category</div>;
+    }
+  };
+
+
+
 
   return (
     <MainLayout>
-      <div className="flex h-screen">
-        {/* Left Sidebar */}
-        <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center space-x-2">
-              <Settings className="h-6 w-6 text-blue-600" />
-              <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
+      <div className="container mx-auto py-6 px-4 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
+        <div className="h-full overflow-y-auto py-6 px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">System Settings</h1>
+              <p className="text-gray-600">Configure application settings and preferences</p>
             </div>
-            <p className="text-sm text-gray-600 mt-1">Configure your preferences</p>
           </div>
 
-          <nav className="flex-1 p-4 space-y-2">
-            <div className="space-y-1">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Configuration</h3>
-              <a href="#ai-providers" className="flex items-center space-x-3 px-3 py-2 text-sm text-blue-600 bg-blue-50 rounded-lg">
-                <Bot className="h-4 w-4" />
-                <span>AI Providers</span>
-              </a>
-              <a href="#security" className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                <Shield className="h-4 w-4" />
-                <span>Security</span>
-              </a>
-              <a href="#appearance" className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                <Palette className="h-4 w-4" />
-                <span>Appearance</span>
-              </a>
-              <a href="#general" className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                <Settings className="h-4 w-4" />
-                <span>General</span>
-              </a>
-            </div>
+        {/* Settings Navigation and Content */}
+        <motion.div 
+          variants={settingsContainerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 lg:grid-cols-4 gap-6"
+        >
+          {/* Settings Navigation */}
+          <motion.div variants={settingsCardVariants}>
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="text-lg">Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 max-h-[600px] overflow-y-auto">
+              <nav className="space-y-1">
+                <AnimatePresence>
+                  {settingSections.map((section, index) => (
+                    <motion.button
+                      key={section.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1, duration: 0.4 }}
+                      whileHover={{ 
+                        x: 5, 
+                        scale: 1.02,
+                        transition: { duration: 0.2 } 
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setActiveSection(section.id)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium rounded-lg transition-all duration-200",
+                        activeSection === section.id
+                          ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      )}
+                    >
+                      <motion.div
+                        animate={activeSection === section.id ? { rotate: 360 } : { rotate: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <section.icon className="h-4 w-4" />
+                      </motion.div>
+                      {section.label}
+                    </motion.button>
+                  ))}
+                </AnimatePresence>
+              </nav>
+</CardContent>
+            </Card>
+          </motion.div>
 
-            <div className="space-y-1 pt-4">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Account</h3>
-              <a href="#profile" className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                <User className="h-4 w-4" />
-                <span>Profile</span>
-              </a>
-              <a href="#notifications" className="flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                <Bell className="h-4 w-4" />
-                <span>Notifications</span>
-              </a>
-            </div>
-          </nav>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 overflow-auto">
-          <div className="p-6 space-y-6">
-            <div className="flex items-center space-x-2">
-              <Settings className="h-8 w-8" />
-              <div>
-                <h1 className="text-3xl font-bold">Settings</h1>
-                <p className="text-gray-600">Configure your TestCaseTracker preferences and integrations</p>
-              </div>
-            </div>
-
-            <Tabs defaultValue="ai-providers" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="ai-providers" className="flex items-center space-x-2">
-                  <Bot className="h-4 w-4" />
-                  <span>AI Providers</span>
-                </TabsTrigger>
-                <TabsTrigger value="security" className="flex items-center space-x-2">
-                  <Shield className="h-4 w-4" />
-                  <span>Security</span>
-                </TabsTrigger>
-                <TabsTrigger value="appearance" className="flex items-center space-x-2">
-                  <Palette className="h-4 w-4" />
-                  <span>Appearance</span>
-                </TabsTrigger>
-                <TabsTrigger value="general" className="flex items-center space-x-2">
-                  <Settings className="h-4 w-4" />
-                  <span>General</span>
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="ai-providers" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Bot className="h-6 w-6" />
-                      <span>AI Provider Configuration</span>
-                    </CardTitle>
-                    <p className="text-gray-600">
-                      Configure API keys for various AI providers to enable intelligent test case generation.
-                      Free providers are marked with a green badge.
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-6">
-                      {providers.map((provider) => (
-                        <Card key={provider.provider} className="border-2">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                {getProviderIcon(provider)}
-                                <div>
-                                  <CardTitle className="text-lg flex items-center space-x-2">
-                                    <span>{provider.name}</span>
-                                    {provider.isFree && (
-                                      <Badge variant="outline" className="text-green-600 border-green-600">
-                                        Free
-                                      </Badge>
-                                    )}
-                                  </CardTitle>
-                                  <p className="text-sm text-gray-600 mt-1">{provider.description}</p>
-                                </div>
-                              </div>
-                              {getProviderBadge(provider)}
-                            </div>
-                          </CardHeader>
-                          <CardContent className="space-y-4">
-                            <div>
-                              <Label htmlFor={`${provider.provider}-key`} className="text-sm font-medium">
-                                API Key
-                                <span className="text-gray-500 ml-1">({provider.keyFormat})</span>
-                              </Label>
-                              <div className="flex space-x-2 mt-2">
-                                <Input
-                                  id={`${provider.provider}-key`}
-                                  type="password"
-                                  placeholder={`Enter ${provider.name} API key`}
-                                  value={apiKeys[provider.provider] || ""}
-                                  onChange={(e) => setApiKeys(prev => ({
-                                    ...prev,
-                                    [provider.provider]: e.target.value
-                                  }))}
-                                  className="flex-1"
-                                />
-                                <Button
-                                  onClick={() => handleUpdateAPIKey(provider.provider)}
-                                  disabled={updateAPIKeyMutation.isPending}
-                                  size="sm"
-                                  className="shrink-0"
-                                >
-                                  {updateAPIKeyMutation.isPending ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <>
-                                      <Key className="h-4 w-4 mr-1" />
-                                      Update
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-
-                            <div className="flex items-start space-x-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                              <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
-                              <div className="text-sm text-blue-700">
-                                <p className="font-medium mb-1">How to get your API key:</p>
-                                <p>{getProviderInstructions(provider)}</p>
-                              </div>
-                            </div>
-
-                            {provider.error && (
-                              <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                <XCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
-                                <div className="text-sm text-red-700">
-                                  <p className="font-medium mb-1">Configuration Error:</p>
-                                  <p>{provider.error}</p>
-                                </div>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="security" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Shield className="h-6 w-6" />
-                      <span>Security Settings</span>
-                    </CardTitle>
-                    <p className="text-gray-600">Manage your account security and privacy settings</p>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="text-base font-medium">Two-Factor Authentication</Label>
-                          <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
-                        </div>
-                        <Switch
-                          checked={userSettings.security.twoFactorAuth}
-                          onCheckedChange={(checked) => handleSettingsUpdate('security', 'twoFactorAuth', checked)}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-base font-medium">Session Timeout (minutes)</Label>
-                        <p className="text-sm text-gray-600">Automatically log out after period of inactivity</p>
-                        <Select
-                          value={userSettings.security.sessionTimeout.toString()}
-                          onValueChange={(value) => handleSettingsUpdate('security', 'sessionTimeout', parseInt(value))}
-                        >
-                          <SelectTrigger className="w-48">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="15">15 minutes</SelectItem>
-                            <SelectItem value="30">30 minutes</SelectItem>
-                            <SelectItem value="60">1 hour</SelectItem>
-                            <SelectItem value="120">2 hours</SelectItem>
-                            <SelectItem value="480">8 hours</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="text-base font-medium">Login Notifications</Label>
-                          <p className="text-sm text-gray-600">Get notified when someone logs into your account</p>
-                        </div>
-                        <Switch
-                          checked={userSettings.security.loginNotifications}
-                          onCheckedChange={(checked) => handleSettingsUpdate('security', 'loginNotifications', checked)}
-                        />
-                      </div>
-
-                      <div className="pt-4 border-t">
-                        <Button variant="outline" className="mr-2">
-                          <Lock className="h-4 w-4 mr-2" />
-                          Change Password
-                        </Button>
-                        <Button variant="outline">
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Reset All Sessions
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="appearance" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Palette className="h-6 w-6" />
-                      <span>Appearance Settings</span>
-                    </CardTitle>
-                    <p className="text-gray-600">Customize how TestCaseTracker looks and feels</p>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-base font-medium">Theme</Label>
-                        <p className="text-sm text-gray-600">Choose your preferred theme</p>
-                        <Select
-                          value={userSettings.appearance.theme}
-                          onValueChange={(value) => handleSettingsUpdate('appearance', 'theme', value)}
-                        >
-                          <SelectTrigger className="w-48">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="light">Light</SelectItem>
-                            <SelectItem value="dark">Dark</SelectItem>
-                            <SelectItem value="system">System</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-base font-medium">Language</Label>
-                        <p className="text-sm text-gray-600">Select your preferred language</p>
-                        <Select
-                          value={userSettings.appearance.language}
-                          onValueChange={(value) => handleSettingsUpdate('appearance', 'language', value)}
-                        >
-                          <SelectTrigger className="w-48">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="en">English</SelectItem>
-                            <SelectItem value="es">Spanish</SelectItem>
-                            <SelectItem value="fr">French</SelectItem>
-                            <SelectItem value="de">German</SelectItem>
-                            <SelectItem value="zh">Chinese</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-base font-medium">Font Size</Label>
-                        <p className="text-sm text-gray-600">Adjust the interface font size</p>
-                        <div className="w-48">
-                          <Slider
-                            value={[userSettings.appearance.fontSize]}
-                            onValueChange={(value) => handleSettingsUpdate('appearance', 'fontSize', value[0])}
-                            max={20}
-                            min={10}
-                            step={1}
-                            className="w-full"
-                          />
-                          <div className="flex justify-between text-xs text-gray-500 mt-1">
-                            <span>Small</span>
-                            <span>{userSettings.appearance.fontSize}px</span>
-                            <span>Large</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="text-base font-medium">Animations</Label>
-                          <p className="text-sm text-gray-600">Enable smooth animations and transitions</p>
-                        </div>
-                        <Switch
-                          checked={userSettings.appearance.animations}
-                          onCheckedChange={(checked) => handleSettingsUpdate('appearance', 'animations', checked)}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="general" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Settings className="h-6 w-6" />
-                      <span>General Settings</span>
-                    </CardTitle>
-                    <p className="text-gray-600">Configure general application preferences</p>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-base font-medium">Timezone</Label>
-                        <p className="text-sm text-gray-600">Set your preferred timezone</p>
-                        <Select
-                          value={userSettings.general.timezone}
-                          onValueChange={(value) => handleSettingsUpdate('general', 'timezone', value)}
-                        >
-                          <SelectTrigger className="w-64">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="UTC">UTC</SelectItem>
-                            <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                            <SelectItem value="America/Chicago">Central Time</SelectItem>
-                            <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                            <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                            <SelectItem value="Europe/London">London</SelectItem>
-                            <SelectItem value="Europe/Paris">Paris</SelectItem>
-                            <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
-                            <SelectItem value="Asia/Kolkata">India</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-base font-medium">Date Format</Label>
-                        <p className="text-sm text-gray-600">Choose how dates are displayed</p>
-                        <Select
-                          value={userSettings.general.dateFormat}
-                          onValueChange={(value) => handleSettingsUpdate('general', 'dateFormat', value)}
-                        >
-                          <SelectTrigger className="w-48">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                            <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                            <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                            <SelectItem value="DD MMM YYYY">DD MMM YYYY</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="text-base font-medium">Auto-Save</Label>
-                          <p className="text-sm text-gray-600">Automatically save changes as you work</p>
-                        </div>
-                        <Switch
-                          checked={userSettings.general.autoSave}
-                          onCheckedChange={(checked) => handleSettingsUpdate('general', 'autoSave', checked)}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-base font-medium">Default Project</Label>
-                        <p className="text-sm text-gray-600">Set a default project for new test cases</p>
-                        <Select
-                          value={userSettings.general.defaultProject}
-                          onValueChange={(value) => handleSettingsUpdate('general', 'defaultProject', value)}
-                        >
-                          <SelectTrigger className="w-64">
-                            <SelectValue placeholder="Select default project" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No default project</SelectItem>
-                            <SelectItem value="1">Current Project</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Notification Preferences</CardTitle>
-                    <p className="text-gray-600">Choose how you want to be notified</p>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-base font-medium">Email Notifications</Label>
-                        <p className="text-sm text-gray-600">Receive updates via email</p>
-                      </div>
-                      <Switch
-                        checked={userSettings.notifications.email}
-                        onCheckedChange={(checked) => handleSettingsUpdate('notifications', 'email', checked)}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-base font-medium">Browser Notifications</Label>
-                        <p className="text-sm text-gray-600">Show notifications in your browser</p>
-                      </div>
-                      <Switch
-                        checked={userSettings.notifications.browser}
-                        onCheckedChange={(checked) => handleSettingsUpdate('notifications', 'browser', checked)}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-base font-medium">Sound Notifications</Label>
-                        <p className="text-sm text-gray-600">Play sounds for important events</p>
-                      </div>
-                      <Switch
-                        checked={userSettings.notifications.sound}
-                        onCheckedChange={(checked) => handleSettingsUpdate('notifications', 'sound', checked)}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
+          {/* Settings Content */}
+          <motion.div 
+            variants={settingsCardVariants}
+            className="lg:col-span-3"
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSection}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
+              >
+                {renderSettingsContent()}
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+        </motion.div>
         </div>
       </div>
     </MainLayout>
