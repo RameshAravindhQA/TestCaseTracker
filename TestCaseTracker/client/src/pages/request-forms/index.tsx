@@ -65,6 +65,9 @@ function RequestFormsPageContent() {
       if (!res.ok) throw new Error("Failed to fetch requests");
       return res.json();
     },
+    suspense: false,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch request form types
@@ -75,6 +78,9 @@ function RequestFormsPageContent() {
       if (!res.ok) throw new Error("Failed to fetch request types");
       return res.json();
     },
+    suspense: false,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch projects for filtering
@@ -85,6 +91,9 @@ function RequestFormsPageContent() {
       if (!res.ok) throw new Error("Failed to fetch projects");
       return res.json();
     },
+    suspense: false,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch employees for lead selection
@@ -95,6 +104,9 @@ function RequestFormsPageContent() {
       if (!res.ok) throw new Error("Failed to fetch employees");
       return res.json();
     },
+    suspense: false,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   // Create/Update request mutation
@@ -230,6 +242,18 @@ function RequestFormsPageContent() {
     }).length
   };
 
+  // Show loading while essential data is being fetched
+  if (requestsLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+          <p className="ml-4">Loading request forms...</p>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="container mx-auto p-6 space-y-6">
@@ -247,7 +271,11 @@ function RequestFormsPageContent() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={(value) => {
+          startTransition(() => {
+            setActiveTab(value);
+          });
+        }}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" />
@@ -377,10 +405,8 @@ function RequestFormsPageContent() {
                       <Button
                         className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                         onClick={() => {
-                          startTransition(() => {
-                            setEditingRequest(null);
-                            setIsFormDialogOpen(true);
-                          });
+                          setEditingRequest(null);
+                          setIsFormDialogOpen(true);
                         }}
                       >
                         <Plus className="h-4 w-4 mr-2" />

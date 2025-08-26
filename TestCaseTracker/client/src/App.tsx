@@ -1,4 +1,4 @@
-import React, { lazy, ComponentType, Suspense, useEffect, useState } from 'react';
+import React, { lazy, ComponentType, Suspense, useEffect, useState, startTransition } from 'react';
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -231,7 +231,9 @@ function Router() {
       <Route path="/automation">
         <ProtectedLazyComponent Component={lazy(() => import("./pages/automation"))} />
       </Route>
-      <Route path="/request-forms" component={lazy(() => import("./pages/request-forms"))} />
+      <Route path="/request-forms">
+        <ProtectedLazyComponent Component={lazy(() => import("./pages/request-forms"))} />
+      </Route>
       <Route path="/notifications" component={lazy(() => import("./pages/notifications"))} />
 
 
