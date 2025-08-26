@@ -234,7 +234,9 @@ function Router() {
       <Route path="/request-forms">
         <ProtectedLazyComponent Component={lazy(() => import("./pages/request-forms"))} />
       </Route>
-      <Route path="/notifications" component={lazy(() => import("./pages/notifications"))} />
+      <Route path="/notifications">
+        <ProtectedLazyComponent Component={lazy(() => import("./pages/notifications"))} />
+      </Routes/notifications"))} />
 
 
       {/* Catch-all 404 route - make sure this is last */}

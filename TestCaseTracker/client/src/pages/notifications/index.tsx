@@ -1,7 +1,6 @@
-
-import React, { useState, startTransition } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Bell, CheckCircle, Clock, FileText, User, X } from "lucide-react";
+import React, { useState, startTransition, Suspense } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Bell, CheckCircle, Clock, FileText, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,8 +10,41 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "wouter";
+import { ErrorBoundary } from "react-error-boundary";
 
-export default function NotificationsPage() {
+// Fallback component for loading state
+function LoadingFallback() {
+  return (
+    <MainLayout>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-500">Loading notifications...</p>
+          </div>
+        </div>
+      </div>
+    </MainLayout>
+  );
+}
+
+// Fallback component for error state
+function ErrorFallback({ error, resetErrorBoundary }) {
+  return (
+    <MainLayout>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px] flex-col gap-4">
+          <p className="text-red-500">Something went wrong with notifications:</p>
+          <pre className="text-red-700">{error.message}</pre>
+          <Button onClick={resetErrorBoundary}>Try again</Button>
+        </div>
+      </div>
+    </MainLayout>
+  );
+}
+
+// Component content
+function NotificationsPageContent() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedNotification, setSelectedNotification] = useState<any>(null);
@@ -66,7 +98,7 @@ export default function NotificationsPage() {
     startTransition(() => {
       setSelectedNotification(notification);
       setIsDetailsOpen(true);
-      
+
       // Mark as read if unread
       if (!notification.read) {
         markAsReadMutation.mutate(notification.id);
@@ -223,7 +255,7 @@ export default function NotificationsPage() {
                     {selectedNotification.message}
                   </p>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium">Type:</span>
@@ -246,13 +278,13 @@ export default function NotificationsPage() {
                     </Link>
                   </div>
                 )}
-                
+
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={handleCloseDialog}>
                     Close
                   </Button>
                   {!selectedNotification.read && (
-                    <Button 
+                    <Button
                       onClick={() => markAsReadMutation.mutate(selectedNotification.id)}
                       disabled={markAsReadMutation.isPending}
                     >
@@ -266,5 +298,16 @@ export default function NotificationsPage() {
         </Dialog>
       </div>
     </MainLayout>
+  );
+}
+
+
+export default function NotificationsPage() {
+  return (
+    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
+      <Suspense fallback={<LoadingFallback />}>
+        <NotificationsPageContent />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
