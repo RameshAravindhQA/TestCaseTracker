@@ -108,6 +108,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   // Generated test cases and selection
   const [generatedTestCases, setGeneratedTestCases] = useState<GeneratedTestCase[]>([]);
   const [selectedTestCases, setSelectedTestCases] = useState<Set<number>>(new Set());
+  const [selectedModuleId, setSelectedModuleId] = useState<number | undefined>();
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
 
   // AI Provider selection state is now managed within formData
   const [showResults, setShowResults] = useState(false);
