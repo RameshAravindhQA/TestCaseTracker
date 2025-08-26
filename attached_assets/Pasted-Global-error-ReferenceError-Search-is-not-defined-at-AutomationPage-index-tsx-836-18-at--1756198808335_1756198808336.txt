@@ -1,0 +1,21 @@
+Global error: ReferenceError: Search is not defined
+    at AutomationPage (index.tsx:836:18)
+    at renderWithHooks (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:11548:26)
+    at updateFunctionComponent (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:14582:28)
+    at mountLazyComponent (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:14833:23)
+    at beginWork (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:15918:22)
+    at HTMLUnknownElement.callCallback2 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:3674:22)
+    at Object.invokeGuardedCallbackDev (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:3699:24)
+    at invokeGuardedCallback (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:3733:39)
+    at beginWork$1 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:19765:15)
+    at performUnitOfWork (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:19198:20)
+(anonymous) @ main.tsx:15Understand this error
+index.tsx:836 Uncaught ReferenceError: Search is not defined
+    at AutomationPage (index.tsx:836:18)
+    at renderWithHooks (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:11548:26)
+    at updateFunctionComponent (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:14582:28)
+    at mountLazyComponent (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:14833:23)
+    at beginWork (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:15918:22)
+    at HTMLUnknownElement.callCallback2 (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:3674:22)
+    at Object.invokeGuardedCallbackDev (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b:3699:24)
+    at invokeGuardedCallback (@fs/home/runner/workspace/TestCaseTracker/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=9513ae3b
