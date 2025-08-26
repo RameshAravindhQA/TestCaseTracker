@@ -281,6 +281,10 @@ export class EnhancedAIService {
           const result = await EnhancedAIService.generateWithOpenAI(request);
           console.log(`✅ Successfully generated with OpenAI: ${result.testCases.length} test cases`);
           return result;
+        } else if (provider === 'grok') {
+          const result = await EnhancedAIService.generateWithGrok(request);
+          console.log(`✅ Successfully generated with GROK: ${result.testCases.length} test cases`);
+          return result;
         }
       } catch (error: any) {
         console.error(`❌ Requested provider ${provider} failed:`, {
@@ -543,44 +547,65 @@ export class EnhancedAIService {
       };
 
       console.log('🌐 Making GROK API request to: https://api.x.ai/v1/chat/completions');
+      console.log('🔐 Using API key:', grokApiKey.substring(0, 10) + '...');
 
+      // Use node-fetch for better error handling
+      const fetch = (await import('node-fetch')).default;
+      
       const response = await fetch('https://api.x.ai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${grokApiKey}`,
           'Content-Type': 'application/json',
+          'User-Agent': 'TestCaseTracker/1.0',
         },
         body: JSON.stringify(requestBody),
+        timeout: 30000, // 30 second timeout
       });
 
       console.log('📡 GROK API response status:', response.status, response.statusText);
 
       if (!response.ok) {
-        let errorText;
+        let errorText = '';
+        let errorJson = null;
+        
         try {
           errorText = await response.text();
           console.error('❌ GROK API error response:', errorText);
+          
+          // Try to parse as JSON for better error details
+          try {
+            errorJson = JSON.parse(errorText);
+            console.error('❌ GROK API error JSON:', errorJson);
+          } catch (e) {
+            // Not JSON, use text
+          }
         } catch (e) {
           errorText = 'Unable to read error response';
         }
 
-        console.error('❌ GROK API error:', {
+        console.error('❌ GROK API error details:', {
           status: response.status,
           statusText: response.statusText,
           error: errorText,
+          errorJson: errorJson,
           headers: Object.fromEntries(response.headers.entries())
         });
         
+        // Handle specific error cases
         if (response.status === 401) {
-          throw new Error('GROK API authentication failed. Please check your API key format (should start with xai-).');
+          throw new Error('GROK API authentication failed. Please verify your API key is correct and active.');
         } else if (response.status === 429) {
-          throw new Error('GROK API quota exceeded. Please try again later.');
+          throw new Error('GROK API rate limit exceeded. Please try again later.');
         } else if (response.status === 403) {
           throw new Error('GROK API access forbidden. Please check your API key permissions.');
         } else if (response.status === 404) {
-          throw new Error('GROK API endpoint not found. The model or endpoint may have changed.');
+          throw new Error('GROK API endpoint not found. The model or API version may have changed.');
+        } else if (response.status === 500) {
+          throw new Error('GROK API server error. Please try again later.');
         } else {
-          throw new Error(`GROK API error: ${response.status} ${response.statusText} - ${errorText}`);
+          const errorDetail = errorJson?.error?.message || errorText || response.statusText;
+          throw new Error(`GROK API error (${response.status}): ${errorDetail}`);
         }
       }
 
@@ -588,6 +613,7 @@ export class EnhancedAIService {
       try {
         const responseText = await response.text();
         console.log('📝 GROK raw response length:', responseText.length);
+        console.log('📝 GROK response preview:', responseText.substring(0, 200) + '...');
         data = JSON.parse(responseText);
       } catch (parseError) {
         console.error('❌ Failed to parse GROK response:', parseError);
@@ -602,6 +628,7 @@ export class EnhancedAIService {
       }
 
       console.log('🤖 GROK response received, content length:', content.length);
+      console.log('🤖 GROK response preview:', content.substring(0, 300) + '...');
 
       const testCases = EnhancedAIService.parseAIResponse(content);
 
@@ -627,18 +654,27 @@ export class EnhancedAIService {
 
     } catch (error: any) {
       console.error('🚨 GROK generation failed:', {
-        error: error.message,
+        message: error.message,
         stack: error.stack,
-        name: error.name
+        name: error.name,
+        code: error.code,
+        type: error.type
       });
 
-      // Provide more specific error messages
-      if (error.message.includes('fetch failed') || error.message.includes('ENOTFOUND')) {
-        throw new Error('GROK API connection failed. Please check your internet connection.');
-      } else if (error.message.includes('NetworkError') || error.message.includes('ECONNREFUSED')) {
+      // Provide more specific error messages based on error type
+      if (error.code === 'ENOTFOUND' || error.message.includes('ENOTFOUND')) {
+        throw new Error('GROK API connection failed: DNS resolution failed. Please check your internet connection.');
+      } else if (error.code === 'ECONNREFUSED' || error.message.includes('ECONNREFUSED')) {
+        throw new Error('GROK API connection refused. The service may be temporarily unavailable.');
+      } else if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+        throw new Error('GROK API request timed out. Please try again.');
+      } else if (error.message.includes('fetch failed')) {
+        throw new Error('GROK API network error. Please check your connection and try again.');
+      } else if (error.message.includes('NetworkError')) {
         throw new Error('GROK API network error. The service may be temporarily unavailable.');
       } else {
-        throw new Error(`GROK API error: ${error.message}`);
+        // Re-throw the original error for debugging
+        throw error;
       }
     }
   }
