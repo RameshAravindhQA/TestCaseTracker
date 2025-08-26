@@ -6175,8 +6175,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           imported,
           failed,
           total: employeeData.length,
-          errors: errors.slice(0, 20), // Show up to20 errors // Show up to 20 errors
-,
+          errors: errors.slice(0, 20), // Show up to 20 errors
           success: imported > 0
         };
 
