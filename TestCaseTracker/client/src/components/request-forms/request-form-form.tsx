@@ -34,6 +34,7 @@ const requestFormSchema = z.object({
   deliverables: z.string().optional(),
   acceptanceCriteria: z.string().optional(),
   additionalNotes: z.string().optional(),
+  leadId: z.number().optional(),
 });
 
 type RequestFormValues = z.infer<typeof requestFormSchema>;
@@ -42,11 +43,12 @@ interface RequestFormFormProps {
   request?: any;
   projects: any[];
   requestTypes: any[];
+  employees: any[];
   onSubmit: (data: RequestFormValues) => void;
   onCancel: () => void;
 }
 
-export function RequestFormForm({ request, projects, requestTypes, onSubmit, onCancel }: RequestFormFormProps) {
+export function RequestFormForm({ request, projects, requestTypes, employees = [], onSubmit, onCancel }: RequestFormFormProps) {
   const isEditing = !!request;
 
   const form = useForm<RequestFormValues>({
@@ -70,6 +72,7 @@ export function RequestFormForm({ request, projects, requestTypes, onSubmit, onC
       deliverables: request?.deliverables || "",
       acceptanceCriteria: request?.acceptanceCriteria || "",
       additionalNotes: request?.additionalNotes || "",
+      leadId: request?.leadId || 0,
     },
   });
 
@@ -321,6 +324,45 @@ export function RequestFormForm({ request, projects, requestTypes, onSubmit, onC
                             Critical
                           </div>
                         </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="leadId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Lead</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select project lead" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="0">No Lead Assigned</SelectItem>
+                        {employees.map((employee) => (
+                          <SelectItem key={employee.id} value={employee.id.toString()}>
+                            <div className="flex items-center gap-2">
+                              {employee.profilePicture ? (
+                                <img
+                                  src={employee.profilePicture}
+                                  alt={`${employee.firstName} ${employee.lastName}`}
+                                  className="h-5 w-5 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="h-5 w-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
+                                  {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
+                                </div>
+                              )}
+                              {employee.firstName} {employee.lastName}
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

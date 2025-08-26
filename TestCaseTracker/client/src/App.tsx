@@ -150,7 +150,7 @@ function Router() {
       <Route path="/test-cases">
         <ProtectedLazyComponent Component={lazy(() => import("./pages/test-cases/index"))} />
       </Route>
-      
+
       <Route path="/ai-generator">
          <ProtectedLazyComponent Component={lazy(() => import("@/pages/ai-generator"))} />
       </Route>
@@ -225,6 +225,9 @@ function Router() {
       <Route path="/automation">
         <ProtectedLazyComponent Component={lazy(() => import("./pages/automation"))} />
       </Route>
+      <Route path="/request-forms" component={lazy(() => import("./pages/request-forms"))} />
+      <Route path="/notifications" component={lazy(() => import("./pages/notifications"))} />
+
 
       {/* Catch-all 404 route - make sure this is last */}
       <Route path="/:rest*">

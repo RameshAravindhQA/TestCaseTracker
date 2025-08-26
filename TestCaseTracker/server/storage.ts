@@ -377,6 +377,7 @@ class MemStorage implements IStorage {
   private resourceRequests = new Map<number, any>();
   private requestExtensions = new Map<number, any>();
   private requestComments = new Map<number, any>();
+  private notifications = new Map<number, any>();
 
 
   private initializeEmployeeDefaults() {
@@ -2918,6 +2919,38 @@ class MemStorage implements IStorage {
 
   async deleteRequestComment(id: number): Promise<boolean> {
     return this.requestComments.delete(id);
+  }
+
+  // Notification methods
+  async getNotifications(userId: number): Promise<any[]> {
+    return Array.from(this.notifications.values())
+      .filter(notification => notification.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createNotification(data: any): Promise<any> {
+    const id = this.getNextId();
+    const notification = {
+      id,
+      ...data,
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    this.notifications.set(id, notification);
+    return notification;
+  }
+
+  async markNotificationAsRead(id: number): Promise<any> {
+    const notification = this.notifications.get(id);
+    if (!notification) return null;
+
+    const updatedNotification = {
+      ...notification,
+      read: true,
+      readAt: new Date().toISOString(),
+    };
+    this.notifications.set(id, updatedNotification);
+    return updatedNotification;
   }
 }
 

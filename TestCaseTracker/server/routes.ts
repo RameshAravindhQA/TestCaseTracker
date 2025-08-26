@@ -841,6 +841,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requestedById: req.session.userId
       };
       const request = await storage.createResourceRequest(requestData);
+
+      // Send notification to lead if specified
+      if (request.leadId) {
+        await storage.createNotification({
+          userId: request.leadId,
+          type: 'resource_request',
+          title: 'New Resource Request Assigned',
+          message: `You have been assigned a new ${request.requestType}: ${request.title}`,
+          entityType: 'resource_request',
+          entityId: request.id,
+          requestId: request.id,
+        });
+      }
+
       res.status(201).json(request);
     } catch (error) {
       console.error("Create resource request error:", error);
@@ -929,6 +943,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(comments);
     } catch (error) {
       console.error("Get request comments error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Notifications API routes
+  apiRouter.get("/notifications/:userId", isAuthenticated, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const notifications = await storage.getNotifications(userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Get notifications error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/notifications", isAuthenticated, async (req, res) => {
+    try {
+      const notification = await storage.createNotification(req.body);
+      res.status(201).json(notification);
+    } catch (error) {
+      console.error("Create notification error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.patch("/notifications/:id/read", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const notification = await storage.markNotificationAsRead(id);
+      res.json(notification);
+    } catch (error) {
+      console.error("Mark notification as read error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

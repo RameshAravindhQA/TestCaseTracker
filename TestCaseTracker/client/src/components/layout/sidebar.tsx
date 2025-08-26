@@ -43,6 +43,7 @@ import {
   TrendingUp,
   Trash2,
   Building2,
+  Bell,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -444,6 +445,26 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch notifications for current user
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['/api/notifications', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      try {
+        const res = await apiRequest("GET", `/api/notifications/${user.id}`);
+        if (!res.ok) return [];
+        return res.json();
+      } catch (error) {
+        console.warn('Failed to fetch notifications:', error);
+        return [];
+      }
+    },
+    enabled: !!user?.id,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  const unreadCount = notifications.filter((n: any) => !n.read).length;
+
   // Helper function to check permissions
   const hasPermission = (resource: string, action: string): boolean => {
     return userPermissions.data?.includes(`${resource}:${action}`) || false;
@@ -502,6 +523,18 @@ const SidebarComponent = ({ className }: SidebarProps) => {
             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
               {user?.role || "User"}
             </p>
+          </div>
+          <div className="relative">
+            <Link href="/notifications">
+              <Button variant="ghost" size="sm" className="relative p-2">
+                <Bell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                {unreadCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center p-0 min-w-[20px]">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

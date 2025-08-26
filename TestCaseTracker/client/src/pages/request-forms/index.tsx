@@ -68,6 +68,16 @@ export default function RequestFormsPage() {
     },
   });
 
+  // Fetch employees for lead selection
+  const { data: employees = [] } = useQuery({
+    queryKey: ["/api/employees"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/employees");
+      if (!res.ok) throw new Error("Failed to fetch employees");
+      return res.json();
+    },
+  });
+
   // Create/Update request mutation
   const createRequestMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -366,6 +376,7 @@ export default function RequestFormsPage() {
                         request={editingRequest}
                         projects={projects}
                         requestTypes={requestTypes}
+                        employees={employees}
                         onSubmit={(data) => createRequestMutation.mutate(data)}
                         onCancel={() => {
                           setIsFormDialogOpen(false);
