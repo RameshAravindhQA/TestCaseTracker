@@ -1660,6 +1660,90 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
+  // Comprehensive AI Debug Endpoint
+  apiRouter.get("/ai/debug-comprehensive", isAuthenticated, async (req, res) => {
+    try {
+      const providerStatus = EnhancedAIService.getProviderStatus();
+      const availableProviders = EnhancedAIService.getAvailableProviders();
+
+      // Test each provider
+      const testResults = {};
+      for (const provider of ['gemini', 'openai']) {
+        try {
+          testResults[provider] = {
+            initialized: providerStatus[provider]?.ready || false,
+            error: providerStatus[provider]?.error || null,
+            testPassed: false
+          };
+
+          if (providerStatus[provider]?.ready) {
+            const testPassed = await EnhancedAIService.testProvider(provider as any);
+            testResults[provider].testPassed = testPassed;
+          }
+        } catch (error: any) {
+          testResults[provider] = {
+            initialized: false,
+            error: error.message,
+            testPassed: false
+          };
+        }
+      }
+
+      // Test mock service
+      let mockServiceWorking = false;
+      try {
+        const mockRequest = {
+          requirement: 'Test mock service functionality',
+          testType: 'functional',
+          priority: 'Medium',
+          inputType: 'text' as const
+        };
+        const mockResult = await EnhancedAIService.generateTestCases(mockRequest);
+        mockServiceWorking = mockResult.success && mockResult.source === 'mock-service';
+      } catch (error) {
+        console.error('Mock service test failed:', error);
+      }
+
+      const debugInfo = {
+        timestamp: new Date().toISOString(),
+        environment: {
+          nodeEnv: process.env.NODE_ENV,
+          hasGoogleApiKey: !!process.env.GOOGLE_API_KEY,
+          hasOpenaiApiKey: !!process.env.OPENAI_API_KEY,
+          googleKeyFormat: process.env.GOOGLE_API_KEY?.startsWith('AIza') ? 'valid' : 'invalid',
+          openaiKeyFormat: process.env.OPENAI_API_KEY?.startsWith('sk-') ? 'valid' : 'invalid'
+        },
+        providers: {
+          status: providerStatus,
+          available: availableProviders,
+          testResults
+        },
+        availableProviders: availableProviders.filter(p => p.available).map(p => p.provider),
+        testGeneration: {
+          mockServiceWorking
+        }
+      };
+
+      res.json({
+        success: true,
+        debug: debugInfo,
+        summary: {
+          workingProviders: Object.keys(testResults).filter(p => testResults[p].testPassed),
+          availableProviders: availableProviders.filter(p => p.available).length,
+          mockServiceStatus: mockServiceWorking ? 'working' : 'failed'
+        }
+      });
+
+    } catch (error: any) {
+      console.error('❌ Debug endpoint failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Debug endpoint failed',
+        details: error.message
+      });
+    }
+  });
+
   // Enhanced AI Test Case Generation
   apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, async (req, res) => {
     try {

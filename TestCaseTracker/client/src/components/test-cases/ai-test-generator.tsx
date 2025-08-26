@@ -534,9 +534,8 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                 size="sm"
                 onClick={async () => {
                   console.log("🔍 Client Debug Info:", {
-                    apiKeys: apiKeyStatus, // Use apiKeyStatus here
-                    selectedProvider: aiProvider, // Use aiProvider here
-                    // formData: form.getValues(), // form is not defined, so this needs to be removed or handled differently
+                    apiKeys: apiKeyStatus,
+                    selectedProvider: aiProvider,
                     debugInfo: {
                       timestamp: new Date().toISOString(),
                       userAgent: navigator.userAgent,
@@ -549,31 +548,45 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                     const response = await fetch('/api/ai/debug-comprehensive', {
                       credentials: 'include'
                     });
+                    
+                    if (!response.ok) {
+                      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
                     const debugData = await response.json();
                     console.log("🔍 Server Debug Info:", debugData);
 
-                    // Extract proper status from debug data
-                    const availableProviders = debugData.debug?.availableProviders || [];
-                    const geminiStatus = availableProviders.includes('gemini') || apiKeyStatus.gemini;
-                    const openaiStatus = availableProviders.includes('openai') || apiKeyStatus.openai;
-                    const mockStatus = debugData.debug?.testGeneration?.mockServiceWorking || false;
+                    if (debugData.success) {
+                      const summary = debugData.summary;
+                      const debug = debugData.debug;
+                      
+                      // Show user-friendly debug info
+                      alert(`🔍 AI Provider Debug Info:
 
-                    // Show user-friendly debug info
-                    alert(`Debug Info:
+✅ Working Providers: ${summary.workingProviders.join(', ') || 'None'}
+📊 Available Providers: ${summary.availableProviders}
+🎭 Mock Service: ${summary.mockServiceStatus}
 
-Gemini: ${geminiStatus ? '✅ Configured & Working' : '❌ Not configured'}
-OpenAI: ${openaiStatus ? '✅ Configured & Working' : '❌ Not configured'}
-Mock Service: ${mockStatus ? '✅ Working' : '❌ Failed'}
+Environment:
+• Google API Key: ${debug.environment.hasGoogleApiKey ? (debug.environment.googleKeyFormat === 'valid' ? '✅ Valid' : '❌ Invalid Format') : '❌ Missing'}
+• OpenAI API Key: ${debug.environment.hasOpenaiApiKey ? (debug.environment.openaiKeyFormat === 'valid' ? '✅ Valid' : '❌ Invalid Format') : '❌ Missing'}
 
-Check console for detailed information.`);
+Selected Provider: ${aiProvider}
+
+Check console for detailed technical information.`);
+                    } else {
+                      throw new Error(debugData.error || 'Debug failed');
+                    }
                   } catch (error) {
                     console.error("❌ Failed to fetch debug info:", error);
-                    alert(`Debug info available in console. Server debug fetch failed.
+                    alert(`❌ Debug fetch failed: ${error.message}
 
 Client API Status:
 ${Object.entries(apiKeyStatus).map(([key, value]) => `${key}: ${value ? '✅' : '❌'}`).join('\n')}
 
-Selected Provider: ${aiProvider}`);
+Selected Provider: ${aiProvider}
+
+Check console and server logs for more details.`);
                   }
                 }}
               >

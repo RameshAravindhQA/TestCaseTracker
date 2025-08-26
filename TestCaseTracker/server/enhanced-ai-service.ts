@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { logger } from './logger';
@@ -53,69 +54,84 @@ let openai: OpenAI | null = null;
 let geminiInitError: string | null = null;
 let openaiInitError: string | null = null;
 
-// Initialize Google Gemini with robust validation
-try {
-  const geminiApiKey = process.env.GOOGLE_API_KEY;
-  console.log('🔧 Gemini API Key Check:', {
-    hasKey: !!geminiApiKey,
-    keyLength: geminiApiKey?.length || 0,
-    startsWithAIza: geminiApiKey?.startsWith('AIza') || false,
-    preview: geminiApiKey ? `${geminiApiKey.substring(0, 15)}...` : 'NONE'
-  });
+// Initialize Google Gemini
+function initializeGemini() {
+  try {
+    const geminiApiKey = process.env.GOOGLE_API_KEY;
+    console.log('🔧 Gemini initialization check:', {
+      hasKey: !!geminiApiKey,
+      keyLength: geminiApiKey?.length || 0,
+      startsWithAIza: geminiApiKey?.startsWith('AIza') || false,
+      preview: geminiApiKey ? `${geminiApiKey.substring(0, 15)}...` : 'NONE'
+    });
 
-  if (!geminiApiKey || geminiApiKey === 'your-gemini-api-key' || geminiApiKey.trim() === '') {
-    geminiInitError = 'Google Gemini API key is not properly configured';
-    console.warn('❌ Gemini API key not configured');
-  } else if (!geminiApiKey.startsWith('AIza')) {
-    geminiInitError = `Google Gemini API key has invalid format. Expected to start with 'AIza'`;
-    console.warn('❌ Gemini API key has invalid format');
-  } else {
-    try {
-      genAI = new GoogleGenerativeAI(geminiApiKey);
-      geminiInitError = null;
-      console.log('✅ Gemini AI initialized successfully');
-    } catch (initError: any) {
-      geminiInitError = `Failed to initialize GoogleGenerativeAI: ${initError.message}`;
-      console.error('❌ GoogleGenerativeAI initialization failed:', initError);
+    if (!geminiApiKey || geminiApiKey === 'your-gemini-api-key' || geminiApiKey.trim() === '') {
+      geminiInitError = 'Google Gemini API key is not properly configured';
+      console.warn('❌ Gemini API key not configured');
+      return false;
+    } 
+    
+    if (!geminiApiKey.startsWith('AIza')) {
+      geminiInitError = `Google Gemini API key has invalid format. Expected to start with 'AIza'`;
+      console.warn('❌ Gemini API key has invalid format');
+      return false;
     }
+
+    genAI = new GoogleGenerativeAI(geminiApiKey);
+    geminiInitError = null;
+    console.log('✅ Gemini AI initialized successfully');
+    return true;
+  } catch (error: any) {
+    geminiInitError = `Gemini initialization failed: ${error.message}`;
+    console.error('❌ Gemini initialization error:', error);
+    return false;
   }
-} catch (error: any) {
-  geminiInitError = `Gemini initialization failed: ${error.message}`;
-  console.error('❌ Gemini initialization error:', error);
 }
 
-// Initialize OpenAI with robust validation
-try {
-  const openaiApiKey = process.env.OPENAI_API_KEY;
-  console.log('🔧 OpenAI API Key Check:', {
-    hasKey: !!openaiApiKey,
-    keyLength: openaiApiKey?.length || 0,
-    startsWithSk: openaiApiKey?.startsWith('sk-') || false,
-    preview: openaiApiKey ? `${openaiApiKey.substring(0, 15)}...` : 'NONE'
-  });
+// Initialize OpenAI
+function initializeOpenAI() {
+  try {
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    console.log('🔧 OpenAI initialization check:', {
+      hasKey: !!openaiApiKey,
+      keyLength: openaiApiKey?.length || 0,
+      startsWithSk: openaiApiKey?.startsWith('sk-') || false,
+      preview: openaiApiKey ? `${openaiApiKey.substring(0, 15)}...` : 'NONE'
+    });
 
-  if (!openaiApiKey || openaiApiKey === 'your-openai-api-key' || openaiApiKey.trim() === '') {
-    openaiInitError = 'OpenAI API key is not properly configured';
-    console.warn('❌ OpenAI API key not configured');
-  } else if (!openaiApiKey.startsWith('sk-')) {
-    openaiInitError = 'OpenAI API key has invalid format. Expected to start with "sk-"';
-    console.warn('❌ OpenAI API key has invalid format');
-  } else {
-    try {
-      openai = new OpenAI({
-        apiKey: openaiApiKey,
-      });
-      openaiInitError = null;
-      console.log('✅ OpenAI initialized successfully');
-    } catch (initError: any) {
-      openaiInitError = `Failed to create OpenAI client: ${initError.message}`;
-      console.error('❌ OpenAI client creation failed:', initError);
+    if (!openaiApiKey || openaiApiKey === 'your-openai-api-key' || openaiApiKey.trim() === '') {
+      openaiInitError = 'OpenAI API key is not properly configured';
+      console.warn('❌ OpenAI API key not configured');
+      return false;
+    } 
+    
+    if (!openaiApiKey.startsWith('sk-')) {
+      openaiInitError = 'OpenAI API key has invalid format. Expected to start with "sk-"';
+      console.warn('❌ OpenAI API key has invalid format');
+      return false;
     }
+
+    openai = new OpenAI({
+      apiKey: openaiApiKey,
+    });
+    openaiInitError = null;
+    console.log('✅ OpenAI initialized successfully');
+    return true;
+  } catch (error: any) {
+    openaiInitError = `OpenAI initialization failed: ${error.message}`;
+    console.error('❌ OpenAI initialization error:', error);
+    return false;
   }
-} catch (error: any) {
-  openaiInitError = `OpenAI initialization failed: ${error.message}`;
-  console.error('❌ OpenAI initialization error:', error);
 }
+
+// Initialize both providers
+const geminiReady = initializeGemini();
+const openaiReady = initializeOpenAI();
+
+console.log('🔍 AI Providers Status:', {
+  gemini: { ready: geminiReady, error: geminiInitError },
+  openai: { ready: openaiReady, error: openaiInitError }
+});
 
 export class EnhancedAIService {
 
@@ -196,10 +212,8 @@ export class EnhancedAIService {
       provider,
       inputType: request.inputType,
       requirement: request.requirement?.substring(0, 50) + '...',
-      hasGemini: !!genAI && !geminiInitError,
-      hasOpenAI: !!openai && !openaiInitError,
-      geminiError: geminiInitError,
-      openaiError: openaiInitError
+      geminiStatus: { ready: !!genAI && !geminiInitError, error: geminiInitError },
+      openaiStatus: { ready: !!openai && !openaiInitError, error: openaiInitError }
     });
 
     // Validate request data
