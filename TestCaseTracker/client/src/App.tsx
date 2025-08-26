@@ -51,6 +51,12 @@ import AnalyticsDashboard from "./pages/dashboard/analytics";
 
 
 // Loading component for Suspense fallback
+const SuspenseFallback = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+    <p className="ml-4">Loading...</p>
+  </div>
+);
 const LoadingSpinner = () => (
   <div className="min-h-screen flex items-center justify-center">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

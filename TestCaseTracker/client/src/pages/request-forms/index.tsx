@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, startTransition } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Plus, Search, Filter, Calendar, Clock, CheckCircle2, AlertCircle, FileText, Settings, History, MessageSquare, Eye, Edit, Trash2, Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -153,7 +153,7 @@ function RequestFormsPageContent() {
 
   // Filter requests
   const filteredRequests = requests.filter((request: any) => {
-    const matchesSearch = searchTerm === "" || 
+    const matchesSearch = searchTerm === "" ||
       request.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.requestId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -374,11 +374,13 @@ function RequestFormsPageContent() {
                   </div>
                   <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button 
+                      <Button
                         className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                         onClick={() => {
-                          setEditingRequest(null);
-                          setIsFormDialogOpen(true);
+                          startTransition(() => {
+                            setEditingRequest(null);
+                            setIsFormDialogOpen(true);
+                          });
                         }}
                       >
                         <Plus className="h-4 w-4 mr-2" />
@@ -523,7 +525,7 @@ function RequestFormsPageContent() {
                     <p className="text-gray-500 dark:text-gray-400 mb-4">
                       Create your first resource request to get started.
                     </p>
-                    <Button 
+                    <Button
                       onClick={() => setIsFormDialogOpen(true)}
                       className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                     >
@@ -835,7 +837,7 @@ function RequestFormsPageContent() {
                   className={approvalAction === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
                   disabled={approvalMutation.isPending}
                 >
-                  {approvalMutation.isPending ? 'Processing...' : 
+                  {approvalMutation.isPending ? 'Processing...' :
                    approvalAction === 'approve' ? 'Approve' : 'Reject'}
                 </Button>
               </div>
