@@ -152,29 +152,37 @@ export class EnhancedAIService {
   }
 
   static getAvailableProviders(): { provider: AIProvider; name: string; available: boolean; error?: string; isFree?: boolean }[] {
-    return [
+    const providers = [
       {
-        provider: 'gemini',
+        provider: 'gemini' as AIProvider,
         name: 'Google Gemini',
         available: !!genAI && !geminiInitError,
         error: geminiInitError || undefined,
         isFree: false
       },
       {
-        provider: 'openai',
+        provider: 'openai' as AIProvider,
         name: 'OpenAI GPT-4',
         available: !!openai && !openaiInitError,
         error: openaiInitError || undefined,
         isFree: false
       },
       {
-        provider: 'claude',
+        provider: 'claude' as AIProvider,
         name: 'Anthropic Claude',
         available: false,
         error: 'Not implemented',
         isFree: false
       }
     ];
+
+    console.log('🔍 Available providers check:', providers.map(p => ({ 
+      provider: p.provider, 
+      available: p.available, 
+      error: p.error 
+    })));
+
+    return providers;
   }
 
   static async testProvider(provider: AIProvider): Promise<boolean> {
@@ -222,15 +230,18 @@ export class EnhancedAIService {
     }
 
     // Check which providers are actually available
-    const availableProviders = [];
+    const availableProviders: string[] = [];
     if (genAI && !geminiInitError) availableProviders.push('gemini');
     if (openai && !openaiInitError) availableProviders.push('openai');
 
     console.log(`🔍 Available real AI providers: ${availableProviders.join(', ')}`);
+    console.log(`🔍 Provider status - Gemini: ${!!genAI && !geminiInitError}, OpenAI: ${!!openai && !openaiInitError}`);
 
     // If no real providers are available, return mock immediately with clear message
     if (availableProviders.length === 0) {
       console.log('⚠️ No AI providers available - API keys may not be configured correctly');
+      console.log('⚠️ Gemini error:', geminiInitError);
+      console.log('⚠️ OpenAI error:', openaiInitError);
       const mockResponse = EnhancedAIService.getMockResponse(request);
       mockResponse.message = 'Generated using mock service (No AI providers configured - please check API keys)';
       return mockResponse;

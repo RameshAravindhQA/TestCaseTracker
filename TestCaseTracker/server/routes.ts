@@ -1,4 +1,3 @@
-
 import { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -426,7 +425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/ai/diagnose", isAuthenticated, async (req, res) => {
     try {
       console.log('🔍 Starting AI provider diagnosis...');
-      
+
       const diagnosis = {
         timestamp: new Date().toISOString(),
         environment: {
@@ -512,7 +511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/ai/test-generation", isAuthenticated, async (req, res) => {
     try {
       console.log('🧪 Testing AI generation service...');
-      
+
       const testRequest = {
         requirement: req.body.requirement || 'Test user registration form with email validation',
         projectContext: 'Test Project',
@@ -525,7 +524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('🔮 Calling EnhancedAIService.generateTestCases with test request...');
       const result = await EnhancedAIService.generateTestCases(testRequest);
-      
+
       console.log('✅ AI generation test completed:', {
         success: result.success,
         testCasesCount: result.testCases?.length || 0,
@@ -562,7 +561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/ai/test-providers", isAuthenticated, async (req, res) => {
     try {
       console.log('🔍 Testing AI providers individually...');
-      
+
       const results = {
         gemini: { available: false, error: null, tested: false },
         openai: { available: false, error: null, tested: false }
@@ -623,7 +622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/ai/debug-comprehensive", isAuthenticated, async (req, res) => {
     try {
       console.log('🔍 Comprehensive AI Debug Check Started');
-      
+
       const debugInfo = {
         timestamp: new Date().toISOString(),
         environment: {
@@ -647,7 +646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           inputType: 'text' as const,
           aiProvider: 'gemini' as const
         };
-        
+
         console.log('🧪 Testing mock generation...');
         const mockResult = await EnhancedAIService.generateTestCases(testRequest);
         debugInfo.testGeneration = {
@@ -1746,318 +1745,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
-  // Comprehensive AI Debug Endpoint
-  apiRouter.get("/ai/debug-comprehensive", isAuthenticated, async (req, res) => {
-    try {
-      const providerStatus = EnhancedAIService.getProviderStatus();
-      const availableProviders = EnhancedAIService.getAvailableProviders();
-
-      // Test each provider
-      const testResults = {};
-      for (const provider of ['gemini', 'openai']) {
-        try {
-          testResults[provider] = {
-            initialized: providerStatus[provider]?.ready || false,
-            error: providerStatus[provider]?.error || null,
-            testPassed: false
-          };
-
-          if (providerStatus[provider]?.ready) {
-            const testPassed = await EnhancedAIService.testProvider(provider as any);
-            testResults[provider].testPassed = testPassed;
-          }
-        } catch (error: any) {
-          testResults[provider] = {
-            initialized: false,
-            error: error.message,
-            testPassed: false
-          };
-        }
-      }
-
-      // Test mock service
-      let mockServiceWorking = false;
-      try {
-        const mockRequest = {
-          requirement: 'Test mock service functionality',
-          testType: 'functional',
-          priority: 'Medium',
-          inputType: 'text' as const
-        };
-        const mockResult = await EnhancedAIService.generateTestCases(mockRequest);
-        mockServiceWorking = mockResult.success && mockResult.source === 'mock-service';
-      } catch (error) {
-        console.error('Mock service test failed:', error);
-      }
-
-      const debugInfo = {
-        timestamp: new Date().toISOString(),
-        environment: {
-          nodeEnv: process.env.NODE_ENV,
-          hasGoogleApiKey: !!process.env.GOOGLE_API_KEY,
-          hasOpenaiApiKey: !!process.env.OPENAI_API_KEY,
-          googleKeyFormat: process.env.GOOGLE_API_KEY?.startsWith('AIza') ? 'valid' : 'invalid',
-          openaiKeyFormat: process.env.OPENAI_API_KEY?.startsWith('sk-') ? 'valid' : 'invalid'
-        },
-        providers: {
-          status: providerStatus,
-          available: availableProviders,
-          testResults
-        },
-        availableProviders: availableProviders.filter(p => p.available).map(p => p.provider),
-        testGeneration: {
-          mockServiceWorking
-        }
-      };
-
-      res.json({
-        success: true,
-        debug: debugInfo,
-        summary: {
-          workingProviders: Object.keys(testResults).filter(p => testResults[p].testPassed),
-          availableProviders: availableProviders.filter(p => p.available).length,
-          mockServiceStatus: mockServiceWorking ? 'working' : 'failed'
-        }
-      });
-
-    } catch (error: any) {
-      console.error('❌ Debug endpoint failed:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Debug endpoint failed',
-        details: error.message
-      });
-    }
-  });
-
-  // Enhanced AI Test Case Generation
-  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, async (req, res) => {
-    try {
-      const {
-        requirement,
-        projectContext,
-        moduleContext,
-        testType,
-        priority,
-        websiteUrl,
-        elementInspection,
-        userFlows,
-        businessRules,
-        inputType,
-        aiProvider
-      } = req.body;
-
-      console.log('🚀 AI Test Case Generation Request:', {
-        requirement: requirement?.substring(0, 100),
-        testType,
-        priority,
-        inputType,
-        aiProvider
-      });
-
-      // Mock test cases for now - in production, integrate with actual AI service
-      const mockTestCases = [
-        {
-          feature: `${moduleContext || 'Application'} Feature Testing`,
-          testObjective: `Verify ${requirement?.substring(0, 50) || 'functionality'} works as expected`,
-          preConditions: "User should be logged in and have necessary permissions",
-          testSteps: `1. Navigate to the feature\n2. Execute the required action\n3. Verify the result`,
-          expectedResult: "Feature should work correctly without errors",
-          priority: priority || "Medium",
-          testType: testType || "functional",
-          coverage: "Basic functionality verification",
-          category: "Core Features",
-          tags: ["automated", "regression"]
-        },
-        {
-          feature: `${moduleContext || 'Application'} Error Handling`,
-          testObjective: "Verify proper error handling and user feedback",
-          preConditions: "System should be in a stable state",
-          testSteps: "1. Trigger error condition\n2. Observe error handling\n3. Verify user feedback",
-          expectedResult: "Appropriate error message should be displayed",
-          priority: priority || "Medium",
-          testType: "negative",
-          coverage: "Error scenarios and edge cases",
-          category: "Error Handling",
-          tags: ["error-handling", "user-experience"]
-        }
-      ];
-
-      res.json({
-        success: true,
-        testCases: mockTestCases,
-        message: `Generated ${mockTestCases.length} test cases using mock AI service`,
-        source: 'mock-service',
-        provider: aiProvider || 'mock'
-      });
-
-    } catch (error: any) {
-      console.error('❌ AI test case generation error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to generate test cases',
-        details: error.message
-      });
-    }
-  });
-
-  // Get available AI providers
-  apiRouter.get("/ai/providers", isAuthenticated, async (req, res) => {
-    try {
-      const providers = [
-        { provider: "gemini", name: "Google Gemini", available: true },
-        { provider: "openai", name: "OpenAI GPT-4", available: true },
-        { provider: "claude", name: "Anthropic Claude", available: true },
-        { provider: "grok", name: "xAI Grok", available: true },
-        { provider: "deepseek", name: "DeepSeek Coder", available: true },
-        { provider: "huggingface", name: "Hugging Face", available: true },
-        { provider: "cohere", name: "Cohere", available: true },
-        { provider: "mistral", name: "Mistral AI", available: true }
-      ];
-
-      res.json({
-        success: true,
-        providers,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error: any) {
-      console.error('❌ Get AI providers error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get AI providers',
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-
-  // Check environment variables
-  apiRouter.get("/ai/env-check", isAuthenticated, async (req, res) => {
-    try {
-      const envVars = {
-        GOOGLE_API_KEY: {
-          exists: !!process.env.GOOGLE_API_KEY,
-          length: process.env.GOOGLE_API_KEY?.length || 0,
-          preview: process.env.GOOGLE_API_KEY ? `${process.env.GOOGLE_API_KEY.substring(0, 15)}...` : 'MISSING',
-          format: process.env.GOOGLE_API_KEY?.startsWith('AIza') ? 'VALID' : 'INVALID'
-        },
-        OPENAI_API_KEY: {
-          exists: !!process.env.OPENAI_API_KEY,
-          length: process.env.OPENAI_API_KEY?.length || 0,
-          preview: process.env.OPENAI_API_KEY ? `${process.env.OPENAI_API_KEY.substring(0, 15)}...` : 'MISSING',
-          format: process.env.OPENAI_API_KEY?.startsWith('sk-') ? 'VALID' : 'INVALID'
-        },
-        NODE_ENV: process.env.NODE_ENV || 'undefined',
-        PORT: process.env.PORT || 'undefined'
-      };
-
-      console.log('🔍 Environment Variables Check:', envVars);
-
-      res.json({
-        success: true,
-        environment: envVars,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error: any) {
-      console.error('❌ Environment check error:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message,
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-
-  // AI API Key Management
-  apiRouter.get("/ai/api-keys", isAuthenticated, async (req, res) => {
-    try {
-      // Only return which keys are configured, not the actual keys
-      const keyStatus = {
-        gemini: !!process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-gemini-api-key',
-        openai: !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your-openai-api-key',
-        claude: !!process.env.CLAUDE_API_KEY && process.env.CLAUDE_API_KEY !== 'your-claude-api-key',
-        grok: !!process.env.GROK_API_KEY && process.env.GROK_API_KEY !== 'your-grok-api-key',
-        deepseek: !!process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !== 'your-deepseek-api-key',
-        huggingface: !!process.env.HUGGINGFACE_API_KEY && process.env.HUGGINGFACE_API_KEY !== 'your-huggingface-api-key',
-        cohere: !!process.env.COHERE_API_KEY && process.env.COHERE_API_KEY !== 'your-cohere-api-key',
-        mistral: !!process.env.MISTRAL_API_KEY && process.env.MISTRAL_API_KEY !== 'your-mistral-api-key'
-      };
-
-      res.json({
-        success: true,
-        keyStatus,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error: any) {
-      console.error('❌ Get API keys status error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get API keys status',
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-
-  apiRouter.post("/ai/api-keys/:provider", isAuthenticated, async (req, res) => {
-    try {
-      const { provider } = req.params;
-      const { apiKey } = req.body;
-
-      if (!apiKey || typeof apiKey !== 'string') {
-        return res.status(400).json({
-          success: false,
-          error: 'API key is required'
-        });
-      }
-
-      const validProviders = ['gemini', 'openai', 'claude', 'grok', 'deepseek', 'huggingface', 'cohere', 'mistral'];
-      if (!validProviders.includes(provider)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid AI provider'
-        });
-      }
-
-      // Validate API key format for specific providers
-      if (provider === 'gemini' && !apiKey.startsWith('AIza')) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid Gemini API key format. Should start with "AIza"'
-        });
-      }
-
-      if (provider === 'openai' && !apiKey.startsWith('sk-')) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid OpenAI API key format. Should start with "sk-"'
-        });
-      }
-
-      // Store the API key
-      aiConfigStorage.setApiKey(provider, apiKey, req.session.userId!);
-
-      console.log(`🔑 API key updated for ${provider} by user ${req.session.userId}`);
-
-      res.json({
-        success: true,
-        message: `${provider} API key updated successfully`,
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (error: any) {
-      console.error(`❌ Update ${req.params.provider} API key error:`, error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to update API key',
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-
   // Comprehensive AI Service Diagnostic endpoint
   apiRouter.get("/ai/diagnostic", isAuthenticated, async (req, res) => {
     try {
       console.log('🔧 Starting comprehensive AI diagnostic...');
-      
+
       const diagnostic = {
         timestamp: new Date().toISOString(),
         environment: {
@@ -2336,7 +2028,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
     try {
       console.log('🤖 Enhanced AI Generation - Handler started');
-      
+
       // Validate authentication
       if (!req.session || !req.session.userId) {
         console.error('❌ Authentication failed');
@@ -2875,16 +2567,13 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Return the updated profile data
-      const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutPassword } = updatedUser;
-
       // Set cache control headers to prevent caching issues
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
 
       res.json({
-        ...userWithoutPassword,
+        ...updatedUser,
         message: "Profile picture uploaded successfully",
         timestamp: Date.now() // Add timestamp to help with cache busting on the client
       });
@@ -3100,7 +2789,6 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
-  // AI Chat endpoint
   // Chat file upload endpoint
   apiRouter.post("/chat/upload", isAuthenticated, 
     (req, res, next) => {
@@ -4015,7 +3703,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         }
       }
 
-      const modules = await storage.getModulesByProject(projectId);
+      const modules = await storage.getModules(projectId);
       const sortedModules = modules.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
       // Get project prefix
@@ -4469,7 +4157,6 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         }
       });
 
-      // Ensure we return valid JSON
       res.status(201).json(testCase);
     } catch (error) {
       console.error("Create test case error:", error);
@@ -4535,7 +4222,23 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
             newStatus: req.body.status
           }
         });
+      } else if (req.body.severity && req.body.severity !== testCase.severity) {
+        await storage.createActivity({
+          userId: req.session.userId!,
+          action: "severity changed to ${req.body.severity}",
+          entityType: "testCase",
+          entityId: testCaseId,
+          details: { 
+            projectId: testCase.projectId,
+            projectName: project?.name,
+            testCaseId: testCase.testCaseId,
+            feature: testCase.feature,
+            prevSeverity: testCase.severity,
+            newSeverity: req.body.severity
+          }
+        });
       } else {
+        // General update activity
         await storage.createActivity({
           userId: req.session.userId!,
           action: "updated",
@@ -5292,7 +4995,9 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         }
 
         if (targetFolder.projectId !== folder.projectId) {
-          return res.status(400).json({ message: "Target folder must be in the same project" });
+          return res.status(400).json({ 
+            message: "Target folder must be in the same project" 
+          });
         }
 
         // Check for circular reference
@@ -5582,7 +5287,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     }
   });
 
-  // Configure document uploads
+  // Configure multer for document uploads
   const configureDocumentUpload = () => {
     const { uploadsDir } = createUploadDirectories();
     const documentsDir = path.join(uploadsDir, 'documents');
@@ -6470,7 +6175,8 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
           imported,
           failed,
           total: employeeData.length,
-          errors: errors.slice(0, 20), // Show up to 20 errors
+          errors: errors.slice(0, 20), // Show up to20 errors // Show up to 20 errors
+,
           success: imported > 0
         };
 
