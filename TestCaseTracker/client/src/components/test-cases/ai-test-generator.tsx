@@ -557,19 +557,20 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                     console.log("🔍 Server Debug Info:", debugData);
 
                     if (debugData.success) {
-                      const summary = debugData.summary;
-                      const debug = debugData.debug;
+                      const summary = debugData.summary || {};
+                      const debug = debugData.debug || {};
                       
                       // Show user-friendly debug info
                       alert(`🔍 AI Provider Debug Info:
 
-✅ Working Providers: ${summary.workingProviders.join(', ') || 'None'}
-📊 Available Providers: ${summary.availableProviders}
-🎭 Mock Service: ${summary.mockServiceStatus}
+✅ Working Providers: ${summary.workingProviders?.join(', ') || 'None'}
+📊 Available Providers: ${summary.availableProviders || 'Unknown'}
+🎭 Mock Service: ${summary.mockServiceStatus || 'Unknown'}
 
 Environment:
-• Google API Key: ${debug.environment.hasGoogleApiKey ? (debug.environment.googleKeyFormat === 'valid' ? '✅ Valid' : '❌ Invalid Format') : '❌ Missing'}
-• OpenAI API Key: ${debug.environment.hasOpenaiApiKey ? (debug.environment.openaiKeyFormat === 'valid' ? '✅ Valid' : '❌ Invalid Format') : '❌ Missing'}
+• Google API Key: ${debug.environment?.hasGoogleApiKey ? (debug.environment?.googleKeyFormat === 'valid' ? '✅ Valid' : '❌ Invalid Format') : '❌ Missing'}
+• OpenAI API Key: ${debug.environment?.hasOpenaiApiKey ? (debug.environment?.openaiKeyFormat === 'valid' ? '✅ Valid' : '❌ Invalid Format') : '❌ Missing'}
+• GROK API Key: ${debug.environment?.hasGrokApiKey ? (debug.environment?.grokKeyFormat === 'valid' ? '✅ Valid' : '❌ Invalid Format') : '❌ Missing'}
 
 Selected Provider: ${aiProvider}
 

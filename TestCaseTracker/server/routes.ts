@@ -601,8 +601,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         results,
         summary: {
-          workingProviders: Object.entries(results).filter(([_, r]) => r.available).length,
-          totalProviders: Object.keys(results).length
+          workingProviders: Object.entries(results).filter(([_, r]) => r.available).map(([name, _]) => name),
+          availableProviders: Object.keys(results).length,
+          mockServiceStatus: 'Available'
         },
         timestamp: new Date().toISOString()
       });
@@ -1934,10 +1935,25 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
       res.json({
         success: true,
+        debug: {
+          timestamp: new Date().toISOString(),
+          environment: {
+            hasGoogleApiKey: !!process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-gemini-api-key',
+            googleKeyFormat: process.env.GOOGLE_API_KEY?.startsWith('AIza') ? 'valid' : 'invalid',
+            hasOpenaiApiKey: !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your-openai-api-key',
+            openaiKeyFormat: process.env.OPENAI_API_KEY?.startsWith('sk-') ? 'valid' : 'invalid',
+            hasGrokApiKey: !!process.env.GROK_API_KEY && process.env.GROK_API_KEY !== 'your-grok-api-key',
+            grokKeyFormat: process.env.GROK_API_KEY?.startsWith('xai-') ? 'valid' : 'invalid'
+          }
+        },
+        summary: {
+          workingProviders: providers.filter(p => p.available).map(p => p.provider),
+          availableProviders: providers.length,
+          mockServiceStatus: 'Available as fallback'
+        },
         environmentCheck: envCheck,
         providers,
-        providerStatus: EnhancedAIService.getProviderStatus(),
-        timestamp: new Date().toISOString()
+        providerStatus: EnhancedAIService.getProviderStatus()
       });
     } catch (error: any) {
       console.error('❌ AI debug status error:', error);

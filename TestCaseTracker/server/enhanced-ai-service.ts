@@ -598,13 +598,17 @@ export class EnhancedAIService {
         } else if (response.status === 429) {
           throw new Error('GROK API rate limit exceeded. Please try again later.');
         } else if (response.status === 403) {
+          // Check for credit-related issues
+          if (errorJson?.error?.includes('credits') || errorText.includes('credits')) {
+            throw new Error('GROK API: Your team has no credits remaining. Please purchase credits at https://console.x.ai/ to use GROK AI.');
+          }
           throw new Error('GROK API access forbidden. Please check your API key permissions.');
         } else if (response.status === 404) {
           throw new Error('GROK API endpoint not found. The model or API version may have changed.');
         } else if (response.status === 500) {
           throw new Error('GROK API server error. Please try again later.');
         } else {
-          const errorDetail = errorJson?.error?.message || errorText || response.statusText;
+          const errorDetail = errorJson?.error?.message || errorJson?.error || errorText || response.statusText;
           throw new Error(`GROK API error (${response.status}): ${errorDetail}`);
         }
       }
@@ -734,7 +738,7 @@ ${request.moduleContext ? `MODULE: ${request.moduleContext}` : ''}
 TEST TYPE: ${request.testType || 'functional'}
 PRIORITY: ${request.priority || 'Medium'}
 
-Generate 3-5 detailed test cases that cover:
+Generate 8-10 detailed test cases that cover:
 1. Happy path scenarios
 2. Edge cases and boundary conditions
 3. Error scenarios and validation
