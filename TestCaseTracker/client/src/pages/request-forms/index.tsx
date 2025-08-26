@@ -586,8 +586,10 @@ function RequestFormsPageContent() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => {
-                                      setSelectedRequest(request);
-                                      setIsCommentsDialogOpen(true);
+                                      startTransition(() => {
+                                        setSelectedRequest(request);
+                                        setIsCommentsDialogOpen(true);
+                                      });
                                     }}
                                   >
                                     <Eye className="h-4 w-4" />
@@ -596,8 +598,10 @@ function RequestFormsPageContent() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => {
-                                      setEditingRequest(request);
-                                      setIsFormDialogOpen(true);
+                                      startTransition(() => {
+                                        setEditingRequest(request);
+                                        setIsFormDialogOpen(true);
+                                      });
                                     }}
                                   >
                                     <Edit className="h-4 w-4" />
@@ -607,8 +611,10 @@ function RequestFormsPageContent() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() => {
-                                        setSelectedRequest(request);
-                                        setIsExtensionDialogOpen(true);
+                                        startTransition(() => {
+                                          setSelectedRequest(request);
+                                          setIsExtensionDialogOpen(true);
+                                        });
                                       }}
                                     >
                                       <History className="h-4 w-4" />
@@ -675,8 +681,10 @@ function RequestFormsPageContent() {
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                setSelectedRequest(request);
-                                setIsCommentsDialogOpen(true);
+                                startTransition(() => {
+                                  setSelectedRequest(request);
+                                  setIsCommentsDialogOpen(true);
+                                });
                               }}
                             >
                               <Eye className="h-4 w-4 mr-1" />
