@@ -36,79 +36,100 @@ interface GeneratedTestCase {
   tags?: string[];
 }
 
+type InputType = 'text' | 'url' | 'image';
+type AIProvider = 'gemini' | 'openai' | 'claude' | 'grok' | 'deepseek' | 'huggingface' | 'cohere' | 'mistral';
+
+const availableProviders = [
+  {
+    provider: "gemini",
+    name: "Google Gemini",
+    available: true,
+  },
+  {
+    provider: "openai",
+    name: "OpenAI GPT-4",
+    available: true,
+  },
+  {
+    provider: "claude",
+    name: "Anthropic Claude",
+    available: true,
+  },
+  {
+    provider: "grok",
+    name: "xAI Grok",
+    available: true,
+  },
+  {
+    provider: "deepseek",
+    name: "DeepSeek Coder",
+    available: true,
+  },
+  {
+    provider: "huggingface",
+    name: "Hugging Face",
+    available: true,
+  },
+  {
+    provider: "cohere",
+    name: "Cohere",
+    available: true,
+  },
+  {
+    provider: "mistral",
+    name: "Mistral AI",
+    available: true,
+  },
+];
+
 export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AITestGeneratorProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("text");
+  const [activeTab, setActiveTab] = useState<InputType>("text");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Form state
-  const [selectedModuleId, setSelectedModuleId] = useState<number>();
-  const [testType, setTestType] = useState("functional");
-  const [priority, setPriority] = useState("Medium");
-
-  // Tab-specific inputs
-  const [textPrompt, setTextPrompt] = useState("");
-  const [projectContext, setProjectContext] = useState("");
-  const [websiteUrl, setWebsiteUrl] = useState("");
-  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [formData, setFormData] = useState({
+    requirement: '',
+    projectContext: '',
+    moduleContext: '',
+    testType: 'functional',
+    priority: 'Medium',
+    websiteUrl: '',
+    elementInspection: '',
+    userFlows: '',
+    businessRules: '',
+    inputType: 'text' as InputType,
+    aiProvider: 'gemini' as AIProvider,
+    testCaseCount: 20
+  });
 
   // Generated test cases and selection
   const [generatedTestCases, setGeneratedTestCases] = useState<GeneratedTestCase[]>([]);
   const [selectedTestCases, setSelectedTestCases] = useState<Set<number>>(new Set());
 
-  // AI Provider selection
-  const [aiProvider, setAiProvider] = useState<string>("gemini");
+  // AI Provider selection state is now managed within formData
   const [showResults, setShowResults] = useState(false);
   const [generatedResults, setGeneratedResults] = useState<any>(null);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
-  const [selectedProviderForKey, setSelectedProviderForKey] = useState<string>("");
+  const [selectedProviderForKey, setSelectedProviderForKey] = useState<string>("gemini"); // Default to gemini or the initial aiProvider
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [apiKeyStatus, setApiKeyStatus] = useState<Record<string, boolean>>({});
 
-  const availableProviders = [
-    {
-      provider: "gemini",
-      name: "Google Gemini",
-      available: true,
-    },
-    {
-      provider: "openai",
-      name: "OpenAI GPT-4",
-      available: true,
-    },
-    {
-      provider: "claude",
-      name: "Anthropic Claude",
-      available: true,
-    },
-    {
-      provider: "grok",
-      name: "xAI Grok",
-      available: true,
-    },
-    {
-      provider: "deepseek",
-      name: "DeepSeek Coder",
-      available: true,
-    },
-    {
-      provider: "huggingface",
-      name: "Hugging Face",
-      available: true,
-    },
-    {
-      provider: "cohere",
-      name: "Cohere",
-      available: true,
-    },
-    {
-      provider: "mistral",
-      name: "Mistral AI",
-      available: true,
-    },
-  ];
+  const handleInputChange = (field: keyof typeof formData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'inputType') {
+      // Reset specific inputs when input type changes
+      setFormData(prev => ({ ...prev, websiteUrl: '', requirement: '' }));
+      if (value !== 'image') {
+        setSelectedImages([]);
+      }
+    }
+    if (field === 'aiProvider') {
+      setSelectedProviderForKey(value);
+    }
+  };
 
   // Fetch API Key Status
   const fetchApiKeyStatus = async () => {
@@ -383,27 +404,27 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   });
 
   const handleGenerate = () => {
-    const selectedModule = modules.find(m => m.id === selectedModuleId);
+    const selectedModule = modules.find(m => m.id === (selectedModuleId === undefined ? undefined : Number(selectedModuleId))); // Ensure selectedModuleId is number or undefined
 
     let requirement = '';
     let inputType = activeTab;
 
     switch (activeTab) {
       case 'text':
-        requirement = textPrompt;
+        requirement = formData.requirement;
         break;
       case 'url':
-        requirement = `Website analysis for: ${websiteUrl}`;
+        requirement = `Website analysis for: ${formData.websiteUrl}`;
         break;
-      case 'images':
+      case 'image':
         requirement = `UI analysis from ${selectedImages.length} uploaded image(s)`;
         inputType = 'image';
         break;
       default:
-        requirement = textPrompt;
+        requirement = formData.requirement;
     }
 
-    if (!requirement.trim() && activeTab !== 'images') {
+    if (!requirement.trim() && activeTab !== 'image') {
       toast({
         title: "Input Required",
         description: `Please provide ${activeTab === 'text' ? 'a text prompt' : activeTab === 'url' ? 'a website URL' : 'input'}.`,
@@ -412,7 +433,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       return;
     }
 
-    if (activeTab === 'url' && !websiteUrl.trim()) {
+    if (activeTab === 'url' && !formData.websiteUrl.trim()) {
       toast({
         title: "URL Required",
         description: "Please provide a website URL to analyze.",
@@ -421,7 +442,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       return;
     }
 
-    if (activeTab === 'images' && selectedImages.length === 0) {
+    if (activeTab === 'image' && selectedImages.length === 0) {
       toast({
         title: "Images Required",
         description: "Please upload at least one image for analysis.",
@@ -432,30 +453,35 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
     generateMutation.mutate({
       requirement,
-      projectContext,
+      projectContext: formData.projectContext,
       moduleContext: selectedModule?.name || '',
-      testType,
-      priority,
-      websiteUrl: activeTab === 'url' ? websiteUrl : '',
+      testType: formData.testType,
+      priority: formData.priority,
+      websiteUrl: activeTab === 'url' ? formData.websiteUrl : '',
       inputType,
-      images: activeTab === 'images' ? selectedImages : [],
-      aiProvider,
+      images: activeTab === 'image' ? selectedImages : [],
+      aiProvider: formData.aiProvider,
+      testCaseCount: formData.testCaseCount, // Pass the count from form data
     });
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     setSelectedImages(files);
+    // Update form data's inputType if it's currently null or not 'image'
+    if (formData.inputType !== 'image') {
+      handleInputChange('inputType', 'image');
+    }
   };
 
   const handleMergeTestCases = () => {
     const selectedCases = Array.from(selectedTestCases).map(index => {
       const testCase = generatedTestCases[index];
-      const selectedModule = modules.find(m => m.id === selectedModuleId);
+      const selectedModule = modules.find(m => m.id === (selectedModuleId === undefined ? undefined : Number(selectedModuleId))); // Ensure selectedModuleId is number or undefined
 
       return {
         projectId,
-        moduleId: selectedModuleId || null,
+        moduleId: selectedModule?.id || null, // Use the found module's ID
         feature: testCase.feature,
         testObjective: testCase.testObjective,
         preConditions: testCase.preConditions,
@@ -526,7 +552,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
             <Wand2 className="h-5 w-5 text-purple-600" />
             AI Test Case Generator Pro
             <Badge variant="secondary">
-              {availableProviders.find(p => p.provider === aiProvider)?.name ?? aiProvider}
+              {availableProviders.find(p => p.provider === formData.aiProvider)?.name ?? formData.aiProvider}
             </Badge>
             <div className="flex gap-2 ml-auto">
               <Button
@@ -535,7 +561,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                 onClick={async () => {
                   console.log("🔍 Client Debug Info:", {
                     apiKeys: apiKeyStatus,
-                    selectedProvider: aiProvider,
+                    selectedProvider: formData.aiProvider,
                     debugInfo: {
                       timestamp: new Date().toISOString(),
                       userAgent: navigator.userAgent,
@@ -548,18 +574,18 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
                     const response = await fetch('/api/ai/debug-comprehensive', {
                       credentials: 'include'
                     });
-                    
+
                     if (!response.ok) {
                       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
-                    
+
                     const debugData = await response.json();
                     console.log("🔍 Server Debug Info:", debugData);
 
                     if (debugData.success) {
                       const summary = debugData.summary || {};
                       const debug = debugData.debug || {};
-                      
+
                       // Show user-friendly debug info
                       alert(`🔍 AI Provider Debug Info:
 
@@ -572,20 +598,20 @@ Environment:
 • OpenAI API Key: ${debug.environment?.hasOpenaiApiKey ? (debug.environment?.openaiKeyFormat === 'valid' ? '✅ Valid' : '❌ Invalid Format') : '❌ Missing'}
 • GROK API Key: ${debug.environment?.hasGrokApiKey ? (debug.environment?.grokKeyFormat === 'valid' ? '✅ Valid' : '❌ Invalid Format') : '❌ Missing'}
 
-Selected Provider: ${aiProvider}
+Selected Provider: ${formData.aiProvider}
 
 Check console for detailed technical information.`);
                     } else {
                       throw new Error(debugData.error || 'Debug failed');
                     }
-                  } catch (error) {
+                  } catch (error: any) {
                     console.error("❌ Failed to fetch debug info:", error);
                     alert(`❌ Debug fetch failed: ${error.message}
 
 Client API Status:
 ${Object.entries(apiKeyStatus).map(([key, value]) => `${key}: ${value ? '✅' : '❌'}`).join('\n')}
 
-Selected Provider: ${aiProvider}
+Selected Provider: ${formData.aiProvider}
 
 Check console and server logs for more details.`);
                   }
@@ -598,7 +624,7 @@ Check console and server logs for more details.`);
                 variant="outline"
                 size="icon"
                 onClick={() => {
-                  setSelectedProviderForKey(aiProvider);
+                  setSelectedProviderForKey(formData.aiProvider);
                   setShowApiKeyDialog(true);
                 }}
               >
@@ -610,17 +636,18 @@ Check console and server logs for more details.`);
 
         {!showResults ? (
           <div className="space-y-6">
-            {/* AI Provider Selection */}
+            {/* AI Provider Selection and Test Case Count */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">AI Provider Selection</CardTitle>
+                <CardTitle className="text-lg">AI Configuration</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* AI Provider Selection */}
                 <div>
-                  <Label>Choose AI Provider</Label>
-                  <Select value={aiProvider} onValueChange={setAiProvider}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select AI provider" />
+                  <Label htmlFor="ai-provider">AI Provider</Label>
+                  <Select value={formData.aiProvider} onValueChange={(value: AIProvider) => handleInputChange('aiProvider', value)}>
+                    <SelectTrigger id="ai-provider" className="mt-1">
+                      <SelectValue placeholder="Select AI Provider" />
                     </SelectTrigger>
                     <SelectContent>
                       {availableProviders.map((provider) => (
@@ -631,18 +658,31 @@ Check console and server logs for more details.`);
                         >
                           <div className="flex items-center justify-between w-full">
                             <span>{provider.name}</span>
-                            {apiKeyStatus[provider.provider] ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-500 ml-2" />
-                            ) : (
-                              <p className="text-xs text-gray-400 ml-2">API Key Needed</p>
+                            {!provider.available && (
+                              <Badge variant="secondary" className="ml-2">Not Available</Badge>
                             )}
                           </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Test Case Count */}
+                <div>
+                  <Label htmlFor="test-case-count">Number of Test Cases</Label>
+                  <Input
+                    id="test-case-count"
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={formData.testCaseCount || 20}
+                    onChange={(e) => handleInputChange('testCaseCount', parseInt(e.target.value) || 20)}
+                    placeholder="Enter number of test cases (e.g., 20)"
+                    className="mt-1"
+                  />
                   <p className="text-sm text-gray-500 mt-1">
-                    {availableProviders.find(p => p.provider === aiProvider)?.name ?? aiProvider} is currently selected.
+                    Specify how many test cases you want to generate (1-50)
                   </p>
                 </div>
               </CardContent>
@@ -654,7 +694,7 @@ Check console and server logs for more details.`);
                 <CardTitle className="text-lg">Project & Module Selection</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label>Module (Optional)</Label>
                     <Select value={selectedModuleId?.toString()} onValueChange={(value) => setSelectedModuleId(value ? parseInt(value) : undefined)}>
@@ -672,7 +712,7 @@ Check console and server logs for more details.`);
                   </div>
                   <div>
                     <Label>Test Type</Label>
-                    <Select value={testType} onValueChange={setTestType}>
+                    <Select value={formData.testType} onValueChange={(value) => handleInputChange('testType', value)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -688,7 +728,7 @@ Check console and server logs for more details.`);
                   </div>
                   <div>
                     <Label>Priority</Label>
-                    <Select value={priority} onValueChange={setPriority}>
+                    <Select value={formData.priority} onValueChange={(value) => handleInputChange('priority', value)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -719,7 +759,7 @@ Check console and server logs for more details.`);
                       <Globe className="h-4 w-4" />
                       Website URL
                     </TabsTrigger>
-                    <TabsTrigger value="images" className="flex items-center gap-2">
+                    <TabsTrigger value="image" className="flex items-center gap-2">
                       <Upload className="h-4 w-4" />
                       Image Upload
                     </TabsTrigger>
@@ -730,8 +770,8 @@ Check console and server logs for more details.`);
                       <Label>Test Requirements / User Story</Label>
                       <Textarea
                         placeholder="Describe what you want to test. For example: 'User registration with email validation and password strength requirements'"
-                        value={textPrompt}
-                        onChange={(e) => setTextPrompt(e.target.value)}
+                        value={formData.requirement}
+                        onChange={(e) => handleInputChange('requirement', e.target.value)}
                         rows={4}
                       />
                     </div>
@@ -739,8 +779,8 @@ Check console and server logs for more details.`);
                       <Label>Project Context (Optional)</Label>
                       <Textarea
                         placeholder="Provide additional context about your application, business rules, or specific requirements..."
-                        value={projectContext}
-                        onChange={(e) => setProjectContext(e.target.value)}
+                        value={formData.projectContext}
+                        onChange={(e) => handleInputChange('projectContext', e.target.value)}
                         rows={3}
                       />
                     </div>
@@ -751,22 +791,22 @@ Check console and server logs for more details.`);
                       <Label>Website URL</Label>
                       <Input
                         placeholder="https://example.com"
-                        value={websiteUrl}
-                        onChange={(e) => setWebsiteUrl(e.target.value)}
+                        value={formData.websiteUrl}
+                        onChange={(e) => handleInputChange('websiteUrl', e.target.value)}
                       />
                     </div>
                     <div>
                       <Label>Project Context (Optional)</Label>
                       <Textarea
                         placeholder="Provide additional context about what functionality to focus on..."
-                        value={projectContext}
-                        onChange={(e) => setProjectContext(e.target.value)}
+                        value={formData.projectContext}
+                        onChange={(e) => handleInputChange('projectContext', e.target.value)}
                         rows={3}
                       />
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="images" className="space-y-4 mt-4">
+                  <TabsContent value="image" className="space-y-4 mt-4">
                     <div>
                       <Label>Upload Images</Label>
                       <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">

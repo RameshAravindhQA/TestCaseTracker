@@ -2066,7 +2066,8 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         userFlows,
         businessRules,
         inputType,
-        aiProvider
+        aiProvider,
+        testCaseCount
       } = req.body;
 
       console.log('📋 Request data received:', {
@@ -2101,6 +2102,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
         businessRules: businessRules || '',
         inputType: inputType || 'text',
         aiProvider: aiProvider || 'gemini',
+        testCaseCount: testCaseCount || 20,
         images: []
       };
 

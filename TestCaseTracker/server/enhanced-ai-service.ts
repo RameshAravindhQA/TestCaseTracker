@@ -17,6 +17,7 @@ export interface TestCaseGenerationRequest {
   inputType: 'text' | 'url' | 'image' | 'inspect';
   images?: Express.Multer.File[];
   aiProvider?: AIProvider;
+  testCaseCount?: number;
 }
 
 export interface GeneratedTestCase {
@@ -730,6 +731,8 @@ export class EnhancedAIService {
   }
 
   private static buildPrompt(request: TestCaseGenerationRequest): string {
+    const testCaseCount = request.testCaseCount || 20; // Default to 20 if not specified
+    
     return `Generate comprehensive test cases based on this requirement:
 
 REQUIREMENT: ${request.requirement}
@@ -738,11 +741,17 @@ ${request.moduleContext ? `MODULE: ${request.moduleContext}` : ''}
 TEST TYPE: ${request.testType || 'functional'}
 PRIORITY: ${request.priority || 'Medium'}
 
-Generate 8-10 detailed test cases that cover:
+Generate ${testCaseCount} detailed test cases that cover:
 1. Happy path scenarios
 2. Edge cases and boundary conditions
 3. Error scenarios and validation
 4. Integration points
+5. Negative testing scenarios
+6. Security considerations
+7. Performance edge cases
+8. User interface validation
+9. Data integrity checks
+10. Cross-browser compatibility (if applicable)
 
 Return ONLY a valid JSON array with this structure:
 [
@@ -766,32 +775,37 @@ Return ONLY valid JSON, no other text.`;
   private static getMockResponse(request: TestCaseGenerationRequest): TestCaseGenerationResponse {
     console.log('🎭 Generating mock response as fallback...');
 
-    const mockTestCases: GeneratedTestCase[] = [
-      {
-        feature: `${request.requirement || 'System Feature'} - Happy Path`,
-        testObjective: `Verify successful ${(request.requirement || 'system functionality').toLowerCase()} with valid data`,
+    const testCaseCount = request.testCaseCount || 20;
+    const mockTestCases: GeneratedTestCase[] = [];
+
+    // Generate the requested number of mock test cases
+    for (let i = 1; i <= testCaseCount; i++) {
+      const testCaseTypes = [
+        { suffix: 'Happy Path', objective: 'successful functionality', category: 'Primary Flow', priority: 'High' },
+        { suffix: 'Input Validation', objective: 'input validation and error handling', category: 'Negative Testing', priority: 'Medium' },
+        { suffix: 'Boundary Testing', objective: 'boundary conditions and edge cases', category: 'Edge Case Testing', priority: 'Medium' },
+        { suffix: 'Security Testing', objective: 'security vulnerabilities and access control', category: 'Security Testing', priority: 'High' },
+        { suffix: 'Performance Testing', objective: 'system performance under load', category: 'Performance Testing', priority: 'Low' },
+        { suffix: 'Integration Testing', objective: 'integration with external systems', category: 'Integration Testing', priority: 'Medium' },
+        { suffix: 'Error Handling', objective: 'error handling and recovery', category: 'Error Testing', priority: 'High' },
+        { suffix: 'Data Validation', objective: 'data integrity and validation', category: 'Data Testing', priority: 'Medium' }
+      ];
+
+      const testType = testCaseTypes[(i - 1) % testCaseTypes.length];
+
+      mockTestCases.push({
+        feature: `${request.requirement || 'System Feature'} - ${testType.suffix} ${Math.ceil(i / testCaseTypes.length)}`,
+        testObjective: `Verify ${testType.objective} for ${(request.requirement || 'system functionality').toLowerCase()}`,
         preConditions: "System is accessible and feature is available",
-        testSteps: "1. Access the system/feature\n2. Enter valid input data\n3. Submit the form/execute action\n4. Verify successful completion\n5. Validate expected results",
-        expectedResult: "System should process the request successfully and return expected results",
-        priority: (request.priority as 'High' | 'Medium' | 'Low') || "High",
+        testSteps: `1. Access the system/feature\n2. Prepare test data for ${testType.suffix.toLowerCase()}\n3. Execute test scenario\n4. Verify system response\n5. Validate expected behavior`,
+        expectedResult: `System should handle ${testType.suffix.toLowerCase()} scenario correctly`,
+        priority: (testType.priority as 'High' | 'Medium' | 'Low'),
         testType: request.testType || "functional",
-        coverage: "Core Functionality",
-        category: "Primary Flow",
-        tags: ["mock-generated", "core-functionality", "positive-testing"]
-      },
-      {
-        feature: `${request.requirement || 'System Feature'} - Input Validation`,
-        testObjective: `Verify input validation and error handling for ${(request.requirement || 'system functionality').toLowerCase()}`,
-        preConditions: "System is accessible",
-        testSteps: "1. Access the system/feature\n2. Enter invalid or malformed data\n3. Submit the form/execute action\n4. Verify error handling\n5. Check error messages are displayed",
-        expectedResult: "System should handle errors gracefully and display appropriate error messages",
-        priority: (request.priority as 'High' | 'Medium' | 'Low') || "Medium",
-        testType: request.testType || "functional",
-        coverage: "Input Validation",
-        category: "Negative Testing",
-        tags: ["mock-generated", "validation", "negative-testing"]
-      }
-    ];
+        coverage: testType.suffix,
+        category: testType.category,
+        tags: ["mock-generated", testType.suffix.toLowerCase().replace(' ', '-')]
+      });
+    }
 
     return {
       testCases: mockTestCases,
