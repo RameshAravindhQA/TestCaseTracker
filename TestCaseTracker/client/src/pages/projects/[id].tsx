@@ -183,6 +183,8 @@ export default function ProjectDetailPage() {
         style: { backgroundColor: 'darkgreen', color: 'white' },
       });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/deleted-test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/activities`] });
       setDeleteTestCaseDialogOpen(false);
     },
     onError: (error) => {
@@ -233,6 +235,7 @@ export default function ProjectDetailPage() {
         style: { backgroundColor: 'darkgreen', color: 'white' },
       });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/deleted-test-cases`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/activities`] });
     },
     onError: (error) => {
@@ -690,7 +693,7 @@ export default function ProjectDetailPage() {
 
         {/* Project tabs */}
         <Tabs defaultValue="modules" className="space-y-4">
-          <TabsList className="grid grid-cols-4 md:w-[400px]">
+          <TabsList className="grid grid-cols-5 md:w-[500px]">
             <TabsTrigger value="modules" className="flex items-center gap-2">
               <Layers className="h-4 w-4" />
               <span className="hidden sm:inline">Modules</span>
@@ -705,7 +708,7 @@ export default function ProjectDetailPage() {
             </TabsTrigger>
             <TabsTrigger value="deleted-test-cases" className="flex items-center gap-2">
               <Trash2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Deleted Test Cases</span>
+              <span className="hidden sm:inline">Deleted</span>
             </TabsTrigger>
             <TabsTrigger value="activity" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
