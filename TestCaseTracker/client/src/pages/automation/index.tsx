@@ -80,7 +80,7 @@ export default function AutomationPage() {
     queryKey: ['modules', selectedProject],
     queryFn: async () => {
       if (!selectedProject) return [];
-      const response = await fetch(`/api/modules?projectId=${selectedProject}`);
+      const response = await fetch(`/api/projects/${selectedProject}/modules`);
       if (!response.ok) throw new Error('Failed to fetch modules');
       return response.json();
     },
@@ -91,8 +91,8 @@ export default function AutomationPage() {
   const { data: testCases = [], isLoading: testCasesLoading } = useQuery({
     queryKey: ['test-cases', selectedModule],
     queryFn: async () => {
-      if (!selectedModule) return [];
-      const response = await fetch(`/api/test-cases?moduleId=${selectedModule}`);
+      if (!selectedModule || !selectedProject) return [];
+      const response = await fetch(`/api/projects/${selectedProject}/test-cases?moduleId=${selectedModule}`);
       if (!response.ok) throw new Error('Failed to fetch test cases');
       // Add mock script status for demonstration
       const cases = await response.json();
@@ -102,7 +102,7 @@ export default function AutomationPage() {
         scriptFile: Math.random() > 0.5 ? `${tc.id}_script.spec.js` : undefined
       }));
     },
-    enabled: !!selectedModule
+    enabled: !!selectedModule && !!selectedProject
   });
 
   // Start recording mutation
