@@ -91,6 +91,12 @@ export interface IStorage {
   createTestCase(testCase: InsertTestCase): Promise<TestCase>;
   updateTestCase(id: number, testCaseData: Partial<TestCase>): Promise<TestCase | undefined>;
   deleteTestCase(id: number): Promise<boolean>;
+  
+  // Deleted test case operations
+  getDeletedTestCases(projectId?: number): Promise<TestCase[]>;
+  getDeletedTestCasesByProject(projectId: number): Promise<TestCase[]>;
+  restoreTestCase(id: number): Promise<TestCase | undefined>;
+  permanentlyDeleteTestCase(id: number): Promise<boolean>;
 
   // Bug operations
   getBugs(): Promise<Bug[]>;
@@ -572,8 +578,9 @@ class MemStorage implements IStorage {
   }
 
   async getTestCasesByProject(projectId: number): Promise<TestCase[]> {
-    const results = Array.from(this.testCases.values()).filter(tc => tc.projectId === projectId);
-    console.log(`Storage: getTestCasesByProject(${projectId}) returning ${results.length} test cases:`, 
+    const results = Array.from(this.testCases.values())
+      .filter(tc => tc.projectId === projectId && tc.isDeleted !== true);
+    console.log(`Storage: getTestCasesByProject(${projectId}) returning ${results.length} active test cases:`, 
       results.map(tc => ({ id: tc.id, testCaseId: tc.testCaseId, projectId: tc.projectId })));
     return results;
   }
@@ -669,16 +676,76 @@ class MemStorage implements IStorage {
     const testCase = this.testCases.get(id);
     if (!testCase) return false;
 
-    console.log(`Storage: Deleting test case ID ${id} (${testCase.testCaseId}). Total test cases before deletion: ${this.testCases.size}`);
+    console.log(`Storage: Soft deleting test case ID ${id} (${testCase.testCaseId})`);
     
-    this.testCases.delete(id);
+    // Soft delete - mark as deleted instead of removing
+    const deletedTestCase = {
+      ...testCase,
+      isDeleted: true,
+      deletedAt: new Date(),
+      deletedById: 1, // Should be current user ID
+      updatedAt: new Date()
+    };
+    
+    this.testCases.set(id, deletedTestCase);
     this.recordActivity('test_case', 'deleted', id, testCase.assignedTo || 1);
     
-    console.log(`Storage: Test case deleted. Total test cases after deletion: ${this.testCases.size}. Remaining test case IDs: [${Array.from(this.testCases.values()).map(tc => tc.testCaseId).join(', ')}]`);
+    console.log(`Storage: Test case soft deleted. ID: ${testCase.testCaseId}`);
     
-    // Note: We explicitly do NOT renumber existing test cases after deletion
-    // Test case IDs should remain immutable once assigned
+    return true;
+  }
+
+  // Deleted test case operations
+  async getDeletedTestCases(projectId?: number): Promise<TestCase[]> {
+    let results = Array.from(this.testCases.values()).filter(tc => tc.isDeleted === true);
     
+    if (projectId) {
+      results = results.filter(tc => tc.projectId === projectId);
+    }
+    
+    console.log(`Storage: getDeletedTestCases(${projectId}) returning ${results.length} deleted test cases`);
+    return results;
+  }
+
+  async getDeletedTestCasesByProject(projectId: number): Promise<TestCase[]> {
+    const results = Array.from(this.testCases.values())
+      .filter(tc => tc.projectId === projectId && tc.isDeleted === true);
+    
+    console.log(`Storage: getDeletedTestCasesByProject(${projectId}) returning ${results.length} deleted test cases`);
+    return results;
+  }
+
+  async restoreTestCase(id: number): Promise<TestCase | undefined> {
+    const testCase = this.testCases.get(id);
+    if (!testCase || !testCase.isDeleted) return undefined;
+
+    console.log(`Storage: Restoring test case ID ${id} (${testCase.testCaseId})`);
+    
+    const restoredTestCase = {
+      ...testCase,
+      isDeleted: false,
+      deletedAt: null,
+      deletedById: null,
+      updatedAt: new Date()
+    };
+    
+    this.testCases.set(id, restoredTestCase);
+    this.recordActivity('test_case', 'restored', id, testCase.assignedTo || 1);
+    
+    console.log(`Storage: Test case restored. ID: ${testCase.testCaseId}`);
+    return restoredTestCase;
+  }
+
+  async permanentlyDeleteTestCase(id: number): Promise<boolean> {
+    const testCase = this.testCases.get(id);
+    if (!testCase) return false;
+
+    console.log(`Storage: Permanently deleting test case ID ${id} (${testCase.testCaseId})`);
+    
+    this.testCases.delete(id);
+    this.recordActivity('test_case', 'permanently_deleted', id, testCase.assignedTo || 1);
+    
+    console.log(`Storage: Test case permanently deleted. Total test cases: ${this.testCases.size}`);
     return true;
   }
 

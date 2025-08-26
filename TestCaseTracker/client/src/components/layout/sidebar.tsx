@@ -41,6 +41,7 @@ import {
   Play,
   User as UserIcon,
   TrendingUp,
+  Trash2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -187,6 +188,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       name: "Test Cases",
       href: "/test-cases",
       icon: <TestTube className="h-5 w-5" />,
+    },
+    {
+      name: "Deleted Test Cases",
+      href: "/test-cases/deleted",
+      icon: <Trash2 className="h-5 w-5" />,
     },
     {
       name: "AI Generator",

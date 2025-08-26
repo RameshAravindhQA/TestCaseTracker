@@ -117,6 +117,9 @@ export const testCases = pgTable("test_cases", {
   tags: json("tags").default([]),
   createdById: integer("created_by_id").notNull(),
   assignedToId: integer("assigned_to_id"),
+  isDeleted: boolean("is_deleted").default(false),
+  deletedAt: timestamp("deleted_at"),
+  deletedById: integer("deleted_by_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at"),
 });

@@ -1673,6 +1673,54 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 });
 
 
+  // Deleted Test Cases routes
+  apiRouter.get("/projects/:projectId/deleted-test-cases", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const deletedTestCases = await storage.getDeletedTestCasesByProject(projectId);
+      
+      console.log(`[API] Returning ${deletedTestCases.length} deleted test cases for project ${projectId}`);
+      res.json(deletedTestCases);
+    } catch (error) {
+      console.error("Get deleted test cases error:", error);
+      res.status(500).json({ message: "Failed to fetch deleted test cases" });
+    }
+  });
+
+  apiRouter.post("/test-cases/:id/restore", isAuthenticated, async (req, res) => {
+    try {
+      const testCaseId = parseInt(req.params.id);
+      const restoredTestCase = await storage.restoreTestCase(testCaseId);
+      
+      if (!restoredTestCase) {
+        return res.status(404).json({ message: "Test case not found or not deleted" });
+      }
+      
+      console.log(`[API] Test case ${restoredTestCase.testCaseId} restored successfully`);
+      res.json(restoredTestCase);
+    } catch (error) {
+      console.error("Restore test case error:", error);
+      res.status(500).json({ message: "Failed to restore test case" });
+    }
+  });
+
+  apiRouter.delete("/test-cases/:id/permanent", isAuthenticated, async (req, res) => {
+    try {
+      const testCaseId = parseInt(req.params.id);
+      const success = await storage.permanentlyDeleteTestCase(testCaseId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Test case not found" });
+      }
+      
+      console.log(`[API] Test case ${testCaseId} permanently deleted`);
+      res.json({ success: true, message: "Test case permanently deleted" });
+    } catch (error) {
+      console.error("Permanent delete test case error:", error);
+      res.status(500).json({ message: "Failed to permanently delete test case" });
+    }
+  });
+
   // Error handling middleware for multer (this is used by document uploads)
 
   // AI Test Case Generation endpoints (moved up before document routes)

@@ -328,9 +328,14 @@ export class DatabaseStorage implements IStorage {
   async getTestCases(projectId: number, moduleId?: number): Promise<TestCase[]> {
     if (moduleId) {
       return await db.select().from(testCases)
-        .where(and(eq(testCases.projectId, projectId), eq(testCases.moduleId, moduleId)));
+        .where(and(
+          eq(testCases.projectId, projectId), 
+          eq(testCases.moduleId, moduleId),
+          eq(testCases.isDeleted, false)
+        ));
     }
-    return await db.select().from(testCases).where(eq(testCases.projectId, projectId));
+    return await db.select().from(testCases)
+      .where(and(eq(testCases.projectId, projectId), eq(testCases.isDeleted, false)));
   }
 
   async getTestCase(id: number): Promise<TestCase | undefined> {
@@ -404,6 +409,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTestCase(id: number): Promise<boolean> {
+    // Soft delete - mark as deleted instead of removing
+    await db.update(testCases)
+      .set({ 
+        isDeleted: true, 
+        deletedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(testCases.id, id));
+    return true;
+  }
+
+  // Deleted test case operations
+  async getDeletedTestCases(projectId?: number): Promise<TestCase[]> {
+    if (projectId) {
+      return await db.select().from(testCases)
+        .where(and(eq(testCases.projectId, projectId), eq(testCases.isDeleted, true)));
+    }
+    return await db.select().from(testCases).where(eq(testCases.isDeleted, true));
+  }
+
+  async getDeletedTestCasesByProject(projectId: number): Promise<TestCase[]> {
+    return await db.select().from(testCases)
+      .where(and(eq(testCases.projectId, projectId), eq(testCases.isDeleted, true)));
+  }
+
+  async restoreTestCase(id: number): Promise<TestCase | undefined> {
+    const [restoredTestCase] = await db.update(testCases)
+      .set({ 
+        isDeleted: false, 
+        deletedAt: null,
+        updatedAt: new Date()
+      })
+      .where(eq(testCases.id, id))
+      .returning();
+    return restoredTestCase;
+  }
+
+  async permanentlyDeleteTestCase(id: number): Promise<boolean> {
     await db.delete(testCases).where(eq(testCases.id, id));
     return true;
   }
