@@ -213,6 +213,11 @@ export class EnhancedAIService {
           if (!openai || openaiInitError) return false;
           await EnhancedAIService.generateWithOpenAI(testRequest);
           return true;
+        case 'grok':
+          const grokApiKey = process.env.GROK_API_KEY;
+          if (!grokApiKey || grokApiKey === 'your-grok-api-key' || grokApiKey.trim() === '') return false;
+          await EnhancedAIService.generateWithGrok(testRequest);
+          return true;
         default:
           return false;
       }
@@ -503,6 +508,13 @@ export class EnhancedAIService {
   private static async generateWithGrok(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     const grokApiKey = process.env.GROK_API_KEY;
     
+    console.log('🔧 GROK API key check:', {
+      hasKey: !!grokApiKey,
+      keyLength: grokApiKey?.length || 0,
+      startsWithXai: grokApiKey?.startsWith('xai-') || false,
+      preview: grokApiKey ? `${grokApiKey.substring(0, 15)}...` : 'NONE'
+    });
+    
     if (!grokApiKey || grokApiKey === 'your-grok-api-key' || grokApiKey.trim() === '') {
       throw new Error('GROK API key is not properly configured');
     }
@@ -514,56 +526,82 @@ export class EnhancedAIService {
       console.log('📝 Sending prompt to GROK (length: ' + prompt.length + ')');
 
       // GROK API call using fetch (xAI uses OpenAI-compatible API)
+      const requestBody = {
+        model: 'grok-beta',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only, no additional text or explanations.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 3000,
+      };
+
+      console.log('🌐 Making GROK API request to: https://api.x.ai/v1/chat/completions');
+
       const response = await fetch('https://api.x.ai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${grokApiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: 'grok-beta',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only, no additional text or explanations.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 3000,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log('📡 GROK API response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        const errorText = await response.text();
+        let errorText;
+        try {
+          errorText = await response.text();
+          console.error('❌ GROK API error response:', errorText);
+        } catch (e) {
+          errorText = 'Unable to read error response';
+        }
+
         console.error('❌ GROK API error:', {
           status: response.status,
           statusText: response.statusText,
-          error: errorText
+          error: errorText,
+          headers: Object.fromEntries(response.headers.entries())
         });
         
         if (response.status === 401) {
-          throw new Error('GROK API authentication failed. Please check your API key.');
+          throw new Error('GROK API authentication failed. Please check your API key format (should start with xai-).');
         } else if (response.status === 429) {
           throw new Error('GROK API quota exceeded. Please try again later.');
         } else if (response.status === 403) {
           throw new Error('GROK API access forbidden. Please check your API key permissions.');
+        } else if (response.status === 404) {
+          throw new Error('GROK API endpoint not found. The model or endpoint may have changed.');
         } else {
-          throw new Error(`GROK API error: ${response.status} ${response.statusText}`);
+          throw new Error(`GROK API error: ${response.status} ${response.statusText} - ${errorText}`);
         }
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        const responseText = await response.text();
+        console.log('📝 GROK raw response length:', responseText.length);
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ Failed to parse GROK response:', parseError);
+        throw new Error('GROK API returned invalid JSON response');
+      }
+
       const content = data.choices?.[0]?.message?.content;
 
       if (!content) {
-        throw new Error('No response from GROK API');
+        console.error('❌ No content in GROK response:', data);
+        throw new Error('No response content from GROK API');
       }
 
-      console.log('🤖 GROK response received');
+      console.log('🤖 GROK response received, content length:', content.length);
 
       const testCases = EnhancedAIService.parseAIResponse(content);
 
@@ -590,13 +628,15 @@ export class EnhancedAIService {
     } catch (error: any) {
       console.error('🚨 GROK generation failed:', {
         error: error.message,
-        status: error.status,
-        code: error.code
+        stack: error.stack,
+        name: error.name
       });
 
       // Provide more specific error messages
       if (error.message.includes('fetch failed') || error.message.includes('ENOTFOUND')) {
         throw new Error('GROK API connection failed. Please check your internet connection.');
+      } else if (error.message.includes('NetworkError') || error.message.includes('ECONNREFUSED')) {
+        throw new Error('GROK API network error. The service may be temporarily unavailable.');
       } else {
         throw new Error(`GROK API error: ${error.message}`);
       }
