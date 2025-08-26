@@ -152,6 +152,9 @@ export class EnhancedAIService {
   }
 
   static getAvailableProviders(): { provider: AIProvider; name: string; available: boolean; error?: string; isFree?: boolean }[] {
+    const grokApiKey = process.env.GROK_API_KEY;
+    const grokAvailable = !!(grokApiKey && grokApiKey !== 'your-grok-api-key' && grokApiKey.trim() !== '');
+    
     const providers = [
       {
         provider: 'gemini' as AIProvider,
@@ -165,6 +168,13 @@ export class EnhancedAIService {
         name: 'OpenAI GPT-4',
         available: !!openai && !openaiInitError,
         error: openaiInitError || undefined,
+        isFree: false
+      },
+      {
+        provider: 'grok' as AIProvider,
+        name: 'xAI GROK',
+        available: grokAvailable,
+        error: grokAvailable ? undefined : 'GROK API key not configured',
         isFree: false
       },
       {
@@ -233,7 +243,12 @@ export class EnhancedAIService {
     const availableProviders: string[] = [];
     if (genAI && !geminiInitError) availableProviders.push('gemini');
     if (openai && !openaiInitError) availableProviders.push('openai');
-    // GROK provider will be added here once implemented
+    
+    // Check GROK availability
+    const grokApiKey = process.env.GROK_API_KEY;
+    if (grokApiKey && grokApiKey !== 'your-grok-api-key' && grokApiKey.trim() !== '') {
+      availableProviders.push('grok');
+    }
 
     console.log(`🔍 Available real AI providers: ${availableProviders.join(', ')}`);
     console.log(`🔍 Provider status - Gemini: ${!!genAI && !geminiInitError}, OpenAI: ${!!openai && !openaiInitError}`);
@@ -484,15 +499,108 @@ export class EnhancedAIService {
     throw new Error(`All OpenAI models failed. Last error: ${lastError?.message || 'Unknown error'}`);
   }
 
-  // Placeholder for GROK implementation
+  // GROK (xAI) implementation
   private static async generateWithGrok(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
-    console.warn('⚠️ GROK provider is not yet implemented. Returning mock response.');
-    // In a real scenario, you would initialize and use the GROK SDK here.
-    // For now, we'll return a mock response similar to getMockResponse.
-    const mockResponse = EnhancedAIService.getMockResponse(request);
-    mockResponse.message = `Generated ${mockResponse.testCases.length} test cases using GROK (mock implementation)`;
-    mockResponse.provider = 'grok';
-    return mockResponse;
+    const grokApiKey = process.env.GROK_API_KEY;
+    
+    if (!grokApiKey || grokApiKey === 'your-grok-api-key' || grokApiKey.trim() === '') {
+      throw new Error('GROK API key is not properly configured');
+    }
+
+    console.log('🔮 Attempting GROK generation...');
+
+    try {
+      const prompt = EnhancedAIService.buildPrompt(request);
+      console.log('📝 Sending prompt to GROK (length: ' + prompt.length + ')');
+
+      // GROK API call using fetch (xAI uses OpenAI-compatible API)
+      const response = await fetch('https://api.x.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${grokApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'grok-beta',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert QA engineer who generates comprehensive test cases. Always respond with valid JSON only, no additional text or explanations.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 3000,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ GROK API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        
+        if (response.status === 401) {
+          throw new Error('GROK API authentication failed. Please check your API key.');
+        } else if (response.status === 429) {
+          throw new Error('GROK API quota exceeded. Please try again later.');
+        } else if (response.status === 403) {
+          throw new Error('GROK API access forbidden. Please check your API key permissions.');
+        } else {
+          throw new Error(`GROK API error: ${response.status} ${response.statusText}`);
+        }
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+
+      if (!content) {
+        throw new Error('No response from GROK API');
+      }
+
+      console.log('🤖 GROK response received');
+
+      const testCases = EnhancedAIService.parseAIResponse(content);
+
+      if (!testCases || testCases.length === 0) {
+        throw new Error('GROK returned empty or invalid test cases');
+      }
+
+      console.log(`✅ GROK successfully generated ${testCases.length} test cases`);
+
+      return {
+        testCases: testCases,
+        analysis: {
+          coverage: 'Comprehensive AI Analysis',
+          complexity: EnhancedAIService.getComplexityLevel(request),
+          focusAreas: EnhancedAIService.getFocusAreas(request),
+          suggestions: EnhancedAIService.getSuggestions(request)
+        },
+        message: `Generated ${testCases.length} test cases using xAI GROK`,
+        source: 'grok',
+        provider: 'grok',
+        success: true
+      };
+
+    } catch (error: any) {
+      console.error('🚨 GROK generation failed:', {
+        error: error.message,
+        status: error.status,
+        code: error.code
+      });
+
+      // Provide more specific error messages
+      if (error.message.includes('fetch failed') || error.message.includes('ENOTFOUND')) {
+        throw new Error('GROK API connection failed. Please check your internet connection.');
+      } else {
+        throw new Error(`GROK API error: ${error.message}`);
+      }
+    }
   }
 
   private static parseAIResponse(text: string): GeneratedTestCase[] {
