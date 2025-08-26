@@ -18,32 +18,46 @@ export default function NotificationsPage() {
   const [selectedNotification, setSelectedNotification] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  // Fetch notifications
+  // Fetch notifications - removed suspense config entirely
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["/api/notifications", user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const res = await apiRequest("GET", `/api/notifications/${user.id}`);
-      if (!res.ok) throw new Error("Failed to fetch notifications");
-      return res.json();
+      try {
+        const res = await apiRequest("GET", `/api/notifications/${user.id}`);
+        if (!res.ok) throw new Error("Failed to fetch notifications");
+        return res.json();
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+        return [];
+      }
     },
     enabled: !!user?.id,
-    suspense: false,
+    refetchOnWindowFocus: false,
+    staleTime: 30000,
   });
 
   // Mark notification as read
   const markAsReadMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest("PATCH", `/api/notifications/${id}/read`);
+      if (!res.ok) throw new Error("Failed to mark notification as read");
       return res.json();
     },
     onSuccess: () => {
       startTransition(() => {
         queryClient.invalidateQueries({ queryKey: ["/api/notifications", user?.id] });
-        toast({
-          title: "Notification marked as read",
-          description: "The notification has been marked as read.",
-        });
+      });
+      toast({
+        title: "Notification marked as read",
+        description: "The notification has been marked as read.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to mark notification as read",
+        variant: "destructive",
       });
     },
   });
@@ -52,11 +66,19 @@ export default function NotificationsPage() {
     startTransition(() => {
       setSelectedNotification(notification);
       setIsDetailsOpen(true);
+      
+      // Mark as read if unread
+      if (!notification.read) {
+        markAsReadMutation.mutate(notification.id);
+      }
     });
-    
-    if (!notification.read) {
-      markAsReadMutation.mutate(notification.id);
-    }
+  };
+
+  const handleCloseDialog = () => {
+    startTransition(() => {
+      setIsDetailsOpen(false);
+      setSelectedNotification(null);
+    });
   };
 
   const getNotificationIcon = (type: string) => {
@@ -71,22 +93,29 @@ export default function NotificationsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
 
+  // Show loading state
   if (isLoading) {
     return (
       <MainLayout>
         <div className="container mx-auto p-6">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-2 text-gray-500">Loading notifications...</p>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-gray-500">Loading notifications...</p>
+            </div>
           </div>
         </div>
       </MainLayout>
@@ -178,14 +207,7 @@ export default function NotificationsPage() {
         </Card>
 
         {/* Notification Details Dialog */}
-        <Dialog open={isDetailsOpen} onOpenChange={(open) => {
-          startTransition(() => {
-            setIsDetailsOpen(open);
-            if (!open) {
-              setSelectedNotification(null);
-            }
-          });
-        }}>
+        <Dialog open={isDetailsOpen} onOpenChange={handleCloseDialog}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -226,17 +248,15 @@ export default function NotificationsPage() {
                 )}
                 
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => {
-                    startTransition(() => {
-                      setIsDetailsOpen(false);
-                      setSelectedNotification(null);
-                    });
-                  }}>
+                  <Button variant="outline" onClick={handleCloseDialog}>
                     Close
                   </Button>
                   {!selectedNotification.read && (
-                    <Button onClick={() => markAsReadMutation.mutate(selectedNotification.id)}>
-                      Mark as Read
+                    <Button 
+                      onClick={() => markAsReadMutation.mutate(selectedNotification.id)}
+                      disabled={markAsReadMutation.isPending}
+                    >
+                      {markAsReadMutation.isPending ? "Marking..." : "Mark as Read"}
                     </Button>
                   )}
                 </div>
