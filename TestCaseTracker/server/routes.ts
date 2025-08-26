@@ -756,6 +756,183 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Request Forms API Routes
+  apiRouter.get("/request-forms/types", isAuthenticated, async (req, res) => {
+    try {
+      const types = await storage.getRequestFormTypes();
+      res.json(types);
+    } catch (error) {
+      console.error("Get request form types error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/request-forms/types", isAuthenticated, async (req, res) => {
+    try {
+      const typeData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+      const type = await storage.createRequestFormType(typeData);
+      res.status(201).json(type);
+    } catch (error) {
+      console.error("Create request form type error:", error);
+      res.status(400).json({ message: "Invalid type data" });
+    }
+  });
+
+  apiRouter.get("/request-forms/options/:formTypeId", isAuthenticated, async (req, res) => {
+    try {
+      const formTypeId = parseInt(req.params.formTypeId);
+      const options = await storage.getRequestFormOptions(formTypeId);
+      res.json(options);
+    } catch (error) {
+      console.error("Get request form options error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/request-forms/options", isAuthenticated, async (req, res) => {
+    try {
+      const option = await storage.createRequestFormOption(req.body);
+      res.status(201).json(option);
+    } catch (error) {
+      console.error("Create request form option error:", error);
+      res.status(400).json({ message: "Invalid option data" });
+    }
+  });
+
+  apiRouter.get("/resource-requests", isAuthenticated, async (req, res) => {
+    try {
+      const { projectId, status, department, requestType } = req.query;
+      const requests = await storage.getResourceRequests({
+        projectId: projectId ? parseInt(projectId as string) : undefined,
+        status: status as string,
+        department: department as string,
+        requestType: requestType as string,
+        userId: req.session.userId,
+        userRole: req.session.userRole
+      });
+      res.json(requests);
+    } catch (error) {
+      console.error("Get resource requests error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/resource-requests/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const request = await storage.getResourceRequest(id);
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+      res.json(request);
+    } catch (error) {
+      console.error("Get resource request error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/resource-requests", isAuthenticated, async (req, res) => {
+    try {
+      const requestData = {
+        ...req.body,
+        requestedById: req.session.userId
+      };
+      const request = await storage.createResourceRequest(requestData);
+      res.status(201).json(request);
+    } catch (error) {
+      console.error("Create resource request error:", error);
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
+
+  apiRouter.put("/resource-requests/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedRequest = await storage.updateResourceRequest(id, req.body);
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error("Update resource request error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/resource-requests/:id/extend", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { newEndDate, extensionReason } = req.body;
+      const extension = await storage.createRequestExtension({
+        requestId: id,
+        newEndDate,
+        extensionReason,
+        requestedById: req.session.userId
+      });
+      res.status(201).json(extension);
+    } catch (error) {
+      console.error("Create request extension error:", error);
+      res.status(400).json({ message: "Invalid extension data" });
+    }
+  });
+
+  apiRouter.get("/resource-requests/:id/extensions", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const extensions = await storage.getRequestExtensions(id);
+      res.json(extensions);
+    } catch (error) {
+      console.error("Get request extensions error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.put("/resource-requests/:id/approve", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status, comments } = req.body;
+      const request = await storage.approveResourceRequest(id, {
+        status,
+        approvedById: req.session.userId,
+        comments
+      });
+      res.json(request);
+    } catch (error) {
+      console.error("Approve resource request error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/resource-requests/:id/comments", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const commentData = {
+        ...req.body,
+        requestId,
+        userId: req.session.userId
+      };
+      const comment = await storage.createRequestComment(commentData);
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Create request comment error:", error);
+      res.status(400).json({ message: "Invalid comment data" });
+    }
+  });
+
+  apiRouter.get("/resource-requests/:id/comments", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const comments = await storage.getRequestComments(requestId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Get request comments error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Status Review endpoints
   apiRouter.get("/navadhiti-projects/status-reviews", isAuthenticated, async (req, res) => {
     try {

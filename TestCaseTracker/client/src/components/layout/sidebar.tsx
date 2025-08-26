@@ -42,6 +42,7 @@ import {
   User as UserIcon,
   TrendingUp,
   Trash2,
+  Building2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -269,6 +270,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       name: "Navadhiti Projects",
       href: "/navadhiti-projects",
       icon: <Briefcase className="h-5 w-5" />,
+    },
+    {
+      name: "Request Forms",
+      href: "/request-forms",
+      icon: <FileText className="h-5 w-5" />,
     },
   ], []);
 

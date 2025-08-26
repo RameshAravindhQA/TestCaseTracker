@@ -91,7 +91,7 @@ export interface IStorage {
   createTestCase(testCase: InsertTestCase): Promise<TestCase>;
   updateTestCase(id: number, testCaseData: Partial<TestCase>): Promise<TestCase | undefined>;
   deleteTestCase(id: number): Promise<boolean>;
-  
+
   // Deleted test case operations
   getDeletedTestCases(projectId?: number): Promise<TestCase[]>;
   getDeletedTestCasesByProject(projectId: number): Promise<TestCase[]>;
@@ -269,7 +269,7 @@ export interface IStorage {
   updateNavadhitiProject(id: number, data: any): Promise<any | null>;
   deleteNavadhitiProject(id: number): Promise<boolean>;
 
-  // Todo Management Methods  
+  // Todo Management Methods
   getTodos(userId: number): Promise<any[]>;
   getTodo(id: number): Promise<any | undefined>;
   createTodo(data: any): Promise<any>;
@@ -280,6 +280,37 @@ export interface IStorage {
   createTodoList(data: any): Promise<any>;
   updateTodoList(id: number, data: any): Promise<any | null>;
   deleteTodoList(id: number): Promise<boolean>;
+
+  // Request Forms Module Methods
+  getRequestFormTypes(): Promise<any[]>;
+  getRequestFormType(id: number): Promise<any | undefined>;
+  createRequestFormType(data: any): Promise<any>;
+  updateRequestFormType(id: number, data: any): Promise<any | null>;
+  deleteRequestFormType(id: number): Promise<boolean>;
+
+  getOptionsByFormType(formTypeId: number): Promise<any[]>;
+  getOption(id: number): Promise<any | undefined>;
+  createOption(data: any): Promise<any>;
+  updateOption(id: number, data: any): Promise<any | null>;
+  deleteOption(id: number): Promise<boolean>;
+
+  getResourceRequests(): Promise<any[]>;
+  getResourceRequest(id: number): Promise<any | undefined>;
+  createResourceRequest(data: any): Promise<any>;
+  updateResourceRequest(id: number, data: any): Promise<any | null>;
+  deleteResourceRequest(id: number): Promise<boolean>;
+
+  getResourceRequestExtensions(): Promise<any[]>;
+  getResourceRequestExtension(id: number): Promise<any | undefined>;
+  createResourceRequestExtension(data: any): Promise<any>;
+  updateResourceRequestExtension(id: number, data: any): Promise<any | null>;
+  deleteResourceRequestExtension(id: number): Promise<boolean>;
+
+  getRequestComments(requestId: number): Promise<any[]>;
+  getRequestComment(id: number): Promise<any | undefined>;
+  createRequestComment(data: any): Promise<any>;
+  updateRequestComment(id: number, data: any): Promise<any | null>;
+  deleteRequestComment(id: number): Promise<boolean>;
 }
 
 /**
@@ -339,6 +370,14 @@ class MemStorage implements IStorage {
   private navadhitiProjects = new Map<number, any>();
   private statusReviews = new Map<number, any>();
   private employeeProjectHistory: any[] = []; // Added for storing history
+
+  // Request Forms Module Maps
+  private requestFormTypes = new Map<number, any>();
+  private requestFormOptions = new Map<number, any>();
+  private resourceRequests = new Map<number, any>();
+  private requestExtensions = new Map<number, any>();
+  private requestComments = new Map<number, any>();
+
 
   private initializeEmployeeDefaults() {
     // Add default technology options
@@ -580,7 +619,7 @@ class MemStorage implements IStorage {
   async getTestCasesByProject(projectId: number): Promise<TestCase[]> {
     const results = Array.from(this.testCases.values())
       .filter(tc => tc.projectId === projectId && tc.isDeleted !== true);
-    console.log(`Storage: getTestCasesByProject(${projectId}) returning ${results.length} active test cases:`, 
+    console.log(`Storage: getTestCasesByProject(${projectId}) returning ${results.length} active test cases:`,
       results.map(tc => ({ id: tc.id, testCaseId: tc.testCaseId, projectId: tc.projectId })));
     return results;
   }
@@ -632,7 +671,7 @@ class MemStorage implements IStorage {
       // Always increment from the highest number ever used, never reuse deleted IDs
       const nextNumber = existingTestCases.length > 0 ? Math.max(...existingTestCases) + 1 : 1;
       testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
-      
+
       console.log(`Storage: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId}. Existing numbers: [${existingTestCases.join(', ')}], next: ${nextNumber}`);
     }
 
@@ -653,10 +692,10 @@ class MemStorage implements IStorage {
     const testCase = this.testCases.get(id);
     if (!testCase) return null;
 
-    const updatedTestCase = { 
-      ...testCase, 
-      ...data, 
-      updatedAt: new Date() 
+    const updatedTestCase = {
+      ...testCase,
+      ...data,
+      updatedAt: new Date()
     };
 
     // Force immediate persistence
@@ -677,7 +716,7 @@ class MemStorage implements IStorage {
     if (!testCase) return false;
 
     console.log(`Storage: Soft deleting test case ID ${id} (${testCase.testCaseId})`);
-    
+
     // Soft delete - mark as deleted instead of removing
     const deletedTestCase = {
       ...testCase,
@@ -686,23 +725,23 @@ class MemStorage implements IStorage {
       deletedById: 1, // Should be current user ID
       updatedAt: new Date()
     };
-    
+
     this.testCases.set(id, deletedTestCase);
     this.recordActivity('test_case', 'deleted', id, testCase.assignedTo || 1);
-    
+
     console.log(`Storage: Test case soft deleted. ID: ${testCase.testCaseId}`);
-    
+
     return true;
   }
 
   // Deleted test case operations
   async getDeletedTestCases(projectId?: number): Promise<TestCase[]> {
     let results = Array.from(this.testCases.values()).filter(tc => tc.isDeleted === true);
-    
+
     if (projectId) {
       results = results.filter(tc => tc.projectId === projectId);
     }
-    
+
     console.log(`Storage: getDeletedTestCases(${projectId}) returning ${results.length} deleted test cases`);
     return results;
   }
@@ -710,7 +749,7 @@ class MemStorage implements IStorage {
   async getDeletedTestCasesByProject(projectId: number): Promise<TestCase[]> {
     const results = Array.from(this.testCases.values())
       .filter(tc => tc.projectId === projectId && tc.isDeleted === true);
-    
+
     console.log(`Storage: getDeletedTestCasesByProject(${projectId}) returning ${results.length} deleted test cases`);
     return results;
   }
@@ -720,7 +759,7 @@ class MemStorage implements IStorage {
     if (!testCase || !testCase.isDeleted) return undefined;
 
     console.log(`Storage: Restoring test case ID ${id} (${testCase.testCaseId})`);
-    
+
     const restoredTestCase = {
       ...testCase,
       isDeleted: false,
@@ -728,10 +767,10 @@ class MemStorage implements IStorage {
       deletedById: null,
       updatedAt: new Date()
     };
-    
+
     this.testCases.set(id, restoredTestCase);
     this.recordActivity('test_case', 'restored', id, testCase.assignedTo || 1);
-    
+
     console.log(`Storage: Test case restored. ID: ${testCase.testCaseId}`);
     return restoredTestCase;
   }
@@ -741,10 +780,10 @@ class MemStorage implements IStorage {
     if (!testCase) return false;
 
     console.log(`Storage: Permanently deleting test case ID ${id} (${testCase.testCaseId})`);
-    
+
     this.testCases.delete(id);
     this.recordActivity('test_case', 'permanently_deleted', id, testCase.assignedTo || 1);
-    
+
     console.log(`Storage: Test case permanently deleted. Total test cases: ${this.testCases.size}`);
     return true;
   }
@@ -830,10 +869,10 @@ class MemStorage implements IStorage {
     const bug = this.bugs.get(id);
     if (!bug) return null;
 
-    const updatedBug = { 
-      ...bug, 
-      ...data, 
-      updatedAt: new Date() 
+    const updatedBug = {
+      ...bug,
+      ...data,
+      updatedAt: new Date()
     };
 
     // Force immediate persistence
@@ -1273,10 +1312,10 @@ class MemStorage implements IStorage {
     const sheet = this.testSheets.get(id);
     if (!sheet) return null;
 
-    const updatedSheet = { 
-      ...sheet, 
-      ...data, 
-      updatedAt: new Date().toISOString() 
+    const updatedSheet = {
+      ...sheet,
+      ...data,
+      updatedAt: new Date().toISOString()
     };
 
     this.testSheets.set(id, updatedSheet);
@@ -1392,7 +1431,7 @@ class MemStorage implements IStorage {
     };
   }
 
-  // Document operations  
+  // Document operations
   async getDocuments(projectId: number, folderId?: number): Promise<Document[]> {
     let results = Array.from(this.documents.values()).filter(doc => doc.projectId === projectId);
     if (folderId !== undefined) {
@@ -1824,10 +1863,10 @@ class MemStorage implements IStorage {
     const existingCell = this.matrixCells.get(key);
 
     if (existingCell) {
-      const updatedCell = { 
-        ...existingCell, 
-        ...cell, 
-        updatedAt: new Date().toISOString() 
+      const updatedCell = {
+        ...existingCell,
+        ...cell,
+        updatedAt: new Date().toISOString()
       };
       this.matrixCells.set(key, updatedCell);
       return updatedCell;
@@ -1836,7 +1875,7 @@ class MemStorage implements IStorage {
         id: this.getNextId(),
         ...cell,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString() 
+        updatedAt: new Date().toISOString()
       };
       this.matrixCells.set(key, newCell);
       return newCell;
@@ -1878,8 +1917,8 @@ class MemStorage implements IStorage {
     const marker = this.customMarkers.get(id);
     if (!marker) return null;
 
-    const updatedMarker = { 
-      ...marker, 
+    const updatedMarker = {
+      ...marker,
       ...data
     };
     this.customMarkers.set(id, updatedMarker);
@@ -1932,10 +1971,10 @@ class MemStorage implements IStorage {
     // Find cell by ID across all keys
     for (const [key, cell] of this.matrixCells.entries()) {
       if (cell.id === id.toString()) {
-        const updatedCell = { 
-          ...cell, 
-          ...data, 
-          updatedAt: new Date().toISOString() 
+        const updatedCell = {
+          ...cell,
+          ...data,
+          updatedAt: new Date().toISOString()
         };
         this.matrixCells.set(key, updatedCell);
         return updatedCell;
@@ -2353,7 +2392,7 @@ class MemStorage implements IStorage {
     });
 
     // Sort by updatedAt/createdAt descending
-    return enrichedHistory.sort((a, b) => 
+    return enrichedHistory.sort((a, b) =>
       new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
     );
   }
@@ -2370,7 +2409,7 @@ class MemStorage implements IStorage {
 
     // Get all active employee projects and add them as history entries
     const allEmployeeProjects = Array.from(this.employeeProjects.values());
-    
+
     // Combine history records with active projects
     const combinedHistory = [
       ...historyRecords,
@@ -2407,7 +2446,7 @@ class MemStorage implements IStorage {
     });
 
     // Sort by updatedAt/createdAt descending
-    return enrichedHistory.sort((a, b) => 
+    return enrichedHistory.sort((a, b) =>
       new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
     );
   }
@@ -2667,7 +2706,7 @@ class MemStorage implements IStorage {
       if (!this.employeeProjectHistory) {
         this.employeeProjectHistory = [];
       }
-      
+
       // Add to history immediately
       this.employeeProjectHistory.push(historyRecord);
       console.log('Created history record for extension:', historyRecord);
@@ -2693,6 +2732,192 @@ class MemStorage implements IStorage {
       console.error('Error extending employee project:', error);
       throw error;
     }
+  }
+
+  // Request Forms Module Methods Implementations
+  async getRequestFormTypes(): Promise<any[]> {
+    return Array.from(this.requestFormTypes.values());
+  }
+
+  async getRequestFormType(id: number): Promise<any | undefined> {
+    return this.requestFormTypes.get(id);
+  }
+
+  async createRequestFormType(data: any): Promise<any> {
+    const id = this.getNextId();
+    const formType = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.requestFormTypes.set(id, formType);
+    return formType;
+  }
+
+  async updateRequestFormType(id: number, data: any): Promise<any | null> {
+    const formType = this.requestFormTypes.get(id);
+    if (!formType) return null;
+
+    const updatedFormType = {
+      ...formType,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.requestFormTypes.set(id, updatedFormType);
+    return updatedFormType;
+  }
+
+  async deleteRequestFormType(id: number): Promise<boolean> {
+    return this.requestFormTypes.delete(id);
+  }
+
+  async getOptionsByFormType(formTypeId: number): Promise<any[]> {
+    return Array.from(this.requestFormOptions.values()).filter(option => option.formTypeId === formTypeId);
+  }
+
+  async getOption(id: number): Promise<any | undefined> {
+    return this.requestFormOptions.get(id);
+  }
+
+  async createOption(data: any): Promise<any> {
+    const id = this.getNextId();
+    const option = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.requestFormOptions.set(id, option);
+    return option;
+  }
+
+  async updateOption(id: number, data: any): Promise<any | null> {
+    const option = this.requestFormOptions.get(id);
+    if (!option) return null;
+
+    const updatedOption = {
+      ...option,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.requestFormOptions.set(id, updatedOption);
+    return updatedOption;
+  }
+
+  async deleteOption(id: number): Promise<boolean> {
+    return this.requestFormOptions.delete(id);
+  }
+
+  async getResourceRequests(): Promise<any[]> {
+    return Array.from(this.resourceRequests.values());
+  }
+
+  async getResourceRequest(id: number): Promise<any | undefined> {
+    return this.resourceRequests.get(id);
+  }
+
+  async createResourceRequest(data: any): Promise<any> {
+    const id = this.getNextId();
+    const request = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.resourceRequests.set(id, request);
+    return request;
+  }
+
+  async updateResourceRequest(id: number, data: any): Promise<any | null> {
+    const request = this.resourceRequests.get(id);
+    if (!request) return null;
+
+    const updatedRequest = {
+      ...request,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.resourceRequests.set(id, updatedRequest);
+    return updatedRequest;
+  }
+
+  async deleteResourceRequest(id: number): Promise<boolean> {
+    return this.resourceRequests.delete(id);
+  }
+
+  async getResourceRequestExtensions(): Promise<any[]> {
+    return Array.from(this.requestExtensions.values());
+  }
+
+  async getResourceRequestExtension(id: number): Promise<any | undefined> {
+    return this.requestExtensions.get(id);
+  }
+
+  async createResourceRequestExtension(data: any): Promise<any> {
+    const id = this.getNextId();
+    const extension = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.requestExtensions.set(id, extension);
+    return extension;
+  }
+
+  async updateResourceRequestExtension(id: number, data: any): Promise<any | null> {
+    const extension = this.requestExtensions.get(id);
+    if (!extension) return null;
+
+    const updatedExtension = {
+      ...extension,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.requestExtensions.set(id, updatedExtension);
+    return updatedExtension;
+  }
+
+  async deleteResourceRequestExtension(id: number): Promise<boolean> {
+    return this.requestExtensions.delete(id);
+  }
+
+  async getRequestComments(requestId: number): Promise<any[]> {
+    return Array.from(this.requestComments.values()).filter(comment => comment.requestId === requestId);
+  }
+
+  async getRequestComment(id: number): Promise<any | undefined> {
+    return this.requestComments.get(id);
+  }
+
+  async createRequestComment(data: any): Promise<any> {
+    const id = this.getNextId();
+    const comment = {
+      id,
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.requestComments.set(id, comment);
+    return comment;
+  }
+
+  async updateRequestComment(id: number, data: any): Promise<any | null> {
+    const comment = this.requestComments.get(id);
+    if (!comment) return null;
+
+    const updatedComment = {
+      ...comment,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.requestComments.set(id, updatedComment);
+    return updatedComment;
+  }
+
+  async deleteRequestComment(id: number): Promise<boolean> {
+    return this.requestComments.delete(id);
   }
 }
 

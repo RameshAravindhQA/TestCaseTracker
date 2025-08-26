@@ -952,6 +952,125 @@ export type InsertDepartmentOption = z.infer<typeof insertDepartmentOptionSchema
 export type NavadhitiProject = typeof navadhitiProjects.$inferSelect;
 export type InsertNavadhitiProject = z.infer<typeof insertNavadhitiProjectSchema>;
 
+// Request Forms Schema
+export const requestFormTypes = pgTable("request_form_types", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  department: text("department").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const requestFormOptions = pgTable("request_form_options", {
+  id: serial("id").primaryKey(),
+  formTypeId: integer("form_type_id").notNull(),
+  fieldName: text("field_name").notNull(),
+  optionValue: text("option_value").notNull(),
+  optionLabel: text("option_label").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const resourceRequests = pgTable("resource_requests", {
+  id: serial("id").primaryKey(),
+  requestId: text("request_id").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description"),
+  requestType: text("request_type").notNull(), // QA, Development, DevOps, etc.
+  department: text("department").notNull(),
+  projectId: integer("project_id").notNull(),
+  requestedById: integer("requested_by_id").notNull(),
+  assignedToId: integer("assigned_to_id"),
+  priority: text("priority").$type<"Low" | "Medium" | "High" | "Critical">().notNull().default("Medium"),
+  status: text("status").$type<"Draft" | "Pending" | "Approved" | "In Progress" | "Completed" | "Rejected" | "Cancelled">().notNull().default("Draft"),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  actualStartDate: date("actual_start_date"),
+  actualEndDate: date("actual_end_date"),
+  estimatedHours: integer("estimated_hours"),
+  actualHours: integer("actual_hours"),
+  testingType: text("testing_type"),
+  developmentType: text("development_type"),
+  devopsType: text("devops_type"),
+  resourceType: text("resource_type"), // Frontend, Backend, Full Stack, etc.
+  skillsRequired: json("skills_required").default([]),
+  technologies: json("technologies").default([]),
+  deliverables: text("deliverables"),
+  acceptanceCriteria: text("acceptance_criteria"),
+  additionalNotes: text("additional_notes"),
+  attachments: json("attachments").default([]),
+  approvedById: integer("approved_by_id"),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+export const requestExtensionHistory = pgTable("request_extension_history", {
+  id: serial("id").primaryKey(),
+  requestId: integer("request_id").notNull(),
+  originalEndDate: date("original_end_date").notNull(),
+  newEndDate: date("new_end_date").notNull(),
+  extensionReason: text("extension_reason").notNull(),
+  approvedById: integer("approved_by_id"),
+  requestedById: integer("requested_by_id").notNull(),
+  status: text("status").$type<"Pending" | "Approved" | "Rejected">().notNull().default("Pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const requestComments = pgTable("request_comments", {
+  id: serial("id").primaryKey(),
+  requestId: integer("request_id").notNull(),
+  userId: integer("user_id").notNull(),
+  comment: text("comment").notNull(),
+  commentType: text("comment_type").$type<"General" | "Status Update" | "Extension Request" | "Approval" | "Rejection">().notNull().default("General"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Create insert schemas
+export const insertRequestFormTypeSchema = createInsertSchema(requestFormTypes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRequestFormOptionSchema = createInsertSchema(requestFormOptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertResourceRequestSchema = createInsertSchema(resourceRequests).omit({
+  id: true,
+  requestId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRequestExtensionHistorySchema = createInsertSchema(requestExtensionHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRequestCommentSchema = createInsertSchema(requestComments).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types based on schemas for Request Forms
+export type RequestFormType = typeof requestFormTypes.$inferSelect;
+export type InsertRequestFormType = z.infer<typeof insertRequestFormTypeSchema>;
+
+export type RequestFormOption = typeof requestFormOptions.$inferSelect;
+export type InsertRequestFormOption = z.infer<typeof insertRequestFormOptionSchema>;
+
+export type ResourceRequest = typeof resourceRequests.$inferSelect;
+export type InsertResourceRequest = z.infer<typeof insertResourceRequestSchema>;
+
+export type RequestExtensionHistory = typeof requestExtensionHistory.$inferSelect;
+export type InsertRequestExtensionHistory = z.infer<typeof insertRequestExtensionHistorySchema>;
+
+export type RequestComment = typeof requestComments.$inferSelect;
+export type InsertRequestComment = z.infer<typeof insertRequestCommentSchema>;
+
 // Test Sheets schema
 export const insertTestSheetSchema = z.object({
   name: z.string().min(1, "Sheet name is required"),
