@@ -508,7 +508,7 @@ export default function AutomationPage() {
               </p>
             </CardHeader>
             <CardContent>
-              {testCasesLoading ? (
+              {testCasesQuery.isLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
