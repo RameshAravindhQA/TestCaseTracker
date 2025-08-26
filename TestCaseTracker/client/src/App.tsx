@@ -236,7 +236,7 @@ function Router() {
       </Route>
       <Route path="/notifications">
         <ProtectedLazyComponent Component={lazy(() => import("./pages/notifications"))} />
-      </Routes/notifications"))} />
+      </Route>
 
 
       {/* Catch-all 404 route - make sure this is last */}
