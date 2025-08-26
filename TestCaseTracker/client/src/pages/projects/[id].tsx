@@ -29,6 +29,7 @@ import { DeletedTestCaseTable } from "@/components/test-cases/deleted-test-case-
 import { AITestGenerator } from "@/components/test-cases/ai-test-generator";
 import { GitHubConfigForm } from "@/components/github/github-config-form";
 import { TestCaseTags } from "@/components/test-cases/test-case-tags";
+import { ImportExport } from "@/components/test-cases/import-export";
 import { format, formatDistance } from "date-fns";
 import {
   Dialog,
