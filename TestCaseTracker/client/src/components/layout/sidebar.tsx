@@ -525,13 +525,17 @@ const SidebarComponent = ({ className }: SidebarProps) => {
             </p>
           </div>
           <div className="relative">
-            <Link href="/notifications">
-              <Button variant="ghost" size="sm" className="relative p-2">
-                <Bell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+            <Link href="/notifications" asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+              >
+                <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center p-0 min-w-[20px]">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Badge>
+                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </div>
                 )}
               </Button>
             </Link>

@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, startTransition } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Bell, CheckCircle, Clock, FileText, User, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ export default function NotificationsPage() {
       return res.json();
     },
     enabled: !!user?.id,
+    suspense: false,
   });
 
   // Mark notification as read
@@ -37,17 +38,21 @@ export default function NotificationsPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications", user?.id] });
-      toast({
-        title: "Notification marked as read",
-        description: "The notification has been marked as read.",
+      startTransition(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/notifications", user?.id] });
+        toast({
+          title: "Notification marked as read",
+          description: "The notification has been marked as read.",
+        });
       });
     },
   });
 
   const handleNotificationClick = (notification: any) => {
-    setSelectedNotification(notification);
-    setIsDetailsOpen(true);
+    startTransition(() => {
+      setSelectedNotification(notification);
+      setIsDetailsOpen(true);
+    });
     
     if (!notification.read) {
       markAsReadMutation.mutate(notification.id);
@@ -173,7 +178,14 @@ export default function NotificationsPage() {
         </Card>
 
         {/* Notification Details Dialog */}
-        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <Dialog open={isDetailsOpen} onOpenChange={(open) => {
+          startTransition(() => {
+            setIsDetailsOpen(open);
+            if (!open) {
+              setSelectedNotification(null);
+            }
+          });
+        }}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -214,7 +226,12 @@ export default function NotificationsPage() {
                 )}
                 
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
+                  <Button variant="outline" onClick={() => {
+                    startTransition(() => {
+                      setIsDetailsOpen(false);
+                      setSelectedNotification(null);
+                    });
+                  }}>
                     Close
                   </Button>
                   {!selectedNotification.read && (
