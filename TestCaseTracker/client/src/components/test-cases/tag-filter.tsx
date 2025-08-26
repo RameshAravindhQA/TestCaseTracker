@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -48,16 +48,16 @@ export function TagFilter({
     enabled: true,
     staleTime: 10000, // Consider data stale after 10 seconds
   });
-  
+
   // Listen for tag creator events (when new tags are created)
   useEffect(() => {
     const handleTagsUpdated = () => {
       console.log("Tags updated, refetching...");
       refetch();
     };
-    
+
     window.addEventListener('tagsUpdated', handleTagsUpdated);
-    
+
     return () => {
       window.removeEventListener('tagsUpdated', handleTagsUpdated);
     };
@@ -66,7 +66,7 @@ export function TagFilter({
   // Handle tag selection/deselection
   const handleTagSelect = (tag: Tag) => {
     const isSelected = selectedTags.some((t) => t.id === tag.id);
-    
+
     if (isSelected) {
       // Remove tag if already selected
       onTagSelect(selectedTags.filter((t) => t.id !== tag.id));
@@ -207,14 +207,22 @@ export function TagFilter({
 
 // Helper function to determine text color based on background color
 function getContrastColor(hexColor: string): string {
+  // Handle undefined or null colors
+  if (!hexColor || typeof hexColor !== 'string') {
+    return '#000000'; // Default to black for undefined colors
+  }
+
+  // Remove # if present
+  const color = hexColor.startsWith('#') ? hexColor.slice(1) : hexColor;
+
   // Convert hex to RGB
-  const r = parseInt(hexColor.slice(1, 3), 16);
-  const g = parseInt(hexColor.slice(3, 5), 16);
-  const b = parseInt(hexColor.slice(5, 7), 16);
-  
+  const r = parseInt(color.slice(0, 2), 16);
+  const g = parseInt(color.slice(2, 4), 16);
+  const b = parseInt(color.slice(4, 6), 16);
+
   // Calculate luminance
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  
+
   // Use white text on dark backgrounds, black text on light backgrounds
   return luminance > 0.5 ? '#000000' : '#ffffff';
 }
