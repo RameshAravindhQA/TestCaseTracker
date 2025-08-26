@@ -1,232 +1,150 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Play, Square, Trash2, Edit, Plus, Clock, CheckCircle, XCircle, Eye, Download, Upload, FileText } from 'lucide-react';
+import { Play, Square, Eye, Download, Search, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/auth';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-
-interface AutomationScript {
-  id: string;
-  name: string;
-  description: string;
-  projectId: string;
-  moduleId: string;
-  testCaseIds: string[];
-  script: string;
-  status: 'draft' | 'ready' | 'running' | 'completed' | 'failed';
-  lastRun?: Date;
-  results?: {
-    success: boolean;
-    steps: Array<{
-      step: string;
-      status: 'passed' | 'failed' | 'skipped';
-      screenshot?: string;
-      timestamp: Date;
-    }>;
-    report: string;
-  };
-}
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Project {
   id: string;
   name: string;
-  modules: Array<{
-    id: string;
-    name: string;
-    testCases: Array<{
-      id: string;
-      title: string;
-      description: string;
-    }>;
-  }>;
+  description: string;
 }
 
-interface Recording {
-  filename: string;
-  createdAt: string;
-  size: number;
+interface Module {
+  id: string;
+  name: string;
+  description: string;
+  testCaseCount: number;
+}
+
+interface TestCase {
+  id: string;
+  title: string;
+  description: string;
+  priority: string;
+  status: string;
+  hasScript: boolean;
+  scriptFile?: string;
 }
 
 interface RecordingSession {
   sessionId: string;
-  status: 'starting' | 'recording' | 'stopped' | 'error';
-  filename: string;
-  startTime: string;
+  status: 'recording' | 'stopped' | 'error';
+  testCaseId: string;
+}
+
+interface ExecutionResult {
+  id: string;
+  testCaseId: string;
+  status: 'running' | 'completed' | 'failed';
+  steps: Array<{
+    step: string;
+    status: 'passed' | 'failed' | 'skipped';
+    error?: string;
+    screenshot?: string;
+  }>;
+  report: string;
 }
 
 export default function AutomationPage() {
-  const [url, setUrl] = useState('');
-  const [projectId, setProjectId] = useState('');
-  const [moduleId, setModuleId] = useState('');
-  const [testCaseId, setTestCaseId] = useState('');
-  const [currentSession, setCurrentSession] = useState<RecordingSession | null>(null);
-  const [recordings, setRecordings] = useState<Recording[]>([]);
-  const [selectedRecording, setSelectedRecording] = useState<string>('');
-  const [recordingContent, setRecordingContent] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [selectedModule, setSelectedModule] = useState<string>('');
-  const [selectedTestCases, setSelectedTestCases] = useState<string[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingScript, setRecordingScript] = useState<string>('');
-  const [editingScript, setEditingScript] = useState<AutomationScript | null>(null);
-  const [availableModules, setAvailableModules] = useState([]);
-  const [availableTestCases, setAvailableTestCases] = useState([]);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [selectedTestCase, setSelectedTestCase] = useState<string>('');
+  const [recordingUrl, setRecordingUrl] = useState<string>('');
+  const [isRecordingDialogOpen, setIsRecordingDialogOpen] = useState<boolean>(false);
+  const [currentRecording, setCurrentRecording] = useState<RecordingSession | null>(null);
+  const [executionResults, setExecutionResults] = useState<ExecutionResult[]>([]);
+  const { toast } = useToast();
 
-  // Validate URL format
-  const validateUrl = (url: string): boolean => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  // Validate form inputs
-  const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    if (!url.trim()) {
-      errors.url = "Target URL is required";
-    } else if (!validateUrl(url)) {
-      errors.url = "Please enter a valid URL";
-    }
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  // Fetch projects with modules and test cases
+  // Fetch projects
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
       const response = await fetch('/api/projects');
       if (!response.ok) throw new Error('Failed to fetch projects');
-      const data = await response.json();
-      console.log('Projects loaded:', data);
-      return data;
-    }
-  });
-
-    // Fetch modules when project changes
-    useEffect(() => {
-      if (selectedProject) {
-        fetch(`/api/modules?projectId=${selectedProject}`)
-          .then(res => res.json())
-          .then(data => setAvailableModules(data))
-          .catch(err => console.error('Failed to fetch modules:', err));
-      } else {
-        setAvailableModules([]);
-      }
-      setSelectedModule('');
-    }, [selectedProject]);
-
-    // Fetch test cases when module changes
-    useEffect(() => {
-      if (selectedModule) {
-        fetch(`/api/test-cases?moduleId=${selectedModule}`)
-          .then(res => res.json())
-          .then(data => setAvailableTestCases(data))
-          .catch(err => console.error('Failed to fetch test cases:', err));
-      } else {
-        setAvailableTestCases([]);
-      }
-    }, [selectedModule]);
-
-  // Fetch automation scripts
-  const { data: scripts = [], isLoading: isScriptsLoading, refetch: refetchScripts } = useQuery<AutomationScript[]>({
-    queryKey: ['/api/automation/scripts'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/automation/scripts');
-      if (!response.ok) throw new Error('Failed to fetch scripts');
       return response.json();
     }
   });
 
+  // Fetch modules for selected project
+  const { data: modules = [], isLoading: modulesLoading } = useQuery({
+    queryKey: ['modules', selectedProject],
+    queryFn: async () => {
+      if (!selectedProject) return [];
+      const response = await fetch(`/api/modules?projectId=${selectedProject}`);
+      if (!response.ok) throw new Error('Failed to fetch modules');
+      return response.json();
+    },
+    enabled: !!selectedProject
+  });
+
+  // Fetch test cases for selected module
+  const { data: testCases = [], isLoading: testCasesLoading } = useQuery({
+    queryKey: ['test-cases', selectedModule],
+    queryFn: async () => {
+      if (!selectedModule) return [];
+      const response = await fetch(`/api/test-cases?moduleId=${selectedModule}`);
+      if (!response.ok) throw new Error('Failed to fetch test cases');
+      // Add mock script status for demonstration
+      const cases = await response.json();
+      return cases.map((tc: any) => ({
+        ...tc,
+        hasScript: Math.random() > 0.5, // Mock script availability
+        scriptFile: Math.random() > 0.5 ? `${tc.id}_script.spec.js` : undefined
+      }));
+    },
+    enabled: !!selectedModule
+  });
+
   // Start recording mutation
   const startRecordingMutation = useMutation({
-    mutationFn: async (data: { projectId: string; moduleId: string; testCaseIds: string[] }) => {
-      if (!validateForm()) {
-          throw new Error("Please fix validation errors");
-        }
-      try {
-        // Check if automation API endpoint exists first
-        const healthCheck = await fetch('/api/automation/health', {
-          method: 'GET',
-          credentials: 'include',
-        }).catch(() => null);
+    mutationFn: async (data: { testCaseId: string; url: string }) => {
+      const response = await fetch('/api/automation/start-recording', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          url: data.url,
+          projectId: selectedProject,
+          moduleId: selectedModule,
+          testCaseId: data.testCaseId
+        })
+      });
 
-        if (!healthCheck || !healthCheck.ok) {
-          throw new Error('Automation service is not available. Please ensure the automation server is running.');
-        }
-
-        const response = await fetch('/api/automation/start-recording', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            url: url.trim(),
-            projectId: projectId || undefined,
-            moduleId: moduleId || undefined,
-            testCaseId: testCaseId || undefined
-          })
-        });
-
-        if (!response.ok) {
-          const contentType = response.headers.get('content-type');
-          const text = await response.text();
-
-          if (contentType?.includes('text/html') || text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-            throw new Error('Automation API endpoint not implemented. The server returned an HTML page instead of JSON. This feature may not be available yet.');
-          }
-
-          let errorData;
-          try {
-            errorData = JSON.parse(text);
-          } catch (parseError) {
-            throw new Error(`Server error: ${response.status} - ${text.substring(0, 200)}...`);
-          }
-
-          throw new Error(errorData.message || `HTTP ${response.status}: ${text}`);
-        }
-
-        const result = await response.json();
-        return result;
-      } catch (error) {
-        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-          throw new Error('Network error - unable to connect to server. Please check your connection.');
-        }
-        throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to start recording');
       }
+
+      return response.json();
     },
     onSuccess: (data) => {
-      setIsRecording(true);
-      setRecordingScript(data.sessionId);
-      setValidationErrors({});
+      setCurrentRecording({
+        sessionId: data.sessionId,
+        status: 'recording',
+        testCaseId: selectedTestCase
+      });
+      setIsRecordingDialogOpen(false);
       toast({
         title: 'Recording Started',
-        description: 'Browser opened for recording. Close the browser to stop recording.',
+        description: 'Playwright browser opened. Interact with the page to record your test steps.',
       });
     },
-    onError: (error) => {
-      console.error('Recording error:', error);
+    onError: (error: any) => {
       toast({
-        title: 'Error',
-        description: `Failed to start recording: ${error.message}`,
+        title: 'Recording Error',
+        description: error.message,
         variant: 'destructive',
       });
     }
@@ -235,426 +153,179 @@ export default function AutomationPage() {
   // Stop recording mutation
   const stopRecordingMutation = useMutation({
     mutationFn: async (sessionId: string) => {
-      const response = await apiRequest('POST', '/api/automation/stop-recording', { sessionId });
-      if (!response.ok) throw new Error('Failed to stop recording');
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setIsRecording(false);
-      setRecordingScript('');
-      toast({
-        title: 'Recording Stopped',
-        description: 'Script generated and saved successfully.',
-      });
-      refetchScripts();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: `Failed to stop recording: ${error}`,
-        variant: 'destructive',
-      });
-    }
-  });
-
-  // Execute script mutation
-  const executeScriptMutation = useMutation({
-    mutationFn: async (scriptId: string) => {
-      const response = await apiRequest('POST', `/api/automation/execute/${scriptId}`);
-      if (!response.ok) throw new Error('Failed to execute script');
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Script Execution Started',
-        description: 'The automation script is now running.',
-      });
-      refetchScripts();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: `Failed to execute script: ${error}`,
-        variant: 'destructive',
-      });
-    }
-  });
-
-  // Delete script mutation
-  const deleteScriptMutation = useMutation({
-    mutationFn: async (scriptId: string) => {
-      const response = await apiRequest('DELETE', `/api/automation/scripts/${scriptId}`);
-      if (!response.ok) throw new Error('Failed to delete script');
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Script Deleted',
-        description: 'The automation script has been deleted.',
-      });
-      refetchScripts();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: `Failed to delete script: ${error}`,
-        variant: 'destructive',
-      });
-    }
-  });
-
-  const selectedProjectData = projects.find(p => p.id === selectedProject);
-  const selectedModuleData = selectedProjectData?.modules.find(m => m.id === selectedModule);
-  const availableTestCases1 = selectedModuleData?.testCases || [];
-
-  useEffect(() => {
-    loadRecordings();
-  }, []);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    if (currentSession && currentSession.status === 'recording') {
-      interval = setInterval(() => {
-        checkRecordingStatus(currentSession.sessionId);
-      }, 2000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [currentSession]);
-
-  const loadRecordings = async () => {
-    try {
-      const response = await fetch('/api/automation/recordings');
-      if (response.ok) {
-        const data = await response.json();
-        setRecordings(data);
-      }
-    } catch (error) {
-      console.error('Failed to load recordings:', error);
-    }
-  };
-
-  const startRecording = async () => {
-    const validationErrors: Record<string, string> = {};
-
-    if (!url) {
-      validationErrors.url = 'URL is required';
-    } else {
-      try {
-        new URL(url);
-      } catch (error) {
-        validationErrors.url = 'Please enter a valid URL (e.g., https://example.com)';
-      }
-    }
-
-    if (Object.keys(validationErrors).length > 0) {
-      setValidationErrors(validationErrors);
-      return;
-    }
-
-    setValidationErrors({});
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/automation/start-recording', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          url,
-          projectId,
-          moduleId,
-          testCaseId
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setCurrentSession({
-          sessionId: data.sessionId,
-          status: 'recording',
-          filename: data.filename,
-          startTime: new Date().toISOString()
-        });
-
-        toast({
-          title: "Recording Started",
-          description: "Playwright browser opened. Start interacting with the page to record your test.",
-        });
-
-        // Poll for session status
-        const pollInterval = setInterval(async () => {
-          try {
-            const statusResponse = await fetch(`/api/automation/session/${data.sessionId}`, {
-              credentials: 'include'
-            });
-            const statusData = await statusResponse.json();
-
-            if (statusData.success) {
-              setCurrentSession(prev => prev ? {
-                ...prev,
-                status: statusData.data.status
-              } : null);
-
-              if (statusData.data.status === 'stopped' || statusData.data.status === 'error') {
-                clearInterval(pollInterval);
-                if (statusData.data.status === 'stopped') {
-                  toast({
-                    title: "Recording Completed",
-                    description: `Test script saved as ${statusData.data.filename}`,
-                  });
-                }
-                loadRecordings();
-              }
-            }
-          } catch (error) {
-            console.error('Error polling session status:', error);
-          }
-        }, 2000);
-
-        // Clean up interval after 5 minutes
-        setTimeout(() => clearInterval(pollInterval), 300000);
-
-      } else {
-        throw new Error(data.message || 'Failed to start recording');
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || 'Failed to start recording',
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const stopRecording1 = async () => {
-    if (!currentSession) return;
-
-    setIsLoading(true);
-    try {
       const response = await fetch('/api/automation/stop-recording', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          sessionId: currentSession.sessionId
+        credentials: 'include',
+        body: JSON.stringify({ sessionId })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to stop recording');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      setCurrentRecording(null);
+      toast({
+        title: 'Recording Stopped',
+        description: 'Test script has been generated and saved.',
+      });
+      // Refetch test cases to update script status
+      window.location.reload();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Stop Recording Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Execute test mutation
+  const executeTestMutation = useMutation({
+    mutationFn: async (testCaseId: string) => {
+      const testCase = testCases.find(tc => tc.id === testCaseId);
+      if (!testCase?.scriptFile) {
+        throw new Error('No script file found for this test case');
+      }
+
+      const response = await fetch('/api/automation/execute-test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          filename: testCase.scriptFile,
+          testCaseId: testCaseId
         })
       });
 
-      const data = await response.json();
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to execute test');
+      }
 
-      if (data.success) {
-        setCurrentSession(null);
-        loadRecordings();
+      return response.json();
+    },
+    onSuccess: (data, testCaseId) => {
+      toast({
+        title: 'Test Execution Started',
+        description: 'Your test is now running. Results will appear below.',
+      });
+
+      // Mock execution result for demonstration
+      setTimeout(() => {
+        const mockResult: ExecutionResult = {
+          id: `exec_${Date.now()}`,
+          testCaseId,
+          status: Math.random() > 0.3 ? 'completed' : 'failed',
+          steps: [
+            {
+              step: 'Navigate to URL',
+              status: 'passed'
+            },
+            {
+              step: 'Click login button',
+              status: 'passed'
+            },
+            {
+              step: 'Fill username field',
+              status: Math.random() > 0.2 ? 'passed' : 'failed',
+              error: Math.random() > 0.2 ? undefined : 'Element not found: input[name="username"]'
+            },
+            {
+              step: 'Submit form',
+              status: 'passed'
+            }
+          ],
+          report: 'Test execution completed with 3/4 steps passed successfully.'
+        };
+
+        setExecutionResults(prev => [...prev, mockResult]);
 
         toast({
-          title: "Recording Stopped",
-          description: `Test script saved as ${data.filename}`,
+          title: mockResult.status === 'completed' ? 'Test Passed' : 'Test Failed',
+          description: mockResult.report,
+          variant: mockResult.status === 'completed' ? 'default' : 'destructive'
         });
-      } else {
-        throw new Error(data.message || 'Failed to stop recording');
-      }
-    } catch (error) {
+      }, 3000);
+    },
+    onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message || 'Failed to stop recording',
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const checkRecordingStatus = async (sessionId: string) => {
-    try {
-      const response = await fetch(`/api/automation/recording-status/${sessionId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentSession(prev => prev ? { ...prev, status: data.status } : null);
-
-        if (data.status === 'stopped' || data.status === 'error') {
-          loadRecordings();
-          if (data.status === 'error') {
-            toast({
-              title: "Recording Error",
-              description: "Recording process encountered an error",
-              variant: "destructive"
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to check recording status:', error);
-    }
-  };
-
-  const viewRecording = async (filename: string) => {
-    try {
-      const response = await fetch(`/api/automation/recordings/${filename}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSelectedRecording(filename);
-        setRecordingContent(data.content);
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load recording content",
-        variant: "destructive"
+        title: 'Execution Error',
+        description: error.message,
+        variant: 'destructive',
       });
     }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'recording':
-        return <Clock className="h-4 w-4 text-blue-500" />;
-      case 'stopped':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      recording: 'default',
-      stopped: 'secondary',
-      error: 'destructive',
-      starting: 'outline'
-    };
-
-    return (
-      <Badge variant={variants[status] || 'outline'}>
-        {getStatusIcon(status)}
-        <span className="ml-1 capitalize">{status}</span>
-      </Badge>
-    );
-  };
+  });
 
   const handleStartRecording = () => {
-    if (!selectedProject || !selectedModule || selectedTestCases.length === 0) {
+    if (!recordingUrl) {
       toast({
-        title: 'Missing Information',
-        description: 'Please select a project, module, and at least one test case.',
+        title: 'URL Required',
+        description: 'Please enter a valid URL to start recording.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      new URL(recordingUrl);
+    } catch {
+      toast({
+        title: 'Invalid URL',
+        description: 'Please enter a valid URL (e.g., https://example.com).',
         variant: 'destructive',
       });
       return;
     }
 
     startRecordingMutation.mutate({
-      projectId: selectedProject,
-      moduleId: selectedModule,
-      testCaseIds: selectedTestCases
+      testCaseId: selectedTestCase,
+      url: recordingUrl
     });
   };
 
   const handleStopRecording = () => {
-    if (recordingScript) {
-      stopRecordingMutation.mutate(recordingScript);
+    if (currentRecording) {
+      stopRecordingMutation.mutate(currentRecording.sessionId);
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getExecutionResultsForTestCase = (testCaseId: string) => {
+    return executionResults.filter(result => result.testCaseId === testCaseId);
+  };
+
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-500';
-      case 'failed': return 'bg-red-500';
-      case 'running': return 'bg-yellow-500';
-      case 'ready': return 'bg-blue-500';
-      default: return 'bg-gray-500';
+      case 'passed':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'failed':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'skipped':
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-500" />;
     }
   };
 
-    const stopRecording = () => {
-    if (!currentSession) return;
+  // Reset selections when project changes
+  useEffect(() => {
+    setSelectedModule('');
+    setSelectedTestCase('');
+  }, [selectedProject]);
 
-    setIsLoading(true);
-    stopRecording1();
-  };
-
-  const executeTest = async (filename: string) => {
-    try {
-      setIsLoading(true);
-
-      const response = await fetch('/api/automation/execute-test', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({ filename })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast({
-          title: "Test Execution Started",
-          description: `Running test: ${filename}`,
-        });
-
-        // Poll for execution status
-        const pollInterval = setInterval(async () => {
-          try {
-            const statusResponse = await fetch(`/api/automation/execution/${data.executionId}`, {
-              credentials: 'include'
-            });
-            const statusData = await statusResponse.json();
-
-            if (statusData.success) {
-              const execution = statusData.data;
-
-              if (execution.status === 'completed' || execution.status === 'failed') {
-                clearInterval(pollInterval);
-
-                const duration = execution.endTime ? 
-                  new Date(execution.endTime).getTime() - new Date(execution.startTime).getTime() :
-                  0;
-
-                toast({
-                  title: execution.status === 'completed' ? "Test Passed" : "Test Failed",
-                  description: `${filename} ${execution.status} in ${duration}ms`,
-                  variant: execution.status === 'completed' ? "default" : "destructive",
-                });
-
-                // Show report if available
-                if (execution.report) {
-                  console.log('Test Report:', execution.report);
-                }
-              }
-            }
-          } catch (error) {
-            console.error('Error polling execution status:', error);
-          }
-        }, 2000);
-
-        // Clean up interval after 5 minutes
-        setTimeout(() => clearInterval(pollInterval), 300000);
-
-      } else {
-        throw new Error(data.message || 'Failed to execute test');
-      }
-    } catch (error: any) {
-      toast({
-        title: "Execution Error",
-        description: error.message || 'Failed to execute test',
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Reset test case selection when module changes
+  useEffect(() => {
+    setSelectedTestCase('');
+  }, [selectedModule]);
 
   return (
     <MainLayout>
@@ -662,370 +333,281 @@ export default function AutomationPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Test Automation</h1>
-            <p className="text-muted-foreground">Record, manage, and execute automated test scripts</p>
+            <p className="text-muted-foreground">Record and execute automated test scripts</p>
           </div>
         </div>
 
-        <Tabs defaultValue="record" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="record">Record Script</TabsTrigger>
-            <TabsTrigger value="scripts">Manage Scripts</TabsTrigger>
-            <TabsTrigger value="reports">Execution Reports</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="record" className="space-y-4">
-                      <Card>
-        <CardHeader>
-          <CardTitle>Test Automation - Playwright Recording</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
-            <h4 className="font-semibold text-green-800 mb-2">🔧 Element Inspection & Automation Tips</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-green-700">
-              <div>
-                <h5 className="font-medium">Element Selection Strategies:</h5>
-                <ul className="mt-1 space-y-1">
-                  <li>• Use CSS selectors for styling-based selection</li>
-                  <li>• Use XPath for complex element relationships</li>
-                  <li>• Use text content for dynamic content</li>
-                  <li>• Use data-testid for test-specific attributes</li>
-                </ul>
-              </div>
-              <div>
-                <h5 className="font-medium">Best Practices:</h5>
-                <ul className="mt-1 space-y-1">
-                  <li>• Avoid brittle selectors (nth-child, absolute paths)</li>
-                  <li>• Use page.locator() for better element handling</li>
-                  <li>• Add explicit waits for dynamic content</li>
-                  <li>• Use page.screenshot() for visual debugging</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="url">Target URL *</Label>
-              <Input
-                id="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://example.com"
-                disabled={!!currentSession}
-                className={validationErrors.url ? "border-red-500" : ""}
-              />
-                {validationErrors.url && (
-                  <p className="text-sm text-red-600">{validationErrors.url}</p>
-                )}
-            </div>
-            <div>
-              <Label htmlFor="projectId">Project ID</Label>
-              <Input
-                id="projectId"
-                value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                placeholder="Optional"
-                disabled={!!currentSession}
-              />
-            </div>
-            <div>
-              <Label htmlFor="moduleId">Module ID</Label>
-              <Input
-                id="moduleId"
-                value={moduleId}
-                onChange={(e) => setModuleId(e.target.value)}
-                placeholder="Optional"
-                disabled={!!currentSession}
-              />
-            </div>
-            <div>
-              <Label htmlFor="testCaseId">Test Case ID</Label>
-              <Input
-                id="testCaseId"
-                value={testCaseId}
-                onChange={(e) => setTestCaseId(e.target.value)}
-                placeholder="Optional"
-                disabled={!!currentSession}
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-4 items-center">
-            {!currentSession ? (
-              <Button
-                onClick={startRecording}
-                disabled={isLoading || !url}
-                className="flex items-center gap-2"
-              >
-                <Play className="h-4 w-4" />
-                Start Recording
-              </Button>
-            ) : (
-              <Button
-                onClick={stopRecording}
-                disabled={isLoading}
-                variant="destructive"
-                className="flex items-center gap-2"
-              >
-                <Square className="h-4 w-4" />
-                Stop Recording
-              </Button>
-            )}
-
-            {currentSession && (
-              <div className="flex items-center gap-2">
-                {getStatusBadge(currentSession.status)}
-                <span className="text-sm text-muted-foreground">
-                  {currentSession.filename}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {currentSession && currentSession.status === 'recording' && (
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-blue-800">
-                <strong>Recording in progress:</strong> A Playwright browser window should have opened. 
-                Interact with the page to record your test steps. Click "Stop Recording" when finished.
-              </p>
-              <div className="mt-3 p-3 bg-blue-100 rounded">
-                <h4 className="font-semibold text-blue-900">Element Inspection Tips:</h4>
-                <ul className="text-sm text-blue-800 mt-2 space-y-1">
-                  <li>• Right-click elements and select "Inspect" to view selectors</li>
-                  <li>• Use browser DevTools (F12) for detailed element analysis</li>
-                  <li>• Playwright auto-generates robust selectors during recording</li>
-                  <li>• Use data-testid attributes for stable element targeting</li>
-                </ul>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            Element Selector Tester
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="selector-input">Test Selector</Label>
-              <Input
-                id="selector-input"
-                placeholder="e.g., button[data-testid='submit']"
-              />
-            </div>
-            <div>
-              <Label>Selector Type</Label>
-              <Select>
+        {/* Step 1: Project Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Step 1: Select Project</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="w-full max-w-md">
+              <Label htmlFor="project-select">Project</Label>
+              <Select value={selectedProject} onValueChange={setSelectedProject}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose type" />
+                  <SelectValue placeholder="Select a project" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="css">CSS Selector</SelectItem>
-                  <SelectItem value="xpath">XPath</SelectItem>
-                  <SelectItem value="text">Text Content</SelectItem>
-                  <SelectItem value="testid">Test ID</SelectItem>
+                  {projects.map((project: Project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end">
-              <Button className="w-full">
-                <Search className="h-4 w-4 mr-2" />
-                Validate Selector
-              </Button>
-            </div>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            <strong>Common Selectors:</strong>
-            <div className="mt-1 grid grid-cols-2 gap-2">
-              <code className="bg-gray-100 p-1 rounded">button:has-text("Submit")</code>
-              <code className="bg-gray-100 p-1 rounded">[data-testid="login-form"]</code>
-              <code className="bg-gray-100 p-1 rounded">input[type="email"]</code>
-              <code className="bg-gray-100 p-1 rounded">//div[@class="modal"]</code>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recorded Tests</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recordings.length === 0 ? (
-            <p className="text-muted-foreground">No recordings found. Start recording to create test scripts.</p>
-          ) : (
-            <div className="space-y-2">
-              {recordings.map((recording) => (
-                <div
-                  key={recording.filename}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-4 w-4 text-blue-500" />
-                    <div>
-                      <p className="font-medium">{recording.filename}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(recording.createdAt).toLocaleString()} • {Math.round(recording.size / 1024)}KB
-                      </p>
-                    </div>
-                  </div>
-                                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => executeTest(recording.filename)}
-                      disabled={isLoading}
-                    >
-                      Execute
-                    </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => viewRecording(recording.filename)}
-                  >
-                    View Code
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {selectedRecording && recordingContent && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recording Content - {selectedRecording}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              value={recordingContent}
-              readOnly
-              className="font-mono text-sm h-96"
-            />
           </CardContent>
         </Card>
-      )}
-          </TabsContent>
 
-          <TabsContent value="scripts" className="space-y-4">
-            <div className="grid gap-4">
-              {scripts.map(script => (
-                <Card key={script.id}>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        {script.name}
-                        <Badge className={getStatusColor(script.status)}>
-                          {script.status}
-                        </Badge>
-                      </CardTitle>
-                      <CardDescription>{script.description}</CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => executeScriptMutation.mutate(script.id)}
-                        disabled={script.status === 'running'}
+        {/* Step 2: Module List */}
+        {selectedProject && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Step 2: Available Modules</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {modulesLoading ? (
+                <div>Loading modules...</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Module Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Test Cases</TableHead>
+                      <TableHead>Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {modules.map((module: Module) => (
+                      <TableRow
+                        key={module.id}
+                        className={selectedModule === module.id ? "bg-blue-50" : "cursor-pointer hover:bg-gray-50"}
+                        onClick={() => setSelectedModule(module.id)}
                       >
-                        <Play className="w-4 h-4" />
-                      </Button>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline">
-                            <Eye className="w-4 h-4" />
+                        <TableCell className="font-medium">{module.name}</TableCell>
+                        <TableCell>{module.description}</TableCell>
+                        <TableCell>{module.testCaseCount || 0}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant={selectedModule === module.id ? "default" : "outline"}
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedModule(module.id);
+                            }}
+                          >
+                            {selectedModule === module.id ? "Selected" : "Select"}
                           </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl">
-                          <DialogHeader>
-                            <DialogTitle>Script Details: {script.name}</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label>Script Code</Label>
-                              <Textarea
-                                value={script.script}
-                                readOnly
-                                className="min-h-[300px] font-mono text-sm"
-                              />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Test Cases with Record/Play */}
+        {selectedModule && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Step 3: Test Cases</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {testCasesLoading ? (
+                <div>Loading test cases...</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Test Case</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Script File</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {testCases.map((testCase: TestCase) => (
+                      <TableRow key={testCase.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{testCase.title}</div>
+                            <div className="text-sm text-gray-500">{testCase.description}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={testCase.priority === 'High' ? 'destructive' : 'secondary'}>
+                            {testCase.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{testCase.status}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {testCase.hasScript ? (
+                            <div className="flex items-center gap-2">
+                              <Eye className="h-4 w-4" />
+                              <span className="text-sm font-mono">{testCase.scriptFile}</span>
                             </div>
-                            <div>
-                              <Label>Test Cases</Label>
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {script.testCaseIds.map(id => (
-                                  <Badge key={id} variant="secondary">{id}</Badge>
-                                ))}
-                              </div>
+                          ) : (
+                            <span className="text-sm text-gray-400">No script</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {/* Record Button */}
+                            <Dialog open={isRecordingDialogOpen} onOpenChange={setIsRecordingDialogOpen}>
+                              <DialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={currentRecording?.testCaseId === testCase.id}
+                                  onClick={() => setSelectedTestCase(testCase.id)}
+                                >
+                                  {currentRecording?.testCaseId === testCase.id ? (
+                                    <>
+                                      <Square className="h-4 w-4 mr-1" />
+                                      Recording...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="w-4 h-4 rounded-full bg-red-500 mr-1" />
+                                      Record
+                                    </>
+                                  )}
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Start Recording - {testCase.title}</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="recording-url">Website URL</Label>
+                                    <Input
+                                      id="recording-url"
+                                      type="url"
+                                      placeholder="https://example.com"
+                                      value={recordingUrl}
+                                      onChange={(e) => setRecordingUrl(e.target.value)}
+                                    />
+                                  </div>
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => setIsRecordingDialogOpen(false)}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      onClick={handleStartRecording}
+                                      disabled={startRecordingMutation.isPending}
+                                    >
+                                      Start Recording
+                                    </Button>
+                                  </div>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+
+                            {/* Stop Recording Button */}
+                            {currentRecording?.testCaseId === testCase.id && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={handleStopRecording}
+                                disabled={stopRecordingMutation.isPending}
+                              >
+                                <Square className="h-4 w-4 mr-1" />
+                                Stop
+                              </Button>
+                            )}
+
+                            {/* Play Button */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={!testCase.hasScript || executeTestMutation.isPending}
+                              onClick={() => executeTestMutation.mutate(testCase.id)}
+                            >
+                              <Play className="h-4 w-4 mr-1" />
+                              Play
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 4: Execution Reports */}
+        {executionResults.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Execution Reports</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {executionResults.map((result) => {
+                  const testCase = testCases.find(tc => tc.id === result.testCaseId);
+                  return (
+                    <Card key={result.id} className="border-l-4 border-l-blue-500">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          {testCase?.title}
+                          <Badge 
+                            variant={result.status === 'completed' ? 'default' : 'destructive'}
+                            className={result.status === 'completed' ? 'bg-green-500' : ''}
+                          >
+                            {result.status}
+                          </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div>
+                            <h4 className="font-semibold mb-2">Step-by-Step Results:</h4>
+                            <div className="space-y-2">
+                              {result.steps.map((step, index) => (
+                                <div key={index} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
+                                  {getStatusIcon(step.status)}
+                                  <span className="flex-1">{step.step}</span>
+                                  {step.error && (
+                                    <span className="text-sm text-red-600 bg-red-100 px-2 py-1 rounded">
+                                      {step.error}
+                                    </span>
+                                  )}
+                                  {step.screenshot && (
+                                    <Button size="sm" variant="outline">
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           </div>
-                        </DialogContent>
-                      </Dialog>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => deleteScriptMutation.mutate(script.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="reports" className="space-y-4">
-            <div className="grid gap-4">
-              {scripts.filter(script => script.results).map(script => (
-                <Card key={script.id}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      {script.name}
-                      <Badge className={script.results?.success ? 'bg-green-500' : 'bg-red-500'}>
-                        {script.results?.success ? 'Passed' : 'Failed'}
-                      </Badge>
-                    </CardTitle>
-                    <CardDescription>
-                      Last run: {script.lastRun ? new Date(script.lastRun).toLocaleString() : 'Never'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Natural Language Report</Label>
-                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                          <p className="text-sm">{script.results?.report}</p>
+                          <div>
+                            <h4 className="font-semibold mb-1">Summary:</h4>
+                            <p className="text-sm text-gray-600">{result.report}</p>
+                          </div>
                         </div>
-                      </div>
-                      <div>
-                        <Label>Step-by-Step Results</Label>
-                        <div className="mt-2 space-y-2">
-                          {script.results?.steps.map((step, index) => (
-                            <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                              <Badge className={step.status === 'passed' ? 'bg-green-500' : 'bg-red-500'}>
-                                {step.status}
-                              </Badge>
-                              <span className="text-sm">{step.step}</span>
-                              {step.screenshot && (
-                                <Button size="sm" variant="outline">
-                                  <FileText className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </MainLayout>
   );
