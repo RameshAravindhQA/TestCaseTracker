@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Plus, Search, Filter, Calendar, Clock, CheckCircle2, AlertCircle, FileText, Settings, History, MessageSquare, Eye, Edit, Trash2, Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,8 +18,28 @@ import { RequestExtensionDialog } from "@/components/request-forms/request-exten
 import { RequestCommentsDialog } from "@/components/request-forms/request-comments-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { ErrorBoundary } from "react-error-boundary";
 
-export default function RequestFormsPage() {
+// Fallback components for Suspense and Error Boundaries
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center h-screen">
+    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600"></div>
+  </div>
+);
+
+const ErrorFallback = ({ error, resetErrorBoundary }) => (
+  <div className="flex flex-col items-center justify-center h-screen text-center p-4">
+    <AlertCircle className="h-16 w-16 text-red-600 mb-4" />
+    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">Something went wrong!</h2>
+    <p className="text-muted-foreground mb-4">{error.message}</p>
+    <Button onClick={resetErrorBoundary} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+      Try again
+    </Button>
+  </div>
+);
+
+// Actual component content
+function RequestFormsPageContent() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("requests");
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
@@ -172,7 +191,7 @@ export default function RequestFormsPage() {
 
   const handleApproval = () => {
     if (!selectedRequest) return;
-    
+
     const status = approvalAction === 'approve' ? 'Approved' : 'Rejected';
     approvalMutation.mutate({
       id: selectedRequest.id,
@@ -534,7 +553,7 @@ export default function RequestFormsPage() {
                         {filteredRequests.map((request: any) => {
                           const project = projects.find((p: any) => p.id === request.projectId);
                           const duration = calculateDuration(request.startDate, request.endDate);
-                          
+
                           return (
                             <TableRow key={request.id}>
                               <TableCell className="font-medium">{request.requestId}</TableCell>
@@ -621,7 +640,7 @@ export default function RequestFormsPage() {
                   {requests.filter((r: any) => r.status === 'Pending').map((request: any) => {
                     const project = projects.find((p: any) => p.id === request.projectId);
                     const duration = calculateDuration(request.startDate, request.endDate);
-                    
+
                     return (
                       <Card key={request.id} className="p-4">
                         <div className="flex items-center justify-between">
@@ -689,7 +708,7 @@ export default function RequestFormsPage() {
                       </Card>
                     );
                   })}
-                  
+
                   {requests.filter((r: any) => r.status === 'Pending').length === 0 && (
                     <div className="text-center py-12">
                       <CheckCircle2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -776,7 +795,7 @@ export default function RequestFormsPage() {
                 setIsExtensionDialogOpen(false);
               }}
             />
-            
+
             <RequestCommentsDialog
               open={isCommentsDialogOpen}
               onOpenChange={setIsCommentsDialogOpen}
@@ -825,5 +844,15 @@ export default function RequestFormsPage() {
         </Dialog>
       </div>
     </MainLayout>
+  );
+}
+
+export default function RequestFormsPage() {
+  return (
+    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
+      <Suspense fallback={<LoadingFallback />}>
+        <RequestFormsPageContent />
+      </Suspense>
+    </ErrorBoundary>
   );
 }

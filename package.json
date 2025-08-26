@@ -20,6 +20,7 @@
     "octokit": "^5.0.3",
     "papaparse": "^5.5.3",
     "playwright": "^1.54.1",
+    "react-error-boundary": "^6.0.0",
     "react-hook-form": "^7.60.0",
     "reactflow": "^11.11.4",
     "recharts": "^3.1.2",
