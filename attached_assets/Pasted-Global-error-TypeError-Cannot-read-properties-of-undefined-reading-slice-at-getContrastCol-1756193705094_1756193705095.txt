@@ -1,0 +1,51 @@
+Global error: TypeError: Cannot read properties of undefined (reading 'slice')
+    at getContrastColor (tag-filter.tsx:211:31)
+    at tag-filter.tsx:191:28
+    at Array.map (<anonymous>)
+    at TagFilter (tag-filter.tsx:178:27)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=9513ae3b:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=9513ae3b:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=9513ae3b:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=9513ae3b:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=9513ae3b:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=9513ae3b:3733:39)
+(anonymous) @ main.tsx:15
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=9513ae3b:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=9513ae3b:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=9513ae3b:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=9513ae3b:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=9513ae3b:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=9513ae3b:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=9513ae3b:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=9513ae3b:9119
+flushSync @ chunk-RPCDYKBN.js?v=9513ae3b:18959
+flushSync$1 @ chunk-RPCDYKBN.js?v=9513ae3b:21538
+dispatchDiscreteCustomEvent @ chunk-J2KA7NLM.js?v=9513ae3b:54
+handleSelect @ chunk-XHJGZA35.js?v=9513ae3b:423
+handleEvent @ chunk-5Q5YC75F.js?v=9513ae3b:6
+callCallback2 @ chunk-RPCDYKBN.js?v=9513ae3b:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=9513ae3b:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=9513ae3b:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=9513ae3b:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=9513ae3b:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=9513ae3b:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=9513ae3b:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=9513ae3b:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=9513ae3b:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=9513ae3b:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=9513ae3b:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=9513ae3b:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=9513ae3b:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=9513ae3b:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=9513ae3b:5449Understand this error
+tag-filter.tsx:211 Uncaught TypeError: Cannot read properties of undefined (reading 'slice')
+    at getContrastColor (tag-filter.tsx:211:31)
+    at tag-filter.tsx:191:28
+    at Array.map (<anonymous>)
+    at TagFilter (tag-filter.tsx:178:27)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=9513ae3b:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=9513ae3b:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=9513ae3b:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=9513ae3b:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=9513ae3b:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=9513ae3b:3733:39)
