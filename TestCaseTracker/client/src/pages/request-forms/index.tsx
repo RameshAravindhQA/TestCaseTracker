@@ -584,7 +584,7 @@ function RequestFormsPageContent() {
 
                           return (
                             <TableRow key={request.id}>
-                              <TableCell className="font-medium">{request.requestId}</TableCell>
+                              <TableCell className="font-medium">{request.requestId || 'N/A'}</TableCell>
                               <TableCell>{request.title}</TableCell>
                               <TableCell>
                                 <Badge variant="outline">{request.requestType}</Badge>

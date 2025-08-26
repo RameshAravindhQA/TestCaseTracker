@@ -838,8 +838,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const requestData = {
         ...req.body,
-        requestedById: req.session.userId
+        createdById: req.session.userId,
+        status: req.body.status || 'Draft'
       };
+
+      // Generate request ID if not provided
+      if (!requestData.requestId) {
+        const prefix = requestData.requestType ? 
+          requestData.requestType.split(' ')[0].toUpperCase() : 'REQ';
+        const timestamp = Date.now().toString().slice(-6);
+        requestData.requestId = `${prefix}-${timestamp}`;
+      }
+
       const request = await storage.createResourceRequest(requestData);
 
       // Send notification to lead if specified
@@ -872,7 +882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedRequest);
     } catch (error) {
       console.error("Update resource request error:", error);
-      res.status(500).json({ message: "Server error" });
+      res.status(400).json({ message: "Invalid request data" });
     }
   });
 
@@ -1902,7 +1912,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const deletedTestCases = await storage.getDeletedTestCasesByProject(projectId);
-      
+
       console.log(`[API] Returning ${deletedTestCases.length} deleted test cases for project ${projectId}`);
       res.json(deletedTestCases);
     } catch (error) {
@@ -1915,11 +1925,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const testCaseId = parseInt(req.params.id);
       const restoredTestCase = await storage.restoreTestCase(testCaseId);
-      
+
       if (!restoredTestCase) {
         return res.status(404).json({ message: "Test case not found or not deleted" });
       }
-      
+
       console.log(`[API] Test case ${restoredTestCase.testCaseId} restored successfully`);
       res.json(restoredTestCase);
     } catch (error) {
@@ -1932,11 +1942,11 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
     try {
       const testCaseId = parseInt(req.params.id);
       const success = await storage.permanentlyDeleteTestCase(testCaseId);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Test case not found" });
       }
-      
+
       console.log(`[API] Test case ${testCaseId} permanently deleted`);
       res.json({ success: true, message: "Test case permanently deleted" });
     } catch (error) {
@@ -3735,7 +3745,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
       }
 
       // Check if user has admin access to this project
-      if (req.session.userRole !== "Admin" && project.createdById !== req.session.userId) {
+      if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const userMembership = projectMembers.find(member => member.userId === req.session.userId);
 
@@ -5823,7 +5833,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
 
       // Log activity
       await storage.createActivity({
-        userId: req.session.userId!,
+        userId:req.session.userId!,
         action: "created",
         entityType: "testSheet",
         entityId: testSheet.id,

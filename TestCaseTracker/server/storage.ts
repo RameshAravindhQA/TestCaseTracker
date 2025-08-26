@@ -2448,7 +2448,7 @@ class MemStorage implements IStorage {
 
     // Sort by updatedAt/createdAt descending
     return enrichedHistory.sort((a, b) =>
-      new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
+      new Date(b.updatedAt || a.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
     );
   }
 
@@ -2818,16 +2818,26 @@ class MemStorage implements IStorage {
     return this.resourceRequests.get(id);
   }
 
-  async createResourceRequest(data: any): Promise<any> {
+  async createResourceRequest(request: any): Promise<any> {
+    // Generate request ID if not provided
+    let requestId = request.requestId;
+    if (!requestId) {
+      const prefix = request.requestType ?
+        request.requestType.split(' ')[0].toUpperCase() : 'REQ';
+      const timestamp = Date.now().toString().slice(-6);
+      requestId = `${prefix}-${timestamp}`;
+    }
+
     const id = this.getNextId();
-    const request = {
+    const newRequest = {
       id,
-      ...data,
+      ...request,
+      requestId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    this.resourceRequests.set(id, request);
-    return request;
+    this.resourceRequests.set(id, newRequest);
+    return newRequest;
   }
 
   async updateResourceRequest(id: number, data: any): Promise<any | null> {
