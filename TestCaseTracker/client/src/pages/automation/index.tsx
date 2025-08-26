@@ -80,27 +80,66 @@ export default function AutomationPage() {
     queryKey: ['modules', selectedProject],
     queryFn: async () => {
       if (!selectedProject) return [];
-      const response = await fetch(`/api/projects/${selectedProject}/modules`);
-      if (!response.ok) throw new Error('Failed to fetch modules');
-      return response.json();
+      
+      try {
+        const response = await fetch(`/api/projects/${selectedProject}/modules`);
+        if (!response.ok) throw new Error('Failed to fetch modules');
+        
+        const modulesData = await response.json();
+        console.log('Fetched modules for automation:', modulesData);
+        
+        // Fetch test case counts for each module
+        const modulesWithCounts = await Promise.all(
+          modulesData.map(async (module: any) => {
+            try {
+              const testCasesResponse = await fetch(`/api/projects/${selectedProject}/test-cases?moduleId=${module.id}`);
+              if (testCasesResponse.ok) {
+                const testCases = await testCasesResponse.json();
+                return { ...module, testCaseCount: testCases.length };
+              }
+              return { ...module, testCaseCount: 0 };
+            } catch (error) {
+              console.error(`Error fetching test case count for module ${module.id}:`, error);
+              return { ...module, testCaseCount: 0 };
+            }
+          })
+        );
+        
+        return modulesWithCounts;
+      } catch (error) {
+        console.error('Error fetching modules:', error);
+        throw error;
+      }
     },
     enabled: !!selectedProject
   });
 
   // Fetch test cases for selected module
   const { data: testCases = [], isLoading: testCasesLoading } = useQuery({
-    queryKey: ['test-cases', selectedModule],
+    queryKey: ['test-cases', selectedProject, selectedModule],
     queryFn: async () => {
       if (!selectedModule || !selectedProject) return [];
-      const response = await fetch(`/api/projects/${selectedProject}/test-cases?moduleId=${selectedModule}`);
-      if (!response.ok) throw new Error('Failed to fetch test cases');
-      // Add mock script status for demonstration
-      const cases = await response.json();
-      return cases.map((tc: any) => ({
-        ...tc,
-        hasScript: Math.random() > 0.5, // Mock script availability
-        scriptFile: Math.random() > 0.5 ? `${tc.id}_script.spec.js` : undefined
-      }));
+      
+      try {
+        const response = await fetch(`/api/projects/${selectedProject}/test-cases?moduleId=${selectedModule}`);
+        if (!response.ok) {
+          console.error('Failed to fetch test cases:', response.status, response.statusText);
+          throw new Error('Failed to fetch test cases');
+        }
+        
+        const cases = await response.json();
+        console.log('Fetched test cases for automation:', cases.length, cases);
+        
+        // Add mock script status for demonstration
+        return cases.map((tc: any) => ({
+          ...tc,
+          hasScript: Math.random() > 0.5, // Mock script availability
+          scriptFile: Math.random() > 0.5 ? `${tc.id}_script.spec.js` : undefined
+        }));
+      } catch (error) {
+        console.error('Error fetching test cases:', error);
+        throw error;
+      }
     },
     enabled: !!selectedModule && !!selectedProject
   });
@@ -384,22 +423,26 @@ export default function AutomationPage() {
                     {modules.map((module: Module) => (
                       <TableRow
                         key={module.id}
-                        className={selectedModule === module.id ? "bg-blue-50" : "cursor-pointer hover:bg-gray-50"}
-                        onClick={() => setSelectedModule(module.id)}
+                        className={selectedModule === module.id.toString() ? "bg-blue-50" : "cursor-pointer hover:bg-gray-50"}
+                        onClick={() => {
+                          console.log('Selecting module:', module.id, module.name);
+                          setSelectedModule(module.id.toString());
+                        }}
                       >
                         <TableCell className="font-medium">{module.name}</TableCell>
                         <TableCell>{module.description}</TableCell>
                         <TableCell>{module.testCaseCount || 0}</TableCell>
                         <TableCell>
                           <Button
-                            variant={selectedModule === module.id ? "default" : "outline"}
+                            variant={selectedModule === module.id.toString() ? "default" : "outline"}
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedModule(module.id);
+                              console.log('Button click - selecting module:', module.id, module.name);
+                              setSelectedModule(module.id.toString());
                             }}
                           >
-                            {selectedModule === module.id ? "Selected" : "Select"}
+                            {selectedModule === module.id.toString() ? "Selected" : "Select"}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -416,10 +459,25 @@ export default function AutomationPage() {
           <Card>
             <CardHeader>
               <CardTitle>Step 3: Test Cases</CardTitle>
+              <p className="text-sm text-gray-600">
+                Selected Module ID: {selectedModule} | Found {testCases.length} test cases
+              </p>
             </CardHeader>
             <CardContent>
               {testCasesLoading ? (
-                <div>Loading test cases...</div>
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                    <p>Loading test cases...</p>
+                  </div>
+                </div>
+              ) : testCases.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No test cases found for this module.</p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    Make sure the module has test cases created in the project.
+                  </p>
+                </div>
               ) : (
                 <Table>
                   <TableHeader>
