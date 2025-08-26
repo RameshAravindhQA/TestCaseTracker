@@ -2,14 +2,15 @@ import { useState, useEffect, useTransition } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ModuleTable } from "@/components/modules/module-table";
 import { Button } from "@/components/ui/button";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
 } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useParams, useLocation } from "wouter";
@@ -24,12 +25,12 @@ import { BugTable } from "@/components/bugs/bug-table";
 import { ProjectChat } from "@/components/chat/project-chat";
 import { TestCaseTable } from "@/components/test-cases/test-case-table";
 import { TestCaseForm } from "@/components/test-cases/test-case-form";
-import { ImportExport } from "@/components/test-cases/import-export";
+import { DeletedTestCaseTable } from "@/components/test-cases/deleted-test-case-table";
 import { AITestGenerator } from "@/components/test-cases/ai-test-generator";
 import { GitHubConfigForm } from "@/components/github/github-config-form";
 import { TestCaseTags } from "@/components/test-cases/test-case-tags";
 import { format, formatDistance } from "date-fns";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -47,8 +48,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
-import { 
-  Edit, Plus, ArrowLeft, Trash, Layers, CheckSquare, Bug as BugIcon, FileText, Loader2, Github, Settings, RefreshCw, Sparkles
+import {
+  Edit, Plus, ArrowLeft, Trash, Layers, CheckSquare, Bug as BugIcon, FileText, Loader2, Github, Settings, RefreshCw, Sparkles, Trash2
 } from "lucide-react";
 import { ProjectExport } from "@/components/project/project-export";
 import { GitHubIssueButton } from "@/components/github/github-issue-button";
@@ -72,6 +73,8 @@ export default function ProjectDetailPage() {
   const [deleteBugDialogOpen, setDeleteBugDialogOpen] = useState(false);
   const [viewTestCaseDialogOpen, setViewTestCaseDialogOpen] = useState(false);
   const [viewBugDialogOpen, setViewBugDialogOpen] = useState(false);
+  const [selectedDeletedTestCase, setSelectedDeletedTestCase] = useState<TestCase | null>(null);
+  const [viewDeletedTestCaseDialogOpen, setViewDeletedTestCaseDialogOpen] = useState(false);
 
   // Selected items for editing/deleting
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
@@ -84,24 +87,28 @@ export default function ProjectDetailPage() {
   // Fetch project details
   const { data: project, isLoading: isProjectLoading } = useQuery<Project>({
     queryKey: [`/api/projects/${projectId}`],
+    enabled: !!projectId,
   });
 
   // Fetch modules
   const { data: modules, isLoading: isModulesLoading } = useQuery<Module[]>({
     queryKey: [`/api/projects/${projectId}/modules`],
+    enabled: !!projectId,
   });
 
   // Fetch test cases
   const { data: testCases, isLoading: isTestCasesLoading } = useQuery<TestCase[]>({
     queryKey: [`/api/projects/${projectId}/test-cases`],
+    enabled: !!projectId,
   });
 
   // Fetch bugs
   const { data: bugs, isLoading: isBugsLoading } = useQuery<Bug[]>({
     queryKey: [`/api/projects/${projectId}/bugs`],
+    enabled: !!projectId,
   });
 
-    // Fetch GitHub config
+  // Fetch GitHub config
   const { data: githubConfig } = useQuery({
     queryKey: ["github-config", project?.id],
     queryFn: async () => {
@@ -124,8 +131,19 @@ export default function ProjectDetailPage() {
   });
 
   // Fetch activities
-  const { data: activities, isLoading: isActivitiesLoading } = useQuery<Activity[]>({
+  const { data: activities = [], isLoading: isActivitiesLoading } = useQuery<Activity[]>({
     queryKey: [`/api/projects/${projectId}/activities`],
+    enabled: !!projectId,
+  });
+
+  // Fetch deleted test cases
+  const { data: deletedTestCases = [], isLoading: isDeletedTestCasesLoading } = useQuery<TestCase[]>({
+    queryKey: [`/api/projects/${projectId}/deleted-test-cases`],
+    enabled: !!projectId,
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/projects/${projectId}/deleted-test-cases`);
+      return res.json();
+    },
   });
 
   // Delete mutations
@@ -220,6 +238,51 @@ export default function ProjectDetailPage() {
       toast({
         title: "Error",
         description: `Failed to delete test cases: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Restore test case mutation
+  const restoreTestCaseMutation = useMutation({
+    mutationFn: async (testCaseId: number) => {
+      const res = await apiRequest("POST", `/api/test-cases/${testCaseId}/restore`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Test case restored",
+        description: `Test case ${data.testCaseId} has been restored successfully`,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/deleted-test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/test-cases`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to restore test case: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Permanent delete mutation
+  const permanentDeleteMutation = useMutation({
+    mutationFn: async (testCaseId: number) => {
+      const res = await apiRequest("DELETE", `/api/test-cases/${testCaseId}/permanent`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Test case permanently deleted",
+        description: "Test case has been permanently removed from the system",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/deleted-test-cases`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to permanently delete test case: ${error}`,
         variant: "destructive",
       });
     },
@@ -354,8 +417,20 @@ export default function ProjectDetailPage() {
 
   const handleReportBug = (testCase: TestCase) => {
     setSelectedTestCase(testCase);
-    setSelectedBug(null);
     setBugFormOpen(true);
+  };
+
+  const handleRestoreTestCase = (testCase: TestCase) => {
+    restoreTestCaseMutation.mutate(testCase.id);
+  };
+
+  const handlePermanentDeleteTestCase = (testCase: TestCase) => {
+    permanentDeleteMutation.mutate(testCase.id);
+  };
+
+  const handleViewDeletedTestCase = (testCase: TestCase) => {
+    setSelectedDeletedTestCase(testCase);
+    setViewDeletedTestCaseDialogOpen(true);
   };
 
   // Handler for multiple deletion
@@ -482,7 +557,7 @@ export default function ProjectDetailPage() {
     syncFromGithubMutation.mutate();
   };
 
-    const createTestCaseMutation = useMutation({
+  const createTestCaseMutation = useMutation({
     mutationFn: async (testCase: TestCase) => {
       const res = await apiRequest("POST", `/api/test-cases`, testCase);
       return res.json();
@@ -516,9 +591,9 @@ export default function ProjectDetailPage() {
         {/* Project header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => navigate("/projects")}
               className="flex items-center gap-1"
             >
@@ -562,8 +637,8 @@ export default function ProjectDetailPage() {
             </div>
 
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setSelectedModule(null);
                   navigate(`/projects/edit/${projectId}`);
@@ -576,8 +651,8 @@ export default function ProjectDetailPage() {
               <Button onClick={handleAddModule}>
                 Add Module
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowGitHubConfig(true)}
               >
                 <Github className="h-4 w-4 mr-2" />
@@ -603,9 +678,9 @@ export default function ProjectDetailPage() {
               </Button>
 
               {project && (
-                <ProjectExport 
-                  projectId={projectId} 
-                  projectName={project.name} 
+                <ProjectExport
+                  projectId={projectId}
+                  projectName={project.name}
                 />
               )}
             </div>
@@ -626,6 +701,10 @@ export default function ProjectDetailPage() {
             <TabsTrigger value="bugs" className="flex items-center gap-2">
               <BugIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Bugs</span>
+            </TabsTrigger>
+            <TabsTrigger value="deleted-test-cases" className="flex items-center gap-2">
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Deleted Test Cases</span>
             </TabsTrigger>
             <TabsTrigger value="activity" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
@@ -654,9 +733,9 @@ export default function ProjectDetailPage() {
 
             {selectedModuleForTestCase ? (
               <div className="space-y-4">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setSelectedModuleForTestCase(null)}
                   className="flex items-center gap-1"
                 >
@@ -740,7 +819,7 @@ export default function ProjectDetailPage() {
             <div className="mb-4 flex justify-between items-center">
               <h2 className="text-lg font-medium">All Test Cases</h2>
               <div className="flex items-center gap-2">
-                <ImportExport 
+                <ImportExport
                   projectId={projectId}
                   modules={modules || []}
                   testCases={testCases || []}
@@ -841,22 +920,78 @@ export default function ProjectDetailPage() {
             )}
           </TabsContent>
 
+          {/* Deleted Test Cases Tab */}
+          <TabsContent value="deleted-test-cases">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Trash2 className="h-5 w-5" />
+                      <span>Deleted Test Cases</span>
+                    </CardTitle>
+                    <CardDescription>
+                      {deletedTestCases.length} deleted test case(s) found
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => queryClient.invalidateQueries({
+                      queryKey: [`/api/projects/${projectId}/deleted-test-cases`]
+                    })}
+                    disabled={isDeletedTestCasesLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isDeletedTestCasesLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <DeletedTestCaseTable
+                  deletedTestCases={deletedTestCases}
+                  onRestore={handleRestoreTestCase}
+                  onPermanentDelete={handlePermanentDeleteTestCase}
+                  onView={handleViewDeletedTestCase}
+                  isLoading={isDeletedTestCasesLoading}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Activity Tab */}
           <TabsContent value="activity">
             <Card>
               <CardHeader>
-                <CardTitle>Project Activity</CardTitle>
-                <CardDescription>Recent activities in this project</CardDescription>
+                <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>
+                  Recent activities in this project
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {isActivitiesLoading ? (
                   <div className="flex justify-center items-center h-64">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
-                ) : formattedActivities.length === 0 ? (
-                  <p className="text-center text-gray-500">No activities found for this project.</p>
+                ) : activities.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    No recent activity
+                  </div>
                 ) : (
-                  <RecentActivity activities={formattedActivities} />
+                  <div className="space-y-4">
+                    {activities.map((activity) => (
+                      <div key={activity.id} className="flex items-start space-x-3 p-3 border rounded-md">
+                        <div className="flex-1">
+                          <p className="text-sm">
+                            <span className="font-medium">{activity.userName}</span> {activity.action}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {new Date(activity.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -875,7 +1010,7 @@ export default function ProjectDetailPage() {
                 : "Fill in the details to create a new module."}
             </DialogDescription>
           </DialogHeader>
-          <ModuleForm 
+          <ModuleForm
             module={selectedModule || undefined}
             projectId={projectId}
             onSuccess={() => setModuleFormOpen(false)}
@@ -894,7 +1029,7 @@ export default function ProjectDetailPage() {
                 : "Fill in the details to create a new test case."}
             </DialogDescription>
           </DialogHeader>
-          <TestCaseForm 
+          <TestCaseForm
             testCase={selectedTestCase || undefined}
             projectId={projectId}
             module={selectedModuleForTestCase || undefined}
@@ -905,7 +1040,7 @@ export default function ProjectDetailPage() {
       </Dialog>
 
       {/* Bug Form Dialog */}
-      <Dialog open={bugFormOpen}onOpenChange={setBugFormOpen}>
+      <Dialog open={bugFormOpen} onOpenChange={setBugFormOpen}>
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>{selectedBug ? "Edit Bug Report" : "Report New Bug"}</DialogTitle>
@@ -915,7 +1050,7 @@ export default function ProjectDetailPage() {
                 : "Fill in the details to report a new bug."}
             </DialogDescription>
           </DialogHeader>
-          <BugForm 
+          <BugForm
             bug={selectedBug || undefined}
             projectId={projectId}
             testCase={selectedTestCase || undefined}
@@ -945,9 +1080,9 @@ export default function ProjectDetailPage() {
               <div>
                 <h3 className="text-sm font-medium">Tags</h3>
                 <div className="mt-2">
-                  <TestCaseTags 
-                    tags={selectedTestCase.tags as any[]} 
-                    limit={10} 
+                  <TestCaseTags
+                    tags={selectedTestCase.tags as any[]}
+                    limit={10}
                   />
                 </div>
               </div>
@@ -957,10 +1092,10 @@ export default function ProjectDetailPage() {
               <div>
                 <h3 className="text-sm font-medium">Status</h3>
                 <Badge variant={
-                  selectedTestCase?.status === "Pass" 
-                    ? "default" 
-                    : selectedTestCase?.status === "Fail" 
-                    ? "destructive" 
+                  selectedTestCase?.status === "Pass"
+                    ? "default"
+                    : selectedTestCase?.status === "Fail"
+                    ? "destructive"
                     : selectedTestCase?.status === "Blocked"
                     ? "secondary"
                     : "outline"
@@ -972,10 +1107,10 @@ export default function ProjectDetailPage() {
               <div>
                 <h3 className="text-sm font-medium">Priority</h3>
                 <Badge variant="outline" className={
-                  selectedTestCase?.priority === "High" 
-                    ? "border-red-200 bg-red-100 text-red-800" 
-                    : selectedTestCase?.priority === "Medium" 
-                    ? "border-yellow-200 bg-yellow-100 text-yellow-800" 
+                  selectedTestCase?.priority === "High"
+                    ? "border-red-200 bg-red-100 text-red-800"
+                    : selectedTestCase?.priority === "Medium"
+                    ? "border-yellow-200 bg-yellow-100 text-yellow-800"
                     : "border-green-200 bg-green-100 text-green-800"
                 }>
                   {selectedTestCase?.priority}
@@ -1054,10 +1189,10 @@ export default function ProjectDetailPage() {
               <div>
                 <h3 className="text-sm font-medium">Severity</h3>
                 <Badge variant={
-                  selectedBug?.severity === "Critical" 
-                    ? "destructive" 
-                    : selectedBug?.severity === "Major" 
-                    ? "default" 
+                  selectedBug?.severity === "Critical"
+                    ? "destructive"
+                    : selectedBug?.severity === "Major"
+                    ? "default"
                     : selectedBug?.severity === "Minor"
                     ? "secondary"
                     : "outline"
@@ -1069,10 +1204,10 @@ export default function ProjectDetailPage() {
               <div>
                 <h3 className="text-sm font-medium">Priority</h3>
                 <Badge variant="outline" className={
-                  selectedBug?.priority === "High" 
-                    ? "border-red-200 bg-red-100 text-red-800" 
-                    : selectedBug?.priority === "Medium" 
-                    ? "border-yellow-200 bg-yellow-100 text-yellow-800" 
+                  selectedBug?.priority === "High"
+                    ? "border-red-200 bg-red-100 text-red-800"
+                    : selectedBug?.priority === "Medium"
+                    ? "border-yellow-200 bg-yellow-100 text-yellow-800"
                     : selectedBug?.priority === "Minor"
                     ? "border-green-200 bg-green-100 text-green-800"
                     : "outline"
@@ -1084,10 +1219,10 @@ export default function ProjectDetailPage() {
 
             <div>
               <h3 className="text-sm font-medium">Status</h3><Badge variant={
-                selectedBug?.status === "Open" 
-                  ? "destructive" 
-                  : selectedBug?.status === "In Progress" 
-                  ? "default" 
+                selectedBug?.status === "Open"
+                  ? "destructive"
+                  : selectedBug?.status === "In Progress"
+                  ? "default"
                   : selectedBug?.status === "Resolved"
                   ? "secondary"
                   : "outline"
@@ -1150,6 +1285,89 @@ export default function ProjectDetailPage() {
               </div>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deleted Test Case View Dialog */}
+      <Dialog open={viewDeletedTestCaseDialogOpen} onOpenChange={setViewDeletedTestCaseDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <span>Deleted Test Case Details</span>
+              <Badge variant="destructive">Deleted</Badge>
+            </DialogTitle>
+            <DialogDescription>
+              {selectedDeletedTestCase?.testCaseId} - {selectedDeletedTestCase?.feature}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedDeletedTestCase && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-sm font-medium">Status</h3>
+                  <Badge variant="outline">{selectedDeletedTestCase.status}</Badge>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium">Priority</h3>
+                  <Badge variant="outline">{selectedDeletedTestCase.priority}</Badge>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium">Test Objective</h3>
+                <p className="text-sm text-gray-700 mt-1">{selectedDeletedTestCase.testObjective}</p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium">Pre-Conditions</h3>
+                <p className="text-sm text-gray-700 mt-1">{selectedDeletedTestCase.preConditions || "None specified"}</p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium">Test Steps</h3>
+                <pre className="text-sm text-gray-700 mt-1 whitespace-pre-wrap font-sans border border-gray-200 rounded-md p-3 bg-gray-50">{selectedDeletedTestCase.testSteps}</pre>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium">Expected Result</h3>
+                <p className="text-sm text-gray-700 mt-1">{selectedDeletedTestCase.expectedResult}</p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium">Actual Result</h3>
+                <p className="text-sm text-gray-700 mt-1">{selectedDeletedTestCase.actualResult || "Not recorded"}</p>
+              </div>
+
+              {selectedDeletedTestCase.comments && (
+                <div>
+                  <h3 className="text-sm font-medium">Comments</h3>
+                  <p className="text-sm text-gray-700 mt-1">{selectedDeletedTestCase.comments}</p>
+                </div>
+              )}
+
+              <Separator />
+
+              <div className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setViewDeletedTestCaseDialogOpen(false)}
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleRestoreTestCase(selectedDeletedTestCase);
+                    setViewDeletedTestCaseDialogOpen(false);
+                  }}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Restore Test Case
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
