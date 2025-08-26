@@ -339,8 +339,56 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTestCase(insertTestCase: InsertTestCase): Promise<TestCase> {
+    // Auto-generate test case ID if not provided
+    let testCaseId = insertTestCase.testCaseId;
+    if (!testCaseId || testCaseId.trim() === '') {
+      // Get the module and project to build the test case ID
+      const [module] = await db.select().from(modules).where(eq(modules.id, insertTestCase.moduleId));
+      const [project] = await db.select().from(projects).where(eq(projects.id, insertTestCase.projectId));
+
+      if (!module || !project) {
+        throw new Error(`Module or Project not found`);
+      }
+
+      const projectPrefix = project.prefix || 'DEF';
+
+      // Get module name prefix (first 3 letters of module name)
+      let modulePrefix = 'MOD';
+      if (module.name) {
+        const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '');
+        modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
+        if (modulePrefix.length < 3) {
+          modulePrefix = modulePrefix.padEnd(3, 'X');
+        }
+      }
+
+      // Find the highest existing test case number for this project and module
+      // This ensures we never reuse deleted test case IDs
+      const existingTestCases = await db
+        .select({ testCaseId: testCases.testCaseId })
+        .from(testCases)
+        .where(and(eq(testCases.projectId, insertTestCase.projectId), eq(testCases.moduleId, insertTestCase.moduleId)));
+
+      const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
+      const existingNumbers = existingTestCases
+        .map(tc => tc.testCaseId)
+        .filter(id => id && prefixPattern.test(id))
+        .map(id => {
+          const match = id.match(prefixPattern);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(num => !isNaN(num));
+
+      // Always increment from the highest number ever used, never reuse deleted IDs
+      const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+      testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
+      
+      console.log(`DB: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId}. Existing numbers: [${existingNumbers.join(', ')}], next: ${nextNumber}`);
+    }
+
     const [newTestCase] = await db.insert(testCases).values({
       ...insertTestCase,
+      testCaseId,
       createdAt: new Date(),
       updatedAt: new Date()
     }).returning();

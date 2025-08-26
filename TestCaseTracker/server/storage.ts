@@ -610,6 +610,7 @@ class MemStorage implements IStorage {
       }
 
       // Find the highest existing test case number for this project and module with the same prefix
+      // This includes ALL test cases that have ever been created, even if some were deleted
       const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
       const existingTestCases = Array.from(this.testCases.values())
         .filter(tc => tc.moduleId === insertTestCase.moduleId && tc.projectId === insertTestCase.projectId)
@@ -621,8 +622,11 @@ class MemStorage implements IStorage {
         })
         .filter(num => !isNaN(num));
 
+      // Always increment from the highest number ever used, never reuse deleted IDs
       const nextNumber = existingTestCases.length > 0 ? Math.max(...existingTestCases) + 1 : 1;
       testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
+      
+      console.log(`Storage: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId}. Existing numbers: [${existingTestCases.join(', ')}], next: ${nextNumber}`);
     }
 
     const testCase: TestCase = {
@@ -665,8 +669,16 @@ class MemStorage implements IStorage {
     const testCase = this.testCases.get(id);
     if (!testCase) return false;
 
+    console.log(`Storage: Deleting test case ID ${id} (${testCase.testCaseId}). Total test cases before deletion: ${this.testCases.size}`);
+    
     this.testCases.delete(id);
     this.recordActivity('test_case', 'deleted', id, testCase.assignedTo || 1);
+    
+    console.log(`Storage: Test case deleted. Total test cases after deletion: ${this.testCases.size}. Remaining test case IDs: [${Array.from(this.testCases.values()).map(tc => tc.testCaseId).join(', ')}]`);
+    
+    // Note: We explicitly do NOT renumber existing test cases after deletion
+    // Test case IDs should remain immutable once assigned
+    
     return true;
   }
 
