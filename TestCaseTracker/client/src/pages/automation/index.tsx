@@ -679,6 +679,29 @@ export default function AutomationPage() {
           <CardTitle>Test Automation - Playwright Recording</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+            <h4 className="font-semibold text-green-800 mb-2">🔧 Element Inspection & Automation Tips</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-green-700">
+              <div>
+                <h5 className="font-medium">Element Selection Strategies:</h5>
+                <ul className="mt-1 space-y-1">
+                  <li>• Use CSS selectors for styling-based selection</li>
+                  <li>• Use XPath for complex element relationships</li>
+                  <li>• Use text content for dynamic content</li>
+                  <li>• Use data-testid for test-specific attributes</li>
+                </ul>
+              </div>
+              <div>
+                <h5 className="font-medium">Best Practices:</h5>
+                <ul className="mt-1 space-y-1">
+                  <li>• Avoid brittle selectors (nth-child, absolute paths)</li>
+                  <li>• Use page.locator() for better element handling</li>
+                  <li>• Add explicit waits for dynamic content</li>
+                  <li>• Use page.screenshot() for visual debugging</li>
+                </ul>
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="url">Target URL *</Label>
@@ -764,8 +787,66 @@ export default function AutomationPage() {
                 <strong>Recording in progress:</strong> A Playwright browser window should have opened. 
                 Interact with the page to record your test steps. Click "Stop Recording" when finished.
               </p>
+              <div className="mt-3 p-3 bg-blue-100 rounded">
+                <h4 className="font-semibold text-blue-900">Element Inspection Tips:</h4>
+                <ul className="text-sm text-blue-800 mt-2 space-y-1">
+                  <li>• Right-click elements and select "Inspect" to view selectors</li>
+                  <li>• Use browser DevTools (F12) for detailed element analysis</li>
+                  <li>• Playwright auto-generates robust selectors during recording</li>
+                  <li>• Use data-testid attributes for stable element targeting</li>
+                </ul>
+              </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="h-5 w-5" />
+            Element Selector Tester
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="selector-input">Test Selector</Label>
+              <Input
+                id="selector-input"
+                placeholder="e.g., button[data-testid='submit']"
+              />
+            </div>
+            <div>
+              <Label>Selector Type</Label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="css">CSS Selector</SelectItem>
+                  <SelectItem value="xpath">XPath</SelectItem>
+                  <SelectItem value="text">Text Content</SelectItem>
+                  <SelectItem value="testid">Test ID</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button className="w-full">
+                <Search className="h-4 w-4 mr-2" />
+                Validate Selector
+              </Button>
+            </div>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            <strong>Common Selectors:</strong>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              <code className="bg-gray-100 p-1 rounded">button:has-text("Submit")</code>
+              <code className="bg-gray-100 p-1 rounded">[data-testid="login-form"]</code>
+              <code className="bg-gray-100 p-1 rounded">input[type="email"]</code>
+              <code className="bg-gray-100 p-1 rounded">//div[@class="modal"]</code>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

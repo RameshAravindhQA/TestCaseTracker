@@ -189,7 +189,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       href: "/test-cases",
       icon: <TestTube className="h-5 w-5" />,
     },
-    
+
     {
       name: "AI Generator",
       href: "/ai-generator",
@@ -269,11 +269,6 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       name: "Navadhiti Projects",
       href: "/navadhiti-projects",
       icon: <Briefcase className="h-5 w-5" />,
-    },
-    {
-      name: "Resource Allocation",
-      href: "/resource-allocation",
-      icon: <Users className="h-5 w-5" />,
     },
   ], []);
 
