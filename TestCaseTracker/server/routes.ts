@@ -422,6 +422,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const apiRouter = Router();
 
+  // AI Provider Diagnostic endpoint
+  apiRouter.get("/ai/diagnose", isAuthenticated, async (req, res) => {
+    try {
+      console.log('🔍 Starting AI provider diagnosis...');
+      
+      const diagnosis = {
+        timestamp: new Date().toISOString(),
+        environment: {
+          nodeEnv: process.env.NODE_ENV,
+          hasGoogleApiKey: !!process.env.GOOGLE_API_KEY,
+          hasOpenaiApiKey: !!process.env.OPENAI_API_KEY,
+          googleKeyValid: process.env.GOOGLE_API_KEY?.startsWith('AIza') || false,
+          openaiKeyValid: process.env.OPENAI_API_KEY?.startsWith('sk-') || false
+        },
+        providerStatus: EnhancedAIService.getProviderStatus(),
+        availableProviders: EnhancedAIService.getAvailableProviders(),
+        testResults: {}
+      };
+
+      // Test each provider with a simple request
+      const testRequest = {
+        requirement: 'Simple login test',
+        testType: 'functional',
+        priority: 'Medium',
+        inputType: 'text' as const
+      };
+
+      // Test Gemini
+      try {
+        console.log('🧪 Testing Gemini provider...');
+        const geminiResult = await EnhancedAIService.generateTestCases({ ...testRequest, aiProvider: 'gemini' });
+        diagnosis.testResults.gemini = {
+          success: true,
+          testCasesGenerated: geminiResult.testCases.length,
+          source: geminiResult.source,
+          isRealAI: !geminiResult.source.includes('mock')
+        };
+      } catch (error: any) {
+        diagnosis.testResults.gemini = {
+          success: false,
+          error: error.message,
+          isRealAI: false
+        };
+      }
+
+      // Test OpenAI
+      try {
+        console.log('🧪 Testing OpenAI provider...');
+        const openaiResult = await EnhancedAIService.generateTestCases({ ...testRequest, aiProvider: 'openai' });
+        diagnosis.testResults.openai = {
+          success: true,
+          testCasesGenerated: openaiResult.testCases.length,
+          source: openaiResult.source,
+          isRealAI: !openaiResult.source.includes('mock')
+        };
+      } catch (error: any) {
+        diagnosis.testResults.openai = {
+          success: false,
+          error: error.message,
+          isRealAI: false
+        };
+      }
+
+      console.log('🔍 Diagnosis complete:', diagnosis.testResults);
+
+      res.json({
+        success: true,
+        diagnosis,
+        summary: {
+          workingRealProviders: Object.entries(diagnosis.testResults)
+            .filter(([_, result]: [string, any]) => result.success && result.isRealAI)
+            .map(([provider, _]) => provider),
+          totalProviders: Object.keys(diagnosis.testResults).length
+        }
+      });
+
+    } catch (error: any) {
+      console.error('❌ AI diagnosis failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Diagnosis failed',
+        details: error.message
+      });
+    }
+  });
+
   // Test endpoint for AI service functionality
   apiRouter.post("/ai/test-generation", isAuthenticated, async (req, res) => {
     try {

@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { logger } from './logger';
@@ -70,7 +69,7 @@ function initializeGemini() {
       console.warn('❌ Gemini API key not configured');
       return false;
     } 
-    
+
     if (!geminiApiKey.startsWith('AIza')) {
       geminiInitError = `Google Gemini API key has invalid format. Expected to start with 'AIza'`;
       console.warn('❌ Gemini API key has invalid format');
@@ -104,7 +103,7 @@ function initializeOpenAI() {
       console.warn('❌ OpenAI API key not configured');
       return false;
     } 
-    
+
     if (!openaiApiKey.startsWith('sk-')) {
       openaiInitError = 'OpenAI API key has invalid format. Expected to start with "sk-"';
       console.warn('❌ OpenAI API key has invalid format');
@@ -281,7 +280,7 @@ export class EnhancedAIService {
       }
     } else {
       console.log(`⚠️ Requested provider ${provider} not available, trying others...`);
-      
+
       // Try any available provider
       for (const availableProvider of availableProviders) {
         try {
@@ -520,7 +519,7 @@ Generate 3-5 detailed test cases that cover:
 3. Error scenarios and validation
 4. Integration points
 
-Return ONLY a valid JSON array with this exact structure:
+Return ONLY a valid JSON array with this structure:
 [
   {
     "feature": "Clear feature name",
