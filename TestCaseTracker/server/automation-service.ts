@@ -54,33 +54,77 @@ export class AutomationService {
       const recordingId = `rec_${Date.now()}`;
 
       // Validate target URL
-      if (!config.targetUrl || !this.isValidUrl(config.targetUrl)) {
+      if (!config.url || !this.isValidUrl(config.url)) {
         return {
           success: false,
           message: "Please provide a valid target URL to start recording."
         };
       }
 
+      // Generate filename based on test case
+      const timestamp = Date.now();
+      const filename = `test-${config.testCaseId}-${timestamp}.spec.ts`;
+      const outputPath = path.join(this.recordingsDir, filename);
+
       // Create recording session
-      const recordingSession = {
+      const recordingSession: RecordingSession = {
         id: recordingId,
-        targetUrl: config.targetUrl,
-        startTime: new Date().toISOString(),
-        status: 'recording',
-        actions: [],
         projectId: config.projectId,
         moduleId: config.moduleId,
-        testCaseId: config.testCaseId
+        testCaseId: config.testCaseId,
+        url: config.url,
+        filename,
+        status: 'starting',
+        startTime: new Date(),
+        outputPath
       };
 
-      this.recordings.set(recordingId, recordingSession);
+      this.activeSessions.set(recordingId, recordingSession);
+
+      // Launch Playwright Codegen
+      logger.info(`Starting Playwright codegen for URL: ${config.url}`);
+      
+      const codegenProcess = spawn('npx', [
+        'playwright',
+        'codegen',
+        config.url,
+        '--target=typescript',
+        `--output=${outputPath}`
+      ], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: { 
+          ...process.env,
+          PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0'
+        }
+      });
+
+      recordingSession.process = codegenProcess;
+      recordingSession.status = 'recording';
+      this.activeSessions.set(recordingId, recordingSession);
+
+      codegenProcess.stdout?.on('data', (data) => {
+        logger.info(`Codegen stdout: ${data.toString()}`);
+      });
+
+      codegenProcess.stderr?.on('data', (data) => {
+        logger.info(`Codegen stderr: ${data.toString()}`);
+      });
+
+      codegenProcess.on('close', (code) => {
+        recordingSession.endTime = new Date();
+        recordingSession.status = code === 0 ? 'stopped' : 'error';
+        this.activeSessions.set(recordingId, recordingSession);
+        
+        logger.info(`Codegen process closed with code ${code} for session ${recordingId}`);
+      });
 
       return {
         success: true,
-        message: `Recording started successfully for ${config.targetUrl}`,
+        message: `Recording started successfully for ${config.url}`,
         recordingId
       };
-    } catch (error) {
+    } catch (error: any) {
+      logger.error('Failed to start recording:', error);
       return {
         success: false,
         message: `Failed to start recording: ${error.message}`
@@ -155,6 +199,7 @@ export class AutomationService {
   async executeTest(filename: string): Promise<{ success: boolean; message: string; executionId?: string }> {
     const executionId = `execution_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const testPath = path.join(this.recordingsDir, filename);
+    const screenshotsDir = path.join(this.recordingsDir, 'screenshots', executionId);
 
     logger.info('Starting test execution:', {
       executionId,
@@ -166,6 +211,9 @@ export class AutomationService {
       // Check if test file exists
       await fs.access(testPath);
 
+      // Create screenshots directory
+      await fs.mkdir(screenshotsDir, { recursive: true });
+
       const execution: TestExecution = {
         id: executionId,
         sessionId: '', // We don't have session ID for execution
@@ -174,12 +222,14 @@ export class AutomationService {
         startTime: new Date(),
       };
 
-      // Execute the test
+      // Execute the test with screenshots enabled
       const testProcess = spawn('npx', [
         'playwright',
         'test',
         testPath,
-        '--reporter=json'
+        '--reporter=json',
+        '--screenshot=on-failure',
+        `--output-dir=${screenshotsDir}`
       ], {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { 
@@ -202,7 +252,7 @@ export class AutomationService {
         stderr += data.toString();
       });
 
-      testProcess.on('close', (code) => {
+      testProcess.on('close', async (code) => {
         execution.endTime = new Date();
         execution.status = code === 0 ? 'completed' : 'failed';
 
@@ -210,7 +260,7 @@ export class AutomationService {
           // Try to parse JSON output
           const results = JSON.parse(stdout);
           execution.results = results;
-          execution.report = this.generateReport(results);
+          execution.report = this.generateDetailedReport(results, screenshotsDir);
         } catch (error) {
           execution.report = `Test execution ${code === 0 ? 'completed' : 'failed'}\n\nOutput:\n${stdout}\n\nErrors:\n${stderr}`;
         }
@@ -274,6 +324,75 @@ export class AutomationService {
           }
 
           report += '\n';
+        });
+      }
+    });
+
+    return report;
+  }
+
+  private generateDetailedReport(results: any, screenshotsDir: string): string {
+    if (!results || !results.suites) {
+      return 'No test results available';
+    }
+
+    let report = '# Detailed Test Execution Report\n\n';
+
+    // Summary
+    const stats = results.stats || {};
+    report += `## Summary\n`;
+    report += `- **Total Tests**: ${stats.total || 0}\n`;
+    report += `- **Passed**: ${stats.passed || 0}\n`;
+    report += `- **Failed**: ${stats.failed || 0}\n`;
+    report += `- **Skipped**: ${stats.skipped || 0}\n`;
+    report += `- **Duration**: ${stats.duration || 0}ms\n\n`;
+
+    // Detailed Test Results with Steps
+    report += `## Detailed Test Results\n\n`;
+
+    results.suites.forEach((suite: any, suiteIndex: number) => {
+      report += `### Suite ${suiteIndex + 1}: ${suite.title || 'Unnamed Suite'}\n\n`;
+
+      if (suite.tests && suite.tests.length > 0) {
+        suite.tests.forEach((test: any, testIndex: number) => {
+          const status = test.outcome === 'passed' ? '✅ PASSED' : 
+                        test.outcome === 'failed' ? '❌ FAILED' : '⚠️ SKIPPED';
+          
+          report += `#### Test ${testIndex + 1}: ${test.title || 'Unnamed Test'}\n`;
+          report += `**Status**: ${status}\n`;
+          report += `**Duration**: ${test.duration || 0}ms\n\n`;
+
+          // Add test steps if available
+          if (test.steps && test.steps.length > 0) {
+            report += `**Steps**:\n`;
+            test.steps.forEach((step: any, stepIndex: number) => {
+              const stepStatus = step.error ? '❌' : '✅';
+              report += `${stepIndex + 1}. ${stepStatus} ${step.title}\n`;
+              
+              if (step.error) {
+                report += `   - **Error**: ${step.error.message}\n`;
+                // Check for screenshots
+                if (step.screenshot) {
+                  const screenshotPath = `/automation/screenshots/${path.basename(screenshotsDir)}/${step.screenshot}`;
+                  report += `   - **Screenshot**: [View Screenshot](${screenshotPath})\n`;
+                }
+              }
+            });
+            report += '\n';
+          }
+
+          // Add error details for failed tests
+          if (test.outcome === 'failed' && test.error) {
+            report += `**Error Details**:\n`;
+            report += `\`\`\`\n${test.error.message}\n\`\`\`\n\n`;
+            
+            if (test.error.stack) {
+              report += `**Stack Trace**:\n`;
+              report += `\`\`\`\n${test.error.stack}\n\`\`\`\n\n`;
+            }
+          }
+
+          report += '---\n\n';
         });
       }
     });

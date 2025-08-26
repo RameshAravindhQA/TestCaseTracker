@@ -1,16 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Play, Square, Eye, Download, Search, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Play, Square, Eye, Download, Search, CheckCircle, XCircle, AlertCircle, Loader2, Video, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Project {
@@ -34,12 +33,16 @@ interface TestCase {
   status: string;
   hasScript: boolean;
   scriptFile?: string;
+  testCaseId: string; // Assuming this is the unique identifier for a test case
+  feature: string; // Assuming this is a field for test case feature
 }
 
 interface RecordingSession {
-  sessionId: string;
+  id: string; // Unique identifier for the recording session
   status: 'recording' | 'stopped' | 'error';
-  testCaseId: string;
+  testCaseId: number; // Link to the test case being recorded
+  startTime: string; // Timestamp of when recording started
+  filename?: string; // Name of the generated script file
 }
 
 interface ExecutionResult {
@@ -80,14 +83,14 @@ export default function AutomationPage() {
     queryKey: ['modules', selectedProject],
     queryFn: async () => {
       if (!selectedProject) return [];
-      
+
       try {
         const response = await fetch(`/api/projects/${selectedProject}/modules`);
         if (!response.ok) throw new Error('Failed to fetch modules');
-        
+
         const modulesData = await response.json();
         console.log('Fetched modules for automation:', modulesData);
-        
+
         // Fetch test case counts for each module
         const modulesWithCounts = await Promise.all(
           modulesData.map(async (module: any) => {
@@ -104,7 +107,7 @@ export default function AutomationPage() {
             }
           })
         );
-        
+
         return modulesWithCounts;
       } catch (error) {
         console.error('Error fetching modules:', error);
@@ -115,21 +118,21 @@ export default function AutomationPage() {
   });
 
   // Fetch test cases for selected module
-  const { data: testCases = [], isLoading: testCasesLoading } = useQuery({
+  const testCasesQuery = useQuery({
     queryKey: ['test-cases', selectedProject, selectedModule],
     queryFn: async () => {
       if (!selectedModule || !selectedProject) return [];
-      
+
       try {
         const response = await fetch(`/api/projects/${selectedProject}/test-cases?moduleId=${selectedModule}`);
         if (!response.ok) {
           console.error('Failed to fetch test cases:', response.status, response.statusText);
           throw new Error('Failed to fetch test cases');
         }
-        
+
         const cases = await response.json();
         console.log('Fetched test cases for automation:', cases.length, cases);
-        
+
         // Add mock script status for demonstration
         return cases.map((tc: any) => ({
           ...tc,
@@ -143,10 +146,15 @@ export default function AutomationPage() {
     },
     enabled: !!selectedModule && !!selectedProject
   });
+  const testCases = testCasesQuery.data || [];
+
 
   // Start recording mutation
   const startRecordingMutation = useMutation({
-    mutationFn: async (data: { testCaseId: string; url: string }) => {
+    mutationFn: async ({ testCaseId, url }: { testCaseId: string; url: string }) => {
+      const testCase = testCases.find(tc => tc.id === parseInt(testCaseId));
+      if (!testCase) throw new Error('Test case not found');
+
       const response = await fetch('/api/automation/start-recording', {
         method: 'POST',
         headers: {
@@ -154,10 +162,10 @@ export default function AutomationPage() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          url: data.url,
+          url,
           projectId: selectedProject,
           moduleId: selectedModule,
-          testCaseId: data.testCaseId
+          testCaseId: parseInt(testCaseId),
         })
       });
 
@@ -168,26 +176,89 @@ export default function AutomationPage() {
 
       return response.json();
     },
-    onSuccess: (data) => {
-      setCurrentRecording({
-        sessionId: data.sessionId,
-        status: 'recording',
-        testCaseId: selectedTestCase
-      });
-      setIsRecordingDialogOpen(false);
+    onSuccess: (data, { testCaseId }) => {
       toast({
         title: 'Recording Started',
-        description: 'Playwright browser opened. Interact with the page to record your test steps.',
+        description: 'Playwright codegen has been launched. Perform your test actions in the browser.',
       });
+
+      // Start polling for recording status
+      const recordingId = data.recordingId;
+      setCurrentRecording({
+        id: recordingId,
+        testCaseId: parseInt(testCaseId),
+        status: 'recording',
+        startTime: new Date().toISOString(),
+      });
+
+      // Poll for completion (in real implementation, this would be WebSocket)
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`/api/automation/session/${recordingId}`);
+          if (statusResponse.ok) {
+            const session = await statusResponse.json();
+            if (session.data.status === 'stopped') {
+              clearInterval(pollInterval);
+              setCurrentRecording(null);
+              toast({
+                title: 'Recording Completed',
+                description: `Test script saved as ${session.data.filename}`,
+              });
+              // Refetch test cases to update script status
+              testCasesQuery.refetch();
+            }
+          }
+        } catch (error) {
+          console.error('Error polling recording status:', error);
+        }
+      }, 2000);
+
+      // Cleanup after 10 minutes
+      setTimeout(() => clearInterval(pollInterval), 600000);
     },
     onError: (error: any) => {
       toast({
-        title: 'Recording Error',
+        title: 'Recording Failed',
         description: error.message,
         variant: 'destructive',
       });
     }
   });
+
+  // Handle recording start
+  const handleStartRecording = (testCaseId: string) => {
+    setIsRecordingDialogOpen(true);
+    setSelectedTestCase(testCaseId);
+  };
+
+  // Handle URL submission for recording
+  const handleRecordingSubmit = () => {
+    if (!recordingUrl.trim()) {
+      toast({
+        title: 'URL Required',
+        description: 'Please enter a valid URL to start recording',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!selectedTestCase) {
+      toast({
+        title: 'No Test Case Selected',
+        description: 'Please select a test case first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    startRecordingMutation.mutate({
+      testCaseId: selectedTestCase,
+      url: recordingUrl.trim()
+    });
+
+    setIsRecordingDialogOpen(false);
+    setRecordingUrl('');
+  };
 
   // Stop recording mutation
   const stopRecordingMutation = useMutation({
@@ -215,7 +286,7 @@ export default function AutomationPage() {
         description: 'Test script has been generated and saved.',
       });
       // Refetch test cases to update script status
-      window.location.reload();
+      testCasesQuery.refetch();
     },
     onError: (error: any) => {
       toast({
@@ -305,36 +376,9 @@ export default function AutomationPage() {
     }
   });
 
-  const handleStartRecording = () => {
-    if (!recordingUrl) {
-      toast({
-        title: 'URL Required',
-        description: 'Please enter a valid URL to start recording.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      new URL(recordingUrl);
-    } catch {
-      toast({
-        title: 'Invalid URL',
-        description: 'Please enter a valid URL (e.g., https://example.com).',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    startRecordingMutation.mutate({
-      testCaseId: selectedTestCase,
-      url: recordingUrl
-    });
-  };
-
   const handleStopRecording = () => {
     if (currentRecording) {
-      stopRecordingMutation.mutate(currentRecording.sessionId);
+      stopRecordingMutation.mutate(currentRecording.id);
     }
   };
 
@@ -519,22 +563,28 @@ export default function AutomationPage() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {/* Record Button */}
-                            <Dialog open={isRecordingDialogOpen} onOpenChange={setIsRecordingDialogOpen}>
+                            <Dialog open={isRecordingDialogOpen && selectedTestCase === testCase.id} onOpenChange={(isOpen) => {
+                              setIsRecordingDialogOpen(isOpen);
+                              if (!isOpen) {
+                                setSelectedTestCase(''); // Clear selection when dialog closes
+                                setRecordingUrl(''); // Clear URL input
+                              }
+                            }}>
                               <DialogTrigger asChild>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  disabled={currentRecording?.testCaseId === testCase.id}
-                                  onClick={() => setSelectedTestCase(testCase.id)}
+                                  disabled={currentRecording?.testCaseId === parseInt(testCase.id)}
+                                  onClick={() => handleStartRecording(testCase.id)}
                                 >
-                                  {currentRecording?.testCaseId === testCase.id ? (
+                                  {currentRecording?.testCaseId === parseInt(testCase.id) ? (
                                     <>
                                       <Square className="h-4 w-4 mr-1" />
                                       Recording...
                                     </>
                                   ) : (
                                     <>
-                                      <div className="w-4 h-4 rounded-full bg-red-500 mr-1" />
+                                      <Video className="h-4 w-4 mr-1" />
                                       Record
                                     </>
                                   )}
@@ -558,12 +608,16 @@ export default function AutomationPage() {
                                   <div className="flex justify-end gap-2">
                                     <Button
                                       variant="outline"
-                                      onClick={() => setIsRecordingDialogOpen(false)}
+                                      onClick={() => {
+                                        setIsRecordingDialogOpen(false);
+                                        setSelectedTestCase('');
+                                        setRecordingUrl('');
+                                      }}
                                     >
                                       Cancel
                                     </Button>
                                     <Button
-                                      onClick={handleStartRecording}
+                                      onClick={handleRecordingSubmit}
                                       disabled={startRecordingMutation.isPending}
                                     >
                                       Start Recording
@@ -574,7 +628,7 @@ export default function AutomationPage() {
                             </Dialog>
 
                             {/* Stop Recording Button */}
-                            {currentRecording?.testCaseId === testCase.id && (
+                            {currentRecording?.testCaseId === parseInt(testCase.id) && (
                               <Button
                                 variant="destructive"
                                 size="sm"
@@ -621,7 +675,7 @@ export default function AutomationPage() {
                     <Card key={result.id} className="border-l-4 border-l-blue-500">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                          {testCase?.title}
+                          {testCase?.title || result.testCaseId}
                           <Badge 
                             variant={result.status === 'completed' ? 'default' : 'destructive'}
                             className={result.status === 'completed' ? 'bg-green-500' : ''}

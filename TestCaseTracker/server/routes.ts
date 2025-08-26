@@ -1856,54 +1856,226 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-// Basic automation endpoints
+// Enhanced automation endpoints with actual implementation
 app.get('/api/automation/health', (req, res) => {
   res.json({ status: 'ok', message: 'Automation service is running' });
 });
 
-app.get('/api/automation/scripts', isAuthenticated, (req, res) => {
-  res.json([]);
-});
-
-app.get('/api/automation/recordings', isAuthenticated, (req, res) => {
-  res.json([]);
-});
-
-app.post('/api/automation/start-recording', isAuthenticated, (req, res) => {
-  const { url, projectId, moduleId, testCaseId } = req.body;
-
-  if (!url) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'URL is required' 
-    });
+app.get('/api/automation/scripts', isAuthenticated, async (req, res) => {
+  try {
+    const scripts = await automationService.getRecordings();
+    res.json(scripts.map(filename => ({
+      id: filename,
+      name: filename.replace('.spec.ts', ''),
+      filename,
+      status: 'ready',
+      created: new Date(),
+    })));
+  } catch (error) {
+    console.error('Get automation scripts error:', error);
+    res.status(500).json({ message: 'Failed to get scripts' });
   }
+});
 
-  // For now, return a mock response indicating the feature is in development
-  res.json({
-    success: false,
-    message: 'Automation recording feature is currently under development. This is a placeholder endpoint.',
-    sessionId: `mock-session-${Date.now()}`,
-    filename: `test-recording-${Date.now()}.js`,
-    details: {
+app.get('/api/automation/recordings', isAuthenticated, async (req, res) => {
+  try {
+    const recordings = await automationService.getRecordings();
+    res.json(recordings);
+  } catch (error) {
+    console.error('Get automation recordings error:', error);
+    res.status(500).json({ message: 'Failed to get recordings' });
+  }
+});
+
+app.get('/api/automation/script/:filename', isAuthenticated, async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const content = await automationService.getRecordingContent(filename);
+    
+    if (!content) {
+      return res.status(404).json({ message: 'Script not found' });
+    }
+    
+    res.json({ filename, content });
+  } catch (error) {
+    console.error('Get script content error:', error);
+    res.status(500).json({ message: 'Failed to get script content' });
+  }
+});
+
+// Serve automation screenshots
+app.use('/automation/screenshots', (req, res, next) => {
+  const screenshotsDir = path.join(process.cwd(), 'recordings', 'screenshots');
+  const filePath = path.join(screenshotsDir, req.path);
+  
+  // Validate path to prevent directory traversal
+  if (!filePath.startsWith(screenshotsDir)) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+  
+  // Check if file exists
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ message: "Screenshot not found" });
+  }
+  
+  // Serve the file
+  res.sendFile(filePath);
+});
+
+app.post('/api/automation/start-recording', isAuthenticated, async (req, res) => {
+  try {
+    const { url, projectId, moduleId, testCaseId } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'URL is required' 
+      });
+    }
+
+    const result = await automationService.startRecording({
       url,
       projectId,
       moduleId,
       testCaseId,
-      timestamp: new Date().toISOString()
+    });
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
     }
-  });
+  } catch (error) {
+    console.error('Start recording error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start recording',
+      error: error.message,
+    });
+  }
 });
 
-app.post('/api/automation/stop-recording', isAuthenticated, (req, res) => {
-  const { sessionId } = req.body;
+app.post('/api/automation/stop-recording', isAuthenticated, async (req, res) => {
+  try {
+    const { sessionId } = req.body;
 
-  res.json({
-    success: false,
-    message: 'Automation recording feature is currently under development.',
-    sessionId,
-    filename: `test-recording-${Date.now()}.js`
-  });
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session ID is required',
+      });
+    }
+
+    const result = await automationService.stopRecording(sessionId);
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('Stop recording error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to stop recording',
+      error: error.message,
+    });
+  }
+});
+
+app.post('/api/automation/execute-test', isAuthenticated, async (req, res) => {
+  try {
+    const { filename, testCaseId } = req.body;
+
+    if (!filename) {
+      return res.status(400).json({
+        success: false,
+        message: 'Filename is required',
+      });
+    }
+
+    const result = await automationService.executeTest(filename);
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('Execute test error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to execute test',
+      error: error.message,
+    });
+  }
+});
+
+app.get('/api/automation/session/:sessionId', isAuthenticated, (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const session = automationService.getSession(sessionId);
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: session.id,
+        status: session.status,
+        filename: session.filename,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        url: session.url,
+      },
+    });
+  } catch (error) {
+    console.error('Get session error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get session',
+      error: error.message,
+    });
+  }
+});
+
+app.get('/api/automation/execution/:executionId', isAuthenticated, (req, res) => {
+  try {
+    const { executionId } = req.params;
+    const execution = automationService.getExecution(executionId);
+
+    if (!execution) {
+      return res.status(404).json({
+        success: false,
+        message: 'Execution not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: execution.id,
+        status: execution.status,
+        filename: execution.filename,
+        startTime: execution.startTime,
+        endTime: execution.endTime,
+        results: execution.results,
+        report: execution.report,
+      },
+    });
+  } catch (error) {
+    console.error('Get execution error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get execution',
+      error: error.message,
+    });
+  }
 });
 
 
