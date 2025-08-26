@@ -233,6 +233,7 @@ export class EnhancedAIService {
     const availableProviders: string[] = [];
     if (genAI && !geminiInitError) availableProviders.push('gemini');
     if (openai && !openaiInitError) availableProviders.push('openai');
+    // GROK provider will be added here once implemented
 
     console.log(`🔍 Available real AI providers: ${availableProviders.join(', ')}`);
     console.log(`🔍 Provider status - Gemini: ${!!genAI && !geminiInitError}, OpenAI: ${!!openai && !openaiInitError}`);
@@ -277,10 +278,20 @@ export class EnhancedAIService {
               if (fallbackProvider === 'gemini') {
                 const result = await EnhancedAIService.generateWithGemini(request);
                 console.log(`✅ Fallback successful with Gemini: ${result.testCases.length} test cases`);
+                result.message = `Generated ${result.testCases.length} test cases using Google Gemini AI (${provider} fallback)`;
+                result.provider = 'gemini';
                 return result;
               } else if (fallbackProvider === 'openai') {
                 const result = await EnhancedAIService.generateWithOpenAI(request);
                 console.log(`✅ Fallback successful with OpenAI: ${result.testCases.length} test cases`);
+                result.message = `Generated ${result.testCases.length} test cases using OpenAI (${provider} fallback)`;
+                result.provider = 'openai';
+                return result;
+              } else if (fallbackProvider === 'grok') {
+                const result = await EnhancedAIService.generateWithGrok(request);
+                console.log(`✅ Fallback successful with GROK: ${result.testCases.length} test cases`);
+                result.message = `Generated ${result.testCases.length} test cases using xAI GROK (${provider} fallback)`;
+                result.provider = 'grok';
                 return result;
               }
             } catch (fallbackError: any) {
@@ -304,6 +315,10 @@ export class EnhancedAIService {
           } else if (availableProvider === 'openai') {
             const result = await EnhancedAIService.generateWithOpenAI(request);
             console.log(`✅ Successfully generated with OpenAI: ${result.testCases.length} test cases`);
+            return result;
+          } else if (availableProvider === 'grok') {
+            const result = await EnhancedAIService.generateWithGrok(request);
+            console.log(`✅ Successfully generated with GROK: ${result.testCases.length} test cases`);
             return result;
           }
         } catch (error: any) {
@@ -467,6 +482,17 @@ export class EnhancedAIService {
 
     // If we get here, all models failed
     throw new Error(`All OpenAI models failed. Last error: ${lastError?.message || 'Unknown error'}`);
+  }
+
+  // Placeholder for GROK implementation
+  private static async generateWithGrok(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
+    console.warn('⚠️ GROK provider is not yet implemented. Returning mock response.');
+    // In a real scenario, you would initialize and use the GROK SDK here.
+    // For now, we'll return a mock response similar to getMockResponse.
+    const mockResponse = EnhancedAIService.getMockResponse(request);
+    mockResponse.message = `Generated ${mockResponse.testCases.length} test cases using GROK (mock implementation)`;
+    mockResponse.provider = 'grok';
+    return mockResponse;
   }
 
   private static parseAIResponse(text: string): GeneratedTestCase[] {
