@@ -12,7 +12,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "cd client && npm run preview",
     "setup-playwright": "node setup-playwright.js",
-    "postinstall": "node setup-playwright.js"
+    "postinstall": "chmod +x setup-playwright.js && ./setup-playwright.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
