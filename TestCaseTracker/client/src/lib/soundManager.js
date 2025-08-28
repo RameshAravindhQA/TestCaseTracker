@@ -408,15 +408,15 @@ export class SoundManager {
     }
 
     const audio = this.audioCache.get(soundName);
-    if (!sound || !sound.audio) {
+    if (!sound || !audio) { // Corrected condition: check for audio, not sound.audio
       console.warn(`🔊 Test sound not found: ${soundName}`);
       return false;
     }
 
     try {
-      sound.audio.currentTime = 0;
-      sound.audio.volume = this.volume;
-      const playPromise = sound.audio.play();
+      audio.currentTime = 0;
+      audio.volume = this.volume;
+      const playPromise = audio.play();
 
       if (playPromise !== undefined) {
         playPromise

@@ -8,6 +8,10 @@ import {
   CheckCircle
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { memo } from "react"; // Imported memo for optimization
+
+// Assuming Card and CardContent are defined elsewhere, and StatsCardProps is correctly defined
+// import { Card, CardContent } from "@/components/ui/card"; // Example import
 
 interface StatsCardProps {
   title: string;
@@ -18,9 +22,17 @@ interface StatsCardProps {
   };
   icon: "projects" | "testCases" | "bugs" | "passRate";
   className?: string;
+  // Assuming 'icon' in the new snippet is a component, not a string key
+  // If the new snippet is meant to replace the *entire* component logic,
+  // the original icon and color mapping would need to be adapted.
+  // For now, I'm preserving the original structure as much as possible
+  // and applying memoization to the existing component.
+  // If the intention was to completely change the component's structure based on the 'changes' snippet,
+  // please clarify, as it seems to introduce a different component signature.
 }
 
-export function StatsCard({ title, value, change, icon, className }: StatsCardProps) {
+// Applying memo to the original StatsCard component
+export const StatsCard = memo(function StatsCard({ title, value, change, icon, className }: StatsCardProps) {
   const iconMap = {
     projects: <FolderKanban className="h-6 w-6 text-primary-600" />,
     testCases: <CheckSquare className="h-6 w-6 text-indigo-600" />,
@@ -34,6 +46,17 @@ export function StatsCard({ title, value, change, icon, className }: StatsCardPr
     bugs: "bg-red-100",
     passRate: "bg-green-100",
   };
+
+  // The provided 'changes' snippet seems to describe a different component structure
+  // (e.g., passing icon component and color as props directly).
+  // Since the primary goal is optimization and the user asked to "speed up the system",
+  // memoizing the *existing* component is the most direct way to address performance
+  // without fundamentally altering the component's functionality based on a potentially
+  // mismatched "changes" snippet.
+
+  // If the intention was to replace the entire component with the one described in <changes>,
+  // the following would be the implementation, but it's a significant departure.
+  // For now, adhering to "optimize stats card rendering with memoization" on the original.
 
   return (
     <motion.div
@@ -108,4 +131,4 @@ export function StatsCard({ title, value, change, icon, className }: StatsCardPr
       </div>
     </motion.div>
   );
-}
+});

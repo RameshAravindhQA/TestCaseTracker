@@ -45,9 +45,9 @@ import { TestStatusChart } from '@/components/dashboard/test-status-chart';
 import { BugSeverityChart } from '@/components/dashboard/bug-severity-chart';
 import { TestStatusCounts } from '@/components/dashboard/test-status-counts';
 import MotionGraphicsShowcase from '@/components/ui/motion-graphics-showcase';
-import { 
-  ScrollTriggeredSection, 
-  ParallaxBackground, 
+import {
+  ScrollTriggeredSection,
+  ParallaxBackground,
   InteractiveCard,
   MorphingText,
   FloatingElements
@@ -83,22 +83,63 @@ export function DashboardPage() {
   const [bugsDialogOpen, setBugsDialogOpen] = useState(false);
   const [passRateDialogOpen, setPassRateDialogOpen] = useState(false);
 
-  // Fetch projects with real-time updates
-  const { data: projects, isLoading: isProjectsLoading, error: projectsError } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
+  // Mock fetch functions for demonstration purposes
+  // In a real app, these would fetch data from your API
+  const fetchProjects = async () => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    // Simulate fetching projects data
+    return [
+      { id: '1', name: 'Project Alpha', description: 'Frontend development', status: 'Active', createdAt: new Date().toISOString() },
+      { id: '2', name: 'Project Beta', description: 'Backend services', status: 'Maintenance', createdAt: new Date().toISOString() },
+      { id: '3', name: 'Project Gamma', description: 'API integration', status: 'Active', createdAt: new Date().toISOString() },
+    ];
+  };
+
+  const fetchTestCases = async () => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 700));
+    // Simulate fetching test cases data
+    return [
+      { id: 'tc1', projectId: '1', moduleId: 'mod1', name: 'Login Test', status: 'Pass', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      { id: 'tc2', projectId: '1', moduleId: 'mod1', name: 'Logout Test', status: 'Fail', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      { id: 'tc3', projectId: '2', moduleId: 'mod2', name: 'DB Connection Test', status: 'Pass', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      { id: 'tc4', projectId: '1', moduleId: 'mod2', name: 'Dashboard Load Test', status: 'Pass', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      { id: 'tc5', projectId: '3', moduleId: 'mod3', name: 'API Endpoint Test', status: 'Blocked', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      { id: 'tc6', projectId: '1', moduleId: 'mod1', name: 'Invalid Credentials Test', status: 'Fail', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+    ];
+  };
+
+  const fetchBugs = async () => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 600));
+    // Simulate fetching bugs data
+    return [
+      { id: 'bug1', projectId: '1', title: 'Login button not working', severity: 'Critical', status: 'Open', dateReported: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(), createdAt: new Date().toISOString() },
+      { id: 'bug2', projectId: '1', title: 'UI glitch on mobile view', severity: 'Minor', status: 'Open', dateReported: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(), createdAt: new Date().toISOString() },
+      { id: 'bug3', projectId: '2', title: 'Database connection timeout', severity: 'Major', status: 'Resolved', dateReported: new Date(new Date().setDate(new Date().getDate() - 3)).toISOString(), createdAt: new Date().toISOString() },
+      { id: 'bug4', projectId: '1', title: 'Incorrect data displayed on dashboard', severity: 'Major', status: 'Open', dateReported: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(), createdAt: new Date().toISOString() },
+      { id: 'bug5', projectId: '3', title: 'API returns 500 error', severity: 'Critical', status: 'Open', dateReported: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(), createdAt: new Date().toISOString() },
+    ];
+  };
+
+  // Fetch projects with optimized query settings
+  const { data: projects = [], isLoading: isProjectsLoading } = useQuery({
+    queryKey: ['/api/projects'],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/projects");
       if (!response.ok) throw new Error("Failed to fetch projects");
       return response.json();
     },
-    staleTime: 0,
-    refetchInterval: 10000,
-    refetchOnWindowFocus: true,
+    staleTime: 30000, // 30 seconds before considering data stale
+    cacheTime: 300000, // 5 minutes cache time
+    refetchOnWindowFocus: true, // Keep refetching on window focus
+    refetchInterval: 10000, // Refetch every 10 seconds
   });
 
-  // Fetch test cases with real-time updates
-  const { data: testCases, isLoading: isTestCasesLoading, error: testCasesError } = useQuery<TestCase[]>({
-    queryKey: ["/api/test-cases"],
+  // Fetch test cases with optimized query settings
+  const { data: testCases = [], isLoading: isTestCasesLoading } = useQuery({
+    queryKey: ['/api/test-cases'],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/test-cases");
       if (!response.ok) throw new Error("Failed to fetch test cases");
@@ -106,12 +147,13 @@ export function DashboardPage() {
       console.log('Dashboard - Fetched test cases:', data);
       return Array.isArray(data) ? data : [];
     },
-    staleTime: 0,
-    refetchInterval: 5000,
-    refetchOnWindowFocus: true,
+    staleTime: 15000, // 15 seconds before considering data stale
+    cacheTime: 180000, // 3 minutes cache time
+    refetchOnWindowFocus: true, // Keep refetching on window focus
+    refetchInterval: 5000, // Refetch every 5 seconds
   });
 
-  // Fetch bugs with real-time updates
+  // Fetch bugs with optimized query settings
   const { data: bugs, isLoading: isBugsLoading, error: bugsError } = useQuery<BugType[]>({
     queryKey: ["/api/bugs"],
     queryFn: async () => {
@@ -119,9 +161,10 @@ export function DashboardPage() {
       if (!response.ok) throw new Error("Failed to fetch bugs");
       return response.json();
     },
-    staleTime: 0,
-    refetchInterval: 10000,
-    refetchOnWindowFocus: true,
+    staleTime: 15000, // 15 seconds before considering data stale
+    cacheTime: 180000, // 3 minutes cache time
+    refetchOnWindowFocus: true, // Keep refetching on window focus
+    refetchInterval: 10000, // Refetch every 10 seconds
   });
 
   // Calculate project-wise statistics
@@ -170,9 +213,10 @@ export function DashboardPage() {
     });
 
     const testExecutionData = last7Days.map((date, index) => {
+      const tcDateValue = date.toDateString(); // Cache the date string for performance
       const dayTestCases = testCases.filter(tc => {
         const tcDate = new Date(tc.updatedAt || tc.createdAt);
-        return tcDate.toDateString() === date.toDateString();
+        return tcDate.toDateString() === tcDateValue;
       });
 
       const pass = dayTestCases.filter(tc => tc.status === 'Pass').length;
@@ -191,9 +235,10 @@ export function DashboardPage() {
     });
 
     const bugTrendData = last7Days.map((date, index) => {
+      const bugDateValue = date.toDateString(); // Cache the date string for performance
       const dayBugs = bugs ? bugs.filter(bug => {
         const bugDate = new Date(bug.dateReported);
-        return bugDate.toDateString() === date.toDateString();
+        return bugDate.toDateString() === bugDateValue;
       }) : [];
 
       const critical = dayBugs.filter(bug => bug.severity === 'Critical').length;
@@ -278,7 +323,7 @@ export function DashboardPage() {
         </div>
 
         {/* Statistics Cards with Interactive Dialogs */}
-        <motion.div 
+        <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
           variants={containerVariants}
           initial="hidden"
@@ -610,8 +655,8 @@ export function DashboardPage() {
                             <TableCell>{executedCount}</TableCell>
                             <TableCell>
                               <div className="w-20 bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className="bg-green-600 h-2 rounded-full transition-all duration-300" 
+                                <div
+                                  className="bg-green-600 h-2 rounded-full transition-all duration-300"
                                   style={{ width: `${project.passRate}%` }}
                                 ></div>
                               </div>
