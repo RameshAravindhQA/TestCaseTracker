@@ -127,7 +127,8 @@ export class AutomationService {
       logger.info(`Output path: ${outputPath}`);
       logger.info(`Recording ID: ${recordingId}`);
       
-      const codegenProcess = spawn('npx', [
+      // Log the exact command being executed
+      const codegenArgs = [
         'playwright',
         'codegen',
         config.url,
@@ -136,7 +137,20 @@ export class AutomationService {
         '--save-storage=state.json',
         '--browser=chromium',
         '--viewport-size=1280,720'
-      ], {
+      ];
+      logger.info(`Executing command: npx ${codegenArgs.join(' ')}`);
+      
+      // Log environment variables
+      logger.info(`Environment variables:`, {
+        PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
+        NODE_ENV: 'development',
+        PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0',
+        DISPLAY: ':99'
+      });
+      
+      logger.info(`🚀 Attempting to launch browser in instrumented mode...`);
+      
+      const codegenProcess = spawn('npx', codegenArgs, {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { 
           ...process.env,
@@ -153,45 +167,91 @@ export class AutomationService {
 
       codegenProcess.stdout?.on('data', (data) => {
         const output = data.toString();
-        logger.info(`Codegen stdout [${recordingId}]: ${output}`);
+        logger.info(`📤 Codegen stdout [${recordingId}]: ${output}`);
+        
+        // Check for browser launch indicators
+        if (output.includes('Connecting to browser') || output.includes('Browser launched')) {
+          logger.info(`🌐 Browser connection initiated for session ${recordingId}`);
+        }
+        if (output.includes('Recording started') || output.includes('codegen started')) {
+          logger.info(`🎬 Browser recording mode activated for session ${recordingId}`);
+        }
       });
 
       codegenProcess.stderr?.on('data', (data) => {
         const output = data.toString();
-        logger.warn(`Codegen stderr [${recordingId}]: ${output}`);
+        logger.warn(`📥 Codegen stderr [${recordingId}]: ${output}`);
         
-        // Check for browser installation issues
-        if (output.includes('Executable doesn\'t exist') || output.includes('npx playwright install')) {
-          logger.error(`Browser installation required for session ${recordingId}`);
+        // Enhanced error detection
+        if (output.includes('Host system is missing dependencies')) {
+          logger.error(`❌ Browser dependencies missing for session ${recordingId}`);
+          logger.error(`🔧 Required: System dependencies for browser execution`);
           recordingSession.status = 'error';
           recordingSession.endTime = new Date();
           this.activeSessions.set(recordingId, recordingSession);
         }
+        
+        if (output.includes('Executable doesn\'t exist') || output.includes('npx playwright install')) {
+          logger.error(`❌ Browser installation required for session ${recordingId}`);
+          recordingSession.status = 'error';
+          recordingSession.endTime = new Date();
+          this.activeSessions.set(recordingId, recordingSession);
+        }
+        
+        if (output.includes('Failed to launch') || output.includes('Browser not found')) {
+          logger.error(`❌ Browser launch failed for session ${recordingId}`);
+          recordingSession.status = 'error';
+          recordingSession.endTime = new Date();
+          this.activeSessions.set(recordingId, recordingSession);
+        }
+        
+        // Check for successful browser connections
+        if (output.includes('DevTools listening') || output.includes('Chrome DevTools Protocol')) {
+          logger.info(`🔗 DevTools Protocol connection established for session ${recordingId}`);
+        }
       });
 
       codegenProcess.on('error', (error) => {
-        logger.error(`Codegen process error [${recordingId}]:`, error);
+        logger.error(`❌ Codegen process error [${recordingId}]:`, error);
+        logger.error(`🔍 Error details: ${error.message}`);
+        if (error.code) {
+          logger.error(`🔍 Error code: ${error.code}`);
+        }
         recordingSession.status = 'error';
         recordingSession.endTime = new Date();
         this.activeSessions.set(recordingId, recordingSession);
       });
 
-      codegenProcess.on('close', (code) => {
+      codegenProcess.on('spawn', () => {
+        logger.info(`🚀 Codegen process spawned successfully for session ${recordingId}`);
+        logger.info(`📋 Process PID: ${codegenProcess.pid}`);
+      });
+
+      codegenProcess.on('close', (code, signal) => {
         recordingSession.endTime = new Date();
         recordingSession.status = code === 0 ? 'stopped' : 'error';
         this.activeSessions.set(recordingId, recordingSession);
         
-        logger.info(`Codegen process closed with code ${code} for session ${recordingId}`);
+        logger.info(`🏁 Codegen process closed for session ${recordingId}:`);
+        logger.info(`   Exit code: ${code}`);
+        logger.info(`   Signal: ${signal || 'none'}`);
+        logger.info(`   Duration: ${recordingSession.endTime.getTime() - recordingSession.startTime.getTime()}ms`);
+        
+        if (code === 0) {
+          logger.info(`✅ Recording completed successfully for session ${recordingId}`);
+        } else {
+          logger.error(`❌ Recording failed for session ${recordingId} (exit code: ${code})`);
+        }
         
         // Log file creation status
         if (recordingSession.outputPath) {
           import('fs').then(fs => {
             fs.promises.access(recordingSession.outputPath!)
               .then(() => {
-                logger.info(`Recording file created successfully: ${recordingSession.outputPath}`);
+                logger.info(`📁 Recording file created successfully: ${recordingSession.outputPath}`);
               })
               .catch(() => {
-                logger.warn(`Recording file was not created: ${recordingSession.outputPath}`);
+                logger.warn(`⚠️ Recording file was not created: ${recordingSession.outputPath}`);
               });
           });
         }
