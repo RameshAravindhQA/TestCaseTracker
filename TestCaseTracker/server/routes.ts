@@ -6205,7 +6205,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
       }
 
       // Check if user has access to the project containing this document
-      constproject = await storage.getProject(document.projectId);
+      const project = await storage.getProject(document.projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
