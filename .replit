@@ -13,7 +13,7 @@ channel = "stable-24_05"
 packages = ["unzipNLS"]
 
 [workflows]
-runButton = "Start TestCaseTracker (Fixed)"
+runButton = "Start TestCaseTracker"
 
 [[workflows.workflow]]
 name = "Start TestCaseTracker"
@@ -23,21 +23,3 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd TestCaseTracker && npm install && node dev.js"
-
-[[workflows.workflow]]
-name = "Launch TestCaseTracker"
-author = 41966107
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd TestCaseTracker && npm run dev"
-
-[[workflows.workflow]]
-name = "Start TestCaseTracker (Fixed)"
-author = 41966107
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node TestCaseTracker/start-app.js"
