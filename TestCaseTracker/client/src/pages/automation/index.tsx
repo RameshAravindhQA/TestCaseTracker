@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Play, Square, Eye, Download, Search, CheckCircle, XCircle, AlertCircle, Loader2, Video, FileText } from 'lucide-react';
+import { Play, Square, Eye, Download, Search, CheckCircle, XCircle, AlertCircle, Loader2, Video, FileText, Monitor, Chrome } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface Project {
   id: string;
@@ -36,6 +37,8 @@ interface TestCase {
   scriptFile?: string;
   testCaseId: string; // Assuming this is the unique identifier for a test case
   feature: string; // Assuming this is a field for test case feature
+  tags?: string[];
+  testObjective?: string;
 }
 
 interface RecordingSession {
@@ -68,6 +71,9 @@ export default function AutomationPage() {
   const [currentRecording, setCurrentRecording] = useState<RecordingSession | null>(null);
   const [executionResults, setExecutionResults] = useState<ExecutionResult[]>([]);
   const [healthStatus, setHealthStatus] = useState<any>(null);
+  const [availableBrowsers, setAvailableBrowsers] = useState<string[]>([]);
+  const [launchMode, setLaunchMode] = useState<string>('playwright');
+  const [preferredBrowser, setPreferredBrowser] = useState<string>('');
   const { toast } = useToast();
 
   // Health check function
@@ -78,7 +84,7 @@ export default function AutomationPage() {
       const health = await response.json();
       console.log('🏥 Health check result:', health);
       setHealthStatus(health);
-      
+
       if (health.details?.playwright?.includes('available')) {
         toast({
           title: 'Service Healthy',
@@ -181,12 +187,47 @@ export default function AutomationPage() {
   });
   const testCases = testCasesQuery.data || [];
 
+  // Fetch recordings
+  const fetchRecordings = async () => {
+    try {
+      const response = await fetch('/api/automation/recordings');
+      if (response.ok) {
+        const data = await response.json();
+        setRecordings(data.recordings || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch recordings:', error);
+    }
+  };
+
+  // Fetch available browsers
+  const fetchAvailableBrowsers = async () => {
+    try {
+      const response = await fetch('/api/automation/browsers');
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableBrowsers(data.browsers || []);
+        if (data.recommended && data.recommended !== 'none') {
+          setPreferredBrowser(data.recommended);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch browsers:', error);
+    }
+  };
+
+  // Fetch projects and recordings on mount
+  useEffect(() => {
+    // fetchProjects(); // useQuery handles this
+    fetchRecordings();
+    fetchAvailableBrowsers();
+  }, []);
 
   // Start recording mutation
   const startRecordingMutation = useMutation({
-    mutationFn: async ({ testCaseId, url }: { testCaseId: string; url: string }) => {
-      console.log('🎬 Starting recording for test case:', testCaseId, 'URL:', url);
-      
+    mutationFn: async ({ testCaseId, url, launchMode, preferredBrowser }: { testCaseId: string; url: string; launchMode: string; preferredBrowser: string }) => {
+      console.log('🎬 Starting recording for test case:', testCaseId, 'URL:', url, 'Mode:', launchMode, 'Browser:', preferredBrowser);
+
       const testCase = testCases.find(tc => tc.id === parseInt(testCaseId));
       if (!testCase) {
         console.error('❌ Test case not found:', testCaseId);
@@ -208,6 +249,8 @@ export default function AutomationPage() {
             projectId: selectedProject,
             moduleId: selectedModule,
             testCaseId: parseInt(testCaseId),
+            launchMode: launchMode,
+            preferredBrowser: preferredBrowser
           })
         });
 
@@ -216,6 +259,10 @@ export default function AutomationPage() {
         if (!response.ok) {
           const error = await response.json();
           console.error('❌ Recording request failed:', error);
+          // Show available browsers if Playwright fails
+          if (error.availableBrowsers) {
+            setAvailableBrowsers(error.availableBrowsers);
+          }
           throw new Error(error.message || `Failed to start recording (${response.status})`);
         }
 
@@ -269,10 +316,10 @@ export default function AutomationPage() {
     },
     onError: (error: any) => {
       console.error('🚫 Recording mutation error:', error);
-      
+
       let errorMessage = error.message || 'Unknown error occurred';
       let errorTitle = 'Recording Failed';
-      
+
       // Provide specific help for common issues
       if (errorMessage.includes('Playwright is not installed')) {
         errorTitle = 'Playwright Not Installed';
@@ -319,9 +366,20 @@ export default function AutomationPage() {
       return;
     }
 
+    if (launchMode === 'system-browser' && !preferredBrowser) {
+      toast({
+        title: "Browser Selection Required",
+        description: "Please select a browser for system launch mode",
+        variant: "destructive"
+      });
+      return;
+    }
+
     startRecordingMutation.mutate({
       testCaseId: selectedTestCase,
-      url: recordingUrl.trim()
+      url: recordingUrl.trim(),
+      launchMode: launchMode,
+      preferredBrowser: preferredBrowser
     });
 
     setIsRecordingDialogOpen(false);
@@ -733,6 +791,60 @@ export default function AutomationPage() {
                                       onChange={(e) => setRecordingUrl(e.target.value)}
                                     />
                                   </div>
+
+                                  <div className="space-y-3">
+                                    <Label className="text-sm font-medium">Browser Launch Mode</Label>
+                                    <RadioGroup value={launchMode} onValueChange={setLaunchMode} className="grid grid-cols-1 gap-3">
+                                      <div className="flex items-center space-x-2 p-3 border rounded-lg">
+                                        <RadioGroupItem value="playwright" id="playwright" />
+                                        <div className="flex-1">
+                                          <Label htmlFor="playwright" className="font-medium">Playwright (Recommended)</Label>
+                                          <p className="text-sm text-muted-foreground">Automated browser with recording capabilities</p>
+                                        </div>
+                                        <Monitor className="h-5 w-5 text-muted-foreground" />
+                                      </div>
+
+                                      <div className="flex items-center space-x-2 p-3 border rounded-lg">
+                                        <RadioGroupItem value="system-browser" id="system-browser" />
+                                        <div className="flex-1">
+                                          <Label htmlFor="system-browser" className="font-medium">System Browser</Label>
+                                          <p className="text-sm text-muted-foreground">Launch your installed browser manually</p>
+                                        </div>
+                                        <Chrome className="h-5 w-5 text-muted-foreground" />
+                                      </div>
+                                    </RadioGroup>
+                                  </div>
+
+                                  {launchMode === 'system-browser' && availableBrowsers.length > 0 && (
+                                    <div>
+                                      <Label className="text-sm font-medium mb-2">Select Browser</Label>
+                                      <Select value={preferredBrowser} onValueChange={setPreferredBrowser}>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Choose a browser" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {availableBrowsers.map((browser) => (
+                                            <SelectItem key={browser} value={browser}>
+                                              <div className="flex items-center">
+                                                <Chrome className="h-4 w-4 mr-2" />
+                                                {browser.charAt(0).toUpperCase() + browser.slice(1)}
+                                                {browser.includes('chrome') && <Badge variant="secondary" className="ml-2">Recommended</Badge>}
+                                              </div>
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  )}
+
+                                  {launchMode === 'system-browser' && availableBrowsers.length === 0 && (
+                                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                      <p className="text-sm text-yellow-800">
+                                        No system browsers detected. Please install Chrome, Chromium, or Firefox.
+                                      </p>
+                                    </div>
+                                  )}
+
                                   <div className="flex justify-end gap-2">
                                     <Button
                                       variant="outline"

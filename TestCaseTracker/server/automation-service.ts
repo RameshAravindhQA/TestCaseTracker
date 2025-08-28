@@ -49,7 +49,97 @@ export class AutomationService {
     }
   }
 
-  async startRecording(config: any): Promise<{ success: boolean; message: string; recordingId?: string }> {
+  // Check for available system browsers
+  private async detectSystemBrowsers(): Promise<string[]> {
+    const browsers = [];
+    const browserCommands = [
+      { name: 'chromium', command: 'chromium-browser' },
+      { name: 'chrome', command: 'google-chrome' },
+      { name: 'firefox', command: 'firefox' },
+      { name: 'chrome-stable', command: 'google-chrome-stable' },
+      { name: 'chromium-snap', command: 'chromium' }
+    ];
+
+    for (const browser of browserCommands) {
+      try {
+        const testProcess = spawn('which', [browser.command], { stdio: 'pipe' });
+        await new Promise((resolve) => {
+          testProcess.on('close', (code) => {
+            if (code === 0) {
+              browsers.push(browser.name);
+              logger.info(`✅ Found system browser: ${browser.name} (${browser.command})`);
+            }
+            resolve(code);
+          });
+        });
+      } catch (error) {
+        // Browser not found, continue
+      }
+    }
+
+    return browsers;
+  }
+
+  // Launch browser with system command instead of Playwright
+  private async launchSystemBrowser(url: string, browserName?: string): Promise<{ success: boolean; process?: ChildProcess; message?: string }> {
+    const availableBrowsers = await this.detectSystemBrowsers();
+    
+    if (availableBrowsers.length === 0) {
+      return {
+        success: false,
+        message: "No system browsers found. Please install Chrome, Chromium, or Firefox."
+      };
+    }
+
+    // Choose browser (prefer Chrome/Chromium)
+    const preferredOrder = ['chrome', 'google-chrome', 'chromium', 'chrome-stable', 'firefox'];
+    const selectedBrowser = browserName || availableBrowsers.find(b => preferredOrder.includes(b)) || availableBrowsers[0];
+    
+    const browserCommands: Record<string, string[]> = {
+      'chrome': ['google-chrome', '--new-window', '--disable-web-security', '--disable-features=VizDisplayCompositor'],
+      'google-chrome': ['google-chrome', '--new-window', '--disable-web-security'],
+      'chromium': ['chromium-browser', '--new-window', '--disable-web-security'],
+      'chrome-stable': ['google-chrome-stable', '--new-window', '--disable-web-security'],
+      'firefox': ['firefox', '--new-window'],
+      'chromium-snap': ['chromium', '--new-window', '--disable-web-security']
+    };
+
+    const command = browserCommands[selectedBrowser];
+    if (!command) {
+      return {
+        success: false,
+        message: `Browser command not configured for: ${selectedBrowser}`
+      };
+    }
+
+    try {
+      logger.info(`🚀 Launching system browser: ${selectedBrowser} with URL: ${url}`);
+      const browserProcess = spawn(command[0], [...command.slice(1), url], {
+        stdio: 'pipe',
+        detached: true,
+        env: {
+          ...process.env,
+          DISPLAY: process.env.DISPLAY || ':0'
+        }
+      });
+
+      browserProcess.unref(); // Allow the process to run independently
+
+      return {
+        success: true,
+        process: browserProcess,
+        message: `Browser ${selectedBrowser} launched successfully`
+      };
+    } catch (error: any) {
+      logger.error(`Failed to launch browser ${selectedBrowser}:`, error);
+      return {
+        success: false,
+        message: `Failed to launch browser: ${error.message}`
+      };
+    }
+  }
+
+  async startRecording(config: any): Promise<{ success: boolean; message: string; recordingId?: string; availableBrowsers?: string[] }> {
     try {
       logger.info('Starting recording with config:', config);
       const recordingId = `rec_${Date.now()}`;
@@ -63,7 +153,46 @@ export class AutomationService {
         };
       }
 
-      // Check if Playwright is available
+      // Detect available system browsers
+      const availableBrowsers = await this.detectSystemBrowsers();
+      logger.info('Available system browsers:', availableBrowsers);
+
+      // If browser launch mode is requested, launch system browser
+      if (config.launchMode === 'system-browser') {
+        const browserResult = await this.launchSystemBrowser(config.url, config.preferredBrowser);
+        
+        if (!browserResult.success) {
+          return {
+            success: false,
+            message: browserResult.message || 'Failed to launch system browser',
+            availableBrowsers
+          };
+        }
+
+        // Create recording session for system browser
+        const recordingSession: RecordingSession = {
+          id: recordingId,
+          projectId: config.projectId,
+          moduleId: config.moduleId,
+          testCaseId: config.testCaseId,
+          url: config.url,
+          filename: `manual-test-${config.testCaseId}-${Date.now()}.md`,
+          status: 'recording',
+          startTime: new Date(),
+          process: browserResult.process
+        };
+
+        this.activeSessions.set(recordingId, recordingSession);
+
+        return {
+          success: true,
+          message: `System browser launched successfully. Please perform your test manually and click stop when done.`,
+          recordingId,
+          availableBrowsers
+        };
+      }
+
+      // Try Playwright first (existing logic)
       try {
         logger.info('Checking Playwright availability...');
         const testProcess = spawn('npx', ['playwright', '--version'], { 
@@ -96,9 +225,12 @@ export class AutomationService {
         
       } catch (error: any) {
         logger.error('Error checking Playwright availability:', error.message);
+        
+        // If Playwright fails, suggest system browser alternatives
         return {
           success: false,
-          message: "Playwright is not installed or configured properly. Please run 'npx playwright install' first."
+          message: `Playwright not available. Available alternatives: ${availableBrowsers.length > 0 ? availableBrowsers.join(', ') : 'No system browsers found'}. Try using system browser mode.`,
+          availableBrowsers
         };
       }
 
