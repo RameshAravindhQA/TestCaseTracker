@@ -6305,7 +6305,8 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
       const notebook = await storage.getNotebook(notebookId);
 
       if (!notebook) {
-        return res.status(404).json({ message: "      }
+        return res.status(404).json({ message: "Notebook not found" });
+      }
 
       // Users can only update their own notebooks unless they're admin
       if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {
