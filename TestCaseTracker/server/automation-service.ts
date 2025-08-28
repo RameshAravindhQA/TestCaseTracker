@@ -149,6 +149,40 @@ export class AutomationService {
       });
       
       logger.info(`🚀 Attempting to launch browser in instrumented mode...`);
+      logger.info(`🔍 Pre-launch browser check starting...`);
+      
+      // Check if browser binary exists
+      try {
+        const { spawn: checkSpawn } = await import('child_process');
+        const browserCheckProcess = checkSpawn('npx', ['playwright', 'install', '--dry-run'], { 
+          stdio: 'pipe',
+          timeout: 10000
+        });
+        
+        let browserCheckOutput = '';
+        browserCheckProcess.stdout?.on('data', (data) => {
+          browserCheckOutput += data.toString();
+        });
+        
+        browserCheckProcess.stderr?.on('data', (data) => {
+          browserCheckOutput += data.toString();
+        });
+        
+        await new Promise((resolve) => {
+          browserCheckProcess.on('close', (code) => {
+            logger.info(`🔍 Browser installation check completed with code: ${code}`);
+            logger.info(`🔍 Browser check output: ${browserCheckOutput}`);
+            resolve(code);
+          });
+        });
+      } catch (browserCheckError: any) {
+        logger.warn(`⚠️ Browser check failed: ${browserCheckError.message}`);
+      }
+      
+      logger.info(`🌐 Initiating Chromium browser launch...`);
+      logger.info(`🎯 Target URL: ${config.url}`);
+      logger.info(`📁 Recording output: ${outputPath}`);
+      logger.info(`🖥️ Display: ${process.env.DISPLAY || ':99'}`);
       
       const codegenProcess = spawn('npx', codegenArgs, {
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -169,12 +203,24 @@ export class AutomationService {
         const output = data.toString();
         logger.info(`📤 Codegen stdout [${recordingId}]: ${output}`);
         
-        // Check for browser launch indicators
+        // Enhanced browser launch detection
         if (output.includes('Connecting to browser') || output.includes('Browser launched')) {
-          logger.info(`🌐 Browser connection initiated for session ${recordingId}`);
+          logger.info(`🌐 ✅ Browser connection initiated for session ${recordingId}`);
         }
         if (output.includes('Recording started') || output.includes('codegen started')) {
-          logger.info(`🎬 Browser recording mode activated for session ${recordingId}`);
+          logger.info(`🎬 ✅ Browser recording mode activated for session ${recordingId}`);
+        }
+        if (output.includes('Launching browser') || output.includes('Starting browser')) {
+          logger.info(`🚀 ✅ Browser launch sequence started for session ${recordingId}`);
+        }
+        if (output.includes('Browser started') || output.includes('Browser ready')) {
+          logger.info(`🎯 ✅ Browser fully started and ready for session ${recordingId}`);
+        }
+        if (output.includes('DevTools listening') || output.includes('DevTools Protocol')) {
+          logger.info(`🔗 ✅ DevTools Protocol connection established for session ${recordingId}`);
+        }
+        if (output.includes('Page loaded') || output.includes('Navigated to')) {
+          logger.info(`📄 ✅ Target page loaded successfully for session ${recordingId}`);
         }
       });
 
