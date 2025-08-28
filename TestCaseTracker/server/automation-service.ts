@@ -129,7 +129,7 @@ export class AutomationService {
               resolve(code);
             } else {
               logger.error('❌ Playwright version check failed with code:', code);
-              reject new Error(`Playwright version check failed with code ${code}. Error: ${errorOutput}`));
+              reject(new Error(`Playwright version check failed with code ${code}. Error: ${errorOutput}`));
             }
           });
           testProcess.on('error', reject);
