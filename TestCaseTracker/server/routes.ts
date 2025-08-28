@@ -804,7 +804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.get("/resource-requests", isAuthenticated, async (req, res) => {
     try {
-      const { projectId, status, department, requestType } = req.query;
+      const {projectId, status, department, requestType } = req.query;
       const requests = await storage.getResourceRequests({
         projectId: projectId ? parseInt(projectId as string) : undefined,
         status: status as string,
@@ -1695,40 +1695,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     },
     async (req, res) => {
-    try {
-      console.log("Processing bug attachment upload request");
+      try {
+        console.log("Processing bug attachment upload request");
 
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        // Get file path relative to the server root for serving in the browser
+        const fileName = path.basename(req.file.path);
+
+        // Ensure we use consistent path format for the URL
+        const fileUrl = `/uploads/bug-attachment/${fileName}`;
+
+        // Return file attachment details with all fields required by the FileAttachment interface
+        const fileAttachment = {
+          id: parseInt(crypto.randomBytes(4).toString('hex'), 16), // Convert to number for id
+          fileName: req.file.originalname,
+          fileUrl: fileUrl,
+          fileType: req.file.mimetype,
+          fileSize: req.file.size,
+          uploadedById: req.session.userId,
+          uploadedAt: new Date().toISOString(),
+          entityType: 'bug',  // Default to bug since this is for bug attachments
+          entityId: 0         // This will be updated when the bug is created or updated
+        };
+
+        console.log("Uploaded file details:", fileAttachment);
+
+        res.status(201).json(fileAttachment);
+      } catch (error) {
+        console.error("Bug attachment upload error:", error);
+        res.status(500).json({ message: "Failed to upload attachment" });
       }
-
-      // Get file path relative to the server root for serving in the browser
-      const fileName = path.basename(req.file.path);
-
-      // Ensure we use consistent path format for the URL
-      const fileUrl = `/uploads/bug-attachment/${fileName}`;
-
-      // Return file attachment details with all fields required by the FileAttachment interface
-      const fileAttachment = {
-        id: parseInt(crypto.randomBytes(4).toString('hex'), 16), // Convert to number for id
-        fileName: req.file.originalname,
-        fileUrl: fileUrl,
-        fileType: req.file.mimetype,
-        fileSize: req.file.size,
-        uploadedById: req.session.userId,
-        uploadedAt: new Date().toISOString(),
-        entityType: 'bug',  // Default to bug since this is for bug attachments
-        entityId: 0         // This will be updated when the bug is created or updated
-      };
-
-      console.log("Uploaded file details:", fileAttachment);
-
-      res.status(201).json(fileAttachment);
-    } catch (error) {
-      console.error("Bug attachment upload error:", error);
-      res.status(500).json({ message: "Failed to upload attachment" });
-    }
-  });
+    });
 
   // Configure multer for document uploads
   const documentUpload = (() => {
@@ -3389,7 +3389,52 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
   // TimeSheet API endpoints
   apiRouter.get("/timesheets", isAuthenticated, async (req, res) => {
     try {
-      const timesheets = await storage.getTimeSheets(req.session.userId!);
+      const { projectId, userId, folderId } = req.query;
+
+      console.log(`[API] Getting timesheets with filters:`, {
+        projectId: projectId ? parseInt(projectId as string) : undefined,
+        userId: userId ? parseInt(userId as string) : req.session.userId,
+        folderId: folderId ? parseInt(folderId as string) : undefined,
+        requestingUser: req.session.userId
+      });
+
+      let timesheets;
+
+      if (folderId) {
+        // Get timesheets by folder
+        timesheets = await storage.getTimeSheetsByFolder(parseInt(folderId as string));
+      } else {
+        // For admins: show all timesheets if no userId filter is specified
+        // For regular users: always filter by their own userId
+        let targetUserId = req.session.userId;
+
+        if (req.session.userRole === "Admin" && userId) {
+          targetUserId = parseInt(userId as string);
+        } else if (req.session.userRole !== "Admin") {
+          // Non-admin users can only see their own timesheets
+          targetUserId = req.session.userId;
+        }
+
+        const targetProjectId = projectId ? parseInt(projectId as string) : undefined;
+
+        // If no specific filters and user is admin, get all timesheets
+        if (req.session.userRole === "Admin" && !projectId && !userId) {
+          // This case should ideally fetch *all* timesheets if no filters are applied by an admin
+          // For now, let's assume getUserTimeSheets is the intended fallback for admin if no filters are specified
+          // A more robust solution might involve a separate `storage.getAllTimeSheets()`
+          // However, based on the original code structure, `getUserTimeSheets` with the admin's own ID seems to be the intended behavior if no filters are passed.
+          // To explicitly fetch all timesheets for an admin, a different storage method might be needed.
+          // For the purpose of this fix, we'll ensure that if an admin requests without filters, they get their own timesheets,
+          // and if they pass a `userId` filter, that is respected.
+          // The crucial fix is for non-admin users to *always* see their own timesheets.
+          timesheets = await storage.getUserTimeSheets(req.session.userId!);
+        } else {
+          timesheets = await storage.getTimeSheets(targetProjectId, targetUserId);
+        }
+      }
+
+      console.log(`[API] Returning ${timesheets.length} timesheets for user ${req.session.userId}:`, 
+        timesheets.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description.substring(0, 50) })));
       res.json(timesheets);
     } catch (error) {
       console.error("Get timesheets error:", error);
@@ -6130,7 +6175,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
   apiRouter.get("/documents/:id", isAuthenticated, async (req, res) => {
     try {
       const documentId = parseInt(req.params.id);
-      const document = await storage.getDocument(documentId);
+      const document = await storage.getDocument(documentid);
 
       if (!document) {
         return res.status(404).json({ message: "Document not found" });

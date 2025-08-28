@@ -1646,18 +1646,30 @@ class MemStorage implements IStorage {
     let results = [...this.timeSheets];
 
     if (projectId && userId) {
-      results = results.filter(ts => ts.projectId === projectId && ts.userId === userId);
+      results = results.filter(ts => {
+        const tsProjectId = typeof ts.projectId === 'string' ? parseInt(ts.projectId, 10) : ts.projectId;
+        return tsProjectId === projectId && ts.userId === userId;
+      });
     } else if (projectId) {
-      results = results.filter(ts => ts.projectId === projectId);
+      results = results.filter(ts => {
+        const tsProjectId = typeof ts.projectId === 'string' ? parseInt(ts.projectId, 10) : ts.projectId;
+        return tsProjectId === projectId;
+      });
     } else if (userId) {
       results = results.filter(ts => ts.userId === userId);
     }
 
+    console.log(`Storage: getTimeSheets(${projectId}, ${userId}) returning ${results.length} timesheets:`, 
+      results.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description })));
+    
     return results;
   }
 
   async getUserTimeSheets(userId: number): Promise<TimeSheet[]> {
-    return this.timeSheets.filter(ts => ts.userId === userId);
+    const results = this.timeSheets.filter(ts => ts.userId === userId);
+    console.log(`Storage: getUserTimeSheets(${userId}) returning ${results.length} timesheets:`, 
+      results.map(ts => ({ id: ts.id, projectId: ts.projectId, description: ts.description.substring(0, 50) })));
+    return results;
   }
 
   async getProjectTimeSheets(projectId: number): Promise<TimeSheet[]> {
@@ -1672,7 +1684,7 @@ class MemStorage implements IStorage {
     const newTimeSheet: TimeSheet = {
       id: this.nextTimeSheetId++,
       userId: timeSheet.userId,
-      projectId: timeSheet.projectId,
+      projectId: timeSheet.projectId, // Keep as string to match schema
       customerId: timeSheet.customerId || null,
       moduleId: timeSheet.moduleId || null,
       testCaseId: timeSheet.testCaseId || null,
@@ -1689,7 +1701,11 @@ class MemStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+    
     this.timeSheets.push(newTimeSheet);
+    
+    console.log(`Storage: Created timesheet ID ${newTimeSheet.id} for user ${newTimeSheet.userId}, project ${newTimeSheet.projectId}. Total timesheets: ${this.timeSheets.length}`);
+    
     return newTimeSheet;
   }
 
