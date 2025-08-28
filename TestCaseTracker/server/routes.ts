@@ -6198,14 +6198,14 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
   apiRouter.get("/documents/:id", isAuthenticated, async (req, res) => {
     try {
       const documentId = parseInt(req.params.id);
-      const document = await storage.getDocument(documentId); // Fixed typo: documentid -> documentId
+      const document = await storage.getDocument(documentId);
 
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
       }
 
       // Check if user has access to the project containing this document
-      constproject = await storage.getProject(document.projectId);
+      const project = await storage.getProject(document.projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
