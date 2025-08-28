@@ -418,22 +418,25 @@ export default function EditTimesheetForm({ timesheet, onSuccess, onCancel }: Ed
           ...data,
           // Ensure all required fields are properly formatted
           userId: Number(data.userId),
-          projectId: Number(data.projectId),
-          customerId: data.customerId ? Number(data.customerId) : undefined,
-          moduleId: data.moduleId ? Number(data.moduleId) : undefined,
-          testCaseId: data.testCaseId ? Number(data.testCaseId) : undefined,
-          bugId: data.bugId ? Number(data.bugId) : undefined,
-          hours: Math.min(Number(hours), 24), // Ensure hours is a reasonable value
-          status: data.status || "Pending", // Include the status
+          projectId: String(data.projectId), // Keep as string to match schema
+          customerId: data.customerId ? Number(data.customerId) : null,
+          moduleId: data.moduleId ? Number(data.moduleId) : null,
+          testCaseId: data.testCaseId ? Number(data.testCaseId) : null,
+          bugId: data.bugId ? Number(data.bugId) : null,
+          folderId: data.folderId ? Number(data.folderId) : timesheet.folderId,
+          hours: Math.min(Number(data.hours || timesheet.hours), 24),
+          status: data.status || timesheet.status || "Pending",
           // Add approval information when status changes to Approved
           approvalDate: data.status === "Approved" ? new Date().toISOString() : timesheet.approvalDate,
           approvedById: data.status === "Approved" ? user?.id : timesheet.approvedById,
           // Use our properly formatted time strings
           startTime: startTimeFormatted,
           endTime: endTimeFormatted,
-          workDate: data.workDate || new Date().toISOString().split('T')[0],
+          workDate: data.workDate || timesheet.workDate || new Date().toISOString().split('T')[0],
+          description: data.description || timesheet.description,
           // Include tags to ensure they get saved properly
-          tags: Array.isArray(data.tags) ? data.tags : [],
+          tags: Array.isArray(data.tags) ? data.tags : (Array.isArray(timesheet.tags) ? timesheet.tags : []),
+          comments: data.comments || timesheet.comments,
         };
 
         console.log('Updating timesheet with data:', formattedData);
@@ -441,8 +444,9 @@ export default function EditTimesheetForm({ timesheet, onSuccess, onCancel }: Ed
         // Prepare the update payload, ensuring all values are included
         const updatePayload = {
           ...formattedData,
-          id: timesheet.id, // Include the ID
         };
+
+        console.log('Sending update request for timesheet:', timesheet.id, 'with payload:', updatePayload);
 
         // Make the API call
         const res = await apiRequest("PATCH", `/api/timesheets/${timesheet.id}`, updatePayload);
@@ -452,7 +456,8 @@ export default function EditTimesheetForm({ timesheet, onSuccess, onCancel }: Ed
           console.error('Update API error:', {
             status: res.status,
             statusText: res.statusText,
-            error: errorText
+            error: errorText,
+            payload: updatePayload
           });
           throw new Error(errorText || `Failed to update timesheet: ${res.statusText}`);
         }
