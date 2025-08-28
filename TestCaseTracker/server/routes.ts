@@ -2,7 +2,7 @@ import { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject } from "./matrix-fix";
-// Removed automation service import
+import { automationService } from "./automation-service";
 import { logger } from "./logger";
 import { emailService } from "./email-service";
 import githubIntegrationsRouter from "./api/github-integrations";
@@ -1857,11 +1857,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 // Enhanced automation endpoints with actual implementation
-app.get('/api/automation/health', (req, res) => {
+apiRouter.get('/automation/health', (req, res) => {
   res.json({ status: 'ok', message: 'Automation service is running' });
 });
 
-app.get('/api/automation/scripts', isAuthenticated, async (req, res) => {
+apiRouter.get('/automation/scripts', isAuthenticated, async (req, res) => {
   try {
     const scripts = await automationService.getRecordings();
     res.json(scripts.map(filename => ({
@@ -1877,7 +1877,7 @@ app.get('/api/automation/scripts', isAuthenticated, async (req, res) => {
   }
 });
 
-app.get('/api/automation/recordings', isAuthenticated, async (req, res) => {
+apiRouter.get('/automation/recordings', isAuthenticated, async (req, res) => {
   try {
     const recordings = await automationService.getRecordings();
     res.json(recordings);
@@ -1887,7 +1887,7 @@ app.get('/api/automation/recordings', isAuthenticated, async (req, res) => {
   }
 });
 
-app.get('/api/automation/script/:filename', isAuthenticated, async (req, res) => {
+apiRouter.get('/automation/script/:filename', isAuthenticated, async (req, res) => {
   try {
     const { filename } = req.params;
     const content = await automationService.getRecordingContent(filename);
@@ -1918,11 +1918,12 @@ app.use('/automation/screenshots', (req, res, next) => {
     return res.status(404).json({ message: "Screenshot not found" });
   }
   
+  
   // Serve the file
   res.sendFile(filePath);
 });
 
-app.post('/api/automation/start-recording', isAuthenticated, async (req, res) => {
+apiRouter.post('/automation/start-recording', isAuthenticated, async (req, res) => {
   try {
     const { url, projectId, moduleId, testCaseId } = req.body;
 
@@ -1955,7 +1956,7 @@ app.post('/api/automation/start-recording', isAuthenticated, async (req, res) =>
   }
 });
 
-app.post('/api/automation/stop-recording', isAuthenticated, async (req, res) => {
+apiRouter.post('/automation/stop-recording', isAuthenticated, async (req, res) => {
   try {
     const { sessionId } = req.body;
 
@@ -1983,7 +1984,7 @@ app.post('/api/automation/stop-recording', isAuthenticated, async (req, res) => 
   }
 });
 
-app.post('/api/automation/execute-test', isAuthenticated, async (req, res) => {
+apiRouter.post('/automation/execute-test', isAuthenticated, async (req, res) => {
   try {
     const { filename, testCaseId } = req.body;
 
@@ -2011,7 +2012,7 @@ app.post('/api/automation/execute-test', isAuthenticated, async (req, res) => {
   }
 });
 
-app.get('/api/automation/session/:sessionId', isAuthenticated, (req, res) => {
+apiRouter.get('/automation/session/:sessionId', isAuthenticated, (req, res) => {
   try {
     const { sessionId } = req.params;
     const session = automationService.getSession(sessionId);
@@ -2044,7 +2045,7 @@ app.get('/api/automation/session/:sessionId', isAuthenticated, (req, res) => {
   }
 });
 
-app.get('/api/automation/execution/:executionId', isAuthenticated, (req, res) => {
+apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) => {
   try {
     const { executionId } = req.params;
     const execution = automationService.getExecution(executionId);

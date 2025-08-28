@@ -51,13 +51,30 @@ export class AutomationService {
 
   async startRecording(config: any): Promise<{ success: boolean; message: string; recordingId?: string }> {
     try {
+      logger.info('Starting recording with config:', config);
       const recordingId = `rec_${Date.now()}`;
 
       // Validate target URL
       if (!config.url || !this.isValidUrl(config.url)) {
+        logger.error('Invalid URL provided for recording:', config.url);
         return {
           success: false,
           message: "Please provide a valid target URL to start recording."
+        };
+      }
+
+      // Check if Playwright is available
+      try {
+        const { spawn } = require('child_process');
+        const testProcess = spawn('npx', ['playwright', '--version'], { stdio: 'pipe' });
+        testProcess.on('error', (error) => {
+          logger.error('Playwright not found:', error);
+        });
+      } catch (error) {
+        logger.error('Error checking Playwright availability:', error);
+        return {
+          success: false,
+          message: "Playwright is not installed or configured properly."
         };
       }
 

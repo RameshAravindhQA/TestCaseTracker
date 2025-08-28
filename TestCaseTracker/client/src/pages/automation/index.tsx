@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Play, Square, Eye, Download, Search, CheckCircle, XCircle, AlertCircle, Loader2, Video, FileText } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Input } from '@/components/ui/input';
@@ -526,10 +527,16 @@ export default function AutomationPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Test Case</TableHead>
-                      <TableHead>Priority</TableHead>
+                      <TableHead className="w-12">
+                        <Checkbox />
+                      </TableHead>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Feature</TableHead>
+                      <TableHead>Objective</TableHead>
+                      <TableHead>Tags</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Script File</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Script</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -537,24 +544,61 @@ export default function AutomationPage() {
                     {testCases.map((testCase: TestCase) => (
                       <TableRow key={testCase.id}>
                         <TableCell>
-                          <div>
-                            <div className="font-medium">{testCase.title}</div>
-                            <div className="text-sm text-gray-500">{testCase.description}</div>
+                          <Checkbox />
+                        </TableCell>
+                        <TableCell className="font-medium">{testCase.testCaseId}</TableCell>
+                        <TableCell>
+                          <div className="font-medium">{testCase.feature}</div>
+                        </TableCell>
+                        <TableCell className="max-w-xs">
+                          <div className="text-sm text-gray-600 truncate" title={testCase.testObjective}>
+                            {testCase.testObjective || testCase.description}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={testCase.priority === 'High' ? 'destructive' : 'secondary'}>
+                          <div className="flex flex-wrap gap-1">
+                            {testCase.tags?.map((tag: string, index: number) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {tag}
+                              </Badge>
+                            )) || <span className="text-xs text-gray-400">No tags</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline"
+                            className={
+                              testCase.status === "Passed" 
+                                ? "border-green-200 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-white dark:border-green-700"
+                                : testCase.status === "Failed" 
+                                ? "border-red-200 bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-white dark:border-red-700"
+                                : testCase.status === "Blocked" 
+                                ? "border-red-200 bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-white dark:border-red-700"
+                                : "border-gray-200 bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-white dark:border-gray-700"
+                            }
+                          >
+                            {testCase.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline"
+                            className={
+                              testCase.priority === "High" 
+                                ? "border-red-200 bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-white dark:border-red-700" 
+                                : testCase.priority === "Medium" 
+                                ? "border-yellow-200 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-white dark:border-yellow-700" 
+                                : "border-green-200 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-white dark:border-green-700"
+                            }
+                          >
                             {testCase.priority}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{testCase.status}</Badge>
-                        </TableCell>
-                        <TableCell>
                           {testCase.hasScript ? (
                             <div className="flex items-center gap-2">
-                              <Eye className="h-4 w-4" />
-                              <span className="text-sm font-mono">{testCase.scriptFile}</span>
+                              <FileText className="h-4 w-4 text-green-500" />
+                              <span className="text-sm font-mono text-green-600">{testCase.scriptFile}</span>
                             </div>
                           ) : (
                             <span className="text-sm text-gray-400">No script</span>
