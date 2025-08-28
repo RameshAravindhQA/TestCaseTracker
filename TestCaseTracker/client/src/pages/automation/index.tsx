@@ -36,6 +36,8 @@ interface TestCase {
   scriptFile?: string;
   testCaseId: string; // Assuming this is the unique identifier for a test case
   feature: string; // Assuming this is a field for test case feature
+  tags?: string[]; // Added for tags
+  testObjective?: string; // Added for test objective
 }
 
 interface RecordingSession {
@@ -69,6 +71,7 @@ export default function AutomationPage() {
   const [executionResults, setExecutionResults] = useState<ExecutionResult[]>([]);
   const [healthStatus, setHealthStatus] = useState<any>(null);
   const { toast } = useToast();
+  const [feature, setFeature] = useState(''); // Added for feature state
 
   // Health check function
   const checkAutomationHealth = async () => {
@@ -78,7 +81,7 @@ export default function AutomationPage() {
       const health = await response.json();
       console.log('🏥 Health check result:', health);
       setHealthStatus(health);
-      
+
       if (health.details?.playwright?.includes('available')) {
         toast({
           title: 'Service Healthy',
@@ -185,18 +188,33 @@ export default function AutomationPage() {
   // Start recording mutation
   const startRecordingMutation = useMutation({
     mutationFn: async ({ testCaseId, url }: { testCaseId: string; url: string }) => {
-      console.log('🎬 Starting recording for test case:', testCaseId, 'URL:', url);
-      
-      const testCase = testCases.find(tc => tc.id === parseInt(testCaseId));
-      if (!testCase) {
-        console.error('❌ Test case not found:', testCaseId);
-        throw new Error('Test case not found');
+      console.log('🎬 Starting recording mutation with:', { testCaseId, url, selectedProject, selectedModule });
+
+      // Validate required data
+      if (!selectedProject || !selectedModule) {
+        console.error('❌ Missing required data:', { selectedProject, selectedModule });
+        throw new Error('Please select both project and module before recording');
       }
 
-      console.log('📋 Test case found:', testCase.testCaseId, testCase.feature);
+      console.log('✅ Validation passed, proceeding with recording...');
+
+      // Show loading state
+      toast({
+        title: 'Initializing Recording',
+        description: 'Setting up Playwright codegen for test recording...',
+      });
+
+      setFeature('Recording');
 
       try {
         console.log('📡 Sending recording request...');
+        console.log('📡 Request payload:', {
+          url,
+          projectId: selectedProject,
+          moduleId: selectedModule,
+          testCaseId: parseInt(testCaseId),
+        });
+
         const response = await fetch('/api/automation/start-recording', {
           method: 'POST',
           headers: {
@@ -212,43 +230,92 @@ export default function AutomationPage() {
         });
 
         console.log('📡 Response status:', response.status, response.statusText);
+        console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
-        if (!response.ok) {
-          const error = await response.json();
-          console.error('❌ Recording request failed:', error);
-          throw new Error(error.message || `Failed to start recording (${response.status})`);
+        const responseText = await response.text();
+        console.log('📡 Raw response text:', responseText);
+
+        let result;
+        try {
+          result = JSON.parse(responseText);
+          console.log('📡 Parsed response:', result);
+        } catch (parseError) {
+          console.error('❌ Failed to parse response JSON:', parseError);
+          console.error('❌ Response text was:', responseText);
+          throw new Error('Server returned invalid JSON response');
         }
 
-        const result = await response.json();
+        if (!response.ok) {
+          console.error('❌ Recording request failed:', result);
+          throw new Error(result.message || `Failed to start recording (${response.status})`);
+        }
+
         console.log('✅ Recording request successful:', result);
         return result;
       } catch (fetchError: any) {
         console.error('❌ Network error during recording request:', fetchError);
+        console.error('❌ Error details:', {
+          name: fetchError.name,
+          message: fetchError.message,
+          stack: fetchError.stack
+        });
         throw fetchError;
       }
     },
     onSuccess: (data, { testCaseId }) => {
+      console.log('🎉 Recording started successfully!');
+      console.log('📊 Success data received:', data);
+      console.log('📋 Test case ID:', testCaseId);
+      console.log('🆔 Recording ID generated:', data.recordingId);
+
+      // Debug current state
+      console.log('🔍 Current state before update:', {
+        selectedProject,
+        selectedModule,
+        currentRecording,
+        feature
+      });
+
       toast({
         title: 'Recording Started',
-        description: 'Playwright codegen has been launched. Perform your test actions in the browser.',
+        description: 'Playwright codegen has been launched. Perform your test actions in the opened browser window.',
       });
 
       // Start polling for recording status
       const recordingId = data.recordingId;
-      setCurrentRecording({
+      console.log('🔄 Setting up recording session with ID:', recordingId);
+
+      const newRecording = {
         id: recordingId,
         testCaseId: parseInt(testCaseId),
-        status: 'recording',
+        status: 'recording' as const,
         startTime: new Date().toISOString(),
-      });
+      };
+
+      console.log('📝 Creating new recording object:', newRecording);
+      setCurrentRecording(newRecording);
 
       // Poll for completion (in real implementation, this would be WebSocket)
+      console.log('⏰ Starting polling for recording status...');
       const pollInterval = setInterval(async () => {
         try {
-          const statusResponse = await fetch(`/api/automation/session/${recordingId}`);
+          console.log('🔍 Polling recording status for ID:', recordingId);
+          const statusResponse = await fetch(`/api/automation/session/${recordingId}`, {
+            credentials: 'include'
+          });
+
+          console.log('📡 Status response:', {
+            status: statusResponse.status,
+            ok: statusResponse.ok,
+            statusText: statusResponse.statusText
+          });
+
           if (statusResponse.ok) {
             const session = await statusResponse.json();
+            console.log('📊 Session status data:', session);
+
             if (session.data.status === 'stopped') {
+              console.log('🛑 Recording stopped, cleaning up...');
               clearInterval(pollInterval);
               setCurrentRecording(null);
               toast({
@@ -256,23 +323,31 @@ export default function AutomationPage() {
                 description: `Test script saved as ${session.data.filename}`,
               });
               // Refetch test cases to update script status
+              console.log('🔄 Refetching test cases...');
               testCasesQuery.refetch();
+            } else {
+              console.log('⏳ Recording still in progress, status:', session.data.status);
             }
+          } else {
+            console.warn('⚠️ Status check failed:', statusResponse.status, statusResponse.statusText);
           }
         } catch (error) {
-          console.error('Error polling recording status:', error);
+          console.error('❌ Error polling recording status:', error);
         }
       }, 2000);
 
       // Cleanup after 10 minutes
-      setTimeout(() => clearInterval(pollInterval), 600000);
+      setTimeout(() => {
+        console.log('⏰ 10 minute timeout reached, cleaning up polling interval');
+        clearInterval(pollInterval);
+      }, 600000);
     },
     onError: (error: any) => {
       console.error('🚫 Recording mutation error:', error);
-      
+
       let errorMessage = error.message || 'Unknown error occurred';
       let errorTitle = 'Recording Failed';
-      
+
       // Provide specific help for common issues
       if (errorMessage.includes('Playwright is not installed')) {
         errorTitle = 'Playwright Not Installed';
@@ -331,6 +406,7 @@ export default function AutomationPage() {
   // Stop recording mutation
   const stopRecordingMutation = useMutation({
     mutationFn: async (sessionId: string) => {
+      console.log('🛑 Stopping recording for session:', sessionId);
       const response = await fetch('/api/automation/stop-recording', {
         method: 'POST',
         headers: {
@@ -342,21 +418,26 @@ export default function AutomationPage() {
 
       if (!response.ok) {
         const error = await response.json();
+        console.error('❌ Error stopping recording:', error);
         throw new Error(error.message || 'Failed to stop recording');
       }
 
+      console.log('✅ Recording stopped successfully.');
       return response.json();
     },
     onSuccess: () => {
+      console.log('🎉 Recording stop success handler triggered.');
       setCurrentRecording(null);
       toast({
         title: 'Recording Stopped',
         description: 'Test script has been generated and saved.',
       });
       // Refetch test cases to update script status
+      console.log('🔄 Refetching test cases after stop.');
       testCasesQuery.refetch();
     },
     onError: (error: any) => {
+      console.error('🚫 Error in stopRecordingMutation:', error);
       toast({
         title: 'Stop Recording Error',
         description: error.message,
@@ -368,10 +449,13 @@ export default function AutomationPage() {
   // Execute test mutation
   const executeTestMutation = useMutation({
     mutationFn: async (testCaseId: string) => {
+      console.log('▶️ Executing test for:', testCaseId);
       const testCase = testCases.find(tc => tc.id === testCaseId);
       if (!testCase?.scriptFile) {
+        console.error('❌ No script file found for test case:', testCaseId);
         throw new Error('No script file found for this test case');
       }
+      console.log('📄 Script file found:', testCase.scriptFile);
 
       const response = await fetch('/api/automation/execute-test', {
         method: 'POST',
@@ -387,12 +471,18 @@ export default function AutomationPage() {
 
       if (!response.ok) {
         const error = await response.json();
+        console.error('❌ Execution request failed:', error);
         throw new Error(error.message || 'Failed to execute test');
       }
 
+      console.log('✅ Test execution request successful.');
       return response.json();
     },
     onSuccess: (data, testCaseId) => {
+      console.log('▶️ Test execution started successfully!');
+      console.log('📊 Execution data received:', data);
+      console.log('📋 Test case ID:', testCaseId);
+
       toast({
         title: 'Test Execution Started',
         description: 'Your test is now running. Results will appear below.',
@@ -427,6 +517,7 @@ export default function AutomationPage() {
         };
 
         setExecutionResults(prev => [...prev, mockResult]);
+        console.log('📦 Added mock execution result:', mockResult);
 
         toast({
           title: mockResult.status === 'completed' ? 'Test Passed' : 'Test Failed',
@@ -436,6 +527,7 @@ export default function AutomationPage() {
       }, 3000);
     },
     onError: (error: any) => {
+      console.error('🚫 Error in executeTestMutation:', error);
       toast({
         title: 'Execution Error',
         description: error.message,
@@ -446,7 +538,10 @@ export default function AutomationPage() {
 
   const handleStopRecording = () => {
     if (currentRecording) {
+      console.log('🛑 Initiating stop recording for session ID:', currentRecording.id);
       stopRecordingMutation.mutate(currentRecording.id);
+    } else {
+      console.warn('⚠️ Cannot stop recording: no current recording session found.');
     }
   };
 
@@ -469,12 +564,14 @@ export default function AutomationPage() {
 
   // Reset selections when project changes
   useEffect(() => {
+    console.log('Project changed, resetting module and test case.');
     setSelectedModule('');
     setSelectedTestCase('');
   }, [selectedProject]);
 
   // Reset test case selection when module changes
   useEffect(() => {
+    console.log('Module changed, resetting test case.');
     setSelectedTestCase('');
   }, [selectedModule]);
 

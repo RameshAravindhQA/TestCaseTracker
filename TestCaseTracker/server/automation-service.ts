@@ -51,54 +51,104 @@ export class AutomationService {
 
   async startRecording(config: any): Promise<{ success: boolean; message: string; recordingId?: string }> {
     try {
-      logger.info('Starting recording with config:', config);
+      logger.info('🎬 Starting recording with config:', config);
+      logger.info('🔍 Config details:', {
+        url: config.url,
+        projectId: config.projectId,
+        moduleId: config.moduleId,
+        testCaseId: config.testCaseId,
+        configType: typeof config,
+        configKeys: Object.keys(config || {})
+      });
+
       const recordingId = `rec_${Date.now()}`;
+      logger.info('🆔 Generated recording ID:', recordingId);
 
       // Validate target URL
+      logger.info('🔍 Validating URL:', config.url);
       if (!config.url || !this.isValidUrl(config.url)) {
-        logger.error('Invalid URL provided for recording:', config.url);
+        logger.error('❌ Invalid URL provided for recording:', config.url);
         return {
           success: false,
           message: "Please provide a valid target URL to start recording."
         };
       }
+      logger.info('✅ URL validation passed');
 
       // Check if Playwright is available
       try {
-        logger.info('Checking Playwright availability...');
+        logger.info('🔍 Checking Playwright availability...');
+        logger.info('🚀 Spawning npx playwright --version process...');
+        
         const testProcess = spawn('npx', ['playwright', '--version'], { 
           stdio: 'pipe',
-          timeout: 10000
+          timeout: 10000,
+          env: { 
+            ...process.env,
+            NODE_ENV: 'development'
+          }
         });
         
         let versionOutput = '';
+        let errorOutput = '';
+
         testProcess.stdout?.on('data', (data) => {
-          versionOutput += data.toString();
+          const output = data.toString();
+          versionOutput += output;
+          logger.info('📊 Playwright version stdout:', output.trim());
+        });
+
+        testProcess.stderr?.on('data', (data) => {
+          const output = data.toString();
+          errorOutput += output;
+          logger.warn('⚠️ Playwright version stderr:', output.trim());
         });
         
         testProcess.on('error', (error) => {
-          logger.error('Playwright executable not found:', error.message);
+          logger.error('❌ Playwright executable not found:', error.message);
+          logger.error('❌ Error details:', {
+            name: error.name,
+            message: error.message,
+            code: (error as any).code,
+            errno: (error as any).errno,
+            syscall: (error as any).syscall,
+            path: (error as any).path
+          });
           throw error;
         });
         
         // Wait for version check to complete
         await new Promise((resolve, reject) => {
           testProcess.on('close', (code) => {
+            logger.info('🔍 Playwright version process closed with code:', code);
+            logger.info('📊 Final version output:', versionOutput.trim());
+            logger.info('⚠️ Final error output:', errorOutput.trim());
+            
             if (code === 0) {
-              logger.info('Playwright version check successful:', versionOutput.trim());
+              logger.info('✅ Playwright version check successful:', versionOutput.trim());
               resolve(code);
             } else {
-              reject(new Error(`Playwright version check failed with code ${code}`));
+              logger.error('❌ Playwright version check failed with code:', code);
+              reject new Error(`Playwright version check failed with code ${code}. Error: ${errorOutput}`));
             }
           });
           testProcess.on('error', reject);
         });
         
+        logger.info('✅ Playwright availability check completed successfully');
+        
       } catch (error: any) {
-        logger.error('Error checking Playwright availability:', error.message);
+        logger.error('❌ Error checking Playwright availability:', error.message);
+        logger.error('❌ Full error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          cause: error.cause
+        });
+        
         return {
           success: false,
-          message: "Playwright is not installed or configured properly. Please run 'npx playwright install' first."
+          message: `Playwright is not available: ${error.message}. Please check if system dependencies are installed.`
         };
       }
 
