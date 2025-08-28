@@ -13,7 +13,7 @@ channel = "stable-24_05"
 packages = ["unzipNLS"]
 
 [workflows]
-runButton = "Optimized TestCaseTracker"
+runButton = "Fixed TestCaseTracker"
 
 [[workflows.workflow]]
 name = "Start TestCaseTracker"
@@ -32,3 +32,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd TestCaseTracker && node dev.js"
+
+[[workflows.workflow]]
+name = "Fixed TestCaseTracker"
+author = 41966107
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd TestCaseTracker && node dev.cjs"
