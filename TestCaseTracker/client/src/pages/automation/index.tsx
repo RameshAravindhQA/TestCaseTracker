@@ -793,26 +793,57 @@ export default function AutomationPage() {
                                   </div>
 
                                   <div className="space-y-3">
-                                    <Label className="text-sm font-medium">Browser Launch Mode</Label>
-                                    <RadioGroup value={launchMode} onValueChange={setLaunchMode} className="grid grid-cols-1 gap-3">
-                                      <div className="flex items-center space-x-2 p-3 border rounded-lg">
-                                        <RadioGroupItem value="playwright" id="playwright" />
-                                        <div className="flex-1">
-                                          <Label htmlFor="playwright" className="font-medium">Playwright (Recommended)</Label>
-                                          <p className="text-sm text-muted-foreground">Automated browser with recording capabilities</p>
-                                        </div>
-                                        <Monitor className="h-5 w-5 text-muted-foreground" />
-                                      </div>
+                                    <Label className="text-sm font-medium">Automation Mode</Label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <Button
+                                        type="button"
+                                        variant={launchMode === 'playwright' ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setLaunchMode('playwright')}
+                                      >
+                                        Playwright
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant={launchMode === 'selenium' ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setLaunchMode('selenium')}
+                                      >
+                                        Selenium
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant={launchMode === 'manual-recorder' ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setLaunchMode('manual-recorder')}
+                                      >
+                                        Manual Guide
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant={launchMode === 'system-browser' ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setLaunchMode('system-browser')}
+                                      >
+                                        System Browser
+                                      </Button>
+                                    </div>
 
-                                      <div className="flex items-center space-x-2 p-3 border rounded-lg">
-                                        <RadioGroupItem value="system-browser" id="system-browser" />
-                                        <div className="flex-1">
-                                          <Label htmlFor="system-browser" className="font-medium">System Browser</Label>
-                                          <p className="text-sm text-muted-foreground">Launch your installed browser manually</p>
-                                        </div>
-                                        <Chrome className="h-5 w-5 text-muted-foreground" />
+                                    {launchMode === 'selenium' && (
+                                      <div className="p-3 bg-blue-50 rounded-md">
+                                        <p className="text-sm text-blue-700">
+                                          Selenium mode generates a script template you can run locally with Node.js and selenium-webdriver.
+                                        </p>
                                       </div>
-                                    </RadioGroup>
+                                    )}
+
+                                    {launchMode === 'manual-recorder' && (
+                                      <div className="p-3 bg-green-50 rounded-md">
+                                        <p className="text-sm text-green-700">
+                                          Manual mode creates a guided test document with steps to follow and record manually.
+                                        </p>
+                                      </div>
+                                    )}
                                   </div>
 
                                   {launchMode === 'system-browser' && availableBrowsers.length > 0 && (

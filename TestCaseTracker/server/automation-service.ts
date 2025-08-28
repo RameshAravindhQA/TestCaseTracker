@@ -3,6 +3,13 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { logger } from './logger';
 
+// Selenium WebDriver alternative
+interface SeleniumConfig {
+  browser: 'chrome' | 'firefox' | 'edge';
+  headless: boolean;
+  timeout: number;
+}
+
 export interface RecordingSession {
   id: string;
   projectId?: string;
@@ -78,6 +85,202 @@ export class AutomationService {
     }
 
     return browsers;
+  }
+
+  // Selenium WebDriver automation
+  private async startSeleniumRecording(config: any): Promise<{ success: boolean; message: string; recordingId?: string }> {
+    try {
+      const recordingId = `selenium_${Date.now()}`;
+      
+      // Generate Selenium script template
+      const seleniumScript = this.generateSeleniumScript(config.url, config.testCaseId);
+      const scriptPath = path.join(this.recordingsDir, `selenium-${config.testCaseId}-${Date.now()}.js`);
+      
+      await fs.writeFile(scriptPath, seleniumScript);
+      
+      return {
+        success: true,
+        message: `Selenium script template created at ${scriptPath}. You can modify and run this script manually.`,
+        recordingId
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: `Failed to create Selenium script: ${error.message}`
+      };
+    }
+  }
+
+  private async startManualRecording(config: any): Promise<{ success: boolean; message: string; recordingId?: string }> {
+    const recordingId = `manual_${Date.now()}`;
+    const timestamp = Date.now();
+    const filename = `manual-test-${config.testCaseId}-${timestamp}.md`;
+    
+    // Create manual test recording template
+    const manualTemplate = this.generateManualTestTemplate(config);
+    const outputPath = path.join(this.recordingsDir, filename);
+    
+    try {
+      await fs.writeFile(outputPath, manualTemplate);
+      
+      const recordingSession: RecordingSession = {
+        id: recordingId,
+        projectId: config.projectId,
+        moduleId: config.moduleId,
+        testCaseId: config.testCaseId,
+        url: config.url,
+        filename,
+        status: 'recording',
+        startTime: new Date(),
+        outputPath
+      };
+
+      this.activeSessions.set(recordingId, recordingSession);
+
+      return {
+        success: true,
+        message: `Manual test recording started. Follow the guided steps and update the test document.`,
+        recordingId
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: `Failed to start manual recording: ${error.message}`
+      };
+    }
+  }
+
+  private async startCypressRecording(config: any): Promise<{ success: boolean; message: string; recordingId?: string }> {
+    try {
+      const recordingId = `cypress_${Date.now()}`;
+      
+      // Generate Cypress test template
+      const cypressTest = this.generateCypressTest(config.url, config.testCaseId);
+      const scriptPath = path.join(this.recordingsDir, `cypress-${config.testCaseId}-${Date.now()}.cy.js`);
+      
+      await fs.writeFile(scriptPath, cypressTest);
+      
+      return {
+        success: true,
+        message: `Cypress test template created at ${scriptPath}. You can run this with 'npx cypress run' locally.`,
+        recordingId
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: `Failed to create Cypress test: ${error.message}`
+      };
+    }
+  }
+
+  private generateCypressTest(url: string, testCaseId: string): string {
+    return `// Cypress Test for Test Case: ${testCaseId}
+describe('Test Case ${testCaseId}', () => {
+  beforeEach(() => {
+    // Navigate to the application
+    cy.visit('${url}');
+  });
+
+  it('should execute test case ${testCaseId}', () => {
+    // Add your test steps here:
+    
+    // Example test steps:
+    // cy.get('[data-testid="username"]').type('testuser');
+    // cy.get('[data-testid="password"]').type('password');
+    // cy.get('[data-testid="submit"]').click();
+    // cy.url().should('include', '/dashboard');
+    
+    // Verify page loads
+    cy.get('body').should('be.visible');
+    
+    // Add assertions
+    cy.title().should('not.be.empty');
+  });
+});`;
+  }
+
+  private generateManualTestTemplate(config: any): string {
+    return `# Manual Test Recording - ${config.testCaseId}
+
+## Test Information
+- **Test Case ID**: ${config.testCaseId}
+- **Target URL**: ${config.url}
+- **Project ID**: ${config.projectId}
+- **Module ID**: ${config.moduleId}
+- **Started**: ${new Date().toISOString()}
+
+## Instructions
+1. Open the target URL: ${config.url}
+2. Follow the test steps below and mark each as completed
+3. Record any issues or observations
+4. Update the status when complete
+
+## Test Steps
+[ ] Step 1: Navigate to ${config.url}
+[ ] Step 2: Verify page loads correctly
+[ ] Step 3: [Add your test steps here]
+[ ] Step 4: [Add your test steps here]
+[ ] Step 5: [Add your test steps here]
+
+## Observations
+- 
+
+## Results
+- **Status**: In Progress
+- **Issues Found**: 
+- **Screenshots**: 
+- **Completion Time**: 
+
+## Generated Test Code (Optional)
+\`\`\`javascript
+// Add generated test code here based on manual testing
+// Example:
+// await page.goto('${config.url}');
+// await page.click('#login-button');
+// await page.fill('#username', 'testuser');
+\`\`\`
+`;
+  }
+
+  private generateSeleniumScript(url: string, testCaseId: string): string {
+    return `// Selenium WebDriver Script for Test Case: ${testCaseId}
+const { Builder, By, Key, until } = require('selenium-webdriver');
+const chrome = require('selenium-webdriver/chrome');
+
+async function runTest() {
+  // Setup Chrome options
+  let options = new chrome.Options();
+  options.addArguments('--no-sandbox');
+  options.addArguments('--disable-dev-shm-usage');
+  
+  // Create driver
+  let driver = await new Builder()
+    .forBrowser('chrome')
+    .setChromeOptions(options)
+    .build();
+
+  try {
+    // Navigate to target URL
+    await driver.get('${url}');
+    
+    // Wait for page to load
+    await driver.wait(until.titleContains(''), 5000);
+    
+    // Add your test steps here:
+    // Example: await driver.findElement(By.id('username')).sendKeys('testuser');
+    // Example: await driver.findElement(By.id('password')).sendKeys('password');
+    // Example: await driver.findElement(By.css('button[type="submit"]')).click();
+    
+    console.log('Test completed successfully');
+    
+  } catch (error) {
+    console.error('Test failed:', error);
+  } finally {
+    await driver.quit();
+  }
+}
+
+runTest();`;
   }
 
   // Launch browser with system command instead of Playwright
@@ -156,6 +359,24 @@ export class AutomationService {
       // Detect available system browsers
       const availableBrowsers = await this.detectSystemBrowsers();
       logger.info('Available system browsers:', availableBrowsers);
+
+      // Manual test recorder mode
+      if (config.launchMode === 'manual-recorder') {
+        const manualSession = await this.startManualRecording(config);
+        return manualSession;
+      }
+
+      // Selenium automation mode
+      if (config.launchMode === 'selenium') {
+        const seleniumResult = await this.startSeleniumRecording(config);
+        return seleniumResult;
+      }
+
+      // Cypress automation mode
+      if (config.launchMode === 'cypress') {
+        const cypressResult = await this.startCypressRecording(config);
+        return cypressResult;
+      }
 
       // If browser launch mode is requested, launch system browser
       if (config.launchMode === 'system-browser') {
