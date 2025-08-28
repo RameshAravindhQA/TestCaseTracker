@@ -67,7 +67,39 @@ export default function AutomationPage() {
   const [isRecordingDialogOpen, setIsRecordingDialogOpen] = useState<boolean>(false);
   const [currentRecording, setCurrentRecording] = useState<RecordingSession | null>(null);
   const [executionResults, setExecutionResults] = useState<ExecutionResult[]>([]);
+  const [healthStatus, setHealthStatus] = useState<any>(null);
   const { toast } = useToast();
+
+  // Health check function
+  const checkAutomationHealth = async () => {
+    try {
+      console.log('🏥 Checking automation service health...');
+      const response = await fetch('/api/automation/health');
+      const health = await response.json();
+      console.log('🏥 Health check result:', health);
+      setHealthStatus(health);
+      
+      if (health.details?.playwright?.includes('available')) {
+        toast({
+          title: 'Service Healthy',
+          description: 'Automation service and Playwright are working correctly.',
+        });
+      } else {
+        toast({
+          title: 'Service Issues Detected',
+          description: health.details?.playwright || 'Unknown issue',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Health check failed:', error);
+      toast({
+        title: 'Health Check Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Fetch projects
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
@@ -153,29 +185,47 @@ export default function AutomationPage() {
   // Start recording mutation
   const startRecordingMutation = useMutation({
     mutationFn: async ({ testCaseId, url }: { testCaseId: string; url: string }) => {
+      console.log('🎬 Starting recording for test case:', testCaseId, 'URL:', url);
+      
       const testCase = testCases.find(tc => tc.id === parseInt(testCaseId));
-      if (!testCase) throw new Error('Test case not found');
-
-      const response = await fetch('/api/automation/start-recording', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          url,
-          projectId: selectedProject,
-          moduleId: selectedModule,
-          testCaseId: parseInt(testCaseId),
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to start recording');
+      if (!testCase) {
+        console.error('❌ Test case not found:', testCaseId);
+        throw new Error('Test case not found');
       }
 
-      return response.json();
+      console.log('📋 Test case found:', testCase.testCaseId, testCase.feature);
+
+      try {
+        console.log('📡 Sending recording request...');
+        const response = await fetch('/api/automation/start-recording', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            url,
+            projectId: selectedProject,
+            moduleId: selectedModule,
+            testCaseId: parseInt(testCaseId),
+          })
+        });
+
+        console.log('📡 Response status:', response.status, response.statusText);
+
+        if (!response.ok) {
+          const error = await response.json();
+          console.error('❌ Recording request failed:', error);
+          throw new Error(error.message || `Failed to start recording (${response.status})`);
+        }
+
+        const result = await response.json();
+        console.log('✅ Recording request successful:', result);
+        return result;
+      } catch (fetchError: any) {
+        console.error('❌ Network error during recording request:', fetchError);
+        throw fetchError;
+      }
     },
     onSuccess: (data, { testCaseId }) => {
       toast({
@@ -218,9 +268,26 @@ export default function AutomationPage() {
       setTimeout(() => clearInterval(pollInterval), 600000);
     },
     onError: (error: any) => {
+      console.error('🚫 Recording mutation error:', error);
+      
+      let errorMessage = error.message || 'Unknown error occurred';
+      let errorTitle = 'Recording Failed';
+      
+      // Provide specific help for common issues
+      if (errorMessage.includes('Playwright is not installed')) {
+        errorTitle = 'Playwright Not Installed';
+        errorMessage = 'Playwright needs to be installed on the server. Please contact your administrator.';
+      } else if (errorMessage.includes('valid URL')) {
+        errorTitle = 'Invalid URL';
+        errorMessage = 'Please provide a valid URL starting with http:// or https://';
+      } else if (errorMessage.includes('not configured')) {
+        errorTitle = 'Configuration Error';
+        errorMessage = 'Test automation is not properly configured. Please contact your administrator.';
+      }
+
       toast({
-        title: 'Recording Failed',
-        description: error.message,
+        title: errorTitle,
+        description: errorMessage,
         variant: 'destructive',
       });
     }
@@ -418,6 +485,23 @@ export default function AutomationPage() {
           <div>
             <h1 className="text-3xl font-bold">Test Automation</h1>
             <p className="text-muted-foreground">Record and execute automated test scripts</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={checkAutomationHealth}
+              className="flex items-center gap-2"
+            >
+              <AlertCircle className="h-4 w-4" />
+              Check Health
+            </Button>
+            {healthStatus && (
+              <Badge 
+                variant={healthStatus.details?.playwright?.includes('available') ? 'default' : 'destructive'}
+              >
+                {healthStatus.details?.playwright?.includes('available') ? 'Service OK' : 'Issues Detected'}
+              </Badge>
+            )}
           </div>
         </div>
 

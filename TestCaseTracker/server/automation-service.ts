@@ -65,16 +65,40 @@ export class AutomationService {
 
       // Check if Playwright is available
       try {
-        const { spawn } = require('child_process');
-        const testProcess = spawn('npx', ['playwright', '--version'], { stdio: 'pipe' });
-        testProcess.on('error', (error) => {
-          logger.error('Playwright not found:', error);
+        logger.info('Checking Playwright availability...');
+        const testProcess = spawn('npx', ['playwright', '--version'], { 
+          stdio: 'pipe',
+          timeout: 10000
         });
-      } catch (error) {
-        logger.error('Error checking Playwright availability:', error);
+        
+        let versionOutput = '';
+        testProcess.stdout?.on('data', (data) => {
+          versionOutput += data.toString();
+        });
+        
+        testProcess.on('error', (error) => {
+          logger.error('Playwright executable not found:', error.message);
+          throw error;
+        });
+        
+        // Wait for version check to complete
+        await new Promise((resolve, reject) => {
+          testProcess.on('close', (code) => {
+            if (code === 0) {
+              logger.info('Playwright version check successful:', versionOutput.trim());
+              resolve(code);
+            } else {
+              reject(new Error(`Playwright version check failed with code ${code}`));
+            }
+          });
+          testProcess.on('error', reject);
+        });
+        
+      } catch (error: any) {
+        logger.error('Error checking Playwright availability:', error.message);
         return {
           success: false,
-          message: "Playwright is not installed or configured properly."
+          message: "Playwright is not installed or configured properly. Please run 'npx playwright install' first."
         };
       }
 
@@ -100,18 +124,22 @@ export class AutomationService {
 
       // Launch Playwright Codegen
       logger.info(`Starting Playwright codegen for URL: ${config.url}`);
+      logger.info(`Output path: ${outputPath}`);
+      logger.info(`Recording ID: ${recordingId}`);
       
       const codegenProcess = spawn('npx', [
         'playwright',
         'codegen',
         config.url,
         '--target=typescript',
-        `--output=${outputPath}`
+        `--output=${outputPath}`,
+        '--save-storage=state.json'
       ], {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { 
           ...process.env,
-          PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0'
+          PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
+          NODE_ENV: 'development'
         }
       });
 
@@ -120,11 +148,20 @@ export class AutomationService {
       this.activeSessions.set(recordingId, recordingSession);
 
       codegenProcess.stdout?.on('data', (data) => {
-        logger.info(`Codegen stdout: ${data.toString()}`);
+        const output = data.toString();
+        logger.info(`Codegen stdout [${recordingId}]: ${output}`);
       });
 
       codegenProcess.stderr?.on('data', (data) => {
-        logger.info(`Codegen stderr: ${data.toString()}`);
+        const output = data.toString();
+        logger.warn(`Codegen stderr [${recordingId}]: ${output}`);
+      });
+
+      codegenProcess.on('error', (error) => {
+        logger.error(`Codegen process error [${recordingId}]:`, error);
+        recordingSession.status = 'error';
+        recordingSession.endTime = new Date();
+        this.activeSessions.set(recordingId, recordingSession);
       });
 
       codegenProcess.on('close', (code) => {
@@ -133,6 +170,19 @@ export class AutomationService {
         this.activeSessions.set(recordingId, recordingSession);
         
         logger.info(`Codegen process closed with code ${code} for session ${recordingId}`);
+        
+        // Log file creation status
+        if (recordingSession.outputPath) {
+          import('fs').then(fs => {
+            fs.promises.access(recordingSession.outputPath!)
+              .then(() => {
+                logger.info(`Recording file created successfully: ${recordingSession.outputPath}`);
+              })
+              .catch(() => {
+                logger.warn(`Recording file was not created: ${recordingSession.outputPath}`);
+              });
+          });
+        }
       });
 
       return {

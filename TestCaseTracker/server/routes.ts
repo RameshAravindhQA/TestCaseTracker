@@ -1857,8 +1857,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 // Enhanced automation endpoints with actual implementation
-apiRouter.get('/automation/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Automation service is running' });
+apiRouter.get('/automation/health', async (req, res) => {
+  try {
+    logger.info('Automation health check requested');
+    
+    const healthStatus = {
+      service: 'running',
+      playwright: 'unknown',
+      recordingsDir: 'unknown',
+      timestamp: new Date().toISOString()
+    };
+
+    // Check if recordings directory exists
+    try {
+      const recordingsDir = path.join(process.cwd(), 'recordings');
+      await fs.promises.access(recordingsDir);
+      healthStatus.recordingsDir = 'accessible';
+      logger.info('Recordings directory accessible:', recordingsDir);
+    } catch (dirError) {
+      healthStatus.recordingsDir = 'not_accessible';
+      logger.warn('Recordings directory not accessible');
+    }
+
+    // Check Playwright availability
+    try {
+      const { spawn } = await import('child_process');
+      const testProcess = spawn('npx', ['playwright', '--version'], { 
+        stdio: 'pipe',
+        timeout: 5000
+      });
+      
+      let versionOutput = '';
+      testProcess.stdout?.on('data', (data) => {
+        versionOutput += data.toString();
+      });
+      
+      await new Promise((resolve, reject) => {
+        testProcess.on('close', (code) => {
+          if (code === 0) {
+            healthStatus.playwright = `available (${versionOutput.trim()})`;
+            logger.info('Playwright health check passed:', versionOutput.trim());
+            resolve(code);
+          } else {
+            healthStatus.playwright = `error_code_${code}`;
+            reject(new Error(`Playwright check failed with code ${code}`));
+          }
+        });
+        testProcess.on('error', (error) => {
+          healthStatus.playwright = `not_found: ${error.message}`;
+          reject(error);
+        });
+        setTimeout(() => {
+          testProcess.kill();
+          reject(new Error('Timeout'));
+        }, 5000);
+      });
+    } catch (playwrightError: any) {
+      healthStatus.playwright = `error: ${playwrightError.message}`;
+      logger.warn('Playwright health check failed:', playwrightError.message);
+    }
+
+    res.json({
+      status: 'ok',
+      message: 'Automation service health check completed',
+      details: healthStatus
+    });
+  } catch (error: any) {
+    logger.error('Health check error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Health check failed',
+      error: error.message
+    });
+  }
 });
 
 apiRouter.get('/automation/scripts', isAuthenticated, async (req, res) => {
@@ -1926,14 +1997,37 @@ app.use('/automation/screenshots', (req, res, next) => {
 apiRouter.post('/automation/start-recording', isAuthenticated, async (req, res) => {
   try {
     const { url, projectId, moduleId, testCaseId } = req.body;
+    
+    logger.info('Recording request received:', {
+      url,
+      projectId,
+      moduleId,
+      testCaseId,
+      userId: req.session.userId,
+      userRole: req.session.userRole
+    });
 
     if (!url) {
+      logger.warn('Recording request rejected: No URL provided');
       return res.status(400).json({ 
         success: false, 
         message: 'URL is required' 
       });
     }
 
+    // Validate URL format
+    try {
+      new URL(url);
+      logger.info('URL validation passed:', url);
+    } catch (urlError) {
+      logger.warn('Invalid URL provided:', url);
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid URL (including http:// or https://)'
+      });
+    }
+
+    logger.info('Starting automation service recording...');
     const result = await automationService.startRecording({
       url,
       projectId,
@@ -1942,12 +2036,23 @@ apiRouter.post('/automation/start-recording', isAuthenticated, async (req, res) 
     });
 
     if (result.success) {
+      logger.info('Recording started successfully:', {
+        recordingId: result.recordingId,
+        url,
+        testCaseId
+      });
       res.json(result);
     } else {
+      logger.error('Recording failed to start:', result);
       res.status(400).json(result);
     }
-  } catch (error) {
-    console.error('Start recording error:', error);
+  } catch (error: any) {
+    logger.error('Start recording error:', {
+      error: error.message,
+      stack: error.stack,
+      url: req.body.url,
+      testCaseId: req.body.testCaseId
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to start recording',
