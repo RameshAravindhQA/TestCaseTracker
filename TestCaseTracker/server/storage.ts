@@ -317,32 +317,31 @@ export interface IStorage {
  * In-memory storage implementation for development and testing
  */
 class MemStorage implements IStorage {
-  // In-memory storage for different entity types using Maps
-  private projects = new Map<number, any>();
-  private users = new Map<number, any>();
-  private modules = new Map<number, any>();
-  private testCases = new Map<number, any>();
-  private bugs = new Map<number, any>();
-  private activities = new Map<number, any>();
-  private tags = new Map<number, any>();
-  private documents = new Map<number, any>();
-  private documentFolders = new Map<number, any>();
-  private testSheets = new Map<number, any>();
-  private customers = new Map<number, any>();
-  private customerProjects = new Map<number, any>();
-  private timeSheets = new Map<number, any>();
-  private timeSheetFolders = new Map<number, any>();
-  private customMarkers = new Map<string, any>();
-  private matrixCells = new Map<string, any>();
-  private notebooks = new Map<number, any>();
-  private notebooksData = { notebooks: [] as any[] };
+  // In-memory storage for different entity types using Arrays
+  private projects: Project[] = [];
+  private users: User[] = [];
+  private modules: Module[] = [];
+  private testCases: TestCase[] = [];
+  private bugs: Bug[] = [];
+  private activities: Activity[] = [];
+  private tags: Tag[] = [];
+  private documents: Document[] = [];
+  private documentFolders: DocumentFolder[] = [];
+  private testSheets: TestSheet[] = [];
+  private customers: Customer[] = [];
+  private customerProjects: CustomerProject[] = [];
+  private timeSheets: TimeSheet[] = [];
+  private timeSheetFolders: TimeSheetFolder[] = [];
+  private customMarkers: CustomMarker[] = [];
+  private matrixCells: MatrixCell[] = [];
+  private notebooks: Notebook[] = [];
   private githubConfigs: any[] = [];
   private githubIssues: any[] = [];
-  private projectMembers = new Map<number, any>();
-  private sprints = new Map<number, any>();
-  private kanbanColumns: Map<number, any> = new Map();
-  private kanbanCards: Map<number, any> = new Map();
-  private traceabilityMatrixes: Map<number, any> = new Map();
+  private projectMembers: ProjectMember[] = [];
+  private sprints: Sprint[] = [];
+  private kanbanColumns: KanbanColumn[] = [];
+  private kanbanCards: KanbanCard[] = [];
+  private traceabilityMatrixes: TraceabilityMatrix[] = [];
 
   // Initialize data property for compatibility
   private data: any = {
@@ -363,22 +362,34 @@ class MemStorage implements IStorage {
   private todosMap = new Map<number, any>();
 
   // Employee Management
-  private employees = new Map<number, any>();
-  private employeeProjects = new Map<number, any>();
-  private technologyOptions = new Map<number, any>();
-  private departmentOptions = new Map<number, any>();
-  private navadhitiProjects = new Map<number, any>();
+  private employees: any[] = [];
+  private employeeProjects: any[] = [];
+  private technologyOptions: any[] = [];
+  private departmentOptions: any[] = [];
+  private navadhitiProjects: any[] = [];
   private statusReviews = new Map<number, any>();
   private employeeProjectHistory: any[] = []; // Added for storing history
 
   // Request Forms Module Maps
-  private requestFormTypes = new Map<number, any>();
-  private requestFormOptions = new Map<number, any>();
-  private resourceRequests = new Map<number, any>();
-  private requestExtensions = new Map<number, any>();
-  private requestComments = new Map<number, any>();
+  private requestFormTypes: any[] = [];
+  private requestFormOptions: any[] = [];
+  private resourceRequests: any[] = [];
+  private requestExtensions: any[] = [];
+  private requestComments: any[] = [];
   private notifications = new Map<number, any>();
 
+  // ID counters
+  private nextUserId = 1;
+  private nextProjectId = 1;
+  private nextModuleId = 1;
+  private nextTestCaseId = 1;
+  private nextBugId = 1;
+  private nextActivityId = 1;
+  private nextDocumentFolderId = 1;
+  private nextDocumentId = 1;
+  private nextTimeSheetId = 1;
+  private nextTimeSheetFolderId = 1;
+  private nextCustomerId = 1;
 
   private initializeEmployeeDefaults() {
     // Add default technology options
@@ -391,7 +402,7 @@ class MemStorage implements IStorage {
       { id: 6, name: 'TypeScript', createdAt: new Date() },
     ];
 
-    defaultTechOptions.forEach(tech => this.technologyOptions.set(tech.id, tech));
+    defaultTechOptions.forEach(tech => this.technologyOptions.push(tech));
 
     // Add default department options
     const defaultDeptOptions = [
@@ -402,14 +413,11 @@ class MemStorage implements IStorage {
       { id: 5, name: 'Project Management', createdAt: new Date() },
     ];
 
-    defaultDeptOptions.forEach(dept => this.departmentOptions.set(dept.id, dept));
+    defaultDeptOptions.forEach(dept => this.departmentOptions.push(dept));
   }
 
-  private nextId = 1;
-  private testSheetIdCounter = 1;
-
   private getNextId(entityType?: string): number {
-    let id = this.nextId++;
+    let id = this.nextUserId++;
     // For specific entities like 'employee', 'navadhiti_project', you can add more specific ID generation logic if needed.
     // For example:
     // if (entityType === 'employee') {
@@ -420,88 +428,90 @@ class MemStorage implements IStorage {
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    return this.users.find(user => user.id === id);
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
+    return this.users.find(user => user.email === email);
   }
 
   // Get all users
   async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    return [...this.users];
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const existingIds = Array.from(this.users.keys());
-    const id = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+    const id = this.getNextId();
     const user: User = {
       id: id,
       ...insertUser,
       createdAt: new Date(),
     };
-    this.users.set(user.id, user);
+    this.users.push(user);
     return user;
   }
 
   async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
+    const index = this.users.findIndex(user => user.id === id);
+    if (index === -1) return undefined;
 
-    const updatedUser = { ...user, ...userData };
-    this.users.set(id, updatedUser);
+    const updatedUser = { ...this.users[index], ...userData };
+    this.users[index] = updatedUser;
     return updatedUser;
   }
 
   async deleteUser(id: number): Promise<boolean> {
-    return this.users.delete(id);
+    const initialLength = this.users.length;
+    this.users = this.users.filter(user => user.id !== id);
+    return this.users.length < initialLength;
   }
 
   // Project operations
   async getProjects(): Promise<Project[]> {
-    return Array.from(this.projects.values());
+    return [...this.projects];
   }
 
   async getProject(id: number): Promise<Project | undefined> {
-    return this.projects.get(id);
+    return this.projects.find(project => project.id === id);
   }
 
   async createProject(insertProject: InsertProject): Promise<Project> {
-    const existingIds = Array.from(this.projects.keys());
-    const id = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+    const id = this.getNextId();
     const project: Project = {
       id: id,
       ...insertProject,
       createdAt: new Date(),
     };
-    this.projects.set(project.id, project);
+    this.projects.push(project);
     return project;
   }
 
   async updateProject(id: number, projectData: Partial<Project>): Promise<Project | undefined> {
-    const project = this.projects.get(id);
-    if (!project) return undefined;
+    const index = this.projects.findIndex(project => project.id === id);
+    if (index === -1) return undefined;
 
-    const updatedProject = { ...project, ...projectData };
-    this.projects.set(id, updatedProject);
+    const updatedProject = { ...this.projects[index], ...projectData };
+    this.projects[index] = updatedProject;
     return updatedProject;
   }
 
   async deleteProject(id: number): Promise<boolean> {
-    return this.projects.delete(id);
+    const initialLength = this.projects.length;
+    this.projects = this.projects.filter(project => project.id !== id);
+    return this.projects.length < initialLength;
   }
 
   // Module operations
   async getModules(): Promise<Module[]> {
-    return Array.from(this.modules.values());
+    return [...this.modules];
   }
 
   async getModulesByProject(projectId: number): Promise<Module[]> {
-    return Array.from(this.modules.values()).filter(module => module.projectId === projectId);
+    return this.modules.filter(module => module.projectId === projectId);
   }
 
   async getModule(id: number): Promise<Module | undefined> {
-    return this.modules.get(id);
+    return this.modules.find(module => module.id === id);
   }
 
   async createModule(moduleData: InsertModule): Promise<Module> {
@@ -513,7 +523,7 @@ class MemStorage implements IStorage {
     let moduleId = moduleData.moduleId;
     if (!moduleId || moduleId.trim() === '') {
       // Get the project to access its details
-      const project = this.projects.get(moduleData.projectId);
+      const project = this.projects.find(p => p.id === moduleData.projectId);
       if (!project) {
         throw new Error(`Project with ID ${moduleData.projectId} not found`);
       }
@@ -544,7 +554,7 @@ class MemStorage implements IStorage {
       }
 
       // Get existing modules for this specific project only
-      const projectModules = Array.from(this.modules.values())
+      const projectModules = this.modules
         .filter(module => module.projectId === moduleData.projectId);
 
       console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix, 'module prefix:', modulePrefix);
@@ -574,33 +584,35 @@ class MemStorage implements IStorage {
 
     console.log('Module object created with moduleId:', module.moduleId, 'and database ID:', module.id);
 
-    this.modules.set(id, module);
+    this.modules.push(module);
 
-    console.log('Module stored, total modules:', this.modules.size);
+    console.log('Module stored, total modules:', this.modules.length);
 
     return module;
   }
 
   async updateModule(id: number, moduleData: Partial<Module>): Promise<Module | undefined> {
-    const module = this.modules.get(id);
-    if (!module) return undefined;
+    const index = this.modules.findIndex(module => module.id === id);
+    if (index === -1) return undefined;
 
-    const updatedModule = { ...module, ...moduleData };
-    this.modules.set(id, updatedModule);
+    const updatedModule = { ...this.modules[index], ...moduleData };
+    this.modules[index] = updatedModule;
     return updatedModule;
   }
 
   async deleteModule(id: number): Promise<boolean> {
-    return this.modules.delete(id);
+    const initialLength = this.modules.length;
+    this.modules = this.modules.filter(module => module.id !== id);
+    return this.modules.length < initialLength;
   }
 
   // Test case operations
   async getTestCases(): Promise<TestCase[]> {
-    return Array.from(this.testCases.values());
+    return [...this.testCases];
   }
 
   async getTestCasesByFilters(projectId?: number, moduleId?: number): Promise<TestCase[]> {
-    let results = Array.from(this.testCases.values());
+    let results = [...this.testCases];
 
     if (projectId) {
       results = results.filter(tc => tc.projectId === projectId);
@@ -618,15 +630,14 @@ class MemStorage implements IStorage {
   }
 
   async getTestCasesByProject(projectId: number): Promise<TestCase[]> {
-    const results = Array.from(this.testCases.values())
-      .filter(tc => tc.projectId === projectId && tc.isDeleted !== true);
+    const results = this.testCases.filter(tc => tc.projectId === projectId && tc.isDeleted !== true);
     console.log(`Storage: getTestCasesByProject(${projectId}) returning ${results.length} active test cases:`,
       results.map(tc => ({ id: tc.id, testCaseId: tc.testCaseId, projectId: tc.projectId })));
     return results;
   }
 
   async getTestCase(id: number): Promise<TestCase | undefined> {
-    return this.testCases.get(id);
+    return this.testCases.find(testCase => testCase.id === id);
   }
 
   async createTestCase(insertTestCase: InsertTestCase): Promise<TestCase> {
@@ -637,8 +648,8 @@ class MemStorage implements IStorage {
     let testCaseId = insertTestCase.testCaseId;
     if (!testCaseId || testCaseId.trim() === '') {
       // Get the module and project to build the test case ID
-      const module = this.modules.get(insertTestCase.moduleId);
-      const project = this.projects.get(insertTestCase.projectId);
+      const module = this.modules.find(m => m.id === insertTestCase.moduleId);
+      const project = this.projects.find(p => p.id === insertTestCase.projectId);
 
       if (!module || !project) {
         throw new Error(`Module or Project not found`);
@@ -659,7 +670,7 @@ class MemStorage implements IStorage {
       // Find the highest existing test case number for this project and module with the same prefix
       // This includes ALL test cases that have ever been created, even if some were deleted
       const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
-      const existingTestCases = Array.from(this.testCases.values())
+      const existingTestCases = this.testCases
         .filter(tc => tc.moduleId === insertTestCase.moduleId && tc.projectId === insertTestCase.projectId)
         .map(tc => tc.testCaseId)
         .filter(id => id && prefixPattern.test(id))
@@ -684,60 +695,60 @@ class MemStorage implements IStorage {
       updatedAt: now
     };
 
-    this.testCases.set(id, testCase);
+    this.testCases.push(testCase);
     this.recordActivity('test_case', 'created', testCase.id, insertTestCase.createdById);
     return testCase;
   }
 
   async updateTestCase(id: number, data: Partial<TestCase>): Promise<TestCase | null> {
-    const testCase = this.testCases.get(id);
-    if (!testCase) return null;
+    const index = this.testCases.findIndex(testCase => testCase.id === id);
+    if (index === -1) return null;
 
     const updatedTestCase = {
-      ...testCase,
+      ...this.testCases[index],
       ...data,
       updatedAt: new Date()
     };
 
     // Force immediate persistence
-    this.testCases.set(id, updatedTestCase);
+    this.testCases[index] = updatedTestCase;
 
     // Log activity for status changes specifically
-    if (data.status && data.status !== testCase.status) {
-      this.recordActivity('test_case', `status_changed_to_${data.status}`, id, data.assignedTo || testCase.assignedTo || 1);
+    if (data.status && data.status !== this.testCases[index].status) {
+      this.recordActivity('test_case', `status_changed_to_${data.status}`, id, data.assignedTo || this.testCases[index].assignedTo || 1);
     } else {
-      this.recordActivity('test_case', 'updated', id, data.assignedTo || testCase.assignedTo || 1);
+      this.recordActivity('test_case', 'updated', id, data.assignedTo || this.testCases[index].assignedTo || 1);
     }
 
     return updatedTestCase;
   }
 
   async deleteTestCase(id: number): Promise<boolean> {
-    const testCase = this.testCases.get(id);
-    if (!testCase) return false;
+    const index = this.testCases.findIndex(testCase => testCase.id === id);
+    if (index === -1) return false;
 
-    console.log(`Storage: Soft deleting test case ID ${id} (${testCase.testCaseId})`);
+    console.log(`Storage: Soft deleting test case ID ${id} (${this.testCases[index].testCaseId})`);
 
     // Soft delete - mark as deleted instead of removing
-    const deletedTestCase = {
-      ...testCase,
+    const deletedTestCase: TestCase = {
+      ...this.testCases[index],
       isDeleted: true,
       deletedAt: new Date(),
       deletedById: 1, // Should be current user ID
       updatedAt: new Date()
     };
 
-    this.testCases.set(id, deletedTestCase);
-    this.recordActivity('test_case', 'deleted', id, testCase.assignedTo || 1);
+    this.testCases[index] = deletedTestCase;
+    this.recordActivity('test_case', 'deleted', id, this.testCases[index].assignedTo || 1);
 
-    console.log(`Storage: Test case soft deleted. ID: ${testCase.testCaseId}`);
+    console.log(`Storage: Test case soft deleted. ID: ${this.testCases[index].testCaseId}`);
 
     return true;
   }
 
   // Deleted test case operations
   async getDeletedTestCases(projectId?: number): Promise<TestCase[]> {
-    let results = Array.from(this.testCases.values()).filter(tc => tc.isDeleted === true);
+    let results = this.testCases.filter(tc => tc.isDeleted === true);
 
     if (projectId) {
       results = results.filter(tc => tc.projectId === projectId);
@@ -748,45 +759,45 @@ class MemStorage implements IStorage {
   }
 
   async getDeletedTestCasesByProject(projectId: number): Promise<TestCase[]> {
-    const results = Array.from(this.testCases.values())
-      .filter(tc => tc.projectId === projectId && tc.isDeleted === true);
+    const results = this.testCases.filter(tc => tc.projectId === projectId && tc.isDeleted === true);
 
     console.log(`Storage: getDeletedTestCasesByProject(${projectId}) returning ${results.length} deleted test cases`);
     return results;
   }
 
   async restoreTestCase(id: number): Promise<TestCase | undefined> {
-    const testCase = this.testCases.get(id);
-    if (!testCase || !testCase.isDeleted) return undefined;
+    const index = this.testCases.findIndex(testCase => testCase.id === id);
+    if (index === -1 || !this.testCases[index].isDeleted) return undefined;
 
-    console.log(`Storage: Restoring test case ID ${id} (${testCase.testCaseId})`);
+    console.log(`Storage: Restoring test case ID ${id} (${this.testCases[index].testCaseId})`);
 
-    const restoredTestCase = {
-      ...testCase,
+    const restoredTestCase: TestCase = {
+      ...this.testCases[index],
       isDeleted: false,
       deletedAt: null,
       deletedById: null,
       updatedAt: new Date()
     };
 
-    this.testCases.set(id, restoredTestCase);
-    this.recordActivity('test_case', 'restored', id, testCase.assignedTo || 1);
+    this.testCases[index] = restoredTestCase;
+    this.recordActivity('test_case', 'restored', id, this.testCases[index].assignedTo || 1);
 
-    console.log(`Storage: Test case restored. ID: ${testCase.testCaseId}`);
+    console.log(`Storage: Test case restored. ID: ${this.testCases[index].testCaseId}`);
     return restoredTestCase;
   }
 
   async permanentlyDeleteTestCase(id: number): Promise<boolean> {
-    const testCase = this.testCases.get(id);
+    const initialLength = this.testCases.length;
+    const testCase = this.testCases.find(tc => tc.id === id);
     if (!testCase) return false;
 
     console.log(`Storage: Permanently deleting test case ID ${id} (${testCase.testCaseId})`);
 
-    this.testCases.delete(id);
+    this.testCases = this.testCases.filter(tc => tc.id !== id);
     this.recordActivity('test_case', 'permanently_deleted', id, testCase.assignedTo || 1);
 
-    console.log(`Storage: Test case permanently deleted. Total test cases: ${this.testCases.size}`);
-    return true;
+    console.log(`Storage: Test case permanently deleted. Total test cases: ${this.testCases.length}`);
+    return this.testCases.length < initialLength;
   }
 
   // Bug operations
@@ -798,7 +809,7 @@ class MemStorage implements IStorage {
     let bugId = insertBug.bugId;
     if (!bugId || bugId.trim() === '') {
       // Find the highest existing bug number
-      const existingBugs = Array.from(this.bugs.values())
+      const existingBugs = this.bugs
         .map(bug => bug.bugId)
         .filter(id => id && id.match(/^BUG-(\d+)$/))
         .map(id => parseInt(id.replace('BUG-', ''), 10))
@@ -816,13 +827,13 @@ class MemStorage implements IStorage {
       updatedAt: new Date()
     };
 
-    this.bugs.set(id, bug);
+    this.bugs.push(bug);
     this.recordActivity('bug', 'created', bug.id, insertBug.reportedById);
     return bug;
   }
 
   async getBugs(projectId?: number, moduleId?: number): Promise<Bug[]> {
-    let results = Array.from(this.bugs.values());
+    let results = [...this.bugs];
 
     if (projectId) {
       results = results.filter(bug => bug.projectId === projectId);
@@ -837,17 +848,17 @@ class MemStorage implements IStorage {
   }
 
   async getBugsByProject(projectId: number): Promise<Bug[]> {
-    const results = Array.from(this.bugs.values()).filter(bug => bug.projectId === projectId);
+    const results = this.bugs.filter(bug => bug.projectId === projectId);
     console.log(`Storage: getBugsByProject(${projectId}) returning ${results.length} bugs`);
     return results;
   }
 
   async getBug(id: number): Promise<Bug | undefined> {
-    return this.bugs.get(id);
+    return this.bugs.find(bug => bug.id === id);
   }
 
   async getBugsWithFilters(filters?: { projectId?: number; status?: string; severity?: string }): Promise<Bug[]> {
-    let bugs = Array.from(this.bugs.values());
+    let bugs = [...this.bugs];
 
     if (filters?.projectId) {
       bugs = bugs.filter(bug => bug.projectId === filters.projectId);
@@ -863,46 +874,47 @@ class MemStorage implements IStorage {
   }
 
   async getBugById(id: number): Promise<Bug | null> {
-    return this.bugs.get(id) || null;
+    return this.bugs.find(bug => bug.id === id) || null;
   }
 
   async updateBug(id: number, data: Partial<Bug>): Promise<Bug | null> {
-    const bug = this.bugs.get(id);
-    if (!bug) return null;
+    const index = this.bugs.findIndex(bug => bug.id === id);
+    if (index === -1) return null;
 
     const updatedBug = {
-      ...bug,
+      ...this.bugs[index],
       ...data,
       updatedAt: new Date()
     };
 
     // Force immediate persistence
-    this.bugs.set(id, updatedBug);
+    this.bugs[index] = updatedBug;
 
     // Log activity for status and severity changes specifically
-    if (data.status && data.status !== bug.status) {
-      this.recordActivity('bug', `status_changed_to_${data.status}`, id, data.assignedTo || bug.assignedTo);
-    } else if (data.severity && data.severity !== bug.severity) {
-      this.recordActivity('bug', `severity_changed_to_${data.severity}`, id, data.assignedTo || bug.assignedTo);
+    if (data.status && data.status !== this.bugs[index].status) {
+      this.recordActivity('bug', `status_changed_to_${data.status}`, id, data.assignedTo || this.bugs[index].assignedTo);
+    } else if (data.severity && data.severity !== this.bugs[index].severity) {
+      this.recordActivity('bug', `severity_changed_to_${data.severity}`, id, data.assignedTo || this.bugs[index].assignedTo);
     } else {
-      this.recordActivity('bug', 'updated', id, data.assignedTo || bug.assignedTo);
+      this.recordActivity('bug', 'updated', id, data.assignedTo || this.bugs[index].assignedTo);
     }
 
     return updatedBug;
   }
 
   async deleteBug(id: number): Promise<boolean> {
-    const bug = this.bugs.get(id);
+    const initialLength = this.bugs.length;
+    const bug = this.bugs.find(b => b.id === id);
     if (!bug) return false;
 
-    this.bugs.delete(id);
+    this.bugs = this.bugs.filter(bug => bug.id !== id);
     this.recordActivity('bug', 'deleted', id, bug.assignedTo);
-    return true;
+    return this.bugs.length < initialLength;
   }
 
   // Document operations
   async createDocument(data: Omit<Document, 'id' | 'createdAt' | 'updatedAt'>): Promise<Document> {
-    const id = this.nextId++;
+    const id = this.getNextId();
     const now = new Date();
 
     const document: Document = {
@@ -912,40 +924,41 @@ class MemStorage implements IStorage {
       updatedAt: now
     };
 
-    this.documents.set(id, document);
+    this.documents.push(document);
     this.recordActivity('document', 'created', document.id, data.uploadedBy);
     return document;
   }
 
   async getDocuments(folderId?: number): Promise<Document[]> {
-    return Array.from(this.documents.values()).filter(doc => doc.folderId === folderId);
+    return this.documents.filter(doc => doc.folderId === folderId);
   }
 
   async getDocumentById(id: number): Promise<Document | null> {
-    return this.documents.get(id) || null;
+    return this.documents.find(doc => doc.id === id) || null;
   }
 
   async updateDocument(id: number, data: Partial<Document>): Promise<Document | null> {
-    const document = this.documents.get(id);
-    if (!document) return null;
+    const index = this.documents.findIndex(document => document.id === id);
+    if (index === -1) return null;
 
-    const updatedDocument = { ...document, ...data, updatedAt: new Date() };
-    this.documents.set(id, updatedDocument);
+    const updatedDocument = { ...this.documents[index], ...data, updatedAt: new Date() };
+    this.documents[index] = updatedDocument;
     return updatedDocument;
   }
 
   async deleteDocument(id: number): Promise<boolean> {
-    const document = this.documents.get(id);
-    if (!document) return false;
-
-    this.documents.delete(id);
-    this.recordActivity('document', 'deleted', id, document.uploadedBy);
-    return true;
+    const initialLength = this.documents.length;
+    this.documents = this.documents.filter(document => document.id !== id);
+    const doc = this.documents.find(d => d.id === id); // Need to capture the deleted doc for activity logging if it existed
+    if (doc) {
+      this.recordActivity('document', 'deleted', id, doc.uploadedBy);
+    }
+    return this.documents.length < initialLength;
   }
 
   // Document folder operations
-  async createDocumentFolder(data: Omit<Document, 'id' | 'createdAt' | 'updatedAt'>): Promise<DocumentFolder> {
-    const id = this.nextId++;
+  async createDocumentFolder(data: Omit<DocumentFolder, 'id' | 'createdAt' | 'updatedAt'>): Promise<DocumentFolder> {
+    const id = this.getNextId();
     const now = new Date();
 
     const folder: DocumentFolder = {
@@ -955,46 +968,45 @@ class MemStorage implements IStorage {
       updatedAt: now
     };
 
-    this.documentFolders.set(id, folder);
+    this.documentFolders.push(folder);
     return folder;
   }
 
   async getDocumentFolders(parentId?: number): Promise<DocumentFolder[]> {
-    return Array.from(this.documentFolders.values()).filter(folder => folder.parentId === parentId);
+    return this.documentFolders.filter(folder => folder.parentId === parentId);
   }
 
   async getDocumentFolderById(id: number): Promise<DocumentFolder | null> {
-    return this.documentFolders.get(id) || null;
+    return this.documentFolders.find(folder => folder.id === id) || null;
   }
 
   async updateDocumentFolder(id: number, data: Partial<DocumentFolder>): Promise<DocumentFolder | null> {
-    const folder = this.documentFolders.get(id);
-    if (!folder) return null;
+    const index = this.documentFolders.findIndex(folder => folder.id === id);
+    if (index === -1) return null;
 
-    const updatedFolder = { ...folder, ...data, updatedAt: new Date() };
-    this.documentFolders.set(id, updatedFolder);
+    const updatedFolder = { ...this.documentFolders[index], ...data, updatedAt: new Date() };
+    this.documentFolders[index] = updatedFolder;
     return updatedFolder;
   }
 
   async deleteDocumentFolder(id: number): Promise<boolean> {
-    const folder = this.documentFolders.get(id);
-    if (!folder) return false;
-
+    const initialLength = this.documentFolders.length;
     // Also delete all documents in this folder
-    const documentsInFolder = Array.from(this.documents.values()).filter(doc => doc.folderId === id);
-    documentsInFolder.forEach(doc => this.documents.delete(doc.id));
+    this.documents = this.documents.filter(doc => doc.folderId !== id);
 
     // Delete all subfolders
-    const subfolders = Array.from(this.documentFolders.values()).filter(f => f.parentId === id);
-    subfolders.forEach(subfolder => this.deleteDocumentFolder(subfolder.id));
+    const subfolders = this.documentFolders.filter(f => f.parentId === id);
+    for (const subfolder of subfolders) {
+      await this.deleteDocumentFolder(subfolder.id); // Recursively delete subfolders
+    }
 
-    this.documentFolders.delete(id);
-    return true;
+    this.documentFolders = this.documentFolders.filter(folder => folder.id !== id);
+    return this.documentFolders.length < initialLength;
   }
 
   // Customer operations
   async createCustomer(data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Customer> {
-    const id = this.nextId++;
+    const id = this.nextCustomerId++;
     const now = new Date();
 
     const customer: Customer = {
@@ -1004,133 +1016,137 @@ class MemStorage implements IStorage {
       updatedAt: now
     };
 
-    this.customers.set(id, customer);
+    this.customers.push(customer);
     return customer;
   }
 
-  async getCustomers(): Promise<Customer[]>{    return Array.from(this.customers.values());
+  async getCustomers(): Promise<Customer[]>{
+    return [...this.customers];
   }
 
   async getCustomerById(id: number): Promise<Customer | null> {
-    return this.customers.get(id) || null;
+    return this.customers.find(customer => customer.id === id) || null;
   }
 
   async updateCustomer(id: number, data: Partial<Customer>): Promise<Customer | null> {
-    const customer = this.customers.get(id);
-    if (!customer) return null;
+    const index = this.customers.findIndex(customer => customer.id === id);
+    if (index === -1) return null;
 
-    const updatedCustomer = { ...customer, ...data, updatedAt: new Date() };
-    this.customers.set(id, updatedCustomer);
+    const updatedCustomer = { ...this.customers[index], ...data, updatedAt: new Date() };
+    this.customers[index] = updatedCustomer;
     return updatedCustomer;
   }
 
   async deleteCustomer(id: number): Promise<boolean> {
-    return this.customers.delete(id);
+    const initialLength = this.customers.length;
+    this.customers = this.customers.filter(customer => customer.id !== id);
+    return this.customers.length < initialLength;
   }
 
   // Tag operations
   async createTag(data: Omit<Tag, 'id'>): Promise<Tag> {
-    const id = this.nextId++;
+    const id = this.getNextId();
 
     const tag: Tag = {
       ...data,
       id
     };
 
-    this.tags.set(id, tag);
+    this.tags.push(tag);
     return tag;
   }
 
   async getTags(): Promise<Tag[]> {
-    return Array.from(this.tags.values());
+    return [...this.tags];
   }
 
   async getTagById(id: number): Promise<Tag | null> {
-    return this.tags.get(id) || null;
+    return this.tags.find(tag => tag.id === id) || null;
   }
 
   async updateTag(id: number, data: Partial<Tag>): Promise<Tag | null> {
-    const tag = this.tags.get(id);
-    if (!tag) return null;
+    const index = this.tags.findIndex(tag => tag.id === id);
+    if (index === -1) return null;
 
-    const updatedTag = { ...tag, ...data };
-    this.tags.set(id, updatedTag);
+    const updatedTag = { ...this.tags[index], ...data };
+    this.tags[index] = updatedTag;
     return updatedTag;
   }
 
   async deleteTag(id: number): Promise<boolean> {
-    return this.tags.delete(id);
+    const initialLength = this.tags.length;
+    this.tags = this.tags.filter(tag => tag.id !== id);
+    return this.tags.length < initialLength;
   }
 
   // Kanban operations
   async createKanbanColumn(data: Omit<KanbanColumn, 'id'>): Promise<KanbanColumn> {
-    const id = this.nextId++;
+    const id = this.getNextId();
 
     const column: KanbanColumn = {
       ...data,
       id
     };
 
-    this.kanbanColumns.set(id, column);
+    this.kanbanColumns.push(column);
     return column;
   }
 
   async getKanbanColumns(projectId: number): Promise<KanbanColumn[]> {
-    return Array.from(this.kanbanColumns.values())
-      .filter(col => col.projectId === projectId)
+    return this.kanbanColumns.filter(col => col.projectId === projectId)
       .sort((a, b) => a.position - b.position);
   }
 
   async updateKanbanColumn(id: number, data: Partial<KanbanColumn>): Promise<KanbanColumn | null> {
-    const column = this.kanbanColumns.get(id);
-    if (!column) return null;
+    const index = this.kanbanColumns.findIndex(column => column.id === id);
+    if (index === -1) return null;
 
-    const updatedColumn = { ...column, ...data };
-    this.kanbanColumns.set(id, updatedColumn);
+    const updatedColumn = { ...this.kanbanColumns[index], ...data };
+    this.kanbanColumns[index] = updatedColumn;
     return updatedColumn;
   }
 
   async deleteKanbanColumn(id: number): Promise<boolean> {
+    const initialLength = this.kanbanColumns.length;
     // Also delete all cards in this column
-    const cardsInColumn = Array.from(this.kanbanCards.values()).filter(card => card.columnId === id);
-    cardsInColumn.forEach(card => this.kanbanCards.delete(card.id));
+    this.kanbanCards = this.kanbanCards.filter(card => card.columnId !== id);
 
-    return this.kanbanColumns.delete(id);
+    this.kanbanColumns = this.kanbanColumns.filter(column => column.id !== id);
+    return this.kanbanColumns.length < initialLength;
   }
 
   async createKanbanCard(data: Omit<KanbanCard, 'id'>): Promise<KanbanCard> {
-    const id = this.nextId++;
+    const id = this.getNextId();
 
     const card: KanbanCard = {
       ...data,
       id
     };
 
-    this.kanbanCards.set(id, card);
+    this.kanbanCards.push(card);
     return card;
   }
 
   async getKanbanCards(columnId: number): Promise<KanbanCard[]> {
-    return Array.from(this.kanbanCards.values())
-      .filter(card => card.columnId === columnId)
+    return this.kanbanCards.filter(card => card.columnId === columnId)
       .sort((a, b) => a.position - b.position);
   }
 
   async updateKanbanCard(id: number, cardData: any): Promise<any> {
-    const card = this.kanbanCards.get(id);
-    if (!card) return null;
+    const index = this.kanbanCards.findIndex(card => card.id === id);
+    if (index === -1) return null;
 
-    const updatedCard = { ...card, ...cardData };
-    this.kanbanCards.set(id, updatedCard);
+    const updatedCard = { ...this.kanbanCards[index], ...cardData };
+    this.kanbanCards[index] = updatedCard;
     return updatedCard;
   }
 
   async deleteKanbanCard(id: number): Promise<boolean> {
+    const initialLength = this.kanbanCards.length;
     // Also delete all cards in this column
-    const cardsInColumn = Array.from(this.kanbanCards.values()).filter(card => card.columnId === id);
-    cardsInColumn.forEach(card => this.kanbanCards.delete(card.id));
+    this.kanbanCards = this.kanbanCards.filter(card => card.columnId !== id);
 
-    return this.kanbanCards.delete(id);
+    return this.kanbanCards.length < initialLength;
   }
 
   // Custom marker operations
@@ -1142,25 +1158,27 @@ class MemStorage implements IStorage {
       id
     };
 
-    this.customMarkers.set(id, marker);
+    this.customMarkers.push(marker);
     return marker;
   }
 
   async getCustomMarkers(): Promise<CustomMarker[]> {
-    return Array.from(this.customMarkers.values());
+    return [...this.customMarkers];
   }
 
   async updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null> {
-    const marker = this.customMarkers.get(id);
-    if (!marker) return null;
+    const index = this.customMarkers.findIndex(marker => marker.id === id);
+    if (index === -1) return null;
 
-    const updatedMarker = { ...marker, ...data };
-    this.customMarkers.set(id, updatedMarker);
+    const updatedMarker = { ...this.customMarkers[index], ...data };
+    this.customMarkers[index] = updatedMarker;
     return updatedMarker;
   }
 
   async deleteCustomMarker(id: number): Promise<boolean> {
-    return this.customMarkers.delete(id);
+    const initialLength = this.customMarkers.length;
+    this.customMarkers = this.customMarkers.filter(marker => marker.id !== id);
+    return this.customMarkers.length < initialLength;
   }
 
   // Matrix operations
@@ -1172,80 +1190,82 @@ class MemStorage implements IStorage {
       id
     };
 
-    this.matrixCells.set(id, cell);
+    this.matrixCells.push(cell);
     return cell;
   }
 
   async getMatrixCells(): Promise<MatrixCell[]> {
-    return Array.from(this.matrixCells.values());
+    return [...this.matrixCells];
   }
 
   async updateMatrixCell(id: number, data: Partial<MatrixCell>): Promise<MatrixCell | null> {
-    const cell = this.matrixCells.get(id);
-    if (!cell) return null;
+    const index = this.matrixCells.findIndex(cell => cell.id === id);
+    if (index === -1) return null;
 
-    const updatedCell = { ...cell, ...data };
-    this.matrixCells.set(id, updatedCell);
+    const updatedCell = { ...this.matrixCells[index], ...data };
+    this.matrixCells[index] = updatedCell;
     return updatedCell;
   }
 
   async deleteMatrixCell(id: number): Promise<boolean> {
-    return this.matrixCells.delete(id);
+    const initialLength = this.matrixCells.length;
+    this.matrixCells = this.matrixCells.filter(cell => cell.id !== id);
+    return this.matrixCells.length < initialLength;
   }
 
   // Project member operations
-  async addProjectMember(data: Omit<any, 'id'>): Promise<any> {
+  async addProjectMember(data: Omit<ProjectMember, 'id'>): Promise<ProjectMember> {
     const id = this.getNextId();
 
-    const member: any = {
+    const member: ProjectMember = {
       ...data,
       id
     };
 
-    this.projectMembers.set(id, member);
+    this.projectMembers.push(member);
     return member;
   }
 
-  async getProjectMembers(projectId: number): Promise<any[]> {
-    return Array.from(this.projectMembers.values()).filter(member => member.projectId === projectId);
+  async getProjectMembers(projectId: number): Promise<ProjectMember[]> {
+    return this.projectMembers.filter(member => member.projectId === projectId);
   }
 
   // Get project memberships for a specific user
-  async getUserProjectMemberships(userId: number): Promise<any[]> {
-    return Array.from(this.projectMembers.values()).filter(member => member.userId === userId);
+  async getUserProjectMemberships(userId: number): Promise<ProjectMember[]> {
+    return this.projectMembers.filter(member => member.userId === userId);
   }
 
   async removeProjectMember(projectId: number, userId: number): Promise<boolean> {
-    const member = Array.from(this.projectMembers.values())
-      .find(m => m.projectId === projectId && m.userId === userId);
-
-    if (member) {
-      return this.projectMembers.delete(member.id);
-    }
-    return false;
+    const initialLength = this.projectMembers.length;
+    this.projectMembers = this.projectMembers.filter(m => !(m.projectId === projectId && m.userId === userId));
+    return this.projectMembers.length < initialLength;
   }
 
   // Activity operations
   async getActivities(limit = 10): Promise<any[]> {
-    return Array.from(this.activities.values())
+    return this.activities
       .sort((a, b) => (b.timestamp || b.createdAt).getTime() - (a.timestamp || a.createdAt).getTime())
       .slice(0, limit);
   }
 
   async getProjectActivities(projectId: number, limit: number = 10): Promise<any[]> {
-    return Array.from(this.activities.values())
+    return this.activities
       .filter(activity => activity.details?.projectId === projectId)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, limit);
   }
 
-  async createActivity(activity: any): Promise<any> {
-    const newActivity = {
-      id: this.getNextId(),
-      ...activity,
-      timestamp: new Date(),
+  async createActivity(activity: InsertActivity): Promise<Activity> {
+    const newActivity: Activity = {
+      id: this.nextActivityId++,
+      userId: activity.userId,
+      action: activity.action,
+      entityType: activity.entityType,
+      entityId: activity.entityId,
+      details: activity.details || null,
+      createdAt: new Date(),
     };
-    this.activities.set(newActivity.id, newActivity);
+    this.activities.push(newActivity);
     return newActivity;
   }
 
@@ -1279,7 +1299,7 @@ class MemStorage implements IStorage {
 
   // Test Sheets methods
   async getTestSheets(projectId?: number): Promise<any[]> {
-    let results = Array.from(this.testSheets.values());
+    let results = [...this.testSheets];
 
     if (projectId) {
       results = results.filter(sheet => sheet.projectId === projectId);
@@ -1290,7 +1310,7 @@ class MemStorage implements IStorage {
   }
 
   async getTestSheet(id: number): Promise<any | null> {
-    return this.testSheets.get(id) || null;
+    return this.testSheets.find(sheet => sheet.id === id) || null;
   }
 
   async createTestSheet(data: any): Promise<any> {
@@ -1304,31 +1324,33 @@ class MemStorage implements IStorage {
       updatedAt: now,
     };
 
-    this.testSheets.set(id, newSheet);
+    this.testSheets.push(newSheet);
     console.log('Created test sheet:', newSheet);
     return newSheet;
   }
 
   async updateTestSheet(id: number, data: any): Promise<any> {
-    const sheet = this.testSheets.get(id);
-    if (!sheet) return null;
+    const index = this.testSheets.findIndex(sheet => sheet.id === id);
+    if (index === -1) return null;
 
     const updatedSheet = {
-      ...sheet,
+      ...this.testSheets[index],
       ...data,
       updatedAt: new Date().toISOString()
     };
 
-    this.testSheets.set(id, updatedSheet);
+    this.testSheets[index] = updatedSheet;
     return updatedSheet;
   }
 
   async deleteTestSheet(id: number): Promise<boolean> {
-    return this.testSheets.delete(id);
+    const initialLength = this.testSheets.length;
+    this.testSheets = this.testSheets.filter(sheet => sheet.id !== id);
+    return this.testSheets.length < initialLength;
   }
 
   async duplicateTestSheet(id: number, name: string, userId: number): Promise<any> {
-    const originalSheet = this.testSheets.get(id);
+    const originalSheet = this.testSheets.find(sheet => sheet.id === id);
     if (!originalSheet) {
       throw new Error('Original sheet not found');
     }
@@ -1351,7 +1373,7 @@ class MemStorage implements IStorage {
       updatedAt: now,
     };
 
-    this.testSheets.set(newId, duplicatedSheet);
+    this.testSheets.push(duplicatedSheet);
     return duplicatedSheet;
   }
 
@@ -1393,13 +1415,14 @@ class MemStorage implements IStorage {
     passRate: number;
     testCaseStatusCounts?: any;
     bugStatusCounts?: any;
+    totalUsers?: number;
   }> {
-    const totalProjects = this.projects.size;
-    const totalTestCases = this.testCases.size;
-    const totalUsers = this.users.size;
+    const totalProjects = this.projects.length;
+    const totalTestCases = this.testCases.length;
+    const totalUsers = this.users.length;
 
     // Real-time test case status counts
-    const testCases = Array.from(this.testCases.values());
+    const testCases = [...this.testCases];
     const testCaseStatusCounts = {
       passed: testCases.filter(tc => tc.status === 'Pass').length,
       failed: testCases.filter(tc => tc.status === 'Fail').length,
@@ -1407,7 +1430,7 @@ class MemStorage implements IStorage {
       notExecuted: testCases.filter(tc => tc.status === 'Not Executed' || !tc.status).length    };
 
     // Real-time bug status counts
-    const bugs = Array.from(this.bugs.values());
+    const bugs = [...this.bugs];
     const bugStatusCounts = {
       open: bugs.filter(bug => bug.status === 'Open').length,
       inProgress: bugs.filter(bug => bug.status === 'In Progress').length,
@@ -1432,9 +1455,9 @@ class MemStorage implements IStorage {
     };
   }
 
-  // Document operations
+  // Document operations (re-declared, ensure consistency)
   async getDocuments(projectId: number, folderId?: number): Promise<Document[]> {
-    let results = Array.from(this.documents.values()).filter(doc => doc.projectId === projectId);
+    let results = this.documents.filter(doc => doc.projectId === projectId);
     if (folderId !== undefined) {
       results = results.filter(doc => doc.folderId === folderId);
     }
@@ -1442,73 +1465,77 @@ class MemStorage implements IStorage {
   }
 
   async getDocumentFolders(projectId: number): Promise<DocumentFolder[]> {
-    return Array.from(this.documentFolders.values()).filter(folder => folder.projectId === projectId);
+    return this.documentFolders.filter(folder => folder.projectId === projectId);
   }
 
   async getDocumentFolder(id: number): Promise<DocumentFolder | undefined> {
-    return this.documentFolders.get(id);
+    return this.documentFolders.find(folder => folder.id === id);
   }
 
-  async createDocumentFolder(folder: any): Promise<DocumentFolder> {
-    const newFolder = {
+  async createDocumentFolder(folder: InsertDocumentFolder): Promise<DocumentFolder> {
+    const newFolder: DocumentFolder = {
       id: this.getNextId(),
       ...folder,
       createdAt: new Date(),
     };
-    this.documentFolders.set(newFolder.id, newFolder);
+    this.documentFolders.push(newFolder);
     return newFolder;
   }
 
   async updateDocumentFolder(id: number, folderData: Partial<DocumentFolder>): Promise<DocumentFolder | undefined> {
-    const folder = this.documentFolders.get(id);
-    if (!folder) return undefined;
+    const index = this.documentFolders.findIndex(folder => folder.id === id);
+    if (index === -1) return undefined;
 
-    const updatedFolder = { ...folder, ...folderData };
-    this.documentFolders.set(newFolder.id, updatedFolder);
+    const updatedFolder = { ...this.documentFolders[index], ...folderData };
+    this.documentFolders[index] = updatedFolder;
     return updatedFolder;
   }
 
   async deleteDocumentFolder(id: number): Promise<boolean> {
-    return this.documentFolders.delete(id);
+    const initialLength = this.documentFolders.length;
+    this.documentFolders = this.documentFolders.filter(folder => folder.id !== id);
+    return this.documentFolders.length < initialLength;
   }
 
   async getDocument(id: number): Promise<Document | undefined> {
-    return this.documents.get(id);
+    return this.documents.find(document => document.id === id);
   }
 
-  async createDocument(document: any): Promise<Document> {
-    const newDocument = {
+  async createDocument(document: InsertDocument): Promise<Document> {
+    const newDocument: Document = {
       id: this.getNextId(),
       ...document,
       uploadedAt: new Date(),
     };
-    this.documents.set(newDocument.id, newDocument);
+    this.documents.push(newDocument);
     return newDocument;
   }
 
   async updateDocument(id: number, documentData: Partial<Document>): Promise<Document | undefined> {
-    const document = this.documents.get(id);
-    if (!document) return undefined;
+    const index = this.documents.findIndex(document => document.id === id);
+    if (index === -1) return undefined;
 
-    const updatedDocument = { ...document, ...documentData };
-    this.documents.set(newDocument.id, updatedDocument);
+    const updatedDocument = { ...this.documents[index], ...documentData };
+    this.documents[index] = updatedDocument;
     return updatedDocument;
   }
 
   async deleteDocument(id: number): Promise<boolean> {
-    return this.documents.delete(id);
+    const initialLength = this.documents.length;
+    this.documents = this.documents.filter(document => document.id !== id);
+    return this.documents.length < initialLength;
   }
 
   // Project operations for user access
   async getProjectsByUserId(userId: number): Promise<Project[]> {
     // Get projects created by this user
-    const createdProjects = Array.from(this.projects.values())
+    const createdProjects = this.projects
       .filter(project => project.createdById === userId);
 
     // Get projects where user is a member
-    const membershipProjects = Array.from(this.projectMembers.values())
+    const membershipProjects = this.projectMembers
       .filter(member => member.userId === userId)
-      .map(member => this.projects.get(member.projectId))
+      .map(member => this.projects.find(p => p.id === member.projectId))
       .filter(project => project !== undefined) as Project[];
 
     // Combine and remove duplicates
@@ -1536,82 +1563,87 @@ class MemStorage implements IStorage {
     return this.getModulesByProject(projectId);
   }
 
-  // Customer operations
+  // Customer operations (re-declared, ensure consistency)
   async getCustomers(): Promise<Customer[]> {
-    return Array.from(this.customers.values());
+    return [...this.customers];
   }
 
   async getCustomer(id: number): Promise<Customer | undefined> {
-    return this.customers.get(id);
+    return this.customers.find(customer => customer.id === id);
   }
 
   async getCustomersByStatus(status: string): Promise<Customer[]> {
-    return Array.from(this.customers.values()).filter(customer => customer.status === status);
+    return this.customers.filter(customer => customer.status === status);
   }
 
-  async createCustomer(customer: any): Promise<Customer> {
-    const newCustomer = {
-      id: this.getNextId(),
+  async createCustomer(customer: InsertCustomer): Promise<Customer> {
+    const newCustomer: Customer = {
+      id: this.nextCustomerId++,
       ...customer,
       createdAt: new Date(),
     };
-    this.customers.set(newCustomer.id, newCustomer);
+    this.customers.push(newCustomer);
     return newCustomer;
   }
 
   async updateCustomer(id: number, customerData: Partial<Customer>): Promise<Customer | undefined> {
-    const customer = this.customers.get(id);
-    if (!customer) return undefined;
+    const index = this.customers.findIndex(customer => customer.id === id);
+    if (index === -1) return undefined;
 
-    const updatedCustomer = { ...customer, ...customerData };
-    this.customers.set(id, updatedCustomer);
+    const updatedCustomer = { ...this.customers[index], ...customerData };
+    this.customers[index] = updatedCustomer;
     return updatedCustomer;
   }
 
   async deleteCustomer(id: number): Promise<boolean> {
-    return this.customers.delete(id);
+    const initialLength = this.customers.length;
+    this.customers = this.customers.filter(customer => customer.id !== id);
+    return this.customers.length < initialLength;
   }
 
   // Customer Projects operations
-  async getCustomerProjects(): Promise<any[]> {
-    return Array.from(this.customerProjects.values());
+  async getCustomerProjects(): Promise<CustomerProject[]> {
+    return [...this.customerProjects];
   }
 
   async getProjectsByCustomerId(customerId: number): Promise<Project[]> {
-    const customerProjectIds = Array.from(this.customerProjects.values())
+    const customerProjectIds = this.customerProjects
       .filter(cp => cp.customerId === customerId)
       .map(cp => cp.projectId);
 
-    return Array.from(this.projects.values())
+    return this.projects
       .filter(project => customerProjectIds.includes(project.id));
   }
 
   async getCustomersByProjectId(projectId: number): Promise<Customer[]> {
-    const customerIds = Array.from(this.customerProjects.values())
+    const customerIds = this.customerProjects
       .filter(cp => cp.projectId === projectId)
       .map(cp => cp.customerId);
 
-    return Array.from(this.customers.values())
+    return this.customers
       .filter(customer => customerIds.includes(customer.id));
   }
 
-  async createCustomerProject(customerProject: any): Promise<any> {
-    const newCustomerProject = {
-      id: this.getNextId(),
+  async createCustomerProject(customerProject: InsertCustomerProject): Promise<CustomerProject> {
+    const id = this.getNextId();
+    const newCustomerProject: CustomerProject = {
       ...customerProject,
+      id,
       createdAt: new Date(),
     };
-    this.customerProjects.set(newCustomerProject.id, newCustomerProject);
+    this.customerProjects.push(newCustomerProject);
     return newCustomerProject;
   }
 
   async deleteCustomerProject(id: number): Promise<boolean> {
-    return this.customerProjects.delete(id);
+    const initialLength = this.customerProjects.length;
+    this.customerProjects = this.customerProjects.filter(cp => cp.id !== id);
+    return this.customerProjects.length < initialLength;
   }
 
   // TimeSheet operations
-  async getTimeSheets(projectId?: number, userId?: number): Promise<any[]> {
-    let results = Array.from(this.timeSheets.values());
+  async getTimeSheets(projectId?: number, userId?: number): Promise<TimeSheet[]> {
+    let results = [...this.timeSheets];
 
     if (projectId && userId) {
       results = results.filter(ts => ts.projectId === projectId && ts.userId === userId);
@@ -1624,150 +1656,176 @@ class MemStorage implements IStorage {
     return results;
   }
 
-  async getUserTimeSheets(userId: number): Promise<any[]> {
-    return Array.from(this.timeSheets.values()).filter(ts => ts.userId === userId);
+  async getUserTimeSheets(userId: number): Promise<TimeSheet[]> {
+    return this.timeSheets.filter(ts => ts.userId === userId);
   }
 
-  async getProjectTimeSheets(projectId: number): Promise<any[]> {
-    return Array.from(this.timeSheets.values()).filter(ts => ts.projectId === projectId);
+  async getProjectTimeSheets(projectId: number): Promise<TimeSheet[]> {
+    return this.timeSheets.filter(ts => ts.projectId === projectId);
   }
 
-  async getTimeSheet(id: number): Promise<any | undefined> {
-    return this.timeSheets.get(id);
+  async getTimeSheet(id: number): Promise<TimeSheet | undefined> {
+    return this.timeSheets.find(ts => ts.id === id);
   }
 
-  async createTimeSheet(timeSheet: any): Promise<any> {
-    const newTimeSheet = {
-      id: this.getNextId(),
-      ...timeSheet,
+  async createTimeSheet(timeSheet: InsertTimeSheet): Promise<TimeSheet> {
+    const newTimeSheet: TimeSheet = {
+      id: this.nextTimeSheetId++,
+      userId: timeSheet.userId,
+      projectId: timeSheet.projectId,
+      customerId: timeSheet.customerId || null,
+      moduleId: timeSheet.moduleId || null,
+      testCaseId: timeSheet.testCaseId || null,
+      bugId: timeSheet.bugId || null,
+      folderId: timeSheet.folderId || null,
+      description: timeSheet.description,
+      workDate: new Date(timeSheet.workDate),
+      startTime: timeSheet.startTime,
+      endTime: timeSheet.endTime,
+      hours: timeSheet.hours,
+      status: timeSheet.status || "Pending",
+      tags: timeSheet.tags || [],
+      comments: timeSheet.comments || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this.timeSheets.set(newTimeSheet.id, newTimeSheet);
+    this.timeSheets.push(newTimeSheet);
     return newTimeSheet;
   }
 
-  async updateTimeSheet(id: number, timeSheetData: any): Promise<any | undefined> {
-    const timeSheet = this.timeSheets.get(id);
-    if (!timeSheet) return undefined;
+  async updateTimeSheet(id: number, timeSheetData: Partial<TimeSheet>): Promise<TimeSheet | undefined> {
+    const index = this.timeSheets.findIndex(ts => ts.id === id);
+    if (index === -1) return undefined;
 
-    const updatedTimeSheet = { ...timeSheet, ...timeSheetData, updatedAt: new Date() };
-    this.timeSheets.set(id, updatedTimeSheet);
+    const updatedTimeSheet = { ...this.timeSheets[index], ...timeSheetData, updatedAt: new Date() };
+    this.timeSheets[index] = updatedTimeSheet;
     return updatedTimeSheet;
   }
 
   async deleteTimeSheet(id: number): Promise<boolean> {
-    return this.timeSheets.delete(id);
+    const initialLength = this.timeSheets.length;
+    this.timeSheets = this.timeSheets.filter(ts => ts.id !== id);
+    return this.timeSheets.length < initialLength;
   }
 
-  async approveTimeSheet(id: number, approverId: number): Promise<any | undefined> {
-    const timeSheet = this.timeSheets.get(id);
-    if (!timeSheet) return undefined;
+  async approveTimeSheet(id: number, approverId: number): Promise<TimeSheet | undefined> {
+    const index = this.timeSheets.findIndex(ts => ts.id === id);
+    if (index === -1) return undefined;
 
-    const approvedTimeSheet = {
-      ...timeSheet,
+    const approvedTimeSheet: TimeSheet = {
+      ...this.timeSheets[index],
       status: "Approved",
       approvedById: approverId,
       approvalDate: new Date(),
       updatedAt: new Date()
     };
-    this.timeSheets.set(id, approvedTimeSheet);
+    this.timeSheets[index] = approvedTimeSheet;
     return approvedTimeSheet;
   }
 
-  async rejectTimeSheet(id: number, approverId: number, reason: string): Promise<any | undefined> {
-    const timeSheet = this.timeSheets.get(id);
-    if (!timeSheet) return undefined;
+  async rejectTimeSheet(id: number, approverId: number, reason: string): Promise<TimeSheet | undefined> {
+    const index = this.timeSheets.findIndex(ts => ts.id === id);
+    if (index === -1) return undefined;
 
-    const rejectedTimeSheet = {
-      ...timeSheet,
+    const rejectedTimeSheet: TimeSheet = {
+      ...this.timeSheets[index],
       status: "Rejected",
       approvedById: approverId,
       approvalDate: new Date(),
       comments: reason,
       updatedAt: new Date()
     };
-    this.timeSheets.set(id, rejectedTimeSheet);
+    this.timeSheets[index] = rejectedTimeSheet;
     return rejectedTimeSheet;
   }
 
   // TimeSheet Folder operations
-  async getTimeSheetFolders(userId: number): Promise<any[]> {
-    return Array.from(this.timeSheetFolders.values()).filter(folder => folder.userId === userId);
+  async getTimeSheetFolders(userId?: number): Promise<TimeSheetFolder[]> {
+    if (userId) {
+      return this.timeSheetFolders.filter(folder => folder.userId === userId);
+    }
+    return [...this.timeSheetFolders];
   }
 
-  async getTimeSheetFolder(id: number): Promise<any | undefined> {
-    return this.timeSheetFolders.get(id);
+  async getTimeSheetFolder(id: number): Promise<TimeSheetFolder | undefined> {
+    return this.timeSheetFolders.find(folder => folder.id === id);
   }
 
-  async createTimeSheetFolder(folder: any): Promise<any> {
-    const newFolder = {
-      id: this.getNextId(),
-      ...folder,
+  async createTimeSheetFolder(folder: InsertTimeSheetFolder): Promise<TimeSheetFolder> {
+    const newFolder: TimeSheetFolder = {
+      id: this.nextTimeSheetFolderId++,
+      name: folder.name,
+      userId: folder.userId,
+      parentId: folder.parentId || null,
+      path: folder.path,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this.timeSheetFolders.set(newFolder.id, newFolder);
+    this.timeSheetFolders.push(newFolder);
     return newFolder;
   }
 
-  async updateTimeSheetFolder(id: number, folderData: any): Promise<any | undefined> {
-    const folder = this.timeSheetFolders.get(id);
-    if (!folder) return undefined;
+  async updateTimeSheetFolder(id: number, folderData: Partial<TimeSheetFolder>): Promise<TimeSheetFolder | undefined> {
+    const index = this.timeSheetFolders.findIndex(folder => folder.id === id);
+    if (index === -1) return undefined;
 
-    const updatedFolder = { ...folder, ...folderData, updatedAt: new Date() };
-    this.timeSheetFolders.set(id, updatedFolder);
+    const updatedFolder = { ...this.timeSheetFolders[index], ...folderData, updatedAt: new Date() };
+    this.timeSheetFolders[index] = updatedFolder;
     return updatedFolder;
   }
 
   async deleteTimeSheetFolder(id: number): Promise<boolean> {
-    return this.timeSheetFolders.delete(id);
+    const initialLength = this.timeSheetFolders.length;
+    this.timeSheetFolders = this.timeSheetFolders.filter(folder => folder.id !== id);
+    return this.timeSheetFolders.length < initialLength;
   }
 
-  async getTimeSheetsByFolder(folderId: number): Promise<any[]> {
-    return Array.from(this.timeSheets.values()).filter(ts => ts.folderId === folderId);
+  async getTimeSheetsByFolder(folderId: number): Promise<TimeSheet[]> {
+    return this.timeSheets.filter(ts => ts.folderId === folderId);
   }
 
   // Sprint operations
-  async getSprints(projectId?: number): Promise<any[]> {
-    let results = Array.from(this.sprints.values());
+  async getSprints(projectId?: number): Promise<Sprint[]> {
+    let results = [...this.sprints];
     if (projectId) {
       results = results.filter(sprint => sprint.projectId === projectId);
     }
     return results;
   }
 
-  async getSprint(id: number): Promise<any | undefined> {
-    return this.sprints.get(id);
+  async getSprint(id: number): Promise<Sprint | undefined> {
+    return this.sprints.find(sprint => sprint.id === id);
   }
 
-  async createSprint(sprint: any): Promise<any> {
-    const newSprint = {
+  async createSprint(sprint: InsertSprint): Promise<Sprint> {
+    const newSprint: Sprint = {
       id: this.getNextId(),
       ...sprint,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this.sprints.set(newSprint.id, newSprint);
+    this.sprints.push(newSprint);
     return newSprint;
   }
 
-  async updateSprint(id: number, sprintData: any): Promise<any> {
-    const sprint = this.sprints.get(id);
-    if (!sprint) throw new Error("Sprint not found");
+  async updateSprint(id: number, sprintData: Partial<Sprint>): Promise<Sprint | undefined> {
+    const index = this.sprints.findIndex(sprint => sprint.id === id);
+    if (index === -1) throw new Error("Sprint not found");
 
-    const updatedSprint = { ...sprint, ...sprintData, updatedAt: new Date() };
-    this.sprints.set(id, updatedSprint);
+    const updatedSprint = { ...this.sprints[index], ...sprintData, updatedAt: new Date() };
+    this.sprints[index] = updatedSprint;
     return updatedSprint;
   }
 
   async deleteSprint(id: number): Promise<boolean> {
-    return this.sprints.delete(id);
+    const initialLength = this.sprints.length;
+    this.sprints = this.sprints.filter(sprint => sprint.id !== id);
+    return this.sprints.length < initialLength;
   }
 
-  // Kanban operations
-  async getKanbanColumns(projectId?: number, sprintId?: number): Promise<any[]> {
-    let results = Array.from(this.kanbanColumns.values());
+  // Kanban operations (re-declared, ensure consistency)
+  async getKanbanColumns(projectId?: number, sprintId?: number): Promise<KanbanColumn[]> {
+    let results = [...this.kanbanColumns];
 
     if (projectId && sprintId) {
       results = results.filter(col => col.projectId === projectId && col.sprintId === sprintId);
@@ -1780,36 +1838,38 @@ class MemStorage implements IStorage {
     return results.sort((a, b) => a.order - b.order);
   }
 
-  async getKanbanColumn(id: number): Promise<any | undefined> {
-    return this.kanbanColumns.get(id);
+  async getKanbanColumn(id: number): Promise<KanbanColumn | undefined> {
+    return this.kanbanColumns.find(column => column.id === id);
   }
 
-  async createKanbanColumn(column: any): Promise<any> {
-    const newColumn = {
+  async createKanbanColumn(column: InsertKanbanColumn): Promise<KanbanColumn> {
+    const newColumn: KanbanColumn = {
       id: this.getNextId(),
       ...column,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this.kanbanColumns.set(newColumn.id, newColumn);
+    this.kanbanColumns.push(newColumn);
     return newColumn;
   }
 
-  async updateKanbanColumn(id: number, columnData: any): Promise<any> {
-    const column = this.kanbanColumns.get(id);
-    if (!column) throw new Error("Column not found");
+  async updateKanbanColumn(id: number, columnData: Partial<KanbanColumn>): Promise<KanbanColumn | undefined> {
+    const index = this.kanbanColumns.findIndex(column => column.id === id);
+    if (index === -1) throw new Error("Column not found");
 
-    const updatedColumn = { ...column, ...columnData, updatedAt: new Date() };
-    this.kanbanColumns.set(id, updatedColumn);
+    const updatedColumn = { ...this.kanbanColumns[index], ...columnData, updatedAt: new Date() };
+    this.kanbanColumns[index] = updatedColumn;
     return updatedColumn;
   }
 
   async deleteKanbanColumn(id: number): Promise<boolean> {
-    return this.kanbanColumns.delete(id);
+    const initialLength = this.kanbanColumns.length;
+    this.kanbanColumns = this.kanbanColumns.filter(column => column.id !== id);
+    return this.kanbanColumns.length < initialLength;
   }
 
-  async getKanbanCards(columnId?: number, sprintId?: number, projectId?: number): Promise<any[]> {
-    let results = Array.from(this.kanbanCards.values());
+  async getKanbanCards(columnId?: number, sprintId?: number, projectId?: number): Promise<KanbanCard[]> {
+    let results = [...this.kanbanCards];
 
     if (columnId !== undefined) {
       results = results.filter(card => card.columnId === columnId);
@@ -1824,77 +1884,88 @@ class MemStorage implements IStorage {
     return results.sort((a, b) => a.order - b.order);
   }
 
-  async getKanbanSubCards(parentId: number): Promise<any[]> {
-    return Array.from(this.kanbanCards.values())
+  async getKanbanSubCards(parentId: number): Promise<KanbanCard[]> {
+    return this.kanbanCards
       .filter(card => card.parentId === parentId)
       .sort((a, b) => a.order - b.order);
   }
 
-  async getKanbanCard(id: number): Promise<any | undefined> {
-    return this.kanbanCards.get(id);
+  async getKanbanCard(id: number): Promise<KanbanCard | undefined> {
+    return this.kanbanCards.find(card => card.id === id);
   }
 
-  async createKanbanCard(card: any): Promise<any> {
-    const newCard = {
+  async createKanbanCard(card: InsertKanbanCard): Promise<KanbanCard> {
+    const newCard: KanbanCard = {
       id: this.getNextId(),
       ...card,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this.kanbanCards.set(newCard.id, newCard);
+    this.kanbanCards.push(newCard);
     return newCard;
   }
 
-  async updateKanbanCard(id: number, cardData: any): Promise<any> {
-    const card = this.kanbanCards.get(id);
-    if (!card) throw new Error("Card not found");
+  async updateKanbanCard(id: number, cardData: Partial<KanbanCard>): Promise<KanbanCard | undefined> {
+    const index = this.kanbanCards.findIndex(card => card.id === id);
+    if (index === -1) throw new Error("Card not found");
 
-    const updatedCard = { ...card, ...cardData, updatedAt: new Date() };
-    this.kanbanCards.set(id, updatedCard);
+    const updatedCard = { ...this.kanbanCards[index], ...cardData, updatedAt: new Date() };
+    this.kanbanCards[index] = updatedCard;
     return updatedCard;
   }
 
   async deleteKanbanCard(id: number): Promise<boolean> {
-    return this.kanbanCards.delete(id);
+    const initialLength = this.kanbanCards.length;
+    this.kanbanCards = this.kanbanCards.filter(card => card.id !== id);
+    return this.kanbanCards.length < initialLength;
   }
 
 // Matrix operations
   async upsertMatrixCell(cell: any): Promise<any> {
     const key = `${cell.rowModuleId}-${cell.colModuleId}-${cell.projectId}`;
-    const existingCell = this.matrixCells.get(key);
+    const existingCellIndex = this.matrixCells.findIndex(c => c.rowModuleId === cell.rowModuleId && c.colModuleId === cell.colModuleId && c.projectId === cell.projectId);
 
-    if (existingCell) {
-      const updatedCell = {
-        ...existingCell,
+    if (existingCellIndex !== -1) {
+      const updatedCell: MatrixCell = {
+        ...this.matrixCells[existingCellIndex],
         ...cell,
         updatedAt: new Date().toISOString()
       };
-      this.matrixCells.set(key, updatedCell);
+      this.matrixCells[existingCellIndex] = updatedCell;
       return updatedCell;
     } else {
-      const newCell = {
-        id: this.getNextId(),
+      const id = this.getNextId().toString();
+      const newCell: MatrixCell = {
+        id,
         ...cell,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      this.matrixCells.set(key, newCell);
+      this.matrixCells.push(newCell);
       return newCell;
     }
   }
 
-  async getMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<any | undefined> {
-    const key = `${rowModuleId}-${colModuleId}-${projectId}`;
-    return this.matrixCells.get(key);
+  async getMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<MatrixCell | undefined> {
+    return this.matrixCells.find(cell =>
+      cell.rowModuleId === rowModuleId &&
+      cell.colModuleId === colModuleId &&
+      cell.projectId === projectId
+    );
   }
 
   async deleteMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<boolean> {
-    const key = `${rowModuleId}-${colModuleId}-${projectId}`;
-    return this.matrixCells.delete(key);
+    const initialLength = this.matrixCells.length;
+    this.matrixCells = this.matrixCells.filter(cell =>
+      !(cell.rowModuleId === rowModuleId &&
+        cell.colModuleId === colModuleId &&
+        cell.projectId === projectId)
+    );
+    return this.matrixCells.length < initialLength;
   }
 
   // Custom marker operations with proper ID handling
-  async createCustomMarker(data: any): Promise<CustomMarker> {
+  async createCustomMarker(data: InsertCustomMarker): Promise<CustomMarker> {
     const id = this.getNextId();
 
     const marker: CustomMarker = {
@@ -1902,91 +1973,90 @@ class MemStorage implements IStorage {
       id
     };
 
-    this.customMarkers.set(id, marker);
+    this.customMarkers.push(marker);
     return marker;
   }
 
   async getCustomMarkers(): Promise<CustomMarker[]> {
-    return Array.from(this.customMarkers.values());
+    return [...this.customMarkers];
   }
 
   async getCustomMarkersByProject(projectId: number): Promise<CustomMarker[]> {
-    return Array.from(this.customMarkers.values()).filter(marker => marker.projectId === projectId);
+    return this.customMarkers.filter(marker => marker.projectId === projectId);
   }
 
   async updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null> {
-    const marker = this.customMarkers.get(id);
-    if (!marker) return null;
+    const index = this.customMarkers.findIndex(marker => marker.id === id);
+    if (index === -1) return null;
 
     const updatedMarker = {
-      ...marker,
+      ...this.customMarkers[index],
       ...data
     };
-    this.customMarkers.set(id, updatedMarker);
+    this.customMarkers[index] = updatedMarker;
     return updatedMarker;
   }
 
   async deleteCustomMarker(id: number): Promise<boolean> {
-    return this.customMarkers.delete(id);
+    const initialLength = this.customMarkers.length;
+    this.customMarkers = this.customMarkers.filter(marker => marker.id !== id);
+    return this.customMarkers.length < initialLength;
   }
 
   // Matrix cell operations with proper storage
-  async createMatrixCell(data: any): Promise<MatrixCell> {
+  async createMatrixCell(data: InsertMatrixCell): Promise<MatrixCell> {
     const key = `${data.rowModuleId}-${data.colModuleId}-${data.projectId}`;
 
     // Check if cell already exists, if so update it
-    const existingCell = this.matrixCells.get(key);
+    const existingCellIndex = this.matrixCells.findIndex(cell => cell.rowModuleId === data.rowModuleId && cell.colModuleId === data.colModuleId && cell.projectId === data.projectId);
 
-    if (existingCell) {
+    if (existingCellIndex !== -1) {
       const updatedCell: MatrixCell = {
-        ...existingCell,
+        ...this.matrixCells[existingCellIndex],
         ...data,
         updatedAt: new Date().toISOString()
       };
-      this.matrixCells.set(key, updatedCell);
+      this.matrixCells[existingCellIndex] = updatedCell;
       console.log(`Storage: Updated matrix cell ${key} with value ${data.value}`);
       return updatedCell;
     } else {
-      const id = this.getNextId();
+      const id = this.getNextId().toString();
       const cell: MatrixCell = {
         ...data,
-        id: id.toString(),
+        id: id,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      this.matrixCells.set(key, cell);
+      this.matrixCells.push(cell);
       console.log(`Storage: Created matrix cell ${key} with value ${data.value}`);
       return cell;
     }
   }
 
   async getMatrixCells(): Promise<MatrixCell[]> {
-    return Array.from(this.matrixCells.values());
+    return [...this.matrixCells];
   }
 
   async getMatrixCellsByProject(projectId: number): Promise<MatrixCell[]> {
-    return Array.from(this.matrixCells.values()).filter(cell => cell.projectId === projectId);
+    return this.matrixCells.filter(cell => cell.projectId === projectId);
   }
 
   async updateMatrixCell(id: number, data: Partial<MatrixCell>): Promise<MatrixCell | null> {
-    // Find cell by ID across all keys
-    for (const [key, cell] of this.matrixCells.entries()) {
-      if (cell.id === id.toString()) {
-        const updatedCell = {
-          ...cell,
-          ...data,
-          updatedAt: new Date().toISOString()
-        };
-        this.matrixCells.set(key, updatedCell);
-        return updatedCell;
-      }
-    }
-    return null;
+    const index = this.matrixCells.findIndex(cell => cell.id === id.toString());
+    if (index === -1) return null;
+
+    const updatedCell = {
+      ...this.matrixCells[index],
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.matrixCells[index] = updatedCell;
+    return updatedCell;
   }
 
   // Additional missing methods for traceability
   async getTraceabilityMatrix(projectId: number): Promise<any> {
-    // For now, return emptymatrix data
+    // For now, return empty matrix data
     // This should be implemented to fetch actual matrix data from storage
     return {};
   }
@@ -2005,10 +2075,30 @@ class MemStorage implements IStorage {
 
       // Store in a simple map for now
       if (!this.traceabilityMatrixes) {
-        this.traceabilityMatrixes = new Map();
+        this.traceabilityMatrixes = []; // Initialize as array
       }
 
-      this.traceabilityMatrixes.set(projectId, matrixMap);
+      // Find if matrix for this project already exists
+      const existingMatrixIndex = this.traceabilityMatrixes.findIndex(m => m.projectId === projectId);
+
+      if (existingMatrixIndex !== -1) {
+        // Update existing matrix
+        this.traceabilityMatrixes[existingMatrixIndex] = {
+          ...this.traceabilityMatrixes[existingMatrixIndex],
+          matrixData: matrixMap, // Assuming matrixData holds the relationships
+          updatedAt: new Date().toISOString()
+        };
+      } else {
+        // Create new matrix entry
+        const newMatrixEntry = {
+          id: this.getNextId(),
+          projectId: projectId,
+          matrixData: matrixMap,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        this.traceabilityMatrixes.push(newMatrixEntry);
+      }
 
       console.log(`Storage: saveTraceabilityMatrix(${projectId}) saved ${matrixData.length} relationships`);
       return matrixMap;
@@ -2019,19 +2109,37 @@ class MemStorage implements IStorage {
   }
 
   async getTraceabilityMatrixById(id: number): Promise<any | undefined> {
-    return undefined; // Placeholder for now
+    return this.traceabilityMatrixes.find(m => m.id === id);
   }
 
   async createTraceabilityMatrix(matrix: any): Promise<any> {
-    return matrix; // Placeholder for now
+    const newMatrix = {
+      id: this.getNextId(),
+      ...matrix,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.traceabilityMatrixes.push(newMatrix);
+    return newMatrix;
   }
 
   async updateTraceabilityMatrix(id: number, matrix: any): Promise<any> {
-    return matrix; // Placeholder for now
+    const index = this.traceabilityMatrixes.findIndex(m => m.id === id);
+    if (index === -1) return null;
+
+    const updatedMatrix = {
+      ...this.traceabilityMatrixes[index],
+      ...matrix,
+      updatedAt: new Date().toISOString()
+    };
+    this.traceabilityMatrixes[index] = updatedMatrix;
+    return updatedMatrix;
   }
 
   async deleteTraceabilityMatrix(id: number): Promise<boolean> {
-    return true; // Placeholder for now
+    const initialLength = this.traceabilityMatrixes.length;
+    this.traceabilityMatrixes = this.traceabilityMatrixes.filter(m => m.id !== id);
+    return this.traceabilityMatrixes.length < initialLength;
   }
 
   async getTraceabilityMarkers(projectId: number): Promise<any[]> {
@@ -2068,20 +2176,20 @@ class MemStorage implements IStorage {
 
   // Helper method to record activities
   private recordActivity(entityType: string, action: string, entityId: number, userId: number) {
-    const activity = {
-      id: this.getNextId(),
+    const activity: Activity = {
+      id: this.nextActivityId++,
       entityType,
       action,
       entityId,
       userId,
-      timestamp: new Date(),
       details: {
         entityType,
         action,
         entityId
-      }
+      },
+      createdAt: new Date(),
     };
-    this.activities.set(activity.id, activity);
+    this.activities.push(activity);
   }
 
   // Initialize with default data
@@ -2092,7 +2200,7 @@ class MemStorage implements IStorage {
 
   private initializeDefaultData() {
     // Add default admin user only
-    const defaultAdmin = {
+    const defaultAdmin: User = {
       id: 1,
       firstName: "Admin",
       lastName: "User",
@@ -2104,17 +2212,28 @@ class MemStorage implements IStorage {
       createdAt: new Date(),
     };
 
-    this.users.set(1, defaultAdmin);
+    this.users.push(defaultAdmin);
 
     // Set counters to start fresh
-    this.nextId = 2;
+    this.nextUserId = 2;
+    this.nextProjectId = 1;
+    this.nextModuleId = 1;
+    this.nextTestCaseId = 1;
+    this.nextBugId = 1;
+    this.nextActivityId = 1;
+    this.nextDocumentFolderId = 1;
+    this.nextDocumentId = 1;
+    this.nextTimeSheetId = 1;
+    this.nextTimeSheetFolderId = 1;
+    this.nextCustomerId = 1;
+
 
     console.log("✅ Initialized clean storage with admin user only:", {
-      users: this.users.size,
-      projects: this.projects.size,
-      modules: this.modules.size,
-      testCases: this.testCases.size,
-      bugs: this.bugs.size
+      users: this.users.length,
+      projects: this.projects.length,
+      modules: this.modules.length,
+      testCases: this.testCases.length,
+      bugs: this.bugs.length
     });
   }
 
@@ -2130,11 +2249,11 @@ class MemStorage implements IStorage {
 
   // Todo Management Implementation
   async getTodos(userId: number): Promise<any[]> {
-    return Array.from(this.todosMap.values()).filter(todo => todo.userId === userId);
+    return this.todosMap.values();
   }
 
   async getTodosByUserId(userId: number): Promise<any[]> {
-    return Array.from(this.todosMap.values()).filter(todo => todo.userId === userId);
+    return this.todosMap.values();
   }
 
   async getTodo(id: number): Promise<any | undefined> {
@@ -2240,11 +2359,11 @@ class MemStorage implements IStorage {
 
   // Employee Management Implementation
   async getEmployees(): Promise<any[]> {
-    return Array.from(this.employees.values());
+    return [...this.employees];
   }
 
   async getEmployee(id: number): Promise<any | undefined> {
-    return this.employees.get(id);
+    return this.employees.find(employee => employee.id === id);
   }
 
   async createEmployee(data: any): Promise<any> {
@@ -2253,7 +2372,7 @@ class MemStorage implements IStorage {
     // Auto-generate employee ID if not provided
     let employeeId = data.employeeId;
     if (!employeeId || employeeId.trim() === '') {
-      const existingEmployees = Array.from(this.employees.values());
+      const existingEmployees = [...this.employees];
       const existingNumbers = existingEmployees
         .map(emp => emp.employeeId)
         .filter(id => id && id.match(/^EMP-(\d+)$/))
@@ -2272,30 +2391,32 @@ class MemStorage implements IStorage {
       updatedAt: new Date().toISOString()
     };
 
-    this.employees.set(id, employee);
+    this.employees.push(employee);
     return employee;
   }
 
   async updateEmployee(id: number, data: any): Promise<any | null> {
-    const employee = this.employees.get(id);
-    if (!employee) return null;
+    const index = this.employees.findIndex(employee => employee.id === id);
+    if (index === -1) return null;
 
     const updatedEmployee = {
-      ...employee,
+      ...this.employees[index],
       ...data,
       updatedAt: new Date().toISOString()
     };
-    this.employees.set(id, updatedEmployee);
+    this.employees[index] = updatedEmployee;
     return updatedEmployee;
   }
 
   async deleteEmployee(id: number): Promise<boolean> {
-    return this.employees.delete(id);
+    const initialLength = this.employees.length;
+    this.employees = this.employees.filter(employee => employee.id !== id);
+    return this.employees.length < initialLength;
   }
 
   // Employee Project Mapping
   async getEmployeeProjects(employeeId?: number): Promise<any[]> {
-    let results = Array.from(this.employeeProjects.values());
+    let results = [...this.employeeProjects];
     if (employeeId) {
       results = results.filter(ep => ep.employeeId === employeeId);
     }
@@ -2310,36 +2431,28 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    this.employeeProjects.set(id, employeeProject);
+    this.employeeProjects.push(employeeProject);
     return employeeProject;
   }
 
   async deleteEmployeeProject(id: number): Promise<boolean> {
-    try {
-      const index = this.employeeProjects.findIndex(ep => ep.id === id);
-      if (index !== -1) {
-        this.employeeProjects.delete(id); // Use delete for Maps
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error deleting employee project:', error);
-      throw error;
-    }
+    const initialLength = this.employeeProjects.length;
+    this.employeeProjects = this.employeeProjects.filter(ep => ep.id !== id);
+    return this.employeeProjects.length < initialLength;
   }
 
   async updateEmployeeProject(id: number, data: Partial<any>): Promise<any> {
-    const employeeProject = this.employeeProjects.get(id);
-    if (!employeeProject) {
+    const index = this.employeeProjects.findIndex(ep => ep.id === id);
+    if (index === -1) {
       console.error(`Employee project with ID ${id} not found.`);
       return null;
     }
     const updatedEmployeeProject = {
-      ...employeeProject,
+      ...this.employeeProjects[index],
       ...data,
       updatedAt: new Date().toISOString()
     };
-    this.employeeProjects.set(id, updatedEmployeeProject);
+    this.employeeProjects[index] = updatedEmployeeProject;
     return updatedEmployeeProject;
   }
 
@@ -2354,7 +2467,7 @@ class MemStorage implements IStorage {
     const historyRecords = this.employeeProjectHistory.filter(hr => hr.employeeId === employeeId);
 
     // Get current employee projects for this specific employee
-    const employeeProjects = Array.from(this.employeeProjects.values())
+    const employeeProjects = this.employeeProjects
       .filter(ep => ep.employeeId === employeeId);
 
     // Combine history records with current projects
@@ -2372,10 +2485,10 @@ class MemStorage implements IStorage {
       let projectName = 'Unknown Project';
 
       if (ep.projectType === 'navadhiti') {
-        const navadhitiProject = this.navadhitiProjects.get(ep.projectId);
+        const navadhitiProject = this.navadhitiProjects.find(p => p.id === ep.projectId);
         projectName = navadhitiProject?.projectName || navadhitiProject?.name || 'Unknown Navadhiti Project';
       } else {
-        const regularProject = this.projects.get(ep.projectId);
+        const regularProject = this.projects.find(p => p.id === ep.projectId);
         projectName = regularProject?.name || 'Unknown Regular Project';
       }
 
@@ -2409,7 +2522,7 @@ class MemStorage implements IStorage {
     const historyRecords = [...this.employeeProjectHistory];
 
     // Get all active employee projects and add them as history entries
-    const allEmployeeProjects = Array.from(this.employeeProjects.values());
+    const allEmployeeProjects = [...this.employeeProjects];
 
     // Combine history records with active projects
     const combinedHistory = [
@@ -2426,10 +2539,10 @@ class MemStorage implements IStorage {
       let projectName = 'Unknown Project';
 
       if (ep.projectType === 'navadhiti') {
-        const navadhitiProject = this.navadhitiProjects.get(ep.projectId);
+        const navadhitiProject = this.navadhitiProjects.find(p => p.id === ep.projectId);
         projectName = navadhitiProject?.projectName || navadhitiProject?.name || 'Unknown Navadhiti Project';
       } else {
-        const regularProject = this.projects.get(ep.projectId);
+        const regularProject = this.projects.find(p => p.id === ep.projectId);
         projectName = regularProject?.name || 'Unknown Regular Project';
       }
 
@@ -2455,7 +2568,7 @@ class MemStorage implements IStorage {
   // Add getEmployeeProjectAllocation method for extension functionality
   async getEmployeeProjectAllocation(allocationId: number): Promise<any | null> {
     try {
-      const allocation = this.employeeProjects.get(allocationId);
+      const allocation = this.employeeProjects.find(ep => ep.id === allocationId);
       return allocation || null;
     } catch (error) {
       console.error('Error getting employee project allocation:', error);
@@ -2487,7 +2600,7 @@ class MemStorage implements IStorage {
 
   // Technology Options
   async getTechnologyOptions(): Promise<any[]> {
-    return Array.from(this.technologyOptions.values());
+    return [...this.technologyOptions];
   }
 
   async createTechnologyOption(data: any): Promise<any> {
@@ -2497,13 +2610,13 @@ class MemStorage implements IStorage {
       ...data,
       createdAt: new Date().toISOString()
     };
-    this.technologyOptions.set(id, tech);
+    this.technologyOptions.push(tech);
     return tech;
   }
 
   // Department Options
   async getDepartmentOptions(): Promise<any[]> {
-    return Array.from(this.departmentOptions.values());
+    return [...this.departmentOptions];
   }
 
   async createDepartmentOption(data: any): Promise<any> {
@@ -2513,17 +2626,17 @@ class MemStorage implements IStorage {
       ...data,
       createdAt: new Date().toISOString()
     };
-    this.departmentOptions.set(id, dept);
+    this.departmentOptions.push(dept);
     return dept;
   }
 
   // Navadhiti Projects implementation
   async getNavadhitiProjects(): Promise<any[]> {
-    return Array.from(this.navadhitiProjects.values());
+    return [...this.navadhitiProjects];
   }
 
   async getNavadhitiProject(id: number): Promise<any | undefined> {
-    return this.navadhitiProjects.get(id);
+    return this.navadhitiProjects.find(project => project.id === id);
   }
 
   async createNavadhitiProject(data: any): Promise<any> {
@@ -2539,18 +2652,18 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    this.navadhitiProjects.set(id, project);
+    this.navadhitiProjects.push(project);
     return project;
   }
 
   async updateNavadhitiProject(id: number, data: any): Promise<any | null> {
-    const project = this.navadhitiProjects.get(id);
-    if (!project) {
+    const index = this.navadhitiProjects.findIndex(project => project.id === id);
+    if (index === -1) {
       return null;
     }
 
     const updatedProject = {
-      ...project,
+      ...this.navadhitiProjects[index],
       ...data,
       updatedAt: new Date().toISOString()
     };
@@ -2581,13 +2694,15 @@ class MemStorage implements IStorage {
       updatedProject.projectLead = data.projectLead;
     }
 
-    this.navadhitiProjects.set(id, updatedProject);
+    this.navadhitiProjects[index] = updatedProject;
     console.log(`Updated Navadhiti project ${id}:`, updatedProject);
     return updatedProject;
   }
 
   async deleteNavadhitiProject(id: number): Promise<boolean> {
-    return this.navadhitiProjects.delete(id);
+    const initialLength = this.navadhitiProjects.length;
+    this.navadhitiProjects = this.navadhitiProjects.filter(project => project.id !== id);
+    return this.navadhitiProjects.length < initialLength;
   }
 
   // Status Review methods
@@ -2617,8 +2732,9 @@ class MemStorage implements IStorage {
 
     // Also update the project with the status review data
     if (data.projectId) {
-      const project = this.navadhitiProjects.get(data.projectId);
-      if (project) {
+      const projectIndex = this.navadhitiProjects.findIndex(p => p.id === data.projectId);
+      if (projectIndex !== -1) {
+        const project = this.navadhitiProjects[projectIndex];
         const updatedProject = {
           ...project,
           // Update project lead if provided
@@ -2637,7 +2753,7 @@ class MemStorage implements IStorage {
           notes: data.notes,
           updatedAt: new Date().toISOString()
         };
-        this.navadhitiProjects.set(data.projectId, updatedProject);
+        this.navadhitiProjects[projectIndex] = updatedProject;
         console.log(`Updated project ${data.projectId} with status review data:`, updatedProject);
       }
     }
@@ -2657,7 +2773,7 @@ class MemStorage implements IStorage {
         bugComments: this.bugComments,
         testSheets: this.testSheets,
         chats: this.chats,
-        timesheets: this.timesheets,
+        timesheets: this.timeSheets,
         documents: this.documents,
         documentFolders: this.documentFolders,
         notebooks: this.notebooks,
@@ -2674,10 +2790,11 @@ class MemStorage implements IStorage {
   // Add extend employee project duration route for history management
   async extendEmployeeProject(allocationId: number, newEndDate: string, extensionDays?: number): Promise<any> {
     try {
-      const allocation = this.employeeProjects.get(allocationId);
-      if (!allocation) {
+      const allocationIndex = this.employeeProjects.findIndex(ep => ep.id === allocationId);
+      if (allocationIndex === -1) {
         throw new Error('Project allocation not found');
       }
+      const allocation = this.employeeProjects[allocationIndex];
 
       const previousEndDate = allocation.endDate;
 
@@ -2703,7 +2820,7 @@ class MemStorage implements IStorage {
         updatedAt: new Date().toISOString()
       };
 
-      // Initialize history array if needed
+      // Add to history
       if (!this.employeeProjectHistory) {
         this.employeeProjectHistory = [];
       }
@@ -2720,7 +2837,7 @@ class MemStorage implements IStorage {
         updatedAt: new Date().toISOString()
       };
 
-      this.employeeProjects.set(allocationId, updatedAllocation);
+      this.employeeProjects[allocationIndex] = updatedAllocation;
       console.log('Updated allocation with new end date:', updatedAllocation);
 
       return {
@@ -2737,11 +2854,11 @@ class MemStorage implements IStorage {
 
   // Request Forms Module Methods Implementations
   async getRequestFormTypes(): Promise<any[]> {
-    return Array.from(this.requestFormTypes.values());
+    return [...this.requestFormTypes];
   }
 
   async getRequestFormType(id: number): Promise<any | undefined> {
-    return this.requestFormTypes.get(id);
+    return this.requestFormTypes.find(formType => formType.id === id);
   }
 
   async createRequestFormType(data: any): Promise<any> {
@@ -2752,33 +2869,35 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    this.requestFormTypes.set(id, formType);
+    this.requestFormTypes.push(formType);
     return formType;
   }
 
   async updateRequestFormType(id: number, data: any): Promise<any | null> {
-    const formType = this.requestFormTypes.get(id);
-    if (!formType) return null;
+    const index = this.requestFormTypes.findIndex(formType => formType.id === id);
+    if (index === -1) return null;
 
     const updatedFormType = {
-      ...formType,
+      ...this.requestFormTypes[index],
       ...data,
       updatedAt: new Date().toISOString()
     };
-    this.requestFormTypes.set(id, updatedFormType);
+    this.requestFormTypes[index] = updatedFormType;
     return updatedFormType;
   }
 
   async deleteRequestFormType(id: number): Promise<boolean> {
-    return this.requestFormTypes.delete(id);
+    const initialLength = this.requestFormTypes.length;
+    this.requestFormTypes = this.requestFormTypes.filter(formType => formType.id !== id);
+    return this.requestFormTypes.length < initialLength;
   }
 
   async getOptionsByFormType(formTypeId: number): Promise<any[]> {
-    return Array.from(this.requestFormOptions.values()).filter(option => option.formTypeId === formTypeId);
+    return this.requestFormOptions.filter(option => option.formTypeId === formTypeId);
   }
 
   async getOption(id: number): Promise<any | undefined> {
-    return this.requestFormOptions.get(id);
+    return this.requestFormOptions.find(option => option.id === id);
   }
 
   async createOption(data: any): Promise<any> {
@@ -2789,33 +2908,35 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    this.requestFormOptions.set(id, option);
+    this.requestFormOptions.push(option);
     return option;
   }
 
   async updateOption(id: number, data: any): Promise<any | null> {
-    const option = this.requestFormOptions.get(id);
-    if (!option) return null;
+    const index = this.requestFormOptions.findIndex(option => option.id === id);
+    if (index === -1) return null;
 
     const updatedOption = {
-      ...option,
+      ...this.requestFormOptions[index],
       ...data,
       updatedAt: new Date().toISOString()
     };
-    this.requestFormOptions.set(id, updatedOption);
+    this.requestFormOptions[index] = updatedOption;
     return updatedOption;
   }
 
   async deleteOption(id: number): Promise<boolean> {
-    return this.requestFormOptions.delete(id);
+    const initialLength = this.requestFormOptions.length;
+    this.requestFormOptions = this.requestFormOptions.filter(option => option.id !== id);
+    return this.requestFormOptions.length < initialLength;
   }
 
   async getResourceRequests(): Promise<any[]> {
-    return Array.from(this.resourceRequests.values());
+    return [...this.resourceRequests];
   }
 
   async getResourceRequest(id: number): Promise<any | undefined> {
-    return this.resourceRequests.get(id);
+    return this.resourceRequests.find(request => request.id === id);
   }
 
   async createResourceRequest(request: any): Promise<any> {
@@ -2836,33 +2957,35 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    this.resourceRequests.set(id, newRequest);
+    this.resourceRequests.push(newRequest);
     return newRequest;
   }
 
   async updateResourceRequest(id: number, data: any): Promise<any | null> {
-    const request = this.resourceRequests.get(id);
-    if (!request) return null;
+    const index = this.resourceRequests.findIndex(request => request.id === id);
+    if (index === -1) return null;
 
     const updatedRequest = {
-      ...request,
+      ...this.resourceRequests[index],
       ...data,
       updatedAt: new Date().toISOString()
     };
-    this.resourceRequests.set(id, updatedRequest);
+    this.resourceRequests[index] = updatedRequest;
     return updatedRequest;
   }
 
   async deleteResourceRequest(id: number): Promise<boolean> {
-    return this.resourceRequests.delete(id);
+    const initialLength = this.resourceRequests.length;
+    this.resourceRequests = this.resourceRequests.filter(request => request.id !== id);
+    return this.resourceRequests.length < initialLength;
   }
 
   async getResourceRequestExtensions(): Promise<any[]> {
-    return Array.from(this.requestExtensions.values());
+    return [...this.requestExtensions];
   }
 
   async getResourceRequestExtension(id: number): Promise<any | undefined> {
-    return this.requestExtensions.get(id);
+    return this.requestExtensions.find(extension => extension.id === id);
   }
 
   async createResourceRequestExtension(data: any): Promise<any> {
@@ -2873,33 +2996,35 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    this.requestExtensions.set(id, extension);
+    this.requestExtensions.push(extension);
     return extension;
   }
 
   async updateResourceRequestExtension(id: number, data: any): Promise<any | null> {
-    const extension = this.requestExtensions.get(id);
-    if (!extension) return null;
+    const index = this.requestExtensions.findIndex(extension => extension.id === id);
+    if (index === -1) return null;
 
     const updatedExtension = {
-      ...extension,
+      ...this.requestExtensions[index],
       ...data,
       updatedAt: new Date().toISOString()
     };
-    this.requestExtensions.set(id, updatedExtension);
+    this.requestExtensions[index] = updatedExtension;
     return updatedExtension;
   }
 
   async deleteResourceRequestExtension(id: number): Promise<boolean> {
-    return this.requestExtensions.delete(id);
+    const initialLength = this.requestExtensions.length;
+    this.requestExtensions = this.requestExtensions.filter(extension => extension.id !== id);
+    return this.requestExtensions.length < initialLength;
   }
 
   async getRequestComments(requestId: number): Promise<any[]> {
-    return Array.from(this.requestComments.values()).filter(comment => comment.requestId === requestId);
+    return this.requestComments.filter(comment => comment.requestId === requestId);
   }
 
   async getRequestComment(id: number): Promise<any | undefined> {
-    return this.requestComments.get(id);
+    return this.requestComments.find(comment => comment.id === id);
   }
 
   async createRequestComment(data: any): Promise<any> {
@@ -2910,25 +3035,27 @@ class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    this.requestComments.set(id, comment);
+    this.requestComments.push(comment);
     return comment;
   }
 
   async updateRequestComment(id: number, data: any): Promise<any | null> {
-    const comment = this.requestComments.get(id);
-    if (!comment) return null;
+    const index = this.requestComments.findIndex(comment => comment.id === id);
+    if (index === -1) return null;
 
     const updatedComment = {
-      ...comment,
+      ...this.requestComments[index],
       ...data,
       updatedAt: new Date().toISOString()
     };
-    this.requestComments.set(id, updatedComment);
+    this.requestComments[index] = updatedComment;
     return updatedComment;
   }
 
   async deleteRequestComment(id: number): Promise<boolean> {
-    return this.requestComments.delete(id);
+    const initialLength = this.requestComments.length;
+    this.requestComments = this.requestComments.filter(comment => comment.id !== id);
+    return this.requestComments.length < initialLength;
   }
 
   // Notification methods

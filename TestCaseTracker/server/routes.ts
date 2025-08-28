@@ -3386,6 +3386,128 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
     }
   });
 
+  // TimeSheet API endpoints
+  apiRouter.get("/timesheets", isAuthenticated, async (req, res) => {
+    try {
+      const timesheets = await storage.getTimeSheets(req.session.userId!);
+      res.json(timesheets);
+    } catch (error) {
+      console.error("Get timesheets error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/timesheets", isAuthenticated, async (req, res) => {
+    try {
+      const timesheetData = insertTimeSheetSchema.parse({
+        ...req.body,
+        userId: req.session.userId,
+      });
+
+      const timesheet = await storage.createTimeSheet(timesheetData);
+      res.status(201).json(timesheet);
+    } catch (error) {
+      console.error("Create timesheet error:", error);
+      res.status(400).json({ message: "Invalid timesheet data" });
+    }
+  });
+
+  apiRouter.put("/timesheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const timesheetId = parseInt(req.params.id);
+      const updatedTimesheet = await storage.updateTimeSheet(timesheetId, req.body);
+      res.json(updatedTimesheet);
+    } catch (error) {
+      console.error("Update timesheet error:", error);
+      res.status(400).json({ message: "Invalid timesheet data" });
+    }
+  });
+
+  apiRouter.delete("/timesheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const timesheetId = parseInt(req.params.id);
+      const success = await storage.deleteTimeSheet(timesheetId);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete timesheet error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // TimeSheet Folders API endpoints
+  apiRouter.get("/timesheet-folders", isAuthenticated, async (req, res) => {
+    try {
+      const folders = await storage.getTimeSheetFolders(req.session.userId!);
+      res.json(folders);
+    } catch (error) {
+      console.error("Get timesheet folders error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/timesheet-folders", isAuthenticated, async (req, res) => {
+    try {
+      const folderData = insertTimeSheetFolderSchema.parse({
+        ...req.body,
+        userId: req.session.userId,
+      });
+
+      const folder = await storage.createTimeSheetFolder(folderData);
+      res.status(201).json(folder);
+    } catch (error) {
+      console.error("Create timesheet folder error:", error);
+      res.status(400).json({ message: "Invalid folder data" });
+    }
+  });
+
+  apiRouter.patch("/timesheet-folders/:id", isAuthenticated, async (req, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      const updatedFolder = await storage.updateTimeSheetFolder(folderId, req.body);
+      res.json(updatedFolder);
+    } catch (error) {
+      console.error("Update timesheet folder error:", error);
+      res.status(400).json({ message: "Invalid folder data" });
+    }
+  });
+
+  apiRouter.delete("/timesheet-folders/:id", isAuthenticated, async (req, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      const success = await storage.deleteTimeSheetFolder(folderId);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete timesheet folder error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Customers API endpoints
+  apiRouter.get("/customers", isAuthenticated, async (req, res) => {
+    try {
+      const customers = await storage.getCustomers();
+      res.json(customers);
+    } catch (error) {
+      console.error("Get customers error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/customers", isAuthenticated, async (req, res) => {
+    try {
+      const customerData = insertCustomerSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+
+      const customer = await storage.createCustomer(customerData);
+      res.status(201).json(customer);
+    } catch (error) {
+      console.error("Create customer error:", error);
+      res.status(400).json({ message: "Invalid customer data" });
+    }
+  });
+
   // Chat file upload endpoint
   apiRouter.post("/chat/upload", isAuthenticated, 
     (req, res, next) => {
