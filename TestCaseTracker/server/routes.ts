@@ -2254,8 +2254,6 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
     }
   });
 
-  // Error handling middleware for multer (this is used by document uploads)
-
   // AI Test Case Generation endpoints (moved up before document routes)
 
   // Get API key status
@@ -4181,7 +4179,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
         return res.status(404).json({ message: "Project not found" });
       }
 
-      // Check if user has admin access to this project
+      // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const userMembership = projectMembers.find(member => member.userId === req.session.userId);
@@ -6307,8 +6305,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
       const notebook = await storage.getNotebook(notebookId);
 
       if (!notebook) {
-        return res.status(404).json({ message: "Notebook not found" });
-      }
+        return res.status(404).json({ message: "      }
 
       // Users can only update their own notebooks unless they're admin
       if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {
