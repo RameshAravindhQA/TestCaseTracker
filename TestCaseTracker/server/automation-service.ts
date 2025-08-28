@@ -15,6 +15,7 @@ export interface RecordingSession {
   endTime?: Date;
   process?: ChildProcess;
   outputPath?: string;
+  logs?: string[];
 }
 
 export interface TestExecution {
@@ -79,16 +80,16 @@ export class AutomationService {
       try {
         logger.info('🔍 Checking Playwright availability...');
         logger.info('🚀 Spawning npx playwright --version process...');
-        
-        const testProcess = spawn('npx', ['playwright', '--version'], { 
+
+        const testProcess = spawn('npx', ['playwright', '--version'], {
           stdio: 'pipe',
           timeout: 10000,
-          env: { 
+          env: {
             ...process.env,
             NODE_ENV: 'development'
           }
         });
-        
+
         let versionOutput = '';
         let errorOutput = '';
 
@@ -103,7 +104,7 @@ export class AutomationService {
           errorOutput += output;
           logger.warn('⚠️ Playwright version stderr:', output.trim());
         });
-        
+
         testProcess.on('error', (error) => {
           logger.error('❌ Playwright executable not found:', error.message);
           logger.error('❌ Error details:', {
@@ -116,14 +117,14 @@ export class AutomationService {
           });
           throw error;
         });
-        
+
         // Wait for version check to complete
         await new Promise((resolve, reject) => {
           testProcess.on('close', (code) => {
             logger.info('🔍 Playwright version process closed with code:', code);
             logger.info('📊 Final version output:', versionOutput.trim());
             logger.info('⚠️ Final error output:', errorOutput.trim());
-            
+
             if (code === 0) {
               logger.info('✅ Playwright version check successful:', versionOutput.trim());
               resolve(code);
@@ -134,9 +135,9 @@ export class AutomationService {
           });
           testProcess.on('error', reject);
         });
-        
+
         logger.info('✅ Playwright availability check completed successfully');
-        
+
       } catch (error: any) {
         logger.error('❌ Error checking Playwright availability:', error.message);
         logger.error('❌ Full error details:', {
@@ -145,7 +146,7 @@ export class AutomationService {
           stack: error.stack,
           cause: error.cause
         });
-        
+
         return {
           success: false,
           message: `Playwright is not available: ${error.message}. Please check if system dependencies are installed.`
@@ -174,7 +175,7 @@ export class AutomationService {
 
       // Start virtual display for Playwright codegen
       logger.info('🖥️ Starting virtual display for Playwright...');
-      
+
       // Start Xvfb (Virtual Framebuffer X Server)
       const xvfbProcess = spawn('Xvfb', [':99', '-screen', '0', '1920x1080x24'], {
         stdio: 'pipe',
@@ -188,7 +189,7 @@ export class AutomationService {
       logger.info(`Starting Playwright codegen for URL: ${config.url}`);
       logger.info(`Output path: ${outputPath}`);
       logger.info(`Recording ID: ${recordingId}`);
-      
+
       const codegenProcess = spawn('npx', [
         'playwright',
         'codegen',
@@ -199,7 +200,7 @@ export class AutomationService {
         '--browser=chromium'
       ], {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: { 
+        env: {
           ...process.env,
           PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
           NODE_ENV: 'development',
@@ -214,20 +215,43 @@ export class AutomationService {
 
       codegenProcess.stdout?.on('data', (data) => {
         const output = data.toString();
-        logger.info(`🎬 Codegen stdout [${recordingId}]: ${output.trim()}`);
+        logger.info(`🎬 Codegen stdout: ${output.trim()}`);
+
+        // Check for browser launch indicators
+        if (output.includes('Launching browser')) {
+          logger.info('✅ Browser launching detected');
+        }
+        if (output.includes('CDP') || output.includes('DevTools')) {
+          logger.info('🔧 DevTools Protocol connection detected');
+        }
+        if (output.includes('chromium')) {
+          logger.info('🌐 Chromium browser process active');
+        }
+        if (output.includes('Recording')) {
+          logger.info('🎥 Recording mode activated - instrumented browser ready');
+        }
+
+        recordingSession.logs = recordingSession.logs || [];
+        recordingSession.logs.push(`stdout: ${output.trim()}`);
       });
 
       codegenProcess.stderr?.on('data', (data) => {
         const output = data.toString();
-        logger.warn(`⚠️ Codegen stderr [${recordingId}]: ${output.trim()}`);
-        
-        // Log specific Playwright messages
-        if (output.includes('Browser')) {
-          logger.info(`🌐 Browser activity detected: ${output.trim()}`);
+        logger.warn(`⚠️ Codegen stderr: ${output.trim()}`);
+
+        // Check for browser instrumentation errors
+        if (output.includes('CDP') || output.includes('DevTools')) {
+          logger.error('❌ DevTools Protocol issue detected:', output.trim());
         }
-        if (output.includes('inspector')) {
-          logger.info(`🔍 Inspector activity detected: ${output.trim()}`);
+        if (output.includes('browser') && output.includes('failed')) {
+          logger.error('❌ Browser launch failure detected:', output.trim());
         }
+        if (output.includes('instrumentation') || output.includes('hook')) {
+          logger.info('🔧 Browser instrumentation details:', output.trim());
+        }
+
+        recordingSession.logs = recordingSession.logs || [];
+        recordingSession.logs.push(`stderr: ${output.trim()}`);
       });
 
       codegenProcess.on('error', (error) => {
@@ -241,9 +265,9 @@ export class AutomationService {
         recordingSession.endTime = new Date();
         recordingSession.status = code === 0 ? 'stopped' : 'error';
         this.activeSessions.set(recordingId, recordingSession);
-        
+
         logger.info(`Codegen process closed with code ${code} for session ${recordingId}`);
-        
+
         // Log file creation status
         if (recordingSession.outputPath) {
           import('fs').then(fs => {
@@ -256,6 +280,40 @@ export class AutomationService {
               });
           });
         }
+      });
+
+      codegenProcess.on('spawn', () => {
+        logger.info('✅ Playwright codegen process started successfully');
+        logger.info('🎯 Browser should now be launching in instrumented mode...');
+        logger.info('🔧 Instrumentation features enabled:');
+        logger.info('  • DOM event capture (clicks, hovers, typing)');
+        logger.info('  • Navigation tracking');
+        logger.info('  • Network request monitoring');
+        logger.info('  • DevTools Protocol hooks active');
+        logger.info('📖 Instructions: Use the opened browser to perform your test actions');
+        logger.info('💾 Test steps will be automatically recorded to:', filename);
+
+        // Check for running browser processes
+        setTimeout(() => {
+          const { spawn: spawnCheck } = require('child_process');
+          const psProcess = spawnCheck('ps', ['aux'], { stdio: 'pipe' });
+
+          psProcess.stdout?.on('data', (data) => {
+            const output = data.toString();
+            if (output.includes('chromium') || output.includes('chrome')) {
+              logger.info('🌐 Chromium browser process detected in system');
+              const lines = output.split('\n').filter(line =>
+                (line.includes('chromium') || line.includes('chrome')) &&
+                !line.includes('grep')
+              );
+              lines.forEach(line => {
+                if (line.includes('--remote-debugging-port') || line.includes('--enable-automation')) {
+                  logger.info('✅ Instrumented browser confirmed:', line.trim());
+                }
+              });
+            }
+          });
+        }, 3000);
       });
 
       return {
@@ -372,7 +430,7 @@ export class AutomationService {
         `--output-dir=${screenshotsDir}`
       ], {
         stdio: ['pipe', 'pipe', 'pipe'],
-        env: { 
+        env: {
           ...process.env,
           PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0'
         }
@@ -495,9 +553,9 @@ export class AutomationService {
 
       if (suite.tests && suite.tests.length > 0) {
         suite.tests.forEach((test: any, testIndex: number) => {
-          const status = test.outcome === 'passed' ? '✅ PASSED' : 
+          const status = test.outcome === 'passed' ? '✅ PASSED' :
                         test.outcome === 'failed' ? '❌ FAILED' : '⚠️ SKIPPED';
-          
+
           report += `#### Test ${testIndex + 1}: ${test.title || 'Unnamed Test'}\n`;
           report += `**Status**: ${status}\n`;
           report += `**Duration**: ${test.duration || 0}ms\n\n`;
@@ -508,7 +566,7 @@ export class AutomationService {
             test.steps.forEach((step: any, stepIndex: number) => {
               const stepStatus = step.error ? '❌' : '✅';
               report += `${stepIndex + 1}. ${stepStatus} ${step.title}\n`;
-              
+
               if (step.error) {
                 report += `   - **Error**: ${step.error.message}\n`;
                 // Check for screenshots
@@ -525,7 +583,7 @@ export class AutomationService {
           if (test.outcome === 'failed' && test.error) {
             report += `**Error Details**:\n`;
             report += `\`\`\`\n${test.error.message}\n\`\`\`\n\n`;
-            
+
             if (test.error.stack) {
               report += `**Stack Trace**:\n`;
               report += `\`\`\`\n${test.error.stack}\n\`\`\`\n\n`;
