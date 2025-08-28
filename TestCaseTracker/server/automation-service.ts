@@ -172,6 +172,18 @@ export class AutomationService {
 
       this.activeSessions.set(recordingId, recordingSession);
 
+      // Start virtual display for Playwright codegen
+      logger.info('🖥️ Starting virtual display for Playwright...');
+      
+      // Start Xvfb (Virtual Framebuffer X Server)
+      const xvfbProcess = spawn('Xvfb', [':99', '-screen', '0', '1920x1080x24'], {
+        stdio: 'pipe',
+        env: { ...process.env }
+      });
+
+      // Wait a moment for Xvfb to start
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       // Launch Playwright Codegen
       logger.info(`Starting Playwright codegen for URL: ${config.url}`);
       logger.info(`Output path: ${outputPath}`);
@@ -183,13 +195,16 @@ export class AutomationService {
         config.url,
         '--target=typescript',
         `--output=${outputPath}`,
-        '--save-storage=state.json'
+        '--save-storage=state.json',
+        '--browser=chromium'
       ], {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { 
           ...process.env,
           PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
-          NODE_ENV: 'development'
+          NODE_ENV: 'development',
+          DISPLAY: ':99',
+          XVFB_WHD: '1920x1080x24'
         }
       });
 
@@ -199,12 +214,20 @@ export class AutomationService {
 
       codegenProcess.stdout?.on('data', (data) => {
         const output = data.toString();
-        logger.info(`Codegen stdout [${recordingId}]: ${output}`);
+        logger.info(`🎬 Codegen stdout [${recordingId}]: ${output.trim()}`);
       });
 
       codegenProcess.stderr?.on('data', (data) => {
         const output = data.toString();
-        logger.warn(`Codegen stderr [${recordingId}]: ${output}`);
+        logger.warn(`⚠️ Codegen stderr [${recordingId}]: ${output.trim()}`);
+        
+        // Log specific Playwright messages
+        if (output.includes('Browser')) {
+          logger.info(`🌐 Browser activity detected: ${output.trim()}`);
+        }
+        if (output.includes('inspector')) {
+          logger.info(`🔍 Inspector activity detected: ${output.trim()}`);
+        }
       });
 
       codegenProcess.on('error', (error) => {
