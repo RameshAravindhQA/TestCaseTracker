@@ -6218,6 +6218,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
 
       if (!name) {
         return res.status(400).json({ message: "Sheet name is required" });
+      }
 
       const duplicatedSheet = await storage.duplicateTestSheet(id, name, req.session.userId!);
 
