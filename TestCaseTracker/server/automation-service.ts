@@ -133,13 +133,17 @@ export class AutomationService {
         config.url,
         '--target=typescript',
         `--output=${outputPath}`,
-        '--save-storage=state.json'
+        '--save-storage=state.json',
+        '--browser=chromium',
+        '--viewport-size=1280,720'
       ], {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { 
           ...process.env,
           PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
-          NODE_ENV: 'development'
+          NODE_ENV: 'development',
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0',
+          DISPLAY: ':99'
         }
       });
 
@@ -155,6 +159,14 @@ export class AutomationService {
       codegenProcess.stderr?.on('data', (data) => {
         const output = data.toString();
         logger.warn(`Codegen stderr [${recordingId}]: ${output}`);
+        
+        // Check for browser installation issues
+        if (output.includes('Executable doesn\'t exist') || output.includes('npx playwright install')) {
+          logger.error(`Browser installation required for session ${recordingId}`);
+          recordingSession.status = 'error';
+          recordingSession.endTime = new Date();
+          this.activeSessions.set(recordingId, recordingSession);
+        }
       });
 
       codegenProcess.on('error', (error) => {
