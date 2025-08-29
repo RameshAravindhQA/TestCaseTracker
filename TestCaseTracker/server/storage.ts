@@ -2602,6 +2602,14 @@ class MemStorage implements IStorage {
         console.log('✅ Test case ID migration completed');
       });
     }, 100);
+
+    // Initialize messaging arrays if they don't exist
+    if (!this.data.messages) {
+      this.data.messages = [];
+    }
+    if (!this.data.conversations) {
+      this.data.conversations = [];
+    }
   }
 
   private initializeDefaultData() {
@@ -3161,6 +3169,16 @@ class MemStorage implements IStorage {
           weeklyComms: data.weeklyComms,
           weeklyCommsLabel: data.weeklyCommsLabel,
           weeklyCommsColor: data.weeklyCommsColor,
+          currentIssues: data.currentIssues,
+          currentIssuesLabel: data.currentIssuesLabel,
+          currentIssuesColor: data.currentIssuesColor,
+          immediateActionItems: data.immediateActionItems,
+          immediateActionItemsLabel: data.immediateActionItemsLabel,
+          immediateActionItemsColor: data.immediateActionItemsColor,
+          supportRequired: data.supportRequired,
+          supportRequiredLabel: data.supportRequiredLabel,
+          supportRequiredColor: data.supportRequiredColor,
+          additionalRemarks: data.additionalRemarks,
           lastReviewDate: data.reviewDate,
           notes: data.notes,
           updatedAt: new Date().toISOString()

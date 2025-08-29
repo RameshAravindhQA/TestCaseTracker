@@ -127,22 +127,32 @@ export function Messenger() {
 
       console.log(`[MESSENGER] Fetching messages for contact:`, selectedContact.id);
 
-      // Use the messages API directly with userId parameter
-      const messagesResponse = await fetch(`/api/messages?userId=${selectedContact.id}`, {
-        credentials: 'include'
-      });
+      try {
+        // Use the messages API directly with userId parameter
+        const messagesResponse = await fetch(`/api/messages?userId=${selectedContact.id}`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
 
-      if (!messagesResponse.ok) {
-        console.error('[MESSENGER] Failed to fetch messages');
+        if (!messagesResponse.ok) {
+          const errorText = await messagesResponse.text();
+          console.error('[MESSENGER] Failed to fetch messages:', messagesResponse.status, errorText);
+          return [];
+        }
+
+        const data = await messagesResponse.json();
+        console.log(`[MESSENGER] Fetched ${data.length} messages for contact ${selectedContact.id}:`, data);
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error('[MESSENGER] Error fetching messages:', error);
         return [];
       }
-
-      const data = await messagesResponse.json();
-      console.log(`[MESSENGER] Fetched ${data.length} messages for contact ${selectedContact.id}:`, data);
-      return data;
     },
-    enabled: !!selectedContact && isConnected,
-    refetchInterval: 5000, // Refetch every 5 seconds as fallback
+    enabled: !!selectedContact,
+    refetchInterval: connectionStatus === 'connected' ? false : 5000, // Only use polling when WebSocket is down
     staleTime: 1000, // Consider data stale after 1 second
   });
 
@@ -211,18 +221,30 @@ export function Messenger() {
                 console.log('[MESSENGER] Connection established');
                 break;
               case 'new_message':
-                // Handle new message
-                queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+                // Handle new message - invalidate queries for real-time updates
+                queryClient.invalidateQueries({ queryKey: ['messages'] });
                 if (selectedContact && (data.message.senderId === selectedContact.id || data.message.receiverId === selectedContact.id)) {
-                  queryClient.invalidateQueries({ queryKey: [`/api/messages?userId=${selectedContact.id}`] });
+                  queryClient.invalidateQueries({ queryKey: ['messages', selectedContact.id] });
                 }
-                toast({
-                  title: "New message",
-                  description: `From ${data.message.sender.firstName}`,
-                });
+                
+                // Show toast notification only if message is from someone else
+                if (data.message.senderId !== user?.id) {
+                  toast({
+                    title: "New message",
+                    description: `From ${data.message.sender?.firstName || 'Unknown'}`,
+                  });
+                }
+                break;
+              case 'message_sent':
+                // Handle message sent confirmation
+                console.log('[MESSENGER] Message sent confirmation received');
+                queryClient.invalidateQueries({ queryKey: ['messages'] });
+                if (selectedContact) {
+                  queryClient.invalidateQueries({ queryKey: ['messages', selectedContact.id] });
+                }
                 break;
               case 'user_typing':
-                if (data.userId !== user.id) {
+                if (data.userId !== user?.id) {
                   setIsTyping(data.isTyping);
                 }
                 break;
@@ -311,41 +333,63 @@ export function Messenger() {
     mutationFn: async (messageData: { receiverId: number; content: string; type?: string; attachments?: any[] }) => {
       console.log('[MESSENGER] Sending message via API:', messageData);
       
-      // Send via API for persistence first
-      const response = await apiRequest('POST', '/api/messages', messageData);
-      if (!response.ok) throw new Error('Failed to send message');
-      const savedMessage = await response.json();
-      
-      // Then send via WebSocket for real-time delivery
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && selectedContact) {
-        wsRef.current.send(JSON.stringify({
-          type: 'send_message',
-          data: {
-            receiverId: messageData.receiverId,
-            message: messageData.content,
-            type: messageData.type || 'text',
-            attachments: messageData.attachments || []
-          }
-        }));
+      try {
+        // Send via API for persistence first
+        const response = await apiRequest('POST', '/api/messages', messageData);
+        
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error('[MESSENGER] API error response:', response.status, errorData);
+          throw new Error(`HTTP ${response.status}: ${errorData}`);
+        }
+        
+        const savedMessage = await response.json();
+        console.log('[MESSENGER] Message saved via API:', savedMessage);
+        
+        // Then send via WebSocket for real-time delivery if connection is open
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && selectedContact) {
+          console.log('[MESSENGER] Sending via WebSocket for real-time delivery');
+          wsRef.current.send(JSON.stringify({
+            type: 'send_message',
+            data: {
+              receiverId: messageData.receiverId,
+              message: messageData.content,
+              type: messageData.type || 'text',
+              attachments: messageData.attachments || []
+            }
+          }));
+        } else {
+          console.warn('[MESSENGER] WebSocket not available, using API only');
+        }
+        
+        return savedMessage;
+      } catch (error) {
+        console.error('[MESSENGER] Error in send message mutation:', error);
+        throw error;
       }
-      
-      return savedMessage;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('[MESSENGER] Message sent successfully:', data);
       setNewMessage('');
       setAttachments([]);
       setReplyingTo(null);
-      queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact?.id] });
+      
+      // Invalidate queries to refresh message list
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      if (selectedContact) {
+        queryClient.invalidateQueries({ queryKey: ['messages', selectedContact.id] });
+      }
 
       toast({
         title: "✅ Message sent",
         description: "Your message has been delivered successfully",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('[MESSENGER] Send message error:', error);
       toast({
         title: "❌ Error",
-        description: "Failed to send message. Please try again.",
+        description: error?.message || "Failed to send message. Please try again.",
         variant: "destructive",
       });
     },
@@ -428,7 +472,22 @@ export function Messenger() {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedContact) return;
+    if (!newMessage.trim() || !selectedContact) {
+      console.warn('[MESSENGER] Cannot send message: missing content or contact');
+      return;
+    }
+
+    if (!user?.id) {
+      console.error('[MESSENGER] Cannot send message: user not authenticated');
+      toast({
+        title: "❌ Error",
+        description: "You must be logged in to send messages",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log(`[MESSENGER] Preparing to send message to contact ${selectedContact.id}`);
 
     const messageData = {
       receiverId: selectedContact.id,
@@ -441,6 +500,7 @@ export function Messenger() {
       }))
     };
 
+    console.log('[MESSENGER] Message data prepared:', messageData);
     sendMessageMutation.mutate(messageData);
   };
 

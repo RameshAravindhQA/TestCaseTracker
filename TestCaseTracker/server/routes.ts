@@ -2420,20 +2420,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get sender info
       const sender = await storage.getUser(req.session.userId!);
 
-      const message = await storage.createChatMessage({
+      // Use the new createMessage method
+      const message = await storage.createMessage({
         senderId: req.session.userId!,
-        userId: req.session.userId!,
         receiverId,
-        conversationId: targetConversationId,
         content: content.trim(),
-        message: content.trim(),
         type: type || 'text',
         attachments: attachments || [],
-        userName: sender ? `${sender.firstName} ${sender.lastName || ''}`.trim() : 'Anonymous',
         sender: sender ? {
           id: sender.id,
           firstName: sender.firstName,
-          lastName: sender.lastName,
+          lastName: sender.lastName || '',
           profilePicture: sender.profilePicture
         } : null
       });
@@ -2449,19 +2446,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get messages for a user (direct messages)
   apiRouter.get("/messages", isAuthenticated, async (req, res) => {
     try {
+      console.log('[API] GET /messages with query:', req.query);
       const { userId } = req.query;
 
       if (userId) {
         // Get direct conversation with this user
-        const conversation = await storage.getDirectConversation(req.session.userId!, parseInt(userId as string));
+        let conversation = await storage.getDirectConversation(req.session.userId!, parseInt(userId as string));
 
-        if (conversation) {
-          const messages = await storage.getMessagesByChat(conversation.id);
-          res.json(messages);
-        } else {
-          res.json([]);
+        if (!conversation) {
+          // Create conversation if it doesn't exist
+          conversation = await storage.createDirectConversation(req.session.userId!, parseInt(userId as string));
+          console.log('[API] Created new conversation:', conversation.id);
         }
+
+        const messages = await storage.getMessagesByChat(conversation.id);
+        console.log(`[API] Returning ${messages.length} messages for conversation ${conversation.id}`);
+        res.json(messages);
       } else {
+        console.log('[API] No userId provided, returning empty array');
         res.json([]);
       }
     } catch (error) {
@@ -2532,6 +2534,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Edit chat message error:', error);
       res.status(500).json({ error: 'Failed to edit message' });
+    }
+  });
+
+  // Edit direct message
+  apiRouter.put("/messages/:messageId", isAuthenticated, async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.messageId);
+      const { content } = req.body;
+      const userId = req.session.userId!;
+
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: 'Message content is required' });
+      }
+
+      // Find the message
+      const messages = storage.data.messages || [];
+      const messageIndex = messages.findIndex(msg => msg.id === messageId && msg.senderId === userId);
+
+      if (messageIndex === -1) {
+        return res.status(404).json({ error: 'Message not found or access denied' });
+      }
+
+      // Update the message
+      messages[messageIndex] = {
+        ...messages[messageIndex],
+        content: content.trim(),
+        isEdited: true,
+        updatedAt: new Date().toISOString()
+      };
+
+      storage.saveToFile();
+      res.json(messages[messageIndex]);
+    } catch (error) {
+      console.error('Edit message error:', error);
+      res.status(500).json({ error: 'Failed to edit message' });
+    }
+  });
+
+  // Delete direct message
+  apiRouter.delete("/messages/:messageId", isAuthenticated, async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.messageId);
+      const userId = req.session.userId!;
+
+      // Find and remove the message
+      const messages = storage.data.messages || [];
+      const messageIndex = messages.findIndex(msg => msg.id === messageId && msg.senderId === userId);
+
+      if (messageIndex === -1) {
+        return res.status(404).json({ error: 'Message not found or access denied' });
+      }
+
+      messages.splice(messageIndex, 1);
+      storage.saveToFile();
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete message error:', error);
+      res.status(500).json({ error: 'Failed to delete message' });
+    }
+  });
+
+  // React to message
+  apiRouter.post("/messages/:messageId/react", isAuthenticated, async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.messageId);
+      const { emoji } = req.body;
+      const userId = req.session.userId!;
+
+      if (!emoji) {
+        return res.status(400).json({ error: 'Emoji is required' });
+      }
+
+      // Find the message
+      const messages = storage.data.messages || [];
+      const message = messages.find(msg => msg.id === messageId);
+
+      if (!message) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
+
+      // Add or update reaction
+      message.reactions = message.reactions || [];
+      const existingReaction = message.reactions.find(r => r.emoji === emoji);
+
+      if (existingReaction) {
+        existingReaction.count = (existingReaction.count || 0) + 1;
+      } else {
+        message.reactions.push({
+          emoji,
+          userId,
+          count: 1
+        });
+      }
+
+      storage.saveToFile();
+      res.json(message);
+    } catch (error) {
+      console.error('React to message error:', error);
+      res.status(500).json({ error: 'Failed to react to message' });
     }
   });
 

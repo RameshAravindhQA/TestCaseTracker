@@ -198,42 +198,44 @@ export class ChatWebSocketServer {
 
   private async handleSendMessage(ws: WebSocket, data: any) {
     const messageData = data.data || data; // Handle both data structures
-    const { conversationId, message, replyToId, attachments, tempId } = messageData;
+    const { receiverId, message, replyToId, attachments, tempId } = messageData;
     const user = this.getUserByWebSocket(ws);
 
-    if (!user || !conversationId || !message) {
-      this.sendError(ws, 'Invalid message data');
+    if (!user || !receiverId || !message) {
+      this.sendError(ws, 'Invalid message data - missing user, receiverId, or message');
       return;
     }
 
     try {
-      // Store message in database using the correct API format
+      console.log(`[WebSocket] Sending message from ${user.userId} to ${receiverId}`);
+
+      // Get sender info for message enrichment
+      const senderUser = await storage.getUser(user.userId);
+
+      // Store message in database using the storage.createMessage method
       const chatMessage = await storage.createMessage({
         senderId: user.userId,
-        receiverId: conversationId, // Using conversationId as receiverId for direct messages
+        receiverId: receiverId,
         content: message.trim(),
         type: 'text',
-        attachments: attachments || []
+        attachments: attachments || [],
+        sender: senderUser ? {
+          id: senderUser.id,
+          firstName: senderUser.firstName,
+          lastName: senderUser.lastName || '',
+          profilePicture: senderUser.profilePicture
+        } : null
       });
 
+      console.log(`[WebSocket] Message stored successfully: ${chatMessage.id}`);
+
       // Clear typing indicator
-      this.clearTypingIndicator(user.userId, conversationId);
+      this.clearTypingIndicator(user.userId, receiverId);
 
-      // Create the message object with sender info
-      const messageWithSender = {
-        ...chatMessage,
-        sender: {
-          id: user.userId,
-          firstName: user.userName,
-          lastName: '',
-          profilePicture: null
-        }
-      };
-
-      // Broadcast message to receiver and sender
-      this.broadcastToUsers([user.userId, conversationId], {
+      // Broadcast message to both sender and receiver
+      this.broadcastToUsers([user.userId, receiverId], {
         type: 'new_message',
-        message: messageWithSender
+        message: chatMessage
       });
 
       // Send confirmation to sender
@@ -244,9 +246,11 @@ export class ChatWebSocketServer {
         timestamp: chatMessage.createdAt || new Date().toISOString()
       });
 
+      console.log(`[WebSocket] Message broadcast completed for message ${chatMessage.id}`);
+
     } catch (error) {
-      logger.error('Error sending message:', error);
-      this.sendError(ws, 'Failed to send message');
+      console.error('[WebSocket] Error sending message:', error);
+      this.sendError(ws, `Failed to send message: ${error.message}`);
     }
   }
 
