@@ -420,6 +420,9 @@ class MemStorage implements IStorage {
   private requestComments: any[] = [];
   private notifications = new Map<number, any>();
 
+  // Flow diagram storage
+  private flowDiagrams = new Map<string, any>();
+
   // ID counters
   private nextUserId = 1;
   private nextProjectId = 1;
