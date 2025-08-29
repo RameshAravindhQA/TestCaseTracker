@@ -694,6 +694,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GitHub integrations routes
   apiRouter.use("/github", githubIntegrationsRouter);
 
+  // Flow diagram routes
+  apiRouter.use("/flow-diagrams", flowDiagramRoutes);
+
   // Navadhiti Projects routes
   apiRouter.get("/navadhiti-projects", isAuthenticated, async (req, res) => {
     try {
@@ -3183,6 +3186,21 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
   });
 
   // Note: GitHub integration routes are handled by the dedicated GitHub router above
+
+  // Flow Diagram Generation endpoint
+  apiRouter.post("/flow-diagrams/generate/:projectId", isAuthenticated, async (req, res) => {
+    try {
+      const { generateFlowDiagram } = await import('./api/flow-diagram-generator');
+      await generateFlowDiagram(req, res);
+    } catch (error) {
+      console.error('Flow diagram generation error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate flow diagram',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
   // Add a duplicate route for handling bug attachment uploads with /api prefix for client compatibility
   app.post('/api/uploads/bug-attachment', isAuthenticated, 
