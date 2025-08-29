@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Badge } from '@/components/ui/badge';
@@ -80,6 +79,37 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
     }
   };
 
+  const getStatusBadgeColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'pass':
+      case 'passed':
+        return 'bg-green-500 text-white';
+      case 'fail':
+      case 'failed':
+        return 'bg-red-500 text-white';
+      case 'not executed':
+      case 'pending':
+        return 'bg-gray-500 text-white';
+      case 'blocked':
+        return 'bg-orange-500 text-white';
+      default:
+        return 'bg-gray-500 text-white';
+    }
+  };
+
+  const getPriorityBadgeColor = (priority: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'high':
+        return 'bg-red-100 text-red-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'low':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   if (data.isTestCase) {
     return (
       <div
@@ -88,7 +118,7 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
         onMouseLeave={() => setIsHovered(false)}
       >
         <Handle type="target" position={Position.Left} className="w-3 h-3" />
-        
+
         <div className="bg-white rounded-lg border-2 border-gray-300 shadow-lg min-w-[120px] p-3">
           <div className="text-xs font-medium text-gray-900 text-center">
             {data.label}
@@ -110,8 +140,8 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
                   <CardTitle className="text-sm font-semibold text-blue-600">
                     Test Case Details
                   </CardTitle>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => setShowDetails(!showDetails)}
                     className="h-6 w-6 p-0"
@@ -203,27 +233,27 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
                 </div>
 
                 <div className="flex gap-1 mt-3 pt-2 border-t">
-                  <Button 
-                    size="sm" 
-                    className="flex-1 text-xs h-7" 
+                  <Button
+                    size="sm"
+                    className="flex-1 text-xs h-7"
                     variant="outline"
                     onClick={handleView}
                   >
                     <Eye className="w-3 h-3 mr-1" />
                     View
                   </Button>
-                  <Button 
-                    size="sm" 
-                    className="flex-1 text-xs h-7" 
+                  <Button
+                    size="sm"
+                    className="flex-1 text-xs h-7"
                     variant="outline"
                     onClick={handleEdit}
                   >
                     <Edit className="w-3 h-3 mr-1" />
                     Edit
                   </Button>
-                  <Button 
-                    size="sm" 
-                    className="flex-1 text-xs h-7" 
+                  <Button
+                    size="sm"
+                    className="flex-1 text-xs h-7"
                     variant="default"
                     onClick={handleExecute}
                   >
@@ -260,7 +290,7 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
       <>
         <div className="relative">
           <Handle type="target" position={Position.Left} className="w-4 h-4 bg-green-400 border-green-300" />
-          
+
           <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg shadow-lg p-4 min-w-[180px] border-2 border-green-400">
             <div className="text-center">
               <div className="font-semibold text-sm">{data.label}</div>
@@ -275,67 +305,57 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
           <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-auto">
             <DialogHeader>
-              <DialogTitle>Test Case Details - {data.label}</DialogTitle>
+              <DialogTitle>Test Case Details</DialogTitle>
               <DialogDescription>
-                View complete test case information
+                {data.label} - {data.description}
               </DialogDescription>
             </DialogHeader>
+
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium">Test Case ID</h3>
-                <p className="text-sm text-gray-700 mt-1">{data.testCaseId || 'N/A'}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{data.label}</p>
               </div>
+
               <div>
                 <h3 className="text-sm font-medium">Feature</h3>
-                <p className="text-sm text-gray-700 mt-1">{data.feature || 'N/A'}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{data.feature}</p>
               </div>
+
               <div>
                 <h3 className="text-sm font-medium">Description</h3>
-                <p className="text-sm text-gray-700 mt-1">{data.description || 'No description provided'}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{data.description}</p>
               </div>
+
+              {data.preConditions && (
+                <div>
+                  <h3 className="text-sm font-medium">Pre-conditions</h3>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">{data.preConditions}</p>
+                </div>
+              )}
+
+              {data.testSteps && (
+                <div>
+                  <h3 className="text-sm font-medium">Test Steps</h3>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap max-h-40 overflow-y-auto p-3 border rounded-md bg-gray-50 dark:bg-gray-800">
+                    {data.testSteps}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="text-sm font-medium">Priority</h3>
-                  <Badge className={`text-xs px-2 py-0.5 ${getPriorityColor(data.priority || 'Medium')}`}>
-                    {data.priority || 'Medium'}
+                  <h3 className="text-sm font-medium">Status</h3>
+                  <Badge variant="outline" className={getStatusBadgeColor(data.status)}>
+                    {data.status}
                   </Badge>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium">Status</h3>
-                  <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(data.status || 'Not Executed')} text-white`}>
-                    {data.status || 'Not Executed'}
+                  <h3 className="text-sm font-medium">Priority</h3>
+                  <Badge variant="outline" className={getPriorityBadgeColor(data.priority)}>
+                    {data.priority}
                   </Badge>
                 </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium">Pre-Conditions</h3>
-                <p className="text-sm text-gray-700 mt-1">{data.preConditions || 'None specified'}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium">Test Steps</h3>
-                <div className="text-sm text-gray-700 mt-1">
-                  {data.testSteps ? (
-                    <ol className="list-decimal list-inside space-y-1">
-                      {data.testSteps.split('\n').map((step, index) => (
-                        <li key={index}>{step.replace(/^\d+\.\s*/, '')}</li>
-                      ))}
-                    </ol>
-                  ) : (
-                    'No steps defined'
-                  )}
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium">Expected Result</h3>
-                <p className="text-sm text-gray-700 mt-1">{data.expectedResult || 'Not specified'}</p>
-              </div>
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
-                  Close
-                </Button>
-                <Button onClick={() => { setViewDialogOpen(false); handleEdit(); }}>
-                  Edit Test Case
-                </Button>
               </div>
             </div>
           </DialogContent>

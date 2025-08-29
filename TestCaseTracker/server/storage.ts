@@ -703,15 +703,27 @@ class MemStorage implements IStorage {
       let modulePrefix = 'MOD';
       if (module.moduleId) {
         const moduleIdParts = module.moduleId.split('-');
-        if (moduleIdParts.length >= 2) {
+        if (moduleIdParts.length >= 3 && moduleIdParts[2] === 'MOD') {
           modulePrefix = moduleIdParts[1]; // Get the second part (REG, LOG, etc.)
         }
-      } else if (module.name) {
-        // Fallback to module name if moduleId is not available
+      } 
+      
+      // If module doesn't have proper ID format, generate prefix from module name
+      if (modulePrefix === 'MOD' && module.name) {
         const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '');
-        modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
-        if (modulePrefix.length < 3) {
-          modulePrefix = modulePrefix.padEnd(3, 'X');
+        if (cleanModuleName.toLowerCase().includes('register') || cleanModuleName.toLowerCase().includes('registration')) {
+          modulePrefix = 'REG';
+        } else if (cleanModuleName.toLowerCase().includes('login')) {
+          modulePrefix = 'LOG';
+        } else if (cleanModuleName.toLowerCase().includes('profile')) {
+          modulePrefix = 'PROF';
+        } else if (cleanModuleName.toLowerCase().includes('dashboard')) {
+          modulePrefix = 'DASH';
+        } else {
+          modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
+          if (modulePrefix.length < 3) {
+            modulePrefix = modulePrefix.padEnd(3, 'X');
+          }
         }
       }
 
@@ -2260,12 +2272,55 @@ class MemStorage implements IStorage {
   async fixExistingTestCaseIds(): Promise<void> {
     console.log('🔧 Starting to fix existing test case IDs...');
     
-    for (const testCase of this.testCases) {
-      // Skip if already has proper format
-      if (testCase.testCaseId && !testCase.testCaseId.startsWith('BEG-TC-')) {
-        continue;
-      }
+    // First, fix module IDs to ensure they have proper format
+    for (const module of this.modules) {
+      const project = this.projects.find(p => p.id === module.projectId);
+      if (!project) continue;
 
+      const projectPrefix = project.prefix || 'BEG';
+      
+      // If module doesn't have proper ID format, fix it
+      if (!module.moduleId || !module.moduleId.includes('-MOD-')) {
+        let modulePrefix = 'MOD';
+        if (module.name) {
+          const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '');
+          if (cleanModuleName.toLowerCase().includes('register') || cleanModuleName.toLowerCase().includes('registration')) {
+            modulePrefix = 'REG';
+          } else if (cleanModuleName.toLowerCase().includes('login')) {
+            modulePrefix = 'LOG';
+          } else if (cleanModuleName.toLowerCase().includes('profile')) {
+            modulePrefix = 'PROF';
+          } else if (cleanModuleName.toLowerCase().includes('dashboard')) {
+            modulePrefix = 'DASH';
+          } else {
+            modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
+            if (modulePrefix.length < 3) {
+              modulePrefix = modulePrefix.padEnd(3, 'X');
+            }
+          }
+        }
+
+        // Find the highest existing module number for this project
+        const modulePattern = new RegExp(`^${projectPrefix}-[A-Z]{3}-MOD-(\\d+)$`);
+        const existingNumbers = this.modules
+          .filter(m => m.projectId === module.projectId && m.id !== module.id)
+          .map(m => {
+            if (!m.moduleId) return 0;
+            const match = m.moduleId.match(modulePattern);
+            return match ? parseInt(match[1], 10) : 0;
+          })
+          .filter(num => !isNaN(num) && num > 0);
+
+        const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+        module.moduleId = `${projectPrefix}-${modulePrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
+        module.updatedAt = new Date();
+
+        console.log(`✅ Fixed module ID ${module.id}: ${module.moduleId} (${module.name})`);
+      }
+    }
+    
+    // Now fix test case IDs based on corrected module IDs
+    for (const testCase of this.testCases) {
       const module = this.modules.find(m => m.id === testCase.moduleId);
       const project = this.projects.find(p => p.id === testCase.projectId);
 
@@ -2276,13 +2331,19 @@ class MemStorage implements IStorage {
 
       const projectPrefix = project.prefix || 'BEG';
 
-      // Extract module prefix from module ID
+      // Extract module prefix from corrected module ID
       let modulePrefix = 'MOD';
       if (module.moduleId) {
         const moduleIdParts = module.moduleId.split('-');
-        if (moduleIdParts.length >= 2) {
+        if (moduleIdParts.length >= 3 && moduleIdParts[2] === 'MOD') {
           modulePrefix = moduleIdParts[1]; // Get the second part (REG, LOG, etc.)
         }
+      }
+
+      // Check if test case already has proper format
+      const expectedPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-\\d{3}$`);
+      if (testCase.testCaseId && expectedPattern.test(testCase.testCaseId)) {
+        continue; // Already has proper format
       }
 
       // Find the highest existing test case number for this specific module
@@ -2333,10 +2394,12 @@ class MemStorage implements IStorage {
     this.initializeDefaultData();
     this.initializeEmployeeDefaults();
     
-    // Fix existing test case IDs after a short delay to ensure all data is loaded
+    // Fix existing test case IDs immediately to ensure proper format
     setTimeout(() => {
-      this.fixExistingTestCaseIds();
-    }, 1000);
+      this.fixExistingTestCaseIds().then(() => {
+        console.log('✅ Test case ID migration completed');
+      });
+    }, 100);
   }
 
   private initializeDefaultData() {

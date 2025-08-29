@@ -377,12 +377,22 @@ export class DatabaseStorage implements IStorage {
         }
       } 
       
-      // If we couldn't extract from moduleId, generate from module name
+      // If we couldn't extract from moduleId, generate from module name with smart mapping
       if (modulePrefix === 'MOD' && module.name) {
         const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '');
-        modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
-        if (modulePrefix.length < 3) {
-          modulePrefix = modulePrefix.padEnd(3, 'X');
+        if (cleanModuleName.toLowerCase().includes('register') || cleanModuleName.toLowerCase().includes('registration')) {
+          modulePrefix = 'REG';
+        } else if (cleanModuleName.toLowerCase().includes('login')) {
+          modulePrefix = 'LOG';
+        } else if (cleanModuleName.toLowerCase().includes('profile')) {
+          modulePrefix = 'PROF';
+        } else if (cleanModuleName.toLowerCase().includes('dashboard')) {
+          modulePrefix = 'DASH';
+        } else {
+          modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
+          if (modulePrefix.length < 3) {
+            modulePrefix = modulePrefix.padEnd(3, 'X');
+          }
         }
       }
 
