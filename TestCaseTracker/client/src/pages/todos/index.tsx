@@ -60,7 +60,8 @@ function TodosPage() {
     queryKey: ["/api/todos"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/todos");
-      return res.json();
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 
@@ -68,7 +69,8 @@ function TodosPage() {
     queryKey: ["/api/todo-lists"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/todo-lists");
-      return res.json();
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 
@@ -168,9 +170,12 @@ function TodosPage() {
     }
   };
 
+  // Ensure todos is always an array before filtering
+  const todosArray = Array.isArray(todos) ? todos : [];
+  
   const filteredTodos = selectedList
-    ? todos.filter((todo: Todo) => todo.listId === selectedList)
-    : todos.filter((todo: Todo) => !todo.listId);
+    ? todosArray.filter((todo: Todo) => todo.listId === selectedList)
+    : todosArray.filter((todo: Todo) => !todo.listId);
 
   console.log('TodosPage render:', { todos, todoLists, filteredTodos, selectedList });
 
@@ -356,7 +361,7 @@ function TodosPage() {
                     onClick={() => setSelectedList(null)}
                   >
                     <CheckSquare className="mr-2 h-4 w-4" />
-                    All Todos ({todos.filter((todo: Todo) => !todo.listId).length})
+                    All Todos ({todosArray.filter((todo: Todo) => !todo.listId).length})
                   </Button>
                   {todoLists.map((list: TodoList) => (
                     <Button
@@ -373,7 +378,7 @@ function TodosPage() {
                         className="w-3 h-3 rounded-full mr-2"
                         style={{ backgroundColor: list.color }}
                       />
-                      {list.name} ({todos.filter((todo: Todo) => todo.listId === list.id).length})
+                      {list.name} ({todosArray.filter((todo: Todo) => todo.listId === list.id).length})
                     </Button>
                   ))}
                 </CardContent>

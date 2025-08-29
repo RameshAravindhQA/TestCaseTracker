@@ -60,6 +60,8 @@ import {
   AutomationEnvironment,
 } from "@shared/schema";
 
+import { desc, eq } from "drizzle-orm"; // Assuming drizzle-orm is used for schema operations
+
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
@@ -707,13 +709,12 @@ class MemStorage implements IStorage {
 
       // Extract module prefix from module ID with robust logic
       let modulePrefix = 'MOD';
-      
       console.log(`Storage: Module ID: ${module.moduleId}, attempting to extract prefix...`);
-      
+
       if (module.moduleId && module.moduleId.includes('-')) {
         const moduleIdParts = module.moduleId.split('-');
         console.log(`Storage: Module ID parts:`, moduleIdParts);
-        
+
         // For format like "BEG-REG-MOD-01", extract "REG" (second part)
         if (moduleIdParts.length >= 4 && moduleIdParts[2] === 'MOD') {
           const potentialPrefix = moduleIdParts[1];
@@ -728,7 +729,7 @@ class MemStorage implements IStorage {
       if (modulePrefix === 'MOD' && module.name) {
         console.log(`Storage: Generating module prefix from module name: ${module.name}`);
         const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '').toLowerCase();
-        
+
         // Smart keyword-based mapping
         if (cleanModuleName.includes('register') || cleanModuleName.includes('registration') || cleanModuleName.includes('signup')) {
           modulePrefix = 'REG';
@@ -761,7 +762,7 @@ class MemStorage implements IStorage {
         }
         console.log(`Storage: Generated module prefix from name: ${modulePrefix}`);
       }
-      
+
       console.log(`Storage: Final module prefix to use: ${modulePrefix}`);
 
       // Find the highest existing test case number for this specific module
@@ -1830,7 +1831,7 @@ class MemStorage implements IStorage {
 
     const updatedTimeSheet = { ...this.timeSheets[index], ...timeSheetData, updatedAt: new Date() };
     this.timeSheets[index] = updatedTimeSheet;
-    
+
     console.log(`Storage: Updated timesheet ${id} with status: ${timeSheetData.status}`, updatedTimeSheet);
     return updatedTimeSheet;
   }
@@ -1871,7 +1872,7 @@ class MemStorage implements IStorage {
 
     const updatedFolder = { ...this.timeSheetFolders[index], ...timeSheetFolderData, updatedAt: new Date() };
     this.timeSheetFolders[index] = updatedFolder;
-    
+
     console.log(`Storage: Updated timesheet folder ${id}`);
     return updatedFolder;
   }
@@ -1897,7 +1898,7 @@ class MemStorage implements IStorage {
       updatedAt: new Date()
     };
     this.timeSheets[index] = approvedTimeSheet;
-    
+
     console.log(`Storage: Approved timesheet ${id} by user ${approverId}`, approvedTimeSheet);
     return approvedTimeSheet;
   }
@@ -1918,7 +1919,7 @@ class MemStorage implements IStorage {
       updatedAt: new Date()
     };
     this.timeSheets[index] = rejectedTimeSheet;
-    
+
     console.log(`Storage: Rejected timesheet ${id} by user ${approverId} with reason: ${reason}`, rejectedTimeSheet);
     return rejectedTimeSheet;
   }
@@ -2374,7 +2375,7 @@ class MemStorage implements IStorage {
         let modulePrefix = 'MOD';
         if (module.name) {
           const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '').toLowerCase();
-          
+
           // Enhanced keyword-based mapping
           if (cleanModuleName.includes('register') || cleanModuleName.includes('registration') || cleanModuleName.includes('signup')) {
             modulePrefix = 'REG';

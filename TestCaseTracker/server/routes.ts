@@ -5279,6 +5279,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const employeeImportUpload = configureEmployeeImportUpload();
 
+  // Todo and Todo Lists API endpoints
+  apiRouter.get("/todos", isAuthenticated, async (req, res) => {
+    try {
+      const todos = await storage.getTodos(req.session.userId!);
+      console.log(`[API] Returning ${todos.length} todos for user ${req.session.userId}`);
+      res.json(todos);
+    } catch (error) {
+      console.error("Get todos error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/todos", isAuthenticated, async (req, res) => {
+    try {
+      const todoData = {
+        ...req.body,
+        userId: req.session.userId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const todo = await storage.createTodo(todoData);
+      res.status(201).json(todo);
+    } catch (error) {
+      console.error("Create todo error:", error);
+      res.status(400).json({ message: "Invalid todo data" });
+    }
+  });
+
+  apiRouter.put("/todos/:id", isAuthenticated, async (req, res) => {
+    try {
+      const todoId = parseInt(req.params.id);
+      const todo = await storage.getTodo(todoId);
+
+      if (!todo) {
+        return res.status(404).json({ message: "Todo not found" });
+      }
+
+      // Users can only update their own todos unless they're admin
+      if (todo.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You don't have permission to update this todo" });
+      }
+
+      const updatedTodo = await storage.updateTodo(todoId, {
+        ...req.body,
+        updatedAt: new Date(),
+      });
+
+      res.json(updatedTodo);
+    } catch (error) {
+      console.error("Update todo error:", error);
+      res.status(400).json({ message: "Invalid todo data" });
+    }
+  });
+
+  apiRouter.delete("/todos/:id", isAuthenticated, async (req, res) => {
+    try {
+      const todoId = parseInt(req.params.id);
+      const todo = await storage.getTodo(todoId);
+
+      if (!todo) {
+        return res.status(404).json({ message: "Todo not found" });
+      }
+
+      // Users can only delete their own todos unless they're admin
+      if (todo.userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You don't have permission to delete this todo" });
+      }
+
+      const success = await storage.deleteTodo(todoId);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete todo error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/todo-lists", isAuthenticated, async (req, res) => {
+    try {
+      console.log(`Getting todo lists for user: ${req.session.userId}`);
+      const todoLists = await storage.getTodoLists(req.session.userId!);
+      console.log(`User todo lists:`, todoLists);
+      res.json(todoLists);
+    } catch (error) {
+      console.error("Get todo lists error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/todo-lists", isAuthenticated, async (req, res) => {
+    try {
+      const listData = {
+        ...req.body,
+        userId: req.session.userId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const todoList = await storage.createTodoList(listData);
+      res.status(201).json(todoList);
+    } catch (error) {
+      console.error("Create todo list error:", error);
+      res.status(400).json({ message: "Invalid todo list data" });
+    }
+  });
+
   // Employee import endpoint
   apiRouter.post("/employees/import", isAuthenticated, 
     (req, res, next) => {
