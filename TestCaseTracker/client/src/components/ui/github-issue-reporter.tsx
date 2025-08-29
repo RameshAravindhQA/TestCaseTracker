@@ -417,7 +417,6 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
       // Step 1: Create bug in the system first
       const bugPayload = {
         title: formData.title,
-        description: formData.description,
         severity: formData.severity === 'low' ? 'Trivial' : 
                  formData.severity === 'medium' ? 'Minor' : 
                  formData.severity === 'high' ? 'Major' : 'Critical',
@@ -437,28 +436,28 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
 
       // Handle file uploads separately first if needed
       const attachmentPromises = [];
-      
+
       for (const file of screenshots) {
         const formData = new FormData();
         formData.append('file', file);
-        
+
         const uploadPromise = fetch('/api/uploads/bug-attachment', {
           method: 'POST',
           body: formData,
         }).then(res => res.json());
-        
+
         attachmentPromises.push(uploadPromise);
       }
 
       if (screenRecording) {
         const formData = new FormData();
         formData.append('file', screenRecording);
-        
+
         const uploadPromise = fetch('/api/uploads/bug-attachment', {
           method: 'POST',
           body: formData,
         }).then(res => res.json());
-        
+
         attachmentPromises.push(uploadPromise);
       }
 

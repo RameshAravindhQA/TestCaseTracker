@@ -159,6 +159,8 @@ export const insertBugSchema = createInsertSchema(bugs).omit({
   id: true,
   dateReported: true,
   updatedAt: true,
+}).extend({
+  bugId: z.string().optional().default(''), // Make bugId optional for insertion, will be auto-generated
 });
 
 // Activity log
