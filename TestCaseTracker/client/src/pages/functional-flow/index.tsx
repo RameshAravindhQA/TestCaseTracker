@@ -12,7 +12,6 @@ import ReactFlow, {
   Node,
   BackgroundVariant,
   Panel,
-  MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +32,6 @@ import { useLocation, useSearch } from 'wouter';
 interface Project {
   id: string;
   name: string;
-  description?: string; // Added description to Project interface
 }
 
 interface FlowDiagram {
@@ -86,6 +84,7 @@ export default function FunctionalFlowPage() {
   const diagramId = searchParams.get('diagramId') || undefined;
   const urlProjectId = searchParams.get('projectId');
   const urlModuleId = searchParams.get('moduleId');
+
 
   // Fetch projects
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
@@ -322,14 +321,14 @@ export default function FunctionalFlowPage() {
       const generateFlowForProject = async () => {
         try {
           console.log(`Auto-generating flow diagram for project ${selectedProject}`);
-
+          
           const project = projects.find(p => p.id === selectedProject);
           if (!project) return;
 
           // Generate a flow diagram name
           const timestamp = new Date().toLocaleString();
           const generatedName = `${project.name} - Test Cases Flow (${timestamp})`;
-
+          
           // Create basic nodes for the project
           const startNode: Node = {
             id: 'start-1',
@@ -356,7 +355,7 @@ export default function FunctionalFlowPage() {
           };
 
           const initialNodes = [startNode, projectNode, endNode];
-
+          
           const initialEdges: Edge[] = [
             {
               id: 'e1-2',
@@ -397,293 +396,185 @@ export default function FunctionalFlowPage() {
     }
   }, [urlProjectId, selectedProject, diagramId, projects, setNodes, setEdges, toast]);
 
-  // Handle diagram loading errors
-  useEffect(() => {
-    // This useEffect depends on a `diagramError` variable which is not defined in the provided code.
-    // Assuming `diagramError` is meant to be a state variable or a value from a query.
-    // For now, I'll leave this as is, but it might need adjustment based on actual implementation.
-    if (diagramError && diagramId) {
-      toast({
-        title: 'Flow Diagram Not Found',
-        description: 'The requested flow diagram could not be found. Creating a new diagram.',
-        variant: 'destructive',
-      });
-      // Clear the diagram ID from URL
-      const url = new URL(window.location.href);
-      url.searchParams.delete('diagramId');
-      window.history.replaceState({}, '', url.toString());
-    }
-  }, [diagramError, diagramId, toast]);
-
-  // Initialize designer with flow data if available - with memoization to prevent rerender flickering
-  useEffect(() => {
-    // Use a ref to track if we've already initialized to prevent constant re-initialization
-    const initializeFlow = () => {
-      if (flowData) {
-        try {
-          const nodeData = flowData.nodes || [];
-          const edgeData = flowData.edges || [];
-          // The rest of the initialization logic would go here.
-          // This part is incomplete in the original snippet.
-        } catch (error) {
-          console.error("Error initializing flow:", error);
-          toast({
-            title: 'Initialization Error',
-            description: 'Failed to initialize flow diagram',
-            variant: 'destructive',
-          });
-        }
-      }
-    };
-    initializeFlow();
-  }, [flowData, setNodes, setEdges, toast]); // Assuming flowData is a prop or derived state
-
-  // Function to generate test case flow
-  const generateTestCaseFlow = async () => {
-    if (!selectedProject) {
-      toast({
-        title: 'Error',
-        description: 'Please select a project first',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const project = projects.find(p => p.id === selectedProject);
-    if (!project) {
-      toast({
-        title: 'Error',
-        description: 'Selected project not found',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const timestamp = new Date().toLocaleString();
-    const generatedName = `${project.name} - Test Cases Flow (${timestamp})`;
-
-    const startNode: Node = {
-      id: 'start-node',
-      type: 'input',
-      data: { label: `${project.name} Start` },
-      position: { x: 250, y: 5 },
-    };
-
-    const processNode: Node = {
-      id: 'process-node',
-      type: 'process',
-      data: { label: 'Execute Test Cases' },
-      position: { x: 250, y: 100 },
-      style: { backgroundColor: nodeTypes.process.color, color: 'white' },
-    };
-
-    const decisionNode: Node = {
-      id: 'decision-node',
-      type: 'decision',
-      data: { label: 'Tests Passed?' },
-      position: { x: 250, y: 200 },
-      style: { backgroundColor: nodeTypes.decision.color, color: 'white' },
-    };
-
-    const endNode: Node = {
-      id: 'end-node',
-      type: 'end',
-      data: { label: 'Test Run Complete' },
-      position: { x: 250, y: 300 },
-      style: { backgroundColor: nodeTypes.end.color, color: 'white' },
-    };
-
-    const newNodes = [startNode, processNode, decisionNode, endNode];
-    const newEdges: Edge[] = [
-      { id: 'e-start-process', source: 'start-node', target: 'process-node', animated: true, markerEnd: { type: MarkerType.ArrowClosed } },
-      { id: 'e-process-decision', source: 'process-node', target: 'decision-node', animated: true, markerEnd: { type: MarkerType.ArrowClosed } },
-      { id: 'e-decision-end-pass', source: 'decision-node', target: 'end-node', label: 'Yes', animated: true, markerEnd: { type: MarkerType.ArrowClosed } },
-      { id: 'e-decision-end-fail', source: 'decision-node', target: 'end-node', label: 'No', animated: true, markerEnd: { type: MarkerType.ArrowClosed } },
-    ];
-
-    setNodes(newNodes);
-    setEdges(newEdges);
-    setDiagramName(generatedName);
-    setDiagramDescription(`Auto-generated flow for ${project.name} test cases.`);
-
-    toast({
-      title: 'Flow Generated',
-      description: `Flow diagram for ${project.name} generated successfully.`,
-    });
-  };
-
-  // Placeholder for flowData, assuming it's fetched or passed as a prop
-  const flowData = undefined; // Replace with actual data fetching or prop
-
   return (
     <MainLayout>
-      <div className="flex flex-col h-screen p-4 space-y-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <Select onValueChange={setSelectedProject} value={selectedProject}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select Project" />
-              </SelectTrigger>
-              <SelectContent>
-                {projectsLoading ? (
-                  <SelectItem value="" disabled>Loading projects...</SelectItem>
-                ) : (
-                  projects.map((project: Project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-            <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" onClick={() => setIsSaveDialogOpen(true)} disabled={!selectedProject}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Flow
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Save Flow Diagram</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <Input
-                    placeholder="Diagram Name"
-                    value={diagramName}
-                    onChange={(e) => setDiagramName(e.target.value)}
-                  />
-                  <Textarea
-                    placeholder="Diagram Description"
-                    value={diagramDescription}
-                    onChange={(e) => setDiagramDescription(e.target.value)}
-                  />
-                  <Button onClick={handleSaveDiagram} disabled={!selectedProject || !diagramName.trim()}>
-                    Save
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" disabled={!selectedProject || diagramsLoading}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Load Flow
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Load Flow Diagram</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <Select onValueChange={setSelectedDiagram} value={selectedDiagram}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select Diagram to Load" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {diagramsLoading ? (
-                        <SelectItem value="" disabled>Loading diagrams...</SelectItem>
-                      ) : diagrams.length === 0 ? (
-                        <SelectItem value="" disabled>No diagrams found for this project</SelectItem>
-                      ) : (
-                        diagrams.map((diagram) => (
-                          <SelectItem key={diagram.id} value={diagram.id}>
-                            {diagram.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={handleLoadDiagram} disabled={!selectedDiagram}>
-                    Load
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Button variant="outline" size="sm" onClick={exportToPDF} disabled={!selectedProject}>
-              <FileDown className="w-4 h-4 mr-2" />
-              Export to PDF
-            </Button>
+      <div className="h-screen w-full bg-gray-100 overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Functional Flow Diagrams</h1>
+              <p className="text-muted-foreground">Create and manage visual workflow diagrams</p>
+            </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsCreateDialogOpen(true)}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Node
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Node</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <Input
-                    placeholder="Node Label"
-                    value={newNodeLabel}
-                    onChange={(e) => setNewNodeLabel(e.target.value)}
-                  />
-                  <Select onValueChange={setNewNodeType} value={newNodeType}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select Node Type" />
+
+          {/* Project Selection and Controls */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Selection & Controls</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="project">Select Project</Label>
+                  <Select value={selectedProject} onValueChange={setSelectedProject}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a project" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(nodeTypes).map(([key, value]) => (
-                        <SelectItem key={key} value={key}>
-                          {value.label}
+                      {projects.map((project: Project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button onClick={addNode} disabled={!newNodeLabel.trim()}>
-                    Add Node
-                  </Button>
                 </div>
-              </DialogContent>
-            </Dialog>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={generateTestCaseFlow}
-              disabled={!selectedProject}
-            >
-              <FileDown className="w-4 h-4 mr-2" />
-              Generate Flow
-            </Button>
-          </div>
-        </div>
-        <div className="flex-1 h-full">
-          <div ref={reactFlowRef} className="w-full h-full">
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              fitView
-              nodeTypes={{
-                startNode: (nodeProps) => <div style={{ ...nodeProps.style, backgroundColor: nodeTypes.start.color, padding: '10px', borderRadius: '8px' }}>{nodeProps.data.label}</div>,
-                processNode: (nodeProps) => <div style={{ ...nodeProps.style, backgroundColor: nodeTypes.process.color, padding: '10px', borderRadius: '8px' }}>{nodeProps.data.label}</div>,
-                decisionNode: (nodeProps) => <div style={{ ...nodeProps.style, backgroundColor: nodeTypes.decision.color, padding: '10px', borderRadius: '8px' }}>{nodeProps.data.label}</div>,
-                endNode: (nodeProps) => <div style={{ ...nodeProps.style, backgroundColor: nodeTypes.end.color, padding: '10px', borderRadius: '8px' }}>{nodeProps.data.label}</div>,
-                inputNode: (nodeProps) => <div style={{ ...nodeProps.style, backgroundColor: nodeTypes.input.color, padding: '10px', borderRadius: '8px' }}>{nodeProps.data.label}</div>,
-                outputNode: (nodeProps) => <div style={{ ...nodeProps.style, backgroundColor: nodeTypes.output.color, padding: '10px', borderRadius: '8px' }}>{nodeProps.data.label}</div>,
-              }}
-            >
-              <Panel position="top-right">
-                <Controls />
-              </Panel>
-              <Panel position="top-left">
-                <MiniMap />
-              </Panel>
-              <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-            </ReactFlow>
-          </div>
+
+                {selectedProject && (
+                  <div>
+                    <Label htmlFor="diagram">Load Existing Diagram</Label>
+                    <Select value={selectedDiagram} onValueChange={setSelectedDiagram}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a diagram" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {diagrams.map((diagram: FlowDiagram) => (
+                          <SelectItem key={diagram.id} value={diagram.id}>
+                            {diagram.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="flex items-end gap-2">
+                  {selectedDiagram && (
+                    <Button onClick={handleLoadDiagram} className="flex-1">
+                      Load Diagram
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button disabled={!selectedProject}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Node
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Node</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="nodeLabel">Node Label</Label>
+                        <Input
+                          id="nodeLabel"
+                          value={newNodeLabel}
+                          onChange={(e) => setNewNodeLabel(e.target.value)}
+                          placeholder="Enter node label"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="nodeType">Node Type</Label>
+                        <Select value={newNodeType} onValueChange={setNewNodeType}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(nodeTypes).map(([key, type]) => (
+                              <SelectItem key={key} value={key}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button onClick={addNode} className="w-full">
+                        Add Node
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button disabled={!selectedProject}>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Diagram
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Save Flow Diagram</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="diagramName">Diagram Name</Label>
+                        <Input
+                          id="diagramName"
+                          value={diagramName}
+                          onChange={(e) => setDiagramName(e.target.value)}
+                          placeholder="Enter diagram name"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="diagramDescription">Description</Label>
+                        <Textarea
+                          id="diagramDescription"
+                          value={diagramDescription}
+                          onChange={(e) => setDiagramDescription(e.target.value)}
+                          placeholder="Enter diagram description"
+                          rows={3}
+                        />
+                      </div>
+                      <Button onClick={handleSaveDiagram} className="w-full" disabled={saveDiagramMutation.isPending}>
+                        {saveDiagramMutation.isPending ? 'Saving...' : 'Save Diagram'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Button onClick={exportToPDF} disabled={!selectedProject}>
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Export PDF
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Flow Diagram Canvas */}
+          <Card className="min-h-[600px] flex-1">
+            <CardContent className="p-4 h-full">
+              <div ref={reactFlowRef} className="h-[550px] w-full border rounded-lg">
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={onConnect}
+                  fitView
+                  attributionPosition="bottom-left"
+                >
+                  <Controls />
+                  <MiniMap />
+                  <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+                  <Panel position="top-left">
+                    <div className="bg-white p-2 rounded shadow-lg border">
+                      <h3 className="font-semibold text-sm">Flow Diagram</h3>
+                      <p className="text-xs text-gray-600">
+                        Drag nodes to move, click to select, connect by dragging from node handles
+                      </p>
+                    </div>
+                  </Panel>
+                </ReactFlow>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </MainLayout>
