@@ -1,7 +1,6 @@
 import { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { createServer, type Server } from "http";
 import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject } from "./matrix-fix";
 import { automationService } from "./automation-service";
 import { logger } from "./logger";
@@ -10,12 +9,12 @@ import githubIntegrationsRouter from "./api/github-integrations";
 import { geminiService } from "./gemini-service";
 import { EnhancedAIService } from "./enhanced-ai-service";
 import { aiConfigStorage } from "./ai-config-storage";
-import { 
-  insertUserSchema, 
-  insertProjectSchema, 
-  insertProjectMemberSchema, 
-  insertModuleSchema, 
-  insertTestCaseSchema, 
+import {
+  insertUserSchema,
+  insertProjectSchema,
+  insertProjectMemberSchema,
+  insertModuleSchema,
+  insertTestCaseSchema,
   insertBugSchema,
   insertActivitySchema,
   insertDocumentFolderSchema,
@@ -341,7 +340,7 @@ const configureBugAttachmentUpload = () => {
         'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-flv',
         'video/x-matroska', 'video/x-ms-wmv', 'video/3gpp', 'video/mpeg', 'video/avi', 'video/x-ms-asf',
         // Documents
-        'application/pdf', 
+        'application/pdf',
         'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // Word
         'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // Excel
         'text/plain', 'text/csv',
@@ -360,8 +359,8 @@ const configureBugAttachmentUpload = () => {
       // For files with unrecognized mime types, check file extensions
       const ext = path.extname(file.originalname).toLowerCase();
       const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.pdf', '.doc', '.docx',
-                          '.xls', '.xlsx', '.txt', '.csv', '.zip', '.mp4', '.webm', '.avi', '.mov',
-                          '.mkv', '.flv', '.wmv', '.ogv', '.3gp'];
+        '.xls', '.xlsx', '.txt', '.csv', '.zip', '.mp4', '.webm', '.avi', '.mov',
+        '.mkv', '.flv', '.wmv', '.ogv', '.3gp'];
 
       if (allowedExts.includes(ext)) {
         return cb(null, true);
@@ -674,7 +673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         debug: debugInfo,
         recommendations: [
           '✅ Gemini API key configured',
-          '✅ OpenAI API key configured', 
+          '✅ OpenAI API key configured',
           debugInfo.testGeneration.mockServiceWorking ? '✅ Mock service working' : '❌ Mock service failed',
           '💡 Mock service should always work as fallback',
           '💡 At least one AI provider should be configured for best results'
@@ -806,7 +805,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.get("/resource-requests", isAuthenticated, async (req, res) => {
     try {
-      const {projectId, status, department, requestType } = req.query;
+      const { projectId, status, department, requestType } = req.query;
       const requests = await storage.getResourceRequests({
         projectId: projectId ? parseInt(projectId as string) : undefined,
         status: status as string,
@@ -846,7 +845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate request ID if not provided
       if (!requestData.requestId) {
-        const prefix = requestData.requestType ? 
+        const prefix = requestData.requestType ?
           requestData.requestType.split(' ')[0].toUpperCase() : 'REQ';
         const timestamp = Date.now().toString().slice(-6);
         requestData.requestId = `${prefix}-${timestamp}`;
@@ -1114,10 +1113,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date()
       });
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: "Project duration extended successfully",
-        allocation: updatedAllocation 
+        allocation: updatedAllocation
       });
     } catch (error) {
       console.error("Extend project duration error:", error);
@@ -1681,7 +1680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Add the uploads endpoint for bug attachments with error handling
-  apiRouter.post("/uploads/bug-attachment", isAuthenticated, 
+  apiRouter.post("/uploads/bug-attachment", isAuthenticated,
     (req, res, next) => {
       console.log("Starting bug attachment upload request");
       console.log("Request headers:", req.headers);
@@ -1846,10 +1845,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // TODO: Implement saveMatrixData in storage
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: "Matrix saved successfully",
-        savedCells: matrixData.length 
+        savedCells: matrixData.length
       });
     } catch (error) {
       console.error("Save matrix error:", error);
@@ -1858,354 +1857,354 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-// Enhanced automation endpoints with actual implementation
-app.get('/api/automation/health', async (req, res) => {
-  try {
-    logger.info('Automation health check requested');
-
-    const healthStatus = {
-      service: 'running',
-      playwright: 'unknown',
-      recordingsDir: 'unknown',
-      timestamp: new Date().toISOString()
-    };
-
-    // Check if recordings directory exists
+  // Enhanced automation endpoints with actual implementation
+  app.get('/api/automation/health', async (req, res) => {
     try {
-      const recordingsDir = path.join(process.cwd(), 'recordings');
-      await fs.promises.access(recordingsDir);
-      healthStatus.recordingsDir = 'accessible';
-      logger.info('Recordings directory accessible:', recordingsDir);
-    } catch (dirError) {
-      healthStatus.recordingsDir = 'not_accessible';
-      logger.warn('Recordings directory not accessible');
-    }
+      logger.info('Automation health check requested');
 
-    // Check Playwright availability
+      const healthStatus = {
+        service: 'running',
+        playwright: 'unknown',
+        recordingsDir: 'unknown',
+        timestamp: new Date().toISOString()
+      };
+
+      // Check if recordings directory exists
+      try {
+        const recordingsDir = path.join(process.cwd(), 'recordings');
+        await fs.promises.access(recordingsDir);
+        healthStatus.recordingsDir = 'accessible';
+        logger.info('Recordings directory accessible:', recordingsDir);
+      } catch (dirError) {
+        healthStatus.recordingsDir = 'not_accessible';
+        logger.warn('Recordings directory not accessible');
+      }
+
+      // Check Playwright availability
+      try {
+        const { spawn } = await import('child_process');
+        const testProcess = spawn('npx', ['playwright', '--version'], {
+          stdio: 'pipe',
+          timeout: 5000
+        });
+
+        let versionOutput = '';
+        testProcess.stdout?.on('data', (data) => {
+          versionOutput += data.toString();
+        });
+
+        await new Promise((resolve, reject) => {
+          testProcess.on('close', (code) => {
+            if (code === 0) {
+              healthStatus.playwright = `available (${versionOutput.trim()})`;
+              logger.info('Playwright health check passed:', versionOutput.trim());
+              resolve(code);
+            } else {
+              healthStatus.playwright = `error_code_${code}`;
+              reject(new Error(`Playwright check failed with code ${code}`));
+            }
+          });
+          testProcess.on('error', (error) => {
+            healthStatus.playwright = `not_found: ${error.message}`;
+            reject(error);
+          });
+          setTimeout(() => {
+            testProcess.kill();
+            reject(new Error('Timeout'));
+          }, 5000);
+        });
+      } catch (playwrightError: any) {
+        healthStatus.playwright = `error: ${playwrightError.message}`;
+        logger.warn('Playwright health check failed:', playwrightError.message);
+      }
+
+      res.json({
+        status: 'ok',
+        message: 'Automation service health check completed',
+        details: healthStatus
+      });
+    } catch (error: any) {
+      logger.error('Health check error:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Health check failed',
+        error: error.message
+      });
+    }
+  });
+
+  // Get available browsers
+  app.get('/api/automation/browsers', async (req, res) => {
     try {
-      const { spawn } = await import('child_process');
-      const testProcess = spawn('npx', ['playwright', '--version'], { 
-        stdio: 'pipe',
-        timeout: 5000
+      const automationServiceInstance = (automationService as any);
+      const availableBrowsers = await automationServiceInstance.detectSystemBrowsers();
+
+      res.json({
+        success: true,
+        browsers: availableBrowsers,
+        recommended: availableBrowsers.includes('chrome') ? 'chrome' :
+          availableBrowsers.includes('chromium') ? 'chromium' :
+            availableBrowsers[0] || 'none'
       });
-
-      let versionOutput = '';
-      testProcess.stdout?.on('data', (data) => {
-        versionOutput += data.toString();
-      });
-
-      await new Promise((resolve, reject) => {
-        testProcess.on('close', (code) => {
-          if (code === 0) {
-            healthStatus.playwright = `available (${versionOutput.trim()})`;
-            logger.info('Playwright health check passed:', versionOutput.trim());
-            resolve(code);
-          } else {
-            healthStatus.playwright = `error_code_${code}`;
-            reject(new Error(`Playwright check failed with code ${code}`));
-          }
-        });
-        testProcess.on('error', (error) => {
-          healthStatus.playwright = `not_found: ${error.message}`;
-          reject(error);
-        });
-        setTimeout(() => {
-          testProcess.kill();
-          reject(new Error('Timeout'));
-        }, 5000);
-      });
-    } catch (playwrightError: any) {
-      healthStatus.playwright = `error: ${playwrightError.message}`;
-      logger.warn('Playwright health check failed:', playwrightError.message);
-    }
-
-    res.json({
-      status: 'ok',
-      message: 'Automation service health check completed',
-      details: healthStatus
-    });
-  } catch (error: any) {
-    logger.error('Health check error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Health check failed',
-      error: error.message
-    });
-  }
-});
-
-// Get available browsers
-app.get('/api/automation/browsers', async (req, res) => {
-  try {
-    const automationServiceInstance = (automationService as any);
-    const availableBrowsers = await automationServiceInstance.detectSystemBrowsers();
-
-    res.json({
-      success: true,
-      browsers: availableBrowsers,
-      recommended: availableBrowsers.includes('chrome') ? 'chrome' : 
-                  availableBrowsers.includes('chromium') ? 'chromium' : 
-                  availableBrowsers[0] || 'none'
-    });
-  } catch (error: any) {
-    logger.error('Failed to detect browsers:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to detect available browsers',
-      browsers: []
-    });
-  }
-});
-
-apiRouter.get('/automation/scripts', isAuthenticated, async (req, res) => {
-  try {
-    const scripts = await automationService.getRecordings();
-    res.json(scripts.map(filename => ({
-      id: filename,
-      name: filename.replace('.spec.ts', ''),
-      filename,
-      status: 'ready',
-      created: new Date(),
-    })));
-  } catch (error) {
-    console.error('Get automation scripts error:', error);
-    res.status(500).json({ message: 'Failed to get scripts' });
-  }
-});
-
-apiRouter.get('/automation/recordings', isAuthenticated, async (req, res) => {
-  try {
-    const recordings = await automationService.getRecordings();
-    res.json(recordings);
-  } catch (error) {
-    console.error('Get automation recordings error:', error);
-    res.status(500).json({ message: 'Failed to get recordings' });
-  }
-});
-
-apiRouter.get('/automation/script/:filename', isAuthenticated, async (req, res) => {
-  try {
-    const { filename } = req.params;
-    const content = await automationService.getRecordingContent(filename);
-
-    if (!content) {
-      return res.status(404).json({ message: 'Script not found' });
-    }
-
-    res.json({ filename, content });
-  } catch (error) {
-    console.error('Get script content error:', error);
-    res.status(500).json({ message: 'Failed to get script content' });
-  }
-});
-
-// Serve automation screenshots
-app.use('/automation/screenshots', (req, res, next) => {
-  const screenshotsDir = path.join(process.cwd(), 'recordings', 'screenshots');
-  const filePath = path.join(screenshotsDir, req.path);
-
-  // Validate path to prevent directory traversal
-  if (!filePath.startsWith(screenshotsDir)) {
-    return res.status(403).json({ message: "Forbidden" });
-  }
-
-  // Check if file exists
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ message: "Screenshot not found" });
-  }
-
-
-  // Serve the file
-  res.sendFile(filePath);
-});
-
-app.post('/api/automation/start-recording', async (req, res) => {
-  try {
-    const { url, projectId, moduleId, testCaseId, launchMode, preferredBrowser } = req.body;
-    const userId = (req as any).user?.id;
-    const userRole = (req as any).user?.role;
-
-    logger.info('Recording request received:', {
-      url,
-      projectId,
-      moduleId,
-      testCaseId,
-      launchMode,
-      preferredBrowser,
-      userId,
-      userRole
-    });
-
-    // Validate required fields
-    if (!url) {
-      return res.status(400).json({
+    } catch (error: any) {
+      logger.error('Failed to detect browsers:', error);
+      res.status(500).json({
         success: false,
-        message: 'URL is required'
+        message: 'Failed to detect available browsers',
+        browsers: []
       });
     }
+  });
 
-    // Validate URL format
+  apiRouter.get('/automation/scripts', isAuthenticated, async (req, res) => {
     try {
-      new URL(url);
-      logger.info('URL validation passed:', url);
+      const scripts = await automationService.getRecordings();
+      res.json(scripts.map(filename => ({
+        id: filename,
+        name: filename.replace('.spec.ts', ''),
+        filename,
+        status: 'ready',
+        created: new Date(),
+      })));
     } catch (error) {
-      logger.error('Invalid URL format:', url);
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide a valid URL'
-      });
+      console.error('Get automation scripts error:', error);
+      res.status(500).json({ message: 'Failed to get scripts' });
+    }
+  });
+
+  apiRouter.get('/automation/recordings', isAuthenticated, async (req, res) => {
+    try {
+      const recordings = await automationService.getRecordings();
+      res.json(recordings);
+    } catch (error) {
+      console.error('Get automation recordings error:', error);
+      res.status(500).json({ message: 'Failed to get recordings' });
+    }
+  });
+
+  apiRouter.get('/automation/script/:filename', isAuthenticated, async (req, res) => {
+    try {
+      const { filename } = req.params;
+      const content = await automationService.getRecordingContent(filename);
+
+      if (!content) {
+        return res.status(404).json({ message: 'Script not found' });
+      }
+
+      res.json({ filename, content });
+    } catch (error) {
+      console.error('Get script content error:', error);
+      res.status(500).json({ message: 'Failed to get script content' });
+    }
+  });
+
+  // Serve automation screenshots
+  app.use('/automation/screenshots', (req, res, next) => {
+    const screenshotsDir = path.join(process.cwd(), 'recordings', 'screenshots');
+    const filePath = path.join(screenshotsDir, req.path);
+
+    // Validate path to prevent directory traversal
+    if (!filePath.startsWith(screenshotsDir)) {
+      return res.status(403).json({ message: "Forbidden" });
     }
 
-    logger.info('Starting automation service recording...');
-    const result = await automationService.startRecording({
-      url,
-      projectId,
-      moduleId,
-      testCaseId,
-      launchMode,
-      preferredBrowser
-    });
-
-    logger.info('Recording result:', {
-      success: result.success,
-      recordingId: result.recordingId,
-      availableBrowsers: result.availableBrowsers,
-      url,
-      testCaseId
-    });
-
-    res.json(result);
-  } catch (error: any) {
-    logger.error('Failed to start recording:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to start recording: ' + error.message
-    });
-  }
-});
-
-apiRouter.post('/automation/stop-recording', isAuthenticated, async (req, res) => {
-  try {
-    const { sessionId } = req.body;
-
-    if (!sessionId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Session ID is required',
-      });
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "Screenshot not found" });
     }
 
-    const result = await automationService.stopRecording(sessionId);
 
-    if (result.success) {
+    // Serve the file
+    res.sendFile(filePath);
+  });
+
+  app.post('/api/automation/start-recording', async (req, res) => {
+    try {
+      const { url, projectId, moduleId, testCaseId, launchMode, preferredBrowser } = req.body;
+      const userId = (req as any).user?.id;
+      const userRole = (req as any).user?.role;
+
+      logger.info('Recording request received:', {
+        url,
+        projectId,
+        moduleId,
+        testCaseId,
+        launchMode,
+        preferredBrowser,
+        userId,
+        userRole
+      });
+
+      // Validate required fields
+      if (!url) {
+        return res.status(400).json({
+          success: false,
+          message: 'URL is required'
+        });
+      }
+
+      // Validate URL format
+      try {
+        new URL(url);
+        logger.info('URL validation passed:', url);
+      } catch (error) {
+        logger.error('Invalid URL format:', url);
+        return res.status(400).json({
+          success: false,
+          message: 'Please provide a valid URL'
+        });
+      }
+
+      logger.info('Starting automation service recording...');
+      const result = await automationService.startRecording({
+        url,
+        projectId,
+        moduleId,
+        testCaseId,
+        launchMode,
+        preferredBrowser
+      });
+
+      logger.info('Recording result:', {
+        success: result.success,
+        recordingId: result.recordingId,
+        availableBrowsers: result.availableBrowsers,
+        url,
+        testCaseId
+      });
+
       res.json(result);
-    } else {
-      res.status(400).json(result);
-    }
-  } catch (error) {
-    console.error('Stop recording error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to stop recording',
-      error: error.message,
-    });
-  }
-});
-
-apiRouter.post('/automation/execute-test', isAuthenticated, async (req, res) => {
-  try {
-    const { filename, testCaseId } = req.body;
-
-    if (!filename) {
-      return res.status(400).json({
+    } catch (error: any) {
+      logger.error('Failed to start recording:', error);
+      res.status(500).json({
         success: false,
-        message: 'Filename is required',
+        message: 'Failed to start recording: ' + error.message
       });
     }
+  });
 
-    const result = await automationService.executeTest(filename);
+  apiRouter.post('/automation/stop-recording', isAuthenticated, async (req, res) => {
+    try {
+      const { sessionId } = req.body;
 
-    if (result.success) {
-      res.json(result);
-    } else {
-      res.status(400).json(result);
-    }
-  } catch (error) {
-    console.error('Execute test error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to execute test',
-      error: error.message,
-    });
-  }
-});
+      if (!sessionId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Session ID is required',
+        });
+      }
 
-apiRouter.get('/automation/session/:sessionId', isAuthenticated, (req, res) => {
-  try {
-    const { sessionId } = req.params;
-    const session = automationService.getSession(sessionId);
+      const result = await automationService.stopRecording(sessionId);
 
-    if (!session) {
-      return res.status(404).json({
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error('Stop recording error:', error);
+      res.status(500).json({
         success: false,
-        message: 'Session not found',
+        message: 'Failed to stop recording',
+        error: error.message,
       });
     }
+  });
 
-    res.json({
-      success: true,
-      data: {
-        id: session.id,
-        status: session.status,
-        filename: session.filename,
-        startTime: session.startTime,
-        endTime: session.endTime,
-        url: session.url,
-      },
-    });
-  } catch (error) {
-    console.error('Get session error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get session',
-      error: error.message,
-    });
-  }
-});
+  apiRouter.post('/automation/execute-test', isAuthenticated, async (req, res) => {
+    try {
+      const { filename, testCaseId } = req.body;
 
-apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) => {
-  try {
-    const { executionId } = req.params;
-    const execution = automationService.getExecution(executionId);
+      if (!filename) {
+        return res.status(400).json({
+          success: false,
+          message: 'Filename is required',
+        });
+      }
 
-    if (!execution) {
-      return res.status(404).json({
+      const result = await automationService.executeTest(filename);
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error('Execute test error:', error);
+      res.status(500).json({
         success: false,
-        message: 'Execution not found',
+        message: 'Failed to execute test',
+        error: error.message,
       });
     }
+  });
 
-    res.json({
-      success: true,
-      data: {
-        id: execution.id,
-        status: execution.status,
-        filename: execution.filename,
-        startTime: execution.startTime,
-        endTime: execution.endTime,
-        results: execution.results,
-        report: execution.report,
-      },
-    });
-  } catch (error) {
-    console.error('Get execution error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get execution',
-      error: error.message,
-    });
-  }
-});
+  apiRouter.get('/automation/session/:sessionId', isAuthenticated, (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const session = automationService.getSession(sessionId);
+
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Session not found',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: {
+          id: session.id,
+          status: session.status,
+          filename: session.filename,
+          startTime: session.startTime,
+          endTime: session.endTime,
+          url: session.url,
+        },
+      });
+    } catch (error) {
+      console.error('Get session error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get session',
+        error: error.message,
+      });
+    }
+  });
+
+  apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) => {
+    try {
+      const { executionId } = req.params;
+      const execution = automationService.getExecution(executionId);
+
+      if (!execution) {
+        return res.status(404).json({
+          success: false,
+          message: 'Execution not found',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: {
+          id: execution.id,
+          status: execution.status,
+          filename: execution.filename,
+          startTime: execution.startTime,
+          endTime: execution.endTime,
+          results: execution.results,
+          report: execution.report,
+        },
+      });
+    } catch (error) {
+      console.error('Get execution error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get execution',
+        error: error.message,
+      });
+    }
+  });
 
 
   // Deleted Test Cases routes
@@ -2627,18 +2626,18 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
       // Validate authentication
       if (!req.session || !req.session.userId) {
         console.error('❌ Authentication failed');
-        return res.status(401).json({ 
+        return res.status(401).json({
           success: false,
           error: 'Authentication required',
           timestamp: new Date().toISOString()
         });
       }
 
-      const { 
-        requirement, 
-        projectContext, 
-        moduleContext, 
-        testType, 
+      const {
+        requirement,
+        projectContext,
+        moduleContext,
+        testType,
         priority,
         websiteUrl,
         elementInspection,
@@ -2661,7 +2660,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
       // Input validation
       if (!requirement && !websiteUrl) {
         console.error('❌ No input provided');
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
           error: 'At least one input is required: requirement text or website URL',
           timestamp: new Date().toISOString()
@@ -2718,7 +2717,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
       console.error('❌ Enhanced AI Generation - Critical handler error:', handlerError);
 
       // Ensure we always return JSON even in error cases
-      const errorResponse = { 
+      const errorResponse = {
         success: false,
         error: 'Internal server error during test case generation',
         details: process.env.NODE_ENV === 'development' ? handlerError.message : 'Please try again',
@@ -2958,7 +2957,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
         action: "updated",
         entityType: "user",
         entityId: userId,
-        details: { 
+        details: {
           field: "avatar",
           avatarType: avatarType || "image"
         }
@@ -3183,7 +3182,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
   // Note: GitHub integration routes are handled by the dedicated GitHub router above
 
   // Add a duplicate route for handling bug attachment uploads with /api prefix for client compatibility
-  app.post('/api/uploads/bug-attachment', isAuthenticated, 
+  app.post('/api/uploads/bug-attachment', isAuthenticated,
     (req, res, next) => {
       console.log('File upload via alternate route detected');
       console.log('Request headers:', req.headers);
@@ -3433,7 +3432,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
         }
       }
 
-      console.log(`[API] Returning ${timesheets.length} timesheets for user ${req.session.userId}:`, 
+      console.log(`[API] Returning ${timesheets.length} timesheets for user ${req.session.userId}:`,
         timesheets.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description.substring(0, 50) })));
       res.json(timesheets);
     } catch (error) {
@@ -3554,7 +3553,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
   });
 
   // Chat file upload endpoint
-  apiRouter.post("/chat/upload", isAuthenticated, 
+  apiRouter.post("/chat/upload", isAuthenticated,
     (req, res, next) => {
       bugAttachmentUpload.array('files', 10)(req, res, (err) => {
         if (err) {
@@ -3634,6 +3633,59 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
 
   // Register the main API router
   app.use("/api", apiRouter);
+
+  // Test cases routes
+  app.get("/api/test-cases", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { projectId, moduleId } = req.query;
+
+      let testCases;
+      if (projectId && moduleId) {
+        testCases = await storage.getTestCasesByFilters(
+          parseInt(projectId as string),
+          parseInt(moduleId as string)
+        );
+      } else if (projectId) {
+        testCases = await storage.getTestCasesByProject(parseInt(projectId as string));
+      } else {
+        testCases = await storage.getTestCases();
+      }
+
+      res.json(testCases);
+    } catch (error) {
+      console.error("Get test cases error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Bugs routes
+  app.get("/api/bugs", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { projectId, status, severity } = req.query;
+
+      const filters: any = {};
+      if (projectId) filters.projectId = parseInt(projectId as string);
+      if (status) filters.status = status as string;
+      if (severity) filters.severity = severity as string;
+
+      const bugs = await storage.getBugsWithFilters(filters);
+      res.json(bugs);
+    } catch (error) {
+      console.error("Get bugs error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Employee routes
+  app.get("/api/employees", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const employees = await storage.getEmployees();
+      res.json(employees);
+    } catch (error) {
+      console.error("Get employees error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
 
   // Create HTTP server
   const httpServer = createServer(app);
