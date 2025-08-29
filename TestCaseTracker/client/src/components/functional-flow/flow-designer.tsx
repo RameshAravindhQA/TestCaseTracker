@@ -17,6 +17,7 @@ import ReactFlow, {
   SelectionMode,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import './test-case-node-styles.css'; // Import custom styles for test case nodes
 import { toPng, toSvg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { useToast } from '@/hooks/use-toast';
@@ -59,9 +60,12 @@ import { SubprocessNode } from './nodes/subprocess-node';
 import { LinkedNode } from './nodes/linked-node';
 import { ApiCallNode } from './nodes/api-call-node';
 import { ExternalSystemNode } from './nodes/external-system-node';
+// Import TestCaseNode for the new functionality
+import { TestCaseNode } from './nodes/test-case-node'; 
 import { FlowDiagramData, FlowNodeType } from '../../../shared/functional-flow-types';
+import { useRouter } from '@tanstack/react-router'; // Import useRouter
 
-// Define custom node types
+// Define custom node types, including the new TestCaseNode
 const nodeTypes: NodeTypes = {
   startNode: StartNode,
   endNode: EndNode,
@@ -71,17 +75,19 @@ const nodeTypes: NodeTypes = {
   linkedNode: LinkedNode,
   apiCallNode: ApiCallNode,
   externalSystemNode: ExternalSystemNode,
+  testCaseNode: TestCaseNode, // Add TestCaseNode to the types
 };
 
-// Define props for FlowDesigner component
+// Define props for FlowDesigner component, including optional diagramId
 interface FlowDesignerProps {
   projectId: number;
   flowData: FlowDiagramData | null;
   onChange: (data: FlowDiagramData) => void;
   onSave: (name: string, description: string) => void;
+  diagramId?: string; // Optional diagramId for auto-loading
 }
 
-export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesignerProps) {
+export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId }: FlowDesignerProps) {
   const { toast } = useToast();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -98,6 +104,10 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
   const [flowDescription, setFlowDescription] = useState('');
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  // State to store the current diagram being edited/viewed
+  const [currentDiagram, setCurrentDiagram] = useState<FlowDiagramData | null>(null);
+
+  const router = useRouter(); // Initialize useRouter
 
   // Initialize designer with flow data if available - with memoization to prevent rerender flickering
   useEffect(() => {
@@ -107,7 +117,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
         try {
           const nodeData = flowData.nodes || [];
           const edgeData = flowData.edges || [];
-          
+
           // Only update state if data has changed to prevent unnecessary rerenders
           setNodes(currentNodes => {
             if (JSON.stringify(currentNodes) !== JSON.stringify(nodeData)) {
@@ -115,14 +125,14 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
             }
             return currentNodes;
           });
-          
+
           setEdges(currentEdges => {
             if (JSON.stringify(currentEdges) !== JSON.stringify(edgeData)) {
               return edgeData;
             }
             return currentEdges;
           });
-          
+
           if (flowData.metadata) {
             setFlowName(flowData.metadata.name || '');
             setFlowDescription(flowData.metadata.description || '');
@@ -156,7 +166,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
           }
           return currentNodes;
         });
-        
+
         setEdges(currentEdges => {
           if (currentEdges.length === 0) {
             return [
@@ -173,20 +183,62 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
           }
           return currentEdges;
         });
-        
+
         setFlowName('');
         setFlowDescription('');
       }
     };
-    
+
     initializeFlow();
   }, [flowData, toast]);
+
+  // Placeholder for loading existing diagrams (e.g., from API)
+  const loadDiagrams = async () => {
+    // Fetch diagrams for the project and update the sidebar/available diagrams
+    // For now, just logging a message
+    console.log(`Fetching diagrams for project ${projectId}`);
+  };
+
+  // Auto-load specific diagram if diagramId is provided
+  useEffect(() => {
+    if (diagramId) {
+      loadDiagram(diagramId);
+    }
+  }, [diagramId]);
+
+  const loadDiagram = async (id: string) => {
+    try {
+      const response = await fetch(`/api/flow-diagrams/${id}`);
+      if (response.ok) {
+        const diagram = await response.json();
+        if (diagram.data && diagram.data.nodes && diagram.data.edges) {
+          setNodes(diagram.data.nodes);
+          setEdges(diagram.data.edges);
+          setCurrentDiagram(diagram); // Set the loaded diagram
+        }
+      } else {
+        console.error(`Failed to load diagram ${id}:`, response.statusText);
+        toast({
+          title: 'Error',
+          description: `Failed to load diagram with ID: ${id}`,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error loading diagram:', error);
+      toast({
+        title: 'Error',
+        description: 'An error occurred while loading the diagram.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Update parent component when nodes or edges change, with debounce to prevent flickering
   useEffect(() => {
     // Only update if we have actual nodes/edges to prevent unnecessary re-renders
     if (nodes.length === 0 && edges.length === 0) return;
-    
+
     // Use a debounce mechanism to reduce update frequency and prevent flickering
     const debounceTimer = setTimeout(() => {
       const updatedFlowData: FlowDiagramData = {
@@ -197,10 +249,10 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
           description: flowDescription,
         },
       };
-      
+
       onChange(updatedFlowData);
     }, 100); // Small delay to batch updates
-    
+
     return () => clearTimeout(debounceTimer);
   }, [nodes, edges, flowName, flowDescription, onChange]);
 
@@ -212,18 +264,18 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
       const dragChanges = changes.filter(change => 
         change.type === 'position' && change.dragging === true
       );
-      
+
       if (dragChanges.length > 0) {
         // We are dragging - add a class to document.body to indicate this global state
         document.body.classList.add('dragging');
-        
+
         // For active drag operations, we need to minimize state updates
         // By manually modifying DOM elements instead of using React state
         dragChanges.forEach(change => {
           if (change.type === 'position' && change.position) {
             // Find the DOM node instead of updating React state
             const nodeElement = document.querySelector(`[data-id="${change.id}"]`);
-            
+
             if (nodeElement) {
               // Force hardware acceleration to eliminate flicker
               nodeElement.style.transform = `translate(${change.position.x}px, ${change.position.y}px)`;
@@ -232,7 +284,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
             }
           }
         });
-        
+
         // Store changes to apply at end of drag without triggering render cycles
         return;
       } else {
@@ -240,12 +292,12 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
         const dragEndChanges = changes.filter(change => 
           change.type === 'position' && change.dragging === false
         );
-        
+
         if (dragEndChanges.length > 0) {
           // Drag ended, remove the global dragging class
           document.body.classList.remove('dragging');
         }
-        
+
         // Process all non-dragging changes normally
         setNodes(nds => applyNodeChanges(changes, nds));
       }
@@ -260,7 +312,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
       if (document.body.classList.contains('dragging')) {
         return; // Skip edge updates during node dragging
       }
-      
+
       // Prioritize deletion changes
       const deletionChanges = changes.filter(change => change.type === 'remove');
       if (deletionChanges.length > 0) {
@@ -280,7 +332,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
     (params: Connection) => {
       // Ensure we have a unique ID for the new edge
       const newEdgeId = `edge-${params.source}-${params.target}-${Date.now()}`;
-      
+
       // Create a new edge with consistent styling
       const newEdge = {
         ...params,
@@ -292,14 +344,14 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
         style: { stroke: '#555' },
         animated: false, // Disable animation to reduce rendering load
       };
-      
+
       // Add edge with optimistic update
       setEdges((eds) => {
         // Check if a similar edge already exists to prevent duplicates
         const edgeExists = eds.some(
           e => e.source === params.source && e.target === params.target
         );
-        
+
         if (edgeExists) return eds;
         return addEdge(newEdge, eds);
       });
@@ -311,7 +363,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     // Prevent event propagation to avoid triggering canvas clicks
     event.stopPropagation();
-    
+
     // Implement a small delay to prevent accidental double editing
     setTimeout(() => {
       setSelectedNode(node);
@@ -323,7 +375,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    
+
     // Prevent flickering by ensuring smooth drag operations
     if (event.target instanceof HTMLElement) {
       event.target.style.transition = 'none';
@@ -337,6 +389,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
 
       const nodeType = event.dataTransfer.getData('application/reactflow-type');
       const nodeLabel = event.dataTransfer.getData('application/reactflow-label');
+      const testCaseId = event.dataTransfer.getData('application/reactflow-testcase-id'); // Get test case ID if dropped from sidebar
 
       if (!nodeType || !reactFlowInstanceRef.current || !reactFlowWrapper.current) {
         return;
@@ -361,8 +414,9 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
           type: nodeType,
           position,
           data: { 
-            label: nodeLabel,
+            label: nodeLabel || `New ${nodeType}`, // Default label
             description: '',
+            ...(nodeType === 'testCaseNode' && testCaseId ? { testCaseId: testCaseId } : {}), // Assign testCaseId if applicable
           },
           // Add default styling to ensure consistent appearance
           style: {
@@ -407,10 +461,10 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
       if (!updatedNode || !updatedNode.id) {
         throw new Error("Invalid node data");
       }
-      
+
       // Create a stable copy of the node to prevent reference issues
       const stableNodeCopy = JSON.parse(JSON.stringify(updatedNode));
-      
+
       setNodes(prevNodes => {
         // Find the existing node index
         const nodeIndex = prevNodes.findIndex(node => node.id === updatedNode.id);
@@ -418,17 +472,17 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
           // Node not found - this shouldn't happen but handle gracefully
           return prevNodes;
         }
-        
+
         // Create a new array with the updated node
         const newNodes = [...prevNodes];
         newNodes[nodeIndex] = stableNodeCopy;
         return newNodes;
       });
-      
+
       // Close the dialog after successful update
       setSelectedNode(null);
       setShowNodeDialog(false);
-      
+
       // Show success feedback
       toast({
         title: "Node Updated",
@@ -468,7 +522,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
         data: { label: 'End' },
       },
     ];
-    
+
     const initialEdges: Edge[] = [
       {
         id: 'start-end',
@@ -480,12 +534,13 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
         },
       },
     ];
-    
+
     setNodes(initialNodes);
     setEdges(initialEdges);
     setFlowName('');
     setFlowDescription('');
     setSelectedNode(null);
+    setCurrentDiagram(null); // Clear current diagram on reset
   };
 
   // Export flow as PDF
@@ -503,28 +558,28 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
     try {
       // Create filename based on flow name or default
       const filename = flowName ? `${flowName.replace(/\s+/g, '_')}.pdf` : 'flow_diagram.pdf';
-      
+
       // Find the ReactFlow element, applying a more specific selector
       const flowElement = reactFlowWrapper.current.querySelector('.react-flow') as HTMLElement;
-      
+
       if (!flowElement) {
         throw new Error('Could not find ReactFlow element to capture');
       }
-      
+
       // Prepare the flow element for export - ensure edges are visible
       // Make a copy of the current styles to restore later
       const currentStyles = window.getComputedStyle(flowElement);
       const originalBackground = currentStyles.backgroundColor;
       const originalOverflow = currentStyles.overflow;
-      
+
       // Temporarily adjust styles to ensure everything is visible for export
       flowElement.style.backgroundColor = '#ffffff';
       flowElement.style.overflow = 'visible';
-      
+
       // Select all edges and ensure they have proper styling
       const edgeElements = flowElement.querySelectorAll('.react-flow__edge-path');
       const originalEdgeStyles: {el: SVGPathElement, stroke: string, strokeWidth: string}[] = [];
-      
+
       // Save original edge styles and enhance for export
       edgeElements.forEach((edge: SVGPathElement) => {
         const computedStyle = window.getComputedStyle(edge);
@@ -533,12 +588,12 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
           stroke: edge.getAttribute('stroke') || computedStyle.stroke,
           strokeWidth: edge.getAttribute('stroke-width') || computedStyle.strokeWidth
         });
-        
+
         // Make edges more visible for export
         edge.setAttribute('stroke', '#555');
         edge.setAttribute('stroke-width', '2');
       });
-      
+
       // Get the flow diagram as an image with higher quality settings
       const dataUrl = await toPng(flowElement, {
         backgroundColor: '#fff',
@@ -557,45 +612,45 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
           return true;
         }
       });
-      
+
       // Restore original styles
       flowElement.style.backgroundColor = originalBackground;
       flowElement.style.overflow = originalOverflow;
-      
+
       // Restore original edge styles
       originalEdgeStyles.forEach(({el, stroke, strokeWidth}) => {
         if (stroke) el.setAttribute('stroke', stroke);
         if (strokeWidth) el.setAttribute('stroke-width', strokeWidth);
       });
-      
+
       // Calculate aspect ratio to fit in PDF
       const imgWidth = 210; // A4 width in mm (portrait)
       const imgHeight = flowElement.offsetHeight * (imgWidth / flowElement.offsetWidth);
-      
+
       // Determine orientation based on content dimensions
       const isLandscape = flowElement.offsetWidth > flowElement.offsetHeight;
-      
+
       // Create PDF with appropriate orientation
       const pdf = new jsPDF({
         orientation: isLandscape ? 'landscape' : 'portrait',
         unit: 'mm',
       });
-      
+
       // Get PDF dimensions
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      
+
       // Add metadata with proper header
       pdf.setFillColor(245, 245, 245);
       pdf.rect(0, 0, pdfWidth, 25, 'F');
-      
+
       // Add title and description
       if (flowName) {
         pdf.setFontSize(16);
         pdf.setTextColor(0, 0, 0);
         pdf.text(flowName, 15, 12);
       }
-      
+
       if (flowDescription) {
         pdf.setFontSize(10);
         pdf.setTextColor(80, 80, 80);
@@ -604,59 +659,59 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
           align: 'left' 
         });
       }
-      
+
       // Calculate safe image dimensions to avoid overflowing the page
       const safeHeight = pdfHeight - 40; // Allow for header and footer
       let finalImgWidth = pdfWidth - 30;
       let finalImgHeight = (finalImgWidth * flowElement.offsetHeight) / flowElement.offsetWidth;
-      
+
       // If image is too tall, scale it down
       if (finalImgHeight > safeHeight) {
         finalImgHeight = safeHeight;
         finalImgWidth = (finalImgHeight * flowElement.offsetWidth) / flowElement.offsetHeight;
       }
-      
+
       // Center the image horizontally
       const xOffset = (pdfWidth - finalImgWidth) / 2;
-      
+
       // Add the image with padding from top
       const imageY = 30; // Below the header
       pdf.addImage(dataUrl, 'PNG', xOffset, imageY, finalImgWidth, finalImgHeight);
-      
+
       // Add footer with timestamp and project information
       pdf.setDrawColor(200, 200, 200);
       pdf.line(15, pdfHeight - 15, pdfWidth - 15, pdfHeight - 15);
-      
+
       pdf.setFontSize(8);
       pdf.setTextColor(100, 100, 100);
       pdf.text(`Generated: ${new Date().toLocaleString()}`, 15, pdfHeight - 10);
       pdf.text(`Project ID: ${projectId}`, pdfWidth - 60, pdfHeight - 10);
-      
+
       // Save the PDF - use a more reliable approach
       try {
         pdf.save(filename);
-        
+
         toast({
           title: 'Success',
           description: `Flow diagram exported as ${filename}`,
           duration: 3000,
         });
-        
+
         return true;
       } catch (saveError) {
         console.error('Error saving PDF:', saveError);
-        
+
         // Fallback: open in new window
         const pdfBlob = pdf.output('blob');
         const blobUrl = URL.createObjectURL(pdfBlob);
         window.open(blobUrl, '_blank');
-        
+
         toast({
           title: 'PDF Generated',
           description: 'Opening in new tab instead of downloading',
           duration: 3000,
         });
-        
+
         return true;
       }
     } catch (error) {
@@ -674,23 +729,59 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
 
   // Expose methods to parent component via window object
   useEffect(() => {
-    window.flowDesignerRef = {
-      showSaveDialog: () => setShowSaveDialog(true),
-      resetDesigner,
-      exportPDF,
-    };
+    // Ensure window.flowDesignerRef is defined before assigning properties
+    if (typeof window !== 'undefined') {
+      window.flowDesignerRef = {
+        showSaveDialog: () => setShowSaveDialog(true),
+        resetDesigner,
+        exportPDF,
+        // Add a method to trigger test case diagram generation
+        generateTestCaseDiagram: async (projectId: number, viewType: 'module' | 'project' = 'project') => {
+          try {
+            const response = await fetch(`/api/projects/${projectId}/generate-flow-diagram?view=${viewType}`);
+            if (response.ok) {
+              const diagramData = await response.json();
+              if (diagramData.nodes && diagramData.edges) {
+                setNodes(diagramData.nodes);
+                setEdges(diagramData.edges);
+                setFlowName(`Test Case Flow - ${viewType} view`);
+                setFlowDescription(`Automatically generated flow diagram of test cases for project ${projectId}`);
+                toast({
+                  title: "Diagram Generated",
+                  description: `Test case flow diagram (${viewType} view) generated successfully.`,
+                });
+              } else {
+                throw new Error("Received invalid diagram data format.");
+              }
+            } else {
+              throw new Error(`API request failed with status ${response.status}`);
+            }
+          } catch (error) {
+            console.error('Error generating test case diagram:', error);
+            toast({
+              title: 'Generation Failed',
+              description: 'Could not generate test case flow diagram. Please check console for details.',
+              variant: 'destructive',
+            });
+          }
+        },
+      };
+    }
 
+    // Cleanup function to remove the reference when the component unmounts
     return () => {
-      window.flowDesignerRef = undefined;
+      if (typeof window !== 'undefined') {
+        window.flowDesignerRef = undefined;
+      }
     };
-  }, [nodes, edges, flowName, flowDescription]);
+  }, [nodes, edges, flowName, flowDescription, projectId]); // Dependencies ensure methods have latest state
 
   return (
     <>
       <div className="flex h-full">
         {/* Sidebar with node palette */}
         <Sidebar />
-        
+
         {/* Main flow canvas */}
         <div className="flex-1 h-full" ref={reactFlowWrapper}>
           <ContextMenu>
@@ -793,6 +884,23 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
                   setNodes((nds) => [...nds, newNode]);
                 }
               }}>Add Decision</ContextMenuItem>
+              {/* Add option to add TestCaseNode */}
+              <ContextMenuItem onClick={() => {
+                if (reactFlowInstanceRef.current) {
+                  const position = reactFlowInstanceRef.current.project({
+                    x: contextMenuPosition?.x || 0,
+                    y: contextMenuPosition?.y || 0,
+                  });
+                  const id = `testcase_${Date.now()}`;
+                  const newNode: Node = {
+                    id,
+                    type: 'testCaseNode', // Use the new node type
+                    position,
+                    data: { label: 'Test Case', testCaseId: undefined, description: '' }, // Default data
+                  };
+                  setNodes((nds) => [...nds, newNode]);
+                }
+              }}>Add Test Case</ContextMenuItem>
               <ContextMenuItem onClick={() => {
                 setNodes([]);
                 setEdges([]);
@@ -851,7 +959,10 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
 
       {/* Node Edit Dialog - Improved for better CRUD operations */}
       <Dialog open={showNodeDialog && !!selectedNode} onOpenChange={(open) => {
-        if (!open) setShowNodeDialog(false);
+        if (!open) {
+          setSelectedNode(null); // Clear selected node on close
+          setShowNodeDialog(false);
+        }
       }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -934,8 +1045,39 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
                     />
                   </div>
                 )}
+                {/* Add input for TestCaseId if node type is testCaseNode */}
+                {selectedNode.type === 'testCaseNode' && (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="test-case-id" className="text-right">
+                      Test Case ID
+                    </Label>
+                    <Input
+                      id="test-case-id"
+                      type="number"
+                      value={selectedNode.data.testCaseId || ''}
+                      onChange={(e) => {
+                        const rawValue = e.target.value;
+                        const numValue = parseInt(rawValue);
+                        const value = !isNaN(numValue) ? numValue : undefined;
+
+                        setSelectedNode(prevNode => {
+                          if (!prevNode) return null;
+                          return {
+                            ...prevNode,
+                            data: {
+                              ...prevNode.data,
+                              testCaseId: value,
+                            },
+                          };
+                        });
+                      }}
+                      className="col-span-3"
+                      placeholder="Enter Test Case ID"
+                    />
+                  </div>
+                )}
               </TabsContent>
-              
+
               <TabsContent value="style" className="space-y-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="node-color" className="text-right">
@@ -964,7 +1106,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
                     <span className="text-sm text-gray-500">Choose background color</span>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="node-border-color" className="text-right">
                     Border
@@ -994,7 +1136,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
                   </div>
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="links" className="space-y-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="linked-item-type" className="text-right">
@@ -1028,8 +1170,8 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
                     </SelectContent>
                   </Select>
                 </div>
-                
-                {selectedNode.data.linkedItemType && (
+
+                {selectedNode.data.linkedItemType && selectedNode.data.linkedItemType !== 'none' && (
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="linked-item-id" className="text-right">
                       Item ID
@@ -1043,7 +1185,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
                         const rawValue = e.target.value;
                         const numValue = parseInt(rawValue);
                         const value = !isNaN(numValue) ? numValue : undefined;
-                        
+
                         setSelectedNode(prevNode => {
                           if (!prevNode) return null;
                           return {
@@ -1060,7 +1202,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
                     />
                   </div>
                 )}
-                
+
                 {selectedNode.data.linkedItemType && selectedNode.data.linkedItemId && (
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700">
                     Linked to {selectedNode.data.linkedItemType} #{selectedNode.data.linkedItemId}.
@@ -1106,7 +1248,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave }: FlowDesi
                   ));
                   setSelectedNode(null);
                   setShowNodeDialog(false);
-                  
+
                   toast({
                     title: "Node Deleted",
                     description: `"${selectedNode.data.label}" has been removed`,

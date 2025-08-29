@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ReactFlow, {
   MiniMap,
@@ -27,6 +27,7 @@ import { apiRequest } from '@/lib/auth';
 import { MainLayout } from '@/components/layout/main-layout';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { useRouter } from 'next/router';
 
 interface Project {
   id: string;
@@ -78,6 +79,9 @@ export default function FunctionalFlowPage() {
   const reactFlowRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { query } = useRouter();
+  const diagramId = query.diagramId as string | undefined;
+
 
   // Fetch projects
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
@@ -88,6 +92,28 @@ export default function FunctionalFlowPage() {
       return response.json();
     }
   });
+
+  // Auto-select project if diagramId is provided
+  useEffect(() => {
+    if (diagramId && projects && projects.length > 0 && !selectedProject) {
+      // Fetch the diagram to get the associated project ID
+      const fetchDiagramAndSetProject = async () => {
+        try {
+          const response = await apiRequest('GET', `/api/flow-diagrams/${diagramId}`);
+          if (!response.ok) throw new Error('Failed to fetch diagram details');
+          const diagramData: FlowDiagram = await response.json();
+          setSelectedProject(diagramData.projectId);
+        } catch (error) {
+          console.error("Error fetching diagram for auto-selection:", error);
+          // Fallback: select the first project if fetching diagram fails
+          if (projects.length > 0) {
+            setSelectedProject(projects[0].id);
+          }
+        }
+      };
+      fetchDiagramAndSetProject();
+    }
+  }, [diagramId, projects, selectedProject]);
 
   // Fetch flow diagrams for selected project
   const { data: diagrams = [], isLoading: diagramsLoading, refetch } = useQuery({
@@ -137,6 +163,8 @@ export default function FunctionalFlowPage() {
     onSuccess: (diagram: FlowDiagram) => {
       setNodes(diagram.nodes || initialNodes);
       setEdges(diagram.edges || initialEdges);
+      setDiagramName(diagram.name || '');
+      setDiagramDescription(diagram.description || '');
       toast({
         title: 'Success',
         description: 'Flow diagram loaded successfully',
@@ -266,6 +294,13 @@ export default function FunctionalFlowPage() {
       loadDiagramMutation.mutate(selectedDiagram);
     }
   };
+
+  // Effect to load diagram if diagramId is present in the URL
+  useEffect(() => {
+    if (diagramId && selectedProject) {
+      loadDiagramMutation.mutate(diagramId);
+    }
+  }, [diagramId, selectedProject, loadDiagramMutation]);
 
   return (
     <MainLayout>

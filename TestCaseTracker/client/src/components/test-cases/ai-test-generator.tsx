@@ -14,8 +14,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Upload, Globe, Type, Wand2, CheckCircle2, Download, Merge, Settings, Loader2, Bug } from "lucide-react";
+import { Sparkles, Upload, Globe, Type, Wand2, CheckCircle2, Download, Merge, Settings, Loader2, Bug, GitBranch, Eye } from "lucide-react";
 import type { Module, TestCase } from "@/types";
+import { useRouter } from "@tanstack/react-router";
 
 interface AITestGeneratorProps {
   projectId: number;
@@ -120,6 +121,9 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
   const [selectedProviderForKey, setSelectedProviderForKey] = useState<string>("gemini"); // Default to gemini or the initial aiProvider
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [apiKeyStatus, setApiKeyStatus] = useState<Record<string, boolean>>({});
+
+  // New state for flow diagram generation
+  const [isGeneratingFlow, setIsGeneratingFlow] = useState(false);
 
   const handleInputChange = (field: keyof typeof formData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -407,37 +411,17 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
     },
   });
 
-  const handleGenerate = () => {
-    const selectedModule = modules.find(m => m.id === (selectedModuleId === undefined ? undefined : Number(selectedModuleId))); // Ensure selectedModuleId is number or undefined
-
-    let requirement = '';
-    let inputType = activeTab;
-
-    switch (activeTab) {
-      case 'text':
-        requirement = formData.requirement;
-        break;
-      case 'url':
-        requirement = `Website analysis for: ${formData.websiteUrl}`;
-        break;
-      case 'image':
-        requirement = `UI analysis from ${selectedImages.length} uploaded image(s)`;
-        inputType = 'image';
-        break;
-      default:
-        requirement = formData.requirement;
-    }
-
-    if (!requirement.trim() && activeTab !== 'image') {
+  const handleGenerate = async () => {
+    if (!formData.requirement.trim() && formData.inputType === 'text') {
       toast({
         title: "Input Required",
-        description: `Please provide ${activeTab === 'text' ? 'a text prompt' : activeTab === 'url' ? 'a website URL' : 'input'}.`,
+        description: "Please provide a text prompt.",
         variant: "destructive",
       });
       return;
     }
 
-    if (activeTab === 'url' && !formData.websiteUrl.trim()) {
+    if (formData.inputType === 'url' && !formData.websiteUrl.trim()) {
       toast({
         title: "URL Required",
         description: "Please provide a website URL to analyze.",
@@ -446,7 +430,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       return;
     }
 
-    if (activeTab === 'image' && selectedImages.length === 0) {
+    if (formData.inputType === 'image' && selectedImages.length === 0) {
       toast({
         title: "Images Required",
         description: "Please upload at least one image for analysis.",
@@ -455,15 +439,17 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       return;
     }
 
+    const selectedModule = modules.find(m => m.id === (selectedModuleId === undefined ? undefined : Number(selectedModuleId))); // Ensure selectedModuleId is number or undefined
+
     generateMutation.mutate({
-      requirement,
+      requirement: formData.requirement,
       projectContext: formData.projectContext,
       moduleContext: selectedModule?.name || '',
       testType: formData.testType,
       priority: formData.priority,
-      websiteUrl: activeTab === 'url' ? formData.websiteUrl : '',
-      inputType,
-      images: activeTab === 'image' ? selectedImages : [],
+      websiteUrl: formData.inputType === 'url' ? formData.websiteUrl : '',
+      inputType: formData.inputType,
+      images: formData.inputType === 'image' ? selectedImages : [],
       aiProvider: formData.aiProvider,
       testCaseCount: formData.testCaseCount, // Pass the count from form data
     });
@@ -506,7 +492,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         // Add priority-based tag
         const priorityTag = {
           name: `${testCase.priority} Priority`,
-          color: testCase.priority === 'High' ? '#dc2626' : 
+          color: testCase.priority === 'High' ? '#dc2626' :
                  testCase.priority === 'Medium' ? '#d97706' : '#16a34a'
         };
 
@@ -583,56 +569,117 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
     fetchApiKeyStatus();
   }, []);
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700">
-          <Sparkles className="h-4 w-4 mr-2" />
-          AI Test Generator
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Wand2 className="h-5 w-5 text-purple-600" />
-            AI Test Case Generator Pro
-            <Badge variant="secondary">
-              {availableProviders.find(p => p.provider === formData.aiProvider)?.name ?? formData.aiProvider}
-            </Badge>
-            <div className="flex gap-2 ml-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  console.log("🔍 Client Debug Info:", {
-                    apiKeys: apiKeyStatus,
-                    selectedProvider: formData.aiProvider,
-                    debugInfo: {
-                      timestamp: new Date().toISOString(),
-                      userAgent: navigator.userAgent,
-                      url: window.location.href
-                    }
-                  });
+  const router = useRouter(); // Ensure router is initialized
 
-                  // Fetch comprehensive debug info from server
-                  try {
-                    const response = await fetch('/api/ai/debug-comprehensive', {
-                      credentials: 'include'
+  // Handler for generating flow diagrams
+  const handleGenerateFlowDiagram = async () => {
+    setIsGeneratingFlow(true);
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/generate-flow-diagram`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.diagramId) {
+        toast({
+          title: "Success",
+          description: "Flow diagram generated successfully",
+        });
+
+        // Navigate to the flow diagram page
+        router.navigate({
+          to: `/functional-flow`,
+          search: { diagramId: data.diagramId }
+        });
+      } else {
+        throw new Error(data.message || "Failed to generate flow diagram");
+      }
+    } catch (error) {
+      console.error("Error generating flow diagram:", error);
+      toast({
+        title: "Generation failed",
+        description: error instanceof Error ? error.message : "Failed to generate flow diagram. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingFlow(false);
+    }
+  };
+
+  return (
+    <div className="flex gap-2">
+      <Button
+        variant="outline"
+        className="flex items-center gap-2"
+        onClick={handleGenerateFlowDiagram}
+        disabled={isGeneratingFlow}
+      >
+        {isGeneratingFlow ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <GitBranch className="h-4 w-4" />
+        )}
+        Flow Diagram
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700">
+            <Sparkles className="h-4 w-4 mr-2" />
+            AI Test Generator
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wand2 className="h-5 w-5 text-purple-600" />
+              AI Test Case Generator Pro
+              <Badge variant="secondary">
+                {availableProviders.find(p => p.provider === formData.aiProvider)?.name ?? formData.aiProvider}
+              </Badge>
+              <div className="flex gap-2 ml-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    console.log("🔍 Client Debug Info:", {
+                      apiKeys: apiKeyStatus,
+                      selectedProvider: formData.aiProvider,
+                      debugInfo: {
+                        timestamp: new Date().toISOString(),
+                        userAgent: navigator.userAgent,
+                        url: window.location.href
+                      }
                     });
 
-                    if (!response.ok) {
-                      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
+                    // Fetch comprehensive debug info from server
+                    try {
+                      const response = await fetch('/api/ai/debug-comprehensive', {
+                        credentials: 'include'
+                      });
 
-                    const debugData = await response.json();
-                    console.log("🔍 Server Debug Info:", debugData);
+                      if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                      }
 
-                    if (debugData.success) {
-                      const summary = debugData.summary || {};
-                      const debug = debugData.debug || {};
+                      const debugData = await response.json();
+                      console.log("🔍 Server Debug Info:", debugData);
 
-                      // Show user-friendly debug info
-                      alert(`🔍 AI Provider Debug Info:
+                      if (debugData.success) {
+                        const summary = debugData.summary || {};
+                        const debug = debugData.debug || {};
+
+                        // Show user-friendly debug info
+                        alert(`🔍 AI Provider Debug Info:
 
 ✅ Working Providers: ${summary.workingProviders?.join(', ') || 'None'}
 📊 Available Providers: ${summary.availableProviders || 'Unknown'}
@@ -646,12 +693,12 @@ Environment:
 Selected Provider: ${formData.aiProvider}
 
 Check console for detailed technical information.`);
-                    } else {
-                      throw new Error(debugData.error || 'Debug failed');
-                    }
-                  } catch (error: any) {
-                    console.error("❌ Failed to fetch debug info:", error);
-                    alert(`❌ Debug fetch failed: ${error.message}
+                      } else {
+                        throw new Error(debugData.error || 'Debug failed');
+                      }
+                    } catch (error: any) {
+                      console.error("❌ Failed to fetch debug info:", error);
+                      alert(`❌ Debug fetch failed: ${error.message}
 
 Client API Status:
 ${Object.entries(apiKeyStatus).map(([key, value]) => `${key}: ${value ? '✅' : '❌'}`).join('\n')}
@@ -659,560 +706,561 @@ ${Object.entries(apiKeyStatus).map(([key, value]) => `${key}: ${value ? '✅' : 
 Selected Provider: ${formData.aiProvider}
 
 Check console and server logs for more details.`);
-                  }
-                }}
-              >
-                <Bug className="h-4 w-4 mr-2" />
-                Debug
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => {
-                  setSelectedProviderForKey(formData.aiProvider);
-                  setShowApiKeyDialog(true);
-                }}
-              >
-                <Settings className="h-5 w-5" />
-              </Button>
-            </div>
-          </DialogTitle>
-        </DialogHeader>
+                    }
+                  }}
+                >
+                  <Bug className="h-4 w-4 mr-2" />
+                  Debug
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    setSelectedProviderForKey(formData.aiProvider);
+                    setShowApiKeyDialog(true);
+                  }}
+                >
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
 
-        {!showResults ? (
-          <div className="space-y-6">
-            {/* AI Provider Selection and Test Case Count */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">AI Configuration</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* AI Provider Selection */}
-                <div>
-                  <Label htmlFor="ai-provider">AI Provider</Label>
-                  <Select value={formData.aiProvider} onValueChange={(value: AIProvider) => handleInputChange('aiProvider', value)}>
-                    <SelectTrigger id="ai-provider" className="mt-1">
-                      <SelectValue placeholder="Select AI Provider" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableProviders.map((provider) => (
-                        <SelectItem
-                          key={provider.provider}
-                          value={provider.provider}
-                          disabled={!provider.available}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span>{provider.name}</span>
-                            {!provider.available && (
-                              <Badge variant="secondary" className="ml-2">Not Available</Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Test Case Count */}
-                <div>
-                  <Label htmlFor="test-case-count">Number of Test Cases</Label>
-                  <Input
-                    id="test-case-count"
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={formData.testCaseCount || 20}
-                    onChange={(e) => handleInputChange('testCaseCount', parseInt(e.target.value) || 20)}
-                    placeholder="Enter number of test cases (e.g., 20)"
-                    className="mt-1"
-                  />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Specify how many test cases you want to generate (1-50)
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Project and Module Selection */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Project & Module Selection</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {!showResults ? (
+            <div className="space-y-6">
+              {/* AI Provider Selection and Test Case Count */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">AI Configuration</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* AI Provider Selection */}
                   <div>
-                    <Label>Module (Optional)</Label>
-                    <Select value={selectedModuleId?.toString()} onValueChange={(value) => setSelectedModuleId(value ? parseInt(value) : undefined)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select module" />
+                    <Label htmlFor="ai-provider">AI Provider</Label>
+                    <Select value={formData.aiProvider} onValueChange={(value: AIProvider) => handleInputChange('aiProvider', value)}>
+                      <SelectTrigger id="ai-provider" className="mt-1">
+                        <SelectValue placeholder="Select AI Provider" />
                       </SelectTrigger>
                       <SelectContent>
-                        {modules.map((module) => (
-                          <SelectItem key={module.id} value={module.id.toString()}>
-                            {module.name}
+                        {availableProviders.map((provider) => (
+                          <SelectItem
+                            key={provider.provider}
+                            value={provider.provider}
+                            disabled={!provider.available}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span>{provider.name}</span>
+                              {!provider.available && (
+                                <Badge variant="secondary" className="ml-2">Not Available</Badge>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Test Case Count */}
                   <div>
-                    <Label>Test Type</Label>
-                    <Select value={formData.testType} onValueChange={(value) => handleInputChange('testType', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="functional">Functional</SelectItem>
-                        <SelectItem value="integration">Integration</SelectItem>
-                        <SelectItem value="unit">Unit</SelectItem>
-                        <SelectItem value="e2e">End-to-End</SelectItem>
-                        <SelectItem value="security">Security</SelectItem>
-                        <SelectItem value="performance">Performance</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="test-case-count">Number of Test Cases</Label>
+                    <Input
+                      id="test-case-count"
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={formData.testCaseCount || 20}
+                      onChange={(e) => handleInputChange('testCaseCount', parseInt(e.target.value) || 20)}
+                      placeholder="Enter number of test cases (e.g., 20)"
+                      className="mt-1"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Specify how many test cases you want to generate (1-50)
+                    </p>
                   </div>
-                  <div>
-                    <Label>Priority</Label>
-                    <Select value={formData.priority} onValueChange={(value) => handleInputChange('priority', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="High">High</SelectItem>
-                        <SelectItem value="Medium">Medium</SelectItem>
-                        <SelectItem value="Low">Low</SelectItem>
-                      </SelectContent>
-                    </Select>
+                </CardContent>
+              </Card>
+
+              {/* Project and Module Selection */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Project & Module Selection</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Module (Optional)</Label>
+                      <Select value={selectedModuleId?.toString()} onValueChange={(value) => setSelectedModuleId(value ? parseInt(value) : undefined)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select module" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {modules.map((module) => (
+                            <SelectItem key={module.id} value={module.id.toString()}>
+                              {module.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Test Type</Label>
+                      <Select value={formData.testType} onValueChange={(value) => handleInputChange('testType', value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="functional">Functional</SelectItem>
+                          <SelectItem value="integration">Integration</SelectItem>
+                          <SelectItem value="unit">Unit</SelectItem>
+                          <SelectItem value="e2e">End-to-End</SelectItem>
+                          <SelectItem value="security">Security</SelectItem>
+                          <SelectItem value="performance">Performance</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Priority</Label>
+                      <Select value={formData.priority} onValueChange={(value) => handleInputChange('priority', value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="High">High</SelectItem>
+                          <SelectItem value="Medium">Medium</SelectItem>
+                          <SelectItem value="Low">Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Input Tabs */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Input Methods</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="text" className="flex items-center gap-2">
-                      <Type className="h-4 w-4" />
-                      Text Prompt
-                    </TabsTrigger>
-                    <TabsTrigger value="url" className="flex items-center gap-2">
-                      <Globe className="h-4 w-4" />
-                      Website URL
-                    </TabsTrigger>
-                    <TabsTrigger value="image" className="flex items-center gap-2">
-                      <Upload className="h-4 w-4" />
-                      Image Upload
-                    </TabsTrigger>
-                  </TabsList>
+              {/* Input Tabs */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Input Methods</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="text" className="flex items-center gap-2">
+                        <Type className="h-4 w-4" />
+                        Text Prompt
+                      </TabsTrigger>
+                      <TabsTrigger value="url" className="flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        Website URL
+                      </TabsTrigger>
+                      <TabsTrigger value="image" className="flex items-center gap-2">
+                        <Upload className="h-4 w-4" />
+                        Image Upload
+                      </TabsTrigger>
+                    </TabsList>
 
-                  <TabsContent value="text" className="space-y-4 mt-4">
-                    <div>
-                      <Label>Test Requirements / User Story</Label>
-                      <Textarea
-                        placeholder="Describe what you want to test. For example: 'User registration with email validation and password strength requirements'"
-                        value={formData.requirement}
-                        onChange={(e) => handleInputChange('requirement', e.target.value)}
-                        rows={4}
-                      />
-                    </div>
-                    <div>
-                      <Label>Project Context (Optional)</Label>
-                      <Textarea
-                        placeholder="Provide additional context about your application, business rules, or specific requirements..."
-                        value={formData.projectContext}
-                        onChange={(e) => handleInputChange('projectContext', e.target.value)}
-                        rows={3}
-                      />
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="url" className="space-y-4 mt-4">
-                    <div>
-                      <Label>Website URL</Label>
-                      <Input
-                        placeholder="https://example.com"
-                        value={formData.websiteUrl}
-                        onChange={(e) => handleInputChange('websiteUrl', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label>Project Context (Optional)</Label>
-                      <Textarea
-                        placeholder="Provide additional context about what functionality to focus on..."
-                        value={formData.projectContext}
-                        onChange={(e) => handleInputChange('projectContext', e.target.value)}
-                        rows={3}
-                      />
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="image" className="space-y-4 mt-4">
-                    <div>
-                      <Label>Upload Images</Label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
+                    <TabsContent value="text" className="space-y-4 mt-4">
+                      <div>
+                        <Label>Test Requirements / User Story</Label>
+                        <Textarea
+                          placeholder="Describe what you want to test. For example: 'User registration with email validation and password strength requirements'"
+                          value={formData.requirement}
+                          onChange={(e) => handleInputChange('requirement', e.target.value)}
+                          rows={4}
                         />
-                        <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-600 mb-2">
-                          Upload screenshots or mockups for AI analysis
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                        >
-                          Choose Files
-                        </Button>
-                        {selectedImages.length > 0 && (
-                          <div className="mt-2">
-                            <p className="text-sm text-green-600">
-                              {selectedImages.length} file(s) selected
-                            </p>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
+                      <div>
+                        <Label>Project Context (Optional)</Label>
+                        <Textarea
+                          placeholder="Provide additional context about your application, business rules, or specific requirements..."
+                          value={formData.projectContext}
+                          onChange={(e) => handleInputChange('projectContext', e.target.value)}
+                          rows={3}
+                        />
+                      </div>
+                    </TabsContent>
 
-            {/* Generate Button */}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleGenerate}
-                disabled={generateMutation.isPending}
-                className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700"
-              >
-                {generateMutation.isPending ? (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="h-4 w-4 mr-2" />
-                    Generate AI Test Cases
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Results Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">Generated Test Cases</h3>
-                <p className="text-sm text-gray-600">
-                  {generatedTestCases.length} test cases generated. Select the ones you want to merge.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowResults(false)}
-                >
-                  Back to Generator
+                    <TabsContent value="url" className="space-y-4 mt-4">
+                      <div>
+                        <Label>Website URL</Label>
+                        <Input
+                          placeholder="https://example.com"
+                          value={formData.websiteUrl}
+                          onChange={(e) => handleInputChange('websiteUrl', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Project Context (Optional)</Label>
+                        <Textarea
+                          placeholder="Provide additional context about what functionality to focus on..."
+                          value={formData.projectContext}
+                          onChange={(e) => handleInputChange('projectContext', e.target.value)}
+                          rows={3}
+                        />
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="image" className="space-y-4 mt-4">
+                      <div>
+                        <Label>Upload Images</Label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
+                          <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-600 mb-2">
+                            Upload screenshots or mockups for AI analysis
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            Choose Files
+                          </Button>
+                          {selectedImages.length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-sm text-green-600">
+                                {selectedImages.length} file(s) selected
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+
+              {/* Generate Button */}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setOpen(false)}>
+                  Cancel
                 </Button>
                 <Button
-                  onClick={handleMergeTestCases}
-                  disabled={mergeMutation.isPending || selectedTestCases.size === 0}
-                  className="bg-green-600 hover:bg-green-700"
+                  onClick={handleGenerate}
+                  disabled={generateMutation.isPending}
+                  className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700"
                 >
-                  {mergeMutation.isPending ? (
+                  {generateMutation.isPending ? (
                     <>
-                      <Download className="h-4 w-4 mr-2 animate-spin" />
-                      Merging...
+                      <Sparkles className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
                     </>
                   ) : (
                     <>
-                      <Merge className="h-4 w-4 mr-2" />
-                      Merge Selected ({selectedTestCases.size})
+                      <Wand2 className="h-4 w-4 mr-2" />
+                      Generate AI Test Cases
                     </>
                   )}
                 </Button>
               </div>
             </div>
-
-            <Separator />
-
-            {/* Test Cases Table */}
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={selectedTestCases.size === generatedTestCases.length && generatedTestCases.length > 0}
-                        onCheckedChange={selectAllTestCases}
-                      />
-                    </TableHead>
-                    <TableHead>Feature</TableHead>
-                    <TableHead>Test Objective</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Coverage</TableHead>
-                    <TableHead className="w-20">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {generatedTestCases.map((testCase, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedTestCases.has(index)}
-                          onCheckedChange={() => toggleTestCaseSelection(index)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{testCase.feature}</TableCell>
-                      <TableCell className="max-w-xs truncate">{testCase.testObjective}</TableCell>
-                      <TableCell>
-                        <Badge variant={testCase.priority === 'High' ? 'destructive' : testCase.priority === 'Medium' ? 'default' : 'secondary'}>
-                          {testCase.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{testCase.testType}</TableCell>
-                      <TableCell className="max-w-xs truncate">{testCase.coverage}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => viewTestCase(testCase)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
-      </DialogContent>
-
-      {/* API Key Configuration Dialog */}
-      <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Configure API Key</DialogTitle>
-            <DialogDescription>
-              Enter your {availableProviders.find(p => p.provider === selectedProviderForKey)?.name} API key
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="api-key">API Key</Label>
-              <Input
-                id="api-key"
-                type="password"
-                placeholder="Enter your API key..."
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-              />
-              <p className="text-xs text-gray-500">
-                Your API key will be stored securely and used only for test generation
-              </p>
-            </div>
-
-            {/* Provider-specific instructions */}
-            <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded">
-              <div className="font-medium mb-1">Where to get your API key:</div>
-              {selectedProviderForKey === 'gemini' && (
-                <p>Visit Google AI Studio (makersuite.google.com) to create an API key</p>
-              )}
-              {selectedProviderForKey === 'openai' && (
-                <p>Visit OpenAI Platform (platform.openai.com) → API Keys</p>
-              )}
-              {selectedProviderForKey === 'claude' && (
-                <p>Visit Anthropic Console (console.anthropic.com) → API Keys</p>
-              )}
-              {selectedProviderForKey === 'grok' && (
-                <p>Visit xAI Console (console.x.ai) → API Keys</p>
-              )}
-              {selectedProviderForKey === 'deepseek' && (
-                <p>Visit DeepSeek Platform (platform.deepseek.com) → API Keys (Free tier available)</p>
-              )}
-              {selectedProviderForKey === 'huggingface' && (
-                <p>Visit Hugging Face (huggingface.co) → Settings → Access Tokens (Free tier available)</p>
-              )}
-              {selectedProviderForKey === 'cohere' && (
-                <p>Visit Cohere Dashboard (dashboard.cohere.ai) → API Keys (Free tier available)</p>
-              )}
-              {selectedProviderForKey === 'mistral' && (
-                <p>Visit Mistral AI Console (console.mistral.ai) → API Keys</p>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowApiKeyDialog(false);
-                  setApiKeyInput("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSaveApiKey}
-                disabled={updateApiKeyMutation.isPending || !apiKeyInput.trim()}
-              >
-                {updateApiKeyMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Key'
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Individual Test Case View Dialog */}
-      <Dialog open={showTestCaseDialog} onOpenChange={setShowTestCaseDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-blue-600" />
-              Test Case Details
-            </DialogTitle>
-          </DialogHeader>
-          
-          {viewingTestCase && (
+          ) : (
             <div className="space-y-6">
-              {/* Header Info */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              {/* Results Header */}
+              <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Priority</Label>
-                  <div className="mt-1">
-                    <Badge variant={viewingTestCase.priority === 'High' ? 'destructive' : viewingTestCase.priority === 'Medium' ? 'default' : 'secondary'}>
-                      {viewingTestCase.priority}
-                    </Badge>
-                  </div>
+                  <h3 className="text-lg font-semibold">Generated Test Cases</h3>
+                  <p className="text-sm text-gray-600">
+                    {generatedTestCases.length} test cases generated. Select the ones you want to merge.
+                  </p>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Type</Label>
-                  <div className="mt-1">
-                    <Badge variant="outline">{viewingTestCase.testType}</Badge>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Category</Label>
-                  <div className="mt-1">
-                    <Badge variant="secondary">{viewingTestCase.category}</Badge>
-                  </div>
-                </div>
-              </div>
-
-              {/* Feature */}
-              <div>
-                <Label className="text-lg font-semibold">Feature</Label>
-                <p className="mt-2 text-gray-700 dark:text-gray-300">{viewingTestCase.feature}</p>
-              </div>
-
-              {/* Test Objective */}
-              <div>
-                <Label className="text-lg font-semibold">Test Objective</Label>
-                <p className="mt-2 text-gray-700 dark:text-gray-300">{viewingTestCase.testObjective}</p>
-              </div>
-
-              {/* Pre-Conditions */}
-              <div>
-                <Label className="text-lg font-semibold">Pre-Conditions</Label>
-                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{viewingTestCase.preConditions}</p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowResults(false)}
+                  >
+                    Back to Generator
+                  </Button>
+                  <Button
+                    onClick={handleMergeTestCases}
+                    disabled={mergeMutation.isPending || selectedTestCases.size === 0}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {mergeMutation.isPending ? (
+                      <>
+                        <Download className="h-4 w-4 mr-2 animate-spin" />
+                        Merging...
+                      </>
+                    ) : (
+                      <>
+                        <Merge className="h-4 w-4 mr-2" />
+                        Merge Selected ({selectedTestCases.size})
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
 
-              {/* Test Steps */}
-              <div>
-                <Label className="text-lg font-semibold">Test Steps</Label>
-                <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
-                  <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                    {viewingTestCase.testSteps.split('\n').map((step, index) => (
-                      <div key={index} className="mb-2 flex gap-2">
-                        <span className="text-green-600 dark:text-green-400 font-medium min-w-[20px]">
-                          {step.trim().match(/^\d+\./) ? '' : `${index + 1}.`}
-                        </span>
-                        <span>{step.replace(/^\d+\.\s*/, '')}</span>
-                      </div>
+              <Separator />
+
+              {/* Test Cases Table */}
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedTestCases.size === generatedTestCases.length && generatedTestCases.length > 0}
+                          onCheckedChange={selectAllTestCases}
+                        />
+                      </TableHead>
+                      <TableHead>Feature</TableHead>
+                      <TableHead>Test Objective</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Coverage</TableHead>
+                      <TableHead className="w-20">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {generatedTestCases.map((testCase, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedTestCases.has(index)}
+                            onCheckedChange={() => toggleTestCaseSelection(index)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">{testCase.feature}</TableCell>
+                        <TableCell className="max-w-xs truncate">{testCase.testObjective}</TableCell>
+                        <TableCell>
+                          <Badge variant={testCase.priority === 'High' ? 'destructive' : testCase.priority === 'Medium' ? 'default' : 'secondary'}>
+                            {testCase.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{testCase.testType}</TableCell>
+                        <TableCell className="max-w-xs truncate">{testCase.coverage}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => viewTestCase(testCase)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Expected Result */}
-              <div>
-                <Label className="text-lg font-semibold">Expected Result</Label>
-                <div className="mt-2 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md">
-                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{viewingTestCase.expectedResult}</p>
-                </div>
-              </div>
-
-              {/* Coverage */}
-              <div>
-                <Label className="text-lg font-semibold">Coverage</Label>
-                <p className="mt-2 text-gray-700 dark:text-gray-300">{viewingTestCase.coverage}</p>
-              </div>
-
-              {/* Tags */}
-              {viewingTestCase.tags && viewingTestCase.tags.length > 0 && (
-                <div>
-                  <Label className="text-lg font-semibold">Tags</Label>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {viewingTestCase.tags.map((tag, index) => (
-                      <Badge key={index} variant="outline">{tag}</Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowTestCaseDialog(false)}
-                >
-                  Close
-                </Button>
-                <Button
-                  onClick={() => {
-                    const index = generatedTestCases.indexOf(viewingTestCase);
-                    if (index !== -1) {
-                      toggleTestCaseSelection(index);
-                    }
-                    setShowTestCaseDialog(false);
-                  }}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Select for Merge
-                </Button>
+                  </TableBody>
+                </Table>
               </div>
             </div>
           )}
         </DialogContent>
+
+        {/* API Key Configuration Dialog */}
+        <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Configure API Key</DialogTitle>
+              <DialogDescription>
+                Enter your {availableProviders.find(p => p.provider === selectedProviderForKey)?.name} API key
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="api-key">API Key</Label>
+                <Input
+                  id="api-key"
+                  type="password"
+                  placeholder="Enter your API key..."
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                />
+                <p className="text-xs text-gray-500">
+                  Your API key will be stored securely and used only for test generation
+                </p>
+              </div>
+
+              {/* Provider-specific instructions */}
+              <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded">
+                <div className="font-medium mb-1">Where to get your API key:</div>
+                {selectedProviderForKey === 'gemini' && (
+                  <p>Visit Google AI Studio (makersuite.google.com) to create an API key</p>
+                )}
+                {selectedProviderForKey === 'openai' && (
+                  <p>Visit OpenAI Platform (platform.openai.com) → API Keys</p>
+                )}
+                {selectedProviderForKey === 'claude' && (
+                  <p>Visit Anthropic Console (console.anthropic.com) → API Keys</p>
+                )}
+                {selectedProviderForKey === 'grok' && (
+                  <p>Visit xAI Console (console.x.ai) → API Keys</p>
+                )}
+                {selectedProviderForKey === 'deepseek' && (
+                  <p>Visit DeepSeek Platform (platform.deepseek.com) → API Keys (Free tier available)</p>
+                )}
+                {selectedProviderForKey === 'huggingface' && (
+                  <p>Visit Hugging Face (huggingface.co) → Settings → Access Tokens (Free tier available)</p>
+                )}
+                {selectedProviderForKey === 'cohere' && (
+                  <p>Visit Cohere Dashboard (dashboard.cohere.ai) → API Keys (Free tier available)</p>
+                )}
+                {selectedProviderForKey === 'mistral' && (
+                  <p>Visit Mistral AI Console (console.mistral.ai) → API Keys</p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowApiKeyDialog(false);
+                    setApiKeyInput("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveApiKey}
+                  disabled={updateApiKeyMutation.isPending || !apiKeyInput.trim()}
+                >
+                  {updateApiKeyMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Key'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Individual Test Case View Dialog */}
+        <Dialog open={showTestCaseDialog} onOpenChange={setShowTestCaseDialog}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5 text-blue-600" />
+                Test Case Details
+              </DialogTitle>
+            </DialogHeader>
+
+            {viewingTestCase && (
+              <div className="space-y-6">
+                {/* Header Info */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Priority</Label>
+                    <div className="mt-1">
+                      <Badge variant={viewingTestCase.priority === 'High' ? 'destructive' : viewingTestCase.priority === 'Medium' ? 'default' : 'secondary'}>
+                        {viewingTestCase.priority}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Type</Label>
+                    <div className="mt-1">
+                      <Badge variant="outline">{viewingTestCase.testType}</Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600 dark:text-gray-400">Category</Label>
+                    <div className="mt-1">
+                      <Badge variant="secondary">{viewingTestCase.category}</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Feature */}
+                <div>
+                  <Label className="text-lg font-semibold">Feature</Label>
+                  <p className="mt-2 text-gray-700 dark:text-gray-300">{viewingTestCase.feature}</p>
+                </div>
+
+                {/* Test Objective */}
+                <div>
+                  <Label className="text-lg font-semibold">Test Objective</Label>
+                  <p className="mt-2 text-gray-700 dark:text-gray-300">{viewingTestCase.testObjective}</p>
+                </div>
+
+                {/* Pre-Conditions */}
+                <div>
+                  <Label className="text-lg font-semibold">Pre-Conditions</Label>
+                  <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                    <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{viewingTestCase.preConditions}</p>
+                  </div>
+                </div>
+
+                {/* Test Steps */}
+                <div>
+                  <Label className="text-lg font-semibold">Test Steps</Label>
+                  <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+                    <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                      {viewingTestCase.testSteps.split('\n').map((step, index) => (
+                        <div key={index} className="mb-2 flex gap-2">
+                          <span className="text-green-600 dark:text-green-400 font-medium min-w-[20px]">
+                            {step.trim().match(/^\d+\./) ? '' : `${index + 1}.`}
+                          </span>
+                          <span>{step.replace(/^\d+\.\s*/, '')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expected Result */}
+                <div>
+                  <Label className="text-lg font-semibold">Expected Result</Label>
+                  <div className="mt-2 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-md">
+                    <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{viewingTestCase.expectedResult}</p>
+                  </div>
+                </div>
+
+                {/* Coverage */}
+                <div>
+                  <Label className="text-lg font-semibold">Coverage</Label>
+                  <p className="mt-2 text-gray-700 dark:text-gray-300">{viewingTestCase.coverage}</p>
+                </div>
+
+                {/* Tags */}
+                {viewingTestCase.tags && viewingTestCase.tags.length > 0 && (
+                  <div>
+                    <Label className="text-lg font-semibold">Tags</Label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {viewingTestCase.tags.map((tag, index) => (
+                        <Badge key={index} variant="outline">{tag}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowTestCaseDialog(false)}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      const index = generatedTestCases.indexOf(viewingTestCase);
+                      if (index !== -1) {
+                        toggleTestCaseSelection(index);
+                      }
+                      setShowTestCaseDialog(false);
+                    }}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Select for Merge
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </Dialog>
-    </Dialog>
+    </div>
   );
 }

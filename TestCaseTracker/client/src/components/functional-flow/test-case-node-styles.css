@@ -1,0 +1,63 @@
+
+/* Test Case Flow Node Styles */
+.react-flow__node-step[data-category="functional-tests"] {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: 2px solid #5a67d8;
+}
+
+.react-flow__node-step[data-category="usability-tests"] {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  border: 2px solid #e53e3e;
+}
+
+.react-flow__node-step[data-category="security-tests"] {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border: 2px solid #3182ce;
+}
+
+.react-flow__node-step[data-category="performance-tests"] {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  border: 2px solid #38a169;
+}
+
+.react-flow__node-step[data-category="scalability-tests"] {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  border: 2px solid #ed8936;
+}
+
+.react-flow__node-step[data-category="upgrade-tests"] {
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  border: 2px solid #9f7aea;
+}
+
+.react-flow__node-step[data-category="compatibility-tests"] {
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+  border: 2px solid #dd6b20;
+}
+
+.react-flow__node-step[data-category="central"] {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: 3px solid #4c51bf;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+.react-flow__node-linked_testcase {
+  background: #ffffff;
+  border: 2px solid #cbd5e0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9em;
+  min-width: 120px;
+  text-align: center;
+}
+
+.react-flow__node-linked_testcase:hover {
+  border-color: #4299e1;
+  box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+}
+
+.react-flow__edge-default .react-flow__edge-path {
+  stroke: #cbd5e0;
+  stroke-width: 2;
+}

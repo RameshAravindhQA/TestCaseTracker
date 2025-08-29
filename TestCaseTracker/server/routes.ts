@@ -1,6 +1,7 @@
 import { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { createServer, type Server } from "http";
 import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject } from "./matrix-fix";
 import { automationService } from "./automation-service";
 import { logger } from "./logger";
@@ -62,6 +63,7 @@ import MemoryStore from "memorystore";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import flowDiagramRoutes from './api/flow-diagram-routes';
 
 // Define session interface
 declare module "express-session" {
@@ -1857,7 +1859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 // Enhanced automation endpoints with actual implementation
-apiRouter.get('/automation/health', async (req, res) => {
+app.get('/api/automation/health', async (req, res) => {
   try {
     logger.info('Automation health check requested');
 
@@ -2685,7 +2687,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
         images: []
       };
 
-      console.log('🔮 Calling enhanced AI service...');
+      console.log('🔮 Calling EnhancedAIService.generateTestCases...');
       const aiResponse = await EnhancedAIService.generateTestCases(aiRequest);
 
       console.log('✅ AI response received:', {
@@ -6175,7 +6177,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
   apiRouter.get("/documents/:id", isAuthenticated, async (req, res) => {
     try {
       const documentId = parseInt(req.params.id);
-      const document = await storage.getDocument(documentid);
+      const document = await storage.getDocument(documentId);
 
       if (!document) {
         return res.status(404).json({ message: "Document not found" });

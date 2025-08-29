@@ -87,9 +87,10 @@ export interface IStorage {
   // Test case operations
   getTestCases(): Promise<TestCase[]>;
   getTestCasesByProject(projectId: number): Promise<TestCase[]>;
+  getTestCasesByFilters(projectId?: number, moduleId?: number): Promise<TestCase[]>;
   getTestCase(id: number): Promise<TestCase | undefined>;
   createTestCase(testCase: InsertTestCase): Promise<TestCase>;
-  updateTestCase(id: number, testCaseData: Partial<TestCase>): Promise<TestCase | undefined>;
+  updateTestCase(id: number, testCaseData: Partial<TestCase>): Promise<TestCase | null>;
   deleteTestCase(id: number): Promise<boolean>;
 
   // Deleted test case operations
@@ -101,15 +102,18 @@ export interface IStorage {
   // Bug operations
   getBugs(): Promise<Bug[]>;
   getBugsByProject(projectId: number): Promise<Bug[]>;
+  getBugsWithFilters(filters?: { projectId?: number; status?: string; severity?: string }): Promise<Bug[]>;
   getBug(id: number): Promise<Bug | undefined>;
+  getBugById(id: number): Promise<Bug | null>;
   createBug(bug: InsertBug): Promise<Bug>;
-  updateBug(id: number, bugData: Partial<Bug>): Promise<Bug | undefined>;
+  updateBug(id: number, bugData: Partial<Bug>): Promise<Bug | null>;
   deleteBug(id: number): Promise<boolean>;
 
   // Document operations
   getDocuments(): Promise<Document[]>;
   getDocumentsByProject(projectId: number): Promise<Document[]>;
   getDocument(id: number): Promise<Document | undefined>;
+  getDocumentById(id: number): Promise<Document | null>;
   createDocument(document: InsertDocument): Promise<Document>;
   updateDocument(id: number, documentData: Partial<Document>): Promise<Document | undefined>;
   deleteDocument(id: number): Promise<boolean>;
@@ -118,6 +122,7 @@ export interface IStorage {
   getDocumentFolders(): Promise<DocumentFolder[]>;
   getDocumentFoldersByProject(projectId: number): Promise<DocumentFolder[]>;
   getDocumentFolder(id: number): Promise<DocumentFolder | undefined>;
+  getDocumentFolderById(id: number): Promise<DocumentFolder | null>;
   createDocumentFolder(folder: InsertDocumentFolder): Promise<DocumentFolder>;
   updateDocumentFolder(id: number, folderData: Partial<DocumentFolder>): Promise<DocumentFolder | undefined>;
   deleteDocumentFolder(id: number): Promise<boolean>;
@@ -125,6 +130,8 @@ export interface IStorage {
   // Customer operations
   getCustomers(): Promise<Customer[]>;
   getCustomer(id: number): Promise<Customer | undefined>;
+  getCustomerById(id: number): Promise<Customer | null>;
+  getCustomersByStatus(status: string): Promise<Customer[]>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: number, customerData: Partial<Customer>): Promise<Customer | undefined>;
   deleteCustomer(id: number): Promise<boolean>;
@@ -133,8 +140,9 @@ export interface IStorage {
   getTags(): Promise<Tag[]>;
   getTagsByProject(projectId: number): Promise<Tag[]>;
   getTag(id: number): Promise<Tag | undefined>;
+  getTagById(id: number): Promise<Tag | null>;
   createTag(tag: InsertTag): Promise<Tag>;
-  updateTag(id: number, tagData: Partial<Tag>): Promise<Tag | undefined>;
+  updateTag(id: number, tagData: Partial<Tag>): Promise<Tag | null>;
   deleteTag(id: number): Promise<boolean>;
 
   // Kanban operations
@@ -149,7 +157,7 @@ export interface IStorage {
   getKanbanCardsByColumn(columnId: number): Promise<KanbanCard[]>;
   getKanbanCard(id: number): Promise<KanbanCard | undefined>;
   createKanbanCard(card: InsertKanbanCard): Promise<KanbanCard>;
-  updateKanbanCard(id: number, cardData: Partial<KanbanCard>): Promise<KanbanCard | undefined>;
+  updateKanbanCard(id: number, cardData: Partial<KanbanCard>): Promise<any>;
   deleteKanbanCard(id: number): Promise<boolean>;
 
   // Matrix operations
@@ -157,7 +165,7 @@ export interface IStorage {
   getCustomMarkersByProject(projectId: number): Promise<CustomMarker[]>;
   getCustomMarker(id: number): Promise<CustomMarker | undefined>;
   createCustomMarker(marker: InsertCustomMarker): Promise<CustomMarker>;
-  updateCustomMarker(id: number, markerData: Partial<CustomMarker>): Promise<CustomMarker | undefined>;
+  updateCustomMarker(id: number, markerData: Partial<CustomMarker>): Promise<CustomMarker | null>;
   deleteCustomMarker(id: number): Promise<boolean>;
 
   getMatrixCells(): Promise<MatrixCell[]>;
@@ -165,16 +173,25 @@ export interface IStorage {
   getMatrixCell(id: number): Promise<MatrixCell | undefined>;
   getMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<MatrixCell | undefined>;
   createMatrixCell(cell: InsertMatrixCell): Promise<MatrixCell>;
-  updateMatrixCell(id: number, cellData: Partial<MatrixCell>): Promise<MatrixCell | undefined>;
+  upsertMatrixCell(cell: any): Promise<any>;
+  updateMatrixCell(id: number, cellData: Partial<MatrixCell>): Promise<MatrixCell | null>;
   deleteMatrixCell(id: number): Promise<boolean>;
   deleteMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<boolean>;
 
   // Test Sheet operations
-  getTestSheets(projectId?: number): Promise<TestSheet[]>;
-  getTestSheet(id: number): Promise<TestSheet | undefined>;
-  createTestSheet(sheet: InsertTestSheet): Promise<TestSheet>;
-  updateTestSheet(id: number, sheetData: Partial<TestSheet>): Promise<TestSheet | undefined>;
+  getTestSheets(projectId?: number): Promise<any[]>;
+  getTestSheet(id: number): Promise<any | null>;
+  createTestSheet(sheet: InsertTestSheet): Promise<any>;
+  updateTestSheet(id: number, sheetData: any): Promise<any>;
   deleteTestSheet(id: number): Promise<boolean>;
+  duplicateTestSheet(id: number, name: string, userId: number): Promise<any>;
+
+  // Flow Diagram methods
+  getFlowDiagramsByProject(projectId: string): Promise<any[]>;
+  getFlowDiagram(id: string): Promise<any | null>;
+  createFlowDiagram(data: any): Promise<any>;
+  updateFlowDiagram(id: string, data: any): Promise<any>;
+  deleteFlowDiagram(id: string): Promise<boolean>;
 
   // GitHub Integration methods
   getGitHubConfig(projectId: number): Promise<any | undefined>;
@@ -203,9 +220,21 @@ export interface IStorage {
   getBugComment(commentId: number): Promise<any>;
   updateComment(commentId: number, updates: any): Promise<any>;
 
-    // Traceability Matrix operations
+  // Traceability Matrix operations
   getTraceabilityMatrix(projectId: number): Promise<any>;
   saveTraceabilityMatrix(projectId: number, matrixData: any[]): Promise<any>;
+  getTraceabilityMatrixById(id: number): Promise<any | undefined>;
+  createTraceabilityMatrix(matrix: any): Promise<any>;
+  updateTraceabilityMatrix(id: number, matrix: any): Promise<any>;
+  deleteTraceabilityMatrix(id: number): Promise<boolean>;
+  getTraceabilityMarkers(projectId: number): Promise<any[]>;
+  getTraceabilityMarker(id: number): Promise<any | undefined>;
+  createTraceabilityMarker(marker: any): Promise<any>;
+  updateTraceabilityMarker(id: number, marker: any): Promise<any>;
+  deleteTraceabilityMarker(id: number): Promise<boolean>;
+  getTraceabilityMatrixCells(matrixId: number): Promise<any[]>;
+  createTraceabilityMatrixCell(cell: any): Promise<any>;
+  updateTraceabilityMatrixCell(id: number, cell: any): Promise<any>;
 
   // Enhanced Chat and Messaging methods
   getChatsByUser(userId: number): Promise<any[]>;
@@ -250,9 +279,9 @@ export interface IStorage {
   updateEmployeeProject(id: number, data: Partial<any>): Promise<any>; // Assuming InsertEmployeeProject type for data
   getEmployeeProjectHistory(employeeId: number): Promise<any[]>;
   getAllEmployeeProjectHistory(): Promise<any[]>;
-
-  // Add getEmployeeProjectAllocation method for extension functionality
   getEmployeeProjectAllocation(allocationId: number): Promise<any | null>;
+  createEmployeeProjectHistory(historyData: any): Promise<any>;
+  extendEmployeeProject(allocationId: number, newEndDate: string, extensionDays?: number): Promise<any>;
 
   // Technology Options
   getTechnologyOptions(): Promise<any[]>;
@@ -269,8 +298,13 @@ export interface IStorage {
   updateNavadhitiProject(id: number, data: any): Promise<any | null>;
   deleteNavadhitiProject(id: number): Promise<boolean>;
 
+  // Status Review Methods
+  getStatusReviews(date?: string): Promise<any[]>;
+  createStatusReview(data: any): Promise<any>;
+
   // Todo Management Methods
   getTodos(userId: number): Promise<any[]>;
+  getTodosByUserId(userId: number): Promise<any[]>;
   getTodo(id: number): Promise<any | undefined>;
   createTodo(data: any): Promise<any>;
   updateTodo(id: number, data: any): Promise<any | null>;
@@ -280,6 +314,7 @@ export interface IStorage {
   createTodoList(data: any): Promise<any>;
   updateTodoList(id: number, data: any): Promise<any | null>;
   deleteTodoList(id: number): Promise<boolean>;
+  getTodosByListId(listId: number): Promise<any[]>;
 
   // Request Forms Module Methods
   getRequestFormTypes(): Promise<any[]>;
@@ -311,6 +346,11 @@ export interface IStorage {
   createRequestComment(data: any): Promise<any>;
   updateRequestComment(id: number, data: any): Promise<any | null>;
   deleteRequestComment(id: number): Promise<boolean>;
+
+  // Notification methods
+  getNotifications(userId: number): Promise<any[]>;
+  createNotification(data: any): Promise<any>;
+  markNotificationAsRead(id: number): Promise<any>;
 }
 
 /**
@@ -345,7 +385,9 @@ class MemStorage implements IStorage {
 
   // Initialize data property for compatibility
   private data: any = {
-    todoLists: []
+    todoLists: [],
+    flowDiagrams: [], // Added for flow diagram storage
+    testCases: [], // Added to ensure testCases array is available in data
   };
 
   // Enhanced Chat and Messaging methods
@@ -390,6 +432,7 @@ class MemStorage implements IStorage {
   private nextTimeSheetId = 1;
   private nextTimeSheetFolderId = 1;
   private nextCustomerId = 1;
+
 
   private initializeEmployeeDefaults() {
     // Add default technology options
@@ -1378,33 +1421,51 @@ class MemStorage implements IStorage {
   }
 
   // Flow Diagrams methods (placeholder)
-  async getFlowDiagrams(projectId?: number): Promise<any[]> {
-    return [];
+  async getFlowDiagramsByProject(projectId: string): Promise<any[]> {
+    return this.data.flowDiagrams.filter(diagram => diagram.projectId === parseInt(projectId));
   }
 
-  async getFlowDiagram(id: number): Promise<any | null> {
-    return null;
+  async getFlowDiagram(id: string): Promise<any | null> {
+    return this.data.flowDiagrams.find(diagram => diagram.id === parseInt(id));
   }
 
-  async createFlowDiagram(data: any): Promise<any> {
-    return {
+  async createFlowDiagram(diagramData: any): Promise<any> {
+    const diagram = {
       id: Date.now(),
-      ...data,
+      ...diagramData,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+    this.data.flowDiagrams.push(diagram);
+    this.saveData();
+    return diagram;
   }
 
-  async updateFlowDiagram(id: number, data: any): Promise<any> {
-    return {
-      id,
-      ...data,
+  async updateFlowDiagram(id: string, updates: any): Promise<any> {
+    const index = this.data.flowDiagrams.findIndex(diagram => diagram.id === parseInt(id));
+    if (index === -1) return null;
+
+    this.data.flowDiagrams[index] = {
+      ...this.data.flowDiagrams[index],
+      ...updates,
       updatedAt: new Date().toISOString(),
     };
+    this.saveData();
+    return this.data.flowDiagrams[index];
   }
 
-  async deleteFlowDiagram(id: number): Promise<boolean> {
+  async deleteFlowDiagram(id: string): Promise<boolean> {
+    const index = this.data.flowDiagrams.findIndex(diagram => diagram.id === parseInt(id));
+    if (index === -1) return false;
+
+    this.data.flowDiagrams.splice(index, 1);
+    this.saveData();
     return true;
+  }
+
+  // Method to get test cases by module ID
+  async getTestCasesByModule(moduleId: string): Promise<TestCase[]> {
+    return this.testCases.filter(tc => tc.moduleId === parseInt(moduleId));
   }
 
   // Dashboard Stats
@@ -1659,15 +1720,15 @@ class MemStorage implements IStorage {
       results = results.filter(ts => ts.userId === userId);
     }
 
-    console.log(`Storage: getTimeSheets(${projectId}, ${userId}) returning ${results.length} timesheets:`, 
+    console.log(`Storage: getTimeSheets(${projectId}, ${userId}) returning ${results.length} timesheets:`,
       results.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description })));
-    
+
     return results;
   }
 
   async getUserTimeSheets(userId: number): Promise<TimeSheet[]> {
     const results = this.timeSheets.filter(ts => ts.userId === userId);
-    console.log(`Storage: getUserTimeSheets(${userId}) returning ${results.length} timesheets:`, 
+    console.log(`Storage: getUserTimeSheets(${userId}) returning ${results.length} timesheets:`,
       results.map(ts => ({ id: ts.id, projectId: ts.projectId, description: ts.description.substring(0, 50) })));
     return results;
   }
@@ -1701,11 +1762,11 @@ class MemStorage implements IStorage {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     this.timeSheets.push(newTimeSheet);
-    
+
     console.log(`Storage: Created timesheet ID ${newTimeSheet.id} for user ${newTimeSheet.userId}, project ${newTimeSheet.projectId}. Total timesheets: ${this.timeSheets.length}`);
-    
+
     return newTimeSheet;
   }
 
