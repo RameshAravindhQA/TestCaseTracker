@@ -3875,31 +3875,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bug routes
   apiRouter.get("/bugs", isAuthenticated, async (req, res) => {
     try {
-      // Get all bugs for user's accessible projects
-      let bugs;
-      if (req.session.userRole === "Admin") {
-        bugs = await storage.getBugs();
-      } else {
-        // Get projects user has access to
-        const userProjects = await storage.getProjectsByUserId(req.session.userId!);
-        const projectIds = userProjects.map(p => p.id);
+      const { projectId, moduleId, status, severity } = req.query;
 
-        // Get bugs for these projects
-        bugs = [];
-        for (const projectId of projectIds) {
-          const projectBugs = await storage.getBugsByProject(projectId);
-          bugs.push(...projectBugs);
-        }
+      console.log(`[API] Fetching bugs with filters:`, { projectId, moduleId, status, severity });
+
+      // Get all bugs first
+      const allBugs = await storage.getBugs();
+
+      // Apply filters
+      let filteredBugs = [...allBugs];
+
+      if (projectId) {
+        const projectIdNum = parseInt(projectId as string);
+        filteredBugs = filteredBugs.filter(bug => bug.projectId === projectIdNum);
       }
 
-      console.log(`[API] Returning ${bugs.length} bugs for user ${req.session.userId}`);
+      if (moduleId) {
+        const moduleIdNum = parseInt(moduleId as string);
+        filteredBugs = filteredBugs.filter(bug => bug.moduleId === moduleIdNum);
+      }
 
-      // Add cache headers for real-time data
-      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.set('Pragma', 'no-cache');
-      res.set('Expires', '0');
+      if (status) {
+        filteredBugs = filteredBugs.filter(bug => bug.status === status);
+      }
 
-      res.json(bugs);
+      if (severity) {
+        filteredBugs = filteredBugs.filter(bug => bug.severity === severity);
+      }
+
+      console.log(`[API] Returning ${filteredBugs.length} bugs for user ${req.session.userId}:`, 
+        filteredBugs.map(bug => ({ id: bug.id, bugId: bug.bugId, title: bug.title, projectId: bug.projectId, moduleId: bug.moduleId })));
+
+      res.json(filteredBugs);
     } catch (error) {
       console.error("Get bugs error:", error);
       res.status(500).json({ message: "Server error" });
@@ -3909,37 +3916,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/projects/:projectId/bugs", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
-      const moduleId = req.query.moduleId ? parseInt(req.query.moduleId as string) : undefined;
+      const { moduleId } = req.query;
 
       console.log(`[API] Fetching bugs for project ${projectId}, module: ${moduleId}`);
 
-      const project = await storage.getProject(projectId);
+      // Get all bugs for this project
+      const bugs = await storage.getBugs();
+      const projectBugs = bugs.filter(bug => bug.projectId === projectId);
 
-      if (!project) {
-        console.log(`[API] Project ${projectId} not found`);
-        return res.status(404).json({ message: "Project not found" });
+      // Filter by module if specified
+      let filteredBugs = projectBugs;
+      if (moduleId) {
+        const moduleIdNum = parseInt(moduleId as string);
+        filteredBugs = projectBugs.filter(bug => bug.moduleId === moduleIdNum);
       }
 
-      // Check if user has access to this project
-      if (req.session.userRole !== "Admin") {
-        const projectMembers = await storage.getProjectMembers(projectId);
-        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+      console.log(`[API] Returning ${filteredBugs.length} bugs for project ${projectId}:`, 
+        filteredBugs.map(bug => ({ id: bug.id, bugId: bug.bugId, title: bug.title, projectId: bug.projectId, moduleId: bug.moduleId })));
 
-        if (!isMember && project.createdById !== req.session.userId) {
-          console.log(`[API] User ${req.session.userId} doesn't have access to project ${projectId}`);
-          return res.status(403).json({ message: "You don't have access to this project" });
-        }
-      }
-
-      const bugs = await storage.getBugs(projectId, moduleId);
-      console.log(`[API] Returning ${bugs.length} bugs for project ${projectId}:`, bugs.map(bug => ({ id: bug.id, title: bug.title, status: bug.status, severity: bug.severity })));
-
-      // Add cache headers for real-time data
-      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.set('Pragma', 'no-cache');
-      res.set('Expires', '0');
-
-      res.json(bugs);
+      res.json(filteredBugs);
     } catch (error) {
       console.error("Get bugs error:", error);
       res.status(500).json({ message: "Server error" });

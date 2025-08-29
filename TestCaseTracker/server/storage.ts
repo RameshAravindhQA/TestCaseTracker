@@ -1020,21 +1020,27 @@ class MemStorage implements IStorage {
   async getBugs(projectId?: number, moduleId?: number): Promise<Bug[]> {
     let results = [...this.bugs];
 
+    console.log(`Storage: Total bugs in storage: ${this.bugs.length}`);
+
     if (projectId) {
       results = results.filter(bug => bug.projectId === projectId);
+      console.log(`Storage: After filtering by projectId ${projectId}: ${results.length} bugs`);
     }
 
     if (moduleId) {
       results = results.filter(bug => bug.moduleId === moduleId);
+      console.log(`Storage: After filtering by moduleId ${moduleId}: ${results.length} bugs`);
     }
 
-    console.log(`Storage: getBugs(${projectId}, ${moduleId}) returning ${results.length} bugs`);
+    console.log(`Storage: getBugs(${projectId}, ${moduleId}) returning ${results.length} bugs:`,
+      results.map(bug => ({ id: bug.id, bugId: bug.bugId, title: bug.title, projectId: bug.projectId, moduleId: bug.moduleId })));
     return results;
   }
 
   async getBugsByProject(projectId: number): Promise<Bug[]> {
     const results = this.bugs.filter(bug => bug.projectId === projectId);
-    console.log(`Storage: getBugsByProject(${projectId}) returning ${results.length} bugs`);
+    console.log(`Storage: getBugsByProject(${projectId}) returning ${results.length} bugs:`, 
+      results.map(bug => ({ id: bug.id, bugId: bug.bugId, title: bug.title, projectId: bug.projectId })));
     return results;
   }
 
