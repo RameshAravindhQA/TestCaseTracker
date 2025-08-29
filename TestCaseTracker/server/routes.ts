@@ -3631,6 +3631,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Projects routes
+  apiRouter.get("/projects", isAuthenticated, async (req, res) => {
+    try {
+      const projects = await storage.getProjects();
+      res.json(projects);
+    } catch (error) {
+      console.error("Get projects error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      console.error("Get project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/projects", isAuthenticated, async (req, res) => {
+    try {
+      const projectData = insertProjectSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+
+      const project = await storage.createProject(projectData);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "created",
+        entityType: "project",
+        entityId: project.id,
+        details: {
+          projectName: project.name,
+        }
+      });
+
+      res.status(201).json(project);
+    } catch (error) {
+      console.error("Create project error:", error);
+      res.status(400).json({ message: "Invalid project data" });
+    }
+  });
+
+  apiRouter.put("/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const updatedProject = await storage.updateProject(projectId, req.body);
+      
+      if (!updatedProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "updated",
+        entityType: "project",
+        entityId: projectId,
+        details: req.body
+      });
+
+      res.json(updatedProject);
+    } catch (error) {
+      console.error("Update project error:", error);
+      res.status(400).json({ message: "Invalid project data" });
+    }
+  });
+
+  apiRouter.delete("/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const success = await storage.deleteProject(projectId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "deleted",
+        entityType: "project",
+        entityId: projectId,
+        details: {}
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Modules routes
+  apiRouter.get("/projects/:projectId/modules", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const modules = await storage.getModulesByProject(projectId);
+      res.json(modules);
+    } catch (error) {
+      console.error("Get modules error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/modules", isAuthenticated, async (req, res) => {
+    try {
+      const moduleData = insertModuleSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+
+      const module = await storage.createModule(moduleData);
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "created",
+        entityType: "module",
+        entityId: module.id,
+        details: {
+          moduleName: module.name,
+          projectId: module.projectId,
+        }
+      });
+
+      res.status(201).json(module);
+    } catch (error) {
+      console.error("Create module error:", error);
+      res.status(400).json({ message: "Invalid module data" });
+    }
+  });
+
+  apiRouter.put("/modules/:id", isAuthenticated, async (req, res) => {
+    try {
+      const moduleId = parseInt(req.params.id);
+      const updatedModule = await storage.updateModule(moduleId, req.body);
+      
+      if (!updatedModule) {
+        return res.status(404).json({ message: "Module not found" });
+      }
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "updated",
+        entityType: "module",
+        entityId: moduleId,
+        details: req.body
+      });
+
+      res.json(updatedModule);
+    } catch (error) {
+      console.error("Update module error:", error);
+      res.status(400).json({ message: "Invalid module data" });
+    }
+  });
+
+  apiRouter.delete("/modules/:id", isAuthenticated, async (req, res) => {
+    try {
+      const moduleId = parseInt(req.params.id);
+      const success = await storage.deleteModule(moduleId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Module not found" });
+      }
+
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "deleted",
+        entityType: "module",
+        entityId: moduleId,
+        details: {}
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete module error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Register the main API router
   app.use("/api", apiRouter);
 
