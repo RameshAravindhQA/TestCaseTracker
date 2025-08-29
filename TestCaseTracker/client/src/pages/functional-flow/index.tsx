@@ -310,37 +310,6 @@ export default function FunctionalFlowPage() {
     }
   };
 
-  // Load diagram mutation with fixed dependency
-  const loadDiagramMutation = useMutation({
-    mutationFn: async (diagramId: string) => {
-      const response = await apiRequest('GET', `/api/flow-diagrams/${diagramId}`);
-      if (!response.ok) throw new Error('Failed to load diagram');
-      return response.json();
-    },
-    onSuccess: (diagram: FlowDiagram) => {
-      if (diagram.data && diagram.data.nodes && diagram.data.edges) {
-        setNodes(diagram.data.nodes || initialNodes);
-        setEdges(diagram.data.edges || initialEdges);
-      } else {
-        setNodes(diagram.nodes || initialNodes);
-        setEdges(diagram.edges || initialEdges);
-      }
-      setDiagramName(diagram.name || '');
-      setDiagramDescription(diagram.description || '');
-      toast({
-        title: 'Success',
-        description: 'Flow diagram loaded successfully',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: `Failed to load diagram: ${error}`,
-        variant: 'destructive',
-      });
-    }
-  });
-
   // Generate flow using Mermaid
   const generateFlowMutation = useMutation({
     mutationFn: async (projectId: string) => {
