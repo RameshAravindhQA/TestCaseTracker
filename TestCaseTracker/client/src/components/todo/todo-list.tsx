@@ -86,17 +86,19 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
   });
 
   // Fetch todos for selected list
-  const { data: todos, isLoading: isLoadingTodos, refetch } = useQuery<TodoItem[]>({
+  const { data: todos = [], isLoading: isLoadingTodos, refetch } = useQuery<TodoItem[]>({
     queryKey: ["todos", selectedListId],
     queryFn: async () => {
       if (selectedListId && selectedListId !== null) {
         const response = await apiRequest("GET", `/api/todo-lists/${selectedListId}/todos`);
         if (!response.ok) throw new Error("Failed to fetch todos");
-        return response.json();
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
       } else {
         const response = await apiRequest("GET", "/api/todos");
         if (!response.ok) throw new Error("Failed to fetch todos");
-        return response.json();
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
       }
     },
     enabled: isVisible,
@@ -320,8 +322,10 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
 
   if (!isVisible) return null;
 
-  const completedCount = todos?.filter(todo => todo.completed).length || 0;
-  const totalCount = todos?.length || 0;
+  // Ensure todos is always an array
+  const todosArray = Array.isArray(todos) ? todos : [];
+  const completedCount = todosArray.filter(todo => todo.completed).length;
+  const totalCount = todosArray.length;
   const selectedList = todoLists?.find(list => list.id === selectedListId);
 
   return (
@@ -502,8 +506,8 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
           <div className="space-y-2">
             {isLoadingTodos ? (
               <div className="text-center py-4 text-sm text-gray-500">Loading todos...</div>
-            ) : todos && todos.length > 0 ? (
-              todos.map((todo) => (
+            ) : todosArray.length > 0 ? (
+              todosArray.map((todo) => (
                 <div
                   key={todo.id}
                   className={cn(

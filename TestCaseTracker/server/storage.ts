@@ -2499,6 +2499,51 @@ class MemStorage implements IStorage {
     this.activities.push(activity);
   }
 
+  // Notebook operations implementation
+  async getNotebooks(userId: number): Promise<Notebook[]> {
+    return this.notebooks.filter(notebook => notebook.userId === userId);
+  }
+
+  async getNotebook(id: number, userId: number): Promise<Notebook | null> {
+    const notebook = this.notebooks.find(n => n.id === id && n.userId === userId);
+    return notebook || null;
+  }
+
+  async createNotebook(notebookData: Omit<Notebook, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notebook> {
+    const id = this.getNextId();
+    const now = new Date();
+    
+    const notebook: Notebook = {
+      id,
+      ...notebookData,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    this.notebooks.push(notebook);
+    return notebook;
+  }
+
+  async updateNotebook(id: number, userId: number, updates: Partial<Notebook>): Promise<Notebook | null> {
+    const index = this.notebooks.findIndex(n => n.id === id && n.userId === userId);
+    if (index === -1) return null;
+
+    const updatedNotebook = {
+      ...this.notebooks[index],
+      ...updates,
+      updatedAt: new Date()
+    };
+    
+    this.notebooks[index] = updatedNotebook;
+    return updatedNotebook;
+  }
+
+  async deleteNotebook(id: number, userId: number): Promise<boolean> {
+    const initialLength = this.notebooks.length;
+    this.notebooks = this.notebooks.filter(n => !(n.id === id && n.userId === userId));
+    return this.notebooks.length < initialLength;
+  }
+
   // Initialize with default data
   constructor() {
     this.initializeDefaultData();
@@ -2563,11 +2608,15 @@ class MemStorage implements IStorage {
 
   // Todo Management Implementation
   async getTodos(userId: number): Promise<any[]> {
-    return this.todosMap.values();
+    const todos = Array.from(this.todosMap.values()).filter(todo => todo.userId === userId);
+    console.log(`Storage: getTodos for user ${userId} returning ${todos.length} todos`);
+    return todos;
   }
 
   async getTodosByUserId(userId: number): Promise<any[]> {
-    return this.todosMap.values();
+    const todos = Array.from(this.todosMap.values()).filter(todo => todo.userId === userId);
+    console.log(`Storage: getTodosByUserId for user ${userId} returning ${todos.length} todos`);
+    return todos;
   }
 
   async getTodo(id: number): Promise<any | undefined> {
@@ -2648,7 +2697,9 @@ class MemStorage implements IStorage {
 
   // Fix: Add getTodosByListId method
   async getTodosByListId(listId: number): Promise<any[]> {
-    return Array.from(this.todosMap.values()).filter(todo => todo.todoListId === listId);
+    const todos = Array.from(this.todosMap.values()).filter(todo => todo.todoListId === listId);
+    console.log(`Storage: getTodosByListId for list ${listId} returning ${todos.length} todos`);
+    return todos;
   }
   async createTodoList(data: any): Promise<any> {
     const id = this.getNextId();

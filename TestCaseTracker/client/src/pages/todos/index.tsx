@@ -60,6 +60,7 @@ function TodosPage() {
     queryKey: ["/api/todos"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/todos");
+      if (!res.ok) throw new Error("Failed to fetch todos");
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
