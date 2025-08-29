@@ -54,14 +54,15 @@ export async function generateFlowDiagram(req: Request, res: Response) {
     
     mermaidDef += `    TC${testCases.length - 1} --> End([Test Complete]);\n`;
 
-    // Group test cases by feature for mind map layout
+    // Group test cases by module for mind map layout
     const featureGroups = {};
     testCases.forEach(testCase => {
-      const feature = testCase.feature || 'General Tests';
-      if (!featureGroups[feature]) {
-        featureGroups[feature] = [];
+      // Use module name if available, otherwise fall back to feature, then to a generic category
+      const module = testCase.moduleName || testCase.feature || 'General Tests';
+      if (!featureGroups[module]) {
+        featureGroups[module] = [];
       }
-      featureGroups[feature].push(testCase);
+      featureGroups[module].push(testCase);
     });
 
     const nodes = [];
@@ -95,28 +96,28 @@ export async function generateFlowDiagram(req: Request, res: Response) {
       },
     });
 
-    // Create feature branch nodes in a radial pattern
-    const features = Object.keys(featureGroups);
-    const angleStep = (2 * Math.PI) / features.length;
-    const branchRadius = 350; // Increased from 250 to 350
+    // Create module branch nodes in a radial pattern
+    const modules = Object.keys(featureGroups);
+    const angleStep = (2 * Math.PI) / modules.length;
+    const branchRadius = 450; // Increased from 350 to 450 for more spacing
 
-    features.forEach((feature, featureIndex) => {
-      const angle = featureIndex * angleStep;
-      const featureX = centerX + Math.cos(angle) * branchRadius;
-      const featureY = centerY + Math.sin(angle) * branchRadius;
-      const featureNodeId = `feature-${featureIndex}`;
+    modules.forEach((module, moduleIndex) => {
+      const angle = moduleIndex * angleStep;
+      const moduleX = centerX + Math.cos(angle) * branchRadius;
+      const moduleY = centerY + Math.sin(angle) * branchRadius;
+      const moduleNodeId = `module-${moduleIndex}`;
 
-      // Feature node
+      // Module node (green nodes representing test modules/categories)
       nodes.push({
-        id: featureNodeId,
+        id: moduleNodeId,
         type: 'testCaseNode',
         data: {
-          label: feature,
-          description: `${featureGroups[feature].length} test cases`,
+          label: module,
+          description: `${featureGroups[module].length} test cases`,
           isFeature: true,
-          testCases: featureGroups[feature]
+          testCases: featureGroups[module]
         },
-        position: { x: featureX, y: featureY },
+        position: { x: moduleX, y: moduleY },
         style: {
           backgroundColor: '#10B981',
           color: 'white',
@@ -130,25 +131,25 @@ export async function generateFlowDiagram(req: Request, res: Response) {
         },
       });
 
-      // Edge from center to feature
+      // Edge from center to module
       edges.push({
-        id: `e-center-${featureNodeId}`,
+        id: `e-center-${moduleNodeId}`,
         source: 'center-1',
-        target: featureNodeId,
+        target: moduleNodeId,
         type: 'smoothstep',
         style: { stroke: '#10B981', strokeWidth: 3 },
         markerEnd: { type: 'ArrowClosed', color: '#10B981' },
       });
 
-      // Create test case nodes for each feature
-      const testCases = featureGroups[feature];
-      const testCaseRadius = 180; // Increased from 120 to 180
+      // Create test case nodes for each module with much better spacing
+      const testCases = featureGroups[module];
+      const testCaseRadius = 280; // Increased from 180 to 280 for more spacing
       const testCaseAngleStep = Math.PI / (testCases.length + 1);
 
       testCases.forEach((testCase, testIndex) => {
-        const testAngle = angle + (testIndex - (testCases.length - 1) / 2) * testCaseAngleStep * 0.5; // Increased from 0.3 to 0.5
-        const testX = featureX + Math.cos(testAngle) * testCaseRadius;
-        const testY = featureY + Math.sin(testAngle) * testCaseRadius;
+        const testAngle = angle + (testIndex - (testCases.length - 1) / 2) * testCaseAngleStep * 0.8; // Increased from 0.5 to 0.8
+        const testX = moduleX + Math.cos(testAngle) * testCaseRadius;
+        const testY = moduleY + Math.sin(testAngle) * testCaseRadius;
         const testNodeId = `testcase-${testCase.id}`;
 
         // Determine node color based on status
@@ -193,10 +194,10 @@ export async function generateFlowDiagram(req: Request, res: Response) {
           },
         });
 
-        // Edge from feature to test case
+        // Edge from module to test case
         edges.push({
-          id: `e-${featureNodeId}-${testNodeId}`,
-          source: featureNodeId,
+          id: `e-${moduleNodeId}-${testNodeId}`,
+          source: moduleNodeId,
           target: testNodeId,
           type: 'smoothstep',
           style: { stroke: backgroundColor, strokeWidth: 2 },
