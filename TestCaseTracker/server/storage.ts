@@ -570,28 +570,51 @@ class MemStorage implements IStorage {
         throw new Error(`Project with ID ${moduleData.projectId} not found`);
       }
 
-      // Get project prefix (first 2-5 letters of project name, or use project.prefix if available)
+      // Get project prefix (same logic as test case creation)
       let projectPrefix = project.prefix;
-      if (!projectPrefix) {
-        // Extract first 2-5 letters from project name
+      if (!projectPrefix || projectPrefix.trim() === '') {
         const cleanProjectName = project.name.replace(/[^a-zA-Z]/g, '');
-        if (cleanProjectName.length >= 5) {
-          projectPrefix = cleanProjectName.substring(0, 5).toUpperCase();
-        } else if (cleanProjectName.length >= 3) {
-          projectPrefix = cleanProjectName.substring(0, cleanProjectName.length).toUpperCase();
+        if (cleanProjectName.length >= 3) {
+          projectPrefix = cleanProjectName.substring(0, 3).toUpperCase();
         } else {
           projectPrefix = cleanProjectName.toUpperCase().padEnd(3, 'X');
         }
       }
 
-      // Get module name prefix (first 3 letters of module name)
+      // Get module name prefix with smart keyword mapping
       let modulePrefix = 'MOD';
       if (moduleData.name) {
-        const cleanModuleName = moduleData.name.replace(/[^a-zA-Z]/g, '');
-        if (cleanModuleName.length >= 3) {
-          modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
+        const cleanModuleName = moduleData.name.replace(/[^a-zA-Z]/g, '').toLowerCase();
+        
+        // Smart keyword-based mapping for common module types
+        if (cleanModuleName.includes('register') || cleanModuleName.includes('registration') || cleanModuleName.includes('signup')) {
+          modulePrefix = 'REG';
+        } else if (cleanModuleName.includes('login') || cleanModuleName.includes('signin') || cleanModuleName.includes('auth')) {
+          modulePrefix = 'LOG';
+        } else if (cleanModuleName.includes('profile') || cleanModuleName.includes('account')) {
+          modulePrefix = 'PROF';
+        } else if (cleanModuleName.includes('dashboard') || cleanModuleName.includes('home')) {
+          modulePrefix = 'DASH';
+        } else if (cleanModuleName.includes('user') || cleanModuleName.includes('users')) {
+          modulePrefix = 'USR';
+        } else if (cleanModuleName.includes('admin') || cleanModuleName.includes('administration')) {
+          modulePrefix = 'ADM';
+        } else if (cleanModuleName.includes('payment') || cleanModuleName.includes('billing')) {
+          modulePrefix = 'PAY';
+        } else if (cleanModuleName.includes('order') || cleanModuleName.includes('cart')) {
+          modulePrefix = 'ORD';
+        } else if (cleanModuleName.includes('product') || cleanModuleName.includes('catalog')) {
+          modulePrefix = 'PRD';
+        } else if (cleanModuleName.includes('search') || cleanModuleName.includes('filter')) {
+          modulePrefix = 'SRC';
         } else {
-          modulePrefix = cleanModuleName.toUpperCase().padEnd(3, 'X');
+          // Fall back to first 3 characters of clean module name
+          const cleanName = moduleData.name.replace(/[^a-zA-Z]/g, '');
+          if (cleanName.length >= 3) {
+            modulePrefix = cleanName.substring(0, 3).toUpperCase();
+          } else {
+            modulePrefix = cleanName.toUpperCase().padEnd(3, 'X');
+          }
         }
       }
 
@@ -599,10 +622,10 @@ class MemStorage implements IStorage {
       const projectModules = this.modules
         .filter(module => module.projectId === moduleData.projectId);
 
-      console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix, 'module prefix:', modulePrefix);
+      console.log('Storage: Project modules found:', projectModules.length, 'for project:', moduleData.projectId, 'with prefixes - Project:', projectPrefix, 'Module:', modulePrefix);
 
-      // Find the highest module number for this project across ALL module types
-      const modulePattern = new RegExp(`^${projectPrefix}-[A-Z]{3}-MOD-(\\d+)$`);
+      // Find the highest module number for this project with this specific module prefix
+      const modulePattern = new RegExp(`^${projectPrefix}-${modulePrefix}-MOD-(\\d+)$`);
       const existingNumbers = projectModules
         .map(module => {
           if (!module.moduleId) return 0;
@@ -614,7 +637,7 @@ class MemStorage implements IStorage {
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
       moduleId = `${projectPrefix}-${modulePrefix}-MOD-${String(nextNumber).padStart(2, '0')}`;
 
-      console.log('Storage: Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'with prefix:', projectPrefix, 'module prefix:', modulePrefix, 'existing numbers:', existingNumbers);
+      console.log('Storage: Generated module ID:', moduleId, 'for project:', moduleData.projectId, 'with prefixes - Project:', projectPrefix, 'Module:', modulePrefix, 'existing numbers:', existingNumbers);
     }
 
     const module: Module = {
@@ -697,9 +720,18 @@ class MemStorage implements IStorage {
         throw new Error(`Module or Project not found`);
       }
 
-      const projectPrefix = project.prefix || 'DEF';
+      // Get project prefix (same as module creation logic)
+      let projectPrefix = project.prefix;
+      if (!projectPrefix || projectPrefix.trim() === '') {
+        const cleanProjectName = project.name.replace(/[^a-zA-Z]/g, '');
+        if (cleanProjectName.length >= 3) {
+          projectPrefix = cleanProjectName.substring(0, 3).toUpperCase();
+        } else {
+          projectPrefix = cleanProjectName.toUpperCase().padEnd(3, 'X');
+        }
+      }
 
-      // Extract module prefix from module ID with robust logic
+      // Extract module prefix from module ID (same logic as project creation)
       let modulePrefix = 'MOD';
       
       console.log(`Storage: Module ID: ${module.moduleId}, attempting to extract prefix...`);
@@ -709,11 +741,18 @@ class MemStorage implements IStorage {
         console.log(`Storage: Module ID parts:`, moduleIdParts);
         
         // For format like "BEG-REG-MOD-01", extract "REG" (second part)
-        if (moduleIdParts.length >= 3) {
+        if (moduleIdParts.length >= 4 && moduleIdParts[2] === 'MOD') {
           const potentialPrefix = moduleIdParts[1];
           if (potentialPrefix && potentialPrefix.length >= 2) {
             modulePrefix = potentialPrefix.toUpperCase();
-            console.log(`Storage: Extracted module prefix from ID: ${modulePrefix}`);
+            console.log(`Storage: Extracted module prefix from module ID: ${modulePrefix}`);
+          }
+        } else if (moduleIdParts.length >= 3) {
+          // Fallback for other formats
+          const potentialPrefix = moduleIdParts[1];
+          if (potentialPrefix && potentialPrefix.length >= 2) {
+            modulePrefix = potentialPrefix.toUpperCase();
+            console.log(`Storage: Extracted module prefix from ID (fallback): ${modulePrefix}`);
           }
         }
       }
@@ -723,7 +762,7 @@ class MemStorage implements IStorage {
         console.log(`Storage: Generating module prefix from module name: ${module.name}`);
         const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '').toLowerCase();
         
-        // Smart keyword-based mapping
+        // Smart keyword-based mapping (same as module creation)
         if (cleanModuleName.includes('register') || cleanModuleName.includes('registration') || cleanModuleName.includes('signup')) {
           modulePrefix = 'REG';
         } else if (cleanModuleName.includes('login') || cleanModuleName.includes('signin') || cleanModuleName.includes('auth')) {
@@ -756,7 +795,7 @@ class MemStorage implements IStorage {
         console.log(`Storage: Generated module prefix from name: ${modulePrefix}`);
       }
       
-      console.log(`Storage: Final module prefix to use: ${modulePrefix}`);
+      console.log(`Storage: Final prefixes - Project: ${projectPrefix}, Module: ${modulePrefix}`);
 
       // Find the highest existing test case number for this specific module
       // Use the exact format: PROJECT-MODULE-TC-###
