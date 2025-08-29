@@ -149,8 +149,11 @@ export async function generateFlowDiagram(req: Request, res: Response) {
 
     // Create flow diagram name
     const timestamp = new Date().toLocaleString();
-    const diagramName = `${project.name} - Mermaid Test Flow (${timestamp})`;
-    const diagramDescription = `Auto-generated Mermaid flow diagram for ${project.name} containing ${testCases.length} test cases`;
+    const diagramName = `${project.name} - Test Flow (${timestamp})`;
+    const diagramDescription = `Auto-generated flow diagram for ${project.name} containing ${testCases.length} test cases`;
+
+    console.log(`📊 Generated ${nodes.length} nodes and ${edges.length} edges`);
+    console.log('First few nodes:', nodes.slice(0, 3));
 
     // Save the flow diagram
     const flowDiagramData = {

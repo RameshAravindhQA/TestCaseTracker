@@ -176,8 +176,21 @@ export default function FunctionalFlowPage() {
       return response.json();
     },
     onSuccess: (diagram: FlowDiagram) => {
-      setNodes(diagram.nodes || initialNodes);
-      setEdges(diagram.edges || initialEdges);
+      console.log('Loading diagram:', diagram);
+      const diagramData = diagram.data || diagram;
+      console.log('Diagram data structure:', diagramData);
+      
+      if (diagramData.nodes && diagramData.edges) {
+        console.log(`Loading ${diagramData.nodes.length} nodes and ${diagramData.edges.length} edges`);
+        setNodes(diagramData.nodes);
+        setEdges(diagramData.edges);
+      } else {
+        // Fallback: try to use direct properties
+        console.log('Using fallback loading method');
+        setNodes(diagram.nodes || initialNodes);
+        setEdges(diagram.edges || initialEdges);
+      }
+      
       setDiagramName(diagram.name || '');
       setDiagramDescription(diagram.description || '');
       toast({
@@ -186,6 +199,7 @@ export default function FunctionalFlowPage() {
       });
     },
     onError: (error) => {
+      console.error('Load diagram error:', error);
       toast({
         title: 'Error',
         description: `Failed to load diagram: ${error}`,
@@ -318,21 +332,39 @@ export default function FunctionalFlowPage() {
       return response.json();
     },
     onSuccess: (result) => {
+      console.log('Generated flow result:', result);
       if (result.success && result.diagram) {
         // Convert the generated diagram data to ReactFlow format
-        const { nodes: apiNodes, edges: apiEdges } = result.diagram.data || result.diagram;
-        setNodes(apiNodes || initialNodes);
-        setEdges(apiEdges || initialEdges);
-        setDiagramName(result.diagram.name || 'Generated Flow');
-        setDiagramDescription(result.diagram.description || 'Auto-generated flow diagram');
+        const diagramData = result.diagram.data || result.diagram;
+        console.log('Diagram data:', diagramData);
         
-        toast({
-          title: 'Success',
-          description: `Generated flow with ${result.testCasesCount} test cases`,
-        });
+        if (diagramData.nodes && diagramData.edges) {
+          setNodes(diagramData.nodes);
+          setEdges(diagramData.edges);
+          setDiagramName(result.diagram.name || 'Generated Flow');
+          setDiagramDescription(result.diagram.description || 'Auto-generated flow diagram');
+          
+          // Refresh the diagrams list to show the newly created diagram
+          refetch();
+          
+          toast({
+            title: 'Success',
+            description: `Generated flow with ${result.testCasesCount} test cases`,
+          });
+        } else {
+          console.error('No nodes/edges found in diagram data:', diagramData);
+          toast({
+            title: 'Warning',
+            description: 'Flow generated but no visual data found',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        console.error('Generation failed or no diagram data:', result);
       }
     },
     onError: (error) => {
+      console.error('Generate flow error:', error);
       toast({
         title: 'Generation Failed',
         description: 'Could not generate flow diagram',
@@ -413,6 +445,9 @@ export default function FunctionalFlowPage() {
                       Load Diagram
                     </Button>
                   )}
+                  <Button onClick={() => refetch()} variant="outline" className="flex-1">
+                    Refresh
+                  </Button>
                 </div>
               </div>
 
