@@ -709,7 +709,7 @@ class MemStorage implements IStorage {
         console.log(`Storage: Module ID parts:`, moduleIdParts);
         
         // For format like "BEG-REG-MOD-01", extract "REG" (second part)
-        if (moduleIdParts.length >= 3) {
+        if (moduleIdParts.length >= 4 && moduleIdParts[2] === 'MOD') {
           const potentialPrefix = moduleIdParts[1];
           if (potentialPrefix && potentialPrefix.length >= 2) {
             modulePrefix = potentialPrefix.toUpperCase();

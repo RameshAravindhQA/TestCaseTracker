@@ -371,9 +371,11 @@ export class DatabaseStorage implements IStorage {
       let modulePrefix = 'MOD'; // Default fallback
       if (module.moduleId) {
         const moduleIdParts = module.moduleId.split('-');
-        if (moduleIdParts.length >= 3 && moduleIdParts[2] === 'MOD') {
+        console.log(`DB: Module ID parts:`, moduleIdParts);
+        if (moduleIdParts.length >= 4 && moduleIdParts[2] === 'MOD') {
           // Extract the module type prefix (second part)
           modulePrefix = moduleIdParts[1]; // Get REG from BEG-REG-MOD-01
+          console.log(`DB: Extracted module prefix from ID: ${modulePrefix}`);
         }
       } 
       
@@ -998,7 +1000,7 @@ export class DatabaseStorage implements IStorage {
     return newSprint;
   }
 
-  async updateSprint(id: number, sprintData: PartialSprint>): Promise<Sprint> {
+  async updateSprint(id: number, sprintData: Partial<Sprint>): Promise<Sprint> {
     const [updatedSprint] = await db.update(sprints)
       .set({ ...sprintData, updatedAt: new Date() })
       .where(eq(sprints.id, id))
