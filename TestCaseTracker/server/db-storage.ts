@@ -355,10 +355,20 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Module or Project not found`);
       }
 
-      const projectPrefix = project.prefix || 'DEF';
+      // Use project prefix, with robust fallback logic
+      let projectPrefix = project.prefix;
+      if (!projectPrefix || projectPrefix.trim() === '') {
+        // Generate prefix from project name as fallback
+        const cleanProjectName = project.name.replace(/[^a-zA-Z]/g, '');
+        if (cleanProjectName.length >= 3) {
+          projectPrefix = cleanProjectName.substring(0, 3).toUpperCase();
+        } else {
+          projectPrefix = cleanProjectName.toUpperCase().padEnd(3, 'X');
+        }
+      }
 
       // Extract module prefix from module ID (e.g., BEG-REG-MOD-01 -> REG)
-      let modulePrefix = 'MOD';
+      let modulePrefix = 'TC'; // Default for test cases
       if (module.moduleId) {
         const moduleIdParts = module.moduleId.split('-');
         if (moduleIdParts.length >= 2) {
@@ -380,21 +390,40 @@ export class DatabaseStorage implements IStorage {
         .from(testCases)
         .where(and(eq(testCases.projectId, insertTestCase.projectId), eq(testCases.moduleId, insertTestCase.moduleId)));
 
-      const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
-      const existingNumbers = existingTestCases
-        .map(tc => tc.testCaseId)
-        .filter(id => id && prefixPattern.test(id))
-        .map(id => {
-          const match = id.match(prefixPattern);
-          return match ? parseInt(match[1], 10) : 0;
-        })
-        .filter(num => !isNaN(num));
+      // More flexible pattern matching - try both formats
+      const patterns = [
+        new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`), // BEG-REG-TC-001
+        new RegExp(`^${projectPrefix}-TC-(\\d+)$`) // BEG-TC-001 (simplified format)
+      ];
+      
+      let existingNumbers = [];
+      for (const pattern of patterns) {
+        const numbers = existingTestCases
+          .map(tc => tc.testCaseId)
+          .filter(id => id && pattern.test(id))
+          .map(id => {
+            const match = id.match(pattern);
+            return match ? parseInt(match[1], 10) : 0;
+          })
+          .filter(num => !isNaN(num));
+        
+        if (numbers.length > 0) {
+          existingNumbers = numbers;
+          break;
+        }
+      }
 
       // Start numbering from 1 for each module
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
       
-      console.log(`DB: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId} (${module.name}). Module prefix: ${modulePrefix}, existing numbers: [${existingNumbers.join(', ')}], next: ${nextNumber}`);
+      // Use the format that matches existing test cases, or default to project-module-TC format
+      if (existingTestCases.length > 0 && existingTestCases[0].testCaseId?.includes(`${projectPrefix}-TC-`)) {
+        testCaseId = `${projectPrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
+      } else {
+        testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
+      }
+      
+      console.log(`DB: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId} (${module.name}). Project prefix: ${projectPrefix}, Module prefix: ${modulePrefix}, existing numbers: [${existingNumbers.join(', ')}], next: ${nextNumber}`);
     }
 
     const [newTestCase] = await db.insert(testCases).values({
