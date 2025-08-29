@@ -27,7 +27,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
     // Get test cases for the project with all details
     let testCases;
     if (moduleId && moduleId !== 'all') {
-      testCases = await storage.getTestCases(parseInt(projectId), parseInt(moduleId as string));
+      testCases = await storage.getTestCasesByFilters(parseInt(projectId), parseInt(moduleId as string));
     } else {
       testCases = await storage.getTestCasesByProject(parseInt(projectId));
     }

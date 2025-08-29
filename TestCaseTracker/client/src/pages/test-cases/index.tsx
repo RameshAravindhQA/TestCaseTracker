@@ -203,27 +203,31 @@ export default function TestCasesPage() {
       const response = await fetch(`/api/flow-diagrams/generate/${selectedProjectId}?${params.toString()}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'
+        }
       });
 
       const data = await response.json();
 
       if (data.success && data.diagramId) {
+        const testCaseCount = selectedModuleId && selectedModuleId !== "all" 
+          ? filteredTestCases.length 
+          : data.testCasesCount || filteredTestCases.length;
+
         toast({
           title: "Flow diagram generated!",
-          description: `Created flow diagram with ${filteredTestCases.length} test cases`,
+          description: `Created flow diagram with ${testCaseCount} test cases`,
         });
 
         // Navigate to the flow diagram page
-        const params = new URLSearchParams();
-        params.set('diagramId', data.diagramId.toString());
-        if (selectedProjectId) params.set('projectId', selectedProjectId.toString());
+        const navParams = new URLSearchParams();
+        navParams.set('diagramId', data.diagramId.toString());
+        if (selectedProjectId) navParams.set('projectId', selectedProjectId.toString());
         if (selectedModuleId && selectedModuleId !== "all") {
-          params.set('moduleId', selectedModuleId.toString());
+          navParams.set('moduleId', selectedModuleId.toString());
         }
 
-        const url = `/functional-flow?${params.toString()}`;
+        const url = `/functional-flow?${navParams.toString()}`;
         window.open(url, '_blank');
       } else {
         throw new Error(data.message || "Failed to generate flow diagram");

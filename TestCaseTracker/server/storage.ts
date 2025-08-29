@@ -649,7 +649,12 @@ class MemStorage implements IStorage {
   }
 
   // Test case operations
-  async getTestCases(): Promise<TestCase[]> {
+  async getTestCases(projectId?: number, moduleId?: number): Promise<TestCase[]> {
+    if (projectId && moduleId) {
+      return this.getTestCasesByFilters(projectId, moduleId);
+    } else if (projectId) {
+      return this.getTestCasesByProject(projectId);
+    }
     return [...this.testCases];
   }
 
