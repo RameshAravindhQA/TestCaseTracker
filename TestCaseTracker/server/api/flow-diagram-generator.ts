@@ -98,7 +98,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
     // Create feature branch nodes in a radial pattern
     const features = Object.keys(featureGroups);
     const angleStep = (2 * Math.PI) / features.length;
-    const branchRadius = 250;
+    const branchRadius = 350; // Increased from 250 to 350
 
     features.forEach((feature, featureIndex) => {
       const angle = featureIndex * angleStep;
@@ -142,11 +142,11 @@ export async function generateFlowDiagram(req: Request, res: Response) {
 
       // Create test case nodes for each feature
       const testCases = featureGroups[feature];
-      const testCaseRadius = 120;
+      const testCaseRadius = 180; // Increased from 120 to 180
       const testCaseAngleStep = Math.PI / (testCases.length + 1);
 
       testCases.forEach((testCase, testIndex) => {
-        const testAngle = angle + (testIndex - (testCases.length - 1) / 2) * testCaseAngleStep * 0.3;
+        const testAngle = angle + (testIndex - (testCases.length - 1) / 2) * testCaseAngleStep * 0.5; // Increased from 0.3 to 0.5
         const testX = featureX + Math.cos(testAngle) * testCaseRadius;
         const testY = featureY + Math.sin(testAngle) * testCaseRadius;
         const testNodeId = `testcase-${testCase.id}`;
