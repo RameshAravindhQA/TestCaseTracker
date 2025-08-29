@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,11 +33,15 @@ import {
   VideoOff,
   StopCircle,
   Play,
-  Github
+  Github,
+  ChevronLeft,
+  ChevronRight,
+  Move
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 
 interface Project {
   id: number;
@@ -154,7 +158,7 @@ export function GitHubIssueReporter() {
     else if (ua.includes("Firefox")) browser = "Firefox";
     else if (ua.includes("Safari")) browser = "Safari";
     else if (ua.includes("Edge")) browser = "Edge";
-    
+
     let os = "Unknown";
     if (ua.includes("Win")) os = "Windows";
     else if (ua.includes("Mac")) os = "macOS";
