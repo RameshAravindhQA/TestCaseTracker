@@ -24,7 +24,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
       });
     }
 
-    // Get test cases for the project
+    // Get test cases for the project with all details
     const testCases = await storage.getTestCasesByProject(parseInt(projectId));
     
     if (testCases.length === 0) {
@@ -54,97 +54,155 @@ export async function generateFlowDiagram(req: Request, res: Response) {
     
     mermaidDef += `    TC${testCases.length - 1} --> End([Test Complete]);\n`;
 
-    // Convert Mermaid to ReactFlow nodes and edges for display
+    // Group test cases by feature for mind map layout
+    const featureGroups = {};
+    testCases.forEach(testCase => {
+      const feature = testCase.feature || 'General Tests';
+      if (!featureGroups[feature]) {
+        featureGroups[feature] = [];
+      }
+      featureGroups[feature].push(testCase);
+    });
+
     const nodes = [];
     const edges = [];
-    let yPosition = 100;
-    const xPosition = 400;
-    const nodeSpacing = 150;
-
-    // Start node
+    
+    // Central node
+    const centerX = 400;
+    const centerY = 300;
     nodes.push({
-      id: 'start-1',
-      type: 'default',
+      id: 'center-1',
+      type: 'testCaseNode',
       data: { 
-        label: `${project.name} Test Flow`,
-        description: 'Start of test execution flow'
+        label: project.name,
+        description: 'Central test execution hub',
+        isCenter: true
       },
-      position: { x: xPosition, y: yPosition },
+      position: { x: centerX, y: centerY },
       style: {
-        backgroundColor: '#10B981',
+        backgroundColor: '#8B5CF6',
         color: 'white',
-        border: '1px solid #333',
-        borderRadius: '8px',
-        padding: '10px',
+        border: '3px solid #7C3AED',
+        borderRadius: '50%',
+        padding: '20px',
+        fontSize: '16px',
+        fontWeight: 'bold',
+        minWidth: '120px',
+        minHeight: '120px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       },
     });
 
-    let previousNodeId = 'start-1';
-    yPosition += nodeSpacing;
+    // Create feature branch nodes in a radial pattern
+    const features = Object.keys(featureGroups);
+    const angleStep = (2 * Math.PI) / features.length;
+    const branchRadius = 250;
 
-    // Create nodes for each test case
-    testCases.forEach((testCase, index) => {
-      const nodeId = `testcase-${testCase.id}`;
-      
+    features.forEach((feature, featureIndex) => {
+      const angle = featureIndex * angleStep;
+      const featureX = centerX + Math.cos(angle) * branchRadius;
+      const featureY = centerY + Math.sin(angle) * branchRadius;
+      const featureNodeId = `feature-${featureIndex}`;
+
+      // Feature node
       nodes.push({
-        id: nodeId,
-        type: 'default',
+        id: featureNodeId,
+        type: 'testCaseNode',
         data: {
-          label: testCase.testCaseId,
-          description: testCase.feature || testCase.testObjective || 'Test case execution',
-          testCaseId: testCase.id,
-          priority: testCase.priority,
-          status: testCase.status
+          label: feature,
+          description: `${featureGroups[feature].length} test cases`,
+          isFeature: true,
+          testCases: featureGroups[feature]
         },
-        position: { x: xPosition, y: yPosition },
+        position: { x: featureX, y: featureY },
         style: {
-          backgroundColor: '#3B82F6',
+          backgroundColor: '#10B981',
           color: 'white',
-          border: '1px solid #333',
-          borderRadius: '8px',
-          padding: '10px',
+          border: '2px solid #059669',
+          borderRadius: '12px',
+          padding: '15px',
+          fontSize: '14px',
+          fontWeight: '600',
+          minWidth: '140px',
+          textAlign: 'center',
         },
       });
 
-      // Create edge from previous node to current node
+      // Edge from center to feature
       edges.push({
-        id: `e-${previousNodeId}-${nodeId}`,
-        source: previousNodeId,
-        target: nodeId,
-        markerEnd: { type: 'ArrowClosed' },
-        label: `Step ${index + 1}`,
+        id: `e-center-${featureNodeId}`,
+        source: 'center-1',
+        target: featureNodeId,
+        type: 'smoothstep',
+        style: { stroke: '#10B981', strokeWidth: 3 },
+        markerEnd: { type: 'ArrowClosed', color: '#10B981' },
       });
 
-      previousNodeId = nodeId;
-      yPosition += nodeSpacing;
-    });
+      // Create test case nodes for each feature
+      const testCases = featureGroups[feature];
+      const testCaseRadius = 120;
+      const testCaseAngleStep = Math.PI / (testCases.length + 1);
 
-    // End node
-    const endNodeId = 'end-1';
-    nodes.push({
-      id: endNodeId,
-      type: 'default',
-      data: { 
-        label: 'Test Complete',
-        description: 'All test cases completed'
-      },
-      position: { x: xPosition, y: yPosition },
-      style: {
-        backgroundColor: '#EF4444',
-        color: 'white',
-        border: '1px solid #333',
-        borderRadius: '8px',
-        padding: '10px',
-      },
-    });
+      testCases.forEach((testCase, testIndex) => {
+        const testAngle = angle + (testIndex - (testCases.length - 1) / 2) * testCaseAngleStep * 0.3;
+        const testX = featureX + Math.cos(testAngle) * testCaseRadius;
+        const testY = featureY + Math.sin(testAngle) * testCaseRadius;
+        const testNodeId = `testcase-${testCase.id}`;
 
-    // Edge to end node
-    edges.push({
-      id: `e-${previousNodeId}-${endNodeId}`,
-      source: previousNodeId,
-      target: endNodeId,
-      markerEnd: { type: 'ArrowClosed' },
-      label: 'Complete',
+        // Determine node color based on status
+        let backgroundColor = '#6B7280'; // Default gray for 'Not Executed'
+        let borderColor = '#4B5563';
+        
+        if (testCase.status === 'Pass') {
+          backgroundColor = '#10B981';
+          borderColor = '#059669';
+        } else if (testCase.status === 'Fail') {
+          backgroundColor = '#EF4444';
+          borderColor = '#DC2626';
+        }
+
+        nodes.push({
+          id: testNodeId,
+          type: 'testCaseNode',
+          data: {
+            label: testCase.testCaseId,
+            description: testCase.testObjective || 'Test case execution',
+            testCaseId: testCase.id,
+            feature: testCase.feature,
+            priority: testCase.priority,
+            status: testCase.status,
+            preConditions: testCase.preConditions,
+            testSteps: testCase.testSteps,
+            expectedResult: testCase.expectedResult,
+            isTestCase: true
+          },
+          position: { x: testX, y: testY },
+          style: {
+            backgroundColor,
+            color: 'white',
+            border: `2px solid ${borderColor}`,
+            borderRadius: '8px',
+            padding: '8px 12px',
+            fontSize: '12px',
+            fontWeight: '500',
+            minWidth: '100px',
+            textAlign: 'center',
+            cursor: 'pointer',
+          },
+        });
+
+        // Edge from feature to test case
+        edges.push({
+          id: `e-${featureNodeId}-${testNodeId}`,
+          source: featureNodeId,
+          target: testNodeId,
+          type: 'smoothstep',
+          style: { stroke: backgroundColor, strokeWidth: 2 },
+          markerEnd: { type: 'ArrowClosed', color: backgroundColor },
+        });
+      });
     });
 
     // Create flow diagram name

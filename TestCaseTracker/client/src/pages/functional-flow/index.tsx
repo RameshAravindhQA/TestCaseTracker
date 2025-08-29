@@ -13,8 +13,10 @@ import ReactFlow, {
   BackgroundVariant,
   Panel,
   MarkerType,
+  NodeTypes,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { TestCaseNode } from '@/components/functional-flow/nodes/test-case-node';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -58,7 +60,11 @@ const initialNodes: Node[] = [
 
 const initialEdges: Edge[] = [];
 
-const nodeTypes = {
+const nodeTypes: NodeTypes = {
+  testCaseNode: TestCaseNode,
+};
+
+const nodeTypeOptions = {
   start: { label: 'Start Node', color: '#10B981' },
   process: { label: 'Process', color: '#3B82F6' },
   decision: { label: 'Decision', color: '#F59E0B' },
@@ -218,17 +224,18 @@ export default function FunctionalFlowPage() {
 
     const newNode: Node = {
       id: `node_${Date.now()}`,
-      type: 'default',
+      type: 'testCaseNode',
       data: { 
         label: newNodeLabel,
-        nodeType: newNodeType 
+        nodeType: newNodeType,
+        description: 'Manual node'
       },
       position: { 
         x: Math.random() * 400 + 100, 
         y: Math.random() * 400 + 100 
       },
       style: {
-        backgroundColor: nodeTypes[newNodeType as keyof typeof nodeTypes]?.color || '#3B82F6',
+        backgroundColor: nodeTypeOptions[newNodeType as keyof typeof nodeTypeOptions]?.color || '#3B82F6',
         color: 'white',
         border: '1px solid #333',
         borderRadius: '8px',
@@ -480,7 +487,7 @@ export default function FunctionalFlowPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {Object.entries(nodeTypes).map(([key, type]) => (
+                            {Object.entries(nodeTypeOptions).map(([key, type]) => (
                               <SelectItem key={key} value={key}>
                                 {type.label}
                               </SelectItem>
@@ -559,8 +566,10 @@ export default function FunctionalFlowPage() {
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
                   onConnect={onConnect}
+                  nodeTypes={nodeTypes}
                   fitView
                   attributionPosition="bottom-left"
+                  defaultViewport={{ x: 0, y: 0, zoom: 0.7 }}
                 >
                   <Controls />
                   <MiniMap />

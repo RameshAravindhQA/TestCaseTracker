@@ -1,63 +1,110 @@
 
-/* Test Case Flow Node Styles */
-.react-flow__node-step[data-category="functional-tests"] {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: 2px solid #5a67d8;
+/* Mind Map Test Case Flow Node Styles */
+.test-case-node {
+  position: relative;
+  transition: all 0.3s ease;
 }
 
-.react-flow__node-step[data-category="usability-tests"] {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  border: 2px solid #e53e3e;
+.test-case-node:hover {
+  transform: scale(1.05);
+  z-index: 1000;
 }
 
-.react-flow__node-step[data-category="security-tests"] {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  border: 2px solid #3182ce;
+.react-flow__node-testCaseNode {
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.react-flow__node-step[data-category="performance-tests"] {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-  border: 2px solid #38a169;
+.react-flow__node-testCaseNode:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  transform: scale(1.05);
 }
 
-.react-flow__node-step[data-category="scalability-tests"] {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-  border: 2px solid #ed8936;
+/* Status-based node styling */
+.react-flow__node-testCaseNode[data-status="Pass"] {
+  border-color: #10B981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
 }
 
-.react-flow__node-step[data-category="upgrade-tests"] {
-  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-  border: 2px solid #9f7aea;
+.react-flow__node-testCaseNode[data-status="Fail"] {
+  border-color: #EF4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
 }
 
-.react-flow__node-step[data-category="compatibility-tests"] {
-  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-  border: 2px solid #dd6b20;
+.react-flow__node-testCaseNode[data-status="Not Executed"] {
+  border-color: #6B7280 !important;
+  box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.2);
 }
 
-.react-flow__node-step[data-category="central"] {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: 3px solid #4c51bf;
-  font-weight: bold;
-  font-size: 1.1em;
+/* Center node styling */
+.react-flow__node-testCaseNode[data-center="true"] {
+  background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%) !important;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+  animation: pulse 2s infinite;
 }
 
-.react-flow__node-linked_testcase {
-  background: #ffffff;
-  border: 2px solid #cbd5e0;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 0.9em;
-  min-width: 120px;
-  text-align: center;
+@keyframes pulse {
+  0% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); }
+  50% { box-shadow: 0 0 30px rgba(139, 92, 246, 0.6); }
+  100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); }
 }
 
-.react-flow__node-linked_testcase:hover {
-  border-color: #4299e1;
-  box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+/* Feature node styling */
+.react-flow__node-testCaseNode[data-feature="true"] {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
 }
 
-.react-flow__edge-default .react-flow__edge-path {
-  stroke: #cbd5e0;
+/* Edge styling for mind map */
+.react-flow__edge-smoothstep {
   stroke-width: 2;
+}
+
+.react-flow__edge-smoothstep:hover {
+  stroke-width: 3;
+}
+
+/* Tooltip styling */
+.test-case-tooltip {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Priority indicators */
+.priority-indicator {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.priority-high { background-color: #EF4444; }
+.priority-medium { background-color: #F59E0B; }
+.priority-low { background-color: #10B981; }
+
+/* Status icons */
+.status-icon {
+  font-size: 14px;
+  margin-right: 4px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .test-case-tooltip {
+    min-width: 250px;
+    max-width: 300px;
+  }
 }
