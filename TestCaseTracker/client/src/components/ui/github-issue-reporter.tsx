@@ -451,7 +451,8 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
         setScreenRecording(null);
         setIsOpen(false);
       } else {
-        throw new Error('Failed to create issue');
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error occurred' }));
+        throw new Error(errorData.message || `Server error: ${response.status}`);
       }
     } catch (error) {
       console.error('Error creating issue:', error);

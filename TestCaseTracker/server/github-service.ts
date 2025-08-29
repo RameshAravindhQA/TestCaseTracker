@@ -155,13 +155,30 @@ export class GitHubService {
     }
 
     try {
-      const response = await this.octokit.rest.issues.create({
-        owner: this.config.owner,
-        repo: this.config.repo,
-        title,
-        body,
-        labels,
-      });
+      // First try with labels, if that fails, try without labels
+      let response;
+      try {
+        response = await this.octokit.rest.issues.create({
+          owner: this.config.owner,
+          repo: this.config.repo,
+          title,
+          body,
+          labels,
+        });
+      } catch (labelError: any) {
+        if (labelError.status === 422 && labels && labels.length > 0) {
+          logger.warn('Labels not found in repository, creating issue without labels');
+          // Retry without labels
+          response = await this.octokit.rest.issues.create({
+            owner: this.config.owner,
+            repo: this.config.repo,
+            title,
+            body,
+          });
+        } else {
+          throw labelError;
+        }
+      }
 
       logger.info('GitHub issue created:', {
         number: response.data.number,
@@ -181,6 +198,20 @@ export class GitHubService {
 
     } catch (error: any) {
       logger.error('Failed to create GitHub issue:', error);
+
+      if (error.status === 422) {
+        return {
+          success: false,
+          message: 'Validation failed: Please check that the repository allows issue creation and all required fields are valid.',
+        };
+      }
+
+      if (error.status === 403) {
+        return {
+          success: false,
+          message: 'Permission denied: Your GitHub token may not have permission to create issues in this repository.',
+        };
+      }
 
       return {
         success: false,

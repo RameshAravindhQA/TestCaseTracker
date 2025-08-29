@@ -8,18 +8,18 @@ const requireAuth = (req: any, res: any, next: any) => {
     req.user = { id: req.session.userId };
     return next();
   }
-  
+
   // Check for user property (if set by other middleware)
   if (req.user && req.user.id) {
     return next();
   }
-  
+
   // For development, allow if no auth is set up
   if (process.env.NODE_ENV === 'development') {
     req.user = { id: 1 }; // Default user for development
     return next();
   }
-  
+
   return res.status(401).json({ message: "Not authenticated" });
 };
 
@@ -349,7 +349,7 @@ router.post('/create-issue', requireAuth, async (req, res) => {
 
     // Find GitHub integration for this project
     const integration = integrations.find(i => i.projectId === parseInt(projectId) && i.isEnabled);
-    
+
     if (!integration) {
       return res.status(400).json({
         success: false,
