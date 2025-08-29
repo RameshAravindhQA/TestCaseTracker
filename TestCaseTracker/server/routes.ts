@@ -7528,7 +7528,7 @@ try {
   const httpServer = createServer(app);
 
   return httpServer;
-}The following change adds the `/api/flow-diagrams/generate/:projectId` POST endpoint to handle flow diagram generation requests.
+}
 <replit_final_file>
 import { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
