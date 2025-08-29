@@ -64,11 +64,32 @@ export async function generateFlowDiagram(req: Request, res: Response) {
     const featureGroups = {};
     testCases.forEach(testCase => {
       // Use module name if available, otherwise fall back to feature, then to a generic category
-      const module = testCase.moduleName || testCase.feature || 'General Tests';
-      if (!featureGroups[module]) {
-        featureGroups[module] = [];
+      let moduleName = testCase.moduleName || testCase.feature || 'General Tests';
+      
+      // For better grouping, if we have a testCaseId with module prefix, extract proper module name
+      if (testCase.testCaseId && testCase.testCaseId.includes('-')) {
+        const parts = testCase.testCaseId.split('-');
+        if (parts.length >= 3) {
+          const modulePrefix = parts[1]; // e.g., REG from BEG-REG-TC-001
+          // Map common prefixes to full names
+          const prefixToName = {
+            'REG': 'User Registration',
+            'LOG': 'User Login', 
+            'PROF': 'User Profile',
+            'DASH': 'Dashboard',
+            'MENU': 'Menu Management',
+            'ORD': 'Order Management',
+            'PAY': 'Payment Processing',
+            'INV': 'Inventory Management'
+          };
+          moduleName = prefixToName[modulePrefix] || `${modulePrefix} Module`;
+        }
       }
-      featureGroups[module].push(testCase);
+      
+      if (!featureGroups[moduleName]) {
+        featureGroups[moduleName] = [];
+      }
+      featureGroups[moduleName].push(testCase);
     });
 
     const nodes = [];

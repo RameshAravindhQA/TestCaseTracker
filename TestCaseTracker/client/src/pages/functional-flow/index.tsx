@@ -600,13 +600,95 @@ export default function FunctionalFlowPage() {
             </CardContent>
           </Card>
 
-          {/* Flow Diagram Canvas */}
-          <Card className="min-h-[600px] flex-1">
-            <CardContent className="p-4 h-full">
-              <div className={`bg-white rounded-lg shadow-sm border ${isMaximized ? 'fixed inset-0 z-50' : ''}`} style={{ height: isMaximized ? '100vh' : '600px' }}>
-                <div className="flex items-center justify-between p-3 border-b bg-gray-50 rounded-t-lg">
+          {/* Flow Diagram Canvas - Compact Card View */}
+          <Card className="h-[400px]">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg">Flow Diagram</CardTitle>
+                  {hasUnsavedChanges && <span className="text-xs text-orange-600">(Unsaved changes)</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditDetailsOpen(true)}
+                    disabled={!selectedDiagram}
+                    title="Edit diagram details"
+                  >
+                    ✏️ Edit Details
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEditMode}
+                    className={isEditMode ? 'bg-blue-50 border-blue-300' : ''}
+                    title={isEditMode ? 'Exit edit mode' : 'Enter edit mode'}
+                  >
+                    {isEditMode ? '✓ Editing' : '✏️ Edit'}
+                  </Button>
+                  {isEditMode && hasUnsavedChanges && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleSave}
+                      disabled={saveDiagramMutation.isPending}
+                      title="Save changes"
+                    >
+                      {saveDiagramMutation.isPending ? '💾 Saving...' : '💾 Save'}
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMaximize}
+                    title="Maximize to fullscreen"
+                  >
+                    🗖 Maximize
+                  </Button>
+                </div>
+              </div>
+              {diagramName && (
+                <p className="text-sm text-gray-600 mt-1">{diagramName}</p>
+              )}
+            </CardHeader>
+            <CardContent className="p-4 h-[calc(100%-120px)]">
+              <div className="bg-white rounded-lg shadow-sm border h-full">
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={handleNodesChange}
+                  onEdgesChange={handleEdgesChange}
+                  onInit={setReactFlowInstance}
+                  nodeTypes={nodeTypes}
+                  nodesDraggable={isEditMode}
+                  nodesConnectable={isEditMode}
+                  elementsSelectable={isEditMode}
+                  fitView
+                  className="bg-gray-50 rounded-lg"
+                >
+                  <Controls />
+                  <MiniMap />
+                  <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+                  <Panel position="top-left">
+                    <div className="bg-white p-2 rounded shadow-lg border text-xs">
+                      <p className="text-gray-600">
+                        {isEditMode ? 'Edit mode: Drag nodes, connect handles' : 'View mode: Click Maximize for full editing'}
+                      </p>
+                    </div>
+                  </Panel>
+                </ReactFlow>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Maximized Flow Diagram Dialog */}
+          <Dialog open={isMaximized} onOpenChange={setIsMaximized}>
+            <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0">
+              <div className="h-full flex flex-col">
+                <div className="flex items-center justify-between p-4 border-b bg-gray-50">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-gray-900">Flow Diagram</h3>
+                    <h3 className="font-medium text-gray-900 text-lg">Flow Diagram - Full View</h3>
                     {hasUnsavedChanges && <span className="text-xs text-orange-600">(Unsaved changes)</span>}
                   </div>
                   <div className="flex items-center gap-2">
@@ -642,46 +724,49 @@ export default function FunctionalFlowPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleMaximize}
-                      title={isMaximized ? 'Exit fullscreen' : 'Enter fullscreen'}
+                      onClick={() => setIsMaximized(false)}
+                      title="Exit fullscreen"
                     >
-                      {isMaximized ? '🗗' : '🗖'}
+                      🗗 Minimize
                     </Button>
                   </div>
                 </div>
-                <ReactFlow
-                  nodes={nodes}
-                  edges={edges}
-                  onNodesChange={handleNodesChange}
-                  onEdgesChange={handleEdgesChange}
-                  onInit={setReactFlowInstance}
-                  nodeTypes={nodeTypes}
-                  nodesDraggable={isEditMode}
-                  nodesConnectable={isEditMode}
-                  elementsSelectable={isEditMode}
-                  fitView
-                  className="bg-gray-50"
-                >
-                  <Controls />
-                  <MiniMap />
-                  <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-                  <Panel position="top-left">
-                    <div className="bg-white p-2 rounded shadow-lg border">
-                      <h3 className="font-semibold text-sm">Flow Diagram</h3>
-                      <p className="text-xs text-gray-600">
-                        Drag nodes to move, click to select, connect by dragging from node handles
-                      </p>
-                      {diagramName && (
-                        <p className="text-xs text-blue-600 mt-1 font-medium">
-                          {diagramName}
+                <div className="flex-1">
+                  <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={handleNodesChange}
+                    onEdgesChange={handleEdgesChange}
+                    onConnect={onConnect}
+                    onInit={setReactFlowInstance}
+                    nodeTypes={nodeTypes}
+                    nodesDraggable={isEditMode}
+                    nodesConnectable={isEditMode}
+                    elementsSelectable={isEditMode}
+                    fitView
+                    className="bg-gray-50"
+                  >
+                    <Controls />
+                    <MiniMap />
+                    <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+                    <Panel position="top-left">
+                      <div className="bg-white p-3 rounded shadow-lg border">
+                        <h3 className="font-semibold text-sm">Flow Diagram - Full Screen</h3>
+                        <p className="text-xs text-gray-600">
+                          {isEditMode ? 'Edit mode: Drag nodes to move, connect by dragging from node handles' : 'View mode: Enable edit mode to make changes'}
                         </p>
-                      )}
-                    </div>
-                  </Panel>
-                </ReactFlow>
+                        {diagramName && (
+                          <p className="text-xs text-blue-600 mt-1 font-medium">
+                            {diagramName}
+                          </p>
+                        )}
+                      </div>
+                    </Panel>
+                  </ReactFlow>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </DialogContent>
+          </Dialog>
 
           {/* Edit Diagram Details Dialog */}
           <Dialog open={isEditDetailsOpen} onOpenChange={setIsEditDetailsOpen}>

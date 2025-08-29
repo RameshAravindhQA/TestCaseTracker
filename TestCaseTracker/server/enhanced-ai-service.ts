@@ -155,7 +155,7 @@ export class EnhancedAIService {
   static getAvailableProviders(): { provider: AIProvider; name: string; available: boolean; error?: string; isFree?: boolean }[] {
     const grokApiKey = process.env.GROK_API_KEY;
     const grokAvailable = !!(grokApiKey && grokApiKey !== 'your-grok-api-key' && grokApiKey.trim() !== '');
-    
+
     const providers = [
       {
         provider: 'gemini' as AIProvider,
@@ -249,7 +249,7 @@ export class EnhancedAIService {
     const availableProviders: string[] = [];
     if (genAI && !geminiInitError) availableProviders.push('gemini');
     if (openai && !openaiInitError) availableProviders.push('openai');
-    
+
     // Check GROK availability
     const grokApiKey = process.env.GROK_API_KEY;
     if (grokApiKey && grokApiKey !== 'your-grok-api-key' && grokApiKey.trim() !== '') {
@@ -355,7 +355,7 @@ export class EnhancedAIService {
     // If all real providers failed, use mock service with informative message
     console.log('🎭 All real AI providers failed, using mock service');
     const mockResponse = EnhancedAIService.getMockResponse(request);
-    mockResponse.message = `Generated using mock service (AI providers failed - ${availableProviders.join(', ')} attempted)`;
+    mockResponse.message = `Generated using mock service (AI providers not available - ${availableProviders.join(', ')} attempted)`;
     return mockResponse;
   }
 
@@ -512,14 +512,14 @@ export class EnhancedAIService {
   // GROK (xAI) implementation
   private static async generateWithGrok(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
     const grokApiKey = process.env.GROK_API_KEY;
-    
+
     console.log('🔧 GROK API key check:', {
       hasKey: !!grokApiKey,
       keyLength: grokApiKey?.length || 0,
       startsWithXai: grokApiKey?.startsWith('xai-') || false,
       preview: grokApiKey ? `${grokApiKey.substring(0, 15)}...` : 'NONE'
     });
-    
+
     if (!grokApiKey || grokApiKey === 'your-grok-api-key' || grokApiKey.trim() === '') {
       throw new Error('GROK API key is not properly configured');
     }
@@ -552,7 +552,7 @@ export class EnhancedAIService {
 
       // Use node-fetch for better error handling
       const fetch = (await import('node-fetch')).default;
-      
+
       const response = await fetch('https://api.x.ai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -569,11 +569,11 @@ export class EnhancedAIService {
       if (!response.ok) {
         let errorText = '';
         let errorJson = null;
-        
+
         try {
           errorText = await response.text();
           console.error('❌ GROK API error response:', errorText);
-          
+
           // Try to parse as JSON for better error details
           try {
             errorJson = JSON.parse(errorText);
@@ -592,7 +592,7 @@ export class EnhancedAIService {
           errorJson: errorJson,
           headers: Object.fromEntries(response.headers.entries())
         });
-        
+
         // Handle specific error cases
         if (response.status === 401) {
           throw new Error('GROK API authentication failed. Please verify your API key is correct and active.');
@@ -732,7 +732,7 @@ export class EnhancedAIService {
 
   private static buildPrompt(request: TestCaseGenerationRequest): string {
     const testCaseCount = request.testCaseCount || 20; // Default to 20 if not specified
-    
+
     return `Generate comprehensive test cases based on this requirement:
 
 REQUIREMENT: ${request.requirement}

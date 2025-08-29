@@ -394,7 +394,7 @@ export class DatabaseStorage implements IStorage {
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
       testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
       
-      console.log(`DB: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId} (${module.name}). Existing numbers: [${existingNumbers.join(', ')}], next: ${nextNumber}`);
+      console.log(`DB: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId} (${module.name}). Module prefix: ${modulePrefix}, existing numbers: [${existingNumbers.join(', ')}], next: ${nextNumber}`);
     }
 
     const [newTestCase] = await db.insert(testCases).values({
