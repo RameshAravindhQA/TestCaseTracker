@@ -12,7 +12,6 @@ import ReactFlow, {
   Node,
   BackgroundVariant,
   Panel,
-  MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -316,28 +315,12 @@ export default function FunctionalFlowPage() {
     }
   }, [diagramId, selectedProject, loadDiagramMutation]);
 
-  // Fetch test cases for flow generation
-  const { data: testCases = [] } = useQuery({
-    queryKey: [`/api/projects/${selectedProject}/test-cases`, { moduleId: urlModuleId }],
-    queryFn: async () => {
-      if (!selectedProject) return [];
-      let url = `/api/projects/${selectedProject}/test-cases`;
-      if (urlModuleId && urlModuleId !== "all") {
-        url += `?moduleId=${urlModuleId}`;
-      }
-      const response = await apiRequest('GET', url);
-      if (!response.ok) throw new Error('Failed to fetch test cases');
-      return response.json();
-    },
-    enabled: !!selectedProject && !!urlProjectId
-  });
-
   // Auto-generate flow diagram when project is selected from URL
   useEffect(() => {
-    if (urlProjectId && selectedProject && !diagramId && projects.length > 0 && testCases.length > 0) {
+    if (urlProjectId && selectedProject && !diagramId && projects.length > 0) {
       const generateFlowForProject = async () => {
         try {
-          console.log(`Auto-generating flow diagram for project ${selectedProject} with ${testCases.length} test cases`);
+          console.log(`Auto-generating flow diagram for project ${selectedProject}`);
           
           const project = projects.find(p => p.id === selectedProject);
           if (!project) return;
@@ -346,149 +329,57 @@ export default function FunctionalFlowPage() {
           const timestamp = new Date().toLocaleString();
           const generatedName = `${project.name} - Test Cases Flow (${timestamp})`;
           
-          // Create nodes for test cases
-          const flowNodes: Node[] = [];
-          const flowEdges: Edge[] = [];
-
-          // Start node
+          // Create basic nodes for the project
           const startNode: Node = {
             id: 'start-1',
-            type: 'default',
-            data: { label: `${project.name} Test Flow Start` },
+            type: 'startNode',
+            data: { label: `${project.name} Test Flow` },
             position: { x: 250, y: 50 },
-            style: {
-              backgroundColor: '#10B981',
-              color: 'white',
-              border: '2px solid #059669',
-              borderRadius: '8px',
-              padding: '10px',
-              fontWeight: 'bold',
-            },
           };
-          flowNodes.push(startNode);
 
-          // Group test cases by feature
-          const testCasesByFeature: { [key: string]: typeof testCases } = {};
-          testCases.forEach(testCase => {
-            const feature = testCase.feature || 'General';
-            if (!testCasesByFeature[feature]) {
-              testCasesByFeature[feature] = [];
-            }
-            testCasesByFeature[feature].push(testCase);
-          });
+          const projectNode: Node = {
+            id: 'project-1',
+            type: 'stepNode',
+            data: { 
+              label: project.name,
+              description: project.description || 'Project test cases overview'
+            },
+            position: { x: 250, y: 150 },
+          };
 
-          let yPosition = 150;
-          let lastNodeId = 'start-1';
-
-          // Create nodes for each feature group
-          Object.entries(testCasesByFeature).forEach(([feature, cases], index) => {
-            const featureNodeId = `feature-${index}`;
-            const featureNode: Node = {
-              id: featureNodeId,
-              type: 'default',
-              data: { 
-                label: `${feature}\n(${cases.length} test cases)`,
-                description: `Feature: ${feature}`
-              },
-              position: { x: 250, y: yPosition },
-              style: {
-                backgroundColor: '#3B82F6',
-                color: 'white',
-                border: '2px solid #2563EB',
-                borderRadius: '8px',
-                padding: '15px',
-                minWidth: '200px',
-                textAlign: 'center',
-              },
-            };
-            flowNodes.push(featureNode);
-
-            // Connect to previous node
-            flowEdges.push({
-              id: `${lastNodeId}-to-${featureNodeId}`,
-              source: lastNodeId,
-              target: featureNodeId,
-              markerEnd: { type: MarkerType.ArrowClosed },
-              style: { stroke: '#374151', strokeWidth: 2 },
-            });
-
-            lastNodeId = featureNodeId;
-            yPosition += 120;
-
-            // Create test case nodes for this feature
-            cases.forEach((testCase, testIndex) => {
-              const testNodeId = `test-${testCase.id}`;
-              const xOffset = (testIndex - (cases.length - 1) / 2) * 180;
-              
-              const testNode: Node = {
-                id: testNodeId,
-                type: 'default',
-                data: { 
-                  label: testCase.testCaseId,
-                  description: testCase.testObjective || testCase.feature
-                },
-                position: { x: 250 + xOffset, y: yPosition },
-                style: {
-                  backgroundColor: getStatusColor(testCase.status),
-                  color: 'white',
-                  border: '2px solid #374151',
-                  borderRadius: '6px',
-                  padding: '8px',
-                  fontSize: '12px',
-                  minWidth: '120px',
-                  textAlign: 'center',
-                },
-              };
-              flowNodes.push(testNode);
-
-              // Connect test case to feature
-              flowEdges.push({
-                id: `${featureNodeId}-to-${testNodeId}`,
-                source: featureNodeId,
-                target: testNodeId,
-                markerEnd: { type: MarkerType.ArrowClosed },
-                style: { stroke: '#6B7280', strokeWidth: 1 },
-              });
-            });
-
-            yPosition += 100;
-          });
-
-          // End node
           const endNode: Node = {
             id: 'end-1',
-            type: 'default',
-            data: { label: 'Test Execution Complete' },
-            position: { x: 250, y: yPosition },
-            style: {
-              backgroundColor: '#EF4444',
-              color: 'white',
-              border: '2px solid #DC2626',
-              borderRadius: '8px',
-              padding: '10px',
-              fontWeight: 'bold',
-            },
+            type: 'endNode',
+            data: { label: 'Test Completion' },
+            position: { x: 250, y: 250 },
           };
-          flowNodes.push(endNode);
 
-          // Connect last feature to end
-          flowEdges.push({
-            id: `${lastNodeId}-to-end-1`,
-            source: lastNodeId,
-            target: 'end-1',
-            markerEnd: { type: MarkerType.ArrowClosed },
-            style: { stroke: '#374151', strokeWidth: 2 },
-          });
+          const initialNodes = [startNode, projectNode, endNode];
+          
+          const initialEdges: Edge[] = [
+            {
+              id: 'e1-2',
+              source: 'start-1',
+              target: 'project-1',
+              markerEnd: { type: MarkerType.ArrowClosed },
+            },
+            {
+              id: 'e2-3',
+              source: 'project-1',
+              target: 'end-1',
+              markerEnd: { type: MarkerType.ArrowClosed },
+            },
+          ];
 
           // Set the nodes and edges
-          setNodes(flowNodes);
-          setEdges(flowEdges);
+          setNodes(initialNodes);
+          setEdges(initialEdges);
           setDiagramName(generatedName);
-          setDiagramDescription(`Auto-generated flow diagram showing ${testCases.length} test cases organized by feature for ${project.name}`);
+          setDiagramDescription(`Auto-generated flow diagram for ${project.name} test cases`);
 
           toast({
             title: 'Flow Diagram Generated',
-            description: `Generated flow diagram with ${testCases.length} test cases for ${project.name}`,
+            description: `Generated flow diagram for ${project.name}`,
           });
 
         } catch (error) {
@@ -503,17 +394,7 @@ export default function FunctionalFlowPage() {
 
       generateFlowForProject();
     }
-  }, [urlProjectId, selectedProject, diagramId, projects, testCases, setNodes, setEdges, toast]);
-
-  // Helper function to get status color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Pass': return '#10B981';
-      case 'Fail': return '#EF4444';
-      case 'Blocked': return '#F59E0B';
-      default: return '#6B7280';
-    }
-  };
+  }, [urlProjectId, selectedProject, diagramId, projects, setNodes, setEdges, toast]);
 
   return (
     <MainLayout>
