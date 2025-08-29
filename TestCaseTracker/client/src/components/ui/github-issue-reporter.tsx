@@ -54,8 +54,6 @@ interface GitHubIssueData {
   additionalInfo?: string;
 }
 
-import React, { useState, useRef, useEffect } from 'react';
-
 interface Project {
   id: number;
   name: string;
