@@ -696,6 +696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Flow diagram routes
   apiRouter.use("/flow-diagrams", flowDiagramRoutes);
+  apiRouter.use('/projects', flowDiagramRoutes);
 
   // Navadhiti Projects routes
   apiRouter.get("/navadhiti-projects", isAuthenticated, async (req, res) => {
@@ -2824,7 +2825,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
         feature: "User Registration - Email Validation",
         testObjective: "Verify email field validation with invalid email formats",
         preConditions: "Registration page is loaded",
-        testSteps: "1. Navigate to registration page\n2. Enter valid first and last name\n3. Enter invalid email formats:\n   - Missing @ symbol (e.g., 'testexample.com')\n   - Missing domain (e.g., 'test@')\n   - Invalid characters (e.g., 'test@exam ple.com')\n   - Empty email field\n4. Attempt to register\n5. Verify validation error messages",
+        testSteps: "1. Navigate to registration page\n2. Fill valid first and last name\n3. Enter invalid email formats:\n   - Missing @ symbol (e.g., 'testexample.com')\n   - Missing domain (e.g., 'test@')\n   - Invalid characters (e.g., 'test@exam ple.com')\n   - Empty email field\n4. Attempt to register\n5. Verify validation error messages",
         expectedResult: "Appropriate error messages should be displayed for each invalid email format without allowing registration",
         priority: priority || "High",
         testType: testType || "functional",
@@ -3453,7 +3454,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
         }
       }
 
-      console.log(`[API] Returning ${timesheets.length} timesheets for user ${req.session.userId}:`, 
+      console.log(`[API] Returning ${timesheets.length} timesheets for user ${req.session.userId}: `, 
         timesheets.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description.substring(0, 50) })));
       res.json(timesheets);
     } catch (error) {

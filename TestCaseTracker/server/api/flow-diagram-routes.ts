@@ -127,10 +127,10 @@ router.post('/generate/:projectId', async (req: Request, res: Response) => {
   }
 });
 
-// Direct generation endpoint for projects
-router.post('/projects/:projectId/generate-flow-diagram', async (req: Request, res: Response) => {
+// Handle the route that matches /api/projects/:projectId/generate-flow-diagram
+router.post('/:projectId/generate-flow-diagram', async (req: Request, res: Response) => {
   try {
-    // Redirect to the main generation endpoint
+    // Set the projectId in params for the generator function
     req.params.projectId = req.params.projectId;
     const { generateFlowDiagram } = await import('./flow-diagram-generator');
     await generateFlowDiagram(req, res);
