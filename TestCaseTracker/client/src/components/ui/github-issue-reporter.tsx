@@ -1,39 +1,56 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import { 
+  Camera, 
+  Upload, 
+  Trash2, 
+  Download, 
+  MousePointer, 
+  Square, 
+  Circle, 
+  Type, 
+  Pencil,
+  Undo,
+  Redo,
+  Palette,
+  Bug,
+  Send,
+  AlertCircle,
+  CheckCircle,
+  Minimize2,
+  Maximize2,
+  X,
+  Video,
+  VideoOff,
+  StopCircle,
+  Play,
+  Github
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { 
-  Bug, 
-  Camera, 
-  Video, 
-  Upload, 
-  Github, 
-  X, 
-  AlertCircle, 
-  Maximize2,
-  Minimize2,
-  Download,
-  Link2,
-  Image,
-  FileText,
-  Clock,
-  Move,
-  ChevronLeft,
-  ChevronRight
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 
 interface Project {
   id: number;
   name: string;
   description?: string;
+  status: string;
+}
+
+interface Module {
+  id: number;
+  name: string;
+  projectId: number;
+  status: string;
 }
 
 interface GitHubIssueData {
@@ -43,6 +60,7 @@ interface GitHubIssueData {
   severity: 'low' | 'medium' | 'high' | 'critical';
   category: 'ui' | 'api' | 'performance' | 'security' | 'data' | 'integration';
   projectId: number;
+  moduleId?: number;
   reproductionSteps: string;
   expectedBehavior: string;
   actualBehavior: string;
@@ -51,13 +69,6 @@ interface GitHubIssueData {
   screenshots: File[];
   screenRecording?: File;
   additionalInfo?: string;
-}
-
-interface Project {
-  id: number;
-  name: string;
-  description?: string;
-  status: string;
 }
 
 export function GitHubIssueReporter() {
@@ -71,6 +82,7 @@ export function GitHubIssueReporter() {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [projects, setProjects] = useState<Project[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [screenshots, setScreenshots] = useState<File[]>([]);
   const [screenRecording, setScreenRecording] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -87,6 +99,7 @@ export function GitHubIssueReporter() {
     severity: 'medium',
     category: 'ui',
     projectId: 0,
+    moduleId: undefined,
     reproductionSteps: '',
     expectedBehavior: '',
     actualBehavior: '',
@@ -96,35 +109,58 @@ export function GitHubIssueReporter() {
     additionalInfo: ''
   });
 
-  // Fetch projects when component mounts
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await fetch('/api/projects');
-        if (response.ok) {
-          const projectsData = await response.json();
-          setProjects(projectsData);
-          // Set first project as default if available
-          if (projectsData.length > 0 && formData.projectId === 0) {
-            setFormData(prev => ({ ...prev, projectId: projectsData[0].id }));
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch projects:', error);
-      }
-    };
+  // Fetch projects
+  const { data: projectsData } = useQuery<Project[]>({
+    queryKey: ['/api/projects'],
+    enabled: isOpen,
+  });
 
-    fetchProjects();
-  }, []);
+  // Fetch modules for selected project
+  const { data: modulesData } = useQuery<Module[]>({
+    queryKey: [`/api/projects/${formData.projectId}/modules`],
+    enabled: isOpen && formData.projectId > 0,
+  });
+
+  React.useEffect(() => {
+    if (projectsData) {
+      setProjects(projectsData);
+      if (projectsData.length > 0 && formData.projectId === 0) {
+        setFormData(prev => ({ ...prev, projectId: projectsData[0].id }));
+      }
+    }
+  }, [projectsData, formData.projectId]);
+
+  React.useEffect(() => {
+    if (modulesData) {
+      setModules(modulesData);
+      // Reset module selection when project changes
+      setFormData(prev => ({ ...prev, moduleId: undefined }));
+    }
+  }, [modulesData]);
+
+  // Handle project change
+  const handleProjectChange = (projectId: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      projectId: parseInt(projectId),
+      moduleId: undefined // Reset module when project changes
+    }));
+  };
 
   function getBrowserInfo(): string {
     const ua = navigator.userAgent;
-    const browser = ua.includes('Chrome') ? 'Chrome' : 
-                   ua.includes('Firefox') ? 'Firefox' : 
-                   ua.includes('Safari') ? 'Safari' : 
-                   ua.includes('Edge') ? 'Edge' : 'Unknown';
+    let browser = "Unknown";
+    if (ua.includes("Chrome")) browser = "Chrome";
+    else if (ua.includes("Firefox")) browser = "Firefox";
+    else if (ua.includes("Safari")) browser = "Safari";
+    else if (ua.includes("Edge")) browser = "Edge";
+    
+    let os = "Unknown";
+    if (ua.includes("Win")) os = "Windows";
+    else if (ua.includes("Mac")) os = "macOS";
+    else if (ua.includes("Linux")) os = "Linux";
 
-    return `${browser} - ${navigator.platform} - Screen: ${screen.width}x${screen.height}`;
+    return `${browser} on ${os} - Screen: ${screen.width}x${screen.height}`;
   }
 
   // Mouse event handlers for dragging
@@ -174,34 +210,6 @@ export function GitHubIssueReporter() {
       };
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
-
-  // Load projects when component opens
-  useEffect(() => {
-    if (isOpen && projects.length === 0) {
-      loadProjects();
-    }
-  }, [isOpen]);
-
-  const loadProjects = async () => {
-    try {
-      const response = await fetch('/api/projects');
-      if (response.ok) {
-        const projectData = await response.json();
-        setProjects(projectData);
-        // Auto-select first project if available
-        if (projectData.length > 0 && formData.projectId === 0) {
-          setFormData(prev => ({ ...prev, projectId: projectData[0].id }));
-        }
-      }
-    } catch (error) {
-      console.error('Error loading projects:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load projects",
-        variant: "destructive",
-      });
-    }
-  };
 
   // Screenshot capture
   const takeScreenshot = useCallback(async () => {
@@ -295,6 +303,7 @@ export function GitHubIssueReporter() {
         setRecordingTime(prev => prev + 1);
       }, 1000);
 
+      // Automatically stop recording after 5 minutes (300 seconds)
       setTimeout(() => {
         if (mediaRecorderRef.current && isRecording) {
           stopRecording();
@@ -344,13 +353,56 @@ export function GitHubIssueReporter() {
     setScreenshots(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Submit issue
+  const formatIssueDescription = () => {
+    const selectedProject = projects.find(p => p.id === formData.projectId);
+    const selectedModule = modules.find(m => m.id === formData.moduleId);
+
+    return `
+## Project Information
+- **Project**: ${selectedProject?.name || 'Unknown'}
+- **Module**: ${selectedModule?.name || 'Not specified'}
+- **Priority**: ${formData.priority}
+- **Severity**: ${formData.severity}
+- **Category**: ${formData.category}
+- **Environment**: ${formData.environment}
+
+## Issue Description
+${formData.description}
+
+## Steps to Reproduce
+${formData.reproductionSteps}
+
+## Expected Behavior
+${formData.expectedBehavior}
+
+## Actual Behavior
+${formData.actualBehavior}
+
+## Browser Information
+${formData.browserInfo}
+
+${formData.additionalInfo ? `## Additional Information\n${formData.additionalInfo}` : ''}
+
+---
+*This issue was automatically created from the GitHub Issue Reporter*
+`.trim();
+  };
+
   const submitIssue = async () => {
-    if (!formData.title || !formData.description || !formData.reproductionSteps) {
+    if (!formData.title.trim()) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in title, description, and reproduction steps",
-        variant: "destructive",
+        title: "Missing title",
+        description: "Please provide a title for the issue",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (formData.projectId === 0) {
+      toast({
+        title: "Missing project",
+        description: "Please select a project",
+        variant: "destructive"
       });
       return;
     }
@@ -358,108 +410,109 @@ export function GitHubIssueReporter() {
     setIsSubmitting(true);
 
     try {
-      const submitData = new FormData();
+      // Step 1: Create bug in the system first
+      const bugData = new FormData();
 
-      submitData.append('title', formData.title);
-      submitData.append('description', formData.description);
-      submitData.append('priority', formData.priority);
-      submitData.append('severity', formData.severity);
-      submitData.append('category', formData.category);
-      submitData.append('projectId', formData.projectId.toString());
-      submitData.append('reproductionSteps', formData.reproductionSteps);
-      submitData.append('expectedBehavior', formData.expectedBehavior);
-      submitData.append('actualBehavior', formData.actualBehavior);
-      submitData.append('environment', formData.environment);
-      submitData.append('browserInfo', formData.browserInfo);
-      submitData.append('additionalInfo', formData.additionalInfo || '');
+      // Add bug fields
+      bugData.append('title', formData.title);
+      bugData.append('description', formData.description);
+      bugData.append('severity', formData.severity === 'low' ? 'Trivial' : 
+                     formData.severity === 'medium' ? 'Minor' : 
+                     formData.severity === 'high' ? 'Major' : 'Critical');
+      bugData.append('priority', formData.priority === 'low' ? 'Low' : 
+                     formData.priority === 'medium' ? 'Medium' : 
+                     formData.priority === 'high' ? 'High' : 'Critical');
+      bugData.append('status', 'Open');
+      bugData.append('stepsToReproduce', formData.reproductionSteps);
+      bugData.append('expectedResult', formData.expectedBehavior);
+      bugData.append('actualResult', formData.actualBehavior);
+      bugData.append('environment', formData.environment);
+      bugData.append('comments', formData.additionalInfo || '');
+      bugData.append('preConditions', '');
 
+      if (formData.moduleId) {
+        bugData.append('moduleId', formData.moduleId.toString());
+      }
+
+      // Add screenshots to bug
       screenshots.forEach((file, index) => {
-        submitData.append(`screenshot_${index}`, file);
+        bugData.append(`attachments`, file);
       });
 
       if (screenRecording) {
-        submitData.append('screenRecording', screenRecording);
+        bugData.append('attachments', screenRecording);
       }
 
-      // Create GitHub issue with the required format
-      const issueData = {
-        title: formData.title,
-        body: `## Description
-${formData.description}
+      // Create bug in system
+      const bugResponse = await fetch(`/api/projects/${formData.projectId}/bugs`, {
+        method: 'POST',
+        body: bugData,
+      });
 
-## Reproduction Steps
-${formData.reproductionSteps}
+      if (!bugResponse.ok) {
+        throw new Error('Failed to create bug in system');
+      }
 
-## Expected Behavior
-${formData.expectedBehavior}
+      const bugResult = await bugResponse.json();
+      const bugId = bugResult.id;
 
-## Actual Behavior  
-${formData.actualBehavior}
-
-## Environment
-${formData.environment}
-
-## Browser Info
-${formData.browserInfo}
-
-## Priority
-${formData.priority}
-
-## Severity
-${formData.severity}
-
-## Category
-${formData.category}
-
-${formData.additionalInfo ? `## Additional Information\n${formData.additionalInfo}` : ''}`,
-        labels: [formData.priority, formData.severity, formData.category],
-        projectId: formData.projectId
-      };
-
-      const response = await fetch('/api/github/create-issue', {
+      // Step 2: Create GitHub issue
+      const githubResponse = await fetch(`/api/github/create-issue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(issueData)
+        body: JSON.stringify({
+          title: formData.title,
+          body: formatIssueDescription(),
+          labels: [formData.priority, formData.severity, formData.category],
+          projectId: formData.projectId,
+        }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        toast({
-          title: "Issue Created Successfully",
-          description: `GitHub issue #${result.issueNumber} created and synced to system`,
-        });
+      if (githubResponse.ok) {
+        const githubResult = await githubResponse.json();
 
-        // Reset form
-        setFormData({
-          title: '',
-          description: '',
-          priority: 'medium',
-          severity: 'medium',
-          category: 'ui',
-          projectId: projects[0]?.id || 0,
-          reproductionSteps: '',
-          expectedBehavior: '',
-          actualBehavior: '',
-          environment: getBrowserInfo(),
-          browserInfo: getBrowserInfo(),
-          screenshots: [],
-          additionalInfo: ''
+        toast({
+          title: "Issue created successfully",
+          description: `Bug #${bugResult.bugId} created in system and GitHub issue #${githubResult.issueNumber} created`,
         });
-        setScreenshots([]);
-        setScreenRecording(null);
-        setIsOpen(false);
       } else {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error occurred' }));
-        throw new Error(errorData.message || `Server error: ${response.status}`);
+        // GitHub creation failed, but system bug was created
+        toast({
+          title: "Partial success",
+          description: `Bug #${bugResult.bugId} created in system, but GitHub issue creation failed`,
+          variant: "destructive"
+        });
       }
+
+      // Reset form
+      setFormData({
+        title: '',
+        description: '',
+        priority: 'medium',
+        severity: 'medium',
+        category: 'ui',
+        projectId: formData.projectId, // Keep the same project
+        moduleId: undefined,
+        reproductionSteps: '',
+        expectedBehavior: '',
+        actualBehavior: '',
+        environment: getBrowserInfo(),
+        browserInfo: getBrowserInfo(),
+        screenshots: [],
+        additionalInfo: ''
+      });
+      setScreenshots([]);
+      setScreenRecording(null);
+      setIsOpen(false);
+
     } catch (error) {
       console.error('Error creating issue:', error);
       toast({
-        title: "Error",
-        description: "Failed to create GitHub issue",
-        variant: "destructive",
+        title: "Error creating issue",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
@@ -573,24 +626,53 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
               exit={{ opacity: 0, height: 0 }}
               className="space-y-6"
             >
-              {/* Project Selection */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Project</label>
-                <Select 
-                  value={formData.projectId.toString()} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, projectId: parseInt(value) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id.toString()}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Project and Module Selection */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="project">Project *</Label>
+                  <Select 
+                    value={formData.projectId.toString()} 
+                    onValueChange={handleProjectChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id.toString()}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="module">Module</Label>
+                  <Select 
+                    value={formData.moduleId?.toString() || ""} 
+                    onValueChange={(value) => setFormData(prev => ({ 
+                      ...prev, 
+                      moduleId: value ? parseInt(value) : undefined 
+                    }))}
+                    disabled={!formData.projectId || modules.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={
+                        !formData.projectId ? "Select a project first" :
+                        modules.length === 0 ? "No modules available" :
+                        "Select module (optional)"
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {modules.map((module) => (
+                        <SelectItem key={module.id} value={module.id.toString()}>
+                          {module.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <Tabs defaultValue="basic" className="w-full">
