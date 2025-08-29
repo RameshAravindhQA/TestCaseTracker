@@ -343,8 +343,24 @@ export default function ProjectDetailPage() {
           formattedMessage = `<span class="font-medium text-gray-900">${activity.details.userName || "A user"}</span> ${activity.action} a ${activity.entityType}`;
       }
 
-      // Calculate time ago
-      const timeAgo = formatDistance(new Date(activity.timestamp), new Date(), { addSuffix: true });
+      // Calculate time ago with proper date validation
+      let timeAgo = "Unknown time";
+      try {
+        // Use timestamp first, then fall back to createdAt, then use current time as fallback
+        const dateValue = activity.timestamp || activity.createdAt || new Date().toISOString();
+        const parsedDate = new Date(dateValue);
+        
+        // Check if the date is valid
+        if (!isNaN(parsedDate.getTime()) && parsedDate.getTime() > 0) {
+          timeAgo = formatDistance(parsedDate, new Date(), { addSuffix: true });
+        } else {
+          console.warn('Invalid date found in activity:', activity);
+          timeAgo = "Recently";
+        }
+      } catch (error) {
+        console.warn('Error formatting date for activity:', activity, error);
+        timeAgo = "Recently";
+      }
 
       return {
         ...activity,
