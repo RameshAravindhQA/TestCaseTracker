@@ -82,6 +82,8 @@ export default function FunctionalFlowPage() {
   const search = useSearch();
   const searchParams = new URLSearchParams(search);
   const diagramId = searchParams.get('diagramId') || undefined;
+  const urlProjectId = searchParams.get('projectId');
+  const urlModuleId = searchParams.get('moduleId');
 
 
   // Fetch projects
@@ -94,27 +96,37 @@ export default function FunctionalFlowPage() {
     }
   });
 
-  // Auto-select project if diagramId is provided
+  // Auto-select project from URL parameters or diagramId
   useEffect(() => {
-    if (diagramId && projects && projects.length > 0 && !selectedProject) {
-      // Fetch the diagram to get the associated project ID
-      const fetchDiagramAndSetProject = async () => {
-        try {
-          const response = await apiRequest('GET', `/api/flow-diagrams/${diagramId}`);
-          if (!response.ok) throw new Error('Failed to fetch diagram details');
-          const diagramData: FlowDiagram = await response.json();
-          setSelectedProject(diagramData.projectId);
-        } catch (error) {
-          console.error("Error fetching diagram for auto-selection:", error);
-          // Fallback: select the first project if fetching diagram fails
-          if (projects.length > 0) {
-            setSelectedProject(projects[0].id);
-          }
+    if (projects && projects.length > 0 && !selectedProject) {
+      if (urlProjectId) {
+        // Auto-select project from URL parameter
+        const projectId = urlProjectId.toString();
+        const project = projects.find(p => p.id.toString() === projectId);
+        if (project) {
+          setSelectedProject(project.id);
+          console.log(`Auto-selected project: ${project.name} (ID: ${project.id})`);
         }
-      };
-      fetchDiagramAndSetProject();
+      } else if (diagramId) {
+        // Fetch the diagram to get the associated project ID
+        const fetchDiagramAndSetProject = async () => {
+          try {
+            const response = await apiRequest('GET', `/api/flow-diagrams/${diagramId}`);
+            if (!response.ok) throw new Error('Failed to fetch diagram details');
+            const diagramData: FlowDiagram = await response.json();
+            setSelectedProject(diagramData.projectId);
+          } catch (error) {
+            console.error("Error fetching diagram for auto-selection:", error);
+            // Fallback: select the first project if fetching diagram fails
+            if (projects.length > 0) {
+              setSelectedProject(projects[0].id);
+            }
+          }
+        };
+        fetchDiagramAndSetProject();
+      }
     }
-  }, [diagramId, projects, selectedProject]);
+  }, [diagramId, projects, selectedProject, urlProjectId]);
 
   // Fetch flow diagrams for selected project
   const { data: diagrams = [], isLoading: diagramsLoading, refetch } = useQuery({
@@ -302,6 +314,87 @@ export default function FunctionalFlowPage() {
       loadDiagramMutation.mutate(diagramId);
     }
   }, [diagramId, selectedProject, loadDiagramMutation]);
+
+  // Auto-generate flow diagram when project is selected from URL
+  useEffect(() => {
+    if (urlProjectId && selectedProject && !diagramId && projects.length > 0) {
+      const generateFlowForProject = async () => {
+        try {
+          console.log(`Auto-generating flow diagram for project ${selectedProject}`);
+          
+          const project = projects.find(p => p.id === selectedProject);
+          if (!project) return;
+
+          // Generate a flow diagram name
+          const timestamp = new Date().toLocaleString();
+          const generatedName = `${project.name} - Test Cases Flow (${timestamp})`;
+          
+          // Create basic nodes for the project
+          const startNode: Node = {
+            id: 'start-1',
+            type: 'startNode',
+            data: { label: `${project.name} Test Flow` },
+            position: { x: 250, y: 50 },
+          };
+
+          const projectNode: Node = {
+            id: 'project-1',
+            type: 'stepNode',
+            data: { 
+              label: project.name,
+              description: project.description || 'Project test cases overview'
+            },
+            position: { x: 250, y: 150 },
+          };
+
+          const endNode: Node = {
+            id: 'end-1',
+            type: 'endNode',
+            data: { label: 'Test Completion' },
+            position: { x: 250, y: 250 },
+          };
+
+          const initialNodes = [startNode, projectNode, endNode];
+          
+          const initialEdges: Edge[] = [
+            {
+              id: 'e1-2',
+              source: 'start-1',
+              target: 'project-1',
+              markerEnd: { type: MarkerType.ArrowClosed },
+            },
+            {
+              id: 'e2-3',
+              source: 'project-1',
+              target: 'end-1',
+              markerEnd: { type: MarkerType.ArrowClosed },
+            },
+          ];
+
+          // Set the nodes and edges
+          setNodes(initialNodes);
+          setEdges(initialEdges);
+          setDiagramName(generatedName);
+          setDiagramDescription(`Auto-generated flow diagram for ${project.name} test cases`);
+
+          toast({
+            title: 'Flow Diagram Generated',
+            description: `Generated flow diagram for ${project.name}`,
+          });
+
+        } catch (error) {
+          console.error('Error auto-generating flow diagram:', error);
+          toast({
+            title: 'Generation Error',
+            description: 'Failed to auto-generate flow diagram',
+            variant: 'destructive',
+          });
+        }
+      };
+
+      generateFlowForProject();
+    }
+  }, [urlProjectId, selectedProject, diagramId, projects, setNodes, setEdges, toast]);
 
   return (
     <MainLayout>

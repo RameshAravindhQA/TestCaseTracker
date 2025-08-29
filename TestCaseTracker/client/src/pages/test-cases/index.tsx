@@ -219,6 +219,37 @@ export default function TestCasesPage() {
                       modules?.find(m => m.id === Number(selectedModuleId))?.name : undefined}
                   />
 
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (!selectedProjectId) {
+                        toast({
+                          title: "No project selected",
+                          description: "Please select a project to view flow diagram",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
+                      // Build the URL with query parameters
+                      const params = new URLSearchParams();
+                      params.set('projectId', selectedProjectId.toString());
+                      if (selectedModuleId && selectedModuleId !== "all") {
+                        params.set('moduleId', selectedModuleId.toString());
+                      }
+                      
+                      // Navigate to functional flow page
+                      const url = `/functional-flow?${params.toString()}`;
+                      window.open(url, '_blank');
+                    }}
+                    className="flex items-center gap-2"
+                    disabled={!selectedProjectId}
+                    title="View Flow Diagram"
+                  >
+                    <GitBranch className="h-4 w-4" />
+                    Flow Diagram
+                  </Button>
+
                   <Button 
                     onClick={() => {
                       if (!selectedProjectId) {
