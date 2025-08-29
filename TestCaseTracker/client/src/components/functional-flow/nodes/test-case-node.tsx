@@ -24,6 +24,7 @@ interface TestCaseNodeProps {
 
 export function TestCaseNode({ data, isConnectable }: TestCaseNodeProps) {
   const [showTooltip, setShowTooltip] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -97,62 +98,83 @@ export function TestCaseNode({ data, isConnectable }: TestCaseNodeProps) {
 
     if (data.isTestCase) {
       return (
-        <div className="p-4 max-w-md max-h-96 overflow-y-auto">
-          <h3 className="font-bold text-sm mb-3 text-blue-600">{data.label}</h3>
-          {data.description && (
-            <div className="mb-3">
-              <p className="text-xs font-bold text-gray-800">Test Objective:</p>
-              <p className="text-xs text-gray-600 mt-1">{data.description}</p>
-            </div>
-          )}
+        <div className={`transition-all duration-200 ${isMinimized ? 'w-80 max-h-60' : 'w-96 max-h-80'} overflow-hidden`}>
+          {/* Header with minimize/maximize button */}
+          <div className="flex items-center justify-between p-3 bg-blue-50 border-b">
+            <h3 className="font-bold text-sm text-blue-600">{data.label}</h3>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMinimized(!isMinimized);
+              }}
+              className="p-1 hover:bg-blue-100 rounded text-blue-600"
+              title={isMinimized ? "Expand" : "Minimize"}
+            >
+              {isMinimized ? '⬆️' : '⬇️'}
+            </button>
+          </div>
+          
+          {/* Content area with scroll */}
+          <div className="p-3 overflow-y-auto" style={{ maxHeight: isMinimized ? '200px' : '280px' }}>
+            {data.description && (
+              <div className="mb-3">
+                <p className="text-xs font-bold text-gray-800">Test Objective:</p>
+                <p className="text-xs text-gray-600 mt-1">{data.description}</p>
+              </div>
+            )}
 
-          <div className="space-y-2">
-            {data.feature && (
-              <div>
-                <span className="text-xs font-bold text-gray-800">Feature:</span>
-                <span className="text-xs text-gray-600 ml-1">{data.feature}</span>
-              </div>
-            )}
-            {data.priority && (
-              <div>
-                <span className="text-xs font-bold text-gray-800">Priority:</span>
-                <span className="text-xs text-gray-600 ml-1">{data.priority}</span>
-              </div>
-            )}
-            {data.status && (
-              <div>
-                <span className="text-xs font-bold text-gray-800">Status:</span>
-                <span className={`text-xs ml-1 ${
-                  data.status === 'Pass' ? 'text-green-600 font-semibold' :
-                  data.status === 'Fail' ? 'text-red-600 font-semibold' :
-                  'text-gray-600'
-                }`}>{data.status}</span>
-              </div>
+            <div className="space-y-2">
+              {data.feature && (
+                <div>
+                  <span className="text-xs font-bold text-gray-800">Feature:</span>
+                  <span className="text-xs text-gray-600 ml-1">{data.feature}</span>
+                </div>
+              )}
+              {data.priority && (
+                <div>
+                  <span className="text-xs font-bold text-gray-800">Priority:</span>
+                  <span className="text-xs text-gray-600 ml-1">{data.priority}</span>
+                </div>
+              )}
+              {data.status && (
+                <div>
+                  <span className="text-xs font-bold text-gray-800">Status:</span>
+                  <span className={`text-xs ml-1 ${
+                    data.status === 'Pass' ? 'text-green-600 font-semibold' :
+                    data.status === 'Fail' ? 'text-red-600 font-semibold' :
+                    'text-gray-600'
+                  }`}>{data.status}</span>
+                </div>
+              )}
+            </div>
+
+            {!isMinimized && (
+              <>
+                {data.preConditions && (
+                  <div className="mt-3">
+                    <p className="text-xs font-bold text-gray-800">Pre-conditions:</p>
+                    <p className="text-xs text-gray-600 mt-1">{data.preConditions}</p>
+                  </div>
+                )}
+
+                {data.testSteps && (
+                  <div className="mt-3">
+                    <p className="text-xs font-bold text-gray-800">Steps to Reproduce:</p>
+                    <div className="text-xs text-gray-600 mt-1 whitespace-pre-line font-mono bg-gray-50 p-2 rounded border max-h-32 overflow-y-auto">
+                      {formatTestSteps(data.testSteps)}
+                    </div>
+                  </div>
+                )}
+
+                {data.expectedResult && (
+                  <div className="mt-3">
+                    <p className="text-xs font-bold text-gray-800">Expected Result:</p>
+                    <p className="text-xs text-gray-600 mt-1 bg-green-50 p-2 rounded border">{data.expectedResult}</p>
+                  </div>
+                )}
+              </>
             )}
           </div>
-
-          {data.preConditions && (
-            <div className="mt-3">
-              <p className="text-xs font-bold text-gray-800">Pre-conditions:</p>
-              <p className="text-xs text-gray-600 mt-1">{data.preConditions}</p>
-            </div>
-          )}
-
-          {data.testSteps && (
-            <div className="mt-3">
-              <p className="text-xs font-bold text-gray-800">Steps to Reproduce:</p>
-              <div className="text-xs text-gray-600 mt-1 whitespace-pre-line font-mono bg-gray-50 p-2 rounded border">
-                {formatTestSteps(data.testSteps)}
-              </div>
-            </div>
-          )}
-
-          {data.expectedResult && (
-            <div className="mt-3">
-              <p className="text-xs font-bold text-gray-800">Expected Result:</p>
-              <p className="text-xs text-gray-600 mt-1 bg-green-50 p-2 rounded border">{data.expectedResult}</p>
-            </div>
-          )}
         </div>
       );
     }
@@ -162,11 +184,7 @@ export function TestCaseNode({ data, isConnectable }: TestCaseNodeProps) {
 
 
   return (
-    <div 
-      className="test-case-node relative"
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-    >
+    <div className="test-case-node relative">
       {!data.isCenter && (
         <Handle
           type="target"
@@ -176,7 +194,11 @@ export function TestCaseNode({ data, isConnectable }: TestCaseNodeProps) {
         />
       )}
 
-      <div className="node-content relative">
+      <div 
+        className="node-content relative"
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+      >
         <div className="flex items-center gap-2">
           {data.isTestCase && data.status && (
             <span className="text-lg">{getStatusIcon(data.status)}</span>
@@ -202,7 +224,12 @@ export function TestCaseNode({ data, isConnectable }: TestCaseNodeProps) {
 
       {/* Tooltip */}
       {showTooltip && (
-        <div className="absolute z-50 bg-white border border-gray-300 rounded-lg shadow-xl -top-2 left-full ml-3 pointer-events-none transform">
+        <div 
+          className="absolute z-50 bg-white border border-gray-300 rounded-lg shadow-xl -top-2 left-full ml-3 transform"
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+          style={{ pointerEvents: 'auto' }}
+        >
           {renderTooltipContent()}
         </div>
       )}
