@@ -118,4 +118,21 @@ router.post('/generate/:projectId', async (req: Request, res: Response) => {
   }
 });
 
+// Direct generation endpoint for projects
+router.post('/projects/:projectId/generate-flow-diagram', async (req: Request, res: Response) => {
+  try {
+    // Redirect to the main generation endpoint
+    req.params.projectId = req.params.projectId;
+    const { generateFlowDiagram } = await import('./flow-diagram-generator');
+    await generateFlowDiagram(req, res);
+  } catch (error) {
+    console.error('Flow diagram generation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate flow diagram',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;

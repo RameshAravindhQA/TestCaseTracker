@@ -20,6 +20,7 @@ import 'reactflow/dist/style.css';
 import './test-case-node-styles.css'; // Import custom styles for test case nodes
 import { toPng, toSvg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
+import mermaid from 'mermaid';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -90,6 +91,7 @@ interface FlowDesignerProps {
 export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId }: FlowDesignerProps) {
   const { toast } = useToast();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const mermaidRef = useRef<HTMLDivElement>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   // Use ref for reactFlowInstance to prevent unnecessary re-renders
@@ -108,6 +110,118 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
   const [currentDiagram, setCurrentDiagram] = useState<FlowDiagramData | null>(null);
 
   const router = useRouter(); // Initialize useRouter
+
+  // Initialize Mermaid
+  useEffect(() => {
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      securityLevel: 'loose',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      }
+    });
+  }, []);
+
+  // Generate Mermaid diagram from current nodes and edges
+  const generateMermaidDiagram = useCallback(() => {
+    if (nodes.length === 0) return '';
+
+    let mermaidCode = 'flowchart TD\n';
+    
+    // Add nodes
+    nodes.forEach(node => {
+      const label = node.data.label || 'Unknown';
+      const safeId = node.id.replace(/[^a-zA-Z0-9]/g, '_');
+      
+      switch (node.type) {
+        case 'startNode':
+          mermaidCode += `    ${safeId}([${label}])\n`;
+          break;
+        case 'endNode':
+          mermaidCode += `    ${safeId}([${label}])\n`;
+          break;
+        case 'decisionNode':
+          mermaidCode += `    ${safeId}{${label}}\n`;
+          break;
+        case 'testCaseNode':
+          mermaidCode += `    ${safeId}[${label}]\n`;
+          break;
+        default:
+          mermaidCode += `    ${safeId}[${label}]\n`;
+      }
+    });
+
+    mermaidCode += '\n';
+
+    // Add edges
+    edges.forEach(edge => {
+      const sourceId = edge.source.replace(/[^a-zA-Z0-9]/g, '_');
+      const targetId = edge.target.replace(/[^a-zA-Z0-9]/g, '_');
+      const label = edge.label ? `|${edge.label}|` : '';
+      mermaidCode += `    ${sourceId} -->${label} ${targetId}\n`;
+    });
+
+    return mermaidCode;
+  }, [nodes, edges]);
+
+  // Render Mermaid diagram
+  const renderMermaidDiagram = useCallback(async () => {
+    if (!mermaidRef.current) return;
+
+    const mermaidCode = generateMermaidDiagram();
+    if (!mermaidCode) return;
+
+    try {
+      const { svg } = await mermaid.render('mermaid-diagram', mermaidCode);
+      mermaidRef.current.innerHTML = svg;
+    } catch (error) {
+      console.error('Error rendering Mermaid diagram:', error);
+      toast({
+        title: 'Diagram Error',
+        description: 'Failed to render Mermaid diagram',
+        variant: 'destructive',
+      });
+    }
+  }, [generateMermaidDiagram, toast]);
+
+  // Generate test case flow diagram from API
+  const generateTestCaseFlowDiagram = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/generate-flow-diagram`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.diagram) {
+          // Convert API response to ReactFlow format
+          const { nodes: apiNodes, edges: apiEdges } = result.diagram.data;
+          setNodes(apiNodes || []);
+          setEdges(apiEdges || []);
+          setFlowName(result.diagram.name || 'Generated Flow');
+          setFlowDescription(result.diagram.description || 'Auto-generated flow diagram');
+          
+          toast({
+            title: 'Success',
+            description: `Generated flow with ${result.testCasesCount} test cases`,
+          });
+        }
+      } else {
+        throw new Error('Failed to generate flow diagram');
+      }
+    } catch (error) {
+      console.error('Error generating test case flow:', error);
+      toast({
+        title: 'Generation Failed',
+        description: 'Could not generate test case flow diagram',
+        variant: 'destructive',
+      });
+    }
+  }, [projectId, toast]);
 
   // Initialize designer with flow data if available - with memoization to prevent rerender flickering
   useEffect(() => {
@@ -199,40 +313,50 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
     console.log(`Fetching diagrams for project ${projectId}`);
   };
 
-  // Auto-load specific diagram if diagramId is provided
+  // Auto-load specific diagram if diagramId is provided - with proper dependency management
   useEffect(() => {
-    if (diagramId) {
+    let isMounted = true;
+    
+    const loadDiagram = async (id: string) => {
+      try {
+        const response = await fetch(`/api/flow-diagrams/${id}`);
+        if (response.ok && isMounted) {
+          const diagram = await response.json();
+          if (diagram.data && diagram.data.nodes && diagram.data.edges) {
+            setNodes(diagram.data.nodes);
+            setEdges(diagram.data.edges);
+            setCurrentDiagram(diagram);
+            setFlowName(diagram.name || '');
+            setFlowDescription(diagram.description || '');
+          }
+        } else if (!response.ok) {
+          console.error(`Failed to load diagram ${id}:`, response.statusText);
+          toast({
+            title: 'Error',
+            description: `Failed to load diagram with ID: ${id}`,
+            variant: 'destructive',
+          });
+        }
+      } catch (error) {
+        console.error('Error loading diagram:', error);
+        if (isMounted) {
+          toast({
+            title: 'Error',
+            description: 'An error occurred while loading the diagram.',
+            variant: 'destructive',
+          });
+        }
+      }
+    };
+
+    if (diagramId && !currentDiagram) {
       loadDiagram(diagramId);
     }
-  }, [diagramId]);
 
-  const loadDiagram = async (id: string) => {
-    try {
-      const response = await fetch(`/api/flow-diagrams/${id}`);
-      if (response.ok) {
-        const diagram = await response.json();
-        if (diagram.data && diagram.data.nodes && diagram.data.edges) {
-          setNodes(diagram.data.nodes);
-          setEdges(diagram.data.edges);
-          setCurrentDiagram(diagram); // Set the loaded diagram
-        }
-      } else {
-        console.error(`Failed to load diagram ${id}:`, response.statusText);
-        toast({
-          title: 'Error',
-          description: `Failed to load diagram with ID: ${id}`,
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error loading diagram:', error);
-      toast({
-        title: 'Error',
-        description: 'An error occurred while loading the diagram.',
-        variant: 'destructive',
-      });
-    }
-  };
+    return () => {
+      isMounted = false;
+    };
+  }, [diagramId, currentDiagram, toast]);
 
   // Update parent component when nodes or edges change, with debounce to prevent flickering
   useEffect(() => {
@@ -727,6 +851,16 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
     }
   };
 
+  // State for view mode
+  const [viewMode, setViewMode] = useState<'reactflow' | 'mermaid'>('reactflow');
+
+  // Re-render Mermaid when switching to mermaid view or when nodes/edges change
+  useEffect(() => {
+    if (viewMode === 'mermaid') {
+      renderMermaidDiagram();
+    }
+  }, [viewMode, renderMermaidDiagram]);
+
   // Expose methods to parent component via window object
   useEffect(() => {
     // Ensure window.flowDesignerRef is defined before assigning properties
@@ -735,36 +869,10 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
         showSaveDialog: () => setShowSaveDialog(true),
         resetDesigner,
         exportPDF,
-        // Add a method to trigger test case diagram generation
-        generateTestCaseDiagram: async (projectId: number, viewType: 'module' | 'project' = 'project') => {
-          try {
-            const response = await fetch(`/api/projects/${projectId}/generate-flow-diagram?view=${viewType}`);
-            if (response.ok) {
-              const diagramData = await response.json();
-              if (diagramData.nodes && diagramData.edges) {
-                setNodes(diagramData.nodes);
-                setEdges(diagramData.edges);
-                setFlowName(`Test Case Flow - ${viewType} view`);
-                setFlowDescription(`Automatically generated flow diagram of test cases for project ${projectId}`);
-                toast({
-                  title: "Diagram Generated",
-                  description: `Test case flow diagram (${viewType} view) generated successfully.`,
-                });
-              } else {
-                throw new Error("Received invalid diagram data format.");
-              }
-            } else {
-              throw new Error(`API request failed with status ${response.status}`);
-            }
-          } catch (error) {
-            console.error('Error generating test case diagram:', error);
-            toast({
-              title: 'Generation Failed',
-              description: 'Could not generate test case flow diagram. Please check console for details.',
-              variant: 'destructive',
-            });
-          }
-        },
+        generateTestCaseFlowDiagram,
+        generateMermaidCode: generateMermaidDiagram,
+        switchToMermaidView: () => setViewMode('mermaid'),
+        switchToReactFlowView: () => setViewMode('reactflow'),
       };
     }
 
@@ -782,8 +890,38 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
         {/* Sidebar with node palette */}
         <Sidebar />
 
+        {/* View Mode Controls */}
+        <div className="absolute top-4 left-80 z-10 bg-white rounded-lg shadow-md p-2 border">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'reactflow' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('reactflow')}
+            >
+              Interactive
+            </Button>
+            <Button
+              variant={viewMode === 'mermaid' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('mermaid')}
+            >
+              Mermaid
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generateTestCaseFlowDiagram}
+            >
+              Generate from Test Cases
+            </Button>
+          </div>
+        </div>
+
         {/* Main flow canvas */}
-        <div className="flex-1 h-full" ref={reactFlowWrapper}>
+        <div className="flex-1 h-full relative">
+          {/* ReactFlow View */}
+          {viewMode === 'reactflow' && (
+            <div className="w-full h-full" ref={reactFlowWrapper}>
           <ContextMenu>
             <ContextMenuTrigger>
               <ReactFlow
@@ -911,6 +1049,53 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
               }}>Export as PDF</ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
+            </div>
+          )}
+
+          {/* Mermaid View */}
+          {viewMode === 'mermaid' && (
+            <div className="w-full h-full p-4 bg-white overflow-auto">
+              <div className="mb-4 flex items-center gap-4">
+                <h3 className="text-lg font-semibold">Mermaid Diagram</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const mermaidCode = generateMermaidDiagram();
+                    navigator.clipboard.writeText(mermaidCode);
+                    toast({
+                      title: 'Copied',
+                      description: 'Mermaid code copied to clipboard',
+                    });
+                  }}
+                >
+                  Copy Code
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={renderMermaidDiagram}
+                >
+                  Refresh
+                </Button>
+              </div>
+              <div 
+                ref={mermaidRef}
+                className="w-full min-h-[400px] border rounded-lg p-4 bg-gray-50"
+                style={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center' 
+                }}
+              />
+              <div className="mt-4 p-4 bg-gray-100 rounded-lg">
+                <h4 className="font-medium mb-2">Mermaid Code:</h4>
+                <pre className="text-sm bg-white p-3 rounded border overflow-x-auto">
+                  {generateMermaidDiagram()}
+                </pre>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -18,6 +18,7 @@
     "jszip": "^3.10.1",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.542.0",
+    "mermaid": "^11.10.1",
     "multer": "^2.0.2",
     "node-fetch": "^2.7.0",
     "octokit": "^5.0.3",
