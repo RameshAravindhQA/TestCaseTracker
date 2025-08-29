@@ -65,6 +65,7 @@ import { ExternalSystemNode } from './nodes/external-system-node';
 import { TestCaseNode } from './nodes/test-case-node'; 
 import { FlowDiagramData, FlowNodeType } from '../../../shared/functional-flow-types';
 import { useRouter } from '@tanstack/react-router'; // Import useRouter
+import { useQuery } from '@tanstack/react-query';
 
 // Define custom node types, including the new TestCaseNode
 const nodeTypes: NodeTypes = {
@@ -111,6 +112,37 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
 
   const router = useRouter(); // Initialize useRouter
 
+  // Load flow diagram data
+  const { data: fetchedFlowData, isLoading, error: loadError } = useQuery({
+    queryKey: ['flow-diagram', diagramId], // Use diagramId for the query key
+    queryFn: async () => {
+      if (!diagramId) return null; // Only fetch if diagramId is provided
+      const response = await fetch(`/api/flow-diagrams/${diagramId}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.warn(`Flow diagram ${diagramId} not found, will create new one`);
+          return null; // Return null if not found, to start a new diagram
+        }
+        throw new Error('Failed to load flow diagram');
+      }
+      return response.json();
+    },
+    enabled: !!diagramId, // Only enable the query if diagramId is present
+    retry: false, // Don't retry 404 errors
+  });
+
+  // Handle loading errors
+  useEffect(() => {
+    if (loadError) {
+      console.error('Error loading flow diagram:', loadError);
+      toast({
+        title: 'Error Loading Diagram',
+        description: 'Failed to load the flow diagram. Starting with a new diagram.',
+        variant: 'destructive',
+      });
+    }
+  }, [loadError, toast]);
+
   // Initialize Mermaid
   useEffect(() => {
     mermaid.initialize({
@@ -130,12 +162,12 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
     if (nodes.length === 0) return '';
 
     let mermaidCode = 'flowchart TD\n';
-    
+
     // Add nodes
     nodes.forEach(node => {
       const label = node.data.label || 'Unknown';
       const safeId = node.id.replace(/[^a-zA-Z0-9]/g, '_');
-      
+
       switch (node.type) {
         case 'startNode':
           mermaidCode += `    ${safeId}([${label}])\n`;
@@ -204,7 +236,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
           setEdges(apiEdges || []);
           setFlowName(result.diagram.name || 'Generated Flow');
           setFlowDescription(result.diagram.description || 'Auto-generated flow diagram');
-          
+
           toast({
             title: 'Success',
             description: `Generated flow with ${result.testCasesCount} test cases`,
@@ -227,10 +259,13 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
   useEffect(() => {
     // Use a ref to track if we've already initialized to prevent constant re-initialization
     const initializeFlow = () => {
-      if (flowData) {
+      // Prioritize flowData passed as prop if diagramId is not provided or doesn't load
+      const dataToInitialize = fetchedFlowData || flowData;
+
+      if (dataToInitialize) {
         try {
-          const nodeData = flowData.nodes || [];
-          const edgeData = flowData.edges || [];
+          const nodeData = dataToInitialize.nodes || [];
+          const edgeData = dataToInitialize.edges || [];
 
           // Only update state if data has changed to prevent unnecessary rerenders
           setNodes(currentNodes => {
@@ -247,9 +282,13 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
             return currentEdges;
           });
 
-          if (flowData.metadata) {
-            setFlowName(flowData.metadata.name || '');
-            setFlowDescription(flowData.metadata.description || '');
+          if (dataToInitialize.metadata) {
+            setFlowName(dataToInitialize.metadata.name || '');
+            setFlowDescription(dataToInitialize.metadata.description || '');
+          }
+          // Set currentDiagram if fetchedFlowData is used
+          if (fetchedFlowData) {
+            setCurrentDiagram(fetchedFlowData);
           }
         } catch (error) {
           console.error('Error initializing flow designer:', error);
@@ -300,11 +339,13 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
 
         setFlowName('');
         setFlowDescription('');
+        setCurrentDiagram(null); // Ensure currentDiagram is cleared if starting fresh
       }
     };
 
     initializeFlow();
-  }, [flowData, toast]);
+    // Dependency on fetchedFlowData is important to re-initialize when data is loaded via query
+  }, [fetchedFlowData, flowData, toast, diagramId]); // Added diagramId to dependencies
 
   // Placeholder for loading existing diagrams (e.g., from API)
   const loadDiagrams = async () => {
@@ -314,9 +355,12 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
   };
 
   // Auto-load specific diagram if diagramId is provided - with proper dependency management
+  // This useEffect is now redundant due to the use of `fetchedFlowData` and the main useEffect
+  // It's kept here commented out for reference but should be removed or refactored if not strictly needed.
+  /*
   useEffect(() => {
     let isMounted = true;
-    
+
     const loadDiagram = async (id: string) => {
       try {
         const response = await fetch(`/api/flow-diagrams/${id}`);
@@ -357,6 +401,7 @@ export function FlowDesigner({ projectId, flowData, onChange, onSave, diagramId 
       isMounted = false;
     };
   }, [diagramId, currentDiagram, toast]);
+  */
 
   // Update parent component when nodes or edges change, with debounce to prevent flickering
   useEffect(() => {

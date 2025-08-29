@@ -25,12 +25,21 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    
+    // Add debug logging for missing diagrams
+    console.log(`🔍 Attempting to fetch flow diagram with ID: ${id}`);
+    
     const diagram = await storage.getFlowDiagram(id);
     
     if (!diagram) {
-      return res.status(404).json({ message: 'Flow diagram not found' });
+      console.log(`❌ Flow diagram not found: ${id}`);
+      return res.status(404).json({ 
+        message: 'Flow diagram not found',
+        diagramId: id 
+      });
     }
 
+    console.log(`✅ Flow diagram found: ${id}`);
     res.json(diagram);
   } catch (error) {
     console.error('Error fetching flow diagram:', error);
