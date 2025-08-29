@@ -86,6 +86,7 @@ export interface IStorage {
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, projectData: Partial<Project>): Promise<Project | undefined>;
   deleteProject(id: number): Promise<boolean>;
+  getAllProjects(): Promise<Project[]>; // Added for all projects retrieval
 
   // Module operations
   getModules(): Promise<Module[]>;
@@ -103,6 +104,7 @@ export interface IStorage {
   createTestCase(testCase: InsertTestCase): Promise<TestCase>;
   updateTestCase(id: number, testCaseData: Partial<TestCase>): Promise<TestCase | null>;
   deleteTestCase(id: number): Promise<boolean>;
+  getAllTestCases(): Promise<TestCase[]>; // Added for all test cases retrieval
 
   // Deleted test case operations
   getDeletedTestCases(projectId?: number): Promise<TestCase[]>;
@@ -327,7 +329,7 @@ export interface IStorage {
   deleteTodoList(id: number): Promise<boolean>;
   getTodosByListId(listId: number): Promise<any[]>;
 
-  // Request Forms Module Methods
+  // Request Forms Module Methods Methods
   getRequestFormTypes(): Promise<any[]>;
   getRequestFormType(id: number): Promise<any | undefined>;
   createRequestFormType(data: any): Promise<any>;
@@ -527,7 +529,7 @@ class MemStorage implements IStorage {
   private nextTimeSheetId = 1;
   private nextTimeSheetFolderId = 1;
   private nextCustomerId = 1;
-  private nextTimeSheetFolderId = 1;
+  private nextTimeSheetFolderId = 1; // Duplicate, should be removed or renamed
 
 
   private initializeEmployeeDefaults() {
@@ -2510,7 +2512,7 @@ class MemStorage implements IStorage {
         }
 
         // Find the highest existing module number for this project
-        const modulePattern = new RegExp(`^${projectPrefix}-[A-Z]{2,5}-MOD-(\\d+)$`);
+        const modulePattern = new RegExp(`^${projectPrefix}-[A-Z]{3}-MOD-(\\d+)$`);
         const existingNumbers = this.modules
           .filter(m => m.projectId === module.projectId && m.id !== module.id && m.moduleId)
           .map(m => {

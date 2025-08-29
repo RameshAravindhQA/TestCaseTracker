@@ -409,7 +409,7 @@ function TodosPage() {
                     <CardHeader>
                       <CardTitle className="text-lg">Todo Lists</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2 max-h-[500px] overflow-y-auto">
+                    <CardContent className="space-y-2 max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                       <Button
                         variant={!selectedList ? "default" : "ghost"}
                         className="w-full justify-start"
@@ -452,7 +452,7 @@ function TodosPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="max-h-[600px] overflow-y-auto space-y-3">
+                      <div className="max-h-[600px] overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                         {filteredTodos.length === 0 ? (
                           <p className="text-center text-muted-foreground py-8">
                             No todos yet. Add a new todo above!
