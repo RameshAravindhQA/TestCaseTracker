@@ -58,15 +58,6 @@ import {
   AutomationRun,
   AutomationSchedule,
   AutomationEnvironment,
-  Role,
-  Permission,
-  UserProject,
-  Marker,
-  RequestFormType,
-  RequestForm,
-  RequestComment,
-  ChatMessage,
-  GitHubConfig,
 } from "@shared/schema";
 
 import { desc, eq } from "drizzle-orm"; // Assuming drizzle-orm is used for schema operations
@@ -86,7 +77,6 @@ export interface IStorage {
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, projectData: Partial<Project>): Promise<Project | undefined>;
   deleteProject(id: number): Promise<boolean>;
-  getAllProjects(): Promise<Project[]>; // Added for all projects retrieval
 
   // Module operations
   getModules(): Promise<Module[]>;
@@ -104,7 +94,6 @@ export interface IStorage {
   createTestCase(testCase: InsertTestCase): Promise<TestCase>;
   updateTestCase(id: number, testCaseData: Partial<TestCase>): Promise<TestCase | null>;
   deleteTestCase(id: number): Promise<boolean>;
-  getAllTestCases(): Promise<TestCase[]>; // Added for all test cases retrieval
 
   // Deleted test case operations
   getDeletedTestCases(projectId?: number): Promise<TestCase[]>;
@@ -329,7 +318,7 @@ export interface IStorage {
   deleteTodoList(id: number): Promise<boolean>;
   getTodosByListId(listId: number): Promise<any[]>;
 
-  // Request Forms Module Methods Methods
+  // Request Forms Module Methods
   getRequestFormTypes(): Promise<any[]>;
   getRequestFormType(id: number): Promise<any | undefined>;
   createRequestFormType(data: any): Promise<any>;
@@ -384,11 +373,6 @@ export interface IStorage {
   // Employee permissions methods
   updateEmployeePermissions(employeeId: number, permissions: any[]): Promise<void>;
   getEmployeePermissions(employeeId: number): Promise<any[]>;
-
-  // Project Collaborator methods
-  getProjectsWhereUserIsCollaborator(userId: number): Promise<any[]>;
-  addProjectMember(member: { projectId: number; userId: number; role: string }): Promise<ProjectMember>;
-  removeProjectMember(projectId: number, userId: number): Promise<void>;
 }
 
 /**
@@ -413,7 +397,8 @@ class MemStorage implements IStorage {
   private customMarkers: CustomMarker[] = [];
   private matrixCells: MatrixCell[] = [];
   private notebooks: Notebook[] = [];
-  private githubConfigs: GitHubConfig[] = [];
+  private githubConfigs: any[] = [];
+  private githubIssues: any[] = [];
   private projectMembers: ProjectMember[] = [];
   private sprints: Sprint[] = [];
   private kanbanColumns: KanbanColumn[] = [];
@@ -444,44 +429,6 @@ class MemStorage implements IStorage {
     todoLists: [],
     flowDiagrams: [], // Added for flow diagram storage
     testCases: [], // Added to ensure testCases array is available in data
-    bugs: [], // Added for bugs
-    projectMembers: [], // Added for projectMembers
-    chats: [],
-    users: [],
-    projects: [],
-    modules: [],
-    documents: [],
-    documentFolders: [],
-    customers: [],
-    tags: [],
-    testSheets: [],
-    sprints: [],
-    kanbanColumns: [],
-    kanbanCards: [],
-    customMarkers: [],
-    matrixCells: [],
-    traceabilityMatrixes: [],
-    employeePermissions: [],
-    roles: [],
-    permissions: [],
-    userProjects: [],
-    markers: [],
-    requestFormTypes: [],
-    requestForms: [],
-    requestComments: [],
-    todos: [],
-    todoLists: [],
-    employees: [],
-    employeeProjects: [],
-    technologyOptions: [],
-    departmentOptions: [],
-    navadhitiProjects: [],
-    statusReviews: new Map<number, any>(),
-    employeeProjectHistory: [],
-    resourceRequests: [],
-    requestExtensions: [],
-    notifications: new Map<number, any>(),
-    flowDiagrams: new Map<string, any>(),
   };
 
   // Enhanced Chat and Messaging methods
@@ -529,7 +476,7 @@ class MemStorage implements IStorage {
   private nextTimeSheetId = 1;
   private nextTimeSheetFolderId = 1;
   private nextCustomerId = 1;
-  private nextTimeSheetFolderId = 1; // Duplicate, should be removed or renamed
+  private nextTimeSheetFolderId = 1;
 
 
   private initializeEmployeeDefaults() {
@@ -1404,17 +1351,16 @@ class MemStorage implements IStorage {
   }
 
   // Project member operations
-  async addProjectMember(member: { projectId: number; userId: number; role: string }): Promise<ProjectMember> {
+  async addProjectMember(data: Omit<ProjectMember, 'id'>): Promise<ProjectMember> {
     const id = this.getNextId();
 
-    const newMember: ProjectMember = {
-      ...member,
-      id,
-      createdAt: new Date(),
+    const member: ProjectMember = {
+      ...data,
+      id
     };
 
-    this.projectMembers.push(newMember);
-    return newMember;
+    this.projectMembers.push(member);
+    return member;
   }
 
   async getProjectMembers(projectId: number): Promise<ProjectMember[]> {
@@ -1426,20 +1372,10 @@ class MemStorage implements IStorage {
     return this.projectMembers.filter(member => member.userId === userId);
   }
 
-  async removeProjectMember(projectId: number, userId: number): Promise<void> {
-    try {
-      const memberIndex = this.projectMembers.findIndex(member =>
-        member.projectId === projectId && member.userId === userId
-      );
-
-      if (memberIndex !== -1) {
-        this.projectMembers.splice(memberIndex, 1);
-        await this.saveData();
-      }
-    } catch (error) {
-      console.error("Error removing project member:", error);
-      throw error;
-    }
+  async removeProjectMember(projectId: number, userId: number): Promise<boolean> {
+    const initialLength = this.projectMembers.length;
+    this.projectMembers = this.projectMembers.filter(m => !(m.projectId === projectId && m.userId === userId));
+    return this.projectMembers.length < initialLength;
   }
 
   // Activity operations
@@ -2512,7 +2448,7 @@ class MemStorage implements IStorage {
         }
 
         // Find the highest existing module number for this project
-        const modulePattern = new RegExp(`^${projectPrefix}-[A-Z]{3}-MOD-(\\d+)$`);
+        const modulePattern = new RegExp(`^${projectPrefix}-[A-Z]{2,5}-MOD-(\\d+)$`);
         const existingNumbers = this.modules
           .filter(m => m.projectId === module.projectId && m.id !== module.id && m.moduleId)
           .map(m => {
@@ -3680,65 +3616,6 @@ class MemStorage implements IStorage {
     const employeePerms = this.employeePermissions.find(ep => ep.employeeId === employeeId);
     console.log(`Retrieved permissions for employee ${employeeId}:`, employeePerms ? employeePerms.permissions : []);
     return employeePerms ? employeePerms.permissions : [];
-  }
-
-  // Project Collaborator methods
-  async getProjectsWhereUserIsCollaborator(userId: number): Promise<any[]> {
-    const membershipProjects = this.projectMembers
-      .filter(member => member.userId === userId)
-      .map(member => this.projects.find(p => p.id === member.projectId))
-      .filter(project => project !== undefined) as Project[];
-    return membershipProjects;
-  }
-
-  async addProjectMember(member: { projectId: number; userId: number; role: string }): Promise<ProjectMember> {
-    const id = this.getNextId();
-
-    const newMember: ProjectMember = {
-      ...member,
-      id,
-      createdAt: new Date(),
-    };
-
-    this.projectMembers.push(newMember);
-    return newMember;
-  }
-
-  async removeProjectMember(projectId: number, userId: number): Promise<void> {
-    try {
-      const memberIndex = this.projectMembers.findIndex(member =>
-        member.projectId === projectId && member.userId === userId
-      );
-
-      if (memberIndex !== -1) {
-        this.projectMembers.splice(memberIndex, 1);
-        await this.saveData();
-      }
-    } catch (error) {
-      console.error("Error removing project member:", error);
-      throw error;
-    }
-  }
-
-  // Added getBugsByProject method
-  async getBugsByProject(projectId: number): Promise<any[]> {
-    try {
-      let bugs = this.bugs.filter(bug => bug.projectId === projectId);
-
-      // Add reporter and assignee names
-      for (let bug of bugs) {
-        const reporter = await this.getUser(bug.reporterId);
-        const assignee = bug.assigneeId ? await this.getUser(bug.assigneeId) : null;
-
-        bug.reporterName = reporter ? `${reporter.firstName} ${reporter.lastName || ''}`.trim() : 'Unknown';
-        bug.assigneeName = assignee ? `${assignee.firstName} ${assignee.lastName || ''}`.trim() : null;
-      }
-
-      return bugs;
-    } catch (error) {
-      console.error("Error getting bugs by project:", error);
-      return [];
-    }
   }
 }
 

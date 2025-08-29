@@ -373,7 +373,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
       </div>
 
       {!isMinimized && (
-        <div className="p-3 max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+        <div className="p-3 max-h-[600px] overflow-y-auto">
           {/* List Management */}
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-2">
@@ -503,7 +503,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
           </div>
 
           {/* Todo list */}
-          <div className="space-y-2 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+          <div className="space-y-2">
             {isLoadingTodos ? (
               <div className="text-center py-4 text-sm text-gray-500">Loading todos...</div>
             ) : todosArray.length > 0 ? (

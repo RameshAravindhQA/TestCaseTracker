@@ -78,7 +78,7 @@ export default function ProjectCollaborators({ projectId, projectName }: Project
   // Remove collaborator mutation
   const removeCollaboratorMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const response = await fetch(`/api/projects/${projectId}/collaborators/${userId}`, {
+      const response = await fetch(`/api/projects/${projectId}/members/${userId}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to remove collaborator');

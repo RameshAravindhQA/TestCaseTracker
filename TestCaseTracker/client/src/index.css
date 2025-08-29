@@ -43,43 +43,6 @@ body.dialog-open {
 @tailwind components;
 @tailwind utilities;
 
-/* Custom scrollbar styles */
-.scrollbar-thin {
-  scrollbar-width: thin;
-}
-
-.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
-  background-color: #d1d5db;
-  border-radius: 0.25rem;
-}
-
-.scrollbar-track-gray-100::-webkit-scrollbar-track {
-  background-color: #f3f4f6;
-}
-
-.hover\:scrollbar-thumb-gray-400:hover::-webkit-scrollbar-thumb {
-  background-color: #9ca3af;
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f3f4f6;
-  border-radius: 0.25rem;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 0.25rem;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
 /* Custom success toast styling with !important */
 .success {
   background-color: #0d4a0d !important;
@@ -303,46 +266,55 @@ body.dialog-open {
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply font-sans antialiased bg-background text-foreground;
   }
-}
 
-/* Custom scrollbar styles */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db #f3f4f6;
-}
+  /* Make input borders more visible in dark mode */
+  .dark input, 
+  .dark textarea, 
+  .dark select {
+    @apply border-gray-500;
+    @apply text-white;
+  }
 
-*::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+  /* Ensure all user input text is white in dark mode */
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    @apply text-gray-400;
+  }
 
-*::-webkit-scrollbar-track {
-  background: #f3f4f6;
-  border-radius: 4px;
-}
+  /* Animation transitions for UI elements */
+  .animate-transition {
+    @apply transition-all duration-300 ease-in-out;
+  }
 
-*::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
-}
+  /* Pulse animation for active elements */
+  .animate-pulse-subtle {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
 
-*::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
 
-.scrollbar-thin {
-  scrollbar-width: thin;
-}
+  /* Toast container positioning - move to upper right */
+  :root {
+    --toastify-toast-width: 320px;
+    --toastify-toast-offset: 1rem;
+  }
 
-.scrollbar-thumb-gray-300 {
-  scrollbar-color: #d1d5db #f3f4f6;
-}
-
-.scrollbar-track-gray-100 {
-  scrollbar-color: #d1d5db #f3f4f6;
+  div[data-sonner-toaster][data-position*="right"] {
+    right: var(--toastify-toast-offset);
+    top: var(--toastify-toast-offset);
+    bottom: auto;
+  }
 }
 
 /* Dark mode styles */

@@ -2589,35 +2589,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Projects routes
   apiRouter.get("/projects", isAuthenticated, async (req, res) => {
     try {
-      const userId = req.session.userId;
-      const userRole = req.session.userRole;
-
+      // CRITICAL: Ensure proper data isolation
       let projects;
-      if (userRole === "Admin") {
-        projects = await storage.getAllProjects();
-        console.log(`[SECURITY] User ${userId} (${userRole}) accessing ${projects.length} projects`);
+      if (req.session.userRole === "Admin") {
+        // Admins can see all projects
+        projects = await storage.getProjects();
       } else {
-        // Get projects where user is creator OR collaborator
-        const userProjects = await storage.getProjectsByUser(userId!);
-        const collaboratorProjects = await storage.getProjectsWhereUserIsCollaborator(userId!);
-
-        // Combine and deduplicate projects
-        const allProjectIds = new Set([
-          ...userProjects.map(p => p.id),
-          ...collaboratorProjects.map(p => p.id)
-        ]);
-
-        projects = [];
-        for (const projectId of allProjectIds) {
-          const project = await storage.getProject(projectId);
-          if (project) {
-            projects.push(project);
-          }
-        }
-
-        console.log(`[SECURITY] User ${userId} (${userRole}) accessing ${projects.length} projects (${userProjects.length} owned + ${collaboratorProjects.length} collaborator)`);
+        // Non-admins can only see projects they created or are members of
+        projects = await storage.getProjectsByUserId(req.session.userId!);
       }
 
+      console.log(`[SECURITY] User ${req.session.userId} (${req.session.userRole}) accessing ${projects.length} projects`);
       res.json(projects);
     } catch (error) {
       console.error("Get projects error:", error);
@@ -2635,12 +2617,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user has access to this project
-      if (req.session.userRole !== "Admin" && project.createdById !== req.session.userId) {
-        // Check if user is a collaborator
+      if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
-        const isCollaborator = projectMembers.some(member => member.userId === req.session.userId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
 
-        if (!isCollaborator) {
+        if (!isMember && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have access to this project" });
         }
       }
@@ -3354,59 +3335,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test cases routes
   apiRouter.get("/test-cases", isAuthenticated, async (req, res) => {
     try {
-      const { projectId } = req.query;
-      const userId = req.session.userId;
-      const userRole = req.session.userRole;
-
+      // Get all test cases for user's accessible projects
       let testCases;
-      if (projectId) {
-        const parsedProjectId = parseInt(projectId as string);
-
-        // Check project access
-        const project = await storage.getProject(parsedProjectId);
-        if (!project) {
-          return res.status(404).json({ message: "Project not found" });
-        }
-
-        if (userRole !== "Admin" && project.createdById !== userId) {
-          // Check if user is a collaborator
-          const projectMembers = await storage.getProjectMembers(parsedProjectId);
-          const isCollaborator = projectMembers.some(member => member.userId === userId);
-
-          if (!isCollaborator) {
-            return res.status(403).json({ message: "You don't have access to this project" });
-        }
-      }
-
-        testCases = await storage.getTestCasesByProject(parsedProjectId);
+      if (req.session.userRole === "Admin") {
+        testCases = await storage.getTestCases();
       } else {
-        if (userRole === "Admin") {
-          testCases = await storage.getAllTestCases();
-        } else {
-          // Get test cases from user's own projects and collaborator projects
-          const userTestCases = await storage.getTestCasesByUser(userId!);
-          const collaboratorProjects = await storage.getProjectsWhereUserIsCollaborator(userId!);
+        // Get projects user has access to
+        const userProjects = await storage.getProjectsByUserId(req.session.userId!);
+        const projectIds = userProjects.map(p => p.id);
 
-          let collaboratorTestCases = [];
-          for (const project of collaboratorProjects) {
-            const projectTestCases = await storage.getTestCasesByProject(project.id);
-            collaboratorTestCases.push(...projectTestCases);
-          }
-
-          // Combine and deduplicate test cases
-          const allTestCaseIds = new Set();
-          testCases = [];
-
-          [...userTestCases, ...collaboratorTestCases].forEach(tc => {
-            if (!allTestCaseIds.has(tc.id)) {
-              allTestCaseIds.add(tc.id);
-              testCases.push(tc);
-            }
-          });
+        // Get test cases for these projects
+        testCases = [];
+        for (const projectId of projectIds) {
+          const projectTestCases = await storage.getTestCasesByProject(projectId);
+          testCases.push(...projectTestCases);
         }
       }
 
-      console.log(`[API] Returning ${testCases.length} test cases for user ${userId}`);
+      console.log(`[API] Returning ${testCases.length} test cases for user ${req.session.userId}`);
+
+      // Add cache headers for real-time data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+
       res.json(testCases);
     } catch (error) {
       console.error("Get test cases error:", error);
@@ -3721,64 +3673,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bug routes
   apiRouter.get("/bugs", isAuthenticated, async (req, res) => {
     try {
-      const { projectId, status } = req.query;
-      const userId = req.session.userId;
-      const userRole = req.session.userRole;
-
+      // Get all bugs for user's accessible projects
       let bugs;
-      if (projectId) {
-        const parsedProjectId = parseInt(projectId as string);
-
-        // Check project access
-        const project = await storage.getProject(parsedProjectId);
-        if (!project) {
-          return res.status(404).json({ message: "Project not found" });
-        }
-
-        if (userRole !== "Admin" && project.createdById !== userId) {
-          // Check if user is a collaborator
-          const projectMembers = await storage.getProjectMembers(parsedProjectId);
-          const isCollaborator = projectMembers.some(member => member.userId === userId);
-
-          if (!isCollaborator) {
-            return res.status(403).json({ message: "You don't have access to this project" });
-          }
-        }
-
-        bugs = await storage.getBugsByProject(parsedProjectId);
+      if (req.session.userRole === "Admin") {
+        bugs = await storage.getBugs();
       } else {
-        if (userRole === "Admin") {
-          bugs = await storage.getBugs(undefined, status as string);
-        } else {
-          // Get bugs from user's own projects and collaborator projects
-          const userBugs = await storage.getBugsByUser(userId!, status as string);
-          const collaboratorProjects = await storage.getProjectsWhereUserIsCollaborator(userId!);
+        // Get projects user has access to
+        const userProjects = await storage.getProjectsByUserId(req.session.userId!);
+        const projectIds = userProjects.map(p => p.id);
 
-          let collaboratorBugs = [];
-          for (const project of collaboratorProjects) {
-            const projectBugs = await storage.getBugsByProject(project.id);
-            collaboratorBugs.push(...projectBugs);
-          }
-
-          // Apply status filter to collaborator bugs
-          if (status) {
-            collaboratorBugs = collaboratorBugs.filter(bug => bug.status === status);
-          }
-
-          // Combine and deduplicate bugs
-          const allBugIds = new Set();
-          bugs = [];
-
-          [...userBugs, ...collaboratorBugs].forEach(bug => {
-            if (!allBugIds.has(bug.id)) {
-              allBugIds.add(bug.id);
-              bugs.push(bug);
-            }
-          });
+        // Get bugs for these projects
+        bugs = [];
+        for (const projectId of projectIds) {
+          const projectBugs = await storage.getBugsByProject(projectId);
+          bugs.push(...projectBugs);
         }
       }
 
-      console.log(`[API] Returning ${bugs.length} bugs for user ${userId}`);
+      console.log(`[API] Returning ${bugs.length} bugs for user ${req.session.userId}`);
+
+      // Add cache headers for real-time data
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+
       res.json(bugs);
     } catch (error) {
       console.error("Get bugs error:", error);
