@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Upload, Globe, Type, Wand2, CheckCircle2, Download, Merge, Settings, Loader2, Bug, GitBranch, Eye } from "lucide-react";
 import type { Module, TestCase } from "@/types";
-import { useRouter } from "@tanstack/react-router";
+import { useLocation } from "wouter";
 
 interface AITestGeneratorProps {
   projectId: number;
@@ -569,7 +569,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
     fetchApiKeyStatus();
   }, []);
 
-  const router = useRouter(); // Ensure router is initialized
+  const [, navigate] = useLocation();
 
   // Handler for generating flow diagrams
   const handleGenerateFlowDiagram = async () => {
@@ -596,10 +596,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
         });
 
         // Navigate to the flow diagram page
-        router.navigate({
-          to: `/functional-flow`,
-          search: { diagramId: data.diagramId }
-        });
+        navigate(`/functional-flow?diagramId=${data.diagramId}`);
       } else {
         throw new Error(data.message || "Failed to generate flow diagram");
       }
