@@ -410,6 +410,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configure uploads
   const profilePictureUpload = configureProfilePictureUpload();
   const bugAttachmentUpload = configureBugAttachmentUpload();
+  const documentUpload = configureDocumentUpload(); // Document upload is configured above with configureDocumentUpload()
+
 
   // Setup session store
   const SessionStore = MemoryStore(session);
@@ -1773,8 +1775,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return multer({
       storage,
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB max file size
-      },
+        fileSize: 50 * 1024 * 1024, // 50MB max file size
+      }
     });
   };
 
@@ -3159,17 +3161,6 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
         console.error("No file in request");
         return res.status(400).json({ message: "No file uploaded" });
       }
-
-      console.log("File details:", {
-        fieldname: req.file.fieldname,
-        originalname: req.file.originalname,
-        encoding: req.file.encoding,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        destination: req.file.destination,
-        filename: req.file.filename,
-        path: req.file.path
-      });
 
       // Get file path relative to the server root for serving in the browser
       const fileName = path.basename(req.file.path);
@@ -5062,7 +5053,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
       if (req.body.status && req.body.status !== testCase.status) {
         await storage.createActivity({
           userId: req.session.userId!,
-          action: "status changed to ${req.body.status}",
+          action: `status changed to ${req.body.status}`,
           entityType: "testCase",
           entityId: testCaseId,
           details: { 
@@ -5077,7 +5068,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
       } else if (req.body.severity && req.body.severity !== testCase.severity) {
         await storage.createActivity({
           userId: req.session.userId!,
-          action: "severity changed to ${req.body.severity}",
+          action: `severity changed to ${req.body.severity}`,
           entityType: "testCase",
           entityId: testCaseId,
           details: { 
@@ -5922,8 +5913,8 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
       const allFolders = await storage.getDocumentFolders();
       console.log("Available folder IDs:", allFolders.map(f => f.id));
 
-      // Force success response even if folder not found - this prevents UI issues
-      // when deleting folders that might not exist in the backend but are shown in the UI
+      // Force success response even if folder notfound - this prevents UI issues
+// when deleting folders that might not exist in the backend but are shown in the UI
       const folder = await storage.getDocumentFolder(folderId);
       console.log("Found folder:", folder);
 
