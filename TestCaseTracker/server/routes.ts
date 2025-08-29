@@ -382,6 +382,38 @@ const configureBugAttachmentUpload = () => {
   });
 };
 
+// Configure multer for document uploads
+const configureDocumentUpload = () => {
+  const { uploadsDir } = createUploadDirectories();
+  const documentsDir = path.join(uploadsDir, 'documents');
+
+  // Create documents directory if it doesn't exist
+  if (!fs.existsSync(documentsDir)) {
+    fs.mkdirSync(documentsDir);
+  }
+
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, documentsDir);
+    },
+    filename: (req, file, cb) => {
+      // Generate unique filename with document details and timestamp
+      const uniqueId = crypto.randomBytes(8).toString('hex');
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+      cb(null, `${baseName}-${timestamp}${ext}`);
+    }
+  });
+
+  return multer({
+    storage,
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB max file size
+    }
+  });
+};
+
 // Backward compatibility function to handle old bug-attachments directory
 const migrateOldDirectories = () => {
   const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -4611,38 +4643,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Server error" });
     }
   });
-
-  // Configure multer for document uploads
-  const configureDocumentUpload = () => {
-    const { uploadsDir } = createUploadDirectories();
-    const documentsDir = path.join(uploadsDir, 'documents');
-
-    // Create documents directory if it doesn't exist
-    if (!fs.existsSync(documentsDir)) {
-      fs.mkdirSync(documentsDir);
-    }
-
-    const storage = multer.diskStorage({
-      destination: (req, file, cb) => {
-        cb(null, documentsDir);
-      },
-      filename: (req, file, cb) => {
-        // Generate unique filename with document details and timestamp
-        const uniqueId = crypto.randomBytes(8).toString('hex');
-        const timestamp = Date.now();
-        const ext = path.extname(file.originalname);
-        const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
-        cb(null, `${baseName}-${timestamp}${ext}`);
-      }
-    });
-
-    return multer({
-      storage,
-      limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB max file size
-      }
-    });
-  };
 
   // documentUpload is already configured above
 
