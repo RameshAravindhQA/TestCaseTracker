@@ -701,15 +701,26 @@ class MemStorage implements IStorage {
 
       // Extract module prefix from module ID (e.g., "BEG-REG-MOD-01" -> "REG", "BEG-LOG-MOD-02" -> "LOG")
       let modulePrefix = 'MOD';
+      
+      console.log(`Storage: Module ID: ${module.moduleId}, attempting to extract prefix...`);
+      
       if (module.moduleId) {
         const moduleIdParts = module.moduleId.split('-');
+        console.log(`Storage: Module ID parts:`, moduleIdParts);
+        
         if (moduleIdParts.length >= 4 && moduleIdParts[2] === 'MOD') {
           modulePrefix = moduleIdParts[1]; // Get the second part (REG, LOG, etc.)
+          console.log(`Storage: Extracted module prefix from ID: ${modulePrefix}`);
+        } else {
+          console.log(`Storage: Module ID format doesn't match expected pattern, parts length: ${moduleIdParts.length}`);
         }
-      } 
+      } else {
+        console.log(`Storage: Module has no moduleId set`);
+      }
 
       // If module doesn't have proper ID format, generate prefix from module name
       if (modulePrefix === 'MOD' && module.name) {
+        console.log(`Storage: Generating module prefix from module name: ${module.name}`);
         const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '');
         if (cleanModuleName.toLowerCase().includes('register') || cleanModuleName.toLowerCase().includes('registration')) {
           modulePrefix = 'REG';
@@ -725,7 +736,10 @@ class MemStorage implements IStorage {
             modulePrefix = modulePrefix.padEnd(3, 'X');
           }
         }
+        console.log(`Storage: Generated module prefix from name: ${modulePrefix}`);
       }
+      
+      console.log(`Storage: Final module prefix to use: ${modulePrefix}`);
 
       // Find the highest existing test case number for this specific module
       // Each module starts numbering from 001 independently
