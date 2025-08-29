@@ -25,7 +25,7 @@ import { Project, Module, TestCase, Bug } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Loader2, TestTube } from "lucide-react";
+import { Search, Plus, Loader2, TestTube, GitBranch } from "lucide-react";
 import { 
   Dialog,
   DialogContent,
@@ -218,6 +218,61 @@ export default function TestCasesPage() {
                     moduleName={selectedModuleId && selectedModuleId !== "all" ? 
                       modules?.find(m => m.id === Number(selectedModuleId))?.name : undefined}
                   />
+
+                  <Button 
+                    onClick={async () => {
+                      if (!selectedProjectId) {
+                        toast({
+                          title: "No project selected",
+                          description: "Please select a project before generating flow diagram",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
+                      if (filteredTestCases.length === 0) {
+                        toast({
+                          title: "No test cases found",
+                          description: "Please create test cases before generating flow diagram",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
+                      try {
+                        const response = await apiRequest("POST", `/api/projects/${selectedProjectId}/generate-flow-diagram`, {
+                          moduleId: selectedModuleId && selectedModuleId !== "all" ? Number(selectedModuleId) : undefined,
+                          viewType: selectedModuleId && selectedModuleId !== "all" ? 'module' : 'project'
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success && data.diagramId) {
+                          toast({
+                            title: "Flow diagram generated",
+                            description: "Redirecting to flow diagram viewer...",
+                          });
+                          
+                          // Navigate to the flow diagram page with the generated diagram ID
+                          window.open(`/functional-flow?diagramId=${data.diagramId}`, '_blank');
+                        } else {
+                          throw new Error(data.message || "Failed to generate flow diagram");
+                        }
+                      } catch (error) {
+                        console.error("Error generating flow diagram:", error);
+                        toast({
+                          title: "Generation failed",
+                          description: error instanceof Error ? error.message : "Failed to generate flow diagram. Please try again.",
+                          variant: "destructive",
+                        });
+                      }
+                    }} 
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <GitBranch className="h-4 w-4" />
+                    Flow Diagram
+                  </Button>
 
                   <Button 
                     onClick={() => {
