@@ -1417,67 +1417,51 @@ class MemStorage implements IStorage {
   }
 
   // Flow Diagrams methods (placeholder)
-  getFlowDiagramsByProject(projectId: string): any[] {
-    return this.data.flowDiagrams?.filter(diagram => diagram.projectId.toString() === projectId) || [];
+  async getFlowDiagramsByProject(projectId: string): Promise<any[]> {
+    return this.data.flowDiagrams.filter(diagram => diagram.projectId === parseInt(projectId));
   }
 
-  getFlowDiagram(id: string): any | null {
-    return this.data.flowDiagrams?.find(diagram => diagram.id.toString() === id) || null;
+  async getFlowDiagram(id: string): Promise<any | null> {
+    return this.data.flowDiagrams.find(diagram => diagram.id === parseInt(id));
   }
 
-  createFlowDiagram(diagramData: any): any {
-    const id = this.getNextId();
+  async createFlowDiagram(diagramData: any): Promise<any> {
     const diagram = {
-      id,
+      id: Date.now(),
       ...diagramData,
-      nodes: diagramData.nodes || [],
-      edges: diagramData.edges || [],
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
-
-    if (!this.data.flowDiagrams) {
-      this.data.flowDiagrams = [];
-    }
-
     this.data.flowDiagrams.push(diagram);
     this.saveData();
     return diagram;
   }
 
-  updateFlowDiagram(id: string, updates: any): any | null {
-    if (!this.data.flowDiagrams) return null;
-
-    const index = this.data.flowDiagrams.findIndex(diagram => diagram.id.toString() === id);
+  async updateFlowDiagram(id: string, updates: any): Promise<any> {
+    const index = this.data.flowDiagrams.findIndex(diagram => diagram.id === parseInt(id));
     if (index === -1) return null;
 
     this.data.flowDiagrams[index] = {
       ...this.data.flowDiagrams[index],
       ...updates,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
-
     this.saveData();
     return this.data.flowDiagrams[index];
   }
 
-  deleteFlowDiagram(id: string): boolean {
-    if (!this.data.flowDiagrams) return false;
+  async deleteFlowDiagram(id: string): Promise<boolean> {
+    const index = this.data.flowDiagrams.findIndex(diagram => diagram.id === parseInt(id));
+    if (index === -1) return false;
 
-    const initialLength = this.data.flowDiagrams.length;
-    this.data.flowDiagrams = this.data.flowDiagrams.filter(diagram => diagram.id.toString() !== id);
-
-    if (this.data.flowDiagrams.length < initialLength) {
-      this.saveData();
-      return true;
-    }
-    return false;
+    this.data.flowDiagrams.splice(index, 1);
+    this.saveData();
+    return true;
   }
 
   // Method to get test cases by module ID
   async getTestCasesByModule(moduleId: string): Promise<TestCase[]> {
-    const numericModuleId = parseInt(moduleId);
-    return this.testCases.filter(tc => tc.moduleId === numericModuleId && !tc.isDeleted);
+    return this.testCases.filter(tc => tc.moduleId === parseInt(moduleId));
   }
 
   // Dashboard Stats
@@ -2025,8 +2009,8 @@ class MemStorage implements IStorage {
     } else {
       const id = this.getNextId().toString();
       const newCell: MatrixCell = {
-        ...cell,
         id,
+        ...cell,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -2338,11 +2322,11 @@ class MemStorage implements IStorage {
 
   // Todo Management Implementation
   async getTodos(userId: number): Promise<any[]> {
-    return Array.from(this.todosMap.values());
+    return this.todosMap.values();
   }
 
   async getTodosByUserId(userId: number): Promise<any[]> {
-    return Array.from(this.todosMap.values()).filter(todo => todo.userId === userId);
+    return this.todosMap.values();
   }
 
   async getTodo(id: number): Promise<any | undefined> {
