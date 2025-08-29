@@ -255,6 +255,14 @@ const defaultPermissions: RolePermissions = {
     { module: "Timesheets", feature: "Time Tracking", view: true, create: true, update: true, delete: false },
     { module: "Notebooks", feature: "Note Management", view: true, create: true, update: true, delete: true },
   ],
+  Employee: {
+    projects: { view: true, create: false, update: false, delete: false },
+    testCases: { view: true, create: false, update: false, delete: false },
+    bugs: { view: true, create: true, update: false, delete: false },
+    reports: { view: true, create: false, update: false, delete: false },
+    users: { view: false, create: false, update: false, delete: false },
+    settings: { view: true, create: false, update: false, delete: false }
+  }
 };
 
 // Animation variants

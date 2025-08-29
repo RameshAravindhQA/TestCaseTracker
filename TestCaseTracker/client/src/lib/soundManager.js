@@ -7,7 +7,6 @@ export class SoundManager {
       click: '/sounds/Mouse Click Sound.mp3',
       crud: '/sounds/CRUD Operation Sounds.mp3',
       success: '/sounds/happy-pop-2-185287.mp3',
-      error: '/sounds/error-011-352286.mp3',
       message: '/sounds/message.mp3'
     };
     this.fallbackSounds = {
@@ -408,15 +407,15 @@ export class SoundManager {
     }
 
     const audio = this.audioCache.get(soundName);
-    if (!sound || !sound.audio) {
+    if (!sound || !audio) {
       console.warn(`🔊 Test sound not found: ${soundName}`);
       return false;
     }
 
     try {
-      sound.audio.currentTime = 0;
-      sound.audio.volume = this.volume;
-      const playPromise = sound.audio.play();
+      audio.currentTime = 0;
+      audio.volume = this.volume;
+      const playPromise = audio.play();
 
       if (playPromise !== undefined) {
         playPromise
@@ -466,7 +465,37 @@ export class SoundManager {
 
   // Main playSound method used by external components
   playSound(type, options = {}) {
-    return this.playSoundByKey(type);
+    // Skip error sounds completely
+    if (type === 'error') {
+      return;
+    }
+
+    if (!this.isEnabled || !this.audioCache.has(type)) {
+      return;
+    }
+
+    try {
+      const audio = this.audioCache.get(type);
+      if (!audio) return;
+
+      // Clone the audio to allow multiple simultaneous plays
+      const audioClone = audio.cloneNode();
+      audioClone.volume = this.volume * (options.volume || 1);
+
+      // Add error handling for playback
+      audioClone.addEventListener('error', (e) => {
+        // Silent error handling - don't log to console
+      });
+
+      const playPromise = audioClone.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          // Silent error handling - don't log to console
+        });
+      }
+    } catch (error) {
+      // Silent error handling - don't log to console
+    }
   }
 }
 

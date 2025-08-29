@@ -17,7 +17,7 @@ export default function RegisterPage() {
           variants={loginHeaderVariants}
           className="text-center"
         >
-          <motion.div 
+          <motion.div
             className="flex justify-center mb-6"
             variants={logoVariants}
             whileHover="hover"
@@ -25,11 +25,11 @@ export default function RegisterPage() {
           >
             <NavadhitiLogo size="xl" />
           </motion.div>
-          <motion.h2 
+          <motion.h2
             className="text-3xl font-bold text-gray-900 dark:text-white"
             initial={{ opacity: 0, y: 20 }}
-            animate={{ 
-              opacity: 1, 
+            animate={{
+              opacity: 1,
               y: 0,
               transition: { delay: 0.6, duration: 0.5 }
             }}
