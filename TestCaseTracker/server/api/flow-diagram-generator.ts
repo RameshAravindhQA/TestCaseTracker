@@ -96,15 +96,14 @@ export async function generateFlowDiagram(req: Request, res: Response) {
       },
     });
 
-    // Create module branch nodes in a radial pattern
+    // Create module branch nodes in a tree-like vertical pattern
     const modules = Object.keys(featureGroups);
-    const angleStep = (2 * Math.PI) / modules.length;
-    const branchRadius = 450; // Increased from 350 to 450 for more spacing
+    const moduleSpacing = 200; // Vertical spacing between modules
+    const startY = centerY - ((modules.length - 1) * moduleSpacing) / 2; // Center the modules vertically
 
     modules.forEach((module, moduleIndex) => {
-      const angle = moduleIndex * angleStep;
-      const moduleX = centerX + Math.cos(angle) * branchRadius;
-      const moduleY = centerY + Math.sin(angle) * branchRadius;
+      const moduleX = centerX + 300; // Fixed horizontal distance from center
+      const moduleY = startY + moduleIndex * moduleSpacing;
       const moduleNodeId = `module-${moduleIndex}`;
 
       // Module node (green nodes representing test modules/categories)
@@ -112,7 +111,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
         id: moduleNodeId,
         type: 'testCaseNode',
         data: {
-          label: module,
+          label: module === 'User Registration' ? 'User Registration Module' : module,
           description: `${featureGroups[module].length} test cases`,
           isFeature: true,
           testCases: featureGroups[module]
@@ -126,30 +125,29 @@ export async function generateFlowDiagram(req: Request, res: Response) {
           padding: '15px',
           fontSize: '14px',
           fontWeight: '600',
-          minWidth: '140px',
+          minWidth: '180px',
           textAlign: 'center',
         },
       });
 
-      // Edge from center to module
+      // Edge from center to module (horizontal line)
       edges.push({
         id: `e-center-${moduleNodeId}`,
         source: 'center-1',
         target: moduleNodeId,
-        type: 'smoothstep',
+        type: 'straight',
         style: { stroke: '#10B981', strokeWidth: 3 },
         markerEnd: { type: 'ArrowClosed', color: '#10B981' },
       });
 
-      // Create test case nodes for each module with much better spacing
+      // Create test case nodes in a vertical tree structure for each module
       const testCases = featureGroups[module];
-      const testCaseRadius = 280; // Increased from 180 to 280 for more spacing
-      const testCaseAngleStep = Math.PI / (testCases.length + 1);
+      const testCaseSpacing = 80; // Vertical spacing between test cases
+      const testCaseStartY = moduleY - ((testCases.length - 1) * testCaseSpacing) / 2;
 
       testCases.forEach((testCase, testIndex) => {
-        const testAngle = angle + (testIndex - (testCases.length - 1) / 2) * testCaseAngleStep * 0.8; // Increased from 0.5 to 0.8
-        const testX = moduleX + Math.cos(testAngle) * testCaseRadius;
-        const testY = moduleY + Math.sin(testAngle) * testCaseRadius;
+        const testX = moduleX + 250; // Fixed horizontal distance from module
+        const testY = testCaseStartY + testIndex * testCaseSpacing;
         const testNodeId = `testcase-${testCase.id}`;
 
         // Determine node color based on status
@@ -194,12 +192,12 @@ export async function generateFlowDiagram(req: Request, res: Response) {
           },
         });
 
-        // Edge from module to test case
+        // Edge from module to test case (straight line)
         edges.push({
           id: `e-${moduleNodeId}-${testNodeId}`,
           source: moduleNodeId,
           target: testNodeId,
-          type: 'smoothstep',
+          type: 'straight',
           style: { stroke: backgroundColor, strokeWidth: 2 },
           markerEnd: { type: 'ArrowClosed', color: backgroundColor },
         });
