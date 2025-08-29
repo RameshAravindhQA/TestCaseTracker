@@ -14,6 +14,7 @@ import ReactFlow, {
   Panel,
   MarkerType,
   NodeTypes,
+  ReactFlowInstance,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { TestCaseNode } from '@/components/functional-flow/nodes/test-case-node';
@@ -93,6 +94,10 @@ export default function FunctionalFlowPage() {
   const urlProjectId = searchParams.get('projectId');
   const urlModuleId = searchParams.get('moduleId');
 
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Fetch projects
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
@@ -148,32 +153,6 @@ export default function FunctionalFlowPage() {
     enabled: !!selectedProject
   });
 
-  // Save diagram mutation
-  const saveDiagramMutation = useMutation({
-    mutationFn: async (data: { name: string; description: string; projectId: string; nodes: Node[]; edges: Edge[] }) => {
-      const response = await apiRequest('POST', '/api/flow-diagrams', data);
-      if (!response.ok) throw new Error('Failed to save diagram');
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Flow diagram saved successfully',
-      });
-      refetch();
-      setIsSaveDialogOpen(false);
-      setDiagramName('');
-      setDiagramDescription('');
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: `Failed to save diagram: ${error}`,
-        variant: 'destructive',
-      });
-    }
-  });
-
   // Load diagram mutation
   const loadDiagramMutation = useMutation({
     mutationFn: async (diagramId: string) => {
@@ -185,7 +164,7 @@ export default function FunctionalFlowPage() {
       console.log('Loading diagram:', diagram);
       const diagramData = diagram.data || diagram;
       console.log('Diagram data structure:', diagramData);
-      
+
       if (diagramData.nodes && diagramData.edges) {
         console.log(`Loading ${diagramData.nodes.length} nodes and ${diagramData.edges.length} edges`);
         setNodes(diagramData.nodes);
@@ -196,9 +175,10 @@ export default function FunctionalFlowPage() {
         setNodes(diagram.nodes || initialNodes);
         setEdges(diagram.edges || initialEdges);
       }
-      
+
       setDiagramName(diagram.name || '');
       setDiagramDescription(diagram.description || '');
+      setHasUnsavedChanges(false);
       toast({
         title: 'Success',
         description: 'Flow diagram loaded successfully',
@@ -214,9 +194,74 @@ export default function FunctionalFlowPage() {
     }
   });
 
+  // Save diagram mutation
+  const saveDiagramMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedDiagram) throw new Error('No diagram selected');
+
+      const diagramData = {
+        name: diagramName,
+        description: diagramDescription,
+        data: {
+          nodes,
+          edges,
+          viewport: reactFlowInstance?.getViewport() || { x: 0, y: 0, zoom: 1 }
+        }
+      };
+
+      const response = await apiRequest('PUT', `/api/flow-diagrams/${selectedDiagram}`, diagramData);
+      if (!response.ok) throw new Error('Failed to save diagram');
+      return response.json();
+    },
+    onSuccess: () => {
+      setHasUnsavedChanges(false);
+      toast({
+        title: 'Success',
+        description: 'Flow diagram saved successfully',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to save diagram: ${error}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Handle changes to track unsaved state
+  const handleNodesChange = (changes: any) => {
+    onNodesChange(changes);
+    if (isEditMode) setHasUnsavedChanges(true);
+  };
+
+  const handleEdgesChange = (changes: any) => {
+    onEdgesChange(changes);
+    if (isEditMode) setHasUnsavedChanges(true);
+  };
+
+  const handleMaximize = () => {
+    setIsMaximized(!isMaximized);
+  };
+
+  const handleEditMode = () => {
+    setIsEditMode(!isEditMode);
+  };
+
+  const handleSave = () => {
+    saveDiagramMutation.mutate();
+  };
+
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    (params: Connection) => {
+      if (isEditMode) {
+        setEdges((eds) => addEdge(params, eds));
+        if (!hasUnsavedChanges) setHasUnsavedChanges(true);
+      } else {
+        toast({ title: 'Info', description: 'Edit mode must be enabled to connect nodes.' });
+      }
+    },
+    [setEdges, isEditMode, hasUnsavedChanges]
   );
 
   const addNode = () => {
@@ -228,7 +273,8 @@ export default function FunctionalFlowPage() {
       data: { 
         label: newNodeLabel,
         nodeType: newNodeType,
-        description: 'Manual node'
+        description: 'Manual node',
+        testCaseId: `BEG-${newNodeType.toUpperCase()}-TC-${String(Date.now()).slice(-3)}` // Placeholder, actual numbering handled by backend or generation
       },
       position: { 
         x: Math.random() * 400 + 100, 
@@ -246,6 +292,7 @@ export default function FunctionalFlowPage() {
     setNodes((nds) => nds.concat(newNode));
     setNewNodeLabel('');
     setIsCreateDialogOpen(false);
+    if (isEditMode) setHasUnsavedChanges(true);
   };
 
   const exportToPDF = async () => {
@@ -316,13 +363,7 @@ export default function FunctionalFlowPage() {
       return;
     }
 
-    saveDiagramMutation.mutate({
-      name: diagramName,
-      description: diagramDescription,
-      projectId: selectedProject,
-      nodes,
-      edges,
-    });
+    saveDiagramMutation.mutate();
   };
 
   const handleLoadDiagram = () => {
@@ -334,7 +375,9 @@ export default function FunctionalFlowPage() {
   // Generate flow using Mermaid
   const generateFlowMutation = useMutation({
     mutationFn: async (projectId: string) => {
-      const response = await apiRequest('POST', `/api/flow-diagrams/generate/${projectId}`);
+      // Pass moduleId from URL if available
+      const moduleId = urlModuleId ? `?moduleId=${urlModuleId}` : '';
+      const response = await apiRequest('POST', `/api/flow-diagrams/generate/${projectId}${moduleId}`, undefined);
       if (!response.ok) throw new Error('Failed to generate flow diagram');
       return response.json();
     },
@@ -344,16 +387,16 @@ export default function FunctionalFlowPage() {
         // Convert the generated diagram data to ReactFlow format
         const diagramData = result.diagram.data || result.diagram;
         console.log('Diagram data:', diagramData);
-        
+
         if (diagramData.nodes && diagramData.edges) {
           setNodes(diagramData.nodes);
           setEdges(diagramData.edges);
           setDiagramName(result.diagram.name || 'Generated Flow');
           setDiagramDescription(result.diagram.description || 'Auto-generated flow diagram');
-          
+
           // Refresh the diagrams list to show the newly created diagram
           refetch();
-          
+
           toast({
             title: 'Success',
             description: `Generated flow with ${result.testCasesCount} test cases`,
@@ -559,21 +602,59 @@ export default function FunctionalFlowPage() {
           {/* Flow Diagram Canvas */}
           <Card className="min-h-[600px] flex-1">
             <CardContent className="p-4 h-full">
-              <div ref={reactFlowRef} className="h-[550px] w-full border rounded-lg">
+              <div className={`bg-white rounded-lg shadow-sm border ${isMaximized ? 'fixed inset-0 z-50' : ''}`} style={{ height: isMaximized ? '100vh' : '600px' }}>
+                <div className="flex items-center justify-between p-3 border-b bg-gray-50 rounded-t-lg">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-gray-900">Flow Diagram</h3>
+                    {hasUnsavedChanges && <span className="text-xs text-orange-600">(Unsaved changes)</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEditMode}
+                      className={isEditMode ? 'bg-blue-50 border-blue-300' : ''}
+                      title={isEditMode ? 'Exit edit mode' : 'Enter edit mode'}
+                    >
+                      {isEditMode ? '✓ Editing' : '✏️ Edit'}
+                    </Button>
+                    {isEditMode && hasUnsavedChanges && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleSave}
+                        disabled={saveDiagramMutation.isPending}
+                        title="Save changes"
+                      >
+                        {saveDiagramMutation.isPending ? '💾 Saving...' : '💾 Save'}
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleMaximize}
+                      title={isMaximized ? 'Exit fullscreen' : 'Enter fullscreen'}
+                    >
+                      {isMaximized ? '🗗' : '🗖'}
+                    </Button>
+                  </div>
+                </div>
                 <ReactFlow
                   nodes={nodes}
                   edges={edges}
-                  onNodesChange={onNodesChange}
-                  onEdgesChange={onEdgesChange}
-                  onConnect={onConnect}
+                  onNodesChange={handleNodesChange}
+                  onEdgesChange={handleEdgesChange}
+                  onInit={setReactFlowInstance}
                   nodeTypes={nodeTypes}
+                  nodesDraggable={isEditMode}
+                  nodesConnectable={isEditMode}
+                  elementsSelectable={isEditMode}
                   fitView
-                  attributionPosition="bottom-left"
-                  defaultViewport={{ x: 0, y: 0, zoom: 0.7 }}
+                  className="bg-gray-50"
                 >
                   <Controls />
                   <MiniMap />
-                  <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+                  <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
                   <Panel position="top-left">
                     <div className="bg-white p-2 rounded shadow-lg border">
                       <h3 className="font-semibold text-sm">Flow Diagram</h3>

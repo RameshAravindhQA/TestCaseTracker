@@ -195,9 +195,16 @@ export default function TestCasesPage() {
     setIsGeneratingFlow(true);
 
     try {
-      const response = await apiRequest("POST", `/api/flow-diagrams/generate/${selectedProjectId}`, {
-        moduleId: selectedModuleId && selectedModuleId !== "all" ? selectedModuleId : undefined,
-        viewType: selectedModuleId && selectedModuleId !== "all" ? 'module' : 'project'
+      const params = new URLSearchParams();
+      if (selectedModuleId && selectedModuleId !== "all") {
+        params.set('moduleId', selectedModuleId.toString());
+      }
+
+      const response = await fetch(`/api/flow-diagrams/generate/${selectedProjectId}?${params.toString()}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       const data = await response.json();
@@ -215,7 +222,7 @@ export default function TestCasesPage() {
         if (selectedModuleId && selectedModuleId !== "all") {
           params.set('moduleId', selectedModuleId.toString());
         }
-        
+
         const url = `/functional-flow?${params.toString()}`;
         window.open(url, '_blank');
       } else {

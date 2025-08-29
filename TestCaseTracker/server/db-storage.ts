@@ -357,9 +357,15 @@ export class DatabaseStorage implements IStorage {
 
       const projectPrefix = project.prefix || 'DEF';
 
-      // Get module name prefix (first 3 letters of module name)
+      // Extract module prefix from module ID (e.g., BEG-REG-MOD-01 -> REG)
       let modulePrefix = 'MOD';
-      if (module.name) {
+      if (module.moduleId) {
+        const moduleIdParts = module.moduleId.split('-');
+        if (moduleIdParts.length >= 2) {
+          modulePrefix = moduleIdParts[1]; // Get the second part (REG, LOG, etc.)
+        }
+      } else if (module.name) {
+        // Fallback to module name if moduleId not available
         const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '');
         modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
         if (modulePrefix.length < 3) {
@@ -367,8 +373,8 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // Find the highest existing test case number for this project and module
-      // This ensures we never reuse deleted test case IDs
+      // Find the highest existing test case number for this specific module only
+      // This ensures each module starts numbering from 001
       const existingTestCases = await db
         .select({ testCaseId: testCases.testCaseId })
         .from(testCases)
@@ -384,11 +390,11 @@ export class DatabaseStorage implements IStorage {
         })
         .filter(num => !isNaN(num));
 
-      // Always increment from the highest number ever used, never reuse deleted IDs
+      // Start numbering from 1 for each module
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
       testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
       
-      console.log(`DB: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId}. Existing numbers: [${existingNumbers.join(', ')}], next: ${nextNumber}`);
+      console.log(`DB: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId} (${module.name}). Existing numbers: [${existingNumbers.join(', ')}], next: ${nextNumber}`);
     }
 
     const [newTestCase] = await db.insert(testCases).values({
@@ -418,6 +424,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(testCases.id, id));
     return true;
+  }
+
+  async getTestCasesByProject(projectId: number): Promise<TestCase[]> {
+    return await db.select().from(testCases)
+      .where(and(eq(testCases.projectId, projectId), eq(testCases.isDeleted, false)));
   }
 
   // Deleted test case operations

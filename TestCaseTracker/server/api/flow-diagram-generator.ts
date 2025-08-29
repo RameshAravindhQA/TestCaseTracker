@@ -5,6 +5,7 @@ import { storage } from '../storage';
 export async function generateFlowDiagram(req: Request, res: Response) {
   try {
     const { projectId } = req.params;
+    const { moduleId } = req.query;
     
     if (!projectId) {
       return res.status(400).json({
@@ -13,7 +14,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
       });
     }
 
-    console.log(`🔄 Generating Mermaid flow diagram for project ${projectId}`);
+    console.log(`🔄 Generating Mermaid flow diagram for project ${projectId}${moduleId ? ` and module ${moduleId}` : ''}`);
 
     // Get project details
     const project = await storage.getProject(parseInt(projectId));
@@ -25,7 +26,12 @@ export async function generateFlowDiagram(req: Request, res: Response) {
     }
 
     // Get test cases for the project with all details
-    const testCases = await storage.getTestCasesByProject(parseInt(projectId));
+    let testCases;
+    if (moduleId && moduleId !== 'all') {
+      testCases = await storage.getTestCases(parseInt(projectId), parseInt(moduleId as string));
+    } else {
+      testCases = await storage.getTestCasesByProject(parseInt(projectId));
+    }
     
     if (testCases.length === 0) {
       return res.status(400).json({
@@ -98,11 +104,11 @@ export async function generateFlowDiagram(req: Request, res: Response) {
 
     // Create module branch nodes in a tree-like vertical pattern
     const modules = Object.keys(featureGroups);
-    const moduleSpacing = 200; // Vertical spacing between modules
+    const moduleSpacing = 250; // Increased vertical spacing between modules
     const startY = centerY - ((modules.length - 1) * moduleSpacing) / 2; // Center the modules vertically
 
     modules.forEach((module, moduleIndex) => {
-      const moduleX = centerX + 300; // Fixed horizontal distance from center
+      const moduleX = centerX + 350; // Increased horizontal distance from center
       const moduleY = startY + moduleIndex * moduleSpacing;
       const moduleNodeId = `module-${moduleIndex}`;
 
@@ -142,11 +148,11 @@ export async function generateFlowDiagram(req: Request, res: Response) {
 
       // Create test case nodes in a vertical tree structure for each module
       const testCases = featureGroups[module];
-      const testCaseSpacing = 80; // Vertical spacing between test cases
+      const testCaseSpacing = 100; // Increased vertical spacing between test cases
       const testCaseStartY = moduleY - ((testCases.length - 1) * testCaseSpacing) / 2;
 
       testCases.forEach((testCase, testIndex) => {
-        const testX = moduleX + 250; // Fixed horizontal distance from module
+        const testX = moduleX + 300; // Increased horizontal distance from module
         const testY = testCaseStartY + testIndex * testCaseSpacing;
         const testNodeId = `testcase-${testCase.id}`;
 
@@ -206,8 +212,19 @@ export async function generateFlowDiagram(req: Request, res: Response) {
 
     // Create flow diagram name
     const timestamp = new Date().toLocaleString();
-    const diagramName = `${project.name} - Test Flow (${timestamp})`;
-    const diagramDescription = `Auto-generated flow diagram for ${project.name} containing ${testCases.length} test cases`;
+    let diagramName = `${project.name} - Test Flow`;
+    let diagramDescription = `Auto-generated flow diagram for ${project.name}`;
+    
+    if (moduleId && moduleId !== 'all') {
+      const module = await storage.getModule(parseInt(moduleId as string));
+      if (module) {
+        diagramName += ` - ${module.name} Module`;
+        diagramDescription += ` - ${module.name} module`;
+      }
+    }
+    
+    diagramName += ` (${timestamp})`;
+    diagramDescription += ` containing ${testCases.length} test cases`;
 
     console.log(`📊 Generated ${nodes.length} nodes and ${edges.length} edges`);
     console.log('First few nodes:', nodes.slice(0, 3));
