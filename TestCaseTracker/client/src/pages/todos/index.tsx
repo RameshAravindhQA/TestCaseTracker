@@ -194,8 +194,8 @@ function TodosPage() {
         {/* List Sidebar */}
         <aside
           className={cn(
-            "relative transition-all duration-300 ease-in-out",
-            isMinimized ? "w-0 md:w-16" : "w-full md:w-64",
+            "relative transition-all duration-300 ease-in-out border-r",
+            isMinimized ? "w-0 md:w-16" : "w-full md:w-80",
             !isVisible && "hidden"
           )}
         >
@@ -204,7 +204,7 @@ function TodosPage() {
               <CardHeader>
                 <CardTitle className="text-lg">Todo Lists</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
                 <Button
                   variant={!selectedList ? "default" : "ghost"}
                   className="w-full justify-start"
@@ -239,8 +239,8 @@ function TodosPage() {
         {/* Main Content Area */}
         <main
           className={cn(
-            "flex-1 transition-all duration-300 ease-in-out",
-            isMinimized ? "ml-0 md:ml-16" : "ml-0 md:ml-64",
+            "flex-1 transition-all duration-300 ease-in-out overflow-y-auto",
+            isMinimized ? "ml-0 md:ml-16" : "ml-0 md:ml-80",
             !isVisible && "ml-0"
           )}
         >
@@ -409,7 +409,7 @@ function TodosPage() {
                     <CardHeader>
                       <CardTitle className="text-lg">Todo Lists</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2 max-h-[500px] overflow-y-auto">
+                    <CardContent className="space-y-2 max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
                       <Button
                         variant={!selectedList ? "default" : "ghost"}
                         className="w-full justify-start"
@@ -452,7 +452,7 @@ function TodosPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="max-h-[600px] overflow-y-auto space-y-3">
+                      <div className="max-h-[70vh] overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400 pr-2">
                         {filteredTodos.length === 0 ? (
                           <p className="text-center text-muted-foreground py-8">
                             No todos yet. Add a new todo above!

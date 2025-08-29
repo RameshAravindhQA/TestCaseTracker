@@ -50,9 +50,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import {
-  Edit, Plus, ArrowLeft, Trash, Layers, CheckSquare, Bug as BugIcon, FileText, Loader2, Github, Settings, RefreshCw, Sparkles, Trash2
+  Edit, Plus, ArrowLeft, Trash, Layers, CheckSquare, Bug as BugIcon, FileText, Loader2, Github, Settings, RefreshCw, Sparkles, Trash2, Users
 } from "lucide-react";
 import { ProjectExport } from "@/components/project/project-export";
+import ProjectCollaborators from "@/components/projects/project-collaborators";
 import { GitHubIssueButton } from "@/components/github/github-issue-button";
 
 export default function ProjectDetailPage() {
@@ -709,7 +710,7 @@ export default function ProjectDetailPage() {
 
         {/* Project tabs */}
         <Tabs defaultValue="modules" className="space-y-4">
-          <TabsList className="grid grid-cols-5 md:w-[500px]">
+          <TabsList className="grid grid-cols-6 md:w-[600px]">
             <TabsTrigger value="modules" className="flex items-center gap-2">
               <Layers className="h-4 w-4" />
               <span className="hidden sm:inline">Modules</span>
@@ -725,6 +726,10 @@ export default function ProjectDetailPage() {
             <TabsTrigger value="deleted-test-cases" className="flex items-center gap-2">
               <Trash2 className="h-4 w-4" />
               <span className="hidden sm:inline">Deleted</span>
+            </TabsTrigger>
+            <TabsTrigger value="collaborators" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Team</span>
             </TabsTrigger>
             <TabsTrigger value="activity" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
@@ -977,6 +982,16 @@ export default function ProjectDetailPage() {
                 />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Team/Collaborators Tab */}
+          <TabsContent value="collaborators">
+            {project && (
+              <ProjectCollaborators
+                projectId={projectId}
+                projectName={project.name}
+              />
+            )}
           </TabsContent>
 
           {/* Activity Tab */}

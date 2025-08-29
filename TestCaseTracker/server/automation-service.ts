@@ -58,7 +58,7 @@ export class AutomationService {
 
   // Check for available system browsers
   private async detectSystemBrowsers(): Promise<string[]> {
-    const browsers = [];
+    const browsers: string[] = [];
     const browserCommands = [
       { name: 'chromium', command: 'chromium-browser' },
       { name: 'chrome', command: 'google-chrome' },
@@ -610,7 +610,7 @@ runTest();`;
         }
       });
 
-      codegenProcess.on('error', (error) => {
+      codegenProcess.on('error', (error: any) => {
         logger.error(`❌ Codegen process error [${recordingId}]:`, error);
         logger.error(`🔍 Error details: ${error.message}`);
         if (error.code) {

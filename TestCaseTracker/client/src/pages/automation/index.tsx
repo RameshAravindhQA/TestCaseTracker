@@ -72,6 +72,7 @@ export default function AutomationPage() {
   const [executionResults, setExecutionResults] = useState<ExecutionResult[]>([]);
   const [healthStatus, setHealthStatus] = useState<any>(null);
   const [availableBrowsers, setAvailableBrowsers] = useState<string[]>([]);
+  const [recordings, setRecordings] = useState<RecordingSession[]>([]);
   const [launchMode, setLaunchMode] = useState<string>('playwright');
   const [preferredBrowser, setPreferredBrowser] = useState<string>('');
   const { toast } = useToast();
@@ -173,7 +174,7 @@ export default function AutomationPage() {
         console.log('Fetched test cases for automation:', cases.length, cases);
 
         // Add mock script status for demonstration
-        return cases.map((tc: any) => ({
+        return cases.map((tc: TestCase) => ({
           ...tc,
           hasScript: Math.random() > 0.5, // Mock script availability
           scriptFile: Math.random() > 0.5 ? `${tc.id}_script.spec.js` : undefined
@@ -228,7 +229,7 @@ export default function AutomationPage() {
     mutationFn: async ({ testCaseId, url, launchMode, preferredBrowser }: { testCaseId: string; url: string; launchMode: string; preferredBrowser: string }) => {
       console.log('🎬 Starting recording for test case:', testCaseId, 'URL:', url, 'Mode:', launchMode, 'Browser:', preferredBrowser);
 
-      const testCase = testCases.find(tc => tc.id === parseInt(testCaseId));
+      const testCase = testCases.find((tc: TestCase) => tc.id === parseInt(testCaseId));
       if (!testCase) {
         console.error('❌ Test case not found:', testCaseId);
         throw new Error('Test case not found');
@@ -426,7 +427,7 @@ export default function AutomationPage() {
   // Execute test mutation
   const executeTestMutation = useMutation({
     mutationFn: async (testCaseId: string) => {
-      const testCase = testCases.find(tc => tc.id === testCaseId);
+      const testCase = testCases.find((tc: TestCase) => tc.id === testCaseId);
       if (!testCase?.scriptFile) {
         throw new Error('No script file found for this test case');
       }
