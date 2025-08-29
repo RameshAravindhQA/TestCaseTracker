@@ -65,6 +65,8 @@ import { NavaDhitiLogo } from "@/components/ui/navadhiti-logo";
 import { useColorTheme } from "@/components/theme/theme-provider";
 import { useStableAvatar } from "@/hooks/use-stable-avatar";
 import { LottieAvatar } from "@/components/ui/lottie-avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 interface SidebarProps {
   className?: string;
@@ -480,7 +482,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     >
 
       <div className="flex items-center h-16 px-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <Link to="/dashboard" className="flex items-center gap-2 font-semibold">
+        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
             <img src="/images/navadhiti-logo-tree.jpg" alt="NavaDhiti" className="h-12 w-12 rounded" />
             <span className="">NavaDhiti</span>
           </Link>
@@ -543,9 +545,10 @@ const SidebarComponent = ({ className }: SidebarProps) => {
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400" ref={sidebarRef}>
+      {/* Use ScrollArea for the main navigation content */}
+      <ScrollArea className="flex-1 px-2 lg:px-4" ref={sidebarRef}>
         <motion.div
-          className="px-2 py-4 space-y-1"
+          className="py-4 space-y-1"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
@@ -679,7 +682,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
             </motion.div>
           )}
         </AnimatePresence>
-      </nav>
+      </ScrollArea>
 
       <motion.div
         className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-2"
