@@ -353,13 +353,6 @@ export interface IStorage {
   getNotifications(userId: number): Promise<any[]>;
   createNotification(data: any): Promise<any>;
   markNotificationAsRead(id: number): Promise<any>;
-
-  // Role-based permissions
-  getAllModules(): Promise<Array<{ id: number; name: string; moduleKey: string }>>;
-  getRolePermissions(roleId: number): Promise<string[]>;
-  updateRolePermissions(roleId: number, permissions: string[]): Promise<void>;
-  getUserPermissions(userId: number): Promise<string[]>;
-  updateUserPermissions(userId: number, permissions: string[]): Promise<void>;
 }
 
 /**
@@ -444,6 +437,7 @@ class MemStorage implements IStorage {
   private nextTimeSheetId = 1;
   private nextTimeSheetFolderId = 1;
   private nextCustomerId = 1;
+  private nextTimeSheetFolderId = 1;
 
 
   private initializeEmployeeDefaults() {
@@ -1849,18 +1843,8 @@ class MemStorage implements IStorage {
   }
 
   // TimeSheet Folder operations
-  async getTimeSheetFolders(projectId?: number, userId?: number): Promise<TimeSheetFolder[]> {
-    let results = [...this.timeSheetFolders];
-
-    if (projectId && userId) {
-      results = results.filter(folder => folder.projectId === projectId && folder.userId === userId);
-    } else if (projectId) {
-      results = results.filter(folder => folder.projectId === projectId);
-    } else if (userId) {
-      results = results.filter(folder => folder.userId === userId);
-    }
-
-    return results;
+  async getTimeSheetFolders(userId: number): Promise<TimeSheetFolder[]> {
+    return this.timeSheetFolders.filter(folder => folder.userId === userId);
   }
 
   async getTimeSheetFolder(id: number): Promise<TimeSheetFolder | undefined> {
@@ -2528,14 +2512,14 @@ class MemStorage implements IStorage {
   async createNotebook(notebookData: Omit<Notebook, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notebook> {
     const id = this.getNextId();
     const now = new Date();
-
+    
     const notebook: Notebook = {
       id,
       ...notebookData,
       createdAt: now,
       updatedAt: now
     };
-
+    
     this.notebooks.push(notebook);
     return notebook;
   }
@@ -2549,7 +2533,7 @@ class MemStorage implements IStorage {
       ...updates,
       updatedAt: new Date()
     };
-
+    
     this.notebooks[index] = updatedNotebook;
     return updatedNotebook;
   }
@@ -3469,147 +3453,6 @@ class MemStorage implements IStorage {
     };
     this.notifications.set(id, updatedNotification);
     return updatedNotification;
-  }
-
-  // Role-based permissions
-  async getAllModules(): Promise<Array<{ id: number; name: string; moduleKey: string }>> {
-    // In a real implementation, this would fetch modules from a database.
-    // For this in-memory storage, we'll return a hardcoded list.
-    // Ensure moduleKey matches the keys used in permissions.
-    return [
-      { id: 1, name: 'Dashboard', moduleKey: 'dashboard' },
-      { id: 2, name: 'Projects', moduleKey: 'projects' },
-      { id: 3, name: 'Modules', moduleKey: 'modules' },
-      { id: 4, name: 'Test Cases', moduleKey: 'testCases' },
-      { id: 5, name: 'Bugs', moduleKey: 'bugs' },
-      { id: 6, name: 'Activity Log', moduleKey: 'activityLog' },
-      { id: 7, name: 'Time Sheets', moduleKey: 'timeSheets' },
-      { id: 8, name: 'Customers', moduleKey: 'customers' },
-      { id: 9, name: 'Documents', moduleKey: 'documents' },
-      { id: 10, name: 'Kanban', moduleKey: 'kanban' },
-      { id: 11, name: 'Matrix', moduleKey: 'matrix' },
-      { id: 12, name: 'Traceability', moduleKey: 'traceability' },
-      { id: 13, name: 'Users', moduleKey: 'users' },
-      { id: 14, name: 'Roles', moduleKey: 'roles' },
-      { id: 15, name: 'Settings', moduleKey: 'settings' },
-      { id: 16, name: 'Notebooks', moduleKey: 'notebooks' },
-      { id: 17, name: 'Chat', moduleKey: 'chat' },
-      { id: 18, name: 'Employee Management', moduleKey: 'employeeManagement' },
-      { id: 19, name: 'Navadhiti Projects', moduleKey: 'navadhitiProjects' },
-      { id: 20, name: 'Status Reviews', moduleKey: 'statusReviews' },
-      { id: 21, name: 'Todo Management', moduleKey: 'todoManagement' },
-      { id: 22, name: 'Request Forms', moduleKey: 'requestForms' },
-      { id: 23, name: 'Notifications', moduleKey: 'notifications' },
-      { id: 24, name: 'Automation', moduleKey: 'automation' }
-    ];
-  }
-
-  async getRolePermissions(roleId: number): Promise<string[]> {
-    // Placeholder for fetching role permissions
-    // In a real implementation, this would query a 'role_permissions' table.
-    // For now, returning empty array.
-    console.warn("getRolePermissions is not fully implemented in MemStorage.");
-    return [];
-  }
-
-  // The following methods are placeholders for database operations,
-  // as MemStorage does not interact with a real database.
-  // They are included to satisfy the IStorage interface.
-  async updateRolePermissions(roleId: number, permissions: string[]): Promise<void> {
-    try {
-      // First, delete existing permissions for this role
-      await this.db.run(
-        "DELETE FROM role_permissions WHERE role_id = ?",
-        [roleId]
-      );
-
-      // Then insert new permissions
-      for (const permission of permissions) {
-        await this.db.run(
-          "INSERT INTO role_permissions (role_id, permission) VALUES (?, ?)",
-          [roleId, permission]
-        );
-      }
-
-      console.log(`Updated permissions for role ${roleId}:`, permissions);
-    } catch (error) {
-      console.error("Error updating role permissions:", error);
-      throw error;
-    }
-  }
-
-  async getUserPermissions(userId: number): Promise<string[]> {
-    try {
-      const result = await this.db.all(`
-        SELECT DISTINCT permission 
-        FROM user_permissions 
-        WHERE user_id = ?
-        UNION
-        SELECT DISTINCT rp.permission
-        FROM users u
-        JOIN role_permissions rp ON u.role = (SELECT name FROM roles WHERE id = rp.role_id)
-        WHERE u.id = ?
-      `, [userId, userId]);
-
-      return result.map((row: any) => row.permission);
-    } catch (error) {
-      console.error("Error getting user permissions:", error);
-      return [];
-    }
-  }
-
-  async updateUserPermissions(userId: number, permissions: string[]): Promise<void> {
-    try {
-      // First, delete existing user-specific permissions
-      await this.db.run(
-        "DELETE FROM user_permissions WHERE user_id = ?",
-        [userId]
-      );
-
-      // Then insert new permissions
-      for (const permission of permissions) {
-        await this.db.run(
-          "INSERT INTO user_permissions (user_id, permission) VALUES (?, ?)",
-          [userId, permission]
-        );
-      }
-
-      console.log(`Updated permissions for user ${userId}:`, permissions);
-    } catch (error) {
-      console.error("Error updating user permissions:", error);
-      throw error;
-    }
-  }
-
-  // Placeholder for db property, typically initialized in a constructor or service setup
-  private db: any;
-
-  // Placeholder for initializing database schema if needed
-  async initializeDatabaseSchema() {
-    console.warn("initializeDatabaseSchema called in MemStorage, no actual DB operations performed.");
-    // Create role_permissions table
-    await this.db.exec(`
-      CREATE TABLE IF NOT EXISTS role_permissions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        role_id INTEGER NOT NULL,
-        permission TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (role_id) REFERENCES roles (id),
-        UNIQUE(role_id, permission)
-      )
-    `);
-
-    // Create user_permissions table for individual user permissions
-    await this.db.exec(`
-      CREATE TABLE IF NOT EXISTS user_permissions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        permission TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id),
-        UNIQUE(user_id, permission)
-      )
-    `);
   }
 }
 
