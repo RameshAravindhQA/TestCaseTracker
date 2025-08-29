@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, Edit, Play, MoreVertical } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
 
 interface TestCaseNodeData {
   label: string;
@@ -26,6 +28,8 @@ interface TestCaseNodeData {
 export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
   const [isHovered, setIsHovered] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const navigate = useNavigate();
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -55,6 +59,24 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
         return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const handleView = () => {
+    setViewDialogOpen(true);
+  };
+
+  const handleEdit = () => {
+    if (data.testCaseId) {
+      // Navigate to test cases page and open edit form
+      navigate(`/test-cases?edit=${data.testCaseId}`);
+    }
+  };
+
+  const handleExecute = () => {
+    if (data.testCaseId) {
+      // Navigate to test cases page and execute the test
+      navigate(`/test-cases?execute=${data.testCaseId}`);
     }
   };
 
@@ -181,15 +203,30 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
                 </div>
 
                 <div className="flex gap-1 mt-3 pt-2 border-t">
-                  <Button size="sm" className="flex-1 text-xs h-7" variant="outline">
+                  <Button 
+                    size="sm" 
+                    className="flex-1 text-xs h-7" 
+                    variant="outline"
+                    onClick={handleView}
+                  >
                     <Eye className="w-3 h-3 mr-1" />
                     View
                   </Button>
-                  <Button size="sm" className="flex-1 text-xs h-7" variant="outline">
+                  <Button 
+                    size="sm" 
+                    className="flex-1 text-xs h-7" 
+                    variant="outline"
+                    onClick={handleEdit}
+                  >
                     <Edit className="w-3 h-3 mr-1" />
                     Edit
                   </Button>
-                  <Button size="sm" className="flex-1 text-xs h-7" variant="default">
+                  <Button 
+                    size="sm" 
+                    className="flex-1 text-xs h-7" 
+                    variant="default"
+                    onClick={handleExecute}
+                  >
                     <Play className="w-3 h-3 mr-1" />
                     Execute
                   </Button>
@@ -232,6 +269,76 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
 
         <Handle type="source" position={Position.Right} className="w-4 h-4 bg-green-400 border-green-300" />
       </div>
+
+      {/* View Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Test Case Details - {data.label}</DialogTitle>
+            <DialogDescription>
+              View complete test case information
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium">Test Case ID</h3>
+              <p className="text-sm text-gray-700 mt-1">{data.testCaseId || 'N/A'}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium">Feature</h3>
+              <p className="text-sm text-gray-700 mt-1">{data.feature || 'N/A'}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium">Description</h3>
+              <p className="text-sm text-gray-700 mt-1">{data.description || 'No description provided'}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-sm font-medium">Priority</h3>
+                <Badge className={`text-xs px-2 py-0.5 ${getPriorityColor(data.priority || 'Medium')}`}>
+                  {data.priority || 'Medium'}
+                </Badge>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium">Status</h3>
+                <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(data.status || 'Not Executed')} text-white`}>
+                  {data.status || 'Not Executed'}
+                </Badge>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium">Pre-Conditions</h3>
+              <p className="text-sm text-gray-700 mt-1">{data.preConditions || 'None specified'}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium">Test Steps</h3>
+              <div className="text-sm text-gray-700 mt-1">
+                {data.testSteps ? (
+                  <ol className="list-decimal list-inside space-y-1">
+                    {data.testSteps.split('\n').map((step, index) => (
+                      <li key={index}>{step.replace(/^\d+\.\s*/, '')}</li>
+                    ))}
+                  </ol>
+                ) : (
+                  'No steps defined'
+                )}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium">Expected Result</h3>
+              <p className="text-sm text-gray-700 mt-1">{data.expectedResult || 'Not specified'}</p>
+            </div>
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+                Close
+              </Button>
+              <Button onClick={() => { setViewDialogOpen(false); handleEdit(); }}>
+                Edit Test Case
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 

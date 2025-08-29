@@ -699,9 +699,15 @@ class MemStorage implements IStorage {
 
       const projectPrefix = project.prefix || 'DEF';
 
-      // Get module name prefix (first 3 letters of module name)
+      // Extract module prefix from module ID (e.g., "BEG-REG-MOD-01" -> "REG", "BEG-LOG-MOD-02" -> "LOG")
       let modulePrefix = 'MOD';
-      if (module.name) {
+      if (module.moduleId) {
+        const moduleIdParts = module.moduleId.split('-');
+        if (moduleIdParts.length >= 2) {
+          modulePrefix = moduleIdParts[1]; // Get the second part (REG, LOG, etc.)
+        }
+      } else if (module.name) {
+        // Fallback to module name if moduleId is not available
         const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '');
         modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
         if (modulePrefix.length < 3) {
@@ -726,7 +732,7 @@ class MemStorage implements IStorage {
       const nextNumber = existingTestCases.length > 0 ? Math.max(...existingTestCases) + 1 : 1;
       testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
 
-      console.log(`Storage: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId}. Existing numbers: [${existingTestCases.join(', ')}], next: ${nextNumber}`);
+      console.log(`Storage: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId} (modulePrefix: ${modulePrefix}). Existing numbers: [${existingTestCases.join(', ')}], next: ${nextNumber}`);
     }
 
     const testCase: TestCase = {
@@ -2250,6 +2256,60 @@ class MemStorage implements IStorage {
     return cell; // Placeholder for now
   }
 
+  // Method to fix existing test case IDs
+  async fixExistingTestCaseIds(): Promise<void> {
+    console.log('🔧 Starting to fix existing test case IDs...');
+    
+    for (const testCase of this.testCases) {
+      // Skip if already has proper format
+      if (testCase.testCaseId && !testCase.testCaseId.startsWith('BEG-TC-')) {
+        continue;
+      }
+
+      const module = this.modules.find(m => m.id === testCase.moduleId);
+      const project = this.projects.find(p => p.id === testCase.projectId);
+
+      if (!module || !project) {
+        console.log(`⚠️ Skipping test case ${testCase.id}: Module or project not found`);
+        continue;
+      }
+
+      const projectPrefix = project.prefix || 'BEG';
+
+      // Extract module prefix from module ID
+      let modulePrefix = 'MOD';
+      if (module.moduleId) {
+        const moduleIdParts = module.moduleId.split('-');
+        if (moduleIdParts.length >= 2) {
+          modulePrefix = moduleIdParts[1]; // Get the second part (REG, LOG, etc.)
+        }
+      }
+
+      // Find the highest existing test case number for this specific module
+      const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
+      const existingTestCases = this.testCases
+        .filter(tc => tc.moduleId === testCase.moduleId && tc.projectId === testCase.projectId && tc.id !== testCase.id)
+        .map(tc => tc.testCaseId)
+        .filter(id => id && prefixPattern.test(id))
+        .map(id => {
+          const match = id.match(prefixPattern);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(num => !isNaN(num) && num > 0);
+
+      const nextNumber = existingTestCases.length > 0 ? Math.max(...existingTestCases) + 1 : 1;
+      const newTestCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
+
+      // Update the test case
+      testCase.testCaseId = newTestCaseId;
+      testCase.updatedAt = new Date();
+
+      console.log(`✅ Fixed test case ID ${testCase.id}: ${testCase.testCaseId} (module: ${module.name})`);
+    }
+
+    console.log('🔧 Finished fixing existing test case IDs');
+  }
+
   // Helper method to record activities
   private recordActivity(entityType: string, action: string, entityId: number, userId: number) {
     const activity: Activity = {
@@ -2272,6 +2332,11 @@ class MemStorage implements IStorage {
   constructor() {
     this.initializeDefaultData();
     this.initializeEmployeeDefaults();
+    
+    // Fix existing test case IDs after a short delay to ensure all data is loaded
+    setTimeout(() => {
+      this.fixExistingTestCaseIds();
+    }, 1000);
   }
 
   private initializeDefaultData() {

@@ -1,7 +1,6 @@
 import { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { createServer, type Server } from "http";
 import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject } from "./matrix-fix";
 import { automationService } from "./automation-service";
 import { logger } from "./logger";
@@ -998,7 +997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Status Review endpoints
   apiRouter.get("/navadhiti-projects/status-reviews", isAuthenticated, async (req, res) => {
     try {
-      const { date } = req.query;
+      const {date} = req.query;
       const reviews = await storage.getStatusReviews(date as string);
       res.json(reviews);
     } catch (error) {
@@ -1010,7 +1009,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Employee-Project Mapping endpoints
   apiRouter.get("/employee-projects", isAuthenticated, async (req, res) => {
     try {
-      const { employeeId } = req.query;
+      const {employeeId} = req.query;
       const employeeProjects = await storage.getEmployeeProjects(employeeId ? parseInt(employeeId as string) : undefined);
       res.json(employeeProjects);
     } catch (error) {
@@ -4798,6 +4797,23 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
     }
   });
 
+  // Fix test case IDs endpoint
+  apiRouter.post("/test-cases/fix-ids", isAuthenticated, async (req, res) => {
+    try {
+      await storage.fixExistingTestCaseIds();
+      res.json({ 
+        success: true, 
+        message: "Test case IDs have been fixed successfully" 
+      });
+    } catch (error) {
+      console.error("Fix test case IDs error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to fix test case IDs" 
+      });
+    }
+  });
+
   apiRouter.get("/projects/:projectId/test-cases", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
@@ -5848,8 +5864,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
       // Ensure we have a valid numeric ID
       const folderId = Number(req.params.id);
       if (isNaN(folderId)) {
-        console.error("Invalid folder ID received:", req.params.id);
-        return res.status(400).json({ message: "Invalid folder ID format" });
+        console.error("Invalid folder ID format");
       }
 
       // Get all available folder IDs for debugging
