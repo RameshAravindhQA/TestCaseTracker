@@ -98,6 +98,7 @@ export default function FunctionalFlowPage() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
 
   // Fetch projects
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
@@ -612,6 +613,15 @@ export default function FunctionalFlowPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => setIsEditDetailsOpen(true)}
+                      disabled={!selectedDiagram}
+                      title="Edit diagram details"
+                    >
+                      ✏️ Edit Details
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={handleEditMode}
                       className={isEditMode ? 'bg-blue-50 border-blue-300' : ''}
                       title={isEditMode ? 'Exit edit mode' : 'Enter edit mode'}
@@ -672,6 +682,65 @@ export default function FunctionalFlowPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Edit Diagram Details Dialog */}
+          <Dialog open={isEditDetailsOpen} onOpenChange={setIsEditDetailsOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <DialogTitle>Edit Diagram Details</DialogTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditDetailsOpen(false)}
+                    className="h-6 w-6 p-0"
+                  >
+                    ×
+                  </Button>
+                </div>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="editDiagramName">Diagram Name</Label>
+                  <Input
+                    id="editDiagramName"
+                    value={diagramName}
+                    onChange={(e) => setDiagramName(e.target.value)}
+                    placeholder="Enter diagram name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editDiagramDescription">Description</Label>
+                  <Textarea
+                    id="editDiagramDescription"
+                    value={diagramDescription}
+                    onChange={(e) => setDiagramDescription(e.target.value)}
+                    placeholder="Enter diagram description"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditDetailsOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (selectedDiagram) {
+                        saveDiagramMutation.mutate();
+                        setIsEditDetailsOpen(false);
+                      }
+                    }}
+                    disabled={saveDiagramMutation.isPending}
+                  >
+                    {saveDiagramMutation.isPending ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </MainLayout>
