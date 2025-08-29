@@ -733,6 +733,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI endpoints
+  apiRouter.get("/ai/api-key-status", isAuthenticated, async (req, res) => {
+    try {
+      const status = EnhancedAIService.getProviderStatus();
+      const availableProviders = EnhancedAIService.getAvailableProviders();
+      
+      res.json({
+        success: true,
+        providers: status,
+        available: availableProviders,
+        hasConfiguredProviders: availableProviders.some(p => p.available)
+      });
+    } catch (error) {
+      console.error("AI API key status error:", error);
+      res.status(500).json({ success: false, error: "Failed to check API key status" });
+    }
+  });
+
+  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, async (req, res) => {
+    try {
+      console.log("🚀 AI Test Case Generation Request:", req.body);
+
+      const {
+        requirement,
+        projectId,
+        moduleId,
+        testType = 'functional',
+        priority = 'Medium',
+        aiProvider = 'gemini',
+        testCaseCount = 20
+      } = req.body;
+
+      if (!requirement || requirement.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          error: 'Requirement is required for test case generation'
+        });
+      }
+
+      // Get project and module context if provided
+      let projectContext = '';
+      let moduleContext = '';
+
+      if (projectId) {
+        try {
+          const project = await storage.getProject(parseInt(projectId));
+          if (project) {
+            projectContext = project.name;
+          }
+        } catch (error) {
+          console.warn("Could not fetch project context:", error);
+        }
+      }
+
+      if (moduleId) {
+        try {
+          const module = await storage.getModule(parseInt(moduleId));
+          if (module) {
+            moduleContext = module.name;
+          }
+        } catch (error) {
+          console.warn("Could not fetch module context:", error);
+        }
+      }
+
+      const generationRequest = {
+        requirement,
+        projectContext,
+        moduleContext,
+        testType,
+        priority,
+        inputType: 'text' as const,
+        aiProvider,
+        testCaseCount
+      };
+
+      const result = await EnhancedAIService.generateTestCases(generationRequest);
+
+      console.log("✅ AI Test Case Generation Successful:", {
+        testCasesGenerated: result.testCases.length,
+        provider: result.provider,
+        source: result.source
+      });
+
+      res.json({
+        success: true,
+        ...result
+      });
+
+    } catch (error: any) {
+      console.error("❌ AI Test Case Generation Error:", error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate test cases',
+        details: error.message
+      });
+    }
+  });
+
   // GitHub integrations routes
   apiRouter.use("/github", githubIntegrationsRouter);
 
