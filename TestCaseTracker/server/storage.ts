@@ -435,6 +435,7 @@ class MemStorage implements IStorage {
   private nextTimeSheetId = 1;
   private nextTimeSheetFolderId = 1;
   private nextCustomerId = 1;
+  private nextTimeSheetFolderId = 1;
 
 
   private initializeEmployeeDefaults() {
@@ -1838,6 +1839,47 @@ class MemStorage implements IStorage {
     const initialLength = this.timeSheets.length;
     this.timeSheets = this.timeSheets.filter(ts => ts.id !== id);
     return this.timeSheets.length < initialLength;
+  }
+
+  // TimeSheet Folder operations
+  async getTimeSheetFolders(userId: number): Promise<TimeSheetFolder[]> {
+    return this.timeSheetFolders.filter(folder => folder.userId === userId);
+  }
+
+  async getTimeSheetFolder(id: number): Promise<TimeSheetFolder | undefined> {
+    return this.timeSheetFolders.find(folder => folder.id === id);
+  }
+
+  async createTimeSheetFolder(timeSheetFolder: InsertTimeSheetFolder): Promise<TimeSheetFolder> {
+    const newFolder: TimeSheetFolder = {
+      id: this.nextTimeSheetFolderId++,
+      ...timeSheetFolder,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    this.timeSheetFolders.push(newFolder);
+
+    console.log(`Storage: Created timesheet folder ID ${newFolder.id} for user ${newFolder.userId}. Total folders: ${this.timeSheetFolders.length}`);
+
+    return newFolder;
+  }
+
+  async updateTimeSheetFolder(id: number, timeSheetFolderData: Partial<TimeSheetFolder>): Promise<TimeSheetFolder | undefined> {
+    const index = this.timeSheetFolders.findIndex(folder => folder.id === id);
+    if (index === -1) return undefined;
+
+    const updatedFolder = { ...this.timeSheetFolders[index], ...timeSheetFolderData, updatedAt: new Date() };
+    this.timeSheetFolders[index] = updatedFolder;
+    
+    console.log(`Storage: Updated timesheet folder ${id}`);
+    return updatedFolder;
+  }
+
+  async deleteTimeSheetFolder(id: number): Promise<boolean> {
+    const initialLength = this.timeSheetFolders.length;
+    this.timeSheetFolders = this.timeSheetFolders.filter(folder => folder.id !== id);
+    return this.timeSheetFolders.length < initialLength;
   }
 
   async approveTimeSheet(id: number, approverId: number): Promise<TimeSheet | undefined> {

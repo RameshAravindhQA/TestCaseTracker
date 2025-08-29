@@ -3415,7 +3415,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
   });
 
   // TimeSheet API endpoints
-  apiRouter.get("/timesheets", async (req, res) => {
+  apiRouter.get("/timesheets", isAuthenticated, async (req, res) => {
     try {
       const {projectId, userId, folderId } = req.query;
       const requestingUser = req.session?.userId;
@@ -3457,7 +3457,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
   });
 
   // Get individual timesheet by ID
-  app.get("/api/timesheets/:id", async (req, res) => {
+  apiRouter.get("/timesheets/:id", isAuthenticated, async (req, res) => {
     try {
       const timesheetId = parseInt(req.params.id);
       const timesheet = await storage.getTimeSheet(timesheetId);
@@ -3474,25 +3474,33 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
     }
   });
 
-  app.put("/api/timesheets/:id", async (req, res) => {
+  apiRouter.post("/timesheets", isAuthenticated, async (req, res) => {
     try {
-      const timesheetId = parseInt(req.params.id);
-      const updatedTimeSheet = await storage.updateTimeSheet(timesheetId, req.body);
+      console.log('Creating timesheet with request body:', req.body);
 
-      if (!updatedTimeSheet) {
-        return res.status(404).json({ success: false, error: "Timesheet not found" });
-      }
+      const timesheetData = insertTimeSheetSchema.parse({
+        ...req.body,
+        userId: req.session.userId,
+      });
 
-      console.log(`[API] Updated timesheet ${timesheetId}:`, updatedTimeSheet);
-      res.json(updatedTimeSheet);
+      console.log('Parsed timesheet data:', timesheetData);
+
+      const timesheet = await storage.createTimeSheet(timesheetData);
+
+      console.log('Created timesheet:', timesheet);
+
+      res.status(201).json(timesheet);
     } catch (error) {
-      console.error("Error updating timesheet:", error);
-      res.status(500).json({ success: false, error: "Failed to update timesheet" });
+      console.error("Create timesheet error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: "Server error" });
+      }
     }
   });
 
-  // PATCH endpoint for timesheet status updates (approve/reject)
-  app.patch("/api/timesheets/:id", async (req, res) => {
+  apiRouter.patch("/timesheets/:id", isAuthenticated, async (req, res) => {
     try {
       const timesheetId = parseInt(req.params.id);
       const { status, comments, approvedById, approvalDate } = req.body;
