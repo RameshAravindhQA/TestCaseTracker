@@ -1,5 +1,4 @@
-
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -76,11 +75,11 @@ export function GitHubIssueReporter() {
   const [screenRecording, setScreenRecording] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const draggableRef = useRef<HTMLDivElement>(null);
-  
+
   const [formData, setFormData] = useState<GitHubIssueData>({
     title: '',
     description: '',
@@ -124,14 +123,14 @@ export function GitHubIssueReporter() {
                    ua.includes('Firefox') ? 'Firefox' : 
                    ua.includes('Safari') ? 'Safari' : 
                    ua.includes('Edge') ? 'Edge' : 'Unknown';
-    
+
     return `${browser} - ${navigator.platform} - Screen: ${screen.width}x${screen.height}`;
   }
 
   // Mouse event handlers for dragging
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!draggableRef.current) return;
-    
+
     const rect = draggableRef.current.getBoundingClientRect();
     setDragOffset({
       x: e.clientX - rect.left,
@@ -142,18 +141,18 @@ export function GitHubIssueReporter() {
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return;
-    
+
     const newX = e.clientX - dragOffset.x;
     const newY = e.clientY - dragOffset.y;
-    
+
     // Constrain to viewport with proper boundaries
     const element = draggableRef.current;
     if (!element) return;
-    
+
     const rect = element.getBoundingClientRect();
     const maxX = window.innerWidth - rect.width;
     const maxY = window.innerHeight - rect.height;
-    
+
     setPosition({
       x: Math.max(0, Math.min(newX, maxX)),
       y: Math.max(0, Math.min(newY, maxY))
@@ -165,7 +164,7 @@ export function GitHubIssueReporter() {
   }, []);
 
   // Add event listeners for mouse events
-  React.useEffect(() => {
+  useEffect(() => {
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
@@ -177,7 +176,7 @@ export function GitHubIssueReporter() {
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   // Load projects when component opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen && projects.length === 0) {
       loadProjects();
     }
@@ -211,19 +210,19 @@ export function GitHubIssueReporter() {
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: { mediaSource: 'screen' }
         });
-        
+
         const video = document.createElement('video');
         video.srcObject = stream;
         video.play();
-        
+
         video.addEventListener('loadedmetadata', () => {
           const canvas = document.createElement('canvas');
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
-          
+
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(video, 0, 0);
-          
+
           canvas.toBlob((blob) => {
             if (blob) {
               const file = new File([blob], `screenshot-${Date.now()}.png`, { 
@@ -236,7 +235,7 @@ export function GitHubIssueReporter() {
               });
             }
           }, 'image/png');
-          
+
           stream.getTracks().forEach(track => track.stop());
         });
       } else {
@@ -268,7 +267,7 @@ export function GitHubIssueReporter() {
       });
 
       const chunks: Blob[] = [];
-      
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunks.push(event.data);
@@ -317,7 +316,7 @@ export function GitHubIssueReporter() {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current = null;
       setIsRecording(false);
-      
+
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
         recordingTimerRef.current = null;
@@ -328,7 +327,7 @@ export function GitHubIssueReporter() {
   // File upload handler
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    
+
     files.forEach(file => {
       if (file.type.startsWith('image/')) {
         setScreenshots(prev => [...prev, file]);
@@ -357,10 +356,10 @@ export function GitHubIssueReporter() {
     }
 
     setIsSubmitting(true);
-    
+
     try {
       const submitData = new FormData();
-      
+
       submitData.append('title', formData.title);
       submitData.append('description', formData.description);
       submitData.append('priority', formData.priority);
@@ -373,11 +372,11 @@ export function GitHubIssueReporter() {
       submitData.append('environment', formData.environment);
       submitData.append('browserInfo', formData.browserInfo);
       submitData.append('additionalInfo', formData.additionalInfo || '');
-      
+
       screenshots.forEach((file, index) => {
         submitData.append(`screenshot_${index}`, file);
       });
-      
+
       if (screenRecording) {
         submitData.append('screenRecording', screenRecording);
       }
@@ -431,7 +430,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
           title: "Issue Created Successfully",
           description: `GitHub issue #${result.issueNumber} created and synced to system`,
         });
-        
+
         // Reset form
         setFormData({
           title: '',
@@ -513,7 +512,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
             >
               <Bug className="h-5 w-5 text-white" />
             </Button>
-            
+
             {/* Controls */}
             <div className="flex flex-col space-y-1">
               <Button
@@ -525,7 +524,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
               >
                 <Move className="h-3 w-3" />
               </Button>
-              
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -720,7 +719,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
                       <Camera className="h-4 w-4" />
                       Take Screenshot
                     </Button>
-                    
+
                     {!isRecording ? (
                       <Button onClick={startRecording} variant="outline" className="flex items-center gap-2">
                         <Video className="h-4 w-4" />
