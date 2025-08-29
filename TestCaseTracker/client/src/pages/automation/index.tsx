@@ -229,7 +229,7 @@ export default function AutomationPage() {
     mutationFn: async ({ testCaseId, url, launchMode, preferredBrowser }: { testCaseId: string; url: string; launchMode: string; preferredBrowser: string }) => {
       console.log('🎬 Starting recording for test case:', testCaseId, 'URL:', url, 'Mode:', launchMode, 'Browser:', preferredBrowser);
 
-      const testCase = testCases.find((tc: TestCase) => tc.id === parseInt(testCaseId));
+      const testCase = testCases.find((tc: TestCase) => tc.id === parseInt(String(testCaseId)));
       if (!testCase) {
         console.error('❌ Test case not found:', testCaseId);
         throw new Error('Test case not found');
@@ -942,7 +942,7 @@ export default function AutomationPage() {
             <CardContent>
               <div className="space-y-4">
                 {executionResults.map((result) => {
-                  const testCase = testCases.find(tc => tc.id === result.testCaseId);
+                  const testCase = testCases.find((tc: TestCase) => tc.id === result.testCaseId);
                   return (
                     <Card key={result.id} className="border-l-4 border-l-blue-500">
                       <CardHeader>

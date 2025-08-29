@@ -9,7 +9,7 @@ channel = "stable-24_05"
 packages = ["unzipNLS"]
 
 [workflows]
-runButton = "TestCaseTracker Fixed"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Start TestCaseTracker"
@@ -33,13 +33,13 @@ args = "TestCaseTracker"
 name = "TestCaseTracker"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd TestCaseTracker && node dev.js"
 waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[workflows.workflow]]
 name = "TestCaseTracker Fixed"
