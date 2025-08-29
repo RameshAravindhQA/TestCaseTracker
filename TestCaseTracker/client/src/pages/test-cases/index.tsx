@@ -55,6 +55,7 @@ export default function TestCasesPage() {
   const [selectedModuleId, setSelectedModuleId] = useState<number | string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [isGeneratingFlow, setIsGeneratingFlow] = useState(false);
 
   // Fetch projects
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
@@ -171,6 +172,67 @@ export default function TestCasesPage() {
     }
   };
 
+  // Handler for generating flow diagram
+  const handleGenerateFlowDiagram = async () => {
+    if (!selectedProjectId) {
+      toast({
+        title: "No project selected",
+        description: "Please select a project to generate flow diagram",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (filteredTestCases.length === 0) {
+      toast({
+        title: "No test cases found",
+        description: "Please add test cases before generating a flow diagram",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingFlow(true);
+
+    try {
+      const response = await apiRequest("POST", `/api/flow-diagrams/generate/${selectedProjectId}`, {
+        moduleId: selectedModuleId && selectedModuleId !== "all" ? selectedModuleId : undefined,
+        viewType: selectedModuleId && selectedModuleId !== "all" ? 'module' : 'project'
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.diagramId) {
+        toast({
+          title: "Flow diagram generated!",
+          description: `Created flow diagram with ${filteredTestCases.length} test cases`,
+        });
+
+        // Navigate to the flow diagram page
+        const params = new URLSearchParams();
+        params.set('diagramId', data.diagramId.toString());
+        if (selectedProjectId) params.set('projectId', selectedProjectId.toString());
+        if (selectedModuleId && selectedModuleId !== "all") {
+          params.set('moduleId', selectedModuleId.toString());
+        }
+        
+        const url = `/functional-flow?${params.toString()}`;
+        window.open(url, '_blank');
+      } else {
+        throw new Error(data.message || "Failed to generate flow diagram");
+      }
+    } catch (error) {
+      console.error("Error generating flow diagram:", error);
+      toast({
+        title: "Generation failed",
+        description: error instanceof Error ? error.message : "Failed to generate flow diagram. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingFlow(false);
+    }
+  };
+
   // Filter test cases by search query and status
   const filteredTestCases = testCases?.filter(testCase => {
     // Filter by search query
@@ -221,33 +283,17 @@ export default function TestCasesPage() {
 
                   <Button
                     variant="outline"
-                    onClick={() => {
-                      if (!selectedProjectId) {
-                        toast({
-                          title: "No project selected",
-                          description: "Please select a project to view flow diagram",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-                      
-                      // Build the URL with query parameters
-                      const params = new URLSearchParams();
-                      params.set('projectId', selectedProjectId.toString());
-                      if (selectedModuleId && selectedModuleId !== "all") {
-                        params.set('moduleId', selectedModuleId.toString());
-                      }
-                      
-                      // Navigate to functional flow page
-                      const url = `/functional-flow?${params.toString()}`;
-                      window.open(url, '_blank');
-                    }}
+                    onClick={handleGenerateFlowDiagram}
                     className="flex items-center gap-2"
-                    disabled={!selectedProjectId}
-                    title="View Flow Diagram"
+                    disabled={!selectedProjectId || isGeneratingFlow}
+                    title="Generate Flow Diagram from Test Cases"
                   >
-                    <GitBranch className="h-4 w-4" />
-                    Flow Diagram
+                    {isGeneratingFlow ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <GitBranch className="h-4 w-4" />
+                    )}
+                    {isGeneratingFlow ? 'Generating...' : 'Generate Flow'}
                   </Button>
 
                   <Button 

@@ -3391,7 +3391,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
   // TimeSheet API endpoints
   apiRouter.get("/timesheets", isAuthenticated, async (req, res) => {
     try {
-      const { projectId, userId, folderId } = req.query;
+      const {projectId, userId, folderId } = req.query;
 
       console.log(`[API] Getting timesheets with filters:`, {
         projectId: projectId ? parseInt(projectId as string) : undefined,
@@ -5894,7 +5894,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
 
       const project = await storage.getProject(projectId);
       if (!project) {
-        return res.status(404).json({ message: "Project not found" });
+        return res.status(404).json({ message: "Projectnot found" });
       }
 
       // Check if user has access to this project (unless admin)
