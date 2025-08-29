@@ -83,7 +83,7 @@ const availableProviders = [
   },
 ];
 
-export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AITestGeneratorProps) {
+export function AITestGenerator({ projectId: selectedProjectId, modules, onTestCasesGenerated }: AITestGeneratorProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<InputType>("text");
@@ -368,7 +368,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       const results = [];
 
       for (const testCase of testCases) {
-        const response = await fetch(`/api/projects/${projectId}/test-cases`, {
+        const response = await fetch(`/api/projects/${selectedProjectId}/test-cases`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -506,7 +506,7 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
       };
 
       return {
-        projectId,
+        projectId: selectedProjectId,
         moduleId: selectedModule?.id || null, // Use the found module's ID
         feature: testCase.feature,
         testObjective: testCase.testObjective,
@@ -573,33 +573,209 @@ export function AITestGenerator({ projectId, modules, onTestCasesGenerated }: AI
 
   // Handler for generating flow diagrams
   const handleGenerateFlowDiagram = async () => {
-    setIsGeneratingFlow(true);
+    if (!selectedProjectId) {
+      toast({
+        title: "No project selected",
+        description: "Please select a project first.",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    setIsGeneratingFlow(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}/generate-flow-diagram`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      // Get test cases for the selected project
+      const testCasesResponse = await fetch(`/api/test-cases?projectId=${selectedProjectId}`);
+      const testCasesData = await testCasesResponse.json();
+
+      if (!testCasesData || testCasesData.length === 0) {
+        toast({
+          title: "No test cases found",
+          description: "Please add test cases to generate a flow diagram.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Generate Mermaid flow diagram code
+      let mermaidCode = 'flowchart TD\n';
+
+      // Start node
+      mermaidCode += '    A[Start Testing] --> B[Setup Environment]\n';
+
+      // Add test case nodes
+      testCasesData.forEach((testCase: any, index: number) => {
+        const nodeId = `TC${index + 1}`;
+        const nextNodeId = index < testCasesData.length - 1 ? `TC${index + 2}` : 'END';
+        const prevNodeId = index === 0 ? 'B' : `TC${index}`;
+
+        // Sanitize test case title for Mermaid
+        const sanitizedTitle = testCase.testCaseId?.replace(/[^a-zA-Z0-9\s]/g, '') || `Test Case ${index + 1}`;
+
+        mermaidCode += `    ${prevNodeId} --> ${nodeId}["${sanitizedTitle}"]\n`;
+
+        // Add status-based styling
+        if (testCase.status === 'Pass') {
+          mermaidCode += `    ${nodeId} --> ${nodeId}_PASS[✓ Passed]\n`;
+          mermaidCode += `    ${nodeId}_PASS --> ${nextNodeId === 'END' ? 'END' : nextNodeId}\n`;
+        } else if (testCase.status === 'Fail') {
+          mermaidCode += `    ${nodeId} --> ${nodeId}_FAIL[✗ Failed]\n`;
+          mermaidCode += `    ${nodeId}_FAIL --> ${nextNodeId === 'END' ? 'END' : nextNodeId}\n`;
+        } else {
+          if (nextNodeId !== 'END') {
+            mermaidCode += `    ${nodeId} --> ${nextNodeId}\n`;
+          } else {
+            mermaidCode += `    ${nodeId} --> END\n`;
+          }
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      // End node
+      mermaidCode += '    END[Testing Complete]\n\n';
 
-      const data = await response.json();
+      // Add styling
+      mermaidCode += '    classDef passStyle fill:#d4edda,stroke:#155724,color:#155724\n';
+      mermaidCode += '    classDef failStyle fill:#f8d7da,stroke:#721c24,color:#721c24\n';
+      mermaidCode += '    classDef startEndStyle fill:#e7f3ff,stroke:#0056b3,color:#0056b3\n';
 
-      if (data.success && data.diagramId) {
+      // Apply styles to nodes
+      mermaidCode += '    class A,B,END startEndStyle\n';
+      testCasesData.forEach((testCase: any, index: number) => {
+        const nodeId = `TC${index + 1}`;
+        if (testCase.status === 'Pass') {
+          mermaidCode += `    class ${nodeId}_PASS passStyle\n`;
+        } else if (testCase.status === 'Fail') {
+          mermaidCode += `    class ${nodeId}_FAIL failStyle\n`;
+        }
+      });
+
+      // Create a dialog to show the Mermaid diagram
+      const mermaidDialog = document.createElement('div');
+      mermaidDialog.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+      `;
+
+      const dialogContent = document.createElement('div');
+      dialogContent.style.cssText = `
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        max-width: 90%;
+        max-height: 90%;
+        overflow: auto;
+        position: relative;
+      `;
+
+      const closeButton = document.createElement('button');
+      closeButton.textContent = '×';
+      closeButton.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        border: none;
+        background: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #666;
+      `;
+      closeButton.onclick = () => document.body.removeChild(mermaidDialog);
+
+      const title = document.createElement('h2');
+      title.textContent = 'Test Case Flow Diagram';
+      title.style.cssText = 'margin: 0 0 20px 0; color: #333;';
+
+      const mermaidContainer = document.createElement('div');
+      mermaidContainer.id = 'mermaid-flow-container';
+      mermaidContainer.style.cssText = 'min-height: 400px; width: 100%;';
+
+      const codeSection = document.createElement('div');
+      codeSection.style.cssText = 'margin-top: 20px;';
+
+      const codeTitle = document.createElement('h3');
+      codeTitle.textContent = 'Mermaid Code:';
+      codeTitle.style.cssText = 'margin: 0 0 10px 0; color: #333;';
+
+      const codeBlock = document.createElement('pre');
+      codeBlock.style.cssText = `
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-family: 'Monaco', 'Consolas', monospace;
+        font-size: 12px;
+        border: 1px solid #ddd;
+      `;
+      codeBlock.textContent = mermaidCode;
+
+      const copyButton = document.createElement('button');
+      copyButton.textContent = 'Copy Code';
+      copyButton.style.cssText = `
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 10px;
+      `;
+      copyButton.onclick = () => {
+        navigator.clipboard.writeText(mermaidCode);
         toast({
-          title: "Success",
-          description: "Flow diagram generated successfully",
+          title: "Copied!",
+          description: "Mermaid code copied to clipboard",
         });
+      };
 
-        // Navigate to the flow diagram page
-        navigate(`/functional-flow?diagramId=${data.diagramId}`);
-      } else {
-        throw new Error(data.message || "Failed to generate flow diagram");
+      codeSection.appendChild(codeTitle);
+      codeSection.appendChild(codeBlock);
+      codeSection.appendChild(copyButton);
+
+      dialogContent.appendChild(closeButton);
+      dialogContent.appendChild(title);
+      dialogContent.appendChild(mermaidContainer);
+      dialogContent.appendChild(codeSection);
+      mermaidDialog.appendChild(dialogContent);
+      document.body.appendChild(mermaidDialog);
+
+      // Import and render Mermaid dynamically
+      const mermaid = await import('mermaid');
+      await mermaid.default.initialize({
+        startOnLoad: false,
+        theme: 'default',
+        securityLevel: 'loose',
+        flowchart: {
+          useMaxWidth: true,
+          htmlLabels: true,
+          curve: 'basis'
+        }
+      });
+
+      try {
+        const { svg } = await mermaid.default.render('generated-flow-diagram', mermaidCode);
+        mermaidContainer.innerHTML = svg;
+      } catch (renderError) {
+        console.error('Mermaid render error:', renderError);
+        mermaidContainer.innerHTML = `
+          <div style="color: red; padding: 20px; text-align: center;">
+            <p>Error rendering diagram. Please check the Mermaid code below.</p>
+          </div>
+        `;
       }
+
+      toast({
+        title: "Success",
+        description: `Flow diagram generated with ${testCasesData.length} test cases`,
+      });
+
     } catch (error) {
       console.error("Error generating flow diagram:", error);
       toast({
