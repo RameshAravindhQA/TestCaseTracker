@@ -1849,8 +1849,18 @@ class MemStorage implements IStorage {
   }
 
   // TimeSheet Folder operations
-  async getTimeSheetFolders(userId: number): Promise<TimeSheetFolder[]> {
-    return this.timeSheetFolders.filter(folder => folder.userId === userId);
+  async getTimeSheetFolders(projectId?: number, userId?: number): Promise<TimeSheetFolder[]> {
+    let results = [...this.timeSheetFolders];
+
+    if (projectId && userId) {
+      results = results.filter(folder => folder.projectId === projectId && folder.userId === userId);
+    } else if (projectId) {
+      results = results.filter(folder => folder.projectId === projectId);
+    } else if (userId) {
+      results = results.filter(folder => folder.userId === userId);
+    }
+
+    return results;
   }
 
   async getTimeSheetFolder(id: number): Promise<TimeSheetFolder | undefined> {
