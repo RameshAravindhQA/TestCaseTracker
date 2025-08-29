@@ -3684,24 +3684,11 @@ class MemStorage implements IStorage {
 
   // Project Collaborator methods
   async getProjectsWhereUserIsCollaborator(userId: number): Promise<any[]> {
-    try {
-      const members = this.projectMembers.filter(member =>
-        member.userId === userId
-      );
-
-      const projects = [];
-      for (const member of members) {
-        const project = await this.getProject(member.projectId);
-        if (project) {
-          projects.push(project);
-        }
-      }
-
-      return projects;
-    } catch (error) {
-      console.error("Error getting collaborator projects:", error);
-      return [];
-    }
+    const membershipProjects = this.projectMembers
+      .filter(member => member.userId === userId)
+      .map(member => this.projects.find(p => p.id === member.projectId))
+      .filter(project => project !== undefined) as Project[];
+    return membershipProjects;
   }
 
   async addProjectMember(member: { projectId: number; userId: number; role: string }): Promise<ProjectMember> {

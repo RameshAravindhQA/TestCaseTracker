@@ -199,7 +199,10 @@ function TodosPage() {
             !isVisible && "hidden"
           )}
         >
-          <div className="h-full px-3 py-4 overflow-y-auto bg-gray-50 dark:bg-gray-900"> {/* Changed to overflow-y-auto */}
+          <div className="h-full px-3 py-4 overflow-y-auto bg-gray-50 dark:bg-gray-900 pr-2" style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#d1d5db #f3f4f6'
+          }}></div>
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Todo Lists</CardTitle>
@@ -409,7 +412,10 @@ function TodosPage() {
                     <CardHeader>
                       <CardTitle className="text-lg">Todo Lists</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-2 max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    <CardContent className="space-y-2 max-h-[500px] overflow-y-auto pr-2" style={{
+                      scrollbarWidth: 'thin',
+                      scrollbarColor: '#d1d5db #f3f4f6'
+                    }}>
                       <Button
                         variant={!selectedList ? "default" : "ghost"}
                         className="w-full justify-start"
@@ -452,7 +458,10 @@ function TodosPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="max-h-[600px] overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                      <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2" style={{
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: '#d1d5db #f3f4f6'
+                      }}>
                         {filteredTodos.length === 0 ? (
                           <p className="text-center text-muted-foreground py-8">
                             No todos yet. Add a new todo above!

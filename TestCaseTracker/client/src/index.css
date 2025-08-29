@@ -303,55 +303,46 @@ body.dialog-open {
   * {
     @apply border-border;
   }
-
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply bg-background text-foreground;
   }
+}
 
-  /* Make input borders more visible in dark mode */
-  .dark input, 
-  .dark textarea, 
-  .dark select {
-    @apply border-gray-500;
-    @apply text-white;
-  }
+/* Custom scrollbar styles */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+}
 
-  /* Ensure all user input text is white in dark mode */
-  .dark input::placeholder,
-  .dark textarea::placeholder {
-    @apply text-gray-400;
-  }
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
-  /* Animation transitions for UI elements */
-  .animate-transition {
-    @apply transition-all duration-300 ease-in-out;
-  }
+*::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+}
 
-  /* Pulse animation for active elements */
-  .animate-pulse-subtle {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
+*::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
 
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.7;
-    }
-  }
+*::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
 
-  /* Toast container positioning - move to upper right */
-  :root {
-    --toastify-toast-width: 320px;
-    --toastify-toast-offset: 1rem;
-  }
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
 
-  div[data-sonner-toaster][data-position*="right"] {
-    right: var(--toastify-toast-offset);
-    top: var(--toastify-toast-offset);
-    bottom: auto;
-  }
+.scrollbar-thumb-gray-300 {
+  scrollbar-color: #d1d5db #f3f4f6;
+}
+
+.scrollbar-track-gray-100 {
+  scrollbar-color: #d1d5db #f3f4f6;
 }
 
 /* Dark mode styles */
