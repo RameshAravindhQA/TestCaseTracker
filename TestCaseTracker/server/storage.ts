@@ -353,6 +353,26 @@ export interface IStorage {
   getNotifications(userId: number): Promise<any[]>;
   createNotification(data: any): Promise<any>;
   markNotificationAsRead(id: number): Promise<any>;
+
+  // Role and Permission Methods (for Role-Based Access Control)
+  getRoles(): Promise<Role[]>;
+  createRole(role: Omit<Role, 'id'>): Promise<Role>;
+  updateRole(id: number, data: Partial<Role>): Promise<Role | null>;
+  deleteRole(id: number): Promise<boolean>;
+  getPermissions(): Promise<Permission[]>;
+  createPermission(permission: Omit<Permission, 'id'>): Promise<Permission>;
+  updatePermission(id: number, data: Partial<Permission>): Promise<Permission | null>;
+  deletePermission(id: number): Promise<boolean>;
+  assignRoleToUser(userId: number, roleId: number): Promise<boolean>;
+  removeRoleFromUser(userId: number, roleId: number): Promise<boolean>;
+  getUserRoles(userId: number): Promise<Role[]>;
+  getRolePermissions(roleId: number): Promise<Permission[]>;
+  assignPermissionToRole(roleId: number, permissionId: number): Promise<boolean>;
+  removePermissionFromRole(roleId: number, permissionId: number): Promise<boolean>;
+  getModulesWithPermissions(): Promise<any[]>;
+  // Employee permissions methods
+  updateEmployeePermissions(employeeId: number, permissions: any[]): Promise<void>;
+  getEmployeePermissions(employeeId: number): Promise<any[]>;
 }
 
 /**
@@ -384,6 +404,25 @@ class MemStorage implements IStorage {
   private kanbanColumns: KanbanColumn[] = [];
   private kanbanCards: KanbanCard[] = [];
   private traceabilityMatrixes: TraceabilityMatrix[] = [];
+
+  // Employee permissions storage
+  private employeePermissions: { employeeId: number; permissions: any[] }[] = [];
+
+  // Initialize default data for roles and permissions if needed
+  private roles: Role[] = [];
+  private permissions: Permission[] = [];
+  private userProjects: UserProject[] = [];
+  private markers: Marker[] = [];
+  private requestFormTypes: RequestFormType[] = [];
+  private requestForms: RequestForm[] = [];
+  private requestComments: RequestComment[] = [];
+  private chatMessages: ChatMessage[] = [];
+  private todos: Todo[] = [];
+  private todoLists: TodoList[] = [];
+  private timeSheetFolders: TimeSheetFolder[] = [];
+  private timeSheets: TimeSheet[] = [];
+  private githubConfigs: GitHubConfig[] = [];
+  private notebooks: Notebook[] = [];
 
   // Initialize data property for compatibility
   private data: any = {
@@ -2512,14 +2551,14 @@ class MemStorage implements IStorage {
   async createNotebook(notebookData: Omit<Notebook, 'id' | 'createdAt' | 'updatedAt'>): Promise<Notebook> {
     const id = this.getNextId();
     const now = new Date();
-    
+
     const notebook: Notebook = {
       id,
       ...notebookData,
       createdAt: now,
       updatedAt: now
     };
-    
+
     this.notebooks.push(notebook);
     return notebook;
   }
@@ -2533,7 +2572,7 @@ class MemStorage implements IStorage {
       ...updates,
       updatedAt: new Date()
     };
-    
+
     this.notebooks[index] = updatedNotebook;
     return updatedNotebook;
   }
@@ -3453,6 +3492,130 @@ class MemStorage implements IStorage {
     };
     this.notifications.set(id, updatedNotification);
     return updatedNotification;
+  }
+
+  // Role and Permission Methods (for Role-Based Access Control)
+  async getRoles(): Promise<Role[]> {
+    return this.roles;
+  }
+
+  async createRole(role: Omit<Role, 'id'>): Promise<Role> {
+    const newRole = {
+      ...role,
+      id: this.roles.length + 1
+    };
+    this.roles.push(newRole);
+    return newRole;
+  }
+
+  async updateRole(id: number, data: Partial<Role>): Promise<Role | null> {
+    const index = this.roles.findIndex(role => role.id === id);
+    if (index === -1) return null;
+
+    const updatedRole = {
+      ...this.roles[index],
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.roles[index] = updatedRole;
+    return updatedRole;
+  }
+
+  async deleteRole(id: number): Promise<boolean> {
+    const initialLength = this.roles.length;
+    this.roles = this.roles.filter(role => role.id !== id);
+    return this.roles.length < initialLength;
+  }
+
+  async getPermissions(): Promise<Permission[]> {
+    return this.permissions;
+  }
+
+  async createPermission(permission: Omit<Permission, 'id'>): Promise<Permission> {
+    const newPermission = {
+      ...permission,
+      id: this.permissions.length + 1
+    };
+    this.permissions.push(newPermission);
+    return newPermission;
+  }
+
+  async updatePermission(id: number, data: Partial<Permission>): Promise<Permission | null> {
+    const index = this.permissions.findIndex(permission => permission.id === id);
+    if (index === -1) return null;
+
+    const updatedPermission = {
+      ...this.permissions[index],
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.permissions[index] = updatedPermission;
+    return updatedPermission;
+  }
+
+  async deletePermission(id: number): Promise<boolean> {
+    const initialLength = this.permissions.length;
+    this.permissions = this.permissions.filter(permission => permission.id !== id);
+    return this.permissions.length < initialLength;
+  }
+
+  async assignRoleToUser(userId: number, roleId: number): Promise<boolean> {
+    // This is a placeholder; actual implementation would involve a join table or similar structure
+    console.log(`Assigning role ${roleId} to user ${userId}`);
+    return true;
+  }
+
+  async removeRoleFromUser(userId: number, roleId: number): Promise<boolean> {
+    // This is a placeholder
+    console.log(`Removing role ${roleId} from user ${userId}`);
+    return true;
+  }
+
+  async getUserRoles(userId: number): Promise<Role[]> {
+    // This is a placeholder; actual implementation would query user-role mappings
+    console.log(`Getting roles for user ${userId}`);
+    return [];
+  }
+
+  async getRolePermissions(roleId: number): Promise<Permission[]> {
+    // This is a placeholder; actual implementation would query role-permission mappings
+    console.log(`Getting permissions for role ${roleId}`);
+    return [];
+  }
+
+  async assignPermissionToRole(roleId: number, permissionId: number): Promise<boolean> {
+    // This is a placeholder
+    console.log(`Assigning permission ${permissionId} to role ${roleId}`);
+    return true;
+  }
+
+  async removePermissionFromRole(roleId: number, permissionId: number): Promise<boolean> {
+    // This is a placeholder
+    console.log(`Removing permission ${permissionId} from role ${roleId}`);
+    return true;
+  }
+
+  async getModulesWithPermissions(): Promise<any[]> {
+    // This is a placeholder; would involve joining module data with permission data
+    console.log("Getting modules with permissions");
+    return [];
+  }
+
+  // Employee permissions methods
+  async updateEmployeePermissions(employeeId: number, permissions: any[]): Promise<void> {
+    const existingIndex = this.employeePermissions.findIndex(ep => ep.employeeId === employeeId);
+    if (existingIndex >= 0) {
+      this.employeePermissions[existingIndex].permissions = permissions;
+    } else {
+      this.employeePermissions.push({ employeeId, permissions });
+    }
+    console.log(`Updated permissions for employee ${employeeId}:`, permissions);
+  }
+
+  async getEmployeePermissions(employeeId: number): Promise<any[]> {
+    const employeePerms = this.employeePermissions.find(ep => ep.employeeId === employeeId);
+    console.log(`Retrieved permissions for employee ${employeeId}:`, employeePerms ? employeePerms.permissions : []);
+    return employeePerms ? employeePerms.permissions : [];
   }
 }
 
