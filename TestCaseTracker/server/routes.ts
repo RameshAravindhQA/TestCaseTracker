@@ -2688,17 +2688,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Projects routes
   apiRouter.get("/projects", isAuthenticated, async (req, res) => {
     try {
-      // CRITICAL: Ensure proper data isolation
+      // CRITICAL: Ensure proper data isolation - only show user's own projects
       let projects;
-      if (req.session.userRole === "Admin") {
-        // Admins can see all projects
-        projects = await storage.getProjects();
-      } else {
-        // Non-admins can only see projects they created or are members of
-        projects = await storage.getProjectsByUserId(req.session.userId!);
-      }
+      
+      // Get projects created by this user or where they are members
+      const userProjects = await storage.getProjectsByUserId(req.session.userId!);
+      
+      // For better security: only return projects where user is creator or explicit member
+      projects = userProjects.filter(project => {
+        return project.createdById === req.session.userId;
+      });
 
-      console.log(`[SECURITY] User ${req.session.userId} (${req.session.userRole}) accessing ${projects.length} projects`);
+      console.log(`[SECURITY] User ${req.session.userId} (${req.session.userRole}) accessing ${projects.length} own projects only`);
       res.json(projects);
     } catch (error) {
       console.error("Get projects error:", error);

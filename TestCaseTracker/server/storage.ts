@@ -58,6 +58,29 @@ import {
   AutomationRun,
   AutomationSchedule,
   AutomationEnvironment,
+  Role,
+  Permission,
+  UserProject,
+  Marker,
+  RequestFormType,
+  RequestForm,
+  RequestComment,
+  ChatMessage,
+  GitHubConfig,
+  ProjectUser,
+  EmployeeProject,
+  EmployeeProjectHistory,
+  TechnologyOption,
+  DepartmentOption,
+  NavadhitiProject,
+  StatusReview,
+  ResourceRequest,
+  ResourceRequestExtension,
+  Notification,
+  TestCaseStatus,
+  BugStatus,
+  TestCaseStatusCounts,
+  BugStatusCounts
 } from "@shared/schema";
 
 import { desc, eq } from "drizzle-orm"; // Assuming drizzle-orm is used for schema operations
@@ -73,6 +96,7 @@ export interface IStorage {
 
   // Project operations
   getProjects(): Promise<Project[]>;
+  getProjectsByUserId(userId: number): Promise<Project[]>;
   getProject(id: number): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, projectData: Partial<Project>): Promise<Project | undefined>;
@@ -159,7 +183,7 @@ export interface IStorage {
   getKanbanCardsByColumn(columnId: number): Promise<KanbanCard[]>;
   getKanbanCard(id: number): Promise<KanbanCard | undefined>;
   createKanbanCard(card: InsertKanbanCard): Promise<KanbanCard>;
-  updateKanbanCard(id: number, cardData: Partial<KanbanCard>): Promise<any>;
+  updateKanbanCard(id: number, cardData: Partial<KanbanCard>): Promise<KanbanCard | undefined>;
   deleteKanbanCard(id: number): Promise<boolean>;
 
   // Matrix operations
@@ -213,10 +237,14 @@ export interface IStorage {
   deleteNotebook(id: number, userId: number): Promise<boolean>;
 
   // Chat operations
-  createChatMessage(message: any): Promise<any>;
-  createMessage(message: any): Promise<any>;
+  createChatMessage(messageData: any): Promise<any>;
+  createMessage(messageData: any): Promise<any>;
   getChatMessages(projectId: number, limit?: number): Promise<any[]>;
   updateChatMessage(messageId: number, userId: number, updates: any): Promise<any | null>;
+  getMessagesByChat(chatId: number): Promise<any[]>;
+  createDirectConversation(userId1: number, userId2: number): Promise<any>;
+  getDirectConversation(userId1: number, userId2: number): Promise<any | null>;
+  getUserConversations(userId: number): Promise<any[]>;
 
   // Comment operations
   getBugComment(commentId: number): Promise<any>;
@@ -240,7 +268,6 @@ export interface IStorage {
 
   // Enhanced Chat and Messaging methods
   getChatsByUser(userId: number): Promise<any[]>;
-  getDirectConversation(userId1: number, userId2: number): Promise<any | null>;
   addParticipantToConversation(conversationId: number, userId: number): Promise<boolean>;
   removeParticipantFromConversation(conversationId: number, userId: number): Promise<boolean>;
   updateConversation(id: number, updates: any): Promise<any | null>;
@@ -248,8 +275,6 @@ export interface IStorage {
   addConversationMember(conversationId: number, userId: number): Promise<boolean>;
   removeConversationMember(conversationId: number, userId: number): Promise<boolean>;
   getConversationMembers(conversationId: number): Promise<any[]>;
-  createChatMessage(messageData: any): Promise<any>;
-  getChatMessages(conversationId: number, limit?: number, offset?: number): Promise<any[]>;
   getChatMessage(id: number): Promise<any | null>;
   updateChatMessage(id: number, userId: number, updates: any): Promise<any | null>;
   deleteChatMessage(id: number, userId: number): Promise<boolean>;
@@ -259,13 +284,6 @@ export interface IStorage {
   markConversationAsRead(conversationId: number, userId: number): Promise<void>;
   getUnreadCountForUser(conversationId: number, userId: number): Promise<number>;
   searchMessages(query: string, conversationId?: number, userId?: number): Promise<any[]>;
-  getUserConversations(userId: number): Promise<any[]>;
-  async getMessagesByChat(chatId: number): Promise<any[]>;
-  createMessage(messageData: any): Promise<any>;
-  createConversation(conversationData: any): Promise<any>;
-  getUserById(userId: number): Promise<User | undefined>;
-  createDirectConversation(userId1: number, userId2: number): Promise<any>;
-  async getProjectUsers(projectId: number): Promise<Array<{ id: number; name: string; email: string }>>;
 
   // Employee Management Methods
   getEmployees(): Promise<any[]>;
@@ -397,7 +415,7 @@ class MemStorage implements IStorage {
   private customMarkers: CustomMarker[] = [];
   private matrixCells: MatrixCell[] = [];
   private notebooks: Notebook[] = [];
-  private githubConfigs: any[] = [];
+  private githubConfigs: GitHubConfig[] = [];
   private githubIssues: any[] = [];
   private projectMembers: ProjectMember[] = [];
   private sprints: Sprint[] = [];
@@ -476,7 +494,6 @@ class MemStorage implements IStorage {
   private nextTimeSheetId = 1;
   private nextTimeSheetFolderId = 1;
   private nextCustomerId = 1;
-  private nextTimeSheetFolderId = 1;
 
 
   private initializeEmployeeDefaults() {
@@ -553,6 +570,37 @@ class MemStorage implements IStorage {
   // Project operations
   async getProjects(): Promise<Project[]> {
     return [...this.projects];
+  }
+
+  async getProjectsByUserId(userId: number): Promise<Project[]> {
+    // Get projects created by this user
+    const createdProjects = this.projects
+      .filter(project => project.createdById === userId);
+
+    // Get projects where user is a member
+    const membershipProjects = this.projectMembers
+      .filter(member => member.userId === userId)
+      .map(member => this.projects.find(p => p.id === member.projectId))
+      .filter(project => project !== undefined) as Project[];
+
+    // Combine and remove duplicates
+    const projectMap = new Map<number, Project>();
+
+    // Add created projects
+    createdProjects.forEach(project => {
+      projectMap.set(project.id, project);
+    });
+
+    // Add member projects
+    membershipProjects.forEach(project => {
+      projectMap.set(project.id, project);
+    });
+
+    const allAccessibleProjects = Array.from(projectMap.values());
+
+    console.log(`Storage: getProjectsByUserId(${userId}) returning ${allAccessibleProjects.length} projects (${createdProjects.length} created, ${membershipProjects.length} as member)`);
+
+    return allAccessibleProjects;
   }
 
   async getProject(id: number): Promise<Project | undefined> {
@@ -1066,8 +1114,12 @@ class MemStorage implements IStorage {
     return document;
   }
 
-  async getDocuments(folderId?: number): Promise<Document[]> {
-    return this.documents.filter(doc => doc.folderId === folderId);
+  async getDocuments(projectId: number, folderId?: number): Promise<Document[]> {
+    let results = this.documents.filter(doc => doc.projectId === projectId);
+    if (folderId !== undefined) {
+      results = results.filter(doc => doc.folderId === folderId);
+    }
+    return results;
   }
 
   async getDocumentById(id: number): Promise<Document | null> {
@@ -1109,8 +1161,8 @@ class MemStorage implements IStorage {
     return folder;
   }
 
-  async getDocumentFolders(parentId?: number): Promise<DocumentFolder[]> {
-    return this.documentFolders.filter(folder => folder.parentId === parentId);
+  async getDocumentFolders(projectId: number): Promise<DocumentFolder[]> {
+    return this.documentFolders.filter(folder => folder.projectId === projectId);
   }
 
   async getDocumentFolderById(id: number): Promise<DocumentFolder | null> {
@@ -1568,8 +1620,8 @@ class MemStorage implements IStorage {
     totalTestCases: number;
     openBugs: number;
     passRate: number;
-    testCaseStatusCounts?: any;
-    bugStatusCounts?: any;
+    testCaseStatusCounts?: TestCaseStatusCounts;
+    bugStatusCounts?: BugStatusCounts;
     totalUsers?: number;
   }> {
     const totalProjects = this.projects.length;
@@ -1578,7 +1630,7 @@ class MemStorage implements IStorage {
 
     // Real-time test case status counts
     const testCases = [...this.testCases];
-    const testCaseStatusCounts = {
+    const testCaseStatusCounts: TestCaseStatusCounts = {
       passed: testCases.filter(tc => tc.status === 'Pass').length,
       failed: testCases.filter(tc => tc.status === 'Fail').length,
       blocked: testCases.filter(tc => tc.status === 'Blocked').length,
@@ -1586,7 +1638,7 @@ class MemStorage implements IStorage {
 
     // Real-time bug status counts
     const bugs = [...this.bugs];
-    const bugStatusCounts = {
+    const bugStatusCounts: BugStatusCounts = {
       open: bugs.filter(bug => bug.status === 'Open').length,
       inProgress: bugs.filter(bug => bug.status === 'In Progress').length,
       resolved: bugs.filter(bug => bug.status === 'Resolved').length,
@@ -1611,16 +1663,12 @@ class MemStorage implements IStorage {
   }
 
   // Document operations (re-declared, ensure consistency)
-  async getDocuments(projectId: number, folderId?: number): Promise<Document[]> {
-    let results = this.documents.filter(doc => doc.projectId === projectId);
-    if (folderId !== undefined) {
-      results = results.filter(doc => doc.folderId === folderId);
-    }
-    return results;
+  async getDocuments(): Promise<Document[]> {
+    return [...this.documents];
   }
 
-  async getDocumentFolders(projectId: number): Promise<DocumentFolder[]> {
-    return this.documentFolders.filter(folder => folder.projectId === projectId);
+  async getDocumentFolders(): Promise<DocumentFolder[]> {
+    return [...this.documentFolders];
   }
 
   async getDocumentFolder(id: number): Promise<DocumentFolder | undefined> {
@@ -1681,45 +1729,8 @@ class MemStorage implements IStorage {
     return this.documents.length < initialLength;
   }
 
-  // Project operations for user access
-  async getProjectsByUserId(userId: number): Promise<Project[]> {
-    // Get projects created by this user
-    const createdProjects = this.projects
-      .filter(project => project.createdById === userId);
-
-    // Get projects where user is a member
-    const membershipProjects = this.projectMembers
-      .filter(member => member.userId === userId)
-      .map(member => this.projects.find(p => p.id === member.projectId))
-      .filter(project => project !== undefined) as Project[];
-
-    // Combine and remove duplicates
-    const projectMap = new Map<number, Project>();
-
-    // Add created projects
-    createdProjects.forEach(project => {
-      projectMap.set(project.id, project);
-    });
-
-    // Add member projects
-    membershipProjects.forEach(project => {
-      projectMap.set(project.id, project);
-    });
-
-    const allAccessibleProjects = Array.from(projectMap.values());
-
-    console.log(`Storage: getProjectsByUserId(${userId}) returning ${allAccessibleProjects.length} projects (${createdProjects.length} created, ${membershipProjects.length} as member)`);
-
-    return allAccessibleProjects;
-  }
-
-  // Module operations
-  async getModules(projectId: number): Promise<Module[]> {
-    return this.getModulesByProject(projectId);
-  }
-
   // Customer operations (re-declared, ensure consistency)
-  async getCustomers(): Promise<Customer[]> {
+  async getCustomers(): Promise<Customer[]>{
     return [...this.customers];
   }
 
@@ -1964,10 +1975,7 @@ class MemStorage implements IStorage {
   }
 
   // TimeSheet Folder operations
-  async getTimeSheetFolders(userId?: number): Promise<TimeSheetFolder[]> {
-    if (userId) {
-      return this.timeSheetFolders.filter(folder => folder.userId === userId);
-    }
+  async getTimeSheetFolders(): Promise<TimeSheetFolder[]> {
     return [...this.timeSheetFolders];
   }
 
@@ -1977,7 +1985,7 @@ class MemStorage implements IStorage {
 
   async createTimeSheetFolder(folder: InsertTimeSheetFolder): Promise<TimeSheetFolder> {
     const newFolder: TimeSheetFolder = {
-      id: this.nextTimeSheetFolderId++,
+      id: this.getNextId(),
       name: folder.name,
       userId: folder.userId,
       parentId: folder.parentId || null,
@@ -2635,12 +2643,12 @@ class MemStorage implements IStorage {
     });
   }
 
-  async updateTestCaseStatus(id: number, status: string): Promise<TestCase | null> {
+  async updateTestCaseStatus(id: number, status: TestCaseStatus): Promise<TestCase | null> {
     console.log(`Storage: updateTestCaseStatus(${id}, ${status})`);
     return this.updateTestCase(id, { status });
   }
 
-  async updateBugStatus(id: number, status: string): Promise<Bug | null> {
+  async updateBugStatus(id: number, status: BugStatus): Promise<Bug | null> {
     console.log(`Storage: updateBugStatus(${id}, ${status})`);
     return this.updateBug(id, { status });
   }
