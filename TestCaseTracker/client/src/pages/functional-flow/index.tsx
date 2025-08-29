@@ -28,6 +28,7 @@ import { MainLayout } from '@/components/layout/main-layout';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { useLocation, useSearch } from 'wouter';
+import MermaidFlowGenerator from '@/components/functional-flow/mermaid-flow-generator';
 
 interface Project {
   id: string;
@@ -308,6 +309,50 @@ export default function FunctionalFlowPage() {
     }
   };
 
+  // Generate flow diagram function
+  const handleGenerateFlowDiagram = async () => {
+    if (!selectedProject) {
+      toast({
+        title: 'Error',
+        description: 'Please select a project first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const response = await apiRequest('POST', `/api/flow-diagrams/generate/${selectedProject}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate flow diagram');
+      }
+
+      const result = await response.json();
+      
+      toast({
+        title: 'Success',
+        description: result.message || 'Flow diagram generated successfully',
+      });
+
+      // Refresh the diagrams list
+      refetch();
+      
+      // If a diagram was created, optionally load it
+      if (result.diagramId) {
+        loadDiagramMutation.mutate(result.diagramId.toString());
+      }
+
+    } catch (error) {
+      console.error('Error generating flow diagram:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to generate flow diagram: ${error}`,
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Effect to load diagram if diagramId is present in the URL
   useEffect(() => {
     if (diagramId && selectedProject) {
@@ -543,9 +588,24 @@ export default function FunctionalFlowPage() {
                   <FileDown className="w-4 h-4 mr-2" />
                   Export PDF
                 </Button>
+
+                <Button onClick={handleGenerateFlowDiagram} disabled={!selectedProject || !projects.find(p => p.id === selectedProject)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Generate Flow
+                </Button>
               </div>
             </CardContent>
           </Card>
+
+          {/* Mermaid Flow Generator */}
+          {selectedProject && (
+            <MermaidFlowGenerator 
+              projectId={selectedProject}
+              onFlowGenerated={(mermaidCode) => {
+                console.log('Generated Mermaid code:', mermaidCode);
+              }}
+            />
+          )}
 
           {/* Flow Diagram Canvas */}
           <Card className="min-h-[600px] flex-1">

@@ -697,6 +697,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Flow diagram routes
   apiRouter.use("/flow-diagrams", flowDiagramRoutes);
 
+  // Flow diagram generation route (separate registration)
+  app.post('/api/flow-diagrams/generate/:projectId', async (req: Request, res: Response) => {
+    try {
+      const { generateFlowDiagram } = await import('./api/flow-diagram-generator');
+      await generateFlowDiagram(req, res);
+    } catch (error) {
+      console.error('Flow diagram generation error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate flow diagram',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Navadhiti Projects routes
   apiRouter.get("/navadhiti-projects", isAuthenticated, async (req, res) => {
     try {
@@ -6083,8 +6098,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
 
     const storage = multer.diskStorage({
       destination: (req, file, cb) => {
-        cb(null, documentsDir);
-      },
+        cb(null, documentsDir});
       filename: (req, file, cb) => {
         // Generate unique filename with document details and timestamp
         const uniqueId = crypto.randomBytes(8).toString('hex');
