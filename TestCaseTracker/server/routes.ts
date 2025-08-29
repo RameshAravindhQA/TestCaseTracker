@@ -3415,97 +3415,132 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
   });
 
   // TimeSheet API endpoints
-  apiRouter.get("/timesheets", isAuthenticated, async (req, res) => {
+  apiRouter.get("/timesheets", async (req, res) => {
     try {
       const {projectId, userId, folderId } = req.query;
+      const requestingUser = req.session?.userId;
 
       console.log(`[API] Getting timesheets with filters:`, {
         projectId: projectId ? parseInt(projectId as string) : undefined,
-        userId: userId ? parseInt(userId as string) : req.session.userId,
+        userId: userId ? parseInt(userId as string) : undefined,
         folderId: folderId ? parseInt(folderId as string) : undefined,
-        requestingUser: req.session.userId
+        requestingUser
       });
 
-      let timesheets;
+      let timeSheets: TimeSheet[];
 
-      if (folderId) {
-        // Get timesheets by folder
-        timesheets = await storage.getTimeSheetsByFolder(parseInt(folderId as string));
+      if (userId) {
+        // Get timesheets for specific user
+        timeSheets = await storage.getUserTimeSheets(parseInt(userId as string));
+      } else if (projectId) {
+        // Get timesheets for specific project
+        timeSheets = await storage.getProjectTimeSheets(parseInt(projectId as string));
       } else {
-        // For admins: show all timesheets if no userId filter is specified
-        // For regular users: always filter by their own userId
-        let targetUserId = req.session.userId;
+        // Get all timesheets (admin view)
+        timeSheets = await storage.getTimeSheets();
+      }
 
-        if (req.session.userRole === "Admin" && userId) {
-          targetUserId = parseInt(userId as string);
-        } else if (req.session.userRole !== "Admin") {
-          // Non-admin users can only see their own timesheets
-          targetUserId = req.session.userId;
-        }
+      // Apply folder filter if specified
+      if (folderId) {
+        const folderIdNum = parseInt(folderId as string);
+        timeSheets = timeSheets.filter(ts => ts.folderId === folderIdNum);
+      }
 
-        const targetProjectId = projectId ? parseInt(projectId as string) : undefined;
+      console.log(`[API] Returning ${timeSheets.length} timesheets for user ${requestingUser}:`, 
+        timeSheets.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description })));
 
-        // If no specific filters and user is admin, get all timesheets
-        if (req.session.userRole === "Admin" && !projectId && !userId) {
-          // This case should ideally fetch *all* timesheets if no filters are applied by an admin
-          // For now, let's assume getUserTimeSheets is the intended fallback for admin if no filters are specified
-          // A more robust solution might involve a separate `storage.getAllTimeSheets()`
-          // However, based on the original code structure, `getUserTimeSheets` with the admin's own ID seems to be the intended behavior if no filters are passed.
-          // To explicitly fetch all timesheets for an admin, a different storage method might be needed.
-          // For the purpose of this fix, we'll ensure that if an admin requests without filters, they get their own timesheets,
-          // and if they pass a `userId` filter, that is respected.
-          // The crucial fix is for non-admin users to *always* see their own timesheets.
-          timesheets = await storage.getUserTimeSheets(req.session.userId!);
-        } else {
-          timesheets = await storage.getTimeSheets(targetProjectId, targetUserId);
+      res.json(timeSheets);
+    } catch (error) {
+      console.error("Error fetching timesheets:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch timesheets" });
+    }
+  });
+
+  // Get individual timesheet by ID
+  app.get("/api/timesheets/:id", async (req, res) => {
+    try {
+      const timesheetId = parseInt(req.params.id);
+      const timesheet = await storage.getTimeSheet(timesheetId);
+
+      if (!timesheet) {
+        return res.status(404).json({ success: false, error: "Timesheet not found" });
+      }
+
+      console.log(`[API] Returning timesheet ${timesheetId}:`, timesheet);
+      res.json(timesheet);
+    } catch (error) {
+      console.error("Error fetching timesheet:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch timesheet" });
+    }
+  });
+
+  app.put("/api/timesheets/:id", async (req, res) => {
+    try {
+      const timesheetId = parseInt(req.params.id);
+      const updatedTimeSheet = await storage.updateTimeSheet(timesheetId, req.body);
+
+      if (!updatedTimeSheet) {
+        return res.status(404).json({ success: false, error: "Timesheet not found" });
+      }
+
+      console.log(`[API] Updated timesheet ${timesheetId}:`, updatedTimeSheet);
+      res.json(updatedTimeSheet);
+    } catch (error) {
+      console.error("Error updating timesheet:", error);
+      res.status(500).json({ success: false, error: "Failed to update timesheet" });
+    }
+  });
+
+  // PATCH endpoint for timesheet status updates (approve/reject)
+  app.patch("/api/timesheets/:id", async (req, res) => {
+    try {
+      const timesheetId = parseInt(req.params.id);
+      const { status, comments, approvedById, approvalDate } = req.body;
+      const requestingUserId = req.session?.userId;
+
+      console.log(`[API] PATCH timesheet ${timesheetId} with status: ${status}`, {
+        status,
+        comments,
+        approvedById,
+        approvalDate,
+        requestingUserId
+      });
+
+      // Get current timesheet
+      const currentTimesheet = await storage.getTimeSheet(timesheetId);
+      if (!currentTimesheet) {
+        return res.status(404).json({ success: false, error: "Timesheet not found" });
+      }
+
+      // Update with new status and approval info
+      const updateData = {
+        ...req.body,
+        updatedAt: new Date(),
+      };
+
+      // Ensure approval fields are set for status changes
+      if (status === "Approved" || status === "Rejected") {
+        updateData.approvedById = approvedById || requestingUserId;
+        updateData.approvalDate = approvalDate || new Date();
+        if (status === "Rejected" && comments) {
+          updateData.comments = comments;
         }
       }
 
-      console.log(`[API] Returning ${timesheets.length} timesheets for user ${req.session.userId}:`, 
-        timesheets.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description.substring(0, 50) })));
-      res.json(timesheets);
+      const updatedTimeSheet = await storage.updateTimeSheet(timesheetId, updateData);
+
+      if (!updatedTimeSheet) {
+        return res.status(404).json({ success: false, error: "Failed to update timesheet" });
+      }
+
+      console.log(`[API] Successfully updated timesheet ${timesheetId} to status: ${status}`);
+      res.json({ success: true, timesheet: updatedTimeSheet });
     } catch (error) {
-      console.error("Get timesheets error:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error("Error updating timesheet status:", error);
+      res.status(500).json({ success: false, error: "Failed to update timesheet status" });
     }
   });
 
-  apiRouter.post("/timesheets", isAuthenticated, async (req, res) => {
-    try {
-      const timesheetData = insertTimeSheetSchema.parse({
-        ...req.body,
-        userId: req.session.userId,
-      });
-
-      const timesheet = await storage.createTimeSheet(timesheetData);
-      res.status(201).json(timesheet);
-    } catch (error) {
-      console.error("Create timesheet error:", error);
-      res.status(400).json({ message: "Invalid timesheet data" });
-    }
-  });
-
-  apiRouter.put("/timesheets/:id", isAuthenticated, async (req, res) => {
-    try {
-      const timesheetId = parseInt(req.params.id);
-      const updatedTimesheet = await storage.updateTimeSheet(timesheetId, req.body);
-      res.json(updatedTimesheet);
-    } catch (error) {
-      console.error("Update timesheet error:", error);
-      res.status(400).json({ message: "Invalid timesheet data" });
-    }
-  });
-
-  apiRouter.delete("/timesheets/:id", isAuthenticated, async (req, res) => {
-    try {
-      const timesheetId = parseInt(req.params.id);
-      const success = await storage.deleteTimeSheet(timesheetId);
-      res.json({ success });
-    } catch (error) {
-      console.error("Delete timesheet error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
 
   // TimeSheet Folders API endpoints
   apiRouter.get("/timesheet-folders", isAuthenticated, async (req, res) => {
@@ -5925,7 +5960,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
 
       const project = await storage.getProject(projectId);
       if (!project) {
-        return res.status(404).json({ message: "Projectnot found" });
+        return res.status(404).json({ message: "Project not found" });
       }
 
       // Check if user has access to this project (unless admin)

@@ -184,12 +184,8 @@ export default function TimeSheetsPage() {
       try {
         console.log(`Attempting to approve timesheet with ID: ${id}`);
 
-        // First get the current timesheet data
-        const currentTimesheet = await apiRequest("GET", `/api/timesheets/${id}`).then(res => res.json());
-
-        // Make the API request with all required data
+        // Make the API request to approve the timesheet
         const res = await apiRequest("PATCH", `/api/timesheets/${id}`, {
-          ...currentTimesheet,
           status: "Approved",
           approvalDate: new Date().toISOString(),
           approvedById: user?.id
@@ -203,6 +199,7 @@ export default function TimeSheetsPage() {
         }
 
         const data = await res.json();
+        console.log("Approval successful:", data);
         return data;
       } catch (err) {
         console.error("Approve timesheet error:", err);
@@ -219,10 +216,8 @@ export default function TimeSheetsPage() {
       });
 
       // Force an immediate refetch of data to update counters and status
-      // Force immediate data refresh
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/timesheets"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/timesheets"], refetchType: "all" }),
         queryClient.refetchQueries({ queryKey: ["/api/timesheets"], type: "all" })
       ]);
     },
@@ -302,12 +297,17 @@ export default function TimeSheetsPage() {
         throw err;
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Success",
         description: "TimeSheet rejected successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/timesheets"] });
+      
+      // Force immediate data refresh
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/timesheets"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/timesheets"], type: "all" })
+      ]);
     },
     onError: (error: Error) => {
       console.error("Reject mutation error:", error);

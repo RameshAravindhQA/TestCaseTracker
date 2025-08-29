@@ -1829,6 +1829,8 @@ class MemStorage implements IStorage {
 
     const updatedTimeSheet = { ...this.timeSheets[index], ...timeSheetData, updatedAt: new Date() };
     this.timeSheets[index] = updatedTimeSheet;
+    
+    console.log(`Storage: Updated timesheet ${id} with status: ${timeSheetData.status}`, updatedTimeSheet);
     return updatedTimeSheet;
   }
 
@@ -1840,7 +1842,10 @@ class MemStorage implements IStorage {
 
   async approveTimeSheet(id: number, approverId: number): Promise<TimeSheet | undefined> {
     const index = this.timeSheets.findIndex(ts => ts.id === id);
-    if (index === -1) return undefined;
+    if (index === -1) {
+      console.error(`Storage: Timesheet ${id} not found for approval`);
+      return undefined;
+    }
 
     const approvedTimeSheet: TimeSheet = {
       ...this.timeSheets[index],
@@ -1850,12 +1855,17 @@ class MemStorage implements IStorage {
       updatedAt: new Date()
     };
     this.timeSheets[index] = approvedTimeSheet;
+    
+    console.log(`Storage: Approved timesheet ${id} by user ${approverId}`, approvedTimeSheet);
     return approvedTimeSheet;
   }
 
   async rejectTimeSheet(id: number, approverId: number, reason: string): Promise<TimeSheet | undefined> {
     const index = this.timeSheets.findIndex(ts => ts.id === id);
-    if (index === -1) return undefined;
+    if (index === -1) {
+      console.error(`Storage: Timesheet ${id} not found for rejection`);
+      return undefined;
+    }
 
     const rejectedTimeSheet: TimeSheet = {
       ...this.timeSheets[index],
@@ -1866,6 +1876,8 @@ class MemStorage implements IStorage {
       updatedAt: new Date()
     };
     this.timeSheets[index] = rejectedTimeSheet;
+    
+    console.log(`Storage: Rejected timesheet ${id} by user ${approverId} with reason: ${reason}`, rejectedTimeSheet);
     return rejectedTimeSheet;
   }
 
