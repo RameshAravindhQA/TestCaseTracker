@@ -69,20 +69,28 @@ export async function generateFlowDiagram(req: Request, res: Response) {
       // For better grouping, if we have a testCaseId with module prefix, extract proper module name
       if (testCase.testCaseId && testCase.testCaseId.includes('-')) {
         const parts = testCase.testCaseId.split('-');
-        if (parts.length >= 3) {
-          const modulePrefix = parts[1]; // e.g., REG from BEG-REG-TC-001
+        if (parts.length >= 4 && parts[2] === 'TC') {
+          // Extract module prefix from new format: BEG-REG-TC-001 -> REG
+          const modulePrefix = parts[1];
           // Map common prefixes to full names
           const prefixToName = {
-            'REG': 'User Registration',
-            'LOG': 'User Login', 
-            'PROF': 'User Profile',
-            'DASH': 'Dashboard',
-            'MENU': 'Menu Management',
-            'ORD': 'Order Management',
-            'PAY': 'Payment Processing',
-            'INV': 'Inventory Management'
+            'REG': 'User Registration Module',
+            'LOG': 'User Login Module', 
+            'PROF': 'User Profile Module',
+            'DASH': 'Dashboard Module',
+            'MENU': 'Menu Management Module',
+            'ORD': 'Order Management Module',
+            'PAY': 'Payment Processing Module',
+            'INV': 'Inventory Management Module',
+            'AUTH': 'Authentication Module',
+            'USER': 'User Management Module',
+            'PROD': 'Product Management Module',
+            'CART': 'Shopping Cart Module'
           };
           moduleName = prefixToName[modulePrefix] || `${modulePrefix} Module`;
+        } else if (parts.length >= 3 && parts[1] === 'TC') {
+          // Handle old format: BEG-TC-001 -> use feature or generic name
+          moduleName = testCase.feature || 'General Tests';
         }
       }
       

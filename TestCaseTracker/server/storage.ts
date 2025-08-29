@@ -709,8 +709,8 @@ class MemStorage implements IStorage {
         }
       }
 
-      // Find the highest existing test case number for this project and module with the same prefix
-      // This includes ALL test cases that have ever been created, even if some were deleted
+      // Find the highest existing test case number for this specific module only
+      // Each module starts numbering from 001 independently  
       const prefixPattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
       const existingTestCases = this.testCases
         .filter(tc => tc.moduleId === insertTestCase.moduleId && tc.projectId === insertTestCase.projectId)
@@ -720,9 +720,9 @@ class MemStorage implements IStorage {
           const match = id.match(prefixPattern);
           return match ? parseInt(match[1], 10) : 0;
         })
-        .filter(num => !isNaN(num));
+        .filter(num => !isNaN(num) && num > 0);
 
-      // Always increment from the highest number ever used, never reuse deleted IDs
+      // Start numbering from 1 for each module independently
       const nextNumber = existingTestCases.length > 0 ? Math.max(...existingTestCases) + 1 : 1;
       testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
 

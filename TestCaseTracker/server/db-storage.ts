@@ -368,14 +368,17 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Extract module prefix from module ID (e.g., BEG-REG-MOD-01 -> REG)
-      let modulePrefix = 'TC'; // Default for test cases
+      let modulePrefix = 'MOD'; // Default fallback
       if (module.moduleId) {
         const moduleIdParts = module.moduleId.split('-');
-        if (moduleIdParts.length >= 2) {
-          modulePrefix = moduleIdParts[1]; // Get the second part (REG, LOG, etc.)
+        if (moduleIdParts.length >= 3 && moduleIdParts[2] === 'MOD') {
+          // Extract the module type prefix (second part)
+          modulePrefix = moduleIdParts[1]; // Get REG from BEG-REG-MOD-01
         }
-      } else if (module.name) {
-        // Fallback to module name if moduleId not available
+      } 
+      
+      // If we couldn't extract from moduleId, generate from module name
+      if (modulePrefix === 'MOD' && module.name) {
         const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '');
         modulePrefix = cleanModuleName.substring(0, 3).toUpperCase();
         if (modulePrefix.length < 3) {
@@ -384,44 +387,32 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Find the highest existing test case number for this specific module only
-      // This ensures each module starts numbering from 001
+      // Each module starts numbering from 001 independently
       const existingTestCases = await db
         .select({ testCaseId: testCases.testCaseId })
         .from(testCases)
-        .where(and(eq(testCases.projectId, insertTestCase.projectId), eq(testCases.moduleId, insertTestCase.moduleId)));
+        .where(and(
+          eq(testCases.projectId, insertTestCase.projectId), 
+          eq(testCases.moduleId, insertTestCase.moduleId)
+        ));
 
-      // More flexible pattern matching - try both formats
-      const patterns = [
-        new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`), // BEG-REG-TC-001
-        new RegExp(`^${projectPrefix}-TC-(\\d+)$`) // BEG-TC-001 (simplified format)
-      ];
+      // Use consistent format: PROJECT-MODULE-TC-###
+      const testCasePattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
       
-      let existingNumbers = [];
-      for (const pattern of patterns) {
-        const numbers = existingTestCases
-          .map(tc => tc.testCaseId)
-          .filter(id => id && pattern.test(id))
-          .map(id => {
-            const match = id.match(pattern);
-            return match ? parseInt(match[1], 10) : 0;
-          })
-          .filter(num => !isNaN(num));
-        
-        if (numbers.length > 0) {
-          existingNumbers = numbers;
-          break;
-        }
-      }
+      const existingNumbers = existingTestCases
+        .map(tc => tc.testCaseId)
+        .filter(id => id && testCasePattern.test(id))
+        .map(id => {
+          const match = id.match(testCasePattern);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(num => !isNaN(num) && num > 0);
 
-      // Start numbering from 1 for each module
+      // Start numbering from 1 for each module independently
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
       
-      // Use the format that matches existing test cases, or default to project-module-TC format
-      if (existingTestCases.length > 0 && existingTestCases[0].testCaseId?.includes(`${projectPrefix}-TC-`)) {
-        testCaseId = `${projectPrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
-      } else {
-        testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
-      }
+      // Always use the full format: PROJECT-MODULE-TC-###
+      testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
       
       console.log(`DB: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId} (${module.name}). Project prefix: ${projectPrefix}, Module prefix: ${modulePrefix}, existing numbers: [${existingNumbers.join(', ')}], next: ${nextNumber}`);
     }
