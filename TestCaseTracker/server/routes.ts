@@ -5714,7 +5714,7 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
           // Check for circular reference by ensuring the new parent is not a descendant of this folder
           const getDescendantIds = async (parentId: number, visited = new Set<number>()): Promise<number[]> => {
             if (visited.has(parentId)) return []; // Prevent infinite recursion if there's a circular reference already
-            visited.add(parentId.
+            visited.add(parentId);
             const children = (await storage.getDocumentFolders(folder.projectId))
               .filter(f => f.parentFolderId === parentId)
               .map(f => f.id);
