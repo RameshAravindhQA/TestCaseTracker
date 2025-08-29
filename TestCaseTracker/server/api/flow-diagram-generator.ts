@@ -1,4 +1,3 @@
-
 import { Request, Response } from 'express';
 import { storage } from '../storage';
 
@@ -6,7 +5,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
   try {
     const { projectId } = req.params;
     const { moduleId } = req.query;
-    
+
     if (!projectId) {
       return res.status(400).json({
         success: false,
@@ -32,7 +31,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
     } else {
       testCases = await storage.getTestCasesByProject(parseInt(projectId));
     }
-    
+
     if (testCases.length === 0) {
       return res.status(400).json({
         success: false,
@@ -45,19 +44,19 @@ export async function generateFlowDiagram(req: Request, res: Response) {
     // Generate Mermaid diagram definition
     let mermaidDef = "graph TD;\n";
     mermaidDef += `    Start([${project.name} Test Flow]);\n`;
-    
+
     testCases.forEach((testCase, i) => {
       const nodeId = `TC${i}`;
       const label = `${testCase.testCaseId}: ${testCase.feature || testCase.testObjective || 'Test Case'}`;
       mermaidDef += `    ${nodeId}["${label}"];\n`;
-      
+
       if (i === 0) {
         mermaidDef += `    Start --> ${nodeId};\n`;
       } else {
         mermaidDef += `    TC${i-1} --> ${nodeId};\n`;
       }
     });
-    
+
     mermaidDef += `    TC${testCases.length - 1} --> End([Test Complete]);\n`;
 
     // Group test cases by module for mind map layout
@@ -65,7 +64,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
     testCases.forEach(testCase => {
       // Use module name if available, otherwise fall back to feature, then to a generic category
       let moduleName = testCase.moduleName || testCase.feature || 'General Tests';
-      
+
       // For better grouping, if we have a testCaseId with module prefix, extract proper module name
       if (testCase.testCaseId && testCase.testCaseId.includes('-')) {
         const parts = testCase.testCaseId.split('-');
@@ -93,7 +92,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
           moduleName = testCase.feature || 'General Tests';
         }
       }
-      
+
       if (!featureGroups[moduleName]) {
         featureGroups[moduleName] = [];
       }
@@ -102,7 +101,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
 
     const nodes = [];
     const edges = [];
-    
+
     // Central node
     const centerX = 400;
     const centerY = 300;
@@ -188,7 +187,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
         // Determine node color based on status
         let backgroundColor = '#6B7280'; // Default gray for 'Not Executed'
         let borderColor = '#4B5563';
-        
+
         if (testCase.status === 'Pass') {
           backgroundColor = '#10B981';
           borderColor = '#059669';
@@ -197,19 +196,19 @@ export async function generateFlowDiagram(req: Request, res: Response) {
           borderColor = '#DC2626';
         }
 
-        nodes.push({
+        const testNode = {
           id: testNodeId,
           type: 'testCaseNode',
           data: {
-            label: testCase.testCaseId,
-            description: testCase.testObjective || 'Test case execution',
+            label: testCase.testCaseId || `TC-${String(testIndex + 1).padStart(3, '0')}`, // Use actual testCaseId from database
+            description: testCase.title || testCase.description || 'No description available',
             testCaseId: testCase.id,
-            feature: testCase.feature,
-            priority: testCase.priority,
-            status: testCase.status,
-            preConditions: testCase.preConditions,
-            testSteps: testCase.testSteps,
-            expectedResult: testCase.expectedResult,
+            feature: testCase.feature || 'General',
+            priority: testCase.priority || 'Medium',
+            status: testCase.status || 'Not Executed',
+            preConditions: testCase.preConditions || 'None specified',
+            testSteps: testCase.testSteps || 'No steps defined',
+            expectedResult: testCase.expectedResult || 'Not specified',
             isTestCase: true
           },
           position: { x: testX, y: testY },
@@ -225,7 +224,8 @@ export async function generateFlowDiagram(req: Request, res: Response) {
             textAlign: 'center',
             cursor: 'pointer',
           },
-        });
+        };
+        nodes.push(testNode);
 
         // Edge from module to test case (straight line)
         edges.push({
@@ -243,7 +243,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
     const timestamp = new Date().toLocaleString();
     let diagramName = `${project.name} - Test Flow`;
     let diagramDescription = `Auto-generated flow diagram for ${project.name}`;
-    
+
     if (moduleId && moduleId !== 'all') {
       const module = await storage.getModule(parseInt(moduleId as string));
       if (module) {
@@ -251,7 +251,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
         diagramDescription += ` - ${module.name} module`;
       }
     }
-    
+
     diagramName += ` (${timestamp})`;
     diagramDescription += ` containing ${testCases.length} test cases`;
 

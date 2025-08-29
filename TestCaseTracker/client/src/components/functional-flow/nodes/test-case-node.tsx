@@ -7,6 +7,8 @@ import { Eye, Edit, Play, MoreVertical } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useLocation } from 'wouter';
+import { TestCaseForm } from '@/components/test-cases/test-case-form';
+import { useQuery } from '@tanstack/react-query';
 
 interface TestCaseNodeData {
   label: string;
@@ -28,7 +30,40 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
   const [isHovered, setIsHovered] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [, setLocation] = useLocation();
+
+  // Debug logging for test case ID
+  console.log('TestCaseNode data:', {
+    label: data.label,
+    testCaseId: data.testCaseId,
+    isTestCase: data.isTestCase,
+    allData: data
+  });
+
+  // Fetch test case details for editing
+  const { data: testCaseDetails } = useQuery({
+    queryKey: [`/api/test-cases/${data.testCaseId}`],
+    queryFn: async () => {
+      if (!data.testCaseId) return null;
+      const response = await fetch(`/api/test-cases/${data.testCaseId}`);
+      if (!response.ok) throw new Error('Failed to fetch test case');
+      return response.json();
+    },
+    enabled: !!data.testCaseId && editDialogOpen
+  });
+
+  // Fetch modules for the form
+  const { data: modules } = useQuery({
+    queryKey: [`/api/projects/${testCaseDetails?.projectId}/modules`],
+    queryFn: async () => {
+      if (!testCaseDetails?.projectId) return [];
+      const response = await fetch(`/api/projects/${testCaseDetails.projectId}/modules`);
+      if (!response.ok) throw new Error('Failed to fetch modules');
+      return response.json();
+    },
+    enabled: !!testCaseDetails?.projectId && editDialogOpen
+  });
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -62,14 +97,13 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
   };
 
   const handleView = () => {
+    console.log('Opening view dialog for test case:', data.testCaseId);
     setViewDialogOpen(true);
   };
 
   const handleEdit = () => {
-    if (data.testCaseId) {
-      // Navigate to test cases page and open edit form
-      setLocation(`/test-cases?edit=${data.testCaseId}`);
-    }
+    console.log('Opening edit dialog for test case:', data.testCaseId);
+    setEditDialogOpen(true);
   };
 
   const handleExecute = () => {
@@ -121,7 +155,7 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
 
         <div className="bg-white rounded-lg border-2 border-gray-300 shadow-lg min-w-[120px] p-3">
           <div className="text-xs font-medium text-gray-900 text-center">
-            {data.label}
+            {data.label || `TC-${data.testCaseId}`}
           </div>
           {data.status && (
             <div className="mt-1 flex justify-center">
@@ -303,7 +337,7 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
 
         {/* View Dialog */}
         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-auto">
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-auto">
             <DialogHeader>
               <DialogTitle>Test Case Details</DialogTitle>
               <DialogDescription>
@@ -323,13 +357,28 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
               </div>
 
               <div>
-                <h3 className="text-sm font-medium">Description</h3>
+                <h3 className="text-sm font-medium">Test Objective</h3>
                 <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{data.description}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-sm font-medium">Status</h3>
+                  <Badge className={getStatusBadgeColor(data.status || 'Not Executed')}>
+                    {data.status || 'Not Executed'}
+                  </Badge>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium">Priority</h3>
+                  <Badge className={getPriorityBadgeColor(data.priority || 'Medium')}>
+                    {data.priority || 'Medium'}
+                  </Badge>
+                </div>
               </div>
 
               {data.preConditions && (
                 <div>
-                  <h3 className="text-sm font-medium">Pre-conditions</h3>
+                  <h3 className="text-sm font-medium">Pre-Conditions</h3>
                   <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">{data.preConditions}</p>
                 </div>
               )}
@@ -338,26 +387,67 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
                 <div>
                   <h3 className="text-sm font-medium">Test Steps</h3>
                   <div className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap max-h-40 overflow-y-auto p-3 border rounded-md bg-gray-50 dark:bg-gray-800">
-                    {data.testSteps}
+                    <ol className="list-decimal list-inside space-y-1">
+                      {data.testSteps.split('\n').map((step, index) => (
+                        <li key={index} className="text-xs">{step.replace(/^\d+\.\s*/, '')}</li>
+                      ))}
+                    </ol>
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              {data.expectedResult && (
                 <div>
-                  <h3 className="text-sm font-medium">Status</h3>
-                  <Badge variant="outline" className={getStatusBadgeColor(data.status)}>
-                    {data.status}
-                  </Badge>
+                  <h3 className="text-sm font-medium">Expected Result</h3>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">{data.expectedResult}</p>
                 </div>
-                <div>
-                  <h3 className="text-sm font-medium">Priority</h3>
-                  <Badge variant="outline" className={getPriorityBadgeColor(data.priority)}>
-                    {data.priority}
-                  </Badge>
-                </div>
+              )}
+
+              <div>
+                <h3 className="text-sm font-medium">Actual Result</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 italic">Not executed</p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium">Comments</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 italic">Generated by AI testing team template.</p>
               </div>
             </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+                Close
+              </Button>
+              <Button onClick={() => {
+                setViewDialogOpen(false);
+                setEditDialogOpen(true);
+              }}>
+                Edit Test Case
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Test Case</DialogTitle>
+              <DialogDescription>
+                Update the test case details below.
+              </DialogDescription>
+            </DialogHeader>
+            {testCaseDetails && modules && (
+              <TestCaseForm 
+                testCase={testCaseDetails}
+                projectId={testCaseDetails.projectId}
+                modules={modules}
+                onSuccess={() => {
+                  setEditDialogOpen(false);
+                  // You might want to refresh the flow diagram here
+                }}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </>
