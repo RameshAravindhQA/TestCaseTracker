@@ -13,7 +13,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
       });
     }
 
-    console.log(`🔄 Generating flow diagram for project ${projectId}`);
+    console.log(`🔄 Generating Mermaid flow diagram for project ${projectId}`);
 
     // Get project details
     const project = await storage.getProject(parseInt(projectId));
@@ -34,9 +34,27 @@ export async function generateFlowDiagram(req: Request, res: Response) {
       });
     }
 
-    console.log(`📋 Found ${testCases.length} test cases for flow diagram generation`);
+    console.log(`📋 Found ${testCases.length} test cases for Mermaid flow diagram generation`);
 
-    // Generate flow diagram nodes and edges based on test cases
+    // Generate Mermaid diagram definition
+    let mermaidDef = "graph TD;\n";
+    mermaidDef += `    Start([${project.name} Test Flow]);\n`;
+    
+    testCases.forEach((testCase, i) => {
+      const nodeId = `TC${i}`;
+      const label = `${testCase.testCaseId}: ${testCase.feature || testCase.testObjective || 'Test Case'}`;
+      mermaidDef += `    ${nodeId}["${label}"];\n`;
+      
+      if (i === 0) {
+        mermaidDef += `    Start --> ${nodeId};\n`;
+      } else {
+        mermaidDef += `    TC${i-1} --> ${nodeId};\n`;
+      }
+    });
+    
+    mermaidDef += `    TC${testCases.length - 1} --> End([Test Complete]);\n`;
+
+    // Convert Mermaid to ReactFlow nodes and edges for display
     const nodes = [];
     const edges = [];
     let yPosition = 100;
@@ -46,12 +64,19 @@ export async function generateFlowDiagram(req: Request, res: Response) {
     // Start node
     nodes.push({
       id: 'start-1',
-      type: 'startNode',
+      type: 'default',
       data: { 
         label: `${project.name} Test Flow`,
         description: 'Start of test execution flow'
       },
       position: { x: xPosition, y: yPosition },
+      style: {
+        backgroundColor: '#10B981',
+        color: 'white',
+        border: '1px solid #333',
+        borderRadius: '8px',
+        padding: '10px',
+      },
     });
 
     let previousNodeId = 'start-1';
@@ -63,7 +88,7 @@ export async function generateFlowDiagram(req: Request, res: Response) {
       
       nodes.push({
         id: nodeId,
-        type: 'stepNode',
+        type: 'default',
         data: {
           label: testCase.testCaseId,
           description: testCase.feature || testCase.testObjective || 'Test case execution',
@@ -72,6 +97,13 @@ export async function generateFlowDiagram(req: Request, res: Response) {
           status: testCase.status
         },
         position: { x: xPosition, y: yPosition },
+        style: {
+          backgroundColor: '#3B82F6',
+          color: 'white',
+          border: '1px solid #333',
+          borderRadius: '8px',
+          padding: '10px',
+        },
       });
 
       // Create edge from previous node to current node
@@ -91,12 +123,19 @@ export async function generateFlowDiagram(req: Request, res: Response) {
     const endNodeId = 'end-1';
     nodes.push({
       id: endNodeId,
-      type: 'endNode',
+      type: 'default',
       data: { 
-        label: 'Test Completion',
+        label: 'Test Complete',
         description: 'All test cases completed'
       },
       position: { x: xPosition, y: yPosition },
+      style: {
+        backgroundColor: '#EF4444',
+        color: 'white',
+        border: '1px solid #333',
+        borderRadius: '8px',
+        padding: '10px',
+      },
     });
 
     // Edge to end node
@@ -110,8 +149,8 @@ export async function generateFlowDiagram(req: Request, res: Response) {
 
     // Create flow diagram name
     const timestamp = new Date().toLocaleString();
-    const diagramName = `${project.name} - Test Flow Diagram (${timestamp})`;
-    const diagramDescription = `Auto-generated flow diagram for ${project.name} containing ${testCases.length} test cases`;
+    const diagramName = `${project.name} - Mermaid Test Flow (${timestamp})`;
+    const diagramDescription = `Auto-generated Mermaid flow diagram for ${project.name} containing ${testCases.length} test cases`;
 
     // Save the flow diagram
     const flowDiagramData = {
@@ -121,7 +160,8 @@ export async function generateFlowDiagram(req: Request, res: Response) {
       data: {
         nodes,
         edges,
-        viewport: { x: 0, y: 0, zoom: 0.8 }
+        viewport: { x: 0, y: 0, zoom: 0.8 },
+        mermaidDefinition: mermaidDef
       },
       version: '1.0',
       createdById: (req as any).session?.userId || 1
@@ -129,21 +169,22 @@ export async function generateFlowDiagram(req: Request, res: Response) {
 
     const savedDiagram = await storage.createFlowDiagram(flowDiagramData);
 
-    console.log(`✅ Flow diagram generated successfully with ID: ${savedDiagram.id}`);
+    console.log(`✅ Mermaid flow diagram generated successfully with ID: ${savedDiagram.id}`);
 
     res.json({
       success: true,
-      message: `Flow diagram generated successfully with ${testCases.length} test cases`,
+      message: `Mermaid flow diagram generated successfully with ${testCases.length} test cases`,
       diagramId: savedDiagram.id,
       diagram: savedDiagram,
-      testCasesCount: testCases.length
+      testCasesCount: testCases.length,
+      mermaidDefinition: mermaidDef
     });
 
   } catch (error) {
-    console.error('❌ Flow diagram generation error:', error);
+    console.error('❌ Mermaid flow diagram generation error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate flow diagram',
+      message: 'Failed to generate Mermaid flow diagram',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

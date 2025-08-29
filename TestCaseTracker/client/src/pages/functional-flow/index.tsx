@@ -12,6 +12,7 @@ import ReactFlow, {
   Node,
   BackgroundVariant,
   Panel,
+  MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,13 +22,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Save, Download, Upload, FileDown } from 'lucide-react';
+import { Plus, Save, Download, Upload, FileDown, GitBranch } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/auth';
 import { MainLayout } from '@/components/layout/main-layout';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { useLocation, useSearch } from 'wouter';
+import mermaid from 'mermaid';
 
 interface Project {
   id: string;
@@ -308,93 +310,81 @@ export default function FunctionalFlowPage() {
     }
   };
 
-  // Effect to load diagram if diagramId is present in the URL
+  // Load diagram mutation with fixed dependency
+  const loadDiagramMutation = useMutation({
+    mutationFn: async (diagramId: string) => {
+      const response = await apiRequest('GET', `/api/flow-diagrams/${diagramId}`);
+      if (!response.ok) throw new Error('Failed to load diagram');
+      return response.json();
+    },
+    onSuccess: (diagram: FlowDiagram) => {
+      if (diagram.data && diagram.data.nodes && diagram.data.edges) {
+        setNodes(diagram.data.nodes || initialNodes);
+        setEdges(diagram.data.edges || initialEdges);
+      } else {
+        setNodes(diagram.nodes || initialNodes);
+        setEdges(diagram.edges || initialEdges);
+      }
+      setDiagramName(diagram.name || '');
+      setDiagramDescription(diagram.description || '');
+      toast({
+        title: 'Success',
+        description: 'Flow diagram loaded successfully',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to load diagram: ${error}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Generate flow using Mermaid
+  const generateFlowMutation = useMutation({
+    mutationFn: async (projectId: string) => {
+      const response = await apiRequest('POST', `/api/flow-diagrams/generate/${projectId}`);
+      if (!response.ok) throw new Error('Failed to generate flow diagram');
+      return response.json();
+    },
+    onSuccess: (result) => {
+      if (result.success && result.diagram) {
+        // Convert the generated diagram data to ReactFlow format
+        const { nodes: apiNodes, edges: apiEdges } = result.diagram.data || result.diagram;
+        setNodes(apiNodes || initialNodes);
+        setEdges(apiEdges || initialEdges);
+        setDiagramName(result.diagram.name || 'Generated Flow');
+        setDiagramDescription(result.diagram.description || 'Auto-generated flow diagram');
+        
+        toast({
+          title: 'Success',
+          description: `Generated flow with ${result.testCasesCount} test cases`,
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: 'Generation Failed',
+        description: 'Could not generate flow diagram',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Effect to load diagram if diagramId is present in the URL - with proper cleanup
   useEffect(() => {
-    if (diagramId && selectedProject) {
+    if (diagramId && selectedProject && !loadDiagramMutation.isPending) {
       loadDiagramMutation.mutate(diagramId);
     }
-  }, [diagramId, selectedProject, loadDiagramMutation]);
+  }, [diagramId, selectedProject]);
 
-  // Auto-generate flow diagram when project is selected from URL
+  // Generate flow when project is selected from URL
   useEffect(() => {
-    if (urlProjectId && selectedProject && !diagramId && projects.length > 0) {
-      const generateFlowForProject = async () => {
-        try {
-          console.log(`Auto-generating flow diagram for project ${selectedProject}`);
-          
-          const project = projects.find(p => p.id === selectedProject);
-          if (!project) return;
-
-          // Generate a flow diagram name
-          const timestamp = new Date().toLocaleString();
-          const generatedName = `${project.name} - Test Cases Flow (${timestamp})`;
-          
-          // Create basic nodes for the project
-          const startNode: Node = {
-            id: 'start-1',
-            type: 'startNode',
-            data: { label: `${project.name} Test Flow` },
-            position: { x: 250, y: 50 },
-          };
-
-          const projectNode: Node = {
-            id: 'project-1',
-            type: 'stepNode',
-            data: { 
-              label: project.name,
-              description: project.description || 'Project test cases overview'
-            },
-            position: { x: 250, y: 150 },
-          };
-
-          const endNode: Node = {
-            id: 'end-1',
-            type: 'endNode',
-            data: { label: 'Test Completion' },
-            position: { x: 250, y: 250 },
-          };
-
-          const initialNodes = [startNode, projectNode, endNode];
-          
-          const initialEdges: Edge[] = [
-            {
-              id: 'e1-2',
-              source: 'start-1',
-              target: 'project-1',
-              markerEnd: { type: MarkerType.ArrowClosed },
-            },
-            {
-              id: 'e2-3',
-              source: 'project-1',
-              target: 'end-1',
-              markerEnd: { type: MarkerType.ArrowClosed },
-            },
-          ];
-
-          // Set the nodes and edges
-          setNodes(initialNodes);
-          setEdges(initialEdges);
-          setDiagramName(generatedName);
-          setDiagramDescription(`Auto-generated flow diagram for ${project.name} test cases`);
-
-          toast({
-            title: 'Flow Diagram Generated',
-            description: `Generated flow diagram for ${project.name}`,
-          });
-
-        } catch (error) {
-          console.error('Error auto-generating flow diagram:', error);
-          toast({
-            title: 'Generation Error',
-            description: 'Failed to auto-generate flow diagram',
-            variant: 'destructive',
-          });
-        }
-      };
-
-      generateFlowForProject();
+    if (urlProjectId && selectedProject && !diagramId && projects.length > 0 && !generateFlowMutation.isPending) {
+      generateFlowMutation.mutate(selectedProject);
     }
-  }, [urlProjectId, selectedProject, diagramId, projects, setNodes, setEdges, toast]);
+  }, [urlProjectId, selectedProject, diagramId, projects]);
 
   return (
     <MainLayout>
@@ -543,6 +533,14 @@ export default function FunctionalFlowPage() {
                   <FileDown className="w-4 h-4 mr-2" />
                   Export PDF
                 </Button>
+
+                <Button 
+                  onClick={() => selectedProject && generateFlowMutation.mutate(selectedProject)} 
+                  disabled={!selectedProject || generateFlowMutation.isPending}
+                >
+                  <GitBranch className="w-4 h-4 mr-2" />
+                  {generateFlowMutation.isPending ? 'Generating...' : 'Generate Flow'}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -569,6 +567,11 @@ export default function FunctionalFlowPage() {
                       <p className="text-xs text-gray-600">
                         Drag nodes to move, click to select, connect by dragging from node handles
                       </p>
+                      {diagramName && (
+                        <p className="text-xs text-blue-600 mt-1 font-medium">
+                          {diagramName}
+                        </p>
+                      )}
                     </div>
                   </Panel>
                 </ReactFlow>
