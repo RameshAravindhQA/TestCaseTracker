@@ -4932,21 +4932,11 @@ apiRouter.get('/automation/execution/:executionId', isAuthenticated, (req, res) 
         }
       }
 
-      // Generate testCaseId if not provided
-      let testCaseId = req.body.testCaseId;
-
-      if (!testCaseId) {
-        // Auto-generate testCaseId
-        const existingTestCases = await storage.getTestCasesByProject(projectId);
-        const projectPrefix = project?.prefix || 'TC';
-        const nextNumber = existingTestCases.length + 1;
-        testCaseId = `${projectPrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
-      }
-
+      // Let the storage layer handle testCaseId generation
       const testCaseData = insertTestCaseSchema.parse({
         ...req.body,
         projectId,
-        testCaseId,
+        testCaseId: req.body.testCaseId || '', // Empty string will trigger auto-generation in storage
         createdById: req.session.userId,
       });
 
