@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, Edit, Play, MoreVertical } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 
 interface TestCaseNodeData {
   label: string;
@@ -29,7 +29,7 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
   const [isHovered, setIsHovered] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -69,14 +69,14 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
   const handleEdit = () => {
     if (data.testCaseId) {
       // Navigate to test cases page and open edit form
-      navigate(`/test-cases?edit=${data.testCaseId}`);
+      setLocation(`/test-cases?edit=${data.testCaseId}`);
     }
   };
 
   const handleExecute = () => {
     if (data.testCaseId) {
       // Navigate to test cases page and execute the test
-      navigate(`/test-cases?execute=${data.testCaseId}`);
+      setLocation(`/test-cases?execute=${data.testCaseId}`);
     }
   };
 
