@@ -415,42 +415,64 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
 
     try {
       // Step 1: Create bug in the system first
-      const bugData = new FormData();
+      const bugPayload = {
+        title: formData.title,
+        description: formData.description,
+        severity: formData.severity === 'low' ? 'Trivial' : 
+                 formData.severity === 'medium' ? 'Minor' : 
+                 formData.severity === 'high' ? 'Major' : 'Critical',
+        priority: formData.priority === 'low' ? 'Low' : 
+                 formData.priority === 'medium' ? 'Medium' : 
+                 formData.priority === 'high' ? 'High' : 'Critical',
+        status: 'Open',
+        stepsToReproduce: formData.reproductionSteps,
+        expectedResult: formData.expectedBehavior,
+        actualResult: formData.actualBehavior,
+        environment: formData.environment,
+        comments: formData.additionalInfo || '',
+        preConditions: 'Issue reported via GitHub Issue Reporter',
+        attachments: [],
+        moduleId: formData.moduleId || null
+      };
 
-      // Add bug fields
-      bugData.append('title', formData.title);
-      bugData.append('description', formData.description);
-      bugData.append('severity', formData.severity === 'low' ? 'Trivial' : 
-                     formData.severity === 'medium' ? 'Minor' : 
-                     formData.severity === 'high' ? 'Major' : 'Critical');
-      bugData.append('priority', formData.priority === 'low' ? 'Low' : 
-                     formData.priority === 'medium' ? 'Medium' : 
-                     formData.priority === 'high' ? 'High' : 'Critical');
-      bugData.append('status', 'Open');
-      bugData.append('stepsToReproduce', formData.reproductionSteps);
-      bugData.append('expectedResult', formData.expectedBehavior);
-      bugData.append('actualResult', formData.actualBehavior);
-      bugData.append('environment', formData.environment);
-      bugData.append('comments', formData.additionalInfo || '');
-      bugData.append('preConditions', '');
-
-      if (formData.moduleId) {
-        bugData.append('moduleId', formData.moduleId.toString());
+      // Handle file uploads separately first if needed
+      const attachmentPromises = [];
+      
+      for (const file of screenshots) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const uploadPromise = fetch('/api/uploads/bug-attachment', {
+          method: 'POST',
+          body: formData,
+        }).then(res => res.json());
+        
+        attachmentPromises.push(uploadPromise);
       }
-
-      // Add screenshots to bug
-      screenshots.forEach((file, index) => {
-        bugData.append(`attachments`, file);
-      });
 
       if (screenRecording) {
-        bugData.append('attachments', screenRecording);
+        const formData = new FormData();
+        formData.append('file', screenRecording);
+        
+        const uploadPromise = fetch('/api/uploads/bug-attachment', {
+          method: 'POST',
+          body: formData,
+        }).then(res => res.json());
+        
+        attachmentPromises.push(uploadPromise);
       }
+
+      // Wait for all uploads to complete
+      const uploadedAttachments = await Promise.all(attachmentPromises);
+      bugPayload.attachments = uploadedAttachments;
 
       // Create bug in system
       const bugResponse = await fetch(`/api/projects/${formData.projectId}/bugs`, {
         method: 'POST',
-        body: bugData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bugPayload),
       });
 
       if (!bugResponse.ok) {

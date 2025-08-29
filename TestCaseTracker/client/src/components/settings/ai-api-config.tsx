@@ -23,6 +23,7 @@ export function AIAPIConfig({ onConfigured }: APIConfigFormProps) {
   const providers = [
     { value: 'gemini', label: 'Google Gemini', placeholder: 'AIzaSy...' },
     { value: 'openai', label: 'OpenAI', placeholder: 'sk-...' },
+    { value: 'github-copilot', label: 'GitHub Copilot', placeholder: 'ghp_...' },
     { value: 'claude', label: 'Claude', placeholder: 'sk-ant-...' },
     { value: 'grok', label: 'Grok', placeholder: 'xai-...' },
   ];

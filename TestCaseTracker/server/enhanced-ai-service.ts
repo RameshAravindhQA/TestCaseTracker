@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { logger } from './logger';
 
-export type AIProvider = 'gemini' | 'openai' | 'claude' | 'grok' | 'deepseek' | 'huggingface' | 'cohere' | 'mistral';
+export type AIProvider = 'gemini' | 'openai' | 'claude' | 'grok' | 'deepseek' | 'huggingface' | 'cohere' | 'mistral' | 'github-copilot';
 
 export interface TestCaseGenerationRequest {
   requirement: string;
@@ -50,9 +50,11 @@ export interface TestCaseGenerationResponse {
 // Initialize AI services with better error handling
 let genAI: GoogleGenerativeAI | null = null;
 let openai: OpenAI | null = null;
+let githubCopilot: OpenAI | null = null;
 
 let geminiInitError: string | null = null;
 let openaiInitError: string | null = null;
+let githubCopilotInitError: string | null = null;
 
 // Initialize Google Gemini
 function initializeGemini() {
@@ -84,6 +86,43 @@ function initializeGemini() {
   } catch (error: any) {
     geminiInitError = `Gemini initialization failed: ${error.message}`;
     console.error('❌ Gemini initialization error:', error);
+    return false;
+  }
+}
+
+// Initialize GitHub Copilot
+function initializeGitHubCopilot() {
+  try {
+    const githubToken = process.env.GITHUB_COPILOT_TOKEN;
+    console.log('🔧 GitHub Copilot initialization check:', {
+      hasKey: !!githubToken,
+      keyLength: githubToken?.length || 0,
+      startsWithGhp: githubToken?.startsWith('ghp_') || false,
+      preview: githubToken ? `${githubToken.substring(0, 15)}...` : 'NONE'
+    });
+
+    if (!githubToken || githubToken === 'your-github-copilot-token' || githubToken.trim() === '') {
+      githubCopilotInitError = 'GitHub Copilot token is not properly configured';
+      console.warn('❌ GitHub Copilot token not configured');
+      return false;
+    } 
+
+    if (!githubToken.startsWith('ghp_')) {
+      githubCopilotInitError = 'GitHub Copilot token has invalid format. Expected to start with "ghp_"';
+      console.warn('❌ GitHub Copilot token has invalid format');
+      return false;
+    }
+
+    githubCopilot = new OpenAI({
+      apiKey: githubToken,
+      baseURL: 'https://models.inference.ai.azure.com',
+    });
+    githubCopilotInitError = null;
+    console.log('✅ GitHub Copilot initialized successfully');
+    return true;
+  } catch (error: any) {
+    githubCopilotInitError = `GitHub Copilot initialization failed: ${error.message}`;
+    console.error('❌ GitHub Copilot initialization error:', error);
     return false;
   }
 }
@@ -124,13 +163,15 @@ function initializeOpenAI() {
   }
 }
 
-// Initialize both providers
+// Initialize all providers
 const geminiReady = initializeGemini();
 const openaiReady = initializeOpenAI();
+const githubCopilotReady = initializeGitHubCopilot();
 
 console.log('🔍 AI Providers Status:', {
   gemini: { ready: geminiReady, error: geminiInitError },
-  openai: { ready: openaiReady, error: openaiInitError }
+  openai: { ready: openaiReady, error: openaiInitError },
+  githubCopilot: { ready: githubCopilotReady, error: githubCopilotInitError }
 });
 
 export class EnhancedAIService {
@@ -145,6 +186,10 @@ export class EnhancedAIService {
         ready: !!openai && !openaiInitError,
         error: openaiInitError
       },
+      githubCopilot: {
+        ready: !!githubCopilot && !githubCopilotInitError,
+        error: githubCopilotInitError
+      },
       claude: {
         ready: false,
         error: 'Claude API integration not implemented'
@@ -155,6 +200,9 @@ export class EnhancedAIService {
   static getAvailableProviders(): { provider: AIProvider; name: string; available: boolean; error?: string; isFree?: boolean }[] {
     const grokApiKey = process.env.GROK_API_KEY;
     const grokAvailable = !!(grokApiKey && grokApiKey !== 'your-grok-api-key' && grokApiKey.trim() !== '');
+
+    const githubCopilotToken = process.env.GITHUB_COPILOT_TOKEN;
+    const githubCopilotAvailable = !!(githubCopilotToken && githubCopilotToken !== 'your-github-copilot-token' && githubCopilotToken.trim() !== '');
 
     const providers = [
       {
@@ -169,6 +217,13 @@ export class EnhancedAIService {
         name: 'OpenAI GPT-4',
         available: !!openai && !openaiInitError,
         error: openaiInitError || undefined,
+        isFree: false
+      },
+      {
+        provider: 'github-copilot' as AIProvider,
+        name: 'GitHub Copilot',
+        available: githubCopilotAvailable && !!githubCopilot && !githubCopilotInitError,
+        error: githubCopilotInitError || (githubCopilotAvailable ? undefined : 'GitHub Copilot token not configured'),
         isFree: false
       },
       {
@@ -214,6 +269,10 @@ export class EnhancedAIService {
           if (!openai || openaiInitError) return false;
           await EnhancedAIService.generateWithOpenAI(testRequest);
           return true;
+        case 'github-copilot':
+          if (!githubCopilot || githubCopilotInitError) return false;
+          await EnhancedAIService.generateWithGitHubCopilot(testRequest);
+          return true;
         case 'grok':
           const grokApiKey = process.env.GROK_API_KEY;
           if (!grokApiKey || grokApiKey === 'your-grok-api-key' || grokApiKey.trim() === '') return false;
@@ -249,6 +308,7 @@ export class EnhancedAIService {
     const availableProviders: string[] = [];
     if (genAI && !geminiInitError) availableProviders.push('gemini');
     if (openai && !openaiInitError) availableProviders.push('openai');
+    if (githubCopilot && !githubCopilotInitError) availableProviders.push('github-copilot');
 
     // Check GROK availability
     const grokApiKey = process.env.GROK_API_KEY;
@@ -281,6 +341,10 @@ export class EnhancedAIService {
         } else if (provider === 'openai') {
           const result = await EnhancedAIService.generateWithOpenAI(request);
           console.log(`✅ Successfully generated with OpenAI: ${result.testCases.length} test cases`);
+          return result;
+        } else if (provider === 'github-copilot') {
+          const result = await EnhancedAIService.generateWithGitHubCopilot(request);
+          console.log(`✅ Successfully generated with GitHub Copilot: ${result.testCases.length} test cases`);
           return result;
         } else if (provider === 'grok') {
           const result = await EnhancedAIService.generateWithGrok(request);
@@ -507,6 +571,77 @@ export class EnhancedAIService {
 
     // If we get here, all models failed
     throw new Error(`All OpenAI models failed. Last error: ${lastError?.message || 'Unknown error'}`);
+  }
+
+  // GitHub Copilot implementation
+  private static async generateWithGitHubCopilot(request: TestCaseGenerationRequest): Promise<TestCaseGenerationResponse> {
+    if (!githubCopilot || githubCopilotInitError) {
+      throw new Error(githubCopilotInitError || 'GitHub Copilot not initialized');
+    }
+
+    const prompt = EnhancedAIService.buildPrompt(request);
+    console.log('📝 Sending prompt to GitHub Copilot (length: ' + prompt.length + ')');
+
+    try {
+      console.log(`🔮 Trying GitHub Copilot model: gpt-4o`);
+
+      const completion = await githubCopilot.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert QA engineer who generates comprehensive test cases using GitHub Copilot AI. Always respond with valid JSON only, no additional text or explanations."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 3000,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error(`No response from GitHub Copilot`);
+      }
+
+      console.log(`🤖 GitHub Copilot response received`);
+
+      const testCases = EnhancedAIService.parseAIResponse(content);
+
+      if (!testCases || testCases.length === 0) {
+        throw new Error('GitHub Copilot returned empty or invalid test cases');
+      }
+
+      return {
+        testCases: testCases,
+        analysis: {
+          coverage: 'Comprehensive AI Analysis',
+          complexity: EnhancedAIService.getComplexityLevel(request),
+          focusAreas: EnhancedAIService.getFocusAreas(request),
+          suggestions: EnhancedAIService.getSuggestions(request)
+        },
+        message: `Generated ${testCases.length} test cases using GitHub Copilot`,
+        source: 'github-copilot',
+        provider: 'github-copilot',
+        success: true
+      };
+
+    } catch (error: any) {
+      console.error(`❌ GitHub Copilot generation failed:`, error);
+      
+      // Handle specific error cases
+      if (error.status === 401) {
+        throw new Error('GitHub Copilot authentication failed. Please verify your token is correct and active.');
+      } else if (error.status === 429) {
+        throw new Error('GitHub Copilot rate limit exceeded. Please try again later.');
+      } else if (error.status === 403) {
+        throw new Error('GitHub Copilot access forbidden. Please check your token permissions.');
+      } else {
+        throw new Error(`GitHub Copilot API error: ${error.message}`);
+      }
+    }
   }
 
   // GROK (xAI) implementation

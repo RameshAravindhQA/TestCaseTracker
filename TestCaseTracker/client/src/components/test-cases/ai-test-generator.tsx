@@ -38,7 +38,7 @@ interface GeneratedTestCase {
 }
 
 type InputType = 'text' | 'url' | 'image';
-type AIProvider = 'gemini' | 'openai' | 'claude' | 'grok' | 'deepseek' | 'huggingface' | 'cohere' | 'mistral';
+type AIProvider = 'gemini' | 'openai' | 'claude' | 'grok' | 'deepseek' | 'huggingface' | 'cohere' | 'mistral' | 'github-copilot';
 
 const availableProviders = [
   {
@@ -49,6 +49,11 @@ const availableProviders = [
   {
     provider: "openai",
     name: "OpenAI GPT-4",
+    available: true,
+  },
+  {
+    provider: "github-copilot",
+    name: "GitHub Copilot",
     available: true,
   },
   {

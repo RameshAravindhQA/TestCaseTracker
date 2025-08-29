@@ -43,6 +43,8 @@ export class AIConfigStorage {
       process.env.COHERE_API_KEY = apiKey;
     } else if (provider === 'mistral') {
       process.env.MISTRAL_API_KEY = apiKey;
+    } else if (provider === 'github-copilot') {
+      process.env.GITHUB_COPILOT_TOKEN = apiKey;
     }
 
     // Track usage history
@@ -74,6 +76,7 @@ export class AIConfigStorage {
       case 'huggingface': return process.env.HUGGINGFACE_API_KEY || null;
       case 'cohere': return process.env.COHERE_API_KEY || null;
       case 'mistral': return process.env.MISTRAL_API_KEY || null;
+      case 'github-copilot': return process.env.GITHUB_COPILOT_TOKEN || null;
       default: return null;
     }
   }
@@ -84,7 +87,7 @@ export class AIConfigStorage {
   }
 
   getStatus(): Record<string, boolean> {
-    const providers = ['gemini', 'openai', 'claude', 'grok', 'deepseek', 'huggingface', 'cohere', 'mistral'];
+    const providers = ['gemini', 'openai', 'claude', 'grok', 'deepseek', 'huggingface', 'cohere', 'mistral', 'github-copilot'];
     const status: Record<string, boolean> = {};
 
     providers.forEach(provider => {
@@ -111,6 +114,7 @@ export class AIConfigStorage {
       case 'huggingface': delete process.env.HUGGINGFACE_API_KEY; break;
       case 'cohere': delete process.env.COHERE_API_KEY; break;
       case 'mistral': delete process.env.MISTRAL_API_KEY; break;
+      case 'github-copilot': delete process.env.GITHUB_COPILOT_TOKEN; break;
     }
 
     console.log(`🗑️ API key cleared for ${provider}`);
