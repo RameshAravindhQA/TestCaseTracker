@@ -257,88 +257,90 @@ export function TestCaseNode({ data, selected }: NodeProps<TestCaseNodeData>) {
   // Feature/Module node
   if (data.isFeature) {
     return (
-      <div className="relative">
-        <Handle type="target" position={Position.Left} className="w-4 h-4 bg-green-400 border-green-300" />
-        
-        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg shadow-lg p-4 min-w-[180px] border-2 border-green-400">
-          <div className="text-center">
-            <div className="font-semibold text-sm">{data.label}</div>
-            <div className="text-xs opacity-90 mt-1">{data.description}</div>
+      <>
+        <div className="relative">
+          <Handle type="target" position={Position.Left} className="w-4 h-4 bg-green-400 border-green-300" />
+          
+          <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg shadow-lg p-4 min-w-[180px] border-2 border-green-400">
+            <div className="text-center">
+              <div className="font-semibold text-sm">{data.label}</div>
+              <div className="text-xs opacity-90 mt-1">{data.description}</div>
+            </div>
           </div>
+
+          <Handle type="source" position={Position.Right} className="w-4 h-4 bg-green-400 border-green-300" />
         </div>
 
-        <Handle type="source" position={Position.Right} className="w-4 h-4 bg-green-400 border-green-300" />
-      </div>
-
-      {/* View Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>Test Case Details - {data.label}</DialogTitle>
-            <DialogDescription>
-              View complete test case information
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium">Test Case ID</h3>
-              <p className="text-sm text-gray-700 mt-1">{data.testCaseId || 'N/A'}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium">Feature</h3>
-              <p className="text-sm text-gray-700 mt-1">{data.feature || 'N/A'}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium">Description</h3>
-              <p className="text-sm text-gray-700 mt-1">{data.description || 'No description provided'}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+        {/* View Dialog */}
+        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-auto">
+            <DialogHeader>
+              <DialogTitle>Test Case Details - {data.label}</DialogTitle>
+              <DialogDescription>
+                View complete test case information
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-medium">Priority</h3>
-                <Badge className={`text-xs px-2 py-0.5 ${getPriorityColor(data.priority || 'Medium')}`}>
-                  {data.priority || 'Medium'}
-                </Badge>
+                <h3 className="text-sm font-medium">Test Case ID</h3>
+                <p className="text-sm text-gray-700 mt-1">{data.testCaseId || 'N/A'}</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium">Status</h3>
-                <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(data.status || 'Not Executed')} text-white`}>
-                  {data.status || 'Not Executed'}
-                </Badge>
+                <h3 className="text-sm font-medium">Feature</h3>
+                <p className="text-sm text-gray-700 mt-1">{data.feature || 'N/A'}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium">Description</h3>
+                <p className="text-sm text-gray-700 mt-1">{data.description || 'No description provided'}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-sm font-medium">Priority</h3>
+                  <Badge className={`text-xs px-2 py-0.5 ${getPriorityColor(data.priority || 'Medium')}`}>
+                    {data.priority || 'Medium'}
+                  </Badge>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium">Status</h3>
+                  <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(data.status || 'Not Executed')} text-white`}>
+                    {data.status || 'Not Executed'}
+                  </Badge>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium">Pre-Conditions</h3>
+                <p className="text-sm text-gray-700 mt-1">{data.preConditions || 'None specified'}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium">Test Steps</h3>
+                <div className="text-sm text-gray-700 mt-1">
+                  {data.testSteps ? (
+                    <ol className="list-decimal list-inside space-y-1">
+                      {data.testSteps.split('\n').map((step, index) => (
+                        <li key={index}>{step.replace(/^\d+\.\s*/, '')}</li>
+                      ))}
+                    </ol>
+                  ) : (
+                    'No steps defined'
+                  )}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium">Expected Result</h3>
+                <p className="text-sm text-gray-700 mt-1">{data.expectedResult || 'Not specified'}</p>
+              </div>
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+                  Close
+                </Button>
+                <Button onClick={() => { setViewDialogOpen(false); handleEdit(); }}>
+                  Edit Test Case
+                </Button>
               </div>
             </div>
-            <div>
-              <h3 className="text-sm font-medium">Pre-Conditions</h3>
-              <p className="text-sm text-gray-700 mt-1">{data.preConditions || 'None specified'}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium">Test Steps</h3>
-              <div className="text-sm text-gray-700 mt-1">
-                {data.testSteps ? (
-                  <ol className="list-decimal list-inside space-y-1">
-                    {data.testSteps.split('\n').map((step, index) => (
-                      <li key={index}>{step.replace(/^\d+\.\s*/, '')}</li>
-                    ))}
-                  </ol>
-                ) : (
-                  'No steps defined'
-                )}
-              </div>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium">Expected Result</h3>
-              <p className="text-sm text-gray-700 mt-1">{data.expectedResult || 'Not specified'}</p>
-            </div>
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
-                Close
-              </Button>
-              <Button onClick={() => { setViewDialogOpen(false); handleEdit(); }}>
-                Edit Test Case
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
