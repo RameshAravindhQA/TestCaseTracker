@@ -337,30 +337,54 @@ router.post('/create-issue', requireAuth, async (req, res) => {
       title, 
       body, 
       labels,
-      githubUsername,
-      repositoryName,
-      personalAccessToken 
+      projectId
     } = req.body;
 
-    if (!title || !body || !githubUsername || !repositoryName || !personalAccessToken) {
+    if (!title || !body || !projectId) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields for issue creation',
+        message: 'Missing required fields: title, body, and projectId are required',
       });
     }
 
-    // Configure GitHub service
+    // Find GitHub integration for this project
+    const integration = integrations.find(i => i.projectId === parseInt(projectId) && i.isEnabled);
+    
+    if (!integration) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active GitHub integration found for this project',
+      });
+    }
+
+    // Extract owner and repo from the stored integration URL
+    const urlMatch = integration.repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+    if (!urlMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid repository URL in GitHub integration',
+      });
+    }
+
+    const [, owner, repo] = urlMatch;
+
+    // Configure GitHub service with integration data
     githubService.setConfig({
-      owner: githubUsername,
-      repo: repositoryName,
-      token: personalAccessToken,
+      owner,
+      repo,
+      token: integration.accessToken,
+      webhookSecret: integration.webhookSecret,
     });
 
     // Create issue
     const result = await githubService.createIssue(title, body, labels);
 
     if (result.success) {
-      res.json(result);
+      res.json({
+        ...result,
+        issueNumber: result.data?.number,
+        githubUrl: result.data?.url
+      });
     } else {
       res.status(400).json(result);
     }

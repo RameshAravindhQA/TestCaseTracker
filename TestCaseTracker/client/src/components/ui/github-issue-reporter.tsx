@@ -54,6 +54,15 @@ interface GitHubIssueData {
   additionalInfo?: string;
 }
 
+import React, { useState, useRef, useEffect } from 'react';
+
+interface Project {
+  id: number;
+  name: string;
+  description?: string;
+  status: string;
+}
+
 export function GitHubIssueReporter() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -89,6 +98,27 @@ export function GitHubIssueReporter() {
     screenshots: [],
     additionalInfo: ''
   });
+
+  // Fetch projects when component mounts
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const response = await fetch('/api/projects');
+        if (response.ok) {
+          const projectsData = await response.json();
+          setProjects(projectsData);
+          // Set first project as default if available
+          if (projectsData.length > 0 && formData.projectId === 0) {
+            setFormData(prev => ({ ...prev, projectId: projectsData[0].id }));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch projects:', error);
+      }
+    };
+
+    fetchProjects();
+  }, []);
 
   function getBrowserInfo(): string {
     const ua = navigator.userAgent;
@@ -354,9 +384,47 @@ export function GitHubIssueReporter() {
         submitData.append('screenRecording', screenRecording);
       }
 
+      // Create GitHub issue with the required format
+      const issueData = {
+        title: formData.title,
+        body: `## Description
+${formData.description}
+
+## Reproduction Steps
+${formData.reproductionSteps}
+
+## Expected Behavior
+${formData.expectedBehavior}
+
+## Actual Behavior  
+${formData.actualBehavior}
+
+## Environment
+${formData.environment}
+
+## Browser Info
+${formData.browserInfo}
+
+## Priority
+${formData.priority}
+
+## Severity
+${formData.severity}
+
+## Category
+${formData.category}
+
+${formData.additionalInfo ? `## Additional Information\n${formData.additionalInfo}` : ''}`,
+        labels: [formData.priority, formData.severity, formData.category],
+        projectId: formData.projectId
+      };
+
       const response = await fetch('/api/github/create-issue', {
         method: 'POST',
-        body: submitData
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(issueData)
       });
 
       if (response.ok) {
