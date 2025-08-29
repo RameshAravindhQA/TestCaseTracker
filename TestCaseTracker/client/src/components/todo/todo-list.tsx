@@ -503,7 +503,7 @@ export function TodoList({ isVisible, onToggleVisibility, isMinimized, onToggleM
           </div>
 
           {/* Todo list */}
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
             {isLoadingTodos ? (
               <div className="text-center py-4 text-sm text-gray-500">Loading todos...</div>
             ) : todosArray.length > 0 ? (
