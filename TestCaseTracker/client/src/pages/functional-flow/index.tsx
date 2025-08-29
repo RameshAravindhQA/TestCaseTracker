@@ -27,7 +27,7 @@ import { apiRequest } from '@/lib/auth';
 import { MainLayout } from '@/components/layout/main-layout';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { useRouter } from 'next/router';
+import { useLocation, useSearch } from 'wouter';
 
 interface Project {
   id: string;
@@ -79,8 +79,9 @@ export default function FunctionalFlowPage() {
   const reactFlowRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { query } = useRouter();
-  const diagramId = query.diagramId as string | undefined;
+  const search = useSearch();
+  const searchParams = new URLSearchParams(search);
+  const diagramId = searchParams.get('diagramId') || undefined;
 
 
   // Fetch projects
