@@ -703,11 +703,11 @@ class MemStorage implements IStorage {
       let modulePrefix = 'MOD';
       if (module.moduleId) {
         const moduleIdParts = module.moduleId.split('-');
-        if (moduleIdParts.length >= 3 && moduleIdParts[2] === 'MOD') {
+        if (moduleIdParts.length >= 4 && moduleIdParts[2] === 'MOD') {
           modulePrefix = moduleIdParts[1]; // Get the second part (REG, LOG, etc.)
         }
       } 
-      
+
       // If module doesn't have proper ID format, generate prefix from module name
       if (modulePrefix === 'MOD' && module.name) {
         const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '');
@@ -2271,14 +2271,14 @@ class MemStorage implements IStorage {
   // Method to fix existing test case IDs
   async fixExistingTestCaseIds(): Promise<void> {
     console.log('🔧 Starting to fix existing test case IDs...');
-    
+
     // First, fix module IDs to ensure they have proper format
     for (const module of this.modules) {
       const project = this.projects.find(p => p.id === module.projectId);
       if (!project) continue;
 
       const projectPrefix = project.prefix || 'BEG';
-      
+
       // If module doesn't have proper ID format, fix it
       if (!module.moduleId || !module.moduleId.includes('-MOD-')) {
         let modulePrefix = 'MOD';
@@ -2318,7 +2318,7 @@ class MemStorage implements IStorage {
         console.log(`✅ Fixed module ID ${module.id}: ${module.moduleId} (${module.name})`);
       }
     }
-    
+
     // Now fix test case IDs based on corrected module IDs
     for (const testCase of this.testCases) {
       const module = this.modules.find(m => m.id === testCase.moduleId);
@@ -2335,7 +2335,7 @@ class MemStorage implements IStorage {
       let modulePrefix = 'MOD';
       if (module.moduleId) {
         const moduleIdParts = module.moduleId.split('-');
-        if (moduleIdParts.length >= 3 && moduleIdParts[2] === 'MOD') {
+        if (moduleIdParts.length >= 4 && moduleIdParts[2] === 'MOD') {
           modulePrefix = moduleIdParts[1]; // Get the second part (REG, LOG, etc.)
         }
       }
@@ -2393,7 +2393,7 @@ class MemStorage implements IStorage {
   constructor() {
     this.initializeDefaultData();
     this.initializeEmployeeDefaults();
-    
+
     // Fix existing test case IDs immediately to ensure proper format
     setTimeout(() => {
       this.fixExistingTestCaseIds().then(() => {
