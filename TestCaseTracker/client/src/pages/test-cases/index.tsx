@@ -25,7 +25,7 @@ import { Project, Module, TestCase, Bug } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Loader2, TestTube } from "lucide-react";
+import { Search, Plus, Loader2, TestTube, FileDown, FileUp, FileText, GitBranch } from "lucide-react";
 import { 
   Dialog,
   DialogContent,
