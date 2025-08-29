@@ -461,11 +461,7 @@ class MemStorage implements IStorage {
 
   private getNextId(entityType?: string): number {
     let id = this.nextUserId++;
-    // For specific entities like 'employee', 'navadhiti_project', you can add more specific ID generation logic if needed.
-    // For example:
-    // if (entityType === 'employee') {
-    //   id = this.employeeIdCounter++;
-    // }
+    // For specific entities like 'employee', you can add more specific ID generation logic if needed.
     return id;
   }
 
@@ -2255,10 +2251,10 @@ class MemStorage implements IStorage {
   private recordActivity(entityType: string, action: string, entityId: number, userId: number) {
     const activity: Activity = {
       id: this.nextActivityId++,
-      entityType,
-      action,
-      entityId,
       userId,
+      action,
+      entityType,
+      entityId,
       details: {
         entityType,
         action,
