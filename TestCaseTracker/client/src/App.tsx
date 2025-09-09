@@ -175,6 +175,7 @@ function Router() {
       <Route path="/documents">
         <ProtectedComponent Component={DocumentsPage} />
       </Route>
+      <Route path="/brd-documents" component={() => import("./pages/brd-documents").then(m => <m.default />)} />
       <Route path="/employees">
         <ProtectedComponent Component={EmployeesPage} />
       </Route>

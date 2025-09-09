@@ -92,35 +92,33 @@ export function BrdDocumentForm({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Document Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Landing & Login Experience" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Document Title *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter BRD document title" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="author"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Author</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Document author name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="author"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Author *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter author name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -128,7 +126,10 @@ export function BrdDocumentForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Project</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(parseInt(value))}>
+                  <Select 
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    defaultValue={field.value?.toString()}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a project" />
@@ -149,12 +150,12 @@ export function BrdDocumentForm({
           </CardContent>
         </Card>
 
-        {/* Document Sections */}
+        {/* Requirements Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
-              Requirements Overview
+              Requirements & Analysis
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -166,7 +167,7 @@ export function BrdDocumentForm({
                   <FormLabel>Overview</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Brief overview of the requirement"
+                      placeholder="Provide a high-level overview of the project"
                       {...field} 
                     />
                   </FormControl>
@@ -183,7 +184,7 @@ export function BrdDocumentForm({
                   <FormLabel>Problem Statement</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="What problem does this requirement solve?"
+                      placeholder="Describe the problem this project aims to solve"
                       {...field} 
                     />
                   </FormControl>
@@ -197,10 +198,27 @@ export function BrdDocumentForm({
               name="objectives"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Objectives / Goals</FormLabel>
+                  <FormLabel>Objectives & Goals</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="What are the goals and objectives?"
+                      placeholder="List the main objectives and goals"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="scope"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Scope</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Define what is included and excluded from the project scope"
                       {...field} 
                     />
                   </FormControl>
@@ -211,41 +229,24 @@ export function BrdDocumentForm({
           </CardContent>
         </Card>
 
-        {/* Scope & Requirements */}
+        {/* Requirements Specifications */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckSquare className="h-5 w-5" />
-              Scope & Requirements
+              Requirements Specifications
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
-              name="scope"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Scope</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="In Scope / Out of Scope"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="userStories"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>User Stories / Use Cases</FormLabel>
+                  <FormLabel>User Stories</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="As a user, I want to..."
+                      placeholder="Write user stories in the format: As a [user], I want [goal] so that [benefit]"
                       {...field} 
                     />
                   </FormControl>
@@ -262,7 +263,7 @@ export function BrdDocumentForm({
                   <FormLabel>Functional Requirements</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="List of functional requirements"
+                      placeholder="List all functional requirements"
                       {...field} 
                     />
                   </FormControl>
@@ -279,7 +280,24 @@ export function BrdDocumentForm({
                   <FormLabel>Non-Functional Requirements</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Performance, security, etc."
+                      placeholder="List performance, security, usability requirements etc."
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="acceptanceCriteria"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Acceptance Criteria</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Define criteria for acceptance testing"
                       {...field} 
                     />
                   </FormControl>
@@ -301,13 +319,13 @@ export function BrdDocumentForm({
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
-              name="acceptanceCriteria"
+              name="designNotes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Acceptance Criteria</FormLabel>
+                  <FormLabel>Design Notes</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Define acceptance criteria"
+                      placeholder="Any design considerations or notes"
                       {...field} 
                     />
                   </FormControl>
@@ -324,7 +342,7 @@ export function BrdDocumentForm({
                   <FormLabel>Dependencies</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="List dependencies"
+                      placeholder="List any dependencies on other systems or projects"
                       {...field} 
                     />
                   </FormControl>
@@ -341,7 +359,7 @@ export function BrdDocumentForm({
                   <FormLabel>Assumptions</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="List assumptions"
+                      placeholder="List any assumptions made during requirement analysis"
                       {...field} 
                     />
                   </FormControl>
