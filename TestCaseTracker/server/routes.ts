@@ -838,6 +838,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Flow diagram routes
   apiRouter.use("/flow-diagrams", flowDiagramRoutes);
+  
+  // BRD Documents routes
   apiRouter.use("/brd-documents", brdRoutes);
 
   // Navadhiti Projects routes
