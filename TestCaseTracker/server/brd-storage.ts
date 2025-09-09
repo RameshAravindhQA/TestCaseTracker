@@ -1,4 +1,3 @@
-
 // Add BRD-specific storage methods to the existing MemStorage class
 
 // Add these properties to the MemStorage class constructor:
@@ -25,7 +24,7 @@ async getBrdDocument(id: number): Promise<any | null> {
 async createBrdDocument(data: any): Promise<any> {
   const id = this.nextBrdId++;
   const now = new Date();
-  
+
   const document = {
     id,
     ...data,
@@ -34,9 +33,9 @@ async createBrdDocument(data: any): Promise<any> {
     createdAt: now,
     updatedAt: now
   };
-  
+
   this.brdDocuments.push(document);
-  
+
   // Create initial version record
   await this.createBrdVersion({
     brdId: id,
@@ -44,51 +43,52 @@ async createBrdDocument(data: any): Promise<any> {
     changes: "Initial version",
     createdById: data.createdById
   });
-  
+
   return document;
 }
 
-async updateBrdDocument(id: number, data: any): Promise<any | null> {
-  const index = this.brdDocuments.findIndex(doc => doc.id === id);
-  if (index === -1) return null;
-  
-  const currentDoc = this.brdDocuments[index];
-  const updatedDoc = {
-    ...currentDoc,
-    ...data,
-    updatedAt: new Date()
-  };
-  
-  // If content changed, create new version
-  const contentFields = [
-    'overview', 'problemStatement', 'objectives', 'scope', 
-    'userStories', 'functionalRequirements', 'nonFunctionalRequirements',
-    'designNotes', 'dependencies', 'assumptions', 'acceptanceCriteria', 'risks'
-  ];
-  
-  const hasContentChanges = contentFields.some(field => 
-    data[field] !== undefined && data[field] !== currentDoc[field]
-  );
-  
-  if (hasContentChanges) {
-    const versionParts = currentDoc.version.split('.');
-    const newMinorVersion = parseInt(versionParts[1]) + 1;
-    const newVersion = `${versionParts[0]}.${newMinorVersion}`;
-    
-    updatedDoc.version = newVersion;
-    
-    // Create version record
-    await this.createBrdVersion({
-      brdId: id,
-      version: newVersion,
-      changes: data.changes || "Document updated",
-      createdById: data.updatedById || currentDoc.createdById
-    });
+async updateBrdDocument(id: number, data: any): Promise<any> {
+    const existingDoc = this.brdDocuments.find(doc => doc.id === id);
+    if (!existingDoc) return null;
+
+    // If version is being updated, create a version entry
+    if (data.version && data.version !== existingDoc.version) {
+      // Create version entry for the previous version first
+      if (existingDoc.version) {
+        const previousVersionEntry = {
+          id: this.brdVersions.length + 1,
+          brdId: id,
+          version: existingDoc.version,
+          changes: `Previous version ${existingDoc.version}`,
+          createdAt: existingDoc.updatedAt || existingDoc.createdAt,
+          createdById: existingDoc.createdById
+        };
+        this.brdVersions.push(previousVersionEntry);
+      }
+
+      // Create version entry for the new version
+      const versionEntry = {
+        id: this.brdVersions.length + 1,
+        brdId: id,
+        version: data.version,
+        changes: data.changes || `Updated to version ${data.version}`,
+        createdAt: new Date().toISOString(),
+        createdById: data.updatedById || existingDoc.createdById
+      };
+      this.brdVersions.push(versionEntry);
+    }
+
+    const updatedDoc = {
+      ...existingDoc,
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+
+    const index = this.brdDocuments.findIndex(doc => doc.id === id);
+    this.brdDocuments[index] = updatedDoc;
+
+    return updatedDoc;
   }
-  
-  this.brdDocuments[index] = updatedDoc;
-  return updatedDoc;
-}
 
 async deleteBrdDocument(id: number): Promise<boolean> {
   const initialLength = this.brdDocuments.length;
@@ -101,10 +101,23 @@ async deleteBrdDocument(id: number): Promise<boolean> {
 
 // BRD Version operations
 async getBrdVersions(brdId: number): Promise<any[]> {
-  return this.brdVersions
-    .filter(version => version.brdId === brdId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-}
+    return this.brdVersions
+      .filter(version => version.brdId === brdId)
+      .sort((a, b) => {
+        // Sort by version number (semantic versioning)
+        const aVersion = a.version.split('.').map(Number);
+        const bVersion = b.version.split('.').map(Number);
+
+        for (let i = 0; i < Math.max(aVersion.length, bVersion.length); i++) {
+          const aNum = aVersion[i] || 0;
+          const bNum = bVersion[i] || 0;
+          if (aNum !== bNum) {
+            return bNum - aNum; // Descending order (newest first)
+          }
+        }
+        return 0;
+      });
+  }
 
 async createBrdVersion(data: any): Promise<any> {
   const id = this.nextBrdVersionId++;
@@ -131,14 +144,14 @@ async getBrdTestCase(id: number): Promise<any | null> {
 async createBrdTestCase(data: any): Promise<any> {
   const id = this.nextBrdTestCaseId++;
   const now = new Date();
-  
+
   const testCase = {
     id,
     ...data,
     createdAt: now,
     updatedAt: now
   };
-  
+
   this.brdTestCases.push(testCase);
   return testCase;
 }
@@ -152,7 +165,7 @@ async updateBrdTestCase(id: number, data: any): Promise<any | null> {
     ...data,
     updatedAt: new Date()
   };
-  
+
   return this.brdTestCases[index];
 }
 
@@ -165,13 +178,13 @@ async deleteBrdTestCase(id: number): Promise<boolean> {
 async updateBrdTestCase(id: number, data: any): Promise<any | null> {
   const index = this.brdTestCases.findIndex(testCase => testCase.id === id);
   if (index === -1) return null;
-  
+
   const updatedTestCase = {
     ...this.brdTestCases[index],
     ...data,
     updatedAt: new Date()
   };
-  
+
   this.brdTestCases[index] = updatedTestCase;
   return updatedTestCase;
 }

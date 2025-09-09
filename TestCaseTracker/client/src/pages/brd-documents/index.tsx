@@ -705,17 +705,12 @@ export default function BrdDocumentsPage() {
                         if (newVersion) {
                           const confirmMessage = `Are you sure you want to create version ${newVersion}? This will increment the document version.`;
                           if (window.confirm(confirmMessage)) {
-                            const versionParts = selectedDocument.version.split('.');
-                            const major = parseInt(versionParts[0]);
-                            const minor = parseInt(versionParts[1]);
-                            const nextVersion = `${major}.${minor + 1}`;
-                            
                             updateDocumentMutation.mutate({
                               id: selectedDocument.id,
                               data: {
                                 ...selectedDocument,
-                                version: nextVersion,
-                                changes: `Updated to version ${nextVersion}`
+                                version: newVersion,
+                                changes: `Updated to version ${newVersion}`
                               }
                             });
                           }
@@ -729,8 +724,8 @@ export default function BrdDocumentsPage() {
                         {(() => {
                           const currentVersion = selectedDocument.version || "1.0";
                           const versionParts = currentVersion.split('.');
-                          const major = parseInt(versionParts[0]);
-                          const minor = parseInt(versionParts[1]);
+                          const major = parseInt(versionParts[0]) || 1;
+                          const minor = parseInt(versionParts[1]) || 0;
                           const nextMinor = `${major}.${minor + 1}`;
                           const nextMajor = `${major + 1}.0`;
                           

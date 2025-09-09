@@ -252,10 +252,10 @@ router.get("/export-all-pdf", async (req, res) => {
 
 // Helper function to generate PDF content
 async function generatePDFContent(document: any): Promise<Buffer> {
-  const puppeteer = require('puppeteer');
+  const puppeteer = await import('puppeteer');
   
   try {
-    const browser = await puppeteer.launch({
+    const browser = await puppeteer.default.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
@@ -465,8 +465,8 @@ async function generatePDFContent(document: any): Promise<Buffer> {
 
 // Helper function to generate ZIP with PDFs
 async function generateZipWithPDFs(documents: any[]): Promise<Buffer> {
-  const archiver = require('archiver');
-  const { Readable } = require('stream');
+  const archiver = (await import('archiver')).default;
+  const { Readable } = await import('stream');
   
   return new Promise(async (resolve, reject) => {
     const archive = archiver('zip', {
