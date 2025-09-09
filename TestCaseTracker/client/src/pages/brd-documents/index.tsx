@@ -68,6 +68,8 @@ export default function BrdDocumentsPage() {
   const [editingDocument, setEditingDocument] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<any>(null);
+  const [revertDialogOpen, setRevertDialogOpen] = useState(false);
+  const [versionToRevert, setVersionToRevert] = useState<any>(null);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const queryClient = useQueryClient();
@@ -194,7 +196,7 @@ export default function BrdDocumentsPage() {
     onSuccess: (updatedTestCase) => {
       // Update the selected document's test cases immediately
       if (selectedDocument && selectedDocument.testCases) {
-        const updatedTestCases = selectedDocument.testCases.map(tc => 
+        const updatedTestCases = selectedDocument.testCases.map((tc: any) => 
           tc.id === updatedTestCase.id ? updatedTestCase : tc
         );
         const updatedDocument = {
@@ -229,7 +231,7 @@ export default function BrdDocumentsPage() {
     onSuccess: (_, testCaseId) => {
       // Remove the test case from the selected document immediately
       if (selectedDocument && selectedDocument.testCases) {
-        const updatedTestCases = selectedDocument.testCases.filter(tc => tc.id !== testCaseId);
+        const updatedTestCases = selectedDocument.testCases.filter((tc: any) => tc.id !== testCaseId);
         const updatedDocument = {
           ...selectedDocument,
           testCases: updatedTestCases
@@ -823,12 +825,8 @@ export default function BrdDocumentsPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                  if (window.confirm(`Are you sure you want to revert to version ${version.version}? This will create a backup of the current version.`)) {
-                                    revertDocumentMutation.mutate({
-                                      brdId: selectedDocument.id,
-                                      versionId: version.id
-                                    });
-                                  }
+                                  setVersionToRevert(version);
+                                  setRevertDialogOpen(true);
                                 }}
                                 disabled={revertDocumentMutation.isPending}
                               >
@@ -1013,6 +1011,38 @@ export default function BrdDocumentsPage() {
               className="bg-red-600 hover:bg-red-700"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Revert Confirmation Dialog */}
+      <AlertDialog open={revertDialogOpen} onOpenChange={setRevertDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revert Document Version</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to revert to version {versionToRevert?.version}? 
+              This will create a backup of the current version and restore the document to the selected version state.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setVersionToRevert(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (versionToRevert && selectedDocument) {
+                  revertDocumentMutation.mutate({
+                    brdId: selectedDocument.id,
+                    versionId: versionToRevert.id
+                  });
+                  setRevertDialogOpen(false);
+                  setVersionToRevert(null);
+                }
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Revert to Version {versionToRevert?.version}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
