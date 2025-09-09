@@ -2849,8 +2849,23 @@ class MemStorage implements IStorage {
 
     this.users.push(defaultAdmin);
 
+    // Add requested super admin user
+    const superAdmin: User = {
+      id: 2,
+      firstName: "Super",
+      lastName: "Admin",
+      email: "admin@navadhiti.com",
+      password: "$2b$10$H3zGZ8laA8P8Om3Dym5H9.loF6HpABJHlCKc3TL4gxMOmcKCeeq/u", // "navadhiti@123"
+      role: "Admin",
+      status: "Active",
+      theme: "light",
+      createdAt: new Date(),
+    };
+
+    this.users.push(superAdmin);
+
     // Set counters to start fresh
-    this.nextUserId = 2;
+    this.nextUserId = 3;
     this.nextProjectId = 1;
     this.nextModuleId = 1;
     this.nextTestCaseId = 1;
