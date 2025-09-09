@@ -239,6 +239,7 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
               onTagSelect={setSelectedTags}
               projectId={testCases[0]?.projectId}
               className="w-full"
+              moduleType="test-cases"
             />
           ) : (
             <div className="text-sm text-muted-foreground p-2 border rounded-md">

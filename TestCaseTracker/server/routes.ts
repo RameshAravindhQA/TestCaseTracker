@@ -838,7 +838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Flow diagram routes
   apiRouter.use("/flow-diagrams", flowDiagramRoutes);
-  
+
   // BRD Documents routes
   apiRouter.use("/brd-documents", brdRoutes);
 
@@ -5541,7 +5541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  apiRouter.delete("/todos/:id", isAuthenticated, async (req, res) => {
+  apiRouter.delete("/todos/:id", isAuthenticated,async (req, res) => {
     try {
       const todoId = parseInt(req.params.id);
       const success = await storage.deleteTodo(todoId);

@@ -450,7 +450,7 @@ class MemStorage implements IStorage {
   async createBrdDocument(data: any): Promise<any> {
     const id = this.nextBrdId++;
     const now = new Date();
-    
+
     const document = {
       id,
       ...data,
@@ -459,9 +459,9 @@ class MemStorage implements IStorage {
       createdAt: now,
       updatedAt: now
     };
-    
+
     this.brdDocuments.push(document);
-    
+
     // Create initial version record
     await this.createBrdVersion({
       brdId: id,
@@ -469,39 +469,39 @@ class MemStorage implements IStorage {
       changes: "Initial version",
       createdById: data.createdById
     });
-    
+
     return document;
   }
 
   async updateBrdDocument(id: number, data: any): Promise<any | null> {
     const index = this.brdDocuments.findIndex(doc => doc.id === id);
     if (index === -1) return null;
-    
+
     const currentDoc = this.brdDocuments[index];
     const updatedDoc = {
       ...currentDoc,
       ...data,
       updatedAt: new Date()
     };
-    
+
     // If content changed, create new version
     const contentFields = [
       'overview', 'problemStatement', 'objectives', 'scope', 
       'userStories', 'functionalRequirements', 'nonFunctionalRequirements',
       'designNotes', 'dependencies', 'assumptions', 'acceptanceCriteria', 'risks'
     ];
-    
+
     const hasContentChanges = contentFields.some(field => 
       data[field] !== undefined && data[field] !== currentDoc[field]
     );
-    
+
     if (hasContentChanges) {
       const versionParts = currentDoc.version.split('.');
       const newMinorVersion = parseInt(versionParts[1]) + 1;
       const newVersion = `${versionParts[0]}.${newMinorVersion}`;
-      
+
       updatedDoc.version = newVersion;
-      
+
       // Create version record
       await this.createBrdVersion({
         brdId: id,
@@ -510,7 +510,7 @@ class MemStorage implements IStorage {
         createdById: data.updatedById || currentDoc.createdById
       });
     }
-    
+
     this.brdDocuments[index] = updatedDoc;
     return updatedDoc;
   }
@@ -556,14 +556,14 @@ class MemStorage implements IStorage {
   async createBrdTestCase(data: any): Promise<any> {
     const id = this.nextBrdTestCaseId++;
     const now = new Date();
-    
+
     const testCase = {
       id,
       ...data,
       createdAt: now,
       updatedAt: now
     };
-    
+
     this.brdTestCases.push(testCase);
     return testCase;
   }
@@ -571,13 +571,13 @@ class MemStorage implements IStorage {
   async updateBrdTestCase(id: number, data: any): Promise<any | null> {
     const index = this.brdTestCases.findIndex(testCase => testCase.id === id);
     if (index === -1) return null;
-    
+
     const updatedTestCase = {
       ...this.brdTestCases[index],
       ...data,
       updatedAt: new Date()
     };
-    
+
     this.brdTestCases[index] = updatedTestCase;
     return updatedTestCase;
   }
@@ -1416,6 +1416,59 @@ class MemStorage implements IStorage {
   async getTags(): Promise<Tag[]> {
     return [...this.tags];
   }
+
+  async getTagsByProject(projectId: number): Promise<Tag[]> {
+    return this.tags.filter(tag => tag.projectId === projectId);
+  },
+
+  getAllTestCaseTags(): Tag[] {
+    const testCases = this.testCases;
+    const tagSet = new Set<string>();
+
+    testCases.forEach(testCase => {
+      if (testCase.tags && Array.isArray(testCase.tags)) {
+        testCase.tags.forEach(tag => tagSet.add(tag.name));
+      }
+    });
+
+    return Array.from(tagSet).map((name, index) => ({
+      id: index + 1000,
+      name,
+      color: this.getRandomColor(),
+      projectId: 0 // Global tags
+    }));
+  },
+
+  getAllBugTags(): Tag[] {
+    const bugs = this.bugs;
+    const tagSet = new Set<string>();
+
+    bugs.forEach(bug => {
+      if (bug.tags && Array.isArray(bug.tags)) {
+        bug.tags.forEach(tag => tagSet.add(tag.name));
+      }
+    });
+
+    return Array.from(tagSet).map((name, index) => ({
+      id: index + 2000,
+      name,
+      color: this.getRandomColor(),
+      projectId: 0 // Global tags
+    }));
+  },
+
+  getAllTags(): Tag[] {
+    const allTags = [...this.tags];
+    const testCaseTags = this.getAllTestCaseTags();
+    const bugTags = this.getAllBugTags();
+
+    return [...allTags, ...testCaseTags, ...bugTags];
+  },
+
+  getRandomColor(): string {
+    const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
+    return colors[Math.floor(Math.random() * colors.length)];
+  },
 
   async getTagById(id: number): Promise<Tag | null> {
     return this.tags.find(tag => tag.id === id) || null;
@@ -2624,7 +2677,7 @@ class MemStorage implements IStorage {
         }
 
         // Find the highest existing module number for this project
-        const modulePattern = new RegExp(`^${projectPrefix}-[A-Z]{2,5}-MOD-(\\d+)$`);
+        const modulePattern = new RegExp(`^${projectPrefix}-[A-Z]{3}-MOD-(\\d+)$`);
         const existingNumbers = this.modules
           .filter(m => m.projectId === module.projectId && m.id !== module.id && m.moduleId)
           .map(m => {
@@ -3828,7 +3881,7 @@ class MemStorage implements IStorage {
   async createBrdDocument(data: any): Promise<any> {
     const id = this.nextBrdId++;
     const now = new Date();
-    
+
     const document = {
       id,
       ...data,
@@ -3837,9 +3890,9 @@ class MemStorage implements IStorage {
       createdAt: now,
       updatedAt: now
     };
-    
+
     this.brdDocuments.push(document);
-    
+
     // Create initial version record
     await this.createBrdVersion({
       brdId: id,
@@ -3847,39 +3900,39 @@ class MemStorage implements IStorage {
       changes: "Initial version",
       createdById: data.createdById
     });
-    
+
     return document;
   }
 
   async updateBrdDocument(id: number, data: any): Promise<any | null> {
     const index = this.brdDocuments.findIndex(doc => doc.id === id);
     if (index === -1) return null;
-    
+
     const currentDoc = this.brdDocuments[index];
     const updatedDoc = {
       ...currentDoc,
       ...data,
       updatedAt: new Date()
     };
-    
+
     // If content changed, create new version
     const contentFields = [
       'overview', 'problemStatement', 'objectives', 'scope', 
       'userStories', 'functionalRequirements', 'nonFunctionalRequirements',
       'designNotes', 'dependencies', 'assumptions', 'acceptanceCriteria', 'risks'
     ];
-    
+
     const hasContentChanges = contentFields.some(field => 
       data[field] !== undefined && data[field] !== currentDoc[field]
     );
-    
+
     if (hasContentChanges) {
       const versionParts = currentDoc.version.split('.');
       const newMinorVersion = parseInt(versionParts[1]) + 1;
       const newVersion = `${versionParts[0]}.${newMinorVersion}`;
-      
+
       updatedDoc.version = newVersion;
-      
+
       // Create version record
       await this.createBrdVersion({
         brdId: id,
@@ -3888,7 +3941,7 @@ class MemStorage implements IStorage {
         createdById: data.updatedById || currentDoc.createdById
       });
     }
-    
+
     this.brdDocuments[index] = updatedDoc;
     return updatedDoc;
   }
@@ -3934,14 +3987,14 @@ class MemStorage implements IStorage {
   async createBrdTestCase(data: any): Promise<any> {
     const id = this.nextBrdTestCaseId++;
     const now = new Date();
-    
+
     const testCase = {
       id,
       ...data,
       createdAt: now,
       updatedAt: now
     };
-    
+
     this.brdTestCases.push(testCase);
     return testCase;
   }
@@ -3949,13 +4002,13 @@ class MemStorage implements IStorage {
   async updateBrdTestCase(id: number, data: any): Promise<any | null> {
     const index = this.brdTestCases.findIndex(testCase => testCase.id === id);
     if (index === -1) return null;
-    
+
     const updatedTestCase = {
       ...this.brdTestCases[index],
       ...data,
       updatedAt: new Date()
     };
-    
+
     this.brdTestCases[index] = updatedTestCase;
     return updatedTestCase;
   }

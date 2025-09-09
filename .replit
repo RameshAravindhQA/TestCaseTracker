@@ -9,7 +9,7 @@ channel = "stable-24_05"
 packages = ["unzipNLS"]
 
 [workflows]
-runButton = "Project"
+runButton = "TestCaseTracker Fixed"
 
 [[workflows.workflow]]
 name = "Start TestCaseTracker"
