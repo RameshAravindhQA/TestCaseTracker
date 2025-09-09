@@ -444,7 +444,13 @@ class MemStorage implements IStorage {
   }
 
   async getBrdDocument(id: number): Promise<any | null> {
-    return this.brdDocuments.find(doc => doc.id === id) || null;
+    const document = this.brdDocuments.find(doc => doc.id === id) || null;
+    if (document) {
+      // Include version history
+      const versions = await this.getBrdVersions(id);
+      return { ...document, versions };
+    }
+    return null;
   }
 
   async createBrdDocument(data: any): Promise<any> {
@@ -536,7 +542,7 @@ class MemStorage implements IStorage {
     const version = {
       id,
       ...data,
-      createdAt: new Date()
+      createdAt: new Date().toISOString()
     };
     this.brdVersions.push(version);
     return version;
@@ -1580,7 +1586,10 @@ class MemStorage implements IStorage {
     const index = this.customMarkers.findIndex(marker => marker.id === id);
     if (index === -1) return null;
 
-    const updatedMarker = { ...this.customMarkers[index], ...data };
+    const updatedMarker = {
+      ...this.customMarkers[index],
+      ...data
+    };
     this.customMarkers[index] = updatedMarker;
     return updatedMarker;
   }
@@ -3890,7 +3899,13 @@ class MemStorage implements IStorage {
   }
 
   async getBrdDocument(id: number): Promise<any | null> {
-    return this.brdDocuments.find(doc => doc.id === id) || null;
+    const document = this.brdDocuments.find(doc => doc.id === id) || null;
+    if (document) {
+      // Include version history
+      const versions = await this.getBrdVersions(id);
+      return { ...document, versions };
+    }
+    return null;
   }
 
   async createBrdDocument(data: any): Promise<any> {

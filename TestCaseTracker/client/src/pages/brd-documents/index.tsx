@@ -696,7 +696,58 @@ export default function BrdDocumentsPage() {
               />
             ) : showVersionHistory ? (
               <div className="space-y-4">
-                <h4 className="font-medium text-lg">Version History</h4>
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium text-lg">Version History</h4>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium">Create New Version:</label>
+                    <Select
+                      onValueChange={(newVersion) => {
+                        if (newVersion) {
+                          const confirmMessage = `Are you sure you want to create version ${newVersion}? This will increment the document version.`;
+                          if (window.confirm(confirmMessage)) {
+                            const versionParts = selectedDocument.version.split('.');
+                            const major = parseInt(versionParts[0]);
+                            const minor = parseInt(versionParts[1]);
+                            const nextVersion = `${major}.${minor + 1}`;
+                            
+                            updateDocumentMutation.mutate({
+                              id: selectedDocument.id,
+                              data: {
+                                ...selectedDocument,
+                                version: nextVersion,
+                                changes: `Updated to version ${nextVersion}`
+                              }
+                            });
+                          }
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="New Version" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(() => {
+                          const currentVersion = selectedDocument.version || "1.0";
+                          const versionParts = currentVersion.split('.');
+                          const major = parseInt(versionParts[0]);
+                          const minor = parseInt(versionParts[1]);
+                          const nextMinor = `${major}.${minor + 1}`;
+                          const nextMajor = `${major + 1}.0`;
+                          
+                          return [
+                            <SelectItem key={nextMinor} value={nextMinor}>
+                              {nextMinor}
+                            </SelectItem>,
+                            <SelectItem key={nextMajor} value={nextMajor}>
+                              {nextMajor}
+                            </SelectItem>
+                          ];
+                        })()}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
                 {selectedDocument.versions && selectedDocument.versions.length > 0 ? (
                   <div className="space-y-3">
                     {selectedDocument.versions.map((version: any, index: number) => (
@@ -716,14 +767,31 @@ export default function BrdDocumentsPage() {
                               Created: {new Date(version.createdAt).toLocaleString()}
                             </p>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => exportToPDF({ ...selectedDocument, version: version.version })}
-                          >
-                            <Download className="h-4 w-4 mr-1" />
-                            Export
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                // View this version's data
+                                setSelectedDocument({
+                                  ...selectedDocument,
+                                  version: version.version
+                                });
+                                setShowVersionHistory(false);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => exportToPDF({ ...selectedDocument, version: version.version })}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              Export
+                            </Button>
+                          </div>
                         </div>
                       </Card>
                     ))}
