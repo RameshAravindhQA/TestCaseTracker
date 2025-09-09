@@ -42,17 +42,22 @@ export default function BrdDocumentsPage() {
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [showTestCases, setShowTestCases] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   // Fetch BRD documents
   const { data: documents = [], isLoading } = useQuery({
-    queryKey: ["/api/brd-documents"],
+    queryKey: ["/api/brd-documents", selectedProjectId],
     queryFn: async () => {
-      const response = await fetch("/api/brd-documents");
+      const url = selectedProjectId 
+        ? `/api/brd-documents?projectId=${selectedProjectId}`
+        : "/api/brd-documents";
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch BRD documents");
       return response.json();
     },
+    enabled: !!selectedProjectId,
   });
 
   // Fetch projects for the form
@@ -71,13 +76,13 @@ export default function BrdDocumentsPage() {
       const response = await fetch("/api/brd-documents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, projectId: selectedProjectId }),
       });
       if (!response.ok) throw new Error("Failed to create document");
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/brd-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/brd-documents", selectedProjectId] });
       setIsCreateDialogOpen(false);
       toast({ title: "Success", description: "BRD document created successfully" });
     },
@@ -85,6 +90,30 @@ export default function BrdDocumentsPage() {
       toast({ 
         title: "Error", 
         description: "Failed to create BRD document",
+        variant: "destructive"
+      });
+    },
+  });
+
+  // Update BRD status mutation
+  const updateBrdStatusMutation = useMutation({
+    mutationFn: async ({ brdId, status }: { brdId: number; status: string }) => {
+      const response = await fetch(`/api/brd-documents/${brdId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) throw new Error("Failed to update BRD status");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/brd-documents", selectedProjectId] });
+      toast({ title: "Success", description: "BRD status updated successfully" });
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Error", 
+        description: "Failed to update BRD status",
         variant: "destructive"
       });
     },
@@ -148,7 +177,7 @@ export default function BrdDocumentsPage() {
         setSelectedDocument(updatedDocument);
       }
       
-      queryClient.invalidateQueries({ queryKey: ["/api/brd-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/brd-documents", selectedProjectId] });
       toast({ title: "Success", description: "Test case updated successfully" });
     },
     onError: (error) => {
@@ -156,6 +185,39 @@ export default function BrdDocumentsPage() {
       toast({ 
         title: "Error", 
         description: "Failed to update test case",
+        variant: "destructive"
+      });
+    },
+  });
+
+  // Delete test case mutation
+  const deleteTestCaseMutation = useMutation({
+    mutationFn: async (testCaseId: number) => {
+      const response = await fetch(`/api/brd-documents/test-cases/${testCaseId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete test case");
+      return response.json();
+    },
+    onSuccess: (_, testCaseId) => {
+      // Remove the test case from the selected document immediately
+      if (selectedDocument && selectedDocument.testCases) {
+        const updatedTestCases = selectedDocument.testCases.filter(tc => tc.id !== testCaseId);
+        const updatedDocument = {
+          ...selectedDocument,
+          testCases: updatedTestCases
+        };
+        setSelectedDocument(updatedDocument);
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/brd-documents", selectedProjectId] });
+      toast({ title: "Success", description: "Test case deleted successfully" });
+    },
+    onError: (error) => {
+      console.error("Delete test case error:", error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete test case",
         variant: "destructive"
       });
     },
@@ -204,25 +266,56 @@ export default function BrdDocumentsPage() {
           </p>
         </div>
         
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              New BRD Document
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New BRD Document</DialogTitle>
-            </DialogHeader>
-            <BrdDocumentForm
-              projects={projects}
-              onSubmit={(data) => createDocumentMutation.mutate(data)}
-              isSubmitting={createDocumentMutation.isPending}
-            />
-          </DialogContent>
-        </Dialog>
+        {selectedProjectId && (
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                New BRD Document
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New BRD Document</DialogTitle>
+              </DialogHeader>
+              <BrdDocumentForm
+                projects={projects}
+                onSubmit={(data) => createDocumentMutation.mutate(data)}
+                isSubmitting={createDocumentMutation.isPending}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
+
+      {/* Project Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Select Project</CardTitle>
+          <CardDescription>
+            Choose a project to view and manage its BRD documents
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="w-full max-w-sm">
+            <Select 
+              value={selectedProjectId?.toString() || ""} 
+              onValueChange={(value) => setSelectedProjectId(parseInt(value) || null)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a project..." />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((project: any) => (
+                  <SelectItem key={project.id} value={project.id.toString()}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <Card>
@@ -257,71 +350,88 @@ export default function BrdDocumentsPage() {
       </Card>
 
       {/* Documents Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredDocuments.map((document: any) => (
-          <Card key={document.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg mb-2">{document.title}</CardTitle>
-                  <div className="flex items-center gap-2 mb-2">
-                    {getStatusIcon(document.status)}
-                    {getStatusBadge(document.status)}
+      {selectedProjectId && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredDocuments.map((document: any) => (
+            <Card key={document.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg mb-2">{document.title}</CardTitle>
+                    <div className="flex items-center gap-2 mb-2">
+                      {getStatusIcon(document.status)}
+                      <Select
+                        value={document.status}
+                        onValueChange={(status) => 
+                          updateBrdStatusMutation.mutate({ brdId: document.id, status })
+                        }
+                      >
+                        <SelectTrigger className="w-32 h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Draft">Draft</SelectItem>
+                          <SelectItem value="Review">Review</SelectItem>
+                          <SelectItem value="Approved">Approved</SelectItem>
+                          <SelectItem value="Rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center text-sm text-gray-600">
-                  <User className="h-4 w-4 mr-2" />
-                  {document.author}
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <User className="h-4 w-4 mr-2" />
+                    {document.author}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Version: {document.version || "1.0"}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Created: {document.createdAt ? new Date(document.createdAt).toLocaleDateString() : 'N/A'}
+                  </div>
+                  {document.overview && (
+                    <p className="text-sm text-gray-600 line-clamp-2">
+                      {document.overview}
+                    </p>
+                  )}
                 </div>
-                <div className="text-sm text-gray-600">
-                  Version: {document.version || "1.0"}
+                
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedDocument(document);
+                      setShowTestCases(false);
+                    }}
+                    className="flex items-center gap-1"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedDocument(document);
+                      setShowTestCases(true);
+                    }}
+                    className="flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Test Cases
+                  </Button>
                 </div>
-                <div className="text-sm text-gray-600">
-                  Created: {document.createdAt ? new Date(document.createdAt).toLocaleDateString() : 'N/A'}
-                </div>
-                {document.overview && (
-                  <p className="text-sm text-gray-600 line-clamp-2">
-                    {document.overview}
-                  </p>
-                )}
-              </div>
-              
-              <div className="flex gap-2 mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedDocument(document);
-                    setShowTestCases(false);
-                  }}
-                  className="flex items-center gap-1"
-                >
-                  <Eye className="h-4 w-4" />
-                  View
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedDocument(document);
-                    setShowTestCases(true);
-                  }}
-                  className="flex items-center gap-1"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  Test Cases
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {filteredDocuments.length === 0 && !isLoading && (
+      {selectedProjectId && filteredDocuments.length === 0 && !isLoading && (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">
@@ -334,6 +444,20 @@ export default function BrdDocumentsPage() {
                 <Plus className="h-4 w-4 mr-2" />
                 Create BRD Document
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!selectedProjectId && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Project</h3>
+              <p className="text-gray-600">
+                Please select a project from the dropdown above to view and manage BRD documents
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -371,6 +495,9 @@ export default function BrdDocumentsPage() {
                     brdId: selectedDocument.id, 
                     testCase 
                   });
+                }}
+                onDeleteTestCase={(testCaseId) => {
+                  deleteTestCaseMutation.mutate(testCaseId);
                 }}
               />
             ) : (

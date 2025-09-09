@@ -146,6 +146,25 @@ async createBrdTestCase(data: any): Promise<any> {
 async updateBrdTestCase(id: number, data: any): Promise<any | null> {
   const index = this.brdTestCases.findIndex(testCase => testCase.id === id);
   if (index === -1) return null;
+
+  this.brdTestCases[index] = {
+    ...this.brdTestCases[index],
+    ...data,
+    updatedAt: new Date()
+  };
+  
+  return this.brdTestCases[index];
+}
+
+async deleteBrdTestCase(id: number): Promise<boolean> {
+  const initialLength = this.brdTestCases.length;
+  this.brdTestCases = this.brdTestCases.filter(testCase => testCase.id !== id);
+  return this.brdTestCases.length < initialLength;
+}
+
+async updateBrdTestCase(id: number, data: any): Promise<any | null> {
+  const index = this.brdTestCases.findIndex(testCase => testCase.id === id);
+  if (index === -1) return null;
   
   const updatedTestCase = {
     ...this.brdTestCases[index],

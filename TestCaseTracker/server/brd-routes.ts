@@ -179,4 +179,26 @@ router.put("/test-cases/:testCaseId", async (req, res) => {
   }
 });
 
+// Delete BRD test case
+router.delete("/test-cases/:testCaseId", async (req, res) => {
+  try {
+    const session = req.session as any;
+    if (!session.userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const testCaseId = parseInt(req.params.testCaseId);
+    const success = await storage.deleteBrdTestCase(testCaseId);
+
+    if (!success) {
+      return res.status(404).json({ error: "Test case not found" });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting BRD test case:", error);
+    res.status(500).json({ error: "Failed to delete test case" });
+  }
+});
+
 export default router;
