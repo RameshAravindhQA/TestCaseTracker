@@ -16,12 +16,13 @@ import {
 import { TestCaseTable } from "@/components/test-cases/test-case-table";
 import { TestCaseForm } from "@/components/test-cases/test-case-form";
 import { TestCaseTags } from "@/components/test-cases/test-case-tags";
+import { TagFilter } from "@/components/test-cases/tag-filter";
 import { BugForm } from "@/components/bugs/bug-form";
 import { ImportExport } from "@/components/test-cases/import-export";
 import { ProjectSelect } from "@/components/ui/project-select";
 import { ModuleSelect } from "@/components/ui/module-select";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Project, Module, TestCase, Bug } from "@/types";
+import { Project, Module, TestCase, Bug, Tag } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +56,7 @@ export default function TestCasesPage() {
   const [selectedModuleId, setSelectedModuleId] = useState<number | string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [isGeneratingFlow, setIsGeneratingFlow] = useState(false);
 
   // Fetch projects
@@ -244,7 +246,7 @@ export default function TestCasesPage() {
     }
   };
 
-  // Filter test cases by search query and status
+  // Filter test cases by search query, status, and tags
   const filteredTestCases = testCases?.filter(testCase => {
     // Filter by search query
     const matchesSearch = 
@@ -255,7 +257,13 @@ export default function TestCasesPage() {
     // Filter by status
     const matchesStatus = statusFilter === "all" || testCase.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    // Filter by tags (test case must have at least one of the selected tags)
+    const matchesTags = selectedTags.length === 0 || 
+      (testCase.tags && testCase.tags.some(tag => 
+        selectedTags.some(selectedTag => selectedTag.id === tag.id)
+      ));
+
+    return matchesSearch && matchesStatus && matchesTags;
   }) || [];
 
   // Filter modules by selected project
@@ -329,7 +337,7 @@ export default function TestCasesPage() {
               )}
             </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-8 gap-4 mb-6">
             <div className="md:col-span-2">
               <ProjectSelect
                 projects={projects}
@@ -338,6 +346,7 @@ export default function TestCasesPage() {
                 onChange={(value) => {
                   setSelectedProjectId(parseInt(value));
                   setSelectedModuleId("");
+                  setSelectedTags([]); // Clear tags when project changes
                 }}
               />
             </div>
@@ -384,6 +393,15 @@ export default function TestCasesPage() {
                   <SelectItem value="Not Executed">Not Executed</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="md:col-span-2">
+              <TagFilter
+                projectId={selectedProjectId}
+                selectedTags={selectedTags}
+                onTagSelect={setSelectedTags}
+                className="w-full"
+              />
             </div>
           </div>
   </div>

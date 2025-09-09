@@ -19,7 +19,7 @@ import { BugTable } from "@/components/bugs/bug-table";
 import { BugForm } from "@/components/bugs/bug-form";
 import { BugImport } from "@/components/bugs/bug-import";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Project, Module, TestCase, Bug } from "@/types";
+import { Project, Module, TestCase, Bug, Tag } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { TestCaseTags } from "@/components/test-cases/test-case-tags";
+import { TagFilter } from "@/components/test-cases/tag-filter";
 import { GitHubIssueButton } from "@/components/github/github-issue-button";
 
 export default function BugsPage() {
@@ -54,6 +55,7 @@ export default function BugsPage() {
   const [selectedModuleId, setSelectedModuleId] = useState<number | string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
 
   // Fetch projects
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
@@ -160,7 +162,7 @@ export default function BugsPage() {
     ? bugs?.filter(bug => bug.moduleId === parseInt(selectedModuleId.toString())) || []
     : bugs || [];
 
-  // Filter bugs by search query and status
+  // Filter bugs by search query, status, and tags
   const filteredBugs = moduleFilteredBugs?.filter(bug => {
     const matchesSearch = 
       bug.bugId.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -168,7 +170,13 @@ export default function BugsPage() {
 
     const matchesStatus = !statusFilter || statusFilter === "all" || bug.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    // Filter by tags (bug must have at least one of the selected tags)
+    const matchesTags = selectedTags.length === 0 || 
+      (bug.tags && bug.tags.some(tag => 
+        selectedTags.some(selectedTag => selectedTag.id === tag.id)
+      ));
+
+    return matchesSearch && matchesStatus && matchesTags;
   }) || [];
 
   return (
@@ -207,10 +215,13 @@ export default function BugsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
               <Select
                 value={selectedProjectId ? selectedProjectId.toString() : undefined}
-                onValueChange={(value) => setSelectedProjectId(parseInt(value))}
+                onValueChange={(value) => {
+                  setSelectedProjectId(parseInt(value));
+                  setSelectedTags([]); // Clear tags when project changes
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a project" />
@@ -270,6 +281,13 @@ export default function BugsPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+
+              <TagFilter
+                projectId={selectedProjectId}
+                selectedTags={selectedTags}
+                onTagSelect={setSelectedTags}
+                className="w-full"
+              />
             </div>
           </div>
 
