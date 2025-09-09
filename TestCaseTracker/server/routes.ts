@@ -63,6 +63,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import flowDiagramRoutes from './api/flow-diagram-routes';
+import brdRoutes from "./brd-routes";
 
 // Define session interface
 declare module "express-session" {
@@ -733,7 +734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI endpoints
+  // AI API key status endpoint
   apiRouter.get("/ai/api-key-status", isAuthenticated, async (req, res) => {
     try {
       const status = EnhancedAIService.getProviderStatus();
@@ -837,6 +838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Flow diagram routes
   apiRouter.use("/flow-diagrams", flowDiagramRoutes);
+  apiRouter.use("/brd-documents", brdRoutes);
 
   // Navadhiti Projects routes
   apiRouter.get("/navadhiti-projects", isAuthenticated, async (req, res) => {
@@ -3875,7 +3877,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bug routes
   apiRouter.get("/bugs", isAuthenticated, async (req, res) => {
     try {
-      const { projectId, moduleId, status, severity } = req.query;
+      const {projectId, moduleId, status, severity } = req.query;
 
       console.log(`[API] Fetching bugs with filters:`, { projectId, moduleId, status, severity });
 
@@ -5274,8 +5276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Users can only delete their own notebooks unless they're admin
-      if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {
-        return res.status(403).json({ message: "You don't have permission to delete this notebook" });
+      if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {        return res.status(403).json({ message: "You don't have permission to delete this notebook" });
       }
 
       const success = await (storage as any).deleteNotebook(notebookId);

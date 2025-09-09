@@ -230,6 +230,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       icon: <FileText className="h-5 w-5" />,
     },
     {
+      name: "BRD Documents",
+      href: "/brd-documents",
+      icon: <FileText className="h-5 w-5" />,
+    },
+    {
       name: "Reports",
       href: "/reports",
       icon: <BarChart className="h-5 w-5" />,
