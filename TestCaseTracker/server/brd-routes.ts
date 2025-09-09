@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import { storage } from "./storage";
 
@@ -11,7 +10,7 @@ router.get("/", async (req, res) => {
     const documents = await storage.getBrdDocuments(
       projectId ? parseInt(projectId as string) : undefined
     );
-    
+
     // Include test cases for each document
     const documentsWithTestCases = await Promise.all(
       documents.map(async (doc: any) => {
@@ -19,7 +18,7 @@ router.get("/", async (req, res) => {
         return { ...doc, testCases };
       })
     );
-    
+
     res.json(documentsWithTestCases);
   } catch (error) {
     console.error("Error fetching BRD documents:", error);
@@ -32,15 +31,15 @@ router.get("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const document = await storage.getBrdDocument(id);
-    
+
     if (!document) {
       return res.status(404).json({ error: "BRD document not found" });
     }
-    
+
     // Include test cases and versions
     const testCases = await storage.getBrdTestCases(id);
     const versions = await storage.getBrdVersions(id);
-    
+
     res.json({
       ...document,
       testCases,
@@ -59,12 +58,12 @@ router.post("/", async (req, res) => {
     if (!session.userId) {
       return res.status(401).json({ error: "Not authenticated" });
     }
-    
+
     const documentData = {
       ...req.body,
       createdById: session.userId
     };
-    
+
     const document = await storage.createBrdDocument(documentData);
     res.status(201).json(document);
   } catch (error) {
@@ -80,19 +79,19 @@ router.put("/:id", async (req, res) => {
     if (!session.userId) {
       return res.status(401).json({ error: "Not authenticated" });
     }
-    
+
     const id = parseInt(req.params.id);
     const updateData = {
       ...req.body,
       updatedById: session.userId
     };
-    
+
     const document = await storage.updateBrdDocument(id, updateData);
-    
+
     if (!document) {
       return res.status(404).json({ error: "BRD document not found" });
     }
-    
+
     res.json(document);
   } catch (error) {
     console.error("Error updating BRD document:", error);
@@ -105,11 +104,11 @@ router.delete("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const success = await storage.deleteBrdDocument(id);
-    
+
     if (!success) {
       return res.status(404).json({ error: "BRD document not found" });
     }
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting BRD document:", error);
@@ -136,14 +135,14 @@ router.post("/:id/test-cases", async (req, res) => {
     if (!session.userId) {
       return res.status(401).json({ error: "Not authenticated" });
     }
-    
+
     const brdId = parseInt(req.params.id);
     const testCaseData = {
       ...req.body,
       brdId,
       createdById: session.userId
     };
-    
+
     const testCase = await storage.createBrdTestCase(testCaseData);
     res.status(201).json(testCase);
   } catch (error) {
@@ -159,20 +158,20 @@ router.put("/test-cases/:testCaseId", async (req, res) => {
     if (!session.userId) {
       return res.status(401).json({ error: "Not authenticated" });
     }
-    
+
     const testCaseId = parseInt(req.params.testCaseId);
     const updateData = {
       ...req.body,
       testedById: session.userId,
       testedAt: new Date().toISOString()
     };
-    
+
     const testCase = await storage.updateBrdTestCase(testCaseId, updateData);
-    
+
     if (!testCase) {
       return res.status(404).json({ error: "Test case not found" });
     }
-    
+
     res.json(testCase);
   } catch (error) {
     console.error("Error updating BRD test case:", error);

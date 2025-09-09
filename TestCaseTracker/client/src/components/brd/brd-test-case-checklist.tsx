@@ -83,16 +83,21 @@ export function BrdTestCaseChecklist({
   };
 
   const handleAddTestCase = () => {
-    if (!newTestCase.title.trim()) return;
+    if (!newTestCase.title.trim()) {
+      return; // Don't add empty test cases
+    }
 
-    const testCaseId = `TC-${String(testCases.length + 1).padStart(3, '0')}`;
+    const testCase = {
+      brdId,
+      testCaseId: `TC-${String(testCases.length + 1).padStart(3, '0')}`,
+      title: newTestCase.title,
+      description: newTestCase.description,
+      expectedResult: newTestCase.expectedResult,
+      status: "Not Executed" as const,
+      notes: newTestCase.notes
+    };
 
-    onAddTestCase({
-      testCaseId,
-      ...newTestCase,
-      status: "Not Executed"
-    });
-
+    onAddTestCase(testCase);
     setNewTestCase({ title: "", description: "", expectedResult: "", notes: "" });
     setShowAddForm(false);
   };
