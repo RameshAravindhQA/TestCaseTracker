@@ -116,6 +116,30 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// Revert BRD document to a specific version
+router.post("/:id/revert/:versionId", async (req, res) => {
+  try {
+    const session = req.session as any;
+    if (!session.userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const brdId = parseInt(req.params.id);
+    const versionId = parseInt(req.params.versionId);
+
+    const document = await storage.revertBrdDocumentToVersion(brdId, versionId);
+
+    if (!document) {
+      return res.status(404).json({ error: "BRD document or version not found" });
+    }
+
+    res.json(document);
+  } catch (error) {
+    console.error("Error reverting BRD document:", error);
+    res.status(500).json({ error: "Failed to revert BRD document" });
+  }
+});
+
 // Get BRD test cases
 router.get("/:id/test-cases", async (req, res) => {
   try {
@@ -257,7 +281,15 @@ async function generatePDFContent(document: any): Promise<Buffer> {
   try {
     const browser = await puppeteer.default.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu'
+      ]
     });
     
     const page = await browser.newPage();

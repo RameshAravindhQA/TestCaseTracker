@@ -276,6 +276,31 @@ export default function BrdDocumentsPage() {
     },
   });
 
+  // Revert BRD document mutation
+  const revertDocumentMutation = useMutation({
+    mutationFn: async ({ brdId, versionId }: { brdId: number; versionId: number }) => {
+      const response = await fetch(`/api/brd-documents/${brdId}/revert/${versionId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to revert document");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/brd-documents", selectedProjectId] });
+      setShowVersionHistory(false);
+      setSelectedDocument(null);
+      toast({ title: "Success", description: "BRD document reverted successfully" });
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Error", 
+        description: "Failed to revert BRD document",
+        variant: "destructive"
+      });
+    },
+  });
+
   // Delete BRD document mutation
   const deleteDocumentMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -748,12 +773,12 @@ export default function BrdDocumentsPage() {
                     {selectedDocument.versions.map((version: any, index: number) => (
                       <Card key={version.id} className="p-4">
                         <div className="flex justify-between items-start">
-                          <div>
+                          <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <Badge variant={index === 0 ? "default" : "secondary"}>
                                 Version {version.version}
                               </Badge>
-                              {index === 0 && <Badge variant="outline">Current</Badge>}
+                              {selectedDocument.version === version.version && <Badge variant="outline">Current</Badge>}
                             </div>
                             <p className="text-sm text-gray-600 mb-1">
                               <strong>Changes:</strong> {version.changes || "No changes documented"}
@@ -763,29 +788,54 @@ export default function BrdDocumentsPage() {
                             </p>
                           </div>
                           <div className="flex gap-2">
+                            {version.documentData && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  // View this version's data
+                                  setSelectedDocument({
+                                    ...selectedDocument,
+                                    ...version.documentData,
+                                    version: version.version
+                                  });
+                                  setShowVersionHistory(false);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                            )}
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                // View this version's data
-                                setSelectedDocument({
-                                  ...selectedDocument,
-                                  version: version.version
-                                });
-                                setShowVersionHistory(false);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => exportToPDF({ ...selectedDocument, version: version.version })}
+                              onClick={() => exportToPDF({ 
+                                ...selectedDocument, 
+                                ...(version.documentData || {}),
+                                version: version.version 
+                              })}
                             >
                               <Download className="h-4 w-4 mr-1" />
                               Export
                             </Button>
+                            {selectedDocument.version !== version.version && version.documentData && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (window.confirm(`Are you sure you want to revert to version ${version.version}? This will create a backup of the current version.`)) {
+                                    revertDocumentMutation.mutate({
+                                      brdId: selectedDocument.id,
+                                      versionId: version.id
+                                    });
+                                  }
+                                }}
+                                disabled={revertDocumentMutation.isPending}
+                              >
+                                <History className="h-4 w-4 mr-1" />
+                                {revertDocumentMutation.isPending ? "Reverting..." : "Revert"}
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </Card>

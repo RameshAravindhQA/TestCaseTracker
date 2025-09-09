@@ -51,29 +51,35 @@ async updateBrdDocument(id: number, data: any): Promise<any> {
     const existingDoc = this.brdDocuments.find(doc => doc.id === id);
     if (!existingDoc) return null;
 
-    // If version is being updated, create a version entry
+    // If version is being updated, create a version entry for the current state before updating
     if (data.version && data.version !== existingDoc.version) {
-      // Create version entry for the previous version first
-      if (existingDoc.version) {
-        const previousVersionEntry = {
-          id: this.brdVersions.length + 1,
-          brdId: id,
-          version: existingDoc.version,
-          changes: `Previous version ${existingDoc.version}`,
-          createdAt: existingDoc.updatedAt || existingDoc.createdAt,
-          createdById: existingDoc.createdById
-        };
-        this.brdVersions.push(previousVersionEntry);
-      }
-
-      // Create version entry for the new version
+      // Store the complete current document state as a version
       const versionEntry = {
-        id: this.brdVersions.length + 1,
+        id: this.nextBrdVersionId++,
         brdId: id,
-        version: data.version,
+        version: existingDoc.version || "1.0",
         changes: data.changes || `Updated to version ${data.version}`,
         createdAt: new Date().toISOString(),
-        createdById: data.updatedById || existingDoc.createdById
+        createdById: data.updatedById || existingDoc.createdById,
+        // Store complete document data for this version
+        documentData: {
+          title: existingDoc.title,
+          author: existingDoc.author,
+          overview: existingDoc.overview,
+          problemStatement: existingDoc.problemStatement,
+          objectives: existingDoc.objectives,
+          scope: existingDoc.scope,
+          userStories: existingDoc.userStories,
+          functionalRequirements: existingDoc.functionalRequirements,
+          nonFunctionalRequirements: existingDoc.nonFunctionalRequirements,
+          designNotes: existingDoc.designNotes,
+          dependencies: existingDoc.dependencies,
+          assumptions: existingDoc.assumptions,
+          acceptanceCriteria: existingDoc.acceptanceCriteria,
+          risks: existingDoc.risks,
+          supportingDocuments: existingDoc.supportingDocuments,
+          status: existingDoc.status
+        }
       };
       this.brdVersions.push(versionEntry);
     }
@@ -88,6 +94,55 @@ async updateBrdDocument(id: number, data: any): Promise<any> {
     this.brdDocuments[index] = updatedDoc;
 
     return updatedDoc;
+  }
+
+async revertBrdDocumentToVersion(brdId: number, versionId: number): Promise<any | null> {
+    const document = this.brdDocuments.find(doc => doc.id === brdId);
+    const version = this.brdVersions.find(v => v.id === versionId && v.brdId === brdId);
+    
+    if (!document || !version || !version.documentData) return null;
+
+    // Before reverting, save current state as a new version
+    const currentVersionEntry = {
+      id: this.nextBrdVersionId++,
+      brdId: brdId,
+      version: document.version,
+      changes: `Pre-revert state before reverting to version ${version.version}`,
+      createdAt: new Date().toISOString(),
+      createdById: document.createdById,
+      documentData: {
+        title: document.title,
+        author: document.author,
+        overview: document.overview,
+        problemStatement: document.problemStatement,
+        objectives: document.objectives,
+        scope: document.scope,
+        userStories: document.userStories,
+        functionalRequirements: document.functionalRequirements,
+        nonFunctionalRequirements: document.nonFunctionalRequirements,
+        designNotes: document.designNotes,
+        dependencies: document.dependencies,
+        assumptions: document.assumptions,
+        acceptanceCriteria: document.acceptanceCriteria,
+        risks: document.risks,
+        supportingDocuments: document.supportingDocuments,
+        status: document.status
+      }
+    };
+    this.brdVersions.push(currentVersionEntry);
+
+    // Revert to the selected version
+    const revertedDoc = {
+      ...document,
+      ...version.documentData,
+      version: `${version.version}-reverted`,
+      updatedAt: new Date().toISOString()
+    };
+
+    const index = this.brdDocuments.findIndex(doc => doc.id === brdId);
+    this.brdDocuments[index] = revertedDoc;
+
+    return revertedDoc;
   }
 
 async deleteBrdDocument(id: number): Promise<boolean> {
