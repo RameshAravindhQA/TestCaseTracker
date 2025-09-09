@@ -1419,7 +1419,7 @@ class MemStorage implements IStorage {
 
   async getTagsByProject(projectId: number): Promise<Tag[]> {
     return this.tags.filter(tag => tag.projectId === projectId);
-  },
+  }
 
   getAllTestCaseTags(): Tag[] {
     const testCases = this.testCases;
@@ -1437,7 +1437,7 @@ class MemStorage implements IStorage {
       color: this.getRandomColor(),
       projectId: 0 // Global tags
     }));
-  },
+  }
 
   getAllBugTags(): Tag[] {
     const bugs = this.bugs;
@@ -1455,7 +1455,7 @@ class MemStorage implements IStorage {
       color: this.getRandomColor(),
       projectId: 0 // Global tags
     }));
-  },
+  }
 
   getAllTags(): Tag[] {
     const allTags = [...this.tags];
@@ -1463,12 +1463,12 @@ class MemStorage implements IStorage {
     const bugTags = this.getAllBugTags();
 
     return [...allTags, ...testCaseTags, ...bugTags];
-  },
+  }
 
   getRandomColor(): string {
     const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
     return colors[Math.floor(Math.random() * colors.length)];
-  },
+  }
 
   async getTagById(id: number): Promise<Tag | null> {
     return this.tags.find(tag => tag.id === id) || null;
