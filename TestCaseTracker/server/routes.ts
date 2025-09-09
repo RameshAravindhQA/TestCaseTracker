@@ -5338,6 +5338,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk import employees endpoint
+  apiRouter.post("/employees/import", isAuthenticated, async (req, res) => {
+    try {
+      const { employees } = req.body;
+      
+      if (!Array.isArray(employees)) {
+        return res.status(400).json({ message: "Employees must be an array" });
+      }
+
+      const results = [];
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const employeeData of employees) {
+        try {
+          // Validate required fields
+          if (!employeeData.firstName || !employeeData.lastName || !employeeData.email) {
+            results.push({
+              success: false,
+              data: employeeData,
+              error: "Missing required fields: firstName, lastName, email"
+            });
+            errorCount++;
+            continue;
+          }
+
+          const employee = await storage.createEmployee({
+            ...employeeData,
+            createdById: req.session.userId
+          });
+
+          results.push({
+            success: true,
+            data: employee
+          });
+          successCount++;
+        } catch (error) {
+          results.push({
+            success: false,
+            data: employeeData,
+            error: error instanceof Error ? error.message : "Unknown error"
+          });
+          errorCount++;
+        }
+      }
+
+      res.json({
+        successCount,
+        errorCount,
+        results
+      });
+    } catch (error) {
+      console.error("Bulk import employees error:", error);
+      res.status(500).json({ message: "Server error during import" });
+    }
+  });
+
   apiRouter.get("/technology-options", isAuthenticated, async (req, res) => {
     try {
       const options = await storage.getTechnologyOptions();

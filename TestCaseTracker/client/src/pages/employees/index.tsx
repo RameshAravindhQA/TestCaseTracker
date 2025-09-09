@@ -133,44 +133,48 @@ export default function EmployeesPage() {
 
   const importEmployees = async (data: any[]) => {
     try {
-      let successCount = 0;
-      let errorCount = 0;
+      // Format data for bulk import
+      const employeesToImport = data
+        .filter(row => row.firstName && row.lastName && row.email)
+        .map(row => ({
+          employeeId: row.employeeId || `EMP${Date.now()}${Math.floor(Math.random() * 1000)}`,
+          firstName: row.firstName,
+          lastName: row.lastName,
+          email: row.email,
+          phone: row.phone || '',
+          department: row.department || '',
+          designation: row.designation || '',
+          joiningDate: row.joiningDate || new Date().toISOString(),
+          status: row.status || 'Active',
+          technologies: typeof row.technologies === 'string'
+            ? row.technologies.split(',').map((t: string) => t.trim())
+            : row.technologies || []
+        }));
 
-      for (const row of data) {
-        if (!row.firstName || !row.lastName || !row.email) {
-          errorCount++;
-          continue;
-        }
-
-        try {
-          await apiRequest("POST", "/api/employees", {
-            employeeId: row.employeeId || `EMP${Date.now()}${Math.floor(Math.random() * 1000)}`,
-            firstName: row.firstName,
-            lastName: row.lastName,
-            email: row.email,
-            phone: row.phone || '',
-            department: row.department || '',
-            designation: row.designation || '',
-            joiningDate: row.joiningDate || new Date().toISOString(),
-            status: row.status || 'Active',
-            technologies: typeof row.technologies === 'string'
-              ? row.technologies.split(',').map((t: string) => t.trim())
-              : row.technologies || []
-          });
-          successCount++;
-        } catch (error) {
-          errorCount++;
-        }
+      if (employeesToImport.length === 0) {
+        toast({
+          title: "No valid data",
+          description: "No valid employees found to import. Please check your data.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      const response = await apiRequest("POST", "/api/employees/import", {
+        employees: employeesToImport
+      });
+
+      const result = await response.json();
 
       toast({
         title: "Import completed",
-        description: `${successCount} employees imported successfully. ${errorCount} failed.`,
+        description: `${result.successCount} employees imported successfully. ${result.errorCount} failed.`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
       setIsImportDialogOpen(false);
     } catch (error) {
+      console.error("Import error:", error);
       toast({
         title: "Import failed",
         description: "Error importing employees",
