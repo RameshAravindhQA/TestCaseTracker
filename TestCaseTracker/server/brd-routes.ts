@@ -274,227 +274,127 @@ router.get("/export-all-pdf", async (req, res) => {
   }
 });
 
-// Helper function to generate PDF content
+// Helper function to generate PDF content using jsPDF
 async function generatePDFContent(document: any): Promise<Buffer> {
-  const puppeteer = await import('puppeteer');
-  
   try {
-    const browser = await puppeteer.default.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
-        '--run-all-compositor-stages-before-draw',
-        '--memory-pressure-off'
-      ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-      timeout: 30000
-    });
+    // Import jsPDF dynamically
+    const { jsPDF } = await import('jspdf');
     
-    const page = await browser.newPage();
+    const doc = new jsPDF();
     
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>BRD Document - ${document.title}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 800px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              border-bottom: 2px solid #007bff;
-              padding-bottom: 20px;
-              margin-bottom: 30px;
-            }
-            .title {
-              font-size: 24px;
-              font-weight: bold;
-              color: #007bff;
-              margin-bottom: 10px;
-            }
-            .meta-info {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 10px;
-              margin-bottom: 20px;
-              font-size: 14px;
-            }
-            .meta-item {
-              padding: 5px 0;
-            }
-            .meta-label {
-              font-weight: bold;
-              color: #666;
-            }
-            .section {
-              margin-bottom: 25px;
-            }
-            .section-title {
-              font-size: 18px;
-              font-weight: bold;
-              color: #007bff;
-              margin-bottom: 10px;
-              border-bottom: 1px solid #eee;
-              padding-bottom: 5px;
-            }
-            .section-content {
-              padding-left: 10px;
-              white-space: pre-wrap;
-            }
-            .status-badge {
-              display: inline-block;
-              padding: 4px 8px;
-              border-radius: 4px;
-              font-size: 12px;
-              font-weight: bold;
-              color: white;
-              background-color: #007bff;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="title">${document.title || 'Untitled BRD'}</div>
-            <div class="meta-info">
-              <div class="meta-item">
-                <span class="meta-label">Author:</span> ${document.author || 'N/A'}
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Version:</span> ${document.version || '1.0'}
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Status:</span> 
-                <span class="status-badge">${document.status || 'Draft'}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Created:</span> ${document.createdAt ? new Date(document.createdAt).toLocaleDateString() : 'N/A'}
-              </div>
-            </div>
-          </div>
-
-          ${document.overview ? `
-            <div class="section">
-              <div class="section-title">Overview</div>
-              <div class="section-content">${document.overview}</div>
-            </div>
-          ` : ''}
-
-          ${document.problemStatement ? `
-            <div class="section">
-              <div class="section-title">Problem Statement</div>
-              <div class="section-content">${document.problemStatement}</div>
-            </div>
-          ` : ''}
-
-          ${document.objectives ? `
-            <div class="section">
-              <div class="section-title">Objectives</div>
-              <div class="section-content">${document.objectives}</div>
-            </div>
-          ` : ''}
-
-          ${document.scope ? `
-            <div class="section">
-              <div class="section-title">Scope</div>
-              <div class="section-content">${document.scope}</div>
-            </div>
-          ` : ''}
-
-          ${document.userStories ? `
-            <div class="section">
-              <div class="section-title">User Stories</div>
-              <div class="section-content">${document.userStories}</div>
-            </div>
-          ` : ''}
-
-          ${document.functionalRequirements ? `
-            <div class="section">
-              <div class="section-title">Functional Requirements</div>
-              <div class="section-content">${document.functionalRequirements}</div>
-            </div>
-          ` : ''}
-
-          ${document.nonFunctionalRequirements ? `
-            <div class="section">
-              <div class="section-title">Non-Functional Requirements</div>
-              <div class="section-content">${document.nonFunctionalRequirements}</div>
-            </div>
-          ` : ''}
-
-          ${document.designNotes ? `
-            <div class="section">
-              <div class="section-title">Design Notes</div>
-              <div class="section-content">${document.designNotes}</div>
-            </div>
-          ` : ''}
-
-          ${document.dependencies ? `
-            <div class="section">
-              <div class="section-title">Dependencies</div>
-              <div class="section-content">${document.dependencies}</div>
-            </div>
-          ` : ''}
-
-          ${document.assumptions ? `
-            <div class="section">
-              <div class="section-title">Assumptions</div>
-              <div class="section-content">${document.assumptions}</div>
-            </div>
-          ` : ''}
-
-          ${document.acceptanceCriteria ? `
-            <div class="section">
-              <div class="section-title">Acceptance Criteria</div>
-              <div class="section-content">${document.acceptanceCriteria}</div>
-            </div>
-          ` : ''}
-
-          ${document.risks ? `
-            <div class="section">
-              <div class="section-title">Risks</div>
-              <div class="section-content">${document.risks}</div>
-            </div>
-          ` : ''}
-
-          ${document.supportingDocuments ? `
-            <div class="section">
-              <div class="section-title">Supporting Documents</div>
-              <div class="section-content">${document.supportingDocuments}</div>
-            </div>
-          ` : ''}
-        </body>
-      </html>
-    `;
-
-    await page.setContent(htmlContent);
+    // Set up fonts and colors
+    const primaryColor = [0, 123, 255]; // Blue color
+    const textColor = [51, 51, 51]; // Dark gray
     
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20mm',
-        right: '15mm',
-        bottom: '20mm',
-        left: '15mm'
+    let yPosition = 20;
+    const pageWidth = doc.internal.pageSize.width;
+    const margin = 20;
+    const contentWidth = pageWidth - (margin * 2);
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(...primaryColor);
+    doc.setFont("helvetica", "bold");
+    doc.text(document.title || 'Untitled BRD', margin, yPosition);
+    yPosition += 15;
+    
+    // Draw header line
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(1);
+    doc.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 20;
+    
+    // Meta information
+    doc.setFontSize(12);
+    doc.setTextColor(...textColor);
+    doc.setFont("helvetica", "normal");
+    
+    const metaInfo = [
+      `Author: ${document.author || 'N/A'}`,
+      `Version: ${document.version || '1.0'}`,
+      `Status: ${document.status || 'Draft'}`,
+      `Created: ${document.createdAt ? new Date(document.createdAt).toLocaleDateString() : 'N/A'}`
+    ];
+    
+    metaInfo.forEach((info, index) => {
+      if (index % 2 === 0) {
+        doc.text(info, margin, yPosition);
+      } else {
+        doc.text(info, margin + contentWidth/2, yPosition);
+        yPosition += 8;
       }
     });
-
-    await browser.close();
-    return pdfBuffer;
+    
+    yPosition += 15;
+    
+    // Helper function to add section
+    const addSection = (title: string, content: string) => {
+      if (!content) return;
+      
+      // Check if we need a new page
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      // Section title
+      doc.setFontSize(14);
+      doc.setTextColor(...primaryColor);
+      doc.setFont("helvetica", "bold");
+      doc.text(title, margin, yPosition);
+      yPosition += 2;
+      
+      // Section underline
+      doc.setDrawColor(238, 238, 238);
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 8;
+      
+      // Section content
+      doc.setFontSize(10);
+      doc.setTextColor(...textColor);
+      doc.setFont("helvetica", "normal");
+      
+      const lines = doc.splitTextToSize(content, contentWidth);
+      lines.forEach((line: string) => {
+        if (yPosition > 270) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        doc.text(line, margin, yPosition);
+        yPosition += 6;
+      });
+      
+      yPosition += 8;
+    };
+    
+    // Add all sections
+    addSection('Overview', document.overview);
+    addSection('Problem Statement', document.problemStatement);
+    addSection('Objectives', document.objectives);
+    addSection('Scope', document.scope);
+    addSection('User Stories', document.userStories);
+    addSection('Functional Requirements', document.functionalRequirements);
+    addSection('Non-Functional Requirements', document.nonFunctionalRequirements);
+    addSection('Design Notes', document.designNotes);
+    addSection('Dependencies', document.dependencies);
+    addSection('Assumptions', document.assumptions);
+    addSection('Acceptance Criteria', document.acceptanceCriteria);
+    addSection('Risks', document.risks);
+    addSection('Supporting Documents', document.supportingDocuments);
+    
+    // Footer
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 20, doc.internal.pageSize.height - 10);
+    }
+    
+    // Convert to buffer
+    const pdfArrayBuffer = doc.output('arraybuffer');
+    return Buffer.from(pdfArrayBuffer);
   } catch (error) {
     console.error('Error generating PDF:', error);
     throw new Error('Failed to generate PDF');
@@ -520,7 +420,8 @@ async function generateZipWithPDFs(documents: any[]): Promise<Buffer> {
       for (const doc of documents) {
         const pdfContent = await generatePDFContent(doc);
         const stream = Readable.from(pdfContent);
-        archive.append(stream, { name: `${doc.title}_v${doc.version}.pdf` });
+        const safeTitle = doc.title.replace(/[^a-zA-Z0-9]/g, '_');
+        archive.append(stream, { name: `${safeTitle}_v${doc.version}.pdf` });
       }
 
       archive.finalize();

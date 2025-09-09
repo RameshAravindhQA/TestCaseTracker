@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,8 +54,47 @@ import {
   Trash2,
   Download,
   History,
-  FileDown
+  RotateCcw,
+  FileDown,
 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+// Mock apiRequest function for demonstration purposes.
+// In a real application, this would be imported from your API utility.
+const apiRequest = async (method: string, url: string, body?: any) => {
+  // Simulate API calls
+  if (method === 'GET' && url.includes('/api/brd-documents/')) {
+    const documentId = parseInt(url.split('/').pop() || '0');
+    // Simulate fetching a document with versions
+    const mockDocument = {
+      id: documentId,
+      title: `Mock Document ${documentId}`,
+      version: "1.1",
+      createdAt: new Date().toISOString(),
+      createdBy: { firstName: "John" },
+      versions: [
+        { id: 1, version: "1.0", createdAt: new Date(Date.now() - 86400000).toISOString(), createdBy: { firstName: "Jane" }, comment: "Initial version" },
+        { id: 2, version: "1.1", createdAt: new Date().toISOString(), createdBy: { firstName: "John" }, comment: "Updated features" },
+      ]
+    };
+    return {
+      ok: true,
+      json: async () => mockDocument,
+    };
+  }
+  if (method === 'POST' && url.includes('/api/brd-documents/revert/')) {
+    return { ok: true, json: async () => ({ success: true }) };
+  }
+  // Default response for other methods
+  return { ok: true, json: async () => ({}) };
+};
 
 export default function BrdDocumentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,13 +108,16 @@ export default function BrdDocumentsPage() {
   const [documentToDelete, setDocumentToDelete] = useState<any>(null);
   const [revertDialogOpen, setRevertDialogOpen] = useState(false);
   const [versionToRevert, setVersionToRevert] = useState<any>(null);
+  // Version History Modal
+  const [selectedBrdForVersions, setSelectedBrdForVersions] = useState<any>(null);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [versions, setVersions] = useState<any[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   // Fetch BRD documents
-  const { data: documents = [], isLoading } = useQuery({
+  const { data: documents = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/brd-documents", selectedProjectId],
     queryFn: async () => {
       const url = selectedProjectId 
@@ -168,7 +209,7 @@ export default function BrdDocumentsPage() {
         };
         setSelectedDocument(updatedDocument);
       }
-      
+
       queryClient.invalidateQueries({ queryKey: ["/api/brd-documents"] });
       toast({ title: "Success", description: "Test case added successfully" });
     },
@@ -205,7 +246,7 @@ export default function BrdDocumentsPage() {
         };
         setSelectedDocument(updatedDocument);
       }
-      
+
       queryClient.invalidateQueries({ queryKey: ["/api/brd-documents", selectedProjectId] });
       toast({ title: "Success", description: "Test case updated successfully" });
     },
@@ -238,7 +279,7 @@ export default function BrdDocumentsPage() {
         };
         setSelectedDocument(updatedDocument);
       }
-      
+
       queryClient.invalidateQueries({ queryKey: ["/api/brd-documents", selectedProjectId] });
       toast({ title: "Success", description: "Test case deleted successfully" });
     },
@@ -333,9 +374,9 @@ export default function BrdDocumentsPage() {
       const response = await fetch(`/api/brd-documents/${document.id}/export-pdf`, {
         method: "GET",
       });
-      
+
       if (!response.ok) throw new Error("Failed to export PDF");
-      
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -345,7 +386,7 @@ export default function BrdDocumentsPage() {
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
-      
+
       toast({ title: "Success", description: "PDF exported successfully" });
     } catch (error) {
       console.error("PDF export error:", error);
@@ -359,14 +400,14 @@ export default function BrdDocumentsPage() {
 
   const exportAllToPDF = async () => {
     if (!selectedProjectId) return;
-    
+
     try {
       const response = await fetch(`/api/brd-documents/export-all-pdf?projectId=${selectedProjectId}`, {
         method: "GET",
       });
-      
+
       if (!response.ok) throw new Error("Failed to export all PDFs");
-      
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -376,7 +417,7 @@ export default function BrdDocumentsPage() {
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
-      
+
       toast({ title: "Success", description: "All PDFs exported successfully" });
     } catch (error) {
       console.error("PDF export error:", error);
@@ -416,8 +457,44 @@ export default function BrdDocumentsPage() {
       "Approved": "default",
       "Rejected": "destructive"
     };
-    
+
     return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
+  };
+
+  const openVersionHistory = async (document: any) => {
+    setSelectedBrdForVersions(document);
+    try {
+      const response = await apiRequest('GET', `/api/brd-documents/${document.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setVersions(data.versions || []);
+      }
+    } catch (error) {
+      console.error('Error fetching versions:', error);
+      setVersions([]);
+    }
+    setShowVersionHistory(true);
+  };
+
+  const revertToVersion = async (versionId: number) => {
+    if (!selectedBrdForVersions) return;
+
+    try {
+      const response = await apiRequest('POST', `/api/brd-documents/${selectedBrdForVersions.id}/revert/${versionId}`);
+      if (response.ok) {
+        toast({ title: "Success", description: "Document reverted successfully" });
+        refetch();
+        setShowVersionHistory(false);
+      } else {
+        throw new Error("Failed to revert document");
+      }
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: "Failed to revert document",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -430,7 +507,7 @@ export default function BrdDocumentsPage() {
             Business Requirements Documents with Version Control
           </p>
         </div>
-        
+
         {selectedProjectId && (
           <div className="flex items-center gap-2">
             <Button
@@ -441,7 +518,7 @@ export default function BrdDocumentsPage() {
               <FileDown className="h-4 w-4" />
               Export All PDF
             </Button>
-            
+
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="flex items-center gap-2">
@@ -574,7 +651,7 @@ export default function BrdDocumentsPage() {
                     </p>
                   )}
                 </div>
-                
+
                 <div className="flex justify-between items-center mt-4">
                   <div className="flex gap-2">
                     <Button
@@ -602,7 +679,7 @@ export default function BrdDocumentsPage() {
                       Test Cases
                     </Button>
                   </div>
-                  
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -621,8 +698,7 @@ export default function BrdDocumentsPage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
-                          setSelectedDocument(document);
-                          setShowVersionHistory(true);
+                          openVersionHistory(document);
                         }}
                       >
                         <History className="h-4 w-4 mr-2" />
@@ -697,7 +773,7 @@ export default function BrdDocumentsPage() {
                 {selectedDocument.title}
               </DialogTitle>
             </DialogHeader>
-            
+
             {showTestCases ? (
               <BrdTestCaseChecklist
                 brdId={selectedDocument.id}
@@ -755,7 +831,7 @@ export default function BrdDocumentsPage() {
                           const minor = parseInt(versionParts[1]) || 0;
                           const nextMinor = `${major}.${minor + 1}`;
                           const nextMajor = `${major + 1}.0`;
-                          
+
                           return [
                             <SelectItem key={nextMinor} value={nextMinor}>
                               {nextMinor}
@@ -769,7 +845,7 @@ export default function BrdDocumentsPage() {
                     </Select>
                   </div>
                 </div>
-                
+
                 {selectedDocument.versions && selectedDocument.versions.length > 0 ? (
                   <div className="space-y-3">
                     {selectedDocument.versions.map((version: any, index: number) => (
@@ -851,91 +927,91 @@ export default function BrdDocumentsPage() {
                   <div><strong>Version:</strong> {selectedDocument.version}</div>
                   <div><strong>Created:</strong> {selectedDocument.createdAt ? new Date(selectedDocument.createdAt).toLocaleDateString() : 'N/A'}</div>
                 </div>
-                
+
                 {selectedDocument.overview && (
                   <div>
                     <h4 className="font-medium mb-2">Overview</h4>
                     <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.overview}</p>
                   </div>
                 )}
-                
+
                 {selectedDocument.problemStatement && (
                   <div>
                     <h4 className="font-medium mb-2">Problem Statement</h4>
                     <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.problemStatement}</p>
                   </div>
                 )}
-                
+
                 {selectedDocument.objectives && (
                   <div>
                     <h4 className="font-medium mb-2">Objectives</h4>
                     <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.objectives}</p>
                   </div>
                 )}
-                
+
                 {selectedDocument.scope && (
                   <div>
                     <h4 className="font-medium mb-2">Scope</h4>
                     <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.scope}</p>
                   </div>
                 )}
-                
+
                 {selectedDocument.userStories && (
                   <div>
                     <h4 className="font-medium mb-2">User Stories</h4>
                     <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.userStories}</p>
                   </div>
                 )}
-                
+
                 {selectedDocument.functionalRequirements && (
                   <div>
                     <h4 className="font-medium mb-2">Functional Requirements</h4>
                     <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.functionalRequirements}</p>
                   </div>
                 )}
-                
+
                 {selectedDocument.nonFunctionalRequirements && (
                   <div>
                     <h4 className="font-medium mb-2">Non-Functional Requirements</h4>
                     <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.nonFunctionalRequirements}</p>
                   </div>
                 )}
-                
+
                 {selectedDocument.designNotes && (
                   <div>
                     <h4 className="font-medium mb-2">Design Notes</h4>
                     <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.designNotes}</p>
                   </div>
                 )}
-                
+
                 {selectedDocument.dependencies && (
                   <div>
                     <h4 className="font-medium mb-2">Dependencies</h4>
                     <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.dependencies}</p>
                   </div>
                 )}
-                
+
                 {selectedDocument.assumptions && (
                   <div>
                     <h4 className="font-medium mb-2">Assumptions</h4>
                     <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.assumptions}</p>
                   </div>
                 )}
-                
+
                 {selectedDocument.acceptanceCriteria && (
                   <div>
                     <h4 className="font-medium mb-2">Acceptance Criteria</h4>
                     <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.acceptanceCriteria}</p>
                   </div>
                 )}
-                
+
                 {selectedDocument.risks && (
                   <div>
                     <h4 className="font-medium mb-2">Risks</h4>
                     <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.risks}</p>
                   </div>
                 )}
-                
+
                 {selectedDocument.supportingDocuments && (
                   <div>
                     <h4 className="font-medium mb-2">Supporting Documents</h4>
@@ -944,7 +1020,7 @@ export default function BrdDocumentsPage() {
                 )}
               </div>
             )}
-            
+
             <div className="flex justify-between pt-4 border-t">
               <Button
                 variant="outline"

@@ -2244,6 +2244,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employee import endpoint
+  apiRouter.post("/employees/import", isAuthenticated, checkRole(["Admin"]), 
+    documentUpload.single('file'),
+    async (req, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        const csv = await import('csv-parser');
+        const fs = await import('fs');
+        const path = await import('path');
+
+        const results: any[] = [];
+        const filePath = req.file.path;
+
+        const stream = fs.createReadStream(filePath)
+          .pipe(csv.default())
+          .on('data', (data: any) => results.push(data))
+          .on('end', async () => {
+            try {
+              // Process the CSV data
+              const importedEmployees = [];
+              const errors = [];
+
+              for (let i = 0; i < results.length; i++) {
+                const row = results[i];
+                try {
+                  // Map CSV columns to employee fields
+                  const employeeData = {
+                    employeeId: row.employeeId || row.emp_id || `EMP${String(Date.now() + i).slice(-6)}`,
+                    firstName: row.firstName || row.first_name || row.name?.split(' ')[0] || '',
+                    lastName: row.lastName || row.last_name || row.name?.split(' ').slice(1).join(' ') || '',
+                    email: row.email || '',
+                    phone: row.phone || row.phoneNumber || '',
+                    department: row.department || 'Development',
+                    designation: row.designation || row.title || 'Developer',
+                    joiningDate: row.joiningDate || row.joining_date || new Date().toISOString(),
+                    status: row.status || 'Active',
+                    technologies: row.technologies || '',
+                    createdById: req.session.userId
+                  };
+
+                  // Validate required fields
+                  if (!employeeData.firstName || !employeeData.email) {
+                    errors.push(`Row ${i + 1}: Missing required fields (firstName, email)`);
+                    continue;
+                  }
+
+                  // Check if employee already exists
+                  const existingEmployee = await storage.getEmployeeByEmail(employeeData.email);
+                  if (existingEmployee) {
+                    errors.push(`Row ${i + 1}: Employee with email ${employeeData.email} already exists`);
+                    continue;
+                  }
+
+                  const employee = await storage.createEmployee(employeeData);
+                  importedEmployees.push(employee);
+                } catch (error: any) {
+                  errors.push(`Row ${i + 1}: ${error.message}`);
+                }
+              }
+
+              // Clean up uploaded file
+              fs.unlinkSync(filePath);
+
+              res.json({
+                success: true,
+                imported: importedEmployees.length,
+                errors: errors,
+                message: `Successfully imported ${importedEmployees.length} employees${errors.length > 0 ? ` with ${errors.length} errors` : ''}`
+              });
+
+            } catch (error: any) {
+              // Clean up file on error
+              if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+              }
+              
+              console.error("Employee import processing error:", error);
+              res.status(500).json({ 
+                success: false,
+                message: "Failed to process employee data",
+                error: error.message 
+              });
+            }
+          })
+          .on('error', (error: any) => {
+            console.error("CSV parsing error:", error);
+            
+            // Clean up file on error
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+            }
+            
+            res.status(400).json({ 
+              success: false,
+              message: "Failed to parse CSV file",
+              error: error.message 
+            });
+          });
+
+      } catch (error: any) {
+        console.error("Employee import error:", error);
+        res.status(500).json({ 
+          success: false,
+          message: "Failed to import employees",
+          error: error.message 
+        });
+      }
+    }
+  );
+
   // Chat file upload endpoint
   apiRouter.post("/chat/upload", isAuthenticated, 
     (req, res, next) => {

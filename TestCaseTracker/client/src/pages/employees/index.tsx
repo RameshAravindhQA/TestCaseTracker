@@ -34,7 +34,7 @@ export default function EmployeesPage() {
   const [isImporting, setIsImporting] = useState(false);
 
 
-  const { data: employees = [], isLoading } = useQuery({
+  const { data: employees = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/employees"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/employees");
@@ -331,15 +331,11 @@ export default function EmployeesPage() {
   };
 
   // Handle file import
-  const handleImport = async () => {
-    if (!selectedFile) return;
+  const handleImport = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
 
-    setIsImporting(true);
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-
-      // Assuming the API endpoint handles parsing and importing
       const response = await fetch('/api/employees/import', {
         method: 'POST',
         body: formData,
@@ -347,20 +343,43 @@ export default function EmployeesPage() {
 
       if (response.ok) {
         const result = await response.json();
-        toast({
-          title: "Import successful",
-          description: `Imported ${result.imported} employees, failed ${result.failed}.`,
-        });
-        queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
-        setIsImportDialogOpen(false);
+        if (result.success) {
+          toast({
+            title: "Import Successful",
+            description: `Imported ${result.imported} employees successfully`,
+          });
+
+          if (result.errors && result.errors.length > 0) {
+            console.warn('Import warnings:', result.errors);
+            toast({
+              title: "Import Warnings",
+              description: `${result.errors.length} rows had issues. Check console for details.`,
+              variant: "destructive",
+            });
+          }
+
+          refetch();
+          setIsImportDialogOpen(false);
+        } else {
+          toast({
+            title: "Import Failed",
+            description: result.message || "Failed to import employees",
+            variant: "destructive",
+          });
+        }
       } else {
-        const errorResult = await response.json();
-        throw new Error(errorResult.message || 'Import failed');
+        const error = await response.json();
+        toast({
+          title: "Import Failed",
+          description: error.message || "Failed to import employees",
+          variant: "destructive",
+        });
       }
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Import error:', error);
       toast({
-        title: "Import failed",
-        description: error.message,
+        title: "Import Failed",
+        description: "An error occurred while importing employees",
         variant: "destructive",
       });
     } finally {
@@ -471,7 +490,7 @@ Mike,Johnson,mike.johnson@company.com,5551234567,Sales,Sales Executive,2023-12-0
                 Cancel
               </Button>
               <Button
-                onClick={handleImport}
+                onClick={() => selectedFile && handleImport(selectedFile)}
                 disabled={!selectedFile || isImporting}
               >
                 {isImporting ? "Importing..." : "Import Employees"}

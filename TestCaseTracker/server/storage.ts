@@ -291,6 +291,7 @@ export interface IStorage {
   createEmployee(data: any): Promise<any>;
   updateEmployee(id: number, data: any): Promise<any | null>;
   deleteEmployee(id: number): Promise<boolean>;
+  getEmployeeByEmail(email: string): Promise<any | undefined>;
 
   // Employee Project Mapping
   getEmployeeProjects(employeeId?: number): Promise<any[]>;
@@ -492,12 +493,12 @@ class MemStorage implements IStorage {
 
     // If content changed, create new version
     const contentFields = [
-      'overview', 'problemStatement', 'objectives', 'scope', 
+      'overview', 'problemStatement', 'objectives', 'scope',
       'userStories', 'functionalRequirements', 'nonFunctionalRequirements',
       'designNotes', 'dependencies', 'assumptions', 'acceptanceCriteria', 'risks'
     ];
 
-    const hasContentChanges = contentFields.some(field => 
+    const hasContentChanges = contentFields.some(field =>
       data[field] !== undefined && data[field] !== currentDoc[field]
     );
 
@@ -542,7 +543,7 @@ class MemStorage implements IStorage {
     const version = {
       id,
       ...data,
-      createdAt: new Date().toISOString()
+      createdAt: new Date()
     };
     this.brdVersions.push(version);
     return version;
@@ -594,22 +595,6 @@ class MemStorage implements IStorage {
     return this.brdTestCases.length < initialLength;
   }
 
-  // Initialize default data for roles and permissions if needed
-  private roles: Role[] = [];
-  private permissions: Permission[] = [];
-  private userProjects: UserProject[] = [];
-  private markers: Marker[] = [];
-  private requestFormTypes: RequestFormType[] = [];
-  private requestForms: RequestForm[] = [];
-  private requestComments: RequestComment[] = [];
-  private chatMessages: ChatMessage[] = [];
-  private todos: Todo[] = [];
-  private todoLists: TodoList[] = [];
-  private timeSheetFolders: TimeSheetFolder[] = [];
-  private timeSheets: TimeSheet[] = [];
-  private githubConfigs: GitHubConfig[] = [];
-  private notebooks: Notebook[] = [];
-
   // Initialize data property for compatibility
   private data: any = {
     todoLists: [],
@@ -619,18 +604,18 @@ class MemStorage implements IStorage {
 
   // Enhanced Chat and Messaging methods
   private conversations = new Map<number, any>();
-  private chatMessages = new Map<number, any>(); // Use Map for better indexing
+  private chatMessagesMap = new Map<number, any>(); // Use Map for better indexing
   private messageReactions = new Map<number, any[]>();
   private messageThreads = new Map<number, number[]>();
   private conversationMembers = new Map<number, Set<number>>();
   private messageReadStatus = new Map<string, Set<number>>(); // messageId-userId -> Set<userId>
   private conversationMessages = new Map<number, any[]>(); // conversationId -> messages array
 
-  // Todo management - using proper Maps
+  // Todo Management Maps
   private todoListsMap = new Map<number, any>();
   private todosMap = new Map<number, any>();
 
-  // Employee Management
+  // Employee Management Storage
   private employees: any[] = [];
   private employeeProjects: any[] = [];
   private technologyOptions: any[] = [];
@@ -1207,7 +1192,7 @@ class MemStorage implements IStorage {
 
   async getBugsByProject(projectId: number): Promise<Bug[]> {
     const results = this.bugs.filter(bug => bug.projectId === projectId);
-    console.log(`Storage: getBugsByProject(${projectId}) returning ${results.length} bugs:`, 
+    console.log(`Storage: getBugsByProject(${projectId}) returning ${results.length} bugs:`,
       results.map(bug => ({ id: bug.id, bugId: bug.bugId, title: bug.title, projectId: bug.projectId })));
     return results;
   }
@@ -2109,7 +2094,7 @@ class MemStorage implements IStorage {
     const index = this.timeSheets.findIndex(ts => ts.id === id);
     if (index === -1) return undefined;
 
-    const updatedTimeSheet = { ...this.timeSheets[index], ...timeSheetData, updatedAt: new Date() };
+    const updatedTimeSheet: TimeSheet = { ...this.timeSheets[index], ...timeSheetData, updatedAt: new Date() };
     this.timeSheets[index] = updatedTimeSheet;
 
     console.log(`Storage: Updated timesheet ${id} with status: ${timeSheetData.status}`, updatedTimeSheet);
@@ -2160,7 +2145,7 @@ class MemStorage implements IStorage {
   async deleteTimeSheetFolder(id: number): Promise<boolean> {
     const initialLength = this.timeSheetFolders.length;
     this.timeSheetFolders = this.timeSheetFolders.filter(folder => folder.id !== id);
-    return this.timeSheetFolders.length < initialLength;
+    return this.initialLength < initialLength;
   }
 
   async approveTimeSheet(id: number, approverId: number): Promise<TimeSheet | undefined> {
@@ -3254,8 +3239,9 @@ class MemStorage implements IStorage {
       if (!this.employeeProjectHistory) {
         this.employeeProjectHistory = [];
       }
-      this.employeeProjectHistory.push(history);
 
+      // Add to history immediately
+      this.employeeProjectHistory.push(history);
       return history;
     } catch (error) {
       console.error('Error creating employee project history:', error);
@@ -3502,8 +3488,6 @@ class MemStorage implements IStorage {
 
       // Add to history immediately
       this.employeeProjectHistory.push(historyRecord);
-      console.log('Created history record for extension:', historyRecord);
-      console.log('Total history records:', this.employeeProjectHistory.length);
 
       // Now update the allocation with new end date
       const updatedAllocation = {
@@ -3513,7 +3497,6 @@ class MemStorage implements IStorage {
       };
 
       this.employeeProjects[allocationIndex] = updatedAllocation;
-      console.log('Updated allocation with new end date:', updatedAllocation);
 
       return {
         success: true,
@@ -3947,12 +3930,12 @@ class MemStorage implements IStorage {
 
     // If content changed, create new version
     const contentFields = [
-      'overview', 'problemStatement', 'objectives', 'scope', 
+      'overview', 'problemStatement', 'objectives', 'scope',
       'userStories', 'functionalRequirements', 'nonFunctionalRequirements',
       'designNotes', 'dependencies', 'assumptions', 'acceptanceCriteria', 'risks'
     ];
 
-    const hasContentChanges = contentFields.some(field => 
+    const hasContentChanges = contentFields.some(field =>
       data[field] !== undefined && data[field] !== currentDoc[field]
     );
 
