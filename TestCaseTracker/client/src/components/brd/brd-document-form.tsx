@@ -1,4 +1,3 @@
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -60,23 +59,22 @@ export function BrdDocumentForm({
   const form = useForm<BrdFormData>({
     resolver: zodResolver(brdSchema),
     defaultValues: {
-      title: "",
-      author: "",
-      projectId: projects[0]?.id || 0,
-      overview: "",
-      problemStatement: "",
-      objectives: "",
-      scope: "",
-      userStories: "",
-      functionalRequirements: "",
-      nonFunctionalRequirements: "",
-      designNotes: "",
-      dependencies: "",
-      assumptions: "",
-      acceptanceCriteria: "",
-      risks: "",
-      supportingDocuments: "",
-      ...initialData
+      title: initialData?.title || "",
+      author: initialData?.author || "",
+      projectId: initialData?.projectId || projects[0]?.id || 0,
+      overview: initialData?.overview || "",
+      problemStatement: initialData?.problemStatement || "",
+      objectives: initialData?.objectives || "",
+      scope: initialData?.scope || "",
+      userStories: initialData?.userStories || "",
+      functionalRequirements: initialData?.functionalRequirements || "",
+      nonFunctionalRequirements: initialData?.nonFunctionalRequirements || "",
+      designNotes: initialData?.designNotes || "",
+      dependencies: initialData?.dependencies || "",
+      assumptions: initialData?.assumptions || "",
+      acceptanceCriteria: initialData?.acceptanceCriteria || "",
+      risks: initialData?.risks || "",
+      supportingDocuments: initialData?.supportingDocuments || "",
     }
   });
 

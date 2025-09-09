@@ -19,6 +19,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { BrdDocumentForm } from "@/components/brd/brd-document-form";
 import { BrdTestCaseChecklist } from "@/components/brd/brd-test-case-checklist";
 import { useToast } from "@/hooks/use-toast";
@@ -33,7 +50,12 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  User
+  User,
+  MoreVertical,
+  Trash2,
+  Download,
+  History,
+  FileDown
 } from "lucide-react";
 
 export default function BrdDocumentsPage() {
@@ -42,6 +64,11 @@ export default function BrdDocumentsPage() {
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [showTestCases, setShowTestCases] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<any>(null);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -223,6 +250,117 @@ export default function BrdDocumentsPage() {
     },
   });
 
+  // Update BRD document mutation
+  const updateDocumentMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await fetch(`/api/brd-documents/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to update document");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/brd-documents", selectedProjectId] });
+      setIsEditDialogOpen(false);
+      setEditingDocument(null);
+      toast({ title: "Success", description: "BRD document updated successfully" });
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Error", 
+        description: "Failed to update BRD document",
+        variant: "destructive"
+      });
+    },
+  });
+
+  // Delete BRD document mutation
+  const deleteDocumentMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/brd-documents/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete document");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/brd-documents", selectedProjectId] });
+      setDeleteDialogOpen(false);
+      setDocumentToDelete(null);
+      toast({ title: "Success", description: "BRD document deleted successfully" });
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete BRD document",
+        variant: "destructive"
+      });
+    },
+  });
+
+  // PDF Export functions
+  const exportToPDF = async (document: any) => {
+    try {
+      const response = await fetch(`/api/brd-documents/${document.id}/export-pdf`, {
+        method: "GET",
+      });
+      
+      if (!response.ok) throw new Error("Failed to export PDF");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `${document.title}_v${document.version}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast({ title: "Success", description: "PDF exported successfully" });
+    } catch (error) {
+      console.error("PDF export error:", error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to export PDF",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const exportAllToPDF = async () => {
+    if (!selectedProjectId) return;
+    
+    try {
+      const response = await fetch(`/api/brd-documents/export-all-pdf?projectId=${selectedProjectId}`, {
+        method: "GET",
+      });
+      
+      if (!response.ok) throw new Error("Failed to export all PDFs");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `BRD_Documents_Project_${selectedProjectId}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast({ title: "Success", description: "All PDFs exported successfully" });
+    } catch (error) {
+      console.error("PDF export error:", error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to export all PDFs",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Filter documents
   const filteredDocuments = documents.filter((doc: any) => {
     const matchesSearch = doc.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -267,24 +405,35 @@ export default function BrdDocumentsPage() {
         </div>
         
         {selectedProjectId && (
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                New BRD Document
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create New BRD Document</DialogTitle>
-              </DialogHeader>
-              <BrdDocumentForm
-                projects={projects}
-                onSubmit={(data) => createDocumentMutation.mutate(data)}
-                isSubmitting={createDocumentMutation.isPending}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={exportAllToPDF}
+              className="flex items-center gap-2"
+            >
+              <FileDown className="h-4 w-4" />
+              Export All PDF
+            </Button>
+            
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  New BRD Document
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New BRD Document</DialogTitle>
+                </DialogHeader>
+                <BrdDocumentForm
+                  projects={projects}
+                  onSubmit={(data) => createDocumentMutation.mutate(data)}
+                  isSubmitting={createDocumentMutation.isPending}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         )}
       </div>
 
@@ -399,31 +548,76 @@ export default function BrdDocumentsPage() {
                   )}
                 </div>
                 
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedDocument(document);
-                      setShowTestCases(false);
-                    }}
-                    className="flex items-center gap-1"
-                  >
-                    <Eye className="h-4 w-4" />
-                    View
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedDocument(document);
-                      setShowTestCases(true);
-                    }}
-                    className="flex items-center gap-1"
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                    Test Cases
-                  </Button>
+                <div className="flex justify-between items-center mt-4">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedDocument(document);
+                        setShowTestCases(false);
+                      }}
+                      className="flex items-center gap-1"
+                    >
+                      <Eye className="h-4 w-4" />
+                      View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedDocument(document);
+                        setShowTestCases(true);
+                      }}
+                      className="flex items-center gap-1"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      Test Cases
+                    </Button>
+                  </div>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditingDocument(document);
+                          setIsEditDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSelectedDocument(document);
+                          setShowVersionHistory(true);
+                        }}
+                      >
+                        <History className="h-4 w-4 mr-2" />
+                        Version History
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => exportToPDF(document)}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Export PDF
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setDocumentToDelete(document);
+                          setDeleteDialogOpen(true);
+                        }}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </CardContent>
             </Card>
@@ -500,6 +694,44 @@ export default function BrdDocumentsPage() {
                   deleteTestCaseMutation.mutate(testCaseId);
                 }}
               />
+            ) : showVersionHistory ? (
+              <div className="space-y-4">
+                <h4 className="font-medium text-lg">Version History</h4>
+                {selectedDocument.versions && selectedDocument.versions.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedDocument.versions.map((version: any, index: number) => (
+                      <Card key={version.id} className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant={index === 0 ? "default" : "secondary"}>
+                                Version {version.version}
+                              </Badge>
+                              {index === 0 && <Badge variant="outline">Current</Badge>}
+                            </div>
+                            <p className="text-sm text-gray-600 mb-1">
+                              <strong>Changes:</strong> {version.changes || "No changes documented"}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Created: {new Date(version.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => exportToPDF({ ...selectedDocument, version: version.version })}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Export
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-8">No version history available</p>
+                )}
+              </div>
             ) : (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -609,13 +841,69 @@ export default function BrdDocumentsPage() {
               >
                 {showTestCases ? "View Document" : "View Test Cases"}
               </Button>
-              <Button variant="outline" onClick={() => setSelectedDocument(null)}>
-                Close
-              </Button>
+              <div className="flex gap-2">
+                {!showTestCases && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowVersionHistory(!showVersionHistory);
+                    }}
+                  >
+                    <History className="h-4 w-4 mr-2" />
+                    {showVersionHistory ? "Hide Versions" : "Version History"}
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setSelectedDocument(null)}>
+                  Close
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Edit Dialog */}
+      {editingDocument && (
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit BRD Document</DialogTitle>
+            </DialogHeader>
+            <BrdDocumentForm
+              projects={projects}
+              initialData={editingDocument}
+              onSubmit={(data) => updateDocumentMutation.mutate({ id: editingDocument.id, data })}
+              isSubmitting={updateDocumentMutation.isPending}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the BRD document
+              "{documentToDelete?.title}" and all its associated data including test cases and version history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (documentToDelete) {
+                  deleteDocumentMutation.mutate(documentToDelete.id);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       </div>
     </MainLayout>
   );

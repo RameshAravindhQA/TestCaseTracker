@@ -201,4 +201,119 @@ router.delete("/test-cases/:testCaseId", async (req, res) => {
   }
 });
 
+// Export single BRD document as PDF
+router.get("/:id/export-pdf", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const document = await storage.getBrdDocument(id);
+
+    if (!document) {
+      return res.status(404).json({ error: "BRD document not found" });
+    }
+
+    // Generate PDF content
+    const pdfContent = generatePDFContent(document);
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${document.title}_v${document.version}.pdf"`);
+    res.send(pdfContent);
+  } catch (error) {
+    console.error("Error exporting BRD document to PDF:", error);
+    res.status(500).json({ error: "Failed to export PDF" });
+  }
+});
+
+// Export all BRD documents for a project as ZIP
+router.get("/export-all-pdf", async (req, res) => {
+  try {
+    const { projectId } = req.query;
+    
+    if (!projectId) {
+      return res.status(400).json({ error: "Project ID is required" });
+    }
+
+    const documents = await storage.getBrdDocuments(parseInt(projectId as string));
+    
+    if (documents.length === 0) {
+      return res.status(404).json({ error: "No BRD documents found for this project" });
+    }
+
+    // Generate ZIP file with all PDFs
+    const zipContent = await generateZipWithPDFs(documents);
+    
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="BRD_Documents_Project_${projectId}.zip"`);
+    res.send(zipContent);
+  } catch (error) {
+    console.error("Error exporting all BRD documents to PDF:", error);
+    res.status(500).json({ error: "Failed to export all PDFs" });
+  }
+});
+
+// Helper function to generate PDF content
+function generatePDFContent(document: any): Buffer {
+  // Simple PDF generation - in a real implementation, you'd use a library like puppeteer or jsPDF
+  const content = `
+    Business Requirements Document
+    
+    Title: ${document.title}
+    Author: ${document.author}
+    Version: ${document.version}
+    Status: ${document.status}
+    Created: ${new Date(document.createdAt).toLocaleDateString()}
+    
+    Overview:
+    ${document.overview || 'N/A'}
+    
+    Problem Statement:
+    ${document.problemStatement || 'N/A'}
+    
+    Objectives:
+    ${document.objectives || 'N/A'}
+    
+    Scope:
+    ${document.scope || 'N/A'}
+    
+    User Stories:
+    ${document.userStories || 'N/A'}
+    
+    Functional Requirements:
+    ${document.functionalRequirements || 'N/A'}
+    
+    Non-Functional Requirements:
+    ${document.nonFunctionalRequirements || 'N/A'}
+    
+    Design Notes:
+    ${document.designNotes || 'N/A'}
+    
+    Dependencies:
+    ${document.dependencies || 'N/A'}
+    
+    Assumptions:
+    ${document.assumptions || 'N/A'}
+    
+    Acceptance Criteria:
+    ${document.acceptanceCriteria || 'N/A'}
+    
+    Risks:
+    ${document.risks || 'N/A'}
+    
+    Supporting Documents:
+    ${document.supportingDocuments || 'N/A'}
+  `;
+  
+  // This is a placeholder - in production, use a proper PDF library
+  return Buffer.from(content, 'utf-8');
+}
+
+// Helper function to generate ZIP with PDFs
+async function generateZipWithPDFs(documents: any[]): Promise<Buffer> {
+  // This is a placeholder - in production, use a library like archiver
+  const zipContent = documents.map(doc => 
+    `File: ${doc.title}_v${doc.version}.pdf\n${generatePDFContent(doc).toString()}\n\n`
+  ).join('');
+  
+  return Buffer.from(zipContent, 'utf-8');
+}
+
 export default router;
