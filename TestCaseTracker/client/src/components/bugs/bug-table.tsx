@@ -169,6 +169,7 @@ ${bug.comments || 'No comments provided.'}
               selectedTags={selectedTags}
               onTagSelect={setSelectedTags}
               projectId={projectId}
+              moduleType="bugs"
             />
 
             {selectedTags.length > 0 && (

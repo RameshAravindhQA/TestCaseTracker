@@ -24,6 +24,7 @@ interface TagFilterProps {
   projectId?: number | string;
   selectedTags: Tag[];
   className?: string;
+  moduleType?: string;
 }
 
 export function TagFilter({
@@ -31,15 +32,15 @@ export function TagFilter({
   projectId,
   selectedTags,
   className,
+  moduleType = "test-cases",
 }: TagFilterProps) {
   const [open, setOpen] = useState(false);
 
   // Fetch all available tags from backend
   const { data: allTags, isLoading, refetch } = useQuery<Tag[]>({
-    queryKey: [projectId ? `/api/projects/${projectId}/tags` : `/api/tags`],
+    queryKey: [`/api/tags`],
     queryFn: () => {
-      const endpoint = projectId ? `/api/projects/${projectId}/tags` : `/api/tags`;
-      return fetch(endpoint)
+      return fetch('/api/tags')
         .then(res => {
           if (!res.ok) throw new Error('Failed to fetch tags');
           return res.json();

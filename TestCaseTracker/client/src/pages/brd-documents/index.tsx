@@ -22,6 +22,7 @@ import {
 import { BrdDocumentForm } from "@/components/brd/brd-document-form";
 import { BrdTestCaseChecklist } from "@/components/brd/brd-test-case-checklist";
 import { useToast } from "@/hooks/use-toast";
+import { MainLayout } from "@/components/layout/main-layout";
 import { 
   FileText, 
   Plus, 
@@ -122,7 +123,8 @@ export default function BrdDocumentsPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <MainLayout>
+      <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">BRD Documents</h1>
@@ -337,6 +339,7 @@ export default function BrdDocumentsPage() {
           </DialogContent>
         </Dialog>
       )}
-    </div>
+      </div>
+    </MainLayout>
   );
 }

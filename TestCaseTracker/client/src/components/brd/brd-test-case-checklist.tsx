@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,7 +66,7 @@ export function BrdTestCaseChecklist({
       "Fail": "destructive", 
       "Not Executed": "secondary"
     };
-    
+
     return (
       <Badge variant={variants[status] || "secondary"}>
         {status}
@@ -87,7 +86,7 @@ export function BrdTestCaseChecklist({
     if (!newTestCase.title.trim()) return;
 
     const testCaseId = `TC-${String(testCases.length + 1).padStart(3, '0')}`;
-    
+
     onAddTestCase({
       testCaseId,
       ...newTestCase,
@@ -253,7 +252,7 @@ export function BrdTestCaseChecklist({
                               Pass
                             </label>
                           </div>
-                          
+
                           <div className="flex items-center space-x-2">
                             <Checkbox
                               id={`fail-${testCase.id}`}
