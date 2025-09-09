@@ -138,8 +138,8 @@ export function TagFilter({
                   No tags available. Click the button below to create a new tag.
                 </div>
               )}
-              <div className="border-t p-2">
-                {selectedTags.length > 0 ? (
+              {selectedTags.length > 0 && (
+                <div className="border-t p-2">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -148,26 +148,8 @@ export function TagFilter({
                   >
                     Clear selection
                   </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs"
-                    onClick={() => {
-                      setOpen(false);
-                      // Using setTimeout to avoid React state update conflicts
-                      setTimeout(() => {
-                        const tagCreateEvent = new CustomEvent('openTagCreator', {
-                          detail: { location: 'tagFilter' }
-                        });
-                        window.dispatchEvent(tagCreateEvent);
-                      }, 100);
-                    }}
-                  >
-                    Create new tag
-                  </Button>
-                )}
-              </div>
+                </div>
+              )}
             </CommandGroup>
           </Command>
         </PopoverContent>

@@ -90,6 +90,54 @@ export default function BrdDocumentsPage() {
     },
   });
 
+  // Add test case mutation
+  const addTestCaseMutation = useMutation({
+    mutationFn: async ({ brdId, testCase }: { brdId: number; testCase: any }) => {
+      const response = await fetch(`/api/brd-documents/${brdId}/test-cases`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(testCase),
+      });
+      if (!response.ok) throw new Error("Failed to add test case");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/brd-documents"] });
+      toast({ title: "Success", description: "Test case added successfully" });
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Error", 
+        description: "Failed to add test case",
+        variant: "destructive"
+      });
+    },
+  });
+
+  // Update test case mutation
+  const updateTestCaseMutation = useMutation({
+    mutationFn: async ({ testCaseId, testCase }: { testCaseId: number; testCase: any }) => {
+      const response = await fetch(`/api/brd-documents/test-cases/${testCaseId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(testCase),
+      });
+      if (!response.ok) throw new Error("Failed to update test case");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/brd-documents"] });
+      toast({ title: "Success", description: "Test case updated successfully" });
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Error", 
+        description: "Failed to update test case",
+        variant: "destructive"
+      });
+    },
+  });
+
   // Filter documents
   const filteredDocuments = documents.filter((doc: any) => {
     const matchesSearch = doc.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -287,10 +335,17 @@ export default function BrdDocumentsPage() {
                 brdId={selectedDocument.id}
                 testCases={selectedDocument.testCases || []}
                 onUpdateTestCase={(testCase) => {
-                  console.log("Update test case:", testCase);
+                  updateTestCaseMutation.mutate({ 
+                    testCaseId: testCase.id, 
+                    testCase 
+                  });
                 }}
                 onAddTestCase={(testCase) => {
                   console.log("Add test case:", testCase);
+                  addTestCaseMutation.mutate({ 
+                    brdId: selectedDocument.id, 
+                    testCase 
+                  });
                 }}
               />
             ) : (
