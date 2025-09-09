@@ -3480,15 +3480,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new tag
   apiRouter.post("/tags", isAuthenticated, async (req, res) => {
     try {
-      const { name, color } = req.body;
+      const { name, color, projectId } = req.body;
 
       if (!name) {
         return res.status(400).json({ message: "Tag name is required" });
       }
 
+      // Check if tag already exists with the same name
+      const existingTags = await storage.getTags();
+      const existingTag = existingTags.find(tag => 
+        tag.name.toLowerCase() === name.toLowerCase() && 
+        (tag.projectId === projectId || (!tag.projectId && !projectId))
+      );
+
+      if (existingTag) {
+        // Return existing tag instead of creating duplicate
+        return res.status(200).json(existingTag);
+      }
+
       const newTag = await storage.createTag({
         name,
         color: color || "#3b82f6", // Default to blue if no color provided
+        projectId: projectId || undefined,
       });
 
       res.status(201).json(newTag);
