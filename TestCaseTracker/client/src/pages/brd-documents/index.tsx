@@ -512,21 +512,91 @@ export default function BrdDocumentsPage() {
                 {selectedDocument.overview && (
                   <div>
                     <h4 className="font-medium mb-2">Overview</h4>
-                    <p className="text-gray-600">{selectedDocument.overview}</p>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.overview}</p>
                   </div>
                 )}
                 
                 {selectedDocument.problemStatement && (
                   <div>
                     <h4 className="font-medium mb-2">Problem Statement</h4>
-                    <p className="text-gray-600">{selectedDocument.problemStatement}</p>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.problemStatement}</p>
                   </div>
                 )}
                 
                 {selectedDocument.objectives && (
                   <div>
                     <h4 className="font-medium mb-2">Objectives</h4>
-                    <p className="text-gray-600">{selectedDocument.objectives}</p>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.objectives}</p>
+                  </div>
+                )}
+                
+                {selectedDocument.scope && (
+                  <div>
+                    <h4 className="font-medium mb-2">Scope</h4>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.scope}</p>
+                  </div>
+                )}
+                
+                {selectedDocument.userStories && (
+                  <div>
+                    <h4 className="font-medium mb-2">User Stories</h4>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.userStories}</p>
+                  </div>
+                )}
+                
+                {selectedDocument.functionalRequirements && (
+                  <div>
+                    <h4 className="font-medium mb-2">Functional Requirements</h4>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.functionalRequirements}</p>
+                  </div>
+                )}
+                
+                {selectedDocument.nonFunctionalRequirements && (
+                  <div>
+                    <h4 className="font-medium mb-2">Non-Functional Requirements</h4>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.nonFunctionalRequirements}</p>
+                  </div>
+                )}
+                
+                {selectedDocument.designNotes && (
+                  <div>
+                    <h4 className="font-medium mb-2">Design Notes</h4>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.designNotes}</p>
+                  </div>
+                )}
+                
+                {selectedDocument.dependencies && (
+                  <div>
+                    <h4 className="font-medium mb-2">Dependencies</h4>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.dependencies}</p>
+                  </div>
+                )}
+                
+                {selectedDocument.assumptions && (
+                  <div>
+                    <h4 className="font-medium mb-2">Assumptions</h4>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.assumptions}</p>
+                  </div>
+                )}
+                
+                {selectedDocument.acceptanceCriteria && (
+                  <div>
+                    <h4 className="font-medium mb-2">Acceptance Criteria</h4>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.acceptanceCriteria}</p>
+                  </div>
+                )}
+                
+                {selectedDocument.risks && (
+                  <div>
+                    <h4 className="font-medium mb-2">Risks</h4>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.risks}</p>
+                  </div>
+                )}
+                
+                {selectedDocument.supportingDocuments && (
+                  <div>
+                    <h4 className="font-medium mb-2">Supporting Documents</h4>
+                    <p className="text-gray-600 whitespace-pre-wrap">{selectedDocument.supportingDocuments}</p>
                   </div>
                 )}
               </div>
