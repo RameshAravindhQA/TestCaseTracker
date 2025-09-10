@@ -101,7 +101,7 @@ export default function BrdDocumentsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [showTestCases, setShowTestCases] = useState(false);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false); // Corrected state name
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -115,6 +115,8 @@ export default function BrdDocumentsPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [showForm, setShowForm] = useState(false); // State to control the creation form visibility
+
 
   // Fetch BRD documents
   const { data: documents = [], isLoading, refetch } = useQuery({
@@ -153,7 +155,7 @@ export default function BrdDocumentsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/brd-documents", selectedProjectId] });
-      setIsCreateDialogOpen(false);
+      setIsCreateDialogOpen(false); // Use the correct state setter
       toast({ title: "Success", description: "BRD document created successfully" });
     },
     onError: (error) => {
@@ -534,7 +536,10 @@ export default function BrdDocumentsPage() {
 
         {selectedProjectId && (
           <div className="flex gap-2">
-            <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-2">
+            <Button onClick={() => {
+              console.log("Create BRD Document button clicked");
+              setShowForm(true);
+            }} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New BRD Document
             </Button>
@@ -738,7 +743,10 @@ export default function BrdDocumentsPage() {
               <p className="text-gray-600 mb-4">
                 Get started by creating your first Business Requirements Document
               </p>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Button onClick={() => {
+                console.log("Create BRD Document button clicked");
+                setShowForm(true);
+              }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create BRD Document
               </Button>
@@ -1052,6 +1060,31 @@ export default function BrdDocumentsPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Create New BRD Document Dialog */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New BRD Document</DialogTitle>
+            </DialogHeader>
+            {selectedProjectId && (
+              <BrdDocumentForm
+                projectId={selectedProjectId}
+                onSuccess={() => {
+                  console.log("BRD Document created successfully");
+                  setShowForm(false);
+                  // Refresh documents
+                  queryClient.invalidateQueries({ queryKey: [`/api/brd-documents/${selectedProjectId}`] });
+                  toast({
+                    title: "Success",
+                    description: "BRD Document created successfully",
+                  });
+                }}
+                onCancel={() => setShowForm(false)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
 
       {/* Edit Dialog */}
       {editingDocument && (
