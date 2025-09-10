@@ -721,7 +721,7 @@ export default function ProjectDetailPage() {
     try {
       const doc = new jsPDF();
       
-      // Calculate statistics
+      // Calculate actual statistics from system data
       const totalTestCases = testCases?.length || 0;
       const passedTestCases = testCases?.filter(tc => tc.status === 'Pass').length || 0;
       const failedTestCases = testCases?.filter(tc => tc.status === 'Fail').length || 0;
@@ -753,303 +753,358 @@ export default function ProjectDetailPage() {
       doc.text(`Report ID: TCR-${Date.now().toString().slice(-6)}`, 105, 90, { align: 'center' });
       doc.text(`Date: ${new Date().toLocaleDateString()}`, 105, 100, { align: 'center' });
       doc.text(`Test Lead: ${currentUser.firstName} ${currentUser.lastName || ''}`, 105, 110, { align: 'center' });
-      doc.text(`Release Version: ${project?.version || 'v1.0.0'}`, 105, 120, { align: 'center' });
 
-      // Summary box
+      // Executive Summary with actual data
       doc.setFillColor(240, 248, 255);
-      doc.rect(20, 140, 170, 60, 'F');
+      doc.rect(20, 130, 170, 70, 'F');
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text('Executive Summary', 25, 155);
+      doc.text('Executive Summary', 25, 145);
       
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text(`Total Test Cases: ${totalTestCases} | Pass Rate: ${passRate}%`, 25, 170);
-      doc.text(`Passed: ${passedTestCases} | Failed: ${failedTestCases} | Blocked: ${blockedTestCases}`, 25, 180);
+      doc.text(`Total Test Cases: ${totalTestCases}`, 25, 160);
+      doc.text(`Pass Rate: ${passRate}%`, 25, 170);
+      doc.text(`Passed: ${passedTestCases} | Failed: ${failedTestCases} | Blocked: ${blockedTestCases} | Not Executed: ${notExecutedTestCases}`, 25, 180);
       doc.text(`Total Bugs: ${totalBugs} | Open: ${openBugs} | Critical: ${criticalBugs}`, 25, 190);
 
-      // **NEW PAGE - DETAILED REPORT**
+      // **TEST STATUS CHART VISUALIZATION**
       doc.addPage();
       let yPos = 20;
 
-      // 1. Introduction
+      // Chart Title
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text("1. INTRODUCTION", 14, yPos);
-      yPos += 10;
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text("This report provides comprehensive details of testing activities conducted for", 14, yPos);
-      yPos += 5;
-      doc.text(`${project?.name || 'the project'}. The testing covered functional, regression, and integration testing.`, 14, yPos);
-      yPos += 15;
+      doc.text("TEST EXECUTION STATUS CHART", 105, yPos, { align: 'center' });
+      yPos += 20;
 
-      // 2. Scope of Testing
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("2. SCOPE OF TESTING", 14, yPos);
-      yPos += 10;
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text("• Functional Testing", 18, yPos);
-      yPos += 5;
-      doc.text("• Regression Testing", 18, yPos);
-      yPos += 5;
-      doc.text("• Integration Testing", 18, yPos);
-      yPos += 5;
-      doc.text("• User Acceptance Testing Support", 18, yPos);
-      yPos += 15;
+      // Visual chart representation using rectangles
+      const chartWidth = 150;
+      const chartHeight = 80;
+      const chartX = 30;
+      const chartY = yPos;
 
-      // 3. Test Coverage
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("3. TEST COVERAGE", 14, yPos);
-      yPos += 10;
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Modules Tested: ${modules?.length || 0}`, 18, yPos);
-      yPos += 5;
-      modules?.forEach((module, index) => {
-        doc.text(`${index + 1}. ${module.name}`, 25, yPos);
-        yPos += 5;
-      });
-      yPos += 10;
+      // Draw chart background
+      doc.setFillColor(245, 245, 245);
+      doc.rect(chartX, chartY, chartWidth, chartHeight, 'F');
 
-      // 4. Test Results Summary Table
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("4. TEST RESULTS BY MODULE", 14, yPos);
-      yPos += 10;
+      // Calculate proportions for visual representation
+      if (totalTestCases > 0) {
+        const passWidth = (passedTestCases / totalTestCases) * chartWidth;
+        const failWidth = (failedTestCases / totalTestCases) * chartWidth;
+        const blockedWidth = (blockedTestCases / totalTestCases) * chartWidth;
+        const notExecutedWidth = (notExecutedTestCases / totalTestCases) * chartWidth;
 
-      // Create module-wise test results
-      const moduleTestResults = modules?.map(module => {
-        const moduleTestCases = testCases?.filter(tc => tc.moduleId === module.id) || [];
-        const total = moduleTestCases.length;
-        const passed = moduleTestCases.filter(tc => tc.status === 'Pass').length;
-        const failed = moduleTestCases.filter(tc => tc.status === 'Fail').length;
-        const blocked = moduleTestCases.filter(tc => tc.status === 'Blocked').length;
-        const notExecuted = moduleTestCases.filter(tc => tc.status === 'Not Executed').length;
-        
-        return [
-          module.name,
-          total.toString(),
-          total.toString(),
-          passed.toString(),
-          failed.toString(),
-          blocked.toString(),
-          notExecuted.toString()
-        ];
-      }) || [];
+        let currentX = chartX;
+        const barHeight = 40;
+        const barY = chartY + 20;
 
-      autoTable(doc, {
-        startY: yPos,
-        head: [['Module Name', 'Total Cases', 'Executed', 'Passed', 'Failed', 'Blocked', 'Not Executed']],
-        body: moduleTestResults,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [59, 130, 246] },
-        columnStyles: {
-          0: { cellWidth: 40 },
-          1: { cellWidth: 20 },
-          2: { cellWidth: 20 },
-          3: { cellWidth: 20 },
-          4: { cellWidth: 20 },
-          5: { cellWidth: 20 },
-          6: { cellWidth: 25 }
+        // Pass - Green
+        if (passedTestCases > 0) {
+          doc.setFillColor(34, 197, 94);
+          doc.rect(currentX, barY, passWidth, barHeight, 'F');
+          currentX += passWidth;
         }
-      });
 
-      yPos = (doc as any).lastAutoTable.finalY + 15;
-
-      // 5. Defect Metrics
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("5. DEFECT METRICS", 14, yPos);
-      yPos += 10;
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Total Defects: ${totalBugs}`, 18, yPos);
-      yPos += 5;
-      doc.text(`Open Defects: ${openBugs}`, 18, yPos);
-      yPos += 5;
-      doc.text(`In Progress: ${inProgressBugs}`, 18, yPos);
-      yPos += 5;
-      doc.text(`Resolved Defects: ${resolvedBugs}`, 18, yPos);
-      yPos += 5;
-      doc.text(`Closed Defects: ${closedBugs}`, 18, yPos);
-      yPos += 15;
-
-      // 6. Defect Distribution by Severity
-      const defectSeverityData = [
-        ['Critical', criticalBugs.toString()],
-        ['Major', majorBugs.toString()],
-        ['Minor', minorBugs.toString()]
-      ];
-
-      autoTable(doc, {
-        startY: yPos,
-        head: [['Severity', 'Count']],
-        body: defectSeverityData,
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [239, 68, 68] },
-        columnStyles: {
-          0: { cellWidth: 60 },
-          1: { cellWidth: 30 }
+        // Fail - Red
+        if (failedTestCases > 0) {
+          doc.setFillColor(239, 68, 68);
+          doc.rect(currentX, barY, failWidth, barHeight, 'F');
+          currentX += failWidth;
         }
-      });
 
-      yPos = (doc as any).lastAutoTable.finalY + 15;
+        // Blocked - Orange
+        if (blockedTestCases > 0) {
+          doc.setFillColor(251, 146, 60);
+          doc.rect(currentX, barY, blockedWidth, barHeight, 'F');
+          currentX += blockedWidth;
+        }
 
-      // **NEW PAGE FOR DETAILED TABLES**
-      if (yPos > 200) {
-        doc.addPage();
-        yPos = 20;
+        // Not Executed - Gray
+        if (notExecutedTestCases > 0) {
+          doc.setFillColor(156, 163, 175);
+          doc.rect(currentX, barY, notExecutedWidth, barHeight, 'F');
+        }
       }
 
-      // 7. Detailed Bug Reports by Module
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("6. DETAILED BUG REPORTS BY MODULE", 14, yPos);
-      yPos += 10;
+      // Chart Legend
+      yPos += 90;
+      doc.setFontSize(10);
+      let legendX = 30;
 
-      if (bugs && bugs.length > 0) {
-        const bugDetailsData = bugs.map(bug => [
-          bug.bugId || `BUG-${bug.id}`,
-          bug.title?.substring(0, 25) + (bug.title?.length > 25 ? '...' : '') || 'N/A',
-          modules?.find(m => m.id === bug.moduleId)?.name || 'N/A',
-          bug.severity || 'N/A',
-          bug.priority || 'N/A',
-          bug.status || 'N/A',
-          users?.find(u => u.id === bug.reportedById)?.firstName || 'Unknown',
-          bug.dateReported ? new Date(bug.dateReported).toLocaleDateString() : 'N/A'
-        ]);
+      doc.setFillColor(34, 197, 94);
+      doc.rect(legendX, yPos, 8, 6, 'F');
+      doc.text(`Pass (${passedTestCases})`, legendX + 12, yPos + 4);
+      legendX += 45;
+
+      doc.setFillColor(239, 68, 68);
+      doc.rect(legendX, yPos, 8, 6, 'F');
+      doc.text(`Fail (${failedTestCases})`, legendX + 12, yPos + 4);
+      legendX += 45;
+
+      doc.setFillColor(251, 146, 60);
+      doc.rect(legendX, yPos, 8, 6, 'F');
+      doc.text(`Blocked (${blockedTestCases})`, legendX + 12, yPos + 4);
+      legendX += 50;
+
+      doc.setFillColor(156, 163, 175);
+      doc.rect(legendX, yPos, 8, 6, 'F');
+      doc.text(`Not Executed (${notExecutedTestCases})`, legendX + 12, yPos + 4);
+
+      yPos += 20;
+
+      // **MODULE-WISE TEST CASE DETAILS**
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("MODULE-WISE TEST CASE SUMMARY", 14, yPos);
+      yPos += 15;
+
+      // Create module-wise test results table
+      if (modules && modules.length > 0) {
+        const moduleTestResults = modules.map(module => {
+          const moduleTestCases = testCases?.filter(tc => tc.moduleId === module.id) || [];
+          const total = moduleTestCases.length;
+          const passed = moduleTestCases.filter(tc => tc.status === 'Pass').length;
+          const failed = moduleTestCases.filter(tc => tc.status === 'Fail').length;
+          const blocked = moduleTestCases.filter(tc => tc.status === 'Blocked').length;
+          const notExecuted = moduleTestCases.filter(tc => tc.status === 'Not Executed').length;
+          const modulePassRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+          
+          return [
+            module.name,
+            total.toString(),
+            passed.toString(),
+            failed.toString(),
+            blocked.toString(),
+            notExecuted.toString(),
+            `${modulePassRate}%`
+          ];
+        });
 
         autoTable(doc, {
           startY: yPos,
-          head: [['Bug ID', 'Title', 'Module', 'Severity', 'Priority', 'Status', 'Tester', 'Date']],
-          body: bugDetailsData,
-          styles: { fontSize: 7 },
-          headStyles: { fillColor: [239, 68, 68] },
+          head: [['Module Name', 'Total', 'Passed', 'Failed', 'Blocked', 'Not Executed', 'Pass Rate']],
+          body: moduleTestResults,
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [59, 130, 246] },
           columnStyles: {
-            0: { cellWidth: 18 },
-            1: { cellWidth: 35 },
-            2: { cellWidth: 25 },
-            3: { cellWidth: 18 },
-            4: { cellWidth: 18 },
-            5: { cellWidth: 18 },
-            6: { cellWidth: 20 },
-            7: { cellWidth: 20 }
+            0: { cellWidth: 40 },
+            1: { cellWidth: 20 },
+            2: { cellWidth: 20 },
+            3: { cellWidth: 20 },
+            4: { cellWidth: 20 },
+            5: { cellWidth: 25 },
+            6: { cellWidth: 20 }
           }
         });
 
         yPos = (doc as any).lastAutoTable.finalY + 15;
       }
 
-      // **NEW PAGE FOR TEST ENVIRONMENT & RECOMMENDATIONS**
+      // **DETAILED MODULE-WISE TEST CASES**
+      if (modules && modules.length > 0 && testCases && testCases.length > 0) {
+        doc.addPage();
+        yPos = 20;
+
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("DETAILED TEST CASES BY MODULE", 14, yPos);
+        yPos += 15;
+
+        modules.forEach((module, moduleIndex) => {
+          const moduleTestCases = testCases.filter(tc => tc.moduleId === module.id);
+          
+          if (moduleTestCases.length > 0) {
+            // Module header
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
+            doc.text(`${moduleIndex + 1}. ${module.name} (${moduleTestCases.length} test cases)`, 14, yPos);
+            yPos += 10;
+
+            // Test cases table for this module
+            const moduleTestCaseData = moduleTestCases.map(tc => [
+              tc.testCaseId || `TC-${tc.id}`,
+              tc.feature?.substring(0, 30) + (tc.feature?.length > 30 ? '...' : '') || 'N/A',
+              tc.status || 'Not Executed',
+              tc.priority || 'Medium',
+              users?.find(u => u.id === tc.assignedToId)?.firstName || 'Unassigned'
+            ]);
+
+            autoTable(doc, {
+              startY: yPos,
+              head: [['Test Case ID', 'Feature', 'Status', 'Priority', 'Assigned To']],
+              body: moduleTestCaseData,
+              styles: { fontSize: 8 },
+              headStyles: { fillColor: [59, 130, 246] },
+              columnStyles: {
+                0: { cellWidth: 25 },
+                1: { cellWidth: 60 },
+                2: { cellWidth: 25 },
+                3: { cellWidth: 20 },
+                4: { cellWidth: 25 }
+              }
+            });
+
+            yPos = (doc as any).lastAutoTable.finalY + 10;
+
+            // Check if we need a new page
+            if (yPos > 250) {
+              doc.addPage();
+              yPos = 20;
+            }
+          }
+        });
+      }
+
+      // **BUG REPORTS BY MODULE**
+      if (bugs && bugs.length > 0) {
+        doc.addPage();
+        yPos = 20;
+
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("BUG REPORTS BY MODULE", 14, yPos);
+        yPos += 15;
+
+        // Bug summary by severity
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("Bug Summary by Severity", 14, yPos);
+        yPos += 10;
+
+        const bugSeverityData = [
+          ['Critical', criticalBugs.toString()],
+          ['Major', majorBugs.toString()],
+          ['Minor', minorBugs.toString()],
+          ['Total', totalBugs.toString()]
+        ];
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Severity', 'Count']],
+          body: bugSeverityData,
+          styles: { fontSize: 10 },
+          headStyles: { fillColor: [239, 68, 68] },
+          columnStyles: {
+            0: { cellWidth: 50 },
+            1: { cellWidth: 30 }
+          }
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+
+        // Detailed bug reports
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("Detailed Bug Reports", 14, yPos);
+        yPos += 10;
+
+        if (modules && modules.length > 0) {
+          modules.forEach((module, moduleIndex) => {
+            const moduleBugs = bugs.filter(bug => bug.moduleId === module.id);
+            
+            if (moduleBugs.length > 0) {
+              // Module header
+              doc.setFontSize(11);
+              doc.setFont("helvetica", "bold");
+              doc.text(`${moduleIndex + 1}. ${module.name} (${moduleBugs.length} bugs)`, 14, yPos);
+              yPos += 8;
+
+              // Bug table for this module
+              const moduleBugData = moduleBugs.map(bug => [
+                bug.bugId || `BUG-${bug.id}`,
+                bug.title?.substring(0, 25) + (bug.title?.length > 25 ? '...' : '') || 'N/A',
+                bug.severity || 'Minor',
+                bug.priority || 'Medium',
+                bug.status || 'Open',
+                users?.find(u => u.id === bug.reportedById)?.firstName || 'Unknown',
+                bug.dateReported ? new Date(bug.dateReported).toLocaleDateString() : 'N/A'
+              ]);
+
+              autoTable(doc, {
+                startY: yPos,
+                head: [['Bug ID', 'Title', 'Severity', 'Priority', 'Status', 'Reporter', 'Date']],
+                body: moduleBugData,
+                styles: { fontSize: 7 },
+                headStyles: { fillColor: [239, 68, 68] },
+                columnStyles: {
+                  0: { cellWidth: 20 },
+                  1: { cellWidth: 40 },
+                  2: { cellWidth: 20 },
+                  3: { cellWidth: 20 },
+                  4: { cellWidth: 20 },
+                  5: { cellWidth: 25 },
+                  6: { cellWidth: 20 }
+                }
+              });
+
+              yPos = (doc as any).lastAutoTable.finalY + 8;
+
+              // Check if we need a new page
+              if (yPos > 250) {
+                doc.addPage();
+                yPos = 20;
+              }
+            }
+          });
+        }
+      }
+
+      // **CONCLUSION WITH ACTUAL DATA**
       doc.addPage();
       yPos = 20;
 
-      // 7. Test Environment
-      doc.setFontSize(14);
+      doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text("7. TEST ENVIRONMENT", 14, yPos);
-      yPos += 10;
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text("Operating System: Windows 10/11, macOS, Linux", 18, yPos);
-      yPos += 5;
-      doc.text("Browsers: Chrome, Firefox, Safari, Edge", 18, yPos);
-      yPos += 5;
-      doc.text("Tools Used: Test Case Tracker, Manual Testing", 18, yPos);
-      yPos += 5;
-      doc.text("Test Data: Production-like data sets", 18, yPos);
+      doc.text("TEST EXECUTION CONCLUSION", 14, yPos);
       yPos += 15;
 
-      // 8. Risks Identified
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("8. RISKS IDENTIFIED", 14, yPos);
-      yPos += 10;
-      
-      doc.setFontSize(10);
+      // Determine actual testing status based on real data
+      const actualReadinessStatus = 
+        totalTestCases === 0 ? "NO TEST CASES EXECUTED" :
+        passRate >= 95 && criticalBugs === 0 && openBugs === 0 ? "READY FOR PRODUCTION" : 
+        passRate >= 90 && criticalBugs === 0 ? "READY WITH MINOR ISSUES" : 
+        passRate >= 70 && criticalBugs <= 1 ? "NEEDS CRITICAL ISSUE RESOLUTION" :
+        "REQUIRES ADDITIONAL TESTING";
+
+      doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
-      doc.text("• Limited test data availability", 18, yPos);
-      yPos += 5;
-      doc.text("• Third-party integration dependencies", 18, yPos);
-      yPos += 5;
-      doc.text("• Environment configuration variations", 18, yPos);
+      doc.text(`Project: ${project?.name || 'Unknown Project'}`, 18, yPos);
+      yPos += 8;
+      doc.text(`Total Modules: ${modules?.length || 0}`, 18, yPos);
+      yPos += 8;
+      doc.text(`Total Test Cases: ${totalTestCases}`, 18, yPos);
+      yPos += 8;
+      doc.text(`Test Execution Rate: ${totalTestCases > 0 ? Math.round(((totalTestCases - notExecutedTestCases) / totalTestCases) * 100) : 0}%`, 18, yPos);
+      yPos += 8;
+      doc.text(`Pass Rate: ${passRate}%`, 18, yPos);
+      yPos += 8;
+      doc.text(`Total Defects Found: ${totalBugs}`, 18, yPos);
+      yPos += 8;
+      doc.text(`Critical Defects: ${criticalBugs}`, 18, yPos);
+      yPos += 8;
+      doc.text(`Open Defects: ${openBugs}`, 18, yPos);
       yPos += 15;
 
-      // 9. Issues Faced
-      doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("9. ISSUES FACED", 14, yPos);
-      yPos += 10;
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text("• Environment setup delays", 18, yPos);
-      yPos += 5;
-      doc.text("• Test data synchronization issues", 18, yPos);
-      yPos += 5;
-      doc.text("• Intermittent system performance issues", 18, yPos);
-      yPos += 15;
+      doc.text(`TESTING STATUS: ${actualReadinessStatus}`, 18, yPos);
+      yPos += 8;
+      doc.text(`PRODUCTION READINESS: ${actualReadinessStatus}`, 18, yPos);
 
-      // 10. Recommendations
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("10. RECOMMENDATIONS", 14, yPos);
-      yPos += 10;
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text("• Implement automated regression testing", 18, yPos);
-      yPos += 5;
-      doc.text("• Enhance test data management processes", 18, yPos);
-      yPos += 5;
-      doc.text("• Improve environment monitoring", 18, yPos);
-      yPos += 5;
-      doc.text("• Strengthen defect triage processes", 18, yPos);
-      yPos += 15;
-
-      // 11. Conclusion
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("11. CONCLUSION", 14, yPos);
-      yPos += 10;
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      const readinessStatus = passRate >= 95 && openBugs === 0 ? "READY FOR PRODUCTION" : 
-                             passRate >= 90 && criticalBugs === 0 ? "READY WITH MINOR ISSUES" : 
-                             "REQUIRES ADDITIONAL TESTING";
-      
-      doc.text(`Testing Status: ${readinessStatus}`, 18, yPos);
-      yPos += 5;
-      doc.text(`Overall Pass Rate: ${passRate}%`, 18, yPos);
-      yPos += 5;
-      doc.text(`Critical Issues: ${criticalBugs === 0 ? 'None' : criticalBugs}`, 18, yPos);
-      yPos += 5;
-      doc.text(`Production Readiness: ${readinessStatus}`, 18, yPos);
-
-      // Save the PDF
-      const fileName = `detailed-test-closure-report-${project?.name?.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.pdf`;
+      // Save the PDF with actual data
+      const fileName = `test-closure-report-${project?.name?.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
 
       toast({
-        title: "Detailed Test Closure Report Generated",
-        description: "The comprehensive test closure report has been downloaded successfully.",
+        title: "Test Closure Report Generated",
+        description: "Comprehensive test closure report with actual system data has been downloaded successfully.",
       });
 
     } catch (error) {
-      console.error('Error generating detailed test closure report:', error);
+      console.error('Error generating test closure report:', error);
       toast({
         title: "Error",
-        description: "Failed to generate detailed test closure report.",
+        description: "Failed to generate test closure report.",
         variant: "destructive",
       });
     }
