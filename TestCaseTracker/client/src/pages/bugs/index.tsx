@@ -654,6 +654,209 @@ export default function BugsPage() {
             }}
           />
         </div>
+
+          <Dialog open={formOpen} onOpenChange={setFormOpen}>
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] w-[95vw]">
+              <DialogHeader>
+                <DialogTitle>{selectedBug ? "Edit Bug Report" : "Report New Bug"}</DialogTitle>
+                <DialogDescription>
+                  {selectedBug
+                    ? "Update the bug report details below."
+                    : "Fill in the details to report a new bug."}
+                </DialogDescription>
+              </DialogHeader>
+              <BugForm
+                bug={selectedBug || undefined}
+                projectId={Number(selectedProjectId)}
+                modules={modules}
+                onSuccess={() => setFormOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] w-[95vw]">
+              <DialogHeader>
+                <DialogTitle>Bug Report Details</DialogTitle>
+                <DialogDescription>
+                  {selectedBug?.bugId} - {selectedBug?.title}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-sm font-medium">Severity</h3>
+                    <div className="mt-1">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full
+                        ${selectedBug?.severity === "Critical" ? "bg-red-100 text-red-800" : 
+                          selectedBug?.severity === "Major" ? "bg-orange-100 text-orange-800" : 
+                          selectedBug?.severity === "Minor" ? "bg-yellow-100 text-yellow-800" :
+                          "bg-green-100 text-green-800"}`}>
+                        {selectedBug?.severity}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium">Priority</h3>
+                    <div className="mt-1">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full
+                        ${selectedBug?.priority === "High" ? "bg-red-100 text-red-800" : 
+                          selectedBug?.priority === "Medium" ? "bg-yellow-100 text-yellow-800" :
+                          "bg-green-100 text-green-800"}`}>
+                        {selectedBug?.priority}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium">Status</h3>
+                  <div className="mt-1">
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full
+                      ${selectedBug?.status === "Open" ? "bg-red-100 text-red-800" : 
+                        selectedBug?.status === "In Progress" ? "bg-blue-100 text-blue-800" : 
+                        selectedBug?.status === "Resolved" ? "bg-green-100 text-green-800" :
+                        "bg-gray-100 text-gray-800"}`}>
+                      {selectedBug?.status}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedBug?.tags && selectedBug.tags.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium">Tags</h3>
+                    <div className="mt-1">
+                      <TestCaseTags tags={selectedBug.tags} />
+                    </div>
+                  </div>
+                )}
+
+                {selectedBug?.environment && (
+                  <div>
+                    <h3 className="text-sm font-medium">Environment</h3>
+                    <p className="text-sm text-gray-700 mt-1">{selectedBug.environment}</p>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="text-sm font-medium">Pre-Conditions</h3>
+                  <p className="text-sm text-gray-700 mt-1">{selectedBug?.preConditions || "None specified"}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium">Steps to Reproduce</h3>
+                  <pre className="text-sm text-gray-700 mt-1 whitespace-pre-wrap font-sans border border-gray-200 rounded-md p-3 bg-gray-50">{selectedBug?.stepsToReproduce}</pre>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium">Expected Result</h3>
+                  <p className="text-sm text-gray-700 mt-1">{selectedBug?.expectedResult}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium">Actual Result</h3>
+                  <p className="text-sm text-gray-700 mt-1">{selectedBug?.actualResult}</p>
+                </div>
+
+                {selectedBug?.comments && (
+                  <div>
+                    <h3 className="text-sm font-medium">Comments</h3>
+                    <p className="text-sm text-gray-700 mt-1">{selectedBug.comments}</p>
+                  </div>
+                )}
+
+                {selectedBug?.attachments && selectedBug.attachments.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium">Attachments ({selectedBug.attachments.length})</h3>
+                    <div className="mt-2 space-y-2">
+                      {selectedBug.attachments.map((attachment, index) => (
+                        <div key={index} className="flex items-center space-x-2 p-2 border rounded-md bg-gray-50">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{attachment.name}</p>
+                            <p className="text-xs text-gray-500">
+                              {attachment.type} • {Math.round(attachment.size / 1024)} KB
+                            </p>
+                          </div>
+                          <a
+                            href={attachment.data}
+                            download={attachment.name}
+                            className="text-sm text-blue-600 hover:text-blue-800"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Download
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center">
+                  <GitHubIssueButton bug={selectedBug} projectId={selectedBug?.projectId || 0} />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setViewDialogOpen(false)}
+                    >
+                      Close
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setViewDialogOpen(false);
+                        handleMakeCopy(selectedBug!);
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <Copy className="h-4 w-4" />
+                      Make as Copy
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setViewDialogOpen(false);
+                        handleEdit(selectedBug!);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete Confirmation Dialog */}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the bug report "{selectedBug?.bugId} - {selectedBug?.title}".
+                  This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDelete}
+                  className="bg-red-600 hover:bg-red-700"
+                  disabled={deleteBugMutation.isPending}
+                >
+                  {deleteBugMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete Bug Report"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
       </div>
     </MainLayout>
   );
