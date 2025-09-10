@@ -1,8 +1,8 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useRef } from "react";
 import { useLocation, useRouter } from "wouter";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Menu, X } from "lucide-react";
+import { Loader2, Menu, X, ChevronUp, ChevronDown } from "lucide-react";
 import { FrozenAvatar } from "@/components/ui/frozen-avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -141,6 +141,93 @@ function MainLayout({ children }: MainLayoutProps) {
     return 'NavaDhiti';
   };
 
+  // ScrollIndicators component for global scroll management
+  function ScrollIndicators() {
+    const [showScrollTop, setShowScrollTop] = useState(false);
+    const [showScrollDown, setShowScrollDown] = useState(false);
+    const [scrollProgress, setScrollProgress] = useState(0);
+
+    useEffect(() => {
+      const handleScroll = () => {
+        const scrollContainer = document.querySelector('main > div');
+        if (scrollContainer) {
+          const scrollTop = scrollContainer.scrollTop;
+          const scrollHeight = scrollContainer.scrollHeight;
+          const clientHeight = scrollContainer.clientHeight;
+          const scrollableHeight = scrollHeight - clientHeight;
+          
+          // Calculate scroll progress
+          const progress = scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
+          setScrollProgress(progress);
+          
+          // Show/hide scroll buttons
+          setShowScrollTop(scrollTop > 100);
+          setShowScrollDown(scrollTop < scrollableHeight - 100);
+        }
+      };
+
+      const scrollContainer = document.querySelector('main > div');
+      if (scrollContainer) {
+        scrollContainer.addEventListener('scroll', handleScroll);
+        handleScroll(); // Initial check
+        return () => scrollContainer.removeEventListener('scroll', handleScroll);
+      }
+    }, [location]);
+
+    const scrollToTop = () => {
+      const scrollContainer = document.querySelector('main > div');
+      if (scrollContainer) {
+        scrollContainer.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
+    };
+
+    const scrollToBottom = () => {
+      const scrollContainer = document.querySelector('main > div');
+      if (scrollContainer) {
+        scrollContainer.scrollTo({
+          top: scrollContainer.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    };
+
+    return (
+      <>
+        {/* Scroll Progress Bar */}
+        <div className="fixed top-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700 z-30">
+          <div 
+            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-150"
+            style={{ width: `${scrollProgress}%` }}
+          />
+        </div>
+
+        {/* Scroll Indicators */}
+        {showScrollTop && (
+          <Button
+            onClick={scrollToTop}
+            className="fixed bottom-20 right-6 z-20 rounded-full w-12 h-12 shadow-lg bg-primary hover:bg-primary/90"
+            size="icon"
+          >
+            <ChevronUp className="h-6 w-6" />
+          </Button>
+        )}
+
+        {showScrollDown && (
+          <Button
+            onClick={scrollToBottom}
+            className="fixed bottom-6 right-6 z-20 rounded-full w-12 h-12 shadow-lg bg-primary hover:bg-primary/90"
+            size="icon"
+          >
+            <ChevronDown className="h-6 w-6" />
+          </Button>
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
       {/* Sidebar for desktop - kept simple with no special key */}
@@ -218,30 +305,35 @@ function MainLayout({ children }: MainLayoutProps) {
 
       {/* Main content */}
       <main className={cn(
-        "flex-1 min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300 overflow-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600",
+        "flex-1 min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300 relative",
         !isMobile ? "ml-60" : "pt-16"
       )}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location}
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="w-full h-full relative"
-            style={{ perspective: "1000px" }}
-          >
+        <div className="h-full overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600 scroll-smooth">
+          <AnimatePresence mode="wait">
             <motion.div
-              initial={{ rotateY: -15, opacity: 0 }}
-              animate={{ rotateY: 0, opacity: 1 }}
-              exit={{ rotateY: 15, opacity: 0 }}
-              transition={{ duration: 0.6, ease: "easeInOut" }}
-              className="w-full h-full"
+              key={location}
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="w-full min-h-full relative"
+              style={{ perspective: "1000px" }}
             >
-              {children}
+              <motion.div
+                initial={{ rotateY: -15, opacity: 0 }}
+                animate={{ rotateY: 0, opacity: 1 }}
+                exit={{ rotateY: 15, opacity: 0 }}
+                transition={{ duration: 0.6, ease: "easeInOut" }}
+                className="w-full min-h-full"
+              >
+                {children}
+              </motion.div>
             </motion.div>
-          </motion.div>
-        </AnimatePresence>
+          </AnimatePresence>
+        </div>
+
+        {/* Global Scroll Indicators */}
+        <ScrollIndicators />
       </main>
 
       {/* This div contains the TodoToggleButton and was not part of the original issue regarding the floating icon. */}

@@ -43,6 +43,54 @@ body.dialog-open {
 @tailwind components;
 @tailwind utilities;
 
+/* Global Scrollbar Styles */
+@layer base {
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800 rounded-lg;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 dark:bg-gray-600 rounded-lg;
+    transition: background-color 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500 dark:bg-gray-500;
+  }
+
+  ::-webkit-scrollbar-corner {
+    @apply bg-gray-100 dark:bg-gray-800;
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(156 163 175) rgb(243 244 246);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    * {
+      scrollbar-color: rgb(75 85 99) rgb(31 41 55);
+    }
+  }
+
+  /* Smooth scrolling for all elements */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Enhanced scroll container */
+  .scroll-container {
+    scrollbar-gutter: stable;
+  }
+}
+
 /* Custom success toast styling with !important */
 .success {
   background-color: #0d4a0d !important;

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,7 @@ export default function AIGeneratorPage() {
   const handleTestCasesGenerated = (testCases: Partial<TestCase>[]) => {
     // Refresh test cases data
     queryClient.invalidateQueries({ queryKey: [`/api/projects/${selectedProjectId}/test-cases`] });
-    
+
     toast({
       title: "🎯 Test Cases Merged Successfully!",
       description: `${testCases.length} AI-generated test cases have been added to your project`,
@@ -50,19 +49,16 @@ export default function AIGeneratorPage() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-6 px-4 min-h-screen">
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
+      <div className="min-h-full">
+        <div className="container mx-auto py-6 px-4">
+          <div className="mb-6 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-900 z-10 py-4 border-b">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-purple-500 via-blue-600 to-indigo-500 rounded-xl shadow-lg">
+              <div className="p-2 bg-gradient-to-br from-purple-500 via-blue-600 to-indigo-500 rounded-xl shadow-lg">
                 <Sparkles className="h-8 w-8 text-white" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">AI Test Case Generator</h1>
-                <p className="text-muted-foreground mt-1">
-                  Generate comprehensive test cases using AI with Google Gemini
-                </p>
+                <p className="text-muted-foreground mt-1">Generate comprehensive test cases using AI with Google Gemini</p>
               </div>
             </div>
           </div>
@@ -172,15 +168,15 @@ export default function AIGeneratorPage() {
                       </p>
                     )}
                   </div>
-                  
+
                   <ArrowRight className="h-6 w-6 text-gray-400" />
-                  
+
                   <AITestGenerator
                     projectId={Number(selectedProjectId)}
                     modules={filteredModules}
                     onTestCasesGenerated={handleTestCasesGenerated}
                   />
-                  
+
                   <p className="text-sm text-gray-500 max-w-md text-center">
                     Click the button above to open the AI Test Generator with multiple input options:
                     Text Prompt, Website URL inspection, and Image Upload analysis.
