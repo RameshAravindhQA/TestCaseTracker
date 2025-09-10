@@ -4421,6 +4421,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Traceability Matrix API endpoints
+  
+  // Get custom markers for a project
+  apiRouter.get("/projects/:projectId/matrix/markers", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      
+      // Check if user has access to this project
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      // Get custom markers from storage - for now return empty array as placeholder
+      const markers = await storage.getTraceabilityMarkers(projectId);
+      res.json(markers);
+    } catch (error) {
+      console.error("Get matrix markers error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get matrix cells for a project
+  apiRouter.get("/projects/:projectId/matrix/cells", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      
+      // Check if user has access to this project
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      // Get matrix cells from matrix-fix module
+      const cells = await getMatrixCellsByProject(projectId);
+      res.json(cells);
+    } catch (error) {
+      console.error("Get matrix cells error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Create custom marker
+  apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
+    try {
+      const { markerId, label, color, type, projectId } = req.body;
+      
+      if (!markerId || !label || !color || !projectId) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Check if user has access to this project
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this project" });
+        }
+      }
+
+      const markerData = {
+        id: Date.now().toString(), // Generate unique ID
+        markerId,
+        label,
+        color,
+        type,
+        projectId,
+        createdById: req.session.userId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const marker = await storage.createTraceabilityMarker(markerData);
+      res.status(201).json(marker);
+    } catch (error) {
+      console.error("Create custom marker error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Update custom marker
+  apiRouter.put("/custom-markers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const markerId = req.params.id;
+      const { label, color, type } = req.body;
+      
+      const updateData = {
+        label,
+        color,
+        type,
+        updatedAt: new Date().toISOString()
+      };
+
+      const updatedMarker = await storage.updateTraceabilityMarker(markerId, updateData);
+      if (!updatedMarker) {
+        return res.status(404).json({ message: "Marker not found" });
+      }
+
+      res.json(updatedMarker);
+    } catch (error) {
+      console.error("Update custom marker error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Delete custom marker
+  apiRouter.delete("/custom-markers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const markerId = req.params.id;
+      const success = await storage.deleteTraceabilityMarker(markerId);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete custom marker error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Save matrix cells
+  apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
+    try {
+      const { rowModuleId, colModuleId, projectId, value } = req.body;
+      
+      if (!rowModuleId || !colModuleId || !projectId) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Save matrix cell using matrix-fix module
+      const cell = await saveMatrixCell(rowModuleId, colModuleId, projectId, value, req.session.userId);
+      res.json(cell);
+    } catch (error) {
+      console.error("Save matrix cell error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Save traceability matrix
+  apiRouter.post("/traceability-matrix/save", isAuthenticated, async (req, res) => {
+    try {
+      const { projectId, matrixData } = req.body;
+      
+      if (!projectId || !matrixData) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const result = await storage.saveTraceabilityMatrix(projectId, matrixData);
+      res.json({ success: true, result });
+    } catch (error) {
+      console.error("Save traceability matrix error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Analytics debug endpoint
   apiRouter.get("/analytics/debug", isAuthenticated, async (req, res) => {
     try {

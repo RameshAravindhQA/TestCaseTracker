@@ -677,9 +677,9 @@ class MemStorage implements IStorage {
     todoLists: [],
     flowDiagrams: [], // Added for flow diagram storage
     testCases: [], // Added to ensure testCases array is available in data
-    brdDocuments: [],
-    brdVersions: [],
-    brdTestCases: [],
+    bugs: [],
+    activities: [],
+    customMarkers: [],
   };
 
   // Employee Management Methods Implementation
@@ -2069,7 +2069,7 @@ class MemStorage implements IStorage {
         blocked: testCases.filter(tc => tc.status === 'Blocked').length,
         notExecuted: testCases.filter(tc => tc.status === 'Not Executed').length,
       },
-      bugSeverityCounts: {
+      bugStatusCounts: {
         critical: bugs.filter(bug => bug.severity === 'Critical').length,
         major: bugs.filter(bug => bug.severity === 'Major').length,
         minor: bugs.filter(bug => bug.severity === 'Minor').length,
@@ -2349,86 +2349,7 @@ class MemStorage implements IStorage {
     return this.initialLength < initialLength;
   }
 
-  async approveTimeSheet(id: number, approverId: number): Promise<TimeSheet | undefined> {
-    const index = this.timeSheets.findIndex(ts => ts.id === id);
-    if (index === -1) {
-      console.error(`Storage: Timesheet ${id} not found for approval`);
-      return undefined;
-    }
-
-    const approvedTimeSheet: TimeSheet = {
-      ...this.timeSheets[index],
-      status: "Approved",
-      approvedById: approverId,
-      approvalDate: new Date(),
-      updatedAt: new Date()
-    };
-    this.timeSheets[index] = approvedTimeSheet;
-
-    console.log(`Storage: Approved timesheet ${id} by user ${approverId}`, approvedTimeSheet);
-    return approvedTimeSheet;
-  }
-
-  async rejectTimeSheet(id: number, approverId: number, reason: string): Promise<TimeSheet | undefined> {
-    const index = this.timeSheets.findIndex(ts => ts.id === id);
-    if (index === -1) {
-      console.error(`Storage: Timesheet ${id} not found for rejection`);
-      return undefined;
-    }
-
-    const rejectedTimeSheet: TimeSheet = {
-      ...this.timeSheets[index],
-      status: "Rejected",
-      approvedById: approverId,
-      approvalDate: new Date(),
-      comments: reason,
-      updatedAt: new Date()
-    };
-    this.timeSheets[index] = rejectedTimeSheet;
-
-    console.log(`Storage: Rejected timesheet ${id} by user ${approverId} with reason: ${reason}`, rejectedTimeSheet);
-    return rejectedTimeSheet;
-  }
-
-  // TimeSheet Folder operations
-  async getTimeSheetFolders(): Promise<TimeSheetFolder[]> {
-    return [...this.timeSheetFolders];
-  }
-
-  async getTimeSheetFolder(id: number): Promise<TimeSheetFolder | undefined> {
-    return this.timeSheetFolders.find(folder => folder.id === id);
-  }
-
-  async createTimeSheetFolder(folder: InsertTimeSheetFolder): Promise<TimeSheetFolder> {
-    const newFolder: TimeSheetFolder = {
-      id: this.getNextId(),
-      name: folder.name,
-      userId: folder.userId,
-      parentId: folder.parentId || null,
-      path: folder.path,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.timeSheetFolders.push(newFolder);
-    return newFolder;
-  }
-
-  async updateTimeSheetFolder(id: number, folderData: Partial<TimeSheetFolder>): Promise<TimeSheetFolder | undefined> {
-    const index = this.timeSheetFolders.findIndex(folder => folder.id === id);
-    if (index === -1) return undefined;
-
-    const updatedFolder = { ...this.timeSheetFolders[index], ...folderData, updatedAt: new Date() };
-    this.timeSheetFolders[index] = updatedFolder;
-    return updatedFolder;
-  }
-
-  async deleteTimeSheetFolder(id: number): Promise<boolean> {
-    const initialLength = this.timeSheetFolders.length;
-    this.timeSheetFolders = this.timeSheetFolders.filter(folder => folder.id !== id);
-    return this.timeSheetFolders.length < initialLength;
-  }
-
-  async getTimeSheetsByFolder(folderId: number): Promise<TimeSheet[]> {
+  async getTimesheetsByFolder(folderId: number): Promise<TimeSheet[]> {
     return this.timeSheets.filter(ts => ts.folderId === folderId);
   }
 
