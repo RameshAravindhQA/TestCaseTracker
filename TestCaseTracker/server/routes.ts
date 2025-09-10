@@ -2408,9 +2408,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve uploaded files (profile pictures and documents)
   app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
+    // Log request for debugging
+    console.log(`File access request for: ${req.path}`);
 
+    // Clean up the path to handle all possible formats
+    let cleanPath = req.path;
+    // Remove any /uploads prefix if it's included and double slashes
+    cleanPath = cleanPath.replace(/^\/uploads\/?/, '').replace(/\/+/g, '/');
 
-// Comprehensive Chat API for Messenger
+    // Make sure bug-attachment path is properly handled
+    if (cleanPath.startsWith('bug-attachment/')) {
+      console.log('Found bug attachment path');
+    } else if (cleanPath.startsWith('bug-attachments/')) {
+      // Handle legacy path format - redirect to new format
+      console.log('Found legacy bug-attachments path, redirecting to bug-attachment');
+      // Extract the filename after bug-attachments/
+      const filename = cleanPath.replace(/^bug-attachments\/?/, '');
+      cleanPath = `bug-attachment/${filename}`;
+      console.log(`Redirected to: ${cleanPath}`);
+    }
+
+    const filePath = path.join(process.cwd(), 'uploads', cleanPath);
+    console.log(`Resolved file path: ${filePath}`);
+
+    // Validate the path to prevent directory traversal attacks
+    if (!filePath.startsWith(path.join(process.cwd(), 'uploads'))) {
+      console.error(`Security protection: Attempted access to unauthorized path: ${filePath}`);
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      console.error(`File not found: ${filePath}`);
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    // Set proper content type based on file extension
+    const ext = path.extname(filePath).toLowerCase();
+
+    // Define a content type mapping
+    const contentTypes: Record<string, string> = {
+      // Images
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+      '.ico': 'image/x-icon',
+
+      // Videos
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.ogv': 'video/ogg',
+      '.mov': 'video/quicktime',
+      '.avi': 'video/x-msvideo',
+      '.flv': 'video/x-flv',
+      '.mkv': 'video/x-matroska',
+      '.wmv': 'video/x-ms-wmv',
+      '.3gp': 'video/3gpp',
+      '.mpg': 'video/mpeg',
+      '.mpeg': 'video/mpeg',
+
+      // Documents
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.ppt': 'application/vnd.ms-powerpoint',
+      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+
+      // Text
+      '.txt': 'text/plain',
+      '.csv': 'text/csv',
+      '.html': 'text/html',
+      '.htm': 'text/html',
+      '.css': 'text/css',
+      '.js': 'text/javascript',
+      '.ts': 'text/plain',
+      '.json': 'application/json',
+      '.md': 'text/markdown',
+
+      // Archives
+      '.zip': 'application/zip',
+      '.rar': 'application/x-rar-compressed',
+      '.7z': 'application/x-7z-compressed',
+      '.tar': 'application/x-tar',
+      '.gz': 'application/gzip',
+    };
+
+    // Set the content type if we know it, otherwise let the browser determine it
+    if (contentTypes[ext]) {
+      res.setHeader('Content-Type', contentTypes[ext]);
+    }
+
+    // Add cache control headers to prevent caching issues
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    // Set content disposition to help with downloading files
+    // Use "inline" for files that can be viewed in browser
+    const inlineTypes = [
+      // Images
+      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+      // Documents that can be viewed in browser
+      '.pdf', '.txt', '.html', '.htm',
+      // Videos that can be viewed in browser
+      '.mp4', '.webm', '.ogv'
+    ];
+    const disposition = inlineTypes.includes(ext) ? 'inline' : 'attachment';
+
+    // Only set filename for attachment disposition
+    if (disposition === 'attachment') {
+      const fileName = path.basename(filePath);
+      res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
+    }
+
+    // Log file access for debugging
+    console.log(`Serving file: ${filePath} with content type: ${contentTypes[ext] || 'auto-determined'}`);
+
+    // Serve the file
+    res.sendFile(filePath);
+  });
+
+  // Comprehensive Chat API for Messenger
   apiRouter.get("/chats", isAuthenticated, async (req, res) => {
     try {
       // Get user's conversations/chats
