@@ -295,6 +295,60 @@ export default function ProjectDetailPage() {
     },
   });
 
+  // Bulk restore test cases mutation
+  const bulkRestoreTestCasesMutation = useMutation({
+    mutationFn: async (testCaseIds: number[]) => {
+      // Sequential restoration to ensure all are processed
+      const results = [];
+      for (const id of testCaseIds) {
+        const res = await apiRequest("POST", `/api/test-cases/${id}/restore`);
+        results.push(await res.json());
+      }
+      return { success: true, restored: results.length };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Test cases restored",
+        description: `${data.restored} test case(s) have been restored successfully`,
+        style: { backgroundColor: 'darkgreen', color: 'white' },
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/deleted-test-cases`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/test-cases`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to restore test cases: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk permanent delete test cases mutation
+  const bulkPermanentDeleteTestCasesMutation = useMutation({
+    mutationFn: async (testCaseIds: number[]) => {
+      // Sequential deletion to ensure all are processed
+      for (const id of testCaseIds) {
+        await apiRequest("DELETE", `/api/test-cases/${id}/permanent`);
+      }
+      return { success: true, deleted: testCaseIds.length };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Test cases permanently deleted",
+        description: `${data.deleted} test case(s) have been permanently removed from the database`,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/deleted-test-cases`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to permanently delete test cases: ${error}`,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Format activities for display
   const formatActivities = (activities: Activity[]): FormattedActivity[] => {
     return activities.map(activity => {
@@ -458,6 +512,18 @@ export default function ProjectDetailPage() {
   const handleViewDeletedTestCase = (testCase: TestCase) => {
     setSelectedDeletedTestCase(testCase);
     setViewDeletedTestCaseDialogOpen(true);
+  };
+
+  const handleBulkRestoreTestCases = (testCaseIds: number[]) => {
+    if (testCaseIds.length > 0) {
+      bulkRestoreTestCasesMutation.mutate(testCaseIds);
+    }
+  };
+
+  const handleBulkPermanentDeleteTestCases = (testCaseIds: number[]) => {
+    if (testCaseIds.length > 0) {
+      bulkPermanentDeleteTestCasesMutation.mutate(testCaseIds);
+    }
   };
 
   // Handler for multiple deletion
@@ -1048,6 +1114,8 @@ export default function ProjectDetailPage() {
                   onRestore={handleRestoreTestCase}
                   onPermanentDelete={handlePermanentDeleteTestCase}
                   onView={handleViewDeletedTestCase}
+                  onBulkRestore={handleBulkRestoreTestCases}
+                  onBulkPermanentDelete={handleBulkPermanentDeleteTestCases}
                   isLoading={isDeletedTestCasesLoading}
                 />
               </CardContent>

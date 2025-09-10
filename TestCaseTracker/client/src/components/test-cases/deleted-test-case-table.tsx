@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, RotateCcw, Trash2, AlertTriangle, Calendar } from "lucide-react";
+import { ArrowLeft, RotateCcw, Trash2, AlertTriangle, Calendar, CheckSquare, Square } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -17,6 +18,8 @@ interface DeletedTestCaseTableProps {
   onRestore: (testCase: TestCase) => void;
   onPermanentDelete: (testCase: TestCase) => void;
   onView: (testCase: TestCase) => void;
+  onBulkRestore?: (testCaseIds: number[]) => void;
+  onBulkPermanentDelete?: (testCaseIds: number[]) => void;
   isLoading: boolean;
 }
 
@@ -25,10 +28,54 @@ export function DeletedTestCaseTable({
   onRestore,
   onPermanentDelete,
   onView,
+  onBulkRestore,
+  onBulkPermanentDelete,
   isLoading
 }: DeletedTestCaseTableProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [bulkRestoreDialogOpen, setBulkRestoreDialogOpen] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+
+  // Handle individual item selection
+  const handleItemSelection = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedItems(prev => [...prev, id]);
+    } else {
+      setSelectedItems(prev => prev.filter(item => item !== id));
+    }
+  };
+
+  // Handle select all
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedItems(deletedTestCases.map(tc => tc.id));
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  // Check if all items are selected
+  const isAllSelected = deletedTestCases.length > 0 && selectedItems.length === deletedTestCases.length;
+  const isIndeterminate = selectedItems.length > 0 && selectedItems.length < deletedTestCases.length;
+
+  // Handle bulk actions
+  const handleBulkRestore = () => {
+    if (onBulkRestore && selectedItems.length > 0) {
+      onBulkRestore(selectedItems);
+      setSelectedItems([]);
+      setBulkRestoreDialogOpen(false);
+    }
+  };
+
+  const handleBulkPermanentDelete = () => {
+    if (onBulkPermanentDelete && selectedItems.length > 0) {
+      onBulkPermanentDelete(selectedItems);
+      setSelectedItems([]);
+      setBulkDeleteDialogOpen(false);
+    }
+  };
 
   
 
@@ -69,10 +116,99 @@ export function DeletedTestCaseTable({
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="space-y-4">
+      {/* Bulk Actions Bar */}
+      <AnimatePresence>
+        {selectedItems.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg"
+          >
+            <div className="flex items-center space-x-2">
+              <CheckSquare className="h-5 w-5 text-blue-600" />
+              <span className="text-sm font-medium text-blue-900">
+                {selectedItems.length} test case(s) selected
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <AlertDialog open={bulkRestoreDialogOpen} onOpenChange={setBulkRestoreDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Restore Selected ({selectedItems.length})
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Restore Selected Test Cases</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to restore {selectedItems.length} selected test case(s)? 
+                      This will move them back to the active test cases list.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkRestore} className="bg-green-600 hover:bg-green-700">
+                      Restore All
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Forever ({selectedItems.length})
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-500" />
+                      Permanently Delete Selected Test Cases
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete {selectedItems.length} selected test case(s) 
+                      and remove all their data from the database.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkPermanentDelete} className="bg-red-600 hover:bg-red-700">
+                      Delete Forever
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedItems([])}
+              >
+                Clear Selection
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={isAllSelected}
+                  onCheckedChange={handleSelectAll}
+                  ref={(el) => {
+                    if (el) el.indeterminate = isIndeterminate;
+                  }}
+                />
+              </TableHead>
               <TableHead>ID</TableHead>
               <TableHead>Feature</TableHead>
               <TableHead>Objective</TableHead>
@@ -86,7 +222,7 @@ export function DeletedTestCaseTable({
             <AnimatePresence>
               {(!deletedTestCases || deletedTestCases.length === 0) ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -106,8 +242,14 @@ export function DeletedTestCaseTable({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.2 }}
-                    className="hover:bg-gray-50"
+                    className={`hover:bg-gray-50 ${selectedItems.includes(testCase.id) ? 'bg-blue-50' : ''}`}
                   >
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedItems.includes(testCase.id)}
+                        onCheckedChange={(checked) => handleItemSelection(testCase.id, checked as boolean)}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium font-mono text-sm">
                       {testCase.testCaseId}
                     </TableCell>
@@ -200,5 +342,6 @@ export function DeletedTestCaseTable({
           </TableBody>
         </Table>
       </div>
+    </div>
   );
 }
