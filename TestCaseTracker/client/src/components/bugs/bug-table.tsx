@@ -184,8 +184,8 @@ ${bug.comments || 'No comments provided.'}
       <div className="w-full border border-gray-200 dark:border-gray-700 rounded-lg">
         <div className="max-h-96 overflow-auto custom-scrollbar w-full">
           <Table className="w-full">
-            <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-50 shadow-sm">
-              <TableRow>
+            <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-50 shadow-sm border-b">
+              <TableRow className="bg-white dark:bg-gray-900">
                 <TableHead>ID</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Tags</TableHead>

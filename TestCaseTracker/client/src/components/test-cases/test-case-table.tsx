@@ -356,8 +356,8 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
       <div className="w-full rounded-md border">
         <div className="overflow-auto max-h-[calc(100vh-400px)] w-full">
           <Table className="w-full">
-            <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-50 shadow-sm">
-              <TableRow>
+            <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-50 shadow-sm border-b">
+              <TableRow className="bg-white dark:bg-gray-900">
               <TableHead className="w-[40px]">
                 <Checkbox 
                   checked={selectedItems.length === testCases.length && testCases.length > 0}

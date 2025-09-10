@@ -35,8 +35,8 @@ export function ProjectTable({ projects, onEdit, onDelete }: ProjectTableProps) 
       transition={{ duration: 0.4 }}
     >
       <Table>
-        <TableHeader>
-          <TableRow>
+        <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-50 shadow-sm border-b">
+          <TableRow className="bg-white dark:bg-gray-900">
             <TableHead>Name</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Status</TableHead>
