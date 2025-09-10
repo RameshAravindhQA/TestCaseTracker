@@ -332,6 +332,7 @@ export default function EmployeesPage() {
 
   // Handle file import
   const handleImport = async (file: File) => {
+    setIsImporting(true);
     const formData = new FormData();
     formData.append('file', file);
 

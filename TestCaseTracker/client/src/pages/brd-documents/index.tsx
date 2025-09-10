@@ -399,8 +399,16 @@ export default function BrdDocumentsPage() {
     }
   };
 
+  // Export all documents to PDF
   const exportAllToPDF = async () => {
-    if (!selectedProjectId) return;
+    if (!selectedProjectId) {
+      toast({ 
+        title: "Error", 
+        description: "Please select a project first",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       const response = await fetch(`/api/brd-documents/export-all-pdf?projectId=${selectedProjectId}`, {
@@ -420,7 +428,7 @@ export default function BrdDocumentsPage() {
       window.document.body.removeChild(anchor);
       window.URL.revokeObjectURL(url);
 
-      toast({ title: "Success", description: "All PDFs exported successfully" });
+      toast({ title: "Success", description: "All BRD documents exported successfully" });
     } catch (error) {
       console.error("PDF export error:", error);
       toast({ 
@@ -494,7 +502,7 @@ export default function BrdDocumentsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
-      
+
       if (response.ok) {
         toast({ title: "Success", description: "Document reverted successfully" });
         refetch();

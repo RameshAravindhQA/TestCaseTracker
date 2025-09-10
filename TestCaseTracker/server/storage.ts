@@ -292,6 +292,7 @@ export interface IStorage {
   updateEmployee(id: number, data: any): Promise<any | null>;
   deleteEmployee(id: number): Promise<boolean>;
   getEmployeeByEmail(email: string): Promise<any | undefined>;
+  importEmployees(employees: any[]): Promise<{ successCount: number; errorCount: number; errors: string[] }>;
 
   // Employee Project Mapping
   getEmployeeProjects(employeeId?: number): Promise<any[]>;
@@ -681,6 +682,100 @@ class MemStorage implements IStorage {
     brdTestCases: [],
   };
 
+  // Employee Management Methods Implementation
+  async getEmployees(): Promise<any[]> {
+    return [...this.employees];
+  }
+
+  async getEmployee(id: number): Promise<any | undefined> {
+    return this.employees.find(emp => emp.id === id);
+  }
+
+  async getEmployeeByEmail(email: string): Promise<any | undefined> {
+    return this.employees.find(emp => emp.email === email);
+  }
+
+  async createEmployee(data: any): Promise<any> {
+    const employee = {
+      id: this.nextEmployeeId++,
+      employeeId: data.employeeId || `EMP${String(Date.now()).slice(-6)}`,
+      firstName: data.firstName,
+      lastName: data.lastName || '',
+      email: data.email,
+      phoneNumber: data.phone || data.phoneNumber || '',
+      department: data.department || '',
+      designation: data.designation || '',
+      joiningDate: data.joiningDate || new Date().toISOString(),
+      status: data.status || 'Active',
+      technologies: Array.isArray(data.technologies) ? data.technologies : 
+                   typeof data.technologies === 'string' ? data.technologies.split(',').map(t => t.trim()) : [],
+      locality: data.locality || '',
+      overallExperience: data.overallExperience || '',
+      profilePicture: data.profilePicture || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdById: data.createdById || 1
+    };
+
+    this.employees.push(employee);
+    return employee;
+  }
+
+  async updateEmployee(id: number, data: any): Promise<any | null> {
+    const index = this.employees.findIndex(emp => emp.id === id);
+    if (index === -1) return null;
+
+    const updatedEmployee = {
+      ...this.employees[index],
+      ...data,
+      updatedAt: new Date()
+    };
+
+    this.employees[index] = updatedEmployee;
+    return updatedEmployee;
+  }
+
+  async deleteEmployee(id: number): Promise<boolean> {
+    const initialLength = this.employees.length;
+    this.employees = this.employees.filter(emp => emp.id !== id);
+    return this.employees.length < initialLength;
+  }
+
+  async importEmployees(employees: any[]): Promise<{ successCount: number; errorCount: number; errors: string[] }> {
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < employees.length; i++) {
+      try {
+        const empData = employees[i];
+        
+        // Validate required fields
+        if (!empData.firstName || !empData.email) {
+          errors.push(`Row ${i + 1}: Missing required fields (firstName, email)`);
+          errorCount++;
+          continue;
+        }
+
+        // Check if employee already exists
+        const existingEmployee = await this.getEmployeeByEmail(empData.email);
+        if (existingEmployee) {
+          errors.push(`Row ${i + 1}: Employee with email ${empData.email} already exists`);
+          errorCount++;
+          continue;
+        }
+
+        await this.createEmployee(empData);
+        successCount++;
+      } catch (error: any) {
+        errors.push(`Row ${i + 1}: ${error.message}`);
+        errorCount++;
+      }
+    }
+
+    return { successCount, errorCount, errors };
+  }
+
   // Enhanced Chat and Messaging methods
   private conversations = new Map<number, any>();
   private chatMessagesMap = new Map<number, any>(); // Use Map for better indexing
@@ -702,6 +797,7 @@ class MemStorage implements IStorage {
   private navadhitiProjects: any[] = [];
   private statusReviews = new Map<number, any>();
   private employeeProjectHistory: any[] = []; // Added for storing history
+  private nextEmployeeId = 1;
 
   // Request Forms Module Maps
   private requestFormTypes: any[] = [];
