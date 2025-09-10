@@ -8,7 +8,7 @@ import {
   TabsList,
   TabsTrigger
 } from "@/components/ui/tabs";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -56,6 +56,8 @@ import { ProjectExport } from "@/components/project/project-export";
 import ProjectCollaborators from "@/components/projects/project-collaborators";
 import { GitHubIssueButton } from "@/components/github/github-issue-button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { jsPDF } from "jspdf";
+import autoTable from 'jspdf-autotable';
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -715,9 +717,186 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleExportProjectReport = () => {
-    // Navigate to consolidated reports with this project selected
-    window.open(`/reports/consolidated?projectId=${projectId}`, '_blank');
+  const generateTestClosureReport = () => {
+    try {
+      const doc = new jsPDF();
+
+      // Title
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("Test Closure Report", 14, 20);
+
+      // Project Information
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Project Information", 14, 35);
+
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Project Name: ${project?.name || 'N/A'}`, 14, 45);
+      doc.text(`Description: ${project?.description || 'N/A'}`, 14, 55);
+      doc.text(`Status: ${project?.status || 'N/A'}`, 14, 65);
+      doc.text(`Created: ${project?.createdAt ? new Date(project.createdAt).toLocaleDateString() : 'N/A'}`, 14, 75);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 85);
+
+      // Modules Summary
+      let yPos = 100;
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Modules Summary", 14, yPos);
+
+      yPos += 10;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+
+      if (modules && modules.length > 0) {
+        doc.text(`Total Modules: ${modules.length}`, 14, yPos);
+        yPos += 10;
+        modules.forEach((module, index) => {
+          doc.text(`${index + 1}. ${module.name} - ${module.description || 'No description'}`, 18, yPos);
+          yPos += 8;
+        });
+      } else {
+        doc.text("No modules found", 14, yPos);
+        yPos += 10;
+      }
+
+      // Test Cases Summary
+      yPos += 10;
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Test Cases Summary", 14, yPos);
+
+      yPos += 10;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+
+      const totalTestCases = testCases?.length || 0;
+      const passedTestCases = testCases?.filter(tc => tc.status === 'Pass').length || 0;
+      const failedTestCases = testCases?.filter(tc => tc.status === 'Fail').length || 0;
+      const blockedTestCases = testCases?.filter(tc => tc.status === 'Blocked').length || 0;
+      const notExecutedTestCases = testCases?.filter(tc => tc.status === 'Not Executed').length || 0;
+      const passRate = totalTestCases > 0 ? Math.round((passedTestCases / totalTestCases) * 100) : 0;
+
+      doc.text(`Total Test Cases: ${totalTestCases}`, 14, yPos);
+      yPos += 8;
+      doc.text(`Passed: ${passedTestCases} | Failed: ${failedTestCases} | Blocked: ${blockedTestCases} | Not Executed: ${notExecutedTestCases}`, 14, yPos);
+      yPos += 8;
+      doc.text(`Pass Rate: ${passRate}%`, 14, yPos);
+      yPos += 15;
+
+      // Test Cases Table
+      if (testCases && testCases.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("Test Cases Details", 14, yPos);
+        yPos += 10;
+
+        const testCaseData = testCases.map(tc => [
+          tc.testCaseId || 'N/A',
+          tc.feature || 'N/A',
+          tc.testObjective || 'N/A',
+          tc.status || 'N/A',
+          tc.priority || 'N/A',
+          modules?.find(m => m.id === tc.moduleId)?.name || 'N/A'
+        ]);
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Test Case ID', 'Feature', 'Test Objective', 'Status', 'Priority', 'Module']],
+          body: testCaseData,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [59, 130, 246] },
+          columnStyles: {
+            0: { cellWidth: 25 },
+            1: { cellWidth: 30 },
+            2: { cellWidth: 50 },
+            3: { cellWidth: 20 },
+            4: { cellWidth: 20 },
+            5: { cellWidth: 25 }
+          }
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 20;
+      }
+
+      // Bug Summary
+      const totalBugs = bugs?.length || 0;
+      const openBugs = bugs?.filter(bug => bug.status === 'Open').length || 0;
+      const resolvedBugs = bugs?.filter(bug => bug.status === 'Resolved').length || 0;
+      const closedBugs = bugs?.filter(bug => bug.status === 'Closed').length || 0;
+
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Bug Summary", 14, yPos);
+
+      yPos += 10;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Total Bugs: ${totalBugs}`, 14, yPos);
+      yPos += 8;
+      doc.text(`Open: ${openBugs} | Resolved: ${resolvedBugs} | Closed: ${closedBugs}`, 14, yPos);
+      yPos += 15;
+
+      // Bug Details Table
+      if (bugs && bugs.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("Bug Details", 14, yPos);
+        yPos += 10;
+
+        const bugData = bugs.map(bug => [
+          bug.title || 'N/A',
+          bug.severity || 'N/A',
+          bug.priority || 'N/A',
+          bug.status || 'N/A',
+          modules?.find(m => m.id === bug.moduleId)?.name || 'N/A',
+          bug.dateReported ? new Date(bug.dateReported).toLocaleDateString() : 'N/A'
+        ]);
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Title', 'Severity', 'Priority', 'Status', 'Module', 'Reported Date']],
+          body: bugData,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [239, 68, 68] },
+          columnStyles: {
+            0: { cellWidth: 40 },
+            1: { cellWidth: 20 },
+            2: { cellWidth: 20 },
+            3: { cellWidth: 20 },
+            4: { cellWidth: 25 },
+            5: { cellWidth: 25 }
+          }
+        });
+      }
+
+      // Save the PDF
+      const fileName = `test-closure-report-${project?.name?.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.pdf`;
+      doc.save(fileName);
+
+      toast({
+        title: "Test Closure Report Generated",
+        description: "The test closure report has been downloaded successfully.",
+      });
+
+    } catch (error) {
+      console.error('Error generating test closure report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate test closure report.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenConsolidatedReports = () => {
+    navigate(`/reports/consolidated?projectId=${projectId}`);
   };
 
   return (
@@ -814,10 +993,10 @@ export default function ProjectDetailPage() {
 
               <Button
                 variant="outline"
-                onClick={handleExportProjectReport}
+                onClick={generateTestClosureReport}
                 className="flex items-center gap-2"
               >
-                <BarChart3 className="h-4 w-4" />
+                <FileText className="h-4 w-4" />
                 Export Project Report
               </Button>
 

@@ -271,10 +271,6 @@ export function DashboardPage() {
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600">Overview of your testing projects and metrics</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="h-4 w-4 mr-2" />
-            New Project
-          </Button>
         </div>
 
         {/* Statistics Cards with Interactive Dialogs */}

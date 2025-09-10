@@ -77,7 +77,7 @@ export function DeletedTestCaseTable({
     }
   };
 
-  
+
 
   const getPriorityBadgeColor = (priority: string) => {
     switch (priority) {
@@ -117,6 +117,9 @@ export function DeletedTestCaseTable({
 
   return (
     <div className="space-y-4">
+      {/* TODO: Address the "New Project" button functionality as per the user's request.
+          This might involve removing the button or changing its navigation. */}
+      
       {/* Bulk Actions Bar */}
       <AnimatePresence>
         {selectedItems.length > 0 && (
@@ -325,7 +328,13 @@ export function DeletedTestCaseTable({
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => onPermanentDelete(testCase)}
+                                onClick={() => {
+                                  // This is a placeholder for the actual permanent delete handler
+                                  // The logic for permanent delete is expected to be in the parent component
+                                  // or handled by a mutation that invalidates queries.
+                                  // For now, we call the prop function.
+                                  onPermanentDelete(testCase);
+                                }}
                                 className="bg-red-600 hover:bg-red-700"
                               >
                                 Delete Forever
