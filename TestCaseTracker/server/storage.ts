@@ -392,6 +392,26 @@ export interface IStorage {
   // Employee permissions methods
   updateEmployeePermissions(employeeId: number, permissions: any[]): Promise<void>;
   getEmployeePermissions(employeeId: number): Promise<any[]>;
+
+  // BRD Document operations (added methods)
+  getBrdDocuments(projectId?: number): Promise<any[]>;
+  getBrdDocument(id: number): Promise<any | null>;
+  createBrdDocument(data: any): Promise<any>;
+  updateBrdDocument(id: number, updateData: any): Promise<any | null>;
+  deleteBrdDocument(id: number): Promise<boolean>;
+
+  // BRD Version operations (added methods)
+  getBrdVersions(brdId: number): Promise<any[]>;
+  getBrdDocumentVersions(brdId: number): Promise<any[]>;
+  createBrdVersion(versionData: any): Promise<any>;
+  revertBrdDocumentToVersion(brdId: number, versionId: number): Promise<any | null>;
+
+  // BRD Test Case operations (added methods)
+  getBrdTestCases(brdId: number): Promise<any[]>;
+  getBrdTestCase(id: number): Promise<any | null>;
+  createBrdTestCase(data: any): Promise<any>;
+  updateBrdTestCase(id: number, data: any): Promise<any | null>;
+  deleteBrdTestCase(id: number): Promise<boolean>;
 }
 
 /**
@@ -538,15 +558,71 @@ class MemStorage implements IStorage {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
-  async createBrdVersion(data: any): Promise<any> {
+  async getBrdDocumentVersions(brdId: number): Promise<any[]> {
+    return this.getBrdVersions(brdId);
+  }
+
+  async createBrdVersion(versionData: any): Promise<any> {
     const id = this.nextBrdVersionId++;
     const version = {
       id,
-      ...data,
-      createdAt: new Date()
+      brdId: versionData.brdId,
+      version: versionData.version,
+      data: versionData.data,
+      createdById: versionData.createdById,
+      createdAt: new Date(),
+      comment: versionData.comment || 'Version created',
+      ...versionData
     };
     this.brdVersions.push(version);
     return version;
+  }
+
+  async revertBrdDocumentToVersion(brdId: number, versionId: number): Promise<any | null> {
+    try {
+      // Get the version data
+      const version = this.brdVersions.find((v: any) => v.id === versionId && v.brdId === brdId);
+      if (!version) {
+        return null;
+      }
+
+      // Get the current document
+      const currentDoc = this.brdDocuments.find((doc: any) => doc.id === brdId);
+      if (!currentDoc) {
+        return null;
+      }
+
+      // Create a new version with current data before reverting
+      await this.createBrdVersion({
+        brdId: brdId,
+        version: `${currentDoc.version}_backup_${Date.now()}`,
+        data: { ...currentDoc },
+        createdById: version.createdById,
+        comment: 'Backup before revert'
+      });
+
+      // Revert to the specified version
+      const revertedData = version.data;
+      const updatedDoc = {
+        ...currentDoc,
+        ...revertedData,
+        version: `${revertedData.version}_reverted_${Date.now()}`,
+        updatedAt: new Date(),
+        updatedById: version.createdById
+      };
+
+      // Update the document
+      const docIndex = this.brdDocuments.findIndex((doc: any) => doc.id === brdId);
+      if (docIndex !== -1) {
+        this.brdDocuments[docIndex] = updatedDoc;
+        return updatedDoc;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error reverting BRD document:', error);
+      return null;
+    }
   }
 
   // BRD Test Case operations
@@ -600,6 +676,9 @@ class MemStorage implements IStorage {
     todoLists: [],
     flowDiagrams: [], // Added for flow diagram storage
     testCases: [], // Added to ensure testCases array is available in data
+    brdDocuments: [],
+    brdVersions: [],
+    brdTestCases: [],
   };
 
   // Enhanced Chat and Messaging methods
@@ -3975,15 +4054,71 @@ class MemStorage implements IStorage {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
-  async createBrdVersion(data: any): Promise<any> {
+  async getBrdDocumentVersions(brdId: number): Promise<any[]> {
+    return this.getBrdVersions(brdId);
+  }
+
+  async createBrdVersion(versionData: any): Promise<any> {
     const id = this.nextBrdVersionId++;
     const version = {
       id,
-      ...data,
-      createdAt: new Date()
+      brdId: versionData.brdId,
+      version: versionData.version,
+      data: versionData.data,
+      createdById: versionData.createdById,
+      createdAt: new Date(),
+      comment: versionData.comment || 'Version created',
+      ...versionData
     };
     this.brdVersions.push(version);
     return version;
+  }
+
+  async revertBrdDocumentToVersion(brdId: number, versionId: number): Promise<any | null> {
+    try {
+      // Get the version data
+      const version = this.brdVersions.find((v: any) => v.id === versionId && v.brdId === brdId);
+      if (!version) {
+        return null;
+      }
+
+      // Get the current document
+      const currentDoc = this.brdDocuments.find((doc: any) => doc.id === brdId);
+      if (!currentDoc) {
+        return null;
+      }
+
+      // Create a new version with current data before reverting
+      await this.createBrdVersion({
+        brdId: brdId,
+        version: `${currentDoc.version}_backup_${Date.now()}`,
+        data: { ...currentDoc },
+        createdById: version.createdById,
+        comment: 'Backup before revert'
+      });
+
+      // Revert to the specified version
+      const revertedData = version.data;
+      const updatedDoc = {
+        ...currentDoc,
+        ...revertedData,
+        version: `${revertedData.version}_reverted_${Date.now()}`,
+        updatedAt: new Date(),
+        updatedById: version.createdById
+      };
+
+      // Update the document
+      const docIndex = this.brdDocuments.findIndex((doc: any) => doc.id === brdId);
+      if (docIndex !== -1) {
+        this.brdDocuments[docIndex] = updatedDoc;
+        return updatedDoc;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error reverting BRD document:', error);
+      return null;
+    }
   }
 
   // BRD Test Case operations

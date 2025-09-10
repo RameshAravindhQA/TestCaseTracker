@@ -470,6 +470,7 @@ export default function BrdDocumentsPage() {
       if (response.ok) {
         const data = await response.json();
         setVersions(data.versions || []);
+        setSelectedDocument({...document, versions: data.versions || []});
         setShowVersionHistory(true);
       } else {
         throw new Error("Failed to fetch versions");
@@ -828,7 +829,7 @@ export default function BrdDocumentsPage() {
                               data: {
                                 ...selectedDocument,
                                 version: newVersion,
-                                changes: `Updated to version ${newVersion}`
+                                versionComment: `Updated to version ${newVersion}`
                               }
                             });
                           }
@@ -861,9 +862,9 @@ export default function BrdDocumentsPage() {
                   </div>
                 </div>
 
-                {selectedDocument.versions && selectedDocument.versions.length > 0 ? (
+                {versions && versions.length > 0 ? (
                   <div className="space-y-3">
-                    {selectedDocument.versions.map((version: any, index: number) => (
+                    {versions.map((version: any, index: number) => (
                       <Card key={version.id} className="p-4">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
@@ -874,14 +875,14 @@ export default function BrdDocumentsPage() {
                               {selectedDocument.version === version.version && <Badge variant="outline">Current</Badge>}
                             </div>
                             <p className="text-sm text-gray-600 mb-1">
-                              <strong>Changes:</strong> {version.changes || "No changes documented"}
+                              <strong>Changes:</strong> {version.comment || "No changes documented"}
                             </p>
                             <p className="text-xs text-gray-500">
                               Created: {new Date(version.createdAt).toLocaleString()}
                             </p>
                           </div>
                           <div className="flex gap-2">
-                            {version.documentData && (
+                            {version.data && (
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -889,7 +890,7 @@ export default function BrdDocumentsPage() {
                                   // View this version's data
                                   setSelectedDocument({
                                     ...selectedDocument,
-                                    ...version.documentData,
+                                    ...version.data,
                                     version: version.version
                                   });
                                   setShowVersionHistory(false);
@@ -904,14 +905,14 @@ export default function BrdDocumentsPage() {
                               size="sm"
                               onClick={() => exportToPDF({ 
                                 ...selectedDocument, 
-                                ...(version.documentData || {}),
+                                ...(version.data || {}),
                                 version: version.version 
                               })}
                             >
                               <Download className="h-4 w-4 mr-1" />
                               Export
                             </Button>
-                            {selectedDocument.version !== version.version && version.documentData && (
+                            {selectedDocument.version !== version.version && version.data && (
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -921,7 +922,7 @@ export default function BrdDocumentsPage() {
                                 }}
                                 disabled={revertDocumentMutation.isPending}
                               >
-                                <History className="h-4 w-4 mr-1" />
+                                <RotateCcw className="h-4 w-4 mr-1" />
                                 {revertDocumentMutation.isPending ? "Reverting..." : "Revert"}
                               </Button>
                             )}
@@ -931,7 +932,10 @@ export default function BrdDocumentsPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-center py-8">No version history available</p>
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 mb-4">No version history available</p>
+                    <p className="text-sm text-gray-400">Versions will appear here when you make changes to the document.</p>
+                  </div>
                 )}
               </div>
             ) : (

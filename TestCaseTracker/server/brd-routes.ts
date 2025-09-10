@@ -235,8 +235,11 @@ router.get("/:id/export-pdf", async (req, res) => {
       return res.status(404).json({ error: "BRD document not found" });
     }
 
-    // Generate PDF content
-    const pdfContent = await generatePDFContent(document);
+    // Get project information
+    const project = await storage.getProject(document.projectId);
+    
+    // Generate PDF content with project info
+    const pdfContent = await generatePDFContent(document, project);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${document.title}_v${document.version}.pdf"`);
@@ -262,11 +265,14 @@ router.get("/export-all-pdf", async (req, res) => {
       return res.status(404).json({ error: "No BRD documents found for this project" });
     }
 
+    // Get project information
+    const project = await storage.getProject(parseInt(projectId as string));
+
     // Generate ZIP file with all PDFs
-    const zipContent = await generateZipWithPDFs(documents);
+    const zipContent = await generateZipWithPDFs(documents, project);
 
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="BRD_Documents_Project_${projectId}.zip"`);
+    res.setHeader('Content-Disposition', `attachment; filename="BRD_Documents_${project?.name || 'Project_' + projectId}.zip"`);
     res.send(zipContent);
   } catch (error) {
     console.error("Error exporting all BRD documents to PDF:", error);
@@ -300,8 +306,20 @@ router.get("/brd-documents/:id", async (req, res) => {
   }
 });
 
+// Get BRD versions 
+router.get("/:id/versions", async (req, res) => {
+  try {
+    const brdId = parseInt(req.params.id);
+    const versions = await storage.getBrdVersions(brdId);
+    res.json(versions);
+  } catch (error) {
+    console.error("Error fetching BRD versions:", error);
+    res.status(500).json({ error: "Failed to fetch versions" });
+  }
+});
+
 // Helper function to generate PDF content using jsPDF
-async function generatePDFContent(document: any): Promise<Buffer> {
+async function generatePDFContent(document: any, project?: any): Promise<Buffer> {
   try {
     // Import jsPDF dynamically
     const { jsPDF } = await import('jspdf');
@@ -317,10 +335,17 @@ async function generatePDFContent(document: any): Promise<Buffer> {
     const margin = 20;
     const contentWidth = pageWidth - (margin * 2);
 
-    // Header
-    doc.setFontSize(20);
+    // Header with project name
+    doc.setFontSize(16);
     doc.setTextColor(...primaryColor);
     doc.setFont("helvetica", "bold");
+    if (project?.name) {
+      doc.text(`Project: ${project.name}`, margin, yPosition);
+      yPosition += 12;
+    }
+
+    // Document title
+    doc.setFontSize(20);
     doc.text(document.title || 'Untitled BRD', margin, yPosition);
     yPosition += 15;
 
@@ -428,7 +453,7 @@ async function generatePDFContent(document: any): Promise<Buffer> {
 }
 
 // Helper function to generate ZIP with PDFs
-async function generateZipWithPDFs(documents: any[]): Promise<Buffer> {
+async function generateZipWithPDFs(documents: any[], project?: any): Promise<Buffer> {
   const archiver = (await import('archiver')).default;
   const { Readable } = await import('stream');
 
@@ -444,7 +469,7 @@ async function generateZipWithPDFs(documents: any[]): Promise<Buffer> {
 
     try {
       for (const doc of documents) {
-        const pdfContent = await generatePDFContent(doc);
+        const pdfContent = await generatePDFContent(doc, project);
         const stream = Readable.from(pdfContent);
         const safeTitle = doc.title.replace(/[^a-zA-Z0-9]/g, '_');
         archive.append(stream, { name: `${safeTitle}_v${doc.version}.pdf` });

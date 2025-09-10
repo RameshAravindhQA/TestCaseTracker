@@ -386,6 +386,17 @@ private saveToFile(): void {
   // Example: require('fs').writeFileSync('memstorage.json', JSON.stringify(this.data, null, 2));
 }
 
+// Add missing method for getting BRD document versions
+async getBrdDocumentVersions(brdId: number): Promise<any[]> {
+  if (!this.data.brdVersions) {
+    this.data.brdVersions = [];
+  }
+
+  return this.data.brdVersions
+    .filter((version: any) => version.brdId === brdId)
+    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
 // Placeholder for the 'employees' data if not already in MemStorage
 // Ensure this.data.employees is initialized if it's part of the storage structure
 // constructor() {
