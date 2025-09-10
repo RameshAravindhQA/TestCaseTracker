@@ -2637,61 +2637,41 @@ class MemStorage implements IStorage {
 
   async saveTraceabilityMatrix(projectId: number, matrixData: any[]): Promise<any> {
     try {
-      // Store matrix data in memory (extend this for persistent storage)
-      const key = `matrix_${projectId}`;
+      console.log(`Storage: Saving traceability matrix for project ${projectId}:`, matrixData);
 
-      // Convert array to object format for storage
-      const matrixMap: Record<string, number> = {};
-      matrixData.forEach(item => {
-        const key = `${item.fromModuleId}-${item.toModuleId}`;
-        matrixMap[key] = item.markerId;
-      });
+      // Clear existing matrix cells for this project
+      this.matrixCells = this.matrixCells.filter(cell => cell.projectId !== projectId);
 
-      // Store in a simple map for now
-      if (!this.traceabilityMatrixes) {
-        this.traceabilityMatrixes = []; // Initialize as array
-      }
-
-      // Find if matrix for this project already exists
-      const existingMatrixIndex = this.traceabilityMatrixes.findIndex(m => m.projectId === projectId);
-
-      if (existingMatrixIndex !== -1) {
-        // Update existing matrix
-        this.traceabilityMatrixes[existingMatrixIndex] = {
-          ...this.traceabilityMatrixes[existingMatrixIndex],
-          matrixData: matrixMap, // Assuming matrixData holds the relationships
-          updatedAt: new Date().toISOString()
-        };
-      } else {
-        // Create new matrix entry
-        const newMatrixEntry = {
-          id: this.getNextId(),
+      // Save new matrix cells
+      for (const cellData of matrixData) {
+        await this.createMatrixCell({
+          rowModuleId: cellData.rowModuleId,
+          colModuleId: cellData.colModuleId,
           projectId: projectId,
-          matrixData: matrixMap,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        this.traceabilityMatrixes.push(newMatrixEntry);
+          value: cellData.markerId?.toString() || '',
+          createdById: cellData.createdById || 1
+        });
       }
 
-      console.log(`Storage: saveTraceabilityMatrix(${projectId}) saved ${matrixData.length} relationships`);
-      return matrixMap;
+      console.log(`Storage: Successfully saved ${matrixData.length} matrix cells for project ${projectId}`);
+      return { success: true, message: 'Matrix saved successfully' };
     } catch (error) {
-      console.error("Error saving traceability matrix:", error);
+      console.error('Error saving traceability matrix:', error);
       throw error;
     }
   }
 
   async getTraceabilityMatrixById(id: number): Promise<any | undefined> {
-    return this.traceabilityMatrixes.find(m => m.id === id);
+    return this.traceabilityMatrixes.find(matrix => matrix.id === id);
   }
 
   async createTraceabilityMatrix(matrix: any): Promise<any> {
+    const id = this.getNextId();
     const newMatrix = {
-      id: this.getNextId(),
+      id,
       ...matrix,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     this.traceabilityMatrixes.push(newMatrix);
     return newMatrix;
@@ -2704,7 +2684,7 @@ class MemStorage implements IStorage {
     const updatedMatrix = {
       ...this.traceabilityMatrixes[index],
       ...matrix,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     };
     this.traceabilityMatrixes[index] = updatedMatrix;
     return updatedMatrix;
@@ -2717,65 +2697,45 @@ class MemStorage implements IStorage {
   }
 
   async getTraceabilityMarkers(projectId: number): Promise<any[]> {
-    return []; // Placeholder for now
+    return this.traceabilityMarkers.filter(marker => marker.projectId === projectId);
   }
 
   async getTraceabilityMarker(id: number): Promise<any | undefined> {
-    return undefined; // Placeholder for now
+    return this.traceabilityMarkers.find(marker => marker.id === id);
   }
 
   async createTraceabilityMarker(marker: any): Promise<any> {
     const id = this.getNextId();
-    
     const newMarker = {
-      ...marker,
       id,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      ...marker,
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
-
-    // Initialize traceabilityMarkers array if it doesn't exist
-    if (!this.traceabilityMarkers) {
-      this.traceabilityMarkers = [];
-    }
-
     this.traceabilityMarkers.push(newMarker);
-    this.saveToFile();
+    console.log(`Storage: Created traceability marker with ID ${id}:`, newMarker);
     return newMarker;
   }
 
-  async updateTraceabilityMarker(id: number, markerUpdates: any): Promise<any> {
-    if (!this.traceabilityMarkers) {
-      this.traceabilityMarkers = [];
-    }
-
-    const index = this.traceabilityMarkers.findIndex((marker: any) => marker.id === id);
+  async updateTraceabilityMarker(id: number, marker: any): Promise<any> {
+    const index = this.traceabilityMarkers.findIndex(m => m.id === id);
     if (index === -1) return null;
 
     const updatedMarker = {
       ...this.traceabilityMarkers[index],
-      ...markerUpdates,
-      updatedAt: new Date().toISOString()
+      ...marker,
+      updatedAt: new Date()
     };
-
     this.traceabilityMarkers[index] = updatedMarker;
-    this.saveToFile();
+    console.log(`Storage: Updated traceability marker with ID ${id}:`, updatedMarker);
     return updatedMarker;
   }
 
   async deleteTraceabilityMarker(id: number): Promise<boolean> {
-    if (!this.traceabilityMarkers) {
-      this.traceabilityMarkers = [];
-    }
-
     const initialLength = this.traceabilityMarkers.length;
-    this.traceabilityMarkers = this.traceabilityMarkers.filter((marker: any) => marker.id !== id);
-    
-    if (this.traceabilityMarkers.length < initialLength) {
-      this.saveToFile();
-      return true;
-    }
-    return false;
+    this.traceabilityMarkers = this.traceabilityMarkers.filter(m => m.id !== id);
+    console.log(`Storage: Deleted traceability marker with ID ${id}`);
+    return this.traceabilityMarkers.length < initialLength;
   }
 
   async getTraceabilityMatrixCells(matrixId: number): Promise<any[]> {
@@ -3109,7 +3069,7 @@ class MemStorage implements IStorage {
   async getTodoLists(userId: number): Promise<any[]> {
     console.log("Getting todo lists for user:", userId);
 
-    // Initialize todoLists if it doesn't exist
+    // Initialize data.todoLists if it doesn't exist
     if (!this.data.todoLists) {
       this.data.todoLists = [];
     }

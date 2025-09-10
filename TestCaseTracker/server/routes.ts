@@ -4609,37 +4609,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create custom marker
   apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
     try {
-      const { markerId, label, color, type, projectId } = req.body;
-
-      if (!label || !color || !projectId) {
-        return res.status(400).json({ message: "Missing required fields: label, color, and projectId" });
-      }
-
-      // Check if user has access to this project
-      const project = await storage.getProject(projectId);
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-
-      if (req.session.userRole !== "Admin") {
-        const projectMembers = await storage.getProjectMembers(projectId);
-        const isMember = projectMembers.some(member => member.userId === req.session.userId);
-
-        if (!isMember && project.createdById !== req.session.userId) {
-          return res.status(403).json({ message: "You don't have access to this project" });
-        }
-      }
-
       const markerData = {
-        name: label,
-        color,
-        icon: type,
-        description: `Custom marker: ${label}`,
-        projectId,
+        ...req.body,
         createdById: req.session.userId
       };
-
-      const marker = await storage.createTraceabilityMarker(markerData);
+      const marker = await storage.createCustomMarker(markerData);
       res.status(201).json(marker);
     } catch (error) {
       console.error("Create custom marker error:", error);
@@ -5591,7 +5565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(201).json(testSheet);
     } catch (error) {
-      console.error("Create test sheet error:", error);
+      console.error("Createtest sheet error:", error);
       res.status(400).json({ message: "Invalid test sheet data" });
     }
   });
