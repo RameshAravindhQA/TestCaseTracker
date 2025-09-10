@@ -304,13 +304,10 @@ export default function TestCasesPage() {
 
   return (
     <MainLayout>
-      <div className="relative h-screen overflow-hidden">
-        <div 
-          ref={scrollContainerRef}
-          className="container mx-auto py-6 px-4 h-full overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600 scroll-smooth"
-        >
-          <div className="h-full flex flex-col">
-            <div className="py-6 px-4 sm:px-6 lg:px-8 flex-shrink-0 sticky top-0 bg-white dark:bg-gray-900 z-10 border-b">
+      <div className="flex flex-col h-screen overflow-hidden">
+        {/* Fixed Header */}
+        <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-20">
+          <div className="container mx-auto px-4 py-6">
             <div className="mb-6 flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <div className="p-2 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
@@ -370,107 +367,114 @@ export default function TestCasesPage() {
               )}
             </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-8 gap-4 mb-6">
-            <div className="md:col-span-2">
-              <ProjectSelect
-                projects={projects}
-                isLoading={isProjectsLoading}
-                selectedProjectId={selectedProjectId}
-                onChange={(value) => {
-                  setSelectedProjectId(parseInt(value));
-                  setSelectedModuleId("");
-                  setSelectedTags([]); // Clear tags when project changes
-                }}
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <ModuleSelect
-                modules={filteredModules}
-                isLoading={isModulesLoading}
-                selectedModuleId={selectedModuleId}
-                onChange={(value) => setSelectedModuleId(value ? parseInt(value) : "")}
-                disabled={!selectedProjectId || isModulesLoading}
-                placeholder="All modules"
-                includeAllOption={true}
-              />
-            </div>
-
-            <div className="md:col-span-1 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
+            {/* Filter Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
+              <div className="md:col-span-2">
+                <ProjectSelect
+                  projects={projects}
+                  isLoading={isProjectsLoading}
+                  selectedProjectId={selectedProjectId}
+                  onChange={(value) => {
+                    setSelectedProjectId(parseInt(value));
+                    setSelectedModuleId("");
+                    setSelectedTags([]); // Clear tags when project changes
+                  }}
+                />
               </div>
-              <Input
-                type="search"
-                placeholder="Search test cases..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
 
-            <div className="md:col-span-1">
-              <Select 
-                value={statusFilter} 
-                defaultValue="all"
-                onValueChange={(value) => setStatusFilter(value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Pass">Pass</SelectItem>
-                  <SelectItem value="Fail">Fail</SelectItem>
-                  <SelectItem value="Blocked">Blocked</SelectItem>
-                  <SelectItem value="Not Executed">Not Executed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="md:col-span-2">
+                <ModuleSelect
+                  modules={filteredModules}
+                  isLoading={isModulesLoading}
+                  selectedModuleId={selectedModuleId}
+                  onChange={(value) => setSelectedModuleId(value ? parseInt(value) : "")}
+                  disabled={!selectedProjectId || isModulesLoading}
+                  placeholder="All modules"
+                  includeAllOption={true}
+                />
+              </div>
 
-            <div className="md:col-span-2">
-              <TagFilter
-                projectId={selectedProjectId}
-                selectedTags={selectedTags}
-                onTagSelect={setSelectedTags}
-                className="w-full"
-              />
+              <div className="md:col-span-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
+                <Input
+                  type="search"
+                  placeholder="Search test cases..."
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="md:col-span-1">
+                <Select 
+                  value={statusFilter} 
+                  defaultValue="all"
+                  onValueChange={(value) => setStatusFilter(value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="Pass">Pass</SelectItem>
+                    <SelectItem value="Fail">Fail</SelectItem>
+                    <SelectItem value="Blocked">Blocked</SelectItem>
+                    <SelectItem value="Not Executed">Not Executed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-2">
+                <TagFilter
+                  projectId={selectedProjectId}
+                  selectedTags={selectedTags}
+                  onTagSelect={setSelectedTags}
+                  className="w-full"
+                />
+              </div>
             </div>
           </div>
-  </div>
-          <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-6 min-h-0 overflow-auto">
+        </div>
+
+        {/* Scrollable Content */}
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600"
+        >
+          <div className="container mx-auto px-4 py-6">
           {!selectedProjectId ? (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <p className="text-gray-500">Please select a project to view its test cases</p>
-              </CardContent>
-            </Card>
-          ) : isTestCasesLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : filteredTestCases.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <p className="text-gray-500">
-                  {searchQuery 
-                    ? "No test cases found matching your search criteria" 
-                    : "No test cases found. Create your first test case to get started."}
-                </p>
-                <Button
-                  onClick={() => {
-                    setSelectedTestCase(null);
-                    setFormOpen(true);
-                  }}
-                  variant="outline"
-                  className="mt-4"
-                >
-                  Add Test Case
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="overflow-auto max-h-full">
+              <Card>
+                <CardContent className="pt-6 text-center">
+                  <p className="text-gray-500">Please select a project to view its test cases</p>
+                </CardContent>
+              </Card>
+            ) : isTestCasesLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : filteredTestCases.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6 text-center">
+                  <p className="text-gray-500">
+                    {searchQuery 
+                      ? "No test cases found matching your search criteria" 
+                      : "No test cases found. Create your first test case to get started."}
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setSelectedTestCase(null);
+                      setFormOpen(true);
+                    }}
+                    variant="outline"
+                    className="mt-4"
+                  >
+                    Add Test Case
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
               <TestCaseTable 
                 testCases={filteredTestCases} 
                 onEdit={handleEdit}
@@ -479,8 +483,7 @@ export default function TestCasesPage() {
                 onReportBug={handleReportBug}
                 onDeleteMultiple={handleDeleteMultiple}
               />
-            </div>
-          )}
+            )}
           </div>
         </div>
 
