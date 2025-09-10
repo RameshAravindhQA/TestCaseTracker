@@ -5881,7 +5881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   apiRouter.post("/technology-options", isAuthenticated, async (req, res) => {
-    try {
+    try{
       const { name } = req.body;
       if (!name || name.trim() === '') {
         return res.status(400).json({ message: "Technology name is required" });

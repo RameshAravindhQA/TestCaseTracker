@@ -2630,9 +2630,7 @@ class MemStorage implements IStorage {
 
   // Additional missing methods for traceability
   async getTraceabilityMatrix(projectId: number): Promise<any> {
-    // For now, return empty matrix data
-    // This should be implemented to fetch actual matrix data from storage
-    return {};
+    return this.traceabilityMatrixes.find(matrix => matrix.projectId === projectId);
   }
 
   async saveTraceabilityMatrix(projectId: number, matrixData: any[]): Promise<any> {
