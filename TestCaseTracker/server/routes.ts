@@ -2278,7 +2278,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 designation: row.designation || row.title || 'Developer',
                 joiningDate: row.joiningDate || row.joining_date || new Date().toISOString(),
                 status: row.status || 'Active',
-                technologies: row.technologies || '',
+                technologies: typeof row.technologies === 'string'
+                  ? row.technologies.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0)
+                  : Array.isArray(row.technologies) ? row.technologies : [],
                 locality: row.locality || '',
                 overallExperience: row.overallExperience || '',
                 createdById: req.session.userId
@@ -2301,7 +2303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
               }
-              
+
               console.error("Employee import processing error:", error);
               res.status(500).json({ 
                 success: false,
@@ -2312,12 +2314,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .on('error', (error: any) => {
             console.error("CSV parsing error:", error);
-            
+
             // Clean up file on error
             if (fs.existsSync(filePath)) {
               fs.unlinkSync(filePath);
             }
-            
+
             res.status(400).json({ 
               success: false,
               message: "Failed to parse CSV file",
@@ -5434,7 +5436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/employees/import", isAuthenticated, async (req, res) => {
     try {
       const { employees } = req.body;
-      
+
       if (!Array.isArray(employees)) {
         return res.status(400).json({ message: "Employees must be an array" });
       }
@@ -5650,7 +5652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Todo and Todo Lists API endpoints
   apiRouter.get("/todos", isAuthenticated, async (req, res) => {
     try {
-      const { listId } = req.query;
+      const {listId} = req.query;
       let todos;
 
       if (listId && listId !== 'null') {

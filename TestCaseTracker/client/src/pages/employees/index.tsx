@@ -633,15 +633,23 @@ Mike,Johnson,mike.johnson@company.com,5551234567,Sales,Sales Executive,2023-12-0
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {employee.technologies?.slice(0, 2).map((tech: string, index: number) => (
+                            {Array.isArray(employee.technologies) && employee.technologies.slice(0, 2).map((tech: string, index: number) => (
                               <Badge key={index} variant="secondary" className="text-xs">
                                 {tech}
                               </Badge>
                             ))}
-                            {employee.technologies?.length > 2 && (
+                            {Array.isArray(employee.technologies) && employee.technologies.length > 2 && (
                               <Badge variant="outline" className="text-xs">
                                 +{employee.technologies.length - 2}
                               </Badge>
+                            )}
+                            {!Array.isArray(employee.technologies) && employee.technologies && (
+                              <Badge variant="secondary" className="text-xs">
+                                {employee.technologies}
+                              </Badge>
+                            )}
+                            {!employee.technologies && (
+                              <span className="text-gray-400 text-sm">None</span>
                             )}
                           </div>
                         </TableCell>

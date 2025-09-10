@@ -534,14 +534,7 @@ export default function BrdDocumentsPage() {
 
         {selectedProjectId && (
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={exportAllToPDF}
-              className="flex items-center gap-2"
-            >
-              <FileDown className="h-4 w-4" />
-              Export All PDF
-            </Button>
+            
 
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
