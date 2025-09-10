@@ -1746,15 +1746,28 @@ class MemStorage implements IStorage {
 
     const marker: CustomMarker = {
       ...data,
-      id
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     this.customMarkers.push(marker);
+    console.log(`Storage: Created custom marker with ID ${id}:`, marker);
     return marker;
   }
 
   async getCustomMarkers(): Promise<CustomMarker[]> {
     return [...this.customMarkers];
+  }
+
+  async getCustomMarkersByProject(projectId: number): Promise<CustomMarker[]> {
+    const markers = this.customMarkers.filter(marker => marker.projectId === projectId);
+    console.log(`Storage: Found ${markers.length} markers for project ${projectId}:`, markers);
+    return markers;
+  }
+
+  async getCustomMarker(id: number): Promise<CustomMarker | undefined> {
+    return this.customMarkers.find(marker => marker.id === id);
   }
 
   async updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null> {
@@ -1763,7 +1776,8 @@ class MemStorage implements IStorage {
 
     const updatedMarker = {
       ...this.customMarkers[index],
-      ...data
+      ...data,
+      updatedAt: new Date()
     };
     this.customMarkers[index] = updatedMarker;
     return updatedMarker;
@@ -1775,16 +1789,66 @@ class MemStorage implements IStorage {
     return this.customMarkers.length < initialLength;
   }
 
+  // Traceability marker operations (separate from custom markers)
+  async createTraceabilityMarker(data: any): Promise<any> {
+    const id = this.getNextId();
+    const now = new Date();
+
+    const marker = {
+      ...data,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    this.traceabilityMarkers.push(marker);
+    console.log(`Storage: Created traceability marker with ID ${id}:`, marker);
+    return marker;
+  }
+
+  async getTraceabilityMarkers(projectId: number): Promise<any[]> {
+    const markers = this.traceabilityMarkers.filter(marker => marker.projectId === projectId);
+    console.log(`Storage: Found ${markers.length} traceability markers for project ${projectId}:`, markers);
+    return markers;
+  }
+
+  async getTraceabilityMarker(id: number): Promise<any | undefined> {
+    return this.traceabilityMarkers.find(marker => marker.id === id);
+  }
+
+  async updateTraceabilityMarker(id: number, data: any): Promise<any> {
+    const index = this.traceabilityMarkers.findIndex(marker => marker.id === id);
+    if (index === -1) return null;
+
+    const updatedMarker = {
+      ...this.traceabilityMarkers[index],
+      ...data,
+      updatedAt: new Date()
+    };
+    this.traceabilityMarkers[index] = updatedMarker;
+    return updatedMarker;
+  }
+
+  async deleteTraceabilityMarker(id: number): Promise<boolean> {
+    const initialLength = this.traceabilityMarkers.length;
+    this.traceabilityMarkers = this.traceabilityMarkers.filter(marker => marker.id !== id);
+    return this.traceabilityMarkers.length < initialLength;
+  }
+
   // Matrix operations
   async createMatrixCell(data: Omit<MatrixCell, 'id'>): Promise<MatrixCell> {
     const id = this.getNextId();
+    const now = new Date();
 
     const cell: MatrixCell = {
       ...data,
-      id
+      id,
+      createdAt: now,
+      updatedAt: now
     };
 
     this.matrixCells.push(cell);
+    console.log(`Storage: Created matrix cell with ID ${id}:`, cell);
     return cell;
   }
 
@@ -1792,19 +1856,65 @@ class MemStorage implements IStorage {
     return [...this.matrixCells];
   }
 
+  async getMatrixCellsByProject(projectId: number): Promise<MatrixCell[]> {
+    const cells = this.matrixCells.filter(cell => cell.projectId === projectId);
+    console.log(`Storage: Found ${cells.length} matrix cells for project ${projectId}:`, cells);
+    return cells;
+  }
+
+  async getMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<MatrixCell | undefined> {
+    return this.matrixCells.find(cell => 
+      cell.rowModuleId === rowModuleId && 
+      cell.colModuleId === colModuleId && 
+      cell.projectId === projectId
+    );
+  }
+
+  async upsertMatrixCell(cellData: any): Promise<any> {
+    const existingCell = await this.getMatrixCell(
+      cellData.rowModuleId, 
+      cellData.colModuleId, 
+      cellData.projectId
+    );
+
+    if (existingCell) {
+      return await this.updateMatrixCell(existingCell.id, cellData);
+    } else {
+      return await this.createMatrixCell(cellData);
+    }
+  }
+
   async updateMatrixCell(id: number, data: Partial<MatrixCell>): Promise<MatrixCell | null> {
     const index = this.matrixCells.findIndex(cell => cell.id === id);
     if (index === -1) return null;
 
-    const updatedCell = { ...this.matrixCells[index], ...data };
+    const updatedCell = { 
+      ...this.matrixCells[index], 
+      ...data, 
+      updatedAt: new Date() 
+    };
     this.matrixCells[index] = updatedCell;
     return updatedCell;
   }
 
-  async deleteMatrixCell(id: number): Promise<boolean> {
-    const initialLength = this.matrixCells.length;
-    this.matrixCells = this.matrixCells.filter(cell => cell.id !== id);
-    return this.matrixCells.length < initialLength;
+  async deleteMatrixCell(id: number): Promise<boolean>;
+  async deleteMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<boolean>;
+  async deleteMatrixCell(idOrRowModuleId: number, colModuleId?: number, projectId?: number): Promise<boolean> {
+    if (colModuleId !== undefined && projectId !== undefined) {
+      // Delete by row/col/project combination
+      const initialLength = this.matrixCells.length;
+      this.matrixCells = this.matrixCells.filter(cell => 
+        !(cell.rowModuleId === idOrRowModuleId && 
+          cell.colModuleId === colModuleId && 
+          cell.projectId === projectId)
+      );
+      return this.matrixCells.length < initialLength;
+    } else {
+      // Delete by ID
+      const initialLength = this.matrixCells.length;
+      this.matrixCells = this.matrixCells.filter(cell => cell.id !== idOrRowModuleId);
+      return this.matrixCells.length < initialLength;
+    }
   }
 
   // Project member operations

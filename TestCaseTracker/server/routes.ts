@@ -4568,11 +4568,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Get custom markers from storage - for now return empty array as placeholder
-      const markers = await storage.getTraceabilityMarkers(projectId);
+      // Try to get traceability markers first, then fall back to custom markers
+      let markers = [];
+      try {
+        markers = await storage.getTraceabilityMarkers(projectId);
+      } catch (error) {
+        console.log("Traceability markers method not available, trying custom markers");
+        markers = await storage.getCustomMarkersByProject(projectId);
+      }
+
+      console.log(`API: Returning ${markers.length} markers for project ${projectId}:`, markers);
       res.json(markers);
     } catch (error) {
-      console.error("Get matrix markers error:", error);
+      console.error("Get custom markers error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -4597,9 +4605,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Get matrix cells from matrix-fix module
-      const cells = await getMatrixCellsByProject(projectId);
-      res.json(cells);
+      try {
+        // Try to use database storage first
+        const cells = await getMatrixCellsByProject(projectId);
+        res.json(cells);
+      } catch (dbError) {
+        console.log("Failed to get matrix cells from database, using in-memory storage:", dbError);
+        // Fall back to in-memory storage
+        const cells = await storage.getMatrixCellsByProject(projectId);
+        res.json(cells);
+      }
     } catch (error) {
       console.error("Get matrix cells error:", error);
       res.status(500).json({ message: "Server error" });
@@ -4613,7 +4628,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         createdById: req.session.userId
       };
-      const marker = await storage.createCustomMarker(markerData);
+
+      console.log(`API: Creating marker with data:`, markerData);
+
+      // Try to use traceability marker method first
+      let marker;
+      try {
+        marker = await storage.createTraceabilityMarker(markerData);
+      } catch (error) {
+        console.log("Traceability marker method not available, using custom marker");
+        marker = await storage.createCustomMarker(markerData);
+      }
+
+      console.log(`API: Created marker:`, marker);
       res.status(201).json(marker);
     } catch (error) {
       console.error("Create custom marker error:", error);
@@ -4667,11 +4694,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing required fields" });
       }
 
-      // Save matrix cell using matrix-fix module
-      const cell = await saveMatrixCell(rowModuleId, colModuleId, projectId, value, req.session.userId);
-      res.json(cell);
+      console.log(`API: Creating matrix cell with data:`, { rowModuleId, colModuleId, projectId, value, createdById: req.session.userId });
+
+      try {
+        // Try to save to database first
+        const cell = await saveMatrixCell(rowModuleId, colModuleId, projectId, value, req.session.userId);
+        console.log(`API: Saved matrix cell to database:`, cell);
+        res.status(201).json(cell);
+      } catch (dbError) {
+        console.log("Failed to save matrix cell to database, using in-memory storage:", dbError);
+        // Fall back to in-memory storage
+        const cell = await storage.upsertMatrixCell({
+          rowModuleId,
+          colModuleId,
+          projectId,
+          value,
+          createdById: req.session.userId
+        });
+        console.log(`API: Saved matrix cell to memory:`, cell);
+        res.status(200).json(cell);
+      }
     } catch (error) {
-      console.error("Save matrix cell error:", error);
+      console.error("Create matrix cell error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
