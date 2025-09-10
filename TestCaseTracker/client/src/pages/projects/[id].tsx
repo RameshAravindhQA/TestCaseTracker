@@ -2000,8 +2000,6 @@ export default function ProjectDetailPage() {
           config={githubConfig}
         />
       )}
-
-       />
     </MainLayout>
   );
 }
