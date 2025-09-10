@@ -284,6 +284,10 @@ export interface IStorage {
   markConversationAsRead(conversationId: number, userId: number): Promise<void>;
   getUnreadCountForUser(conversationId: number, userId: number): Promise<number>;
   searchMessages(query: string, conversationId?: number, userId?: number): Promise<any[]>;
+  getMessagesBetweenUsers(userId1: number, userId2: number): Promise<any[]>;
+  createDirectMessage(messageData: any): Promise<any>;
+  updateDirectMessage(messageId: number, userId: number, updates: any): Promise<any | null>;
+  deleteDirectMessage(messageId: number, userId: number): Promise<boolean>;
 
   // Employee Management Methods
   getEmployees(): Promise<any[]>;

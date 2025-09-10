@@ -671,7 +671,7 @@ export function Messenger() {
   };
 
   return (
-    <div className="h-full flex bg-gray-50 dark:bg-gray-900">
+    <div className="h-full flex bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Contacts Sidebar */}
       <div className="w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col">
         {/* Header */}
@@ -822,8 +822,8 @@ export function Messenger() {
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4 bg-gray-50 dark:bg-gray-900">
-              <div className="space-y-4">
+            <ScrollArea className="flex-1 p-4 bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+              <div className="space-y-4 min-h-full flex flex-col justify-end">
                 {messagesLoading ? (
                   <div className="text-center text-gray-500">Loading messages...</div>
                 ) : messages.length === 0 ? (
@@ -980,7 +980,7 @@ export function Messenger() {
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 sticky bottom-0">
               {replyingTo && (
                 <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
                   <p className="text-xs text-gray-500">Replying to {replyingTo.sender.firstName}</p>

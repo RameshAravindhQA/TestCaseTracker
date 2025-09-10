@@ -173,8 +173,14 @@ export default function TraceabilityMatrixPage() {
       if (!response.ok) throw new Error("Failed to create marker");
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (newMarker) => {
+      // Immediately update local state for instant UI feedback
+      setCustomMarkers(prev => [...prev, newMarker]);
+      
+      // Invalidate and refetch queries to ensure consistency
       queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/markers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-markers"] });
+      
       toast({ title: "Marker created successfully" });
       setIsMarkerDialogOpen(false);
       resetMarkerForm();
@@ -190,8 +196,16 @@ export default function TraceabilityMatrixPage() {
       if (!response.ok) throw new Error("Failed to update marker");
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedMarker) => {
+      // Immediately update local state
+      setCustomMarkers(prev => prev.map(marker => 
+        marker.id === updatedMarker.id ? updatedMarker : marker
+      ));
+      
+      // Invalidate queries for consistency
       queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/markers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-markers"] });
+      
       toast({ title: "Marker updated successfully" });
       setIsMarkerDialogOpen(false);
       setEditingMarker(null);
@@ -208,8 +222,14 @@ export default function TraceabilityMatrixPage() {
       if (!response.ok) throw new Error("Failed to delete marker");
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, markerId) => {
+      // Immediately update local state
+      setCustomMarkers(prev => prev.filter(marker => marker.id !== markerId));
+      
+      // Invalidate queries for consistency
       queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/markers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-markers"] });
+      
       toast({ title: "Marker deleted successfully" });
     },
     onError: () => {
