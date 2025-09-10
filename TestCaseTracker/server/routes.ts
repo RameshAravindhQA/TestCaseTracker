@@ -2537,17 +2537,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId } = req.query;
 
       if (userId) {
+        // Security check: ensure user can only access their own conversations
+        const targetUserId = parseInt(userId as string);
+        if (targetUserId === req.session.userId) {
+          return res.status(400).json({ error: 'Cannot get messages with yourself' });
+        }
+
         // Get direct conversation with this user
-        let conversation = await storage.getDirectConversation(req.session.userId!, parseInt(userId as string));
+        let conversation = await storage.getDirectConversation(req.session.userId!, targetUserId);
 
         if (!conversation) {
           // Create conversation if it doesn't exist
-          conversation = await storage.createDirectConversation(req.session.userId!, parseInt(userId as string));
+          conversation = await storage.createDirectConversation(req.session.userId!, targetUserId);
           console.log('[API] Created new conversation:', conversation.id);
         }
 
         const messages = await storage.getMessagesByChat(conversation.id);
-        console.log(`[API] Returning ${messages.length} messages for conversation ${conversation.id}`);
+        console.log(`[SECURITY] User ${req.session.userId} accessing ${messages.length} messages for conversation ${conversation.id}`);
         res.json(messages);
       } else {
         console.log('[API] No userId provided, returning empty array');
@@ -2877,18 +2883,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Projects routes
   apiRouter.get("/projects", isAuthenticated, async (req, res) => {
     try {
-      // CRITICAL: Ensure proper data isolation - only show user's own projects
+      // CRITICAL: Ensure proper data isolation - show user's accessible projects
       let projects;
 
-      // Get projects created by this user or where they are members
-      const userProjects = await storage.getProjectsByUserId(req.session.userId!);
+      if (req.session.userRole === "Admin") {
+        // Admins can see all projects
+        projects = await storage.getProjects();
+      } else {
+        // Regular users can only see projects they created or are members of
+        const userProjects = await storage.getProjectsByUserId(req.session.userId!);
+        
+        // Get project members for each project to verify access
+        const accessibleProjects = [];
+        for (const project of userProjects) {
+          const members = await storage.getProjectMembers(project.id);
+          const isMember = members.some(member => member.userId === req.session.userId);
+          
+          if (project.createdById === req.session.userId || isMember) {
+            accessibleProjects.push(project);
+          }
+        }
+        projects = accessibleProjects;
+      }
 
-      // For better security: only return projects where user is creator or explicit member
-      projects = userProjects.filter(project => {
-        return project.createdById === req.session.userId;
-      });
-
-      console.log(`[SECURITY] User ${req.session.userId} (${req.session.userRole}) accessing ${projects.length} own projects only`);
+      console.log(`[SECURITY] User ${req.session.userId} (${req.session.userRole}) accessing ${projects.length} accessible projects`);
       res.json(projects);
     } catch (error) {
       console.error("Get projects error:", error);
@@ -3637,24 +3655,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test cases routes
   apiRouter.get("/test-cases", isAuthenticated, async (req, res) => {
     try {
-      // Get all test cases for user's accessible projects
-      let testCases;
+      // Get all test cases for user's accessible projects with proper security
+      let testCases = [];
+      
       if (req.session.userRole === "Admin") {
         testCases = await storage.getTestCases();
       } else {
-        // Get projects user has access to
+        // Get projects user has access to (created or member)
         const userProjects = await storage.getProjectsByUserId(req.session.userId!);
-        const projectIds = userProjects.map(p => p.id);
-
-        // Get test cases for these projects
-        testCases = [];
-        for (const projectId of projectIds) {
-          const projectTestCases = await storage.getTestCasesByProject(projectId);
-          testCases.push(...projectTestCases);
+        
+        for (const project of userProjects) {
+          // Verify user has access to this project
+          const members = await storage.getProjectMembers(project.id);
+          const isMember = members.some(member => member.userId === req.session.userId);
+          
+          if (project.createdById === req.session.userId || isMember) {
+            const projectTestCases = await storage.getTestCasesByProject(project.id);
+            testCases.push(...projectTestCases);
+          }
         }
       }
 
-      console.log(`[API] Returning ${testCases.length} test cases for user ${req.session.userId}`);
+      console.log(`[SECURITY] User ${req.session.userId} (${req.session.userRole}) accessing ${testCases.length} test cases from accessible projects`);
 
       // Add cache headers for real-time data
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -4047,10 +4069,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`[API] Fetching bugs with filters:`, { projectId, moduleId, status, severity });
 
-      // Get all bugs first
-      const allBugs = await storage.getBugs();
+      // Get bugs with proper security filtering
+      let allBugs = [];
+      
+      if (req.session.userRole === "Admin") {
+        allBugs = await storage.getBugs();
+      } else {
+        // Get user's accessible projects
+        const userProjects = await storage.getProjectsByUserId(req.session.userId!);
+        const accessibleProjectIds = [];
+        
+        for (const project of userProjects) {
+          const members = await storage.getProjectMembers(project.id);
+          const isMember = members.some(member => member.userId === req.session.userId);
+          
+          if (project.createdById === req.session.userId || isMember) {
+            accessibleProjectIds.push(project.id);
+          }
+        }
+        
+        // Filter bugs to only accessible projects
+        const allBugsUnsafe = await storage.getBugs();
+        allBugs = allBugsUnsafe.filter(bug => accessibleProjectIds.includes(bug.projectId));
+      }
 
-      // Apply filters
+      // Apply additional filters
       let filteredBugs = [...allBugs];
 
       if (projectId) {
@@ -4071,8 +4114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filteredBugs = filteredBugs.filter(bug => bug.severity === severity);
       }
 
-      console.log(`[API] Returning ${filteredBugs.length} bugs for user ${req.session.userId}:`,
-        filteredBugs.map(bug => ({ id: bug.id, bugId: bug.bugId, title: bug.title, projectId: bug.projectId, moduleId: bug.moduleId })));
+      console.log(`[SECURITY] User ${req.session.userId} (${req.session.userRole}) accessing ${filteredBugs.length} bugs from accessible projects`);
 
       res.json(filteredBugs);
     } catch (error) {
@@ -4493,9 +4535,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard stats
   apiRouter.get("/dashboard/stats", isAuthenticated, async (req, res) => {
     try {
-      const stats = await storage.getDashboardStats(
-        req.session.userRole === "Admin" ? undefined : req.session.userId
-      );
+      // Get stats based on user's accessible projects only
+      let statsUserId = undefined;
+      
+      if (req.session.userRole !== "Admin") {
+        // For non-admin users, filter stats by their accessible projects
+        statsUserId = req.session.userId;
+      }
+      
+      const stats = await storage.getDashboardStats(statsUserId);
+      
+      console.log(`[SECURITY] User ${req.session.userId} (${req.session.userRole}) accessing dashboard stats`);
       res.json(stats);
     } catch (error) {
       console.error("Get dashboard stats error:", error);

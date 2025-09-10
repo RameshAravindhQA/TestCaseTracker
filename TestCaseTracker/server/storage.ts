@@ -2024,41 +2024,57 @@ class MemStorage implements IStorage {
     bugStatusCounts?: BugStatusCounts;
     totalUsers?: number;
   }> {
-    const totalProjects = this.projects.length;
-    const totalTestCases = this.testCases.length;
-    const totalUsers = this.users.length;
+    let projects, testCases, bugs;
+    const users = this.data.users || [];
 
-    // Real-time test case status counts
-    const testCases = [...this.testCases];
-    const testCaseStatusCounts: TestCaseStatusCounts = {
-      passed: testCases.filter(tc => tc.status === 'Pass').length,
-      failed: testCases.filter(tc => tc.status === 'Fail').length,
-      blocked: testCases.filter(tc => tc.status === 'Blocked').length,
-      notExecuted: testCases.filter(tc => tc.status === 'Not Executed' || !tc.status).length    };
+    if (userId) {
+      // Get user's accessible projects with proper security verification
+      const userProjects = await this.getProjectsByUserId(userId);
+      const accessibleProjects = [];
 
-    // Real-time bug status counts
-    const bugs = [...this.bugs];
-    const bugStatusCounts: BugStatusCounts = {
-      open: bugs.filter(bug => bug.status === 'Open').length,
-      inProgress: bugs.filter(bug => bug.status === 'In Progress').length,
-      resolved: bugs.filter(bug => bug.status === 'Resolved').length,
-      closed: bugs.filter(bug => bug.status === 'Closed').length,
-      critical: bugs.filter(bug => bug.severity === 'Critical').length,
-      major: bugs.filter(bug => bug.severity === 'Major').length,
-      minor: bugs.filter(bug => bug.severity === 'Minor').length
-    };
+      for (const project of userProjects) {
+        const members = await this.getProjectMembers(project.id);
+        const isMember = members.some(member => member.userId === userId);
 
-    const openBugs = bugStatusCounts.open + bugStatusCounts.inProgress;
-    const passRate = totalTestCases > 0 ? Math.round((testCaseStatusCounts.passed / totalTestCases) * 100) : 0;
+        if (project.createdById === userId || isMember) {
+          accessibleProjects.push(project);
+        }
+      }
+
+      projects = accessibleProjects;
+
+      // Filter test cases and bugs to only accessible projects
+      const accessibleProjectIds = projects.map(p => p.id);
+      testCases = (this.data.testCases || []).filter(tc =>
+        accessibleProjectIds.includes(tc.projectId) && !tc.isDeleted
+      );
+      bugs = (this.data.bugs || []).filter(bug =>
+        accessibleProjectIds.includes(bug.projectId)
+      );
+    } else {
+      // Admin user - can see all data
+      projects = this.data.projects || [];
+      testCases = (this.data.testCases || []).filter(tc => !tc.isDeleted);
+      bugs = this.data.bugs || [];
+    }
 
     return {
-      totalProjects,
-      totalTestCases,
-      openBugs,
-      passRate,
-      totalUsers,
-      testCaseStatusCounts,
-      bugStatusCounts
+      totalProjects: projects.length,
+      totalTestCases: testCases.length,
+      totalBugs: bugs.length,
+      totalUsers: users.length,
+      testStatusCounts: {
+        passed: testCases.filter(tc => tc.status === 'Passed').length,
+        failed: testCases.filter(tc => tc.status === 'Failed').length,
+        blocked: testCases.filter(tc => tc.status === 'Blocked').length,
+        notExecuted: testCases.filter(tc => tc.status === 'Not Executed').length,
+      },
+      bugSeverityCounts: {
+        critical: bugs.filter(bug => bug.severity === 'Critical').length,
+        major: bugs.filter(bug => bug.severity === 'Major').length,
+        minor: bugs.filter(bug => bug.severity === 'Minor').length,
+        trivial: bugs.filter(bug => bug.severity === 'Trivial').length,
+      }
     };
   }
 
