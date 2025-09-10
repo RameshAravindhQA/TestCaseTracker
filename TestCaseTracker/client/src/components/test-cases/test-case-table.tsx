@@ -353,10 +353,11 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
         </div>
       )}
 
-      <div className="rounded-md border overflow-auto max-h-[calc(100vh-400px)]">
-        <Table>
-          <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-10">
-            <TableRow>
+      <div className="w-full rounded-md border">
+        <div className="overflow-auto max-h-[calc(100vh-400px)] w-full">
+          <Table className="w-full">
+            <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-50 shadow-sm">
+              <TableRow>
               <TableHead className="w-[40px]">
                 <Checkbox 
                   checked={selectedItems.length === testCases.length && testCases.length > 0}
@@ -545,7 +546,8 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
               </AnimatePresence>
             )}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
 
       {/* Pagination Controls */}

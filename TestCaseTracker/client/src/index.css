@@ -43,6 +43,35 @@ body.dialog-open {
 @tailwind components;
 @tailwind utilities;
 
+/* Sticky table header styles */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: inherit;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Custom scrollbar for tables */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
 /* Global Scrollbar Styles */
 @layer base {
   /* Webkit browsers (Chrome, Safari, Edge) */

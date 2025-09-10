@@ -307,7 +307,7 @@ export default function TestCasesPage() {
       <div className="flex flex-col h-screen overflow-hidden">
         {/* Fixed Header */}
         <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-20">
-          <div className="container mx-auto px-4 py-6">
+          <div className="w-full px-4 py-6">
             <div className="mb-6 flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <div className="p-2 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
@@ -443,7 +443,7 @@ export default function TestCasesPage() {
           ref={scrollContainerRef}
           className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600"
         >
-          <div className="container mx-auto px-4 py-6">
+          <div className="w-full px-4 py-6">
           {!selectedProjectId ? (
               <Card>
                 <CardContent className="pt-6 text-center">

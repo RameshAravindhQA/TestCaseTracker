@@ -393,7 +393,7 @@ export default function BugsPage() {
           ref={scrollContainerRef}
           className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600"
         >
-          <div className="container mx-auto px-4 py-6">
+          <div className="w-full px-4 py-6">
               {!selectedProjectId ? (
               <Card>
                 <CardContent className="pt-6 text-center py-10">
