@@ -44,17 +44,19 @@ const brdSchema = z.object({
 type BrdFormData = z.infer<typeof brdSchema>;
 
 interface BrdDocumentFormProps {
-  projects: Array<{ id: number; name: string }>;
-  initialData?: Partial<BrdFormData>;
-  onSubmit: (data: BrdFormData) => void;
+  projects?: any[];
+  initialData?: any;
+  onSubmit: (data: any) => void;
   isSubmitting?: boolean;
+  projectId?: number;
 }
 
 export function BrdDocumentForm({
-  projects,
+  projects = [],
   initialData,
   onSubmit,
-  isSubmitting = false
+  isSubmitting = false,
+  projectId
 }: BrdDocumentFormProps) {
   const form = useForm<BrdFormData>({
     resolver: zodResolver(brdSchema),
@@ -124,7 +126,7 @@ export function BrdDocumentForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Project</FormLabel>
-                  <Select 
+                  <Select
                     onValueChange={(value) => field.onChange(parseInt(value))}
                     defaultValue={field.value?.toString()}
                   >
@@ -164,9 +166,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>Overview</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Provide a high-level overview of the project"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -181,9 +183,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>Problem Statement</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Describe the problem this project aims to solve"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -198,9 +200,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>Objectives & Goals</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="List the main objectives and goals"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -215,9 +217,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>Scope</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Define what is included and excluded from the project scope"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -243,9 +245,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>User Stories</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Write user stories in the format: As a [user], I want [goal] so that [benefit]"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -260,9 +262,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>Functional Requirements</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="List all functional requirements"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -277,9 +279,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>Non-Functional Requirements</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="List performance, security, usability requirements etc."
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -294,9 +296,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>Acceptance Criteria</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Define criteria for acceptance testing"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -322,9 +324,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>Design Notes</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Any design considerations or notes"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -339,9 +341,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>Dependencies</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="List any dependencies on other systems or projects"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -356,9 +358,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>Assumptions</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="List any assumptions made during requirement analysis"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -373,9 +375,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>Risks & Mitigations</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Identify risks and mitigation strategies"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -390,9 +392,9 @@ export function BrdDocumentForm({
                 <FormItem>
                   <FormLabel>Supporting Documents</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Links to wireframes, designs, etc."
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
