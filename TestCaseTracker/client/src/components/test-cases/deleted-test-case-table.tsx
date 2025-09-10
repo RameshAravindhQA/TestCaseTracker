@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, RotateCcw, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, RotateCcw, Trash2, AlertTriangle, Calendar } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -24,10 +24,10 @@ export function DeletedTestCaseTable({
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: deletedTestCases, isLoading } = useQuery<TestCase[]>({
+  const { data: deletedTestCases = [], isLoading } = useQuery<TestCase[]>({
     queryKey: ['deleted-test-cases', projectId],
     queryFn: async () => {
-      const response = await apiRequest('GET', `/api/projects/${projectId}/test-cases?deleted=true`);
+      const response = await apiRequest('GET', `/api/projects/${projectId}/deleted-test-cases`);
       if (!response.ok) throw new Error('Failed to fetch deleted test cases');
       return response.json();
     },

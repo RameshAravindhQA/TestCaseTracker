@@ -3933,9 +3933,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deleted = await storage.deleteTestCase(testCaseId, req.session.userId!, hardDelete);
 
       if (deleted) {
-        res.json({ 
+        res.json({
           message: hardDelete ? "Test case permanently deleted" : "Test case moved to deleted items",
-          hardDelete 
+          hardDelete
         });
       } else {
         res.status(404).json({ message: "Test case not found" });
@@ -3971,6 +3971,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Restore test case error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get deleted test cases for a project
+  apiRouter.get("/projects/:projectId/deleted-test-cases", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+
+      console.log(`[API] Fetching deleted test cases for project ${projectId}`);
+
+      const deletedTestCases = await storage.getDeletedTestCasesByProject(projectId);
+
+      console.log(`[API] Returning ${deletedTestCases.length} deleted test cases for project ${projectId}:`,
+        deletedTestCases.map(tc => ({ id: tc.id, testCaseId: tc.testCaseId, feature: tc.feature })));
+
+      res.json(deletedTestCases);
+    } catch (error) {
+      console.error("[API] Get deleted test cases error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Restore deleted test case
+  apiRouter.post("/test-cases/:id/restore", isAuthenticated, async (req, res) => {
+    try {
+      const testCaseId = parseInt(req.params.id);
+
+      console.log(`[API] Restoring test case ${testCaseId}`);
+
+      const restoredTestCase = await storage.restoreTestCase(testCaseId);
+
+      if (!restoredTestCase) {
+        return res.status(404).json({ message: "Test case not found or already active" });
+      }
+
+      console.log(`[API] Test case ${testCaseId} restored successfully`);
+      res.json({ message: "Test case restored successfully", testCase: restoredTestCase });
+    } catch (error) {
+      console.error("[API] Restore test case error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
