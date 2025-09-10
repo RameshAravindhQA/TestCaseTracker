@@ -1,7 +1,7 @@
 import { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject } from "./matrix-fix";
+import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject, getTraceabilityMarkersByProject, deleteMatrixCell } from "./matrix-fix";
 import { automationService } from "./automation-service";
 import { logger } from "./logger";
 import { emailService } from "./email-service";
@@ -4571,10 +4571,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try to get traceability markers first, then fall back to custom markers
       let markers = [];
       try {
-        markers = await storage.getTraceabilityMarkers(projectId);
+        markers = await getTraceabilityMarkersByProject(projectId);
       } catch (error) {
         console.log("Traceability markers method not available, trying custom markers");
-        markers = await storage.getCustomMarkersByProject(projectId);
+        markers = await storage.getTraceabilityMarkers(projectId);
       }
 
       console.log(`API: Returning ${markers.length} markers for project ${projectId}:`, markers);
@@ -4634,7 +4634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try to use traceability marker method first
       let marker;
       try {
-        marker = await storage.createTraceabilityMarker(markerData);
+        marker = await saveTraceabilityMarker(markerData);
       } catch (error) {
         console.log("Traceability marker method not available, using custom marker");
         marker = await storage.createCustomMarker(markerData);
@@ -4698,7 +4698,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       try {
         // Try to save to database first
-        const cell = await saveMatrixCell(rowModuleId, colModuleId, projectId, value, req.session.userId);
+        const cell = await saveMatrixCell({
+          rowModuleId,
+          colModuleId,
+          projectId,
+          value,
+          userId: req.session.userId
+        });
         console.log(`API: Saved matrix cell to database:`, cell);
         res.status(201).json(cell);
       } catch (dbError) {
@@ -5614,8 +5620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  apiRouter.put("/test-sheets/:id", isAuthenticated, async (req, res) => {
-    try {
+  apiRouter.put("/test-sheets/:id", isAuthenticated, async (req, res) => {    try {
       const id = parseInt(req.params.id);
       const testSheet = await storage.getTestSheet(id);
 

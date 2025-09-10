@@ -1880,7 +1880,24 @@ class MemStorage implements IStorage {
     if (existingCell) {
       return await this.updateMatrixCell(existingCell.id, cellData);
     } else {
-      return await this.createMatrixCell(cellData);
+      // Create new matrix cell with proper ID structure
+      const id = Date.now(); // Use timestamp as ID for uniqueness
+      const now = new Date();
+      
+      const cell: MatrixCell = {
+        id,
+        rowModuleId: cellData.rowModuleId,
+        colModuleId: cellData.colModuleId, 
+        projectId: cellData.projectId,
+        value: cellData.value,
+        createdById: cellData.createdById,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      this.matrixCells.push(cell);
+      console.log(`Storage: Created matrix cell with ID ${id}:`, cell);
+      return cell;
     }
   }
 

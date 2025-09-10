@@ -384,6 +384,7 @@ export const insertTraceabilityModuleSchema = createInsertSchema(traceabilityMod
 // Traceability Matrix Markers model
 export const traceabilityMarkers = pgTable("traceability_markers", {
   id: serial("id").primaryKey(),
+  markerId: text("marker_id").notNull().unique(), // Unique marker identifier
   name: text("name").notNull(),
   color: text("color").notNull().default("#007bff"),
   icon: text("icon"),
