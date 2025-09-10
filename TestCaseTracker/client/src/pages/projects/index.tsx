@@ -40,6 +40,12 @@ export default function ProjectsPage() {
   const [showScrollDown, setShowScrollDown] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Fetch projects
+  const { data: projects, isLoading } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+    initialData: [],
+  });
+
   // Check if we should open the form automatically (from dashboard)
   useEffect(() => {
     // Check if the URL has ?new=true query parameter
@@ -77,12 +83,6 @@ export default function ProjectsPage() {
       behavior: 'smooth' 
     });
   };
-
-  // Fetch projects
-  const { data: projects, isLoading } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
-    initialData: [],
-  });
 
   // Delete project mutation
   const deleteProjectMutation = useMutation({
