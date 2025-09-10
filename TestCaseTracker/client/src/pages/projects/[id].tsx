@@ -738,8 +738,8 @@ export default function ProjectDetailPage() {
       const majorBugs = bugs?.filter(bug => bug.severity === 'Major').length || 0;
       const minorBugs = bugs?.filter(bug => bug.severity === 'Minor').length || 0;
 
-      // Current user as test lead
-      const currentUser = users?.find(u => u.id === req.session?.userId) || { firstName: 'Test', lastName: 'Lead' };
+      // Current user as test lead - use first user as default since we don't have session info on client
+      const currentUser = users?.[0] || { firstName: 'Test', lastName: 'Lead' };
 
       // **COVER PAGE**
       doc.setFontSize(24);
