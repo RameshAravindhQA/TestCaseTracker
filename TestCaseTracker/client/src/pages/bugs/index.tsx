@@ -23,7 +23,7 @@ import { Project, Module, TestCase, Bug, Tag } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Loader2, Copy, Bug as BugIcon, ChevronUp, ChevronDown } from "lucide-react";
+import { Search, Plus, Loader2, Copy, Bug as BugIcon, ChevronUp, ChevronDown, FileDown, FileUp } from "lucide-react";
 import { 
   Dialog,
   DialogContent,
@@ -219,36 +219,99 @@ export default function BugsPage() {
         >
           <div className="h-full flex flex-col">
             <div className="py-6 px-4 sm:px-6 lg:px-8 flex-shrink-0 sticky top-0 bg-white dark:bg-gray-900 z-10 border-b">
-            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-red-500 via-rose-600 to-pink-500 rounded-xl shadow-lg">
-                    <BugIcon className="h-8 w-8 text-white" />
-                  </div>
-                  Bug Reports
-                </h1>
-                <p className="text-gray-600 mt-2">
-                  Track and manage bug reports
-                </p>
+            <div className="mb-6 flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-gradient-to-br from-red-500 via-pink-600 to-rose-500 rounded-xl shadow-lg">
+                <BugIcon className="h-8 w-8 text-white" />
               </div>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Bug Reports</h1>
+                <p className="text-muted-foreground mt-1">Track and manage bug reports</p>
+              </div>
+            </div>
 
-              <div className="flex gap-2 flex-wrap">
+            {selectedProjectId && (
+              <div className="flex gap-2">
                 <Button
-                  onClick={() => setFormOpen(true)}
+                  variant="outline"
+                  onClick={() => {
+                    // Import functionality placeholder
+                    toast({
+                      title: "Import functionality",
+                      description: "Import functionality will be implemented soon",
+                    });
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <FileUp className="h-4 w-4" />
+                  Import Bugs
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // Export bugs functionality
+                    if (filteredBugs.length === 0) {
+                      toast({
+                        title: "No bugs to export",
+                        description: "There are no bugs available for export",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+
+                    // Create CSV content
+                    const csvContent = [
+                      ['Bug ID', 'Title', 'Status', 'Severity', 'Priority', 'Date Reported'],
+                      ...filteredBugs.map(bug => [
+                        bug.bugId,
+                        bug.title,
+                        bug.status,
+                        bug.severity,
+                        bug.priority,
+                        new Date(bug.dateReported).toLocaleDateString()
+                      ])
+                    ].map(row => row.join(',')).join('\n');
+
+                    // Download CSV
+                    const blob = new Blob([csvContent], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `bugs-${selectedProject?.name || 'export'}-${Date.now()}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+
+                    toast({
+                      title: "Export successful",
+                      description: "Bug reports have been exported to CSV",
+                    });
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <FileDown className="h-4 w-4" />
+                  Export Bugs
+                </Button>
+                <Button 
+                  onClick={() => {
+                    if (!selectedProjectId) {
+                      toast({
+                        title: "No project selected",
+                        description: "Please select a project before reporting a bug",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    setSelectedBug(null);
+                    setFormOpen(true);
+                  }} 
                   className="flex items-center gap-2"
                 >
                   <Plus className="h-4 w-4" />
                   Report Bug
                 </Button>
-
-                <BugImport
-                  projectId={selectedProjectId}
-                  onImportComplete={() => {
-                    queryClient.invalidateQueries({ queryKey: ["/api/bugs"] });
-                  }}
-                />
               </div>
-            </div>
+            )}
+          </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
               <Select

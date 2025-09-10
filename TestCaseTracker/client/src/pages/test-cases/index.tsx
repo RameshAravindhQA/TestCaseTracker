@@ -312,20 +312,18 @@ export default function TestCasesPage() {
           <div className="h-full flex flex-col">
             <div className="py-6 px-4 sm:px-6 lg:px-8 flex-shrink-0 sticky top-0 bg-white dark:bg-gray-900 z-10 border-b">
             <div className="mb-6 flex justify-between items-center">
-              <div className="flex-1">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
-                    <TestTube className="h-8 w-8 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Test Cases</h1>
-                    <p className="text-muted-foreground mt-1">Manage test cases across all projects</p>
-                  </div>
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-500 rounded-xl shadow-lg">
+                  <TestTube className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight">Test Cases</h1>
+                  <p className="text-muted-foreground mt-1">Manage test cases across all projects</p>
                 </div>
               </div>
 
               {selectedProjectId && (
-                <div className="flex gap-2 ml-4">
+                <div className="flex gap-2">
                   <ImportExport
                     projectId={Number(selectedProjectId)}
                     moduleId={selectedModuleId ? Number(selectedModuleId) : undefined}
