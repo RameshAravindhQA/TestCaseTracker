@@ -353,9 +353,9 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
         </div>
       )}
 
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-auto max-h-[calc(100vh-400px)]">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-10">
             <TableRow>
               <TableHead className="w-[40px]">
                 <Checkbox 

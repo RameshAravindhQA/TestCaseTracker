@@ -440,7 +440,7 @@ export default function TestCasesPage() {
             </div>
           </div>
   </div>
-          <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-6 min-h-0">
+          <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-6 min-h-0 overflow-auto">
           {!selectedProjectId ? (
             <Card>
               <CardContent className="pt-6 text-center">
@@ -472,14 +472,16 @@ export default function TestCasesPage() {
               </CardContent>
             </Card>
           ) : (
-            <TestCaseTable 
-              testCases={filteredTestCases} 
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onView={handleView}
-              onReportBug={handleReportBug}
-              onDeleteMultiple={handleDeleteMultiple}
-            />
+            <div className="overflow-auto max-h-full">
+              <TestCaseTable 
+                testCases={filteredTestCases} 
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onView={handleView}
+                onReportBug={handleReportBug}
+                onDeleteMultiple={handleDeleteMultiple}
+              />
+            </div>
           )}
           </div>
         </div>
