@@ -369,9 +369,9 @@ export default function BrdDocumentsPage() {
   });
 
   // PDF Export functions
-  const exportToPDF = async (document: any) => {
+  const exportToPDF = async (brdDocument: any) => {
     try {
-      const response = await fetch(`/api/brd-documents/${document.id}/export-pdf`, {
+      const response = await fetch(`/api/brd-documents/${brdDocument.id}/export-pdf`, {
         method: "GET",
       });
 
@@ -379,12 +379,13 @@ export default function BrdDocumentsPage() {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `${document.title}_v${document.version}.pdf`;
-      document.body.appendChild(a);
-      a.click();
+      const anchor = window.document.createElement('a');
+      anchor.style.display = 'none';
+      anchor.href = url;
+      anchor.download = `${brdDocument.title}_v${brdDocument.version}.pdf`;
+      window.document.body.appendChild(anchor);
+      anchor.click();
+      window.document.body.removeChild(anchor);
       window.URL.revokeObjectURL(url);
 
       toast({ title: "Success", description: "PDF exported successfully" });
@@ -410,12 +411,13 @@ export default function BrdDocumentsPage() {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `BRD_Documents_Project_${selectedProjectId}.zip`;
-      document.body.appendChild(a);
-      a.click();
+      const anchor = window.document.createElement('a');
+      anchor.style.display = 'none';
+      anchor.href = url;
+      anchor.download = `BRD_Documents_Project_${selectedProjectId}.zip`;
+      window.document.body.appendChild(anchor);
+      anchor.click();
+      window.document.body.removeChild(anchor);
       window.URL.revokeObjectURL(url);
 
       toast({ title: "Success", description: "All PDFs exported successfully" });
@@ -464,31 +466,44 @@ export default function BrdDocumentsPage() {
   const openVersionHistory = async (document: any) => {
     setSelectedBrdForVersions(document);
     try {
-      const response = await apiRequest('GET', `/api/brd-documents/${document.id}`);
+      const response = await fetch(`/api/brd-documents/${document.id}`);
       if (response.ok) {
         const data = await response.json();
         setVersions(data.versions || []);
+        setShowVersionHistory(true);
+      } else {
+        throw new Error("Failed to fetch versions");
       }
     } catch (error) {
       console.error('Error fetching versions:', error);
       setVersions([]);
+      toast({ 
+        title: "Error", 
+        description: "Failed to load version history",
+        variant: "destructive"
+      });
     }
-    setShowVersionHistory(true);
   };
 
   const revertToVersion = async (versionId: number) => {
     if (!selectedBrdForVersions) return;
 
     try {
-      const response = await apiRequest('POST', `/api/brd-documents/${selectedBrdForVersions.id}/revert/${versionId}`);
+      const response = await fetch(`/api/brd-documents/${selectedBrdForVersions.id}/revert/${versionId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      
       if (response.ok) {
         toast({ title: "Success", description: "Document reverted successfully" });
         refetch();
         setShowVersionHistory(false);
+        setSelectedDocument(null);
       } else {
         throw new Error("Failed to revert document");
       }
     } catch (error) {
+      console.error("Revert error:", error);
       toast({ 
         title: "Error", 
         description: "Failed to revert document",

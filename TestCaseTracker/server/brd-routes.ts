@@ -237,7 +237,7 @@ router.get("/:id/export-pdf", async (req, res) => {
 
     // Generate PDF content
     const pdfContent = await generatePDFContent(document);
-    
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${document.title}_v${document.version}.pdf"`);
     res.send(pdfContent);
@@ -251,20 +251,20 @@ router.get("/:id/export-pdf", async (req, res) => {
 router.get("/export-all-pdf", async (req, res) => {
   try {
     const { projectId } = req.query;
-    
+
     if (!projectId) {
       return res.status(400).json({ error: "Project ID is required" });
     }
 
     const documents = await storage.getBrdDocuments(parseInt(projectId as string));
-    
+
     if (documents.length === 0) {
       return res.status(404).json({ error: "No BRD documents found for this project" });
     }
 
     // Generate ZIP file with all PDFs
     const zipContent = await generateZipWithPDFs(documents);
-    
+
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="BRD_Documents_Project_${projectId}.zip"`);
     res.send(zipContent);
@@ -274,48 +274,74 @@ router.get("/export-all-pdf", async (req, res) => {
   }
 });
 
+// Get BRD document by ID with versions
+router.get("/brd-documents/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const document = await storage.getBrdDocument(parseInt(id));
+
+    if (!document) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+
+    // Get versions for this document
+    const versions = await storage.getBrdDocumentVersions(parseInt(id));
+
+    // Add versions to document response
+    const documentWithVersions = {
+      ...document,
+      versions: versions || []
+    };
+
+    res.json(documentWithVersions);
+  } catch (error) {
+    console.error("Error fetching BRD document:", error);
+    res.status(500).json({ error: "Failed to fetch document" });
+  }
+});
+
 // Helper function to generate PDF content using jsPDF
 async function generatePDFContent(document: any): Promise<Buffer> {
   try {
     // Import jsPDF dynamically
     const { jsPDF } = await import('jspdf');
-    
+
     const doc = new jsPDF();
-    
+
     // Set up fonts and colors
     const primaryColor = [0, 123, 255]; // Blue color
     const textColor = [51, 51, 51]; // Dark gray
-    
+
     let yPosition = 20;
     const pageWidth = doc.internal.pageSize.width;
     const margin = 20;
     const contentWidth = pageWidth - (margin * 2);
-    
+
     // Header
     doc.setFontSize(20);
     doc.setTextColor(...primaryColor);
     doc.setFont("helvetica", "bold");
     doc.text(document.title || 'Untitled BRD', margin, yPosition);
     yPosition += 15;
-    
+
     // Draw header line
     doc.setDrawColor(...primaryColor);
     doc.setLineWidth(1);
     doc.line(margin, yPosition, pageWidth - margin, yPosition);
     yPosition += 20;
-    
+
     // Meta information
     doc.setFontSize(12);
     doc.setTextColor(...textColor);
     doc.setFont("helvetica", "normal");
-    
+
     const metaInfo = [
       `Author: ${document.author || 'N/A'}`,
       `Version: ${document.version || '1.0'}`,
       `Status: ${document.status || 'Draft'}`,
       `Created: ${document.createdAt ? new Date(document.createdAt).toLocaleDateString() : 'N/A'}`
     ];
-    
+
     metaInfo.forEach((info, index) => {
       if (index % 2 === 0) {
         doc.text(info, margin, yPosition);
@@ -324,37 +350,37 @@ async function generatePDFContent(document: any): Promise<Buffer> {
         yPosition += 8;
       }
     });
-    
+
     yPosition += 15;
-    
+
     // Helper function to add section
     const addSection = (title: string, content: string) => {
       if (!content) return;
-      
+
       // Check if we need a new page
       if (yPosition > 250) {
         doc.addPage();
         yPosition = 20;
       }
-      
+
       // Section title
       doc.setFontSize(14);
       doc.setTextColor(...primaryColor);
       doc.setFont("helvetica", "bold");
       doc.text(title, margin, yPosition);
       yPosition += 2;
-      
+
       // Section underline
       doc.setDrawColor(238, 238, 238);
       doc.setLineWidth(0.5);
       doc.line(margin, yPosition, pageWidth - margin, yPosition);
       yPosition += 8;
-      
+
       // Section content
       doc.setFontSize(10);
       doc.setTextColor(...textColor);
       doc.setFont("helvetica", "normal");
-      
+
       const lines = doc.splitTextToSize(content, contentWidth);
       lines.forEach((line: string) => {
         if (yPosition > 270) {
@@ -364,10 +390,10 @@ async function generatePDFContent(document: any): Promise<Buffer> {
         doc.text(line, margin, yPosition);
         yPosition += 6;
       });
-      
+
       yPosition += 8;
     };
-    
+
     // Add all sections
     addSection('Overview', document.overview);
     addSection('Problem Statement', document.problemStatement);
@@ -382,7 +408,7 @@ async function generatePDFContent(document: any): Promise<Buffer> {
     addSection('Acceptance Criteria', document.acceptanceCriteria);
     addSection('Risks', document.risks);
     addSection('Supporting Documents', document.supportingDocuments);
-    
+
     // Footer
     const totalPages = doc.internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
@@ -391,7 +417,7 @@ async function generatePDFContent(document: any): Promise<Buffer> {
       doc.setTextColor(128, 128, 128);
       doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 20, doc.internal.pageSize.height - 10);
     }
-    
+
     // Convert to buffer
     const pdfArrayBuffer = doc.output('arraybuffer');
     return Buffer.from(pdfArrayBuffer);
@@ -405,7 +431,7 @@ async function generatePDFContent(document: any): Promise<Buffer> {
 async function generateZipWithPDFs(documents: any[]): Promise<Buffer> {
   const archiver = (await import('archiver')).default;
   const { Readable } = await import('stream');
-  
+
   return new Promise(async (resolve, reject) => {
     const archive = archiver('zip', {
       zlib: { level: 9 }
