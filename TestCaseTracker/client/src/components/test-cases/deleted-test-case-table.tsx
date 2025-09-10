@@ -13,72 +13,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
 interface DeletedTestCaseTableProps {
-  projectId: number;
-  onBack: () => void;
+  deletedTestCases: TestCase[];
+  onRestore: (testCase: TestCase) => void;
+  onPermanentDelete: (testCase: TestCase) => void;
+  onView: (testCase: TestCase) => void;
+  isLoading: boolean;
 }
 
 export function DeletedTestCaseTable({
-  projectId,
-  onBack
+  deletedTestCases,
+  onRestore,
+  onPermanentDelete,
+  onView,
+  isLoading
 }: DeletedTestCaseTableProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: deletedTestCases = [], isLoading } = useQuery<TestCase[]>({
-    queryKey: ['deleted-test-cases', projectId],
-    queryFn: async () => {
-      const response = await apiRequest('GET', `/api/projects/${projectId}/deleted-test-cases`);
-      if (!response.ok) throw new Error('Failed to fetch deleted test cases');
-      return response.json();
-    },
-  });
-
-  // Restore test case mutation
-  const restoreTestCaseMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await apiRequest('POST', `/api/test-cases/${id}/restore`);
-      if (!response.ok) throw new Error('Failed to restore test case');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deleted-test-cases'] });
-      queryClient.invalidateQueries({ queryKey: ['test-cases'] });
-      toast({
-        title: "Test case restored",
-        description: "Test case has been restored successfully.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Restore failed",
-        description: "Failed to restore test case.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Hard delete test case mutation
-  const hardDeleteTestCaseMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await apiRequest('DELETE', `/api/test-cases/${id}?hardDelete=true`);
-      if (!response.ok) throw new Error('Failed to permanently delete test case');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deleted-test-cases'] });
-      toast({
-        title: "Test case permanently deleted",
-        description: "Test case has been permanently removed from the database.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Delete failed",
-        description: "Failed to permanently delete test case.",
-        variant: "destructive",
-      });
-    },
-  });
+  
 
   const getPriorityBadgeColor = (priority: string) => {
     switch (priority) {
@@ -117,15 +69,7 @@ export function DeletedTestCaseTable({
   }
 
   return (
-    <>
-      <div className="flex justify-between items-center mb-4">
-        <Button variant="outline" onClick={onBack} className="flex items-center space-x-2">
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Project Details</span>
-        </Button>
-        <h1 className="text-xl font-semibold">Deleted Test Cases</h1>
-      </div>
-      <div className="rounded-md border">
+    <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -209,8 +153,7 @@ export function DeletedTestCaseTable({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => restoreTestCaseMutation.mutate(testCase.id)}
-                          disabled={restoreTestCaseMutation.isPending}
+                          onClick={() => onRestore(testCase)}
                         >
                           <RotateCcw className="h-4 w-4 mr-2" />
                           Restore
@@ -221,7 +164,6 @@ export function DeletedTestCaseTable({
                             <Button
                               variant="destructive"
                               size="sm"
-                              disabled={hardDeleteTestCaseMutation.isPending}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete Forever
@@ -241,7 +183,7 @@ export function DeletedTestCaseTable({
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => hardDeleteTestCaseMutation.mutate(testCase.id)}
+                                onClick={() => onPermanentDelete(testCase)}
                                 className="bg-red-600 hover:bg-red-700"
                               >
                                 Delete Forever
@@ -258,6 +200,5 @@ export function DeletedTestCaseTable({
           </TableBody>
         </Table>
       </div>
-    </>
   );
 }
