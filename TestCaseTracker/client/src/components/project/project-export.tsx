@@ -54,35 +54,30 @@ export function ProjectExport({ projectId, projectName }: ProjectExportProps) {
       const bugs = await bugsRes.json();
       const stats = await statsRes.json();
 
-      // Create a new workbook
+      // Create workbook with summary sheet
       const wb = XLSX.utils.book_new();
 
-      // Create dashboard sheet with statistics
-      const dashboardData = [
-        ['Project Name', project.name],
-        ['Description', project.description || 'No description'],
-        ['Status', project.status],
-        ['Created Date', format(new Date(project.createdAt), 'yyyy-MM-dd')],
-        [],
-        ['Project Statistics', ''],
-        ['Total Modules', modules.length],
-        ['Total Test Cases', testCases.length],
-        ['Test Cases Passed', testCases.filter(tc => tc.status === 'Pass').length],
-        ['Test Cases Failed', testCases.filter(tc => tc.status === 'Fail').length],
-        ['Test Cases Blocked', testCases.filter(tc => tc.status === 'Blocked').length],
-        ['Test Cases Not Executed', testCases.filter(tc => tc.status === 'Not Executed').length],
-        ['Pass Rate', `${stats.passRate || 0}%`],
-        [],
-        ['Bug Reports', bugs.length],
-        ['Open Bugs', bugs.filter(bug => bug.status === 'Open').length],
-        ['In Progress Bugs', bugs.filter(bug => bug.status === 'In Progress').length],
-        ['Resolved Bugs', bugs.filter(bug => bug.status === 'Resolved').length],
-        ['Closed Bugs', bugs.filter(bug => bug.status === 'Closed').length],
+      // Summary Sheet
+      const summaryData = [
+        ['Project Export Summary'],
+        [''],
+        ['Project Name:', project?.name || 'Unknown Project'],
+        ['Description:', project?.description || 'N/A'],
+        ['Export Date:', new Date().toLocaleDateString()],
+        [''],
+        ['Statistics:'],
+        ['Total Test Cases:', stats.totalTestCases || 0],
+        ['Passed Test Cases:', stats.passedTestCases || 0],
+        ['Failed Test Cases:', stats.failedTestCases || 0],
+        ['Pending Test Cases:', stats.pendingTestCases || 0],
+        ['Total Bugs:', stats.totalBugs || 0],
+        ['Open Bugs:', stats.openBugs || 0],
+        ['Closed Bugs:', stats.closedBugs || 0],
+        ['Total Modules:', modules.length || 0],
       ];
 
-      // Add dashboard sheet
-      const dashboardSheet = XLSX.utils.aoa_to_sheet(dashboardData);
-      XLSX.utils.book_append_sheet(wb, dashboardSheet, 'Dashboard');
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
 
       // Add a sheet for all test cases
       if (testCases.length > 0) {
@@ -126,28 +121,51 @@ export function ProjectExport({ projectId, projectName }: ProjectExportProps) {
         XLSX.utils.book_append_sheet(wb, allBugsSheet, 'Bug Reports');
       }
 
-      // Add a sheet for each module
-      for (const module of modules) {
-        const moduleTestCases = testCases.filter(tc => tc.moduleId === module.id);
+      // Create sheets for each module's test cases
+      if (modules && modules.length > 0) {
+        for (const module of modules) {
+          const moduleTestCases = testCases.filter(tc => tc.moduleId === module.id);
 
-        if (moduleTestCases.length > 0) {
-          const moduleData = moduleTestCases.map(tc => ({
-            'Test Case ID': tc.testCaseId,
-            'Feature': tc.feature,
-            'Status': tc.status,
-            'Priority': tc.priority,
-            'Objective': tc.testObjective,
-            'Test Steps': tc.testSteps,
-            'Expected Result': tc.expectedResult,
+          if (moduleTestCases.length > 0) {
+            const moduleData = moduleTestCases.map(tc => ({
+              'Test Case ID': tc.testCaseId || '',
+              'Feature': tc.feature || '',
+              'Status': tc.status || 'Pending',
+              'Priority': tc.priority || 'Medium',
+              'Objective': tc.testObjective || '',
+              'Test Steps': tc.testSteps || '',
+              'Expected Result': tc.expectedResult || '',
+              'Actual Result': tc.actualResult || '',
+              'Pre-Conditions': tc.preConditions || '',
+              'Comments': tc.comments || '',
+            }));
+
+            const moduleSheet = XLSX.utils.json_to_sheet(moduleData);
+            // Truncate module name to avoid Excel sheet name limitations
+            const safeModuleName = (module.name || 'Unknown Module').substring(0, 30);
+            XLSX.utils.book_append_sheet(wb, moduleSheet, safeModuleName);
+          }
+        }
+      }
+
+      // If no modules, create a single sheet with all test cases
+      if (!modules || modules.length === 0) {
+        if (testCases && testCases.length > 0) {
+          const allTestCasesData = testCases.map(tc => ({
+            'Test Case ID': tc.testCaseId || '',
+            'Feature': tc.feature || '',
+            'Status': tc.status || 'Pending',
+            'Priority': tc.priority || 'Medium',
+            'Objective': tc.testObjective || '',
+            'Test Steps': tc.testSteps || '',
+            'Expected Result': tc.expectedResult || '',
             'Actual Result': tc.actualResult || '',
             'Pre-Conditions': tc.preConditions || '',
             'Comments': tc.comments || '',
           }));
 
-          const moduleSheet = XLSX.utils.json_to_sheet(moduleData);
-          // Truncate module name to avoid Excel sheet name limitations
-          const safeModuleName = module.name.substring(0, 30);
-          XLSX.utils.book_append_sheet(wb, moduleSheet, safeModuleName);
+          const testCasesSheet = XLSX.utils.json_to_sheet(allTestCasesData);
+          XLSX.utils.book_append_sheet(wb, testCasesSheet, 'All Test Cases');
         }
       }
 
@@ -388,7 +406,7 @@ export function ProjectExport({ projectId, projectName }: ProjectExportProps) {
       // Project overview box
       doc.setFillColor(240, 248, 255);
       doc.rect(14, currentY, 180, 45, 'F');
-      
+
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
       doc.text('Project Overview', 18, currentY + 10);
@@ -526,8 +544,8 @@ export function ProjectExport({ projectId, projectName }: ProjectExportProps) {
       };
 
       // Calculate pass rate
-      const passRate = testCases.length > 0 
-        ? Math.round((statusCounts.Pass / testCases.length) * 100) 
+      const passRate = testCases.length > 0
+        ? Math.round((statusCounts.Pass / testCases.length) * 100)
         : 0;
 
       doc.text(`Test Case Status:`, 14, currentY);

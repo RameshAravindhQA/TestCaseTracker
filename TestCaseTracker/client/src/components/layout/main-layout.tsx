@@ -60,9 +60,9 @@ function MainLayout({ children }: MainLayoutProps) {
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
     // Redirect to login if not authenticated or if we have an error
-    if (!isLoading && (!user || error?.message === "Not authenticated") && !isAuthenticated && 
-        location !== "/login" && 
-        location !== "/register" && 
+    if (!isLoading && (!user || error?.message === "Not authenticated") && !isAuthenticated &&
+        location !== "/login" &&
+        location !== "/register" &&
         location !== "/forgot-password") {
       console.log("User not authenticated, redirecting to login");
       // Clear invalid auth state
@@ -165,8 +165,8 @@ function MainLayout({ children }: MainLayoutProps) {
 
             {/* Display avatar in mobile header too */}
             <div className="flex items-center">
-              <FrozenAvatar 
-                user={user} 
+              <FrozenAvatar
+                user={user}
                 className="h-8 w-8"
                 fallbackClassName="bg-gradient-to-br from-primary/80 to-primary/40"
               />
@@ -218,7 +218,7 @@ function MainLayout({ children }: MainLayoutProps) {
 
       {/* Main content */}
       <main className={cn(
-        "flex-1 min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300 overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600",
+        "flex-1 min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300 overflow-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600",
         !isMobile ? "ml-60" : "pt-16"
       )}>
         <AnimatePresence mode="wait">
@@ -244,6 +244,7 @@ function MainLayout({ children }: MainLayoutProps) {
         </AnimatePresence>
       </main>
 
+      {/* This div contains the TodoToggleButton and was not part of the original issue regarding the floating icon. */}
       <div className="flex items-center gap-2">
             <TodoToggleButton />
             </div>

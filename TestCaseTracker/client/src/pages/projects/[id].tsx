@@ -2001,8 +2001,7 @@ export default function ProjectDetailPage() {
         />
       )}
 
-      {/* Floating Team Chat */}
-      <ProjectChat projectId={projectId} currentUser={currentUser} />
+       />
     </MainLayout>
   );
 }

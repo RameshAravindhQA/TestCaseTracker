@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -27,60 +26,18 @@ const sizeStyles = {
   lg: 'h-14 w-14'
 };
 
-export function FloatingActionButton({
-  icon: Icon,
-  onClick,
-  className,
-  tooltip,
-  variant = 'primary',
-  size = 'md'
-}: FloatingActionButtonProps) {
+export function FloatingActionButton({ icon, onClick, className, ...props }: FloatingActionButtonProps) {
   return (
-    <motion.div
+    <Button
+      onClick={onClick}
       className={cn(
-        "fixed bottom-6 right-6 z-50",
+        "hidden fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 z-50",
         className
       )}
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0, opacity: 0 }}
-      whileHover={{ scale: 1.1 }}
-      whileTap={{ scale: 0.9 }}
-      transition={{
-        type: "spring",
-        stiffness: 300,
-        damping: 30
-      }}
+      {...props}
     >
-      <Button
-        onClick={onClick}
-        className={cn(
-          "rounded-full shadow-lg hover:shadow-xl transition-all duration-200",
-          variantStyles[variant],
-          sizeStyles[size]
-        )}
-        title={tooltip}
-      >
-        <motion.div
-          whileHover={{ rotate: 5 }}
-          transition={{ duration: 0.2 }}
-        >
-          <Icon className="h-5 w-5" />
-        </motion.div>
-      </Button>
-      
-      {/* Ripple effect */}
-      <motion.div
-        className="absolute inset-0 rounded-full border-2 border-blue-400"
-        initial={{ scale: 1, opacity: 0.5 }}
-        animate={{ scale: 1.5, opacity: 0 }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeOut"
-        }}
-      />
-    </motion.div>
+      {icon}
+    </Button>
   );
 }
 
