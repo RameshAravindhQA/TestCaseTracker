@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,7 @@ import { Project, Module, TestCase, Bug, Tag } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Loader2, Copy, Bug as BugIcon } from "lucide-react";
+import { Search, Plus, Loader2, Copy, Bug as BugIcon, ChevronUp, ChevronDown } from "lucide-react";
 import { 
   Dialog,
   DialogContent,
@@ -56,6 +56,9 @@ export default function BugsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch projects
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
@@ -179,11 +182,43 @@ export default function BugsPage() {
     return matchesSearch && matchesStatus && matchesTags;
   }) || [];
 
+  // Scroll event handler
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      setShowScrollTop(scrollTop > 100);
+      setShowScrollDown(scrollTop < scrollHeight - clientHeight - 100);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    handleScroll(); // Initial check
+
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [filteredBugs]);
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToBottom = () => {
+    scrollContainerRef.current?.scrollTo({ 
+      top: scrollContainerRef.current.scrollHeight, 
+      behavior: 'smooth' 
+    });
+  };
+
   return (
     <MainLayout>
-      <div className="container mx-auto py-6 px-4 min-h-screen overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
-        <div className="h-full flex flex-col">
-          <div className="py-6 px-4 sm:px-6 lg:px-8 flex-shrink-0">
+      <div className="relative h-screen overflow-hidden">
+        <div 
+          ref={scrollContainerRef}
+          className="container mx-auto py-6 px-4 h-full overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600 scroll-smooth"
+        >
+          <div className="h-full flex flex-col">
+            <div className="py-6 px-4 sm:px-6 lg:px-8 flex-shrink-0 sticky top-0 bg-white dark:bg-gray-900 z-10 border-b">
             <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
@@ -517,6 +552,39 @@ export default function BugsPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+        </div>
+
+        {/* Scroll Indicators */}
+        {showScrollTop && (
+          <Button
+            onClick={scrollToTop}
+            className="fixed bottom-20 right-6 z-20 rounded-full w-12 h-12 shadow-lg bg-primary hover:bg-primary/90"
+            size="icon"
+          >
+            <ChevronUp className="h-6 w-6" />
+          </Button>
+        )}
+
+        {showScrollDown && (
+          <Button
+            onClick={scrollToBottom}
+            className="fixed bottom-6 right-6 z-20 rounded-full w-12 h-12 shadow-lg bg-primary hover:bg-primary/90"
+            size="icon"
+          >
+            <ChevronDown className="h-6 w-6" />
+          </Button>
+        )}
+
+        {/* Scroll Progress Bar */}
+        <div className="fixed top-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700 z-30">
+          <div 
+            className="h-full bg-gradient-to-r from-red-500 to-pink-500 transition-all duration-150"
+            style={{
+              width: `${scrollContainerRef.current ? 
+                (scrollContainerRef.current.scrollTop / 
+                (scrollContainerRef.current.scrollHeight - scrollContainerRef.current.clientHeight)) * 100 : 0}%`
+            }}
+          />
         </div>
       </div>
     </MainLayout>
