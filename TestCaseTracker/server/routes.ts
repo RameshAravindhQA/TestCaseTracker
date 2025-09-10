@@ -5462,7 +5462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: "document",
         entityId: document.id,
         details: {
-          projectId:,
+          projectId: numericProjectId,
           documentName: name,
           folderId: numericFolderId,
         },
