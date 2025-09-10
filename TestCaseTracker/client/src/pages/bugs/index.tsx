@@ -326,28 +326,29 @@ export default function BugsPage() {
             </div>
           </div>
 
-          <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-6 min-h-0">
-            {!selectedProjectId ? (
-              <Card>
-                <CardContent className="pt-6 text-center py-10">
-                  <BugIcon className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500">
-                    Please select a project to view bug reports
-                  </p>
-                </CardContent>
-              </Card>
-            ) : isBugsLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <BugTable
-                bugs={filteredBugs}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onView={handleView}
-              />
-            )}
+            <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-6 min-h-0">
+              {!selectedProjectId ? (
+                <Card>
+                  <CardContent className="pt-6 text-center py-10">
+                    <BugIcon className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                    <p className="text-gray-500">
+                      Please select a project to view bug reports
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : isBugsLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <BugTable
+                  bugs={filteredBugs}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onView={handleView}
+                />
+              )}
+            </div>
           </div>
 
           <Dialog open={formOpen} onOpenChange={setFormOpen}>
