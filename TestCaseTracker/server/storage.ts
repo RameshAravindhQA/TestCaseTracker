@@ -979,7 +979,14 @@ class MemStorage implements IStorage {
   }
 
   async getModulesByProject(projectId: number): Promise<Module[]> {
-    return this.modules.filter(module => module.projectId === projectId);
+    console.log(`Storage: getModulesByProject called for projectId: ${projectId}`);
+    const filteredModules = this.modules.filter(module => {
+      console.log(`Storage: Checking module ${module.id} (${module.name}) - projectId: ${module.projectId} vs requested: ${projectId}`);
+      return module.projectId === projectId;
+    });
+    console.log(`Storage: Returning ${filteredModules.length} modules for project ${projectId}:`, 
+      filteredModules.map(m => ({ id: m.id, moduleId: m.moduleId, name: m.name, projectId: m.projectId })));
+    return filteredModules;
   }
 
   async getModule(id: number): Promise<Module | undefined> {
@@ -1107,7 +1114,11 @@ class MemStorage implements IStorage {
   }
 
   async getTestCasesByProject(projectId: number): Promise<TestCase[]> {
-    const results = this.testCases.filter(tc => tc.projectId === projectId && tc.isDeleted !== true);
+    console.log(`Storage: getTestCasesByProject called for projectId: ${projectId}`);
+    const results = this.testCases.filter(tc => {
+      console.log(`Storage: Checking test case ${tc.id} (${tc.testCaseId}) - projectId: ${tc.projectId} vs requested: ${projectId}, isDeleted: ${tc.isDeleted}`);
+      return tc.projectId === projectId && tc.isDeleted !== true;
+    });
     console.log(`Storage: getTestCasesByProject(${projectId}) returning ${results.length} active test cases:`,
       results.map(tc => ({ id: tc.id, testCaseId: tc.testCaseId, projectId: tc.projectId })));
     return results;
@@ -1381,7 +1392,11 @@ class MemStorage implements IStorage {
   }
 
   async getBugsByProject(projectId: number): Promise<Bug[]> {
-    const results = this.bugs.filter(bug => bug.projectId === projectId);
+    console.log(`Storage: getBugsByProject called for projectId: ${projectId}`);
+    const results = this.bugs.filter(bug => {
+      console.log(`Storage: Checking bug ${bug.id} (${bug.bugId}) - projectId: ${bug.projectId} vs requested: ${projectId}`);
+      return bug.projectId === projectId;
+    });
     console.log(`Storage: getBugsByProject(${projectId}) returning ${results.length} bugs:`,
       results.map(bug => ({ id: bug.id, bugId: bug.bugId, title: bug.title, projectId: bug.projectId })));
     return results;
