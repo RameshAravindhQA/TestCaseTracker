@@ -4699,6 +4699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: "Target folder not found" });
         }
 
+        // Make sure target folder is in the same project
         if (targetFolder.projectId !== folder.projectId) {
           return res.status(400).json({
             message: "Target folder must be in the same project"
