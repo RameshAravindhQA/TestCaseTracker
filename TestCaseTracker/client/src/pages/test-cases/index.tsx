@@ -711,7 +711,6 @@ export default function TestCasesPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
-    </MainLayout>
-  );
-}
+      </MainLayout>
+    );
+  }
