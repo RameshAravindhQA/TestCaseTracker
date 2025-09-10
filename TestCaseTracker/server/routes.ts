@@ -3946,6 +3946,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Permanent delete test case
+  apiRouter.delete("/test-cases/:id/permanent", isAuthenticated, async (req, res) => {
+    try {
+      const testCaseId = parseInt(req.params.id);
+      
+      console.log(`[API] Permanent delete request for test case ${testCaseId}`);
+      
+      const deleted = await storage.permanentlyDeleteTestCase(testCaseId);
+
+      if (deleted) {
+        console.log(`[API] Test case ${testCaseId} permanently deleted successfully`);
+        res.json({
+          message: "Test case permanently deleted",
+          success: true
+        });
+      } else {
+        console.log(`[API] Test case ${testCaseId} not found for permanent deletion`);
+        res.status(404).json({ message: "Test case not found" });
+      }
+    } catch (error) {
+      console.error("Permanent delete test case error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Get deleted test cases
   apiRouter.get("/test-cases/deleted", isAuthenticated, async (req, res) => {
     try {
