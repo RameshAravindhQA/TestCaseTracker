@@ -50,11 +50,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import {
-  Edit, Plus, ArrowLeft, Trash, Layers, CheckSquare, Bug as BugIcon, FileText, Loader2, Github, Settings, RefreshCw, Sparkles, Trash2, Users
+  Edit, Plus, ArrowLeft, Trash, Layers, CheckSquare, Bug as BugIcon, FileText, Loader2, Github, Settings, RefreshCw, Sparkles, Trash2, Users, BarChart3, FileDown, GitBranch, ChevronDown
 } from "lucide-react";
 import { ProjectExport } from "@/components/project/project-export";
 import ProjectCollaborators from "@/components/projects/project-collaborators";
 import { GitHubIssueButton } from "@/components/github/github-issue-button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -77,14 +78,15 @@ export default function ProjectDetailPage() {
   const [viewBugDialogOpen, setViewBugDialogOpen] = useState(false);
   const [selectedDeletedTestCase, setSelectedDeletedTestCase] = useState<TestCase | null>(null);
   const [viewDeletedTestCaseDialogOpen, setViewDeletedTestCaseDialogOpen] = useState(false);
+  const [showGitHubConfig, setShowGitHubConfig] = useState(false);
+  const [showCreateModule, setShowCreateModule] = useState(false);
+
 
   // Selected items for editing/deleting
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
   const [selectedBug, setSelectedBug] = useState<Bug | null>(null);
   const [selectedModuleForTestCase, setSelectedModuleForTestCase] = useState<Module | null>(null);
-  const [showGitHubConfig, setShowGitHubConfig] = useState(false);
-  const [showCreateModule, setShowCreateModule] = useState(false);
 
   // Fetch project details
   const { data: project, isLoading: isProjectLoading } = useQuery<Project>({
@@ -138,7 +140,7 @@ export default function ProjectDetailPage() {
     enabled: !!projectId,
   });
 
-  // Fetch deleted test cases
+  // Fetch deleted test cases for this project
   const { data: deletedTestCases = [], isLoading: isDeletedTestCasesLoading } = useQuery<TestCase[]>({
     queryKey: [`/api/projects/${projectId}/deleted-test-cases`],
     enabled: !!projectId,
@@ -271,8 +273,8 @@ export default function ProjectDetailPage() {
     },
   });
 
-  // Permanent delete mutation
-  const permanentDeleteMutation = useMutation({
+  // Permanent delete test case mutation
+  const permanentDeleteTestCaseMutation = useMutation({
     mutationFn: async (testCaseId: number) => {
       const res = await apiRequest("DELETE", `/api/test-cases/${testCaseId}/permanent`);
       return res.json();
@@ -280,7 +282,7 @@ export default function ProjectDetailPage() {
     onSuccess: () => {
       toast({
         title: "Test case permanently deleted",
-        description: "Test case has been permanently removed from the system",
+        description: "Test case has been permanently removed from the database",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/deleted-test-cases`] });
     },
@@ -350,7 +352,7 @@ export default function ProjectDetailPage() {
         // Use timestamp first, then fall back to createdAt, then use current time as fallback
         const dateValue = activity.timestamp || activity.createdAt || new Date().toISOString();
         const parsedDate = new Date(dateValue);
-        
+
         // Check if the date is valid
         if (!isNaN(parsedDate.getTime()) && parsedDate.getTime() > 0) {
           timeAgo = formatDistance(parsedDate, new Date(), { addSuffix: true });
@@ -442,11 +444,15 @@ export default function ProjectDetailPage() {
   };
 
   const handleRestoreTestCase = (testCase: TestCase) => {
-    restoreTestCaseMutation.mutate(testCase.id);
+    if (window.confirm(`Are you sure you want to restore test case "${testCase.testCaseId}"?`)) {
+      restoreTestCaseMutation.mutate(testCase.id);
+    }
   };
 
   const handlePermanentDeleteTestCase = (testCase: TestCase) => {
-    permanentDeleteMutation.mutate(testCase.id);
+    if (window.confirm(`Are you sure you want to permanently delete test case "${testCase.testCaseId}"? This action cannot be undone and will remove all data from the database.`)) {
+      permanentDeleteTestCaseMutation.mutate(testCase.id);
+    }
   };
 
   const handleViewDeletedTestCase = (testCase: TestCase) => {
@@ -606,6 +612,48 @@ export default function ProjectDetailPage() {
     name: "John Doe",
   };
 
+  // Export project handlers
+  const handleExportProject = async (format: 'csv' | 'pdf') => {
+    if (!project) return;
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/export?format=${format}`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `${project.name}-export.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Export successful",
+        description: `Project exported as ${format.toUpperCase()}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "There was an error exporting the project",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportProjectReport = () => {
+    // Navigate to consolidated reports with this project selected
+    window.open(`/reports/consolidated?projectId=${projectId}`, '_blank');
+  };
+
   return (
     <MainLayout>
       <div className="py-6 px-4 sm:px-6 lg:px-8">
@@ -698,12 +746,34 @@ export default function ProjectDetailPage() {
                 {syncFromGithubMutation.isPending ? 'Syncing...' : 'Sync from GitHub to System'}
               </Button>
 
-              {project && (
-                <ProjectExport
-                  projectId={projectId}
-                  projectName={project.name}
-                />
-              )}
+              <Button
+                variant="outline"
+                onClick={handleExportProjectReport}
+                className="flex items-center gap-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                Export Project Report
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <FileDown className="h-4 w-4" />
+                    Export Options
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleExportProject('csv')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export Project CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExportProject('pdf')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export Project PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>

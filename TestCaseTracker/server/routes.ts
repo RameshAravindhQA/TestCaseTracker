@@ -9,12 +9,12 @@ import githubIntegrationsRouter from "./api/github-integrations";
 import { geminiService } from "./gemini-service";
 import { EnhancedAIService } from "./enhanced-ai-service";
 import { aiConfigStorage } from "./ai-config-storage";
-import { 
-  insertUserSchema, 
-  insertProjectSchema, 
-  insertProjectMemberSchema, 
-  insertModuleSchema, 
-  insertTestCaseSchema, 
+import {
+  insertUserSchema,
+  insertProjectSchema,
+  insertProjectMemberSchema,
+  insertModuleSchema,
+  insertTestCaseSchema,
   insertBugSchema,
   insertActivitySchema,
   insertDocumentFolderSchema,
@@ -350,7 +350,7 @@ const configureBugAttachmentUpload = () => {
         'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-flv',
         'video/x-matroska', 'video/x-ms-wmv', 'video/3gpp', 'video/mpeg', 'video/avi', 'video/x-ms-asf',
         // Documents
-        'application/pdf', 
+        'application/pdf',
         'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // Word
         'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // Excel
         'text/plain', 'text/csv',
@@ -717,7 +717,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         debug: debugInfo,
         recommendations: [
           '✅ Gemini API key configured',
-          '✅ OpenAI API key configured', 
+          '✅ OpenAI API key configured',
           debugInfo.testGeneration.mockServiceWorking ? '✅ Mock service working' : '❌ Mock service failed',
           '💡 Mock service should always work as fallback',
           '💡 At least one AI provider should be configured for best results'
@@ -994,7 +994,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate request ID if not provided
       if (!requestData.requestId) {
-        const prefix = requestData.requestType ? 
+        const prefix = requestData.requestType ?
           requestData.requestType.split(' ')[0].toUpperCase() : 'REQ';
         const timestamp = Date.now().toString().slice(-6);
         requestData.requestId = `${prefix}-${timestamp}`;
@@ -1262,10 +1262,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date()
       });
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: "Project duration extended successfully",
-        allocation: updatedAllocation 
+        allocation: updatedAllocation
       });
     } catch (error) {
       console.error("Extend project duration error:", error);
@@ -1832,7 +1832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Add the uploads endpoint for bug attachments with error handling
-  apiRouter.post("/uploads/bug-attachment", isAuthenticated, 
+  apiRouter.post("/uploads/bug-attachment", isAuthenticated,
     (req, res, next) => {
       console.log("Starting bug attachment upload request");
       console.log("Request headers:", req.headers);
@@ -2066,7 +2066,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timeSheets = timeSheets.filter(ts => ts.folderId === folderIdNum);
       }
 
-      console.log(`[API] Returning ${timeSheets.length} timesheets for user ${requestingUser}:`, 
+      console.log(`[API] Returning ${timeSheets.length} timesheets for user ${requestingUser}:`,
         timeSheets.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description })));
 
       res.json(timeSheets);
@@ -2245,14 +2245,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Employee import endpoint
-  apiRouter.post("/employees/import", isAuthenticated, checkRole(["Admin"]), 
+  apiRouter.post("/employees/import", isAuthenticated, checkRole(["Admin"]),
     documentUpload.single('file'),
     async (req, res) => {
       try {
         if (!req.file) {
-          return res.status(400).json({ 
-            success: false, 
-            message: "No file uploaded" 
+          return res.status(400).json({
+            success: false,
+            message: "No file uploaded"
           });
         }
 
@@ -2305,10 +2305,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
 
               console.error("Employee import processing error:", error);
-              res.status(500).json({ 
+              res.status(500).json({
                 success: false,
                 message: "Failed to process employee data",
-                error: error.message 
+                error: error.message
               });
             }
           })
@@ -2320,26 +2320,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
               fs.unlinkSync(filePath);
             }
 
-            res.status(400).json({ 
+            res.status(400).json({
               success: false,
               message: "Failed to parse CSV file",
-              error: error.message 
+              error: error.message
             });
           });
 
       } catch (error: any) {
         console.error("Employee import error:", error);
-        res.status(500).json({ 
+        res.status(500).json({
           success: false,
           message: "Failed to import employees",
-          error: error.message 
+          error: error.message
         });
       }
     }
   );
 
   // Chat file upload endpoint
-  apiRouter.post("/chat/upload", isAuthenticated, 
+  apiRouter.post("/chat/upload", isAuthenticated,
     (req, res, next) => {
       bugAttachmentUpload.array('files', 10)(req, res, (err) => {
         if (err) {
@@ -2864,7 +2864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Use "inline" for files that can be viewed in browser
     const inlineTypes = [
       // Images
-      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', 
+      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
       // Documents that can be viewed in browser
       '.pdf', '.txt', '.html', '.htm',
       // Videos that can be viewed in browser
@@ -3271,11 +3271,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         action: "added",
         entityType: "projectMember",
         entityId: member.id,
-        details: { 
-          projectId, 
+        details: {
+          projectId,
           projectName: project.name,
           userId: user.id,
-          userName: user.name 
+          userName: user.name
         }
       });
 
@@ -3319,11 +3319,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: "removed",
           entityType: "projectMember",
           entityId: userId,
-          details: { 
-            projectId, 
+          details: {
+            projectId,
             projectName: project.name,
             userId: user.id,
-            userName: user.name 
+            userName: user.name
           }
         });
       }
@@ -3385,8 +3385,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedModules.push(updatedModule);
       }
 
-      res.json({ 
-        message: `Fixed ${sortedModules.length} module IDs with prefix ${projectPrefix}`, 
+      res.json({
+        message: `Fixed ${sortedModules.length} module IDs with prefix ${projectPrefix}`,
         modules: sortedModules.length,
         prefix: projectPrefix,
         updatedModules: updatedModules.map(m => ({ id: m?.id, moduleId: m?.moduleId, name: m?.name }))
@@ -3457,8 +3457,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         action: "created",
         entityType: "module",
         entityId: module.id,
-        details: { 
-          projectId, 
+        details: {
+          projectId,
           projectName: project.name,
           moduleName: module.name
         }
@@ -3500,8 +3500,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         action: "updated",
         entityType: "module",
         entityId: moduleId,
-        details: { 
-          projectId: module.projectId, 
+        details: {
+          projectId: module.projectId,
           projectName: project?.name,
           moduleName: module.name
         }
@@ -3544,8 +3544,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: "deleted",
           entityType: "module",
           entityId: moduleId,
-          details: { 
-            projectId: module.projectId, 
+          details: {
+            projectId: module.projectId,
             projectName: project?.name,
             moduleName: module.name
           }
@@ -3582,8 +3582,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if tag already exists with the same name
       const existingTags = await storage.getTags();
-      const existingTag = existingTags.find(tag => 
-        tag.name.toLowerCase() === name.toLowerCase() && 
+      const existingTag = existingTags.find(tag =>
+        tag.name.toLowerCase() === name.toLowerCase() &&
         (tag.projectId === projectId || (!tag.projectId && !projectId))
       );
 
@@ -3683,15 +3683,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/test-cases/fix-ids", isAuthenticated, async (req, res) => {
     try {
       await storage.fixExistingTestCaseIds();
-      res.json({ 
-        success: true, 
-        message: "Test case IDs have been fixed successfully" 
+      res.json({
+        success: true,
+        message: "Test case IDs have been fixed successfully"
       });
     } catch (error) {
       console.error("Fix test case IDs error:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: "Failed to fix test case IDs" 
+      res.status(500).json({
+        success: false,
+        error: "Failed to fix test case IDs"
       });
     }
   });
@@ -3699,7 +3699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/projects/:projectId/test-cases", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
-      const moduleId = req.query.moduleId ? parseInt(req.query.moduleId as string) : undefined;
+      const { moduleId } = req.query;
 
       console.log(`[API] Fetching test cases for project ${projectId}, module: ${moduleId}`);
 
@@ -3723,20 +3723,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Use project-specific filtering to ensure test cases belong to this project
       let testCases;
-      if (moduleId) {
+      if (moduleId && moduleId !== 'all') {
         // Validate that the module belongs to this project
-        const module = await storage.getModule(moduleId);
+        const module = await storage.getModule(parseInt(moduleId as string));
         if (!module || module.projectId !== projectId) {
           console.log(`[API] Module ${moduleId} not found or doesn't belong to project ${projectId}`);
           return res.status(400).json({ message: "Invalid module for this project" });
         }
-        testCases = await storage.getTestCasesByFilters(projectId, moduleId);
+        testCases = await storage.getTestCasesByFilters(projectId, parseInt(moduleId as string));
       } else {
         testCases = await storage.getTestCasesByProject(projectId);
       }
 
-      console.log(`[API] Returning ${testCases.length} test cases for project ${projectId}:`, 
-        testCases.map(tc => ({ id: tc.id, testCaseId: tc.testCaseId, feature: tc.feature, projectId: tc.projectId })));
+      console.log(`[API] Returning ${testCases.length} test cases for project ${projectId}:`,
+        testCases.slice(0, 3).map(tc => ({ id: tc.id, testCaseId: tc.testCaseId, feature: tc.feature, projectId: tc.projectId })));
 
       // Add cache headers for real-time data
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -3821,7 +3821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         action: "created",
         entityType: "testCase",
         entityId: testCase.id,
-        details: { 
+        details: {
           projectId,
           projectName: project.name,
           testCaseId: testCase.testCaseId,
@@ -3885,7 +3885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: `status changed to ${req.body.status}`,
           entityType: "testCase",
           entityId: testCaseId,
-          details: { 
+          details: {
             projectId: testCase.projectId,
             projectName: project?.name,
             testCaseId: testCase.testCaseId,
@@ -3900,7 +3900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: `severity changed to ${req.body.severity}`,
           entityType: "testCase",
           entityId: testCaseId,
-          details: { 
+          details: {
             projectId: testCase.projectId,
             projectName: project?.name,
             testCaseId: testCase.testCaseId,
@@ -3916,7 +3916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: "updated",
           entityType: "testCase",
           entityId: testCaseId,
-          details: { 
+          details: {
             projectId: testCase.projectId,
             projectName: project?.name,
             testCaseId: testCase.testCaseId,
@@ -3967,7 +3967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: "deleted",
           entityType: "testCase",
           entityId: testCaseId,
-          details: { 
+          details: {
             projectId: testCase.projectId,
             projectName: project?.name,
             testCaseId: testCase.testCaseId,
@@ -4014,7 +4014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filteredBugs = filteredBugs.filter(bug => bug.severity === severity);
       }
 
-      console.log(`[API] Returning ${filteredBugs.length} bugs for user ${req.session.userId}:`, 
+      console.log(`[API] Returning ${filteredBugs.length} bugs for user ${req.session.userId}:`,
         filteredBugs.map(bug => ({ id: bug.id, bugId: bug.bugId, title: bug.title, projectId: bug.projectId, moduleId: bug.moduleId })));
 
       res.json(filteredBugs);
@@ -4042,7 +4042,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filteredBugs = projectBugs.filter(bug => bug.moduleId === moduleIdNum);
       }
 
-      console.log(`[API] Returning ${filteredBugs.length} bugs for project ${projectId}:`, 
+      console.log(`[API] Returning ${filteredBugs.length} bugs for project ${projectId}:`,
         filteredBugs.map(bug => ({ id: bug.id, bugId: bug.bugId, title: bug.title, projectId: bug.projectId, moduleId: bug.moduleId })));
 
       res.json(filteredBugs);
@@ -4143,7 +4143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         action: "reported",
         entityType: "bug",
         entityId: bug.id,
-        details: { 
+        details: {
           projectId,
           projectName: project.name,
           bugId: bug.bugId,
@@ -4220,7 +4220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: `status changed to ${req.body.status}`,
           entityType: "bug",
           entityId: bugId,
-          details: { 
+          details: {
             projectId: bug.projectId,
             projectName: project?.name,
             bugId: bug.bugId,
@@ -4235,7 +4235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: `severity changed to ${req.body.severity}`,
           entityType: "bug",
           entityId: bugId,
-          details: { 
+          details: {
             projectId: bug.projectId,
             projectName: project?.name,
             bugId: bug.bugId,
@@ -4251,7 +4251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: "updated",
           entityType: "bug",
           entityId: bugId,
-          details: { 
+          details: {
             projectId: bug.projectId,
             projectName: project?.name,
             bugId: bug.bugId,
@@ -4306,7 +4306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: "deleted",
           entityType: "bug",
           entityId: bugId,
-          details: { 
+          details: {
             projectId: bug.projectId,
             projectName: project?.name,
             bugId: bug.bugId,
@@ -4357,7 +4357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Test projects
       try {
-        const projects = req.session.userRole === "Admin" 
+        const projects = req.session.userRole === "Admin"
           ? await storage.getProjects()
           : await storage.getProjectsByUserId(req.session.userId!);
         debugData.dataStatus.projects.count = projects.length;
@@ -4367,7 +4367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Test test cases
       try {
-        const testCases = req.session.userRole === "Admin" 
+        const testCases = req.session.userRole === "Admin"
           ? await storage.getTestCases()
           : [];
         debugData.dataStatus.testCases.count = testCases.length;
@@ -4377,7 +4377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Test bugs
       try {
-        const bugs = req.session.userRole === "Admin" 
+        const bugs = req.session.userRole === "Admin"
           ? await storage.getBugs()
           : [];
         debugData.dataStatus.bugs.count = bugs.length;
@@ -4668,8 +4668,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         if (targetFolder.projectId !== folder.projectId) {
-          return res.status(400).json({ 
-            message: "Target folder must be in the same project" 
+          return res.status(400).json({
+            message: "Target folder must be in the same project"
           });
         }
 
@@ -4854,15 +4854,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Make sure target folder is in the same project
         if (targetFolder.projectId !== document.projectId) {
-          return res.status(400).json({ 
-            message: "Target folder must be in the same project" 
+          return res.status(400).json({
+            message: "Target folder must be in the same project"
           });
         }
       }
 
       // Update document's folder ID
-      const updatedDocument = await storage.updateDocument(documentId, { 
-        folderId: targetFolderId === null ? null : targetFolderId 
+      const updatedDocument = await storage.updateDocument(documentId, {
+        folderId: targetFolderId === null ? null : targetFolderId
       });
 
       // Log the activity
@@ -4918,8 +4918,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Make sure target folder is in the same project
         if (targetFolder.projectId !== document.projectId) {
-          return res.status(400).json({ 
-            message: "Cannot copy document to a folder in a different project" 
+          return res.status(400).json({
+            message: "Cannot copy document to a folder in a different project"
           });
         }
       }
@@ -5918,7 +5918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = await storage.getAllUsers();
       const publicUsers = users.map(user => ({
         id: user.id,
-        name: user.firstName + ' ' + (user.lastName || ''),
+name: user.firstName + ' ' + (user.lastName || ''),
         email: user.email,
         isOnline: false,
         lastSeen: null

@@ -707,8 +707,15 @@ class MemStorage implements IStorage {
       designation: data.designation || '',
       joiningDate: data.joiningDate || new Date().toISOString(),
       status: data.status || 'Active',
-      technologies: Array.isArray(data.technologies) ? data.technologies : 
-                   typeof data.technologies === 'string' ? data.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0) : [],
+      technologies: (() => {
+        if (Array.isArray(data.technologies)) {
+          return data.technologies;
+        }
+        if (typeof data.technologies === 'string' && data.technologies.trim()) {
+          return data.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0);
+        }
+        return [];
+      })(),
       locality: data.locality || '',
       overallExperience: data.overallExperience || '',
       profilePicture: data.profilePicture || null,

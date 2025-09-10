@@ -146,9 +146,11 @@ export default function EmployeesPage() {
           designation: row.designation || '',
           joiningDate: row.joiningDate || new Date().toISOString(),
           status: row.status || 'Active',
-          technologies: typeof row.technologies === 'string'
-            ? row.technologies.split(',').map((t: string) => t.trim())
-            : row.technologies || []
+          technologies: row.technologies 
+                        ? (typeof row.technologies === 'string' 
+                           ? row.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0)
+                           : Array.isArray(row.technologies) ? row.technologies : [])
+                        : [],
         }));
 
       if (employeesToImport.length === 0) {

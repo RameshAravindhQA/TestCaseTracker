@@ -533,27 +533,11 @@ export default function BrdDocumentsPage() {
         </div>
 
         {selectedProjectId && (
-          <div className="flex items-center gap-2">
-            
-
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  New BRD Document
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create New BRD Document</DialogTitle>
-                </DialogHeader>
-                <BrdDocumentForm
-                  projects={projects}
-                  onSubmit={(data) => createDocumentMutation.mutate(data)}
-                  isSubmitting={createDocumentMutation.isPending}
-                />
-              </DialogContent>
-            </Dialog>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New BRD Document
+            </Button>
           </div>
         )}
       </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { 
   Table, 
@@ -198,7 +197,7 @@ export function DeletedTestCaseTable({
                           size="sm"
                           onClick={() => handlePermanentDelete(testCase)}
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          title="Permanently Delete"
+                          title="Permanently delete this test case from database"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
