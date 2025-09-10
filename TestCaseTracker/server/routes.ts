@@ -20,17 +20,6 @@ import {
   insertDocumentFolderSchema,
   insertDocumentSchema,
   insertTimeSheetSchema,
-  insertTimeSheetFolderSchema,
-  insertCustomerSchema,
-  insertCustomerProjectSchema,
-
-  insertSprintSchema,
-  insertKanbanColumnSchema,
-  insertKanbanCardSchema,
-  insertTraceabilityMarkerSchema,
-  insertTraceabilityMatrixSchema,
-  insertTraceabilityMatrixCellSchema,
-  insertTestSheetSchema,
   type TimeSheet,
   type InsertTimeSheet,
   type TimeSheetFolder,
@@ -3940,45 +3929,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.delete("/test-cases/:id", isAuthenticated, async (req, res) => {
     try {
       const testCaseId = parseInt(req.params.id);
-      const testCase = await storage.getTestCase(testCaseId);
+      const hardDelete = req.query.hardDelete === 'true';
+      const deleted = await storage.deleteTestCase(testCaseId, req.session.userId!, hardDelete);
 
-      if (!testCase) {
-        return res.status(404).json({ message: "Test case not found" });
-      }
-
-      const project = await storage.getProject(testCase.projectId);
-
-      // Check if user has access to this project
-      if (req.session.userRole !== "Admin") {
-        const projectMembers = await storage.getProjectMembers(testCase.projectId);
-        const isMember = projectMembers.some(member => member.userId === req.session.userId);
-
-        if (!isMember && project?.createdById !== req.session.userId) {
-          return res.status(403).json({ message: "You don't have access to this test case" });
-        }
-      }
-
-      const success = await storage.deleteTestCase(testCaseId);
-
-      if (success) {
-        // Log activity
-        await storage.createActivity({
-          userId: req.session.userId!,
-          action: "deleted",
-          entityType: "testCase",
-          entityId: testCaseId,
-          details: {
-            projectId: testCase.projectId,
-            projectName: project?.name,
-            testCaseId: testCase.testCaseId,
-            feature: testCase.feature
-          }
+      if (deleted) {
+        res.json({ 
+          message: hardDelete ? "Test case permanently deleted" : "Test case moved to deleted items",
+          hardDelete 
         });
+      } else {
+        res.status(404).json({ message: "Test case not found" });
       }
-
-      res.json({ success });
     } catch (error) {
       console.error("Delete test case error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get deleted test cases
+  apiRouter.get("/test-cases/deleted", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      const deletedTestCases = await storage.getDeletedTestCases(projectId);
+      res.json(deletedTestCases);
+    } catch (error) {
+      console.error("Get deleted test cases error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Restore test case
+  apiRouter.post("/test-cases/:id/restore", isAuthenticated, async (req, res) => {
+    try {
+      const testCaseId = parseInt(req.params.id);
+      const restored = await storage.restoreTestCase(testCaseId);
+
+      if (restored) {
+        res.json({ message: "Test case restored successfully" });
+      } else {
+        res.status(404).json({ message: "Test case not found" });
+      }
+    } catch (error) {
+      console.error("Restore test case error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

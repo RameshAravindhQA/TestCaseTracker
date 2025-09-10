@@ -31,6 +31,9 @@ import { TagFilter } from "./tag-filter";
 import { X, Filter } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/api";
+import { useToast } from "@/components/ui/use-toast";
 
 interface TestCaseTableProps {
   testCases: TestCase[];
@@ -55,7 +58,7 @@ function getContrastColor(hexColor: string): string {
   const b = parseInt(hexColor.slice(5, 7), 16);
 
   // Calculate luminance
-  // Formula: https://www.w3.org/TR/WCAG20-TECHS/G17.html
+  // Formula: https://www.w3.org/WCAG20-TECHS/G17.html
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
   // Use white text on dark backgrounds, black text on light backgrounds
@@ -92,6 +95,35 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25); // Default to 25 rows per page
   const [testCasesData, setTestCasesData] = useState(testCases);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const deleteTestCaseMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/test-cases/${id}`);
+      if (!res.ok) {
+        throw new Error("Failed to delete test case");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["test-cases"] });
+      queryClient.invalidateQueries({ queryKey: ["deleted-test-cases"] });
+      toast({
+        title: "Test case deleted",
+        description: data.hardDelete ? 
+          "Test case has been permanently deleted." : 
+          "Test case has been moved to deleted items. You can restore it from the Deleted tab.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete test case.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Get all unique tags across test cases
   const allTags = useMemo(() => {
@@ -183,7 +215,7 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
   // Handle multiple delete
   const handleDeleteSelected = () => {
     if (onDeleteMultiple && selectedItems.length > 0) {
-      onDeleteMultiple(selectedItems);
+      selectedItems.forEach(id => deleteTestCaseMutation.mutate(id));
       setSelectedItems([]);
     }
   };
@@ -495,7 +527,13 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
                             <Bug className="mr-2 h-4 w-4" />
                             <span>Report Bug</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onDelete(testCase)}>
+                          <DropdownMenuItem onClick={() => {
+                            if (testCase && testCase.id !== undefined) {
+                              deleteTestCaseMutation.mutate(testCase.id);
+                            } else {
+                              console.error("Attempted to delete a test case with an invalid ID:", testCase);
+                            }
+                          }}>
                             <Trash className="mr-2 h-4 w-4" />
                             <span>Delete</span>
                           </DropdownMenuItem>

@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { useIsMobile as useMobile } from "@/hooks/use-mobile";
 import { AnimatedContainer } from "@/components/ui/animated-container";
 import { motion, AnimatePresence } from "framer-motion";
-import { GlobalChatbot } from "@/components/chat/global-chatbot";
 import { TodoToggleButton } from "@/components/todo/todo-toggle-button";
 import { pageVariants, sidebarVariants, backdropVariants } from "@/lib/animations";
 import {
@@ -115,7 +114,7 @@ function MainLayout({ children }: MainLayoutProps) {
     if (pathname.startsWith('/profile')) return <User className="h-5 w-5" />;
     return <Home className="h-5 w-5" />;
   };
-  
+
   const getPageTitle = (pathname: string) => {
     if (pathname.startsWith('/dashboard')) return 'Dashboard';
     if (pathname.startsWith('/projects')) return 'Projects';
@@ -245,11 +244,8 @@ function MainLayout({ children }: MainLayoutProps) {
         </AnimatePresence>
       </main>
 
-      {/* Global Chatbot */}
-      <GlobalChatbot />
       <div className="flex items-center gap-2">
             <TodoToggleButton />
-            <GlobalChatbot />
             </div>
     </div>
   );

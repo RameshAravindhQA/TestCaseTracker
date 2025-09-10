@@ -117,7 +117,7 @@ export interface IStorage {
   getTestCase(id: number): Promise<TestCase | undefined>;
   createTestCase(testCase: InsertTestCase): Promise<TestCase>;
   updateTestCase(id: number, testCaseData: Partial<TestCase>): Promise<TestCase | null>;
-  deleteTestCase(id: number): Promise<boolean>;
+  deleteTestCase(id: number, userId: number, hardDelete?: boolean): Promise<boolean>;
 
   // Deleted test case operations
   getDeletedTestCases(projectId?: number): Promise<TestCase[]>;
@@ -756,7 +756,7 @@ class MemStorage implements IStorage {
     for (let i = 0; i < employees.length; i++) {
       try {
         const empData = employees[i];
-        
+
         // Validate required fields
         if (!empData.firstName || !empData.email) {
           errors.push(`Row ${i + 1}: Missing required fields (firstName, email)`);
@@ -1243,27 +1243,30 @@ class MemStorage implements IStorage {
     return updatedTestCase;
   }
 
-  async deleteTestCase(id: number): Promise<boolean> {
+  async deleteTestCase(id: number, userId: number, hardDelete: boolean = false): Promise<boolean> {
     const index = this.testCases.findIndex(testCase => testCase.id === id);
     if (index === -1) return false;
 
-    console.log(`Storage: Soft deleting test case ID ${id} (${this.testCases[index].testCaseId})`);
-
-    // Soft delete - mark as deleted instead of removing
-    const deletedTestCase: TestCase = {
-      ...this.testCases[index],
-      isDeleted: true,
-      deletedAt: new Date(),
-      deletedById: 1, // Should be current user ID
-      updatedAt: new Date()
-    };
-
-    this.testCases[index] = deletedTestCase;
-    this.recordActivity('test_case', 'deleted', id, this.testCases[index].assignedTo || 1);
-
-    console.log(`Storage: Test case soft deleted. ID: ${this.testCases[index].testCaseId}`);
-
-    return true;
+    if (hardDelete) {
+      console.log(`Storage: Permanently deleting test case ID ${id} (${this.testCases[index].testCaseId})`);
+      this.testCases.splice(index, 1); // Remove from array
+      this.recordActivity('test_case', 'permanently_deleted', id, userId);
+      console.log(`Storage: Test case permanently deleted. Total test cases: ${this.testCases.length}`);
+      return true;
+    } else {
+      console.log(`Storage: Soft deleting test case ID ${id} (${this.testCases[index].testCaseId}) by user ${userId}`);
+      const deletedTestCase: TestCase = {
+        ...this.testCases[index],
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedById: userId,
+        updatedAt: new Date()
+      };
+      this.testCases[index] = deletedTestCase;
+      this.recordActivity('test_case', 'deleted', id, userId);
+      console.log(`Storage: Test case soft deleted. ID: ${this.testCases[index].testCaseId}`);
+      return true;
+    }
   }
 
   // Deleted test case operations

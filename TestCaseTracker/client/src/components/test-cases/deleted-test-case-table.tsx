@@ -1,59 +1,84 @@
 import React, { useState } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { TestCase } from "@/types";
-import { RefreshCw, Trash2, Eye, Calendar } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, RotateCcw, Trash2, AlertTriangle } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
 interface DeletedTestCaseTableProps {
-  deletedTestCases: TestCase[];
-  onRestore: (testCase: TestCase) => void;
-  onPermanentDelete: (testCase: TestCase) => void;
-  onView: (testCase: TestCase) => void;
-  isLoading?: boolean;
+  projectId: number;
+  onBack: () => void;
 }
 
 export function DeletedTestCaseTable({
-  deletedTestCases,
-  onRestore,
-  onPermanentDelete,
-  onView,
-  isLoading = false
+  projectId,
+  onBack
 }: DeletedTestCaseTableProps) {
-  const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
-  const [permanentDeleteDialogOpen, setPermanentDeleteDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  const handlePermanentDelete = (testCase: TestCase) => {
-    setSelectedTestCase(testCase);
-    setPermanentDeleteDialogOpen(true);
-  };
+  const { data: deletedTestCases, isLoading } = useQuery<TestCase[]>({
+    queryKey: ['deleted-test-cases', projectId],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/projects/${projectId}/test-cases?deleted=true`);
+      if (!response.ok) throw new Error('Failed to fetch deleted test cases');
+      return response.json();
+    },
+  });
 
-  const confirmPermanentDelete = () => {
-    if (selectedTestCase) {
-      onPermanentDelete(selectedTestCase);
-      setPermanentDeleteDialogOpen(false);
-      setSelectedTestCase(null);
-    }
-  };
+  // Restore test case mutation
+  const restoreTestCaseMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest('POST', `/api/test-cases/${id}/restore`);
+      if (!response.ok) throw new Error('Failed to restore test case');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deleted-test-cases'] });
+      queryClient.invalidateQueries({ queryKey: ['test-cases'] });
+      toast({
+        title: "Test case restored",
+        description: "Test case has been restored successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Restore failed",
+        description: "Failed to restore test case.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Hard delete test case mutation
+  const hardDeleteTestCaseMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest('DELETE', `/api/test-cases/${id}?hardDelete=true`);
+      if (!response.ok) throw new Error('Failed to permanently delete test case');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deleted-test-cases'] });
+      toast({
+        title: "Test case permanently deleted",
+        description: "Test case has been permanently removed from the database.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Delete failed",
+        description: "Failed to permanently delete test case.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const getPriorityBadgeColor = (priority: string) => {
     switch (priority) {
@@ -93,6 +118,13 @@ export function DeletedTestCaseTable({
 
   return (
     <>
+      <div className="flex justify-between items-center mb-4">
+        <Button variant="outline" onClick={onBack} className="flex items-center space-x-2">
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back to Project Details</span>
+        </Button>
+        <h1 className="text-xl font-semibold">Deleted Test Cases</h1>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -108,7 +140,7 @@ export function DeletedTestCaseTable({
           </TableHeader>
           <TableBody>
             <AnimatePresence>
-              {deletedTestCases.length === 0 ? (
+              {(!deletedTestCases || deletedTestCases.length === 0) ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center">
                     <motion.div
@@ -173,34 +205,50 @@ export function DeletedTestCaseTable({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => onView(testCase)}
-                          className="h-8 w-8 p-0"
-                          title="View Details"
+                          onClick={() => restoreTestCaseMutation.mutate(testCase.id)}
+                          disabled={restoreTestCaseMutation.isPending}
                         >
-                          <Eye className="h-4 w-4" />
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Restore
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onRestore(testCase)}
-                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                          title="Restore Test Case"
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePermanentDelete(testCase)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          title="Permanently delete this test case from database"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              disabled={hardDeleteTestCaseMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Forever
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5 text-red-500" />
+                                Permanently Delete Test Case
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the test case 
+                                "{testCase.feature}" and remove all its data from the database.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => hardDeleteTestCaseMutation.mutate(testCase.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Delete Forever
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </TableCell>
                   </motion.tr>
@@ -210,30 +258,6 @@ export function DeletedTestCaseTable({
           </TableBody>
         </Table>
       </div>
-
-      {/* Permanent Delete Confirmation Dialog */}
-      <AlertDialog open={permanentDeleteDialogOpen} onOpenChange={setPermanentDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Permanently Delete Test Case</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to permanently delete test case "{selectedTestCase?.testCaseId} - {selectedTestCase?.feature}"?
-              <br />
-              <br />
-              <strong className="text-red-600">This action cannot be undone.</strong> The test case will be completely removed from the system.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmPermanentDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Permanently Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

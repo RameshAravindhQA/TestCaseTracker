@@ -305,7 +305,7 @@ export function ProjectExport({ projectId, projectName }: ProjectExportProps) {
 };
 
 
-  // Export project to PDF
+  // Export project to PDF - Test Closure Report
   const exportToPDF = async () => {
     if (!projectId) {
       toast({
@@ -334,15 +334,164 @@ export function ProjectExport({ projectId, projectName }: ProjectExportProps) {
 
       const doc = new jsPDF();
 
-      // Add title
-      doc.setFontSize(18);
-      doc.text(`Project: ${project.name}`, 14, 20);
+      // Calculate test case statistics
+      const testCaseStats = {
+        total: testCases.length,
+        passed: testCases.filter(tc => tc.status === "Pass").length,
+        failed: testCases.filter(tc => tc.status === "Fail").length,
+        blocked: testCases.filter(tc => tc.status === "Blocked").length,
+        notExecuted: testCases.filter(tc => tc.status === "Not Executed").length,
+      };
 
-      // Add metadata
-      doc.setFontSize(10);
+      const bugStats = {
+        total: bugs.length,
+        open: bugs.filter(bug => bug.status === "Open").length,
+        inProgress: bugs.filter(bug => bug.status === "In Progress").length,
+        resolved: bugs.filter(bug => bug.status === "Resolved").length,
+        closed: bugs.filter(bug => bug.status === "Closed").length,
+        critical: bugs.filter(bug => bug.severity === "Critical").length,
+        major: bugs.filter(bug => bug.severity === "Major").length,
+      };
 
-      let currentY = 30;
+      const passRate = testCaseStats.total > 0 ? Math.round((testCaseStats.passed / testCaseStats.total) * 100) : 0;
+
+      // Cover page
+      doc.setFontSize(24);
+      doc.setTextColor(0, 0, 0);
+      doc.text("TEST CLOSURE REPORT", 105, 50, { align: 'center' });
+
+      doc.setFontSize(20);
+      doc.text(project.name, 105, 70, { align: 'center' });
+
+      doc.setFontSize(12);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 90, { align: 'center' });
+      doc.text(`Status: ${project.status}`, 105, 100, { align: 'center' });
+
+      if (project.description) {
+        doc.setFontSize(10);
+        doc.text("Description:", 14, 120);
+        const splitDescription = doc.splitTextToSize(project.description, 180);
+        doc.text(splitDescription, 14, 130);
+      }
+
+      // Add new page for executive summary
+      doc.addPage();
+      let currentY = 20;
       const lineSpacing = 5;
+
+      // Executive Summary
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("EXECUTIVE SUMMARY", 14, currentY);
+      currentY += 15;
+
+      // Project overview box
+      doc.setFillColor(240, 248, 255);
+      doc.rect(14, currentY, 180, 45, 'F');
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text('Project Overview', 18, currentY + 10);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Project Name: ${project.name}`, 18, currentY + 20);
+      doc.text(`Total Modules: ${modules.length}`, 18, currentY + 25);
+      doc.text(`Total Test Cases: ${testCaseStats.total}`, 18, currentY + 30);
+      doc.text(`Test Pass Rate: ${passRate}%`, 18, currentY + 35);
+      doc.text(`Total Bugs: ${bugStats.total} (Open: ${bugStats.open}, Resolved: ${bugStats.resolved})`, 18, currentY + 40);
+
+      currentY += 55;
+
+      // Test Execution Summary
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Test Execution Summary", 14, currentY);
+      currentY += 10;
+
+      // Test case status chart representation
+      const chartWidth = 160;
+      const chartHeight = 20;
+      let chartX = 14;
+
+      if (testCaseStats.total > 0) {
+        const passWidth = (testCaseStats.passed / testCaseStats.total) * chartWidth;
+        const failWidth = (testCaseStats.failed / testCaseStats.total) * chartWidth;
+        const blockedWidth = (testCaseStats.blocked / testCaseStats.total) * chartWidth;
+        const notExecutedWidth = (testCaseStats.notExecuted / testCaseStats.total) * chartWidth;
+
+        // Pass - Green
+        if (passWidth > 0) {
+          doc.setFillColor(34, 197, 94);
+          doc.rect(chartX, currentY, passWidth, chartHeight, 'F');
+          chartX += passWidth;
+        }
+
+        // Fail - Red
+        if (failWidth > 0) {
+          doc.setFillColor(239, 68, 68);
+          doc.rect(chartX, currentY, failWidth, chartHeight, 'F');
+          chartX += failWidth;
+        }
+
+        // Blocked - Orange
+        if (blockedWidth > 0) {
+          doc.setFillColor(251, 146, 60);
+          doc.rect(chartX, currentY, blockedWidth, chartHeight, 'F');
+          chartX += blockedWidth;
+        }
+
+        // Not Executed - Gray
+        if (notExecutedWidth > 0) {
+          doc.setFillColor(156, 163, 175);
+          doc.rect(chartX, currentY, notExecutedWidth, chartHeight, 'F');
+        }
+      }
+
+      currentY += 30;
+
+      // Legend
+      doc.setFontSize(9);
+      let legendX = 14;
+
+      doc.setFillColor(34, 197, 94);
+      doc.rect(legendX, currentY, 8, 6, 'F');
+      doc.text(`Pass (${testCaseStats.passed})`, legendX + 12, currentY + 4);
+      legendX += 50;
+
+      doc.setFillColor(239, 68, 68);
+      doc.rect(legendX, currentY, 8, 6, 'F');
+      doc.text(`Fail (${testCaseStats.failed})`, legendX + 12, currentY + 4);
+      legendX += 50;
+
+      doc.setFillColor(251, 146, 60);
+      doc.rect(legendX, currentY, 8, 6, 'F');
+      doc.text(`Blocked (${testCaseStats.blocked})`, legendX + 12, currentY + 4);
+      legendX += 60;
+
+      doc.setFillColor(156, 163, 175);
+      doc.rect(legendX, currentY, 8, 6, 'F');
+      doc.text(`Not Executed (${testCaseStats.notExecuted})`, legendX + 12, currentY + 4);
+
+      currentY += 20;
+
+      // Modules Summary
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Modules Summary", 14, currentY);
+      currentY += 10;
+
+      modules.forEach((module, index) => {
+        const moduleTestCases = testCases.filter(tc => tc.moduleId === module.id);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`${index + 1}. ${module.name} - ${moduleTestCases.length} test cases`, 18, currentY);
+        currentY += 5;
+      });
+
+      // Add new page for detailed tables
+      doc.addPage();
+      currentY = 20;
 
       // Add project information
       doc.text(`Status: ${project.status}`, 14, currentY);
