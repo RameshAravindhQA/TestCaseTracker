@@ -4611,8 +4611,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { markerId, label, color, type, projectId } = req.body;
 
-      if (!markerId || !label || !color || !projectId) {
-        return res.status(400).json({ message: "Missing required fields" });
+      if (!label || !color || !projectId) {
+        return res.status(400).json({ message: "Missing required fields: label, color, and projectId" });
       }
 
       // Check if user has access to this project
@@ -4631,15 +4631,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const markerData = {
-        id: Date.now().toString(), // Generate unique ID
-        markerId,
-        label,
+        name: label,
         color,
-        type,
+        icon: type,
+        description: `Custom marker: ${label}`,
         projectId,
-        createdById: req.session.userId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdById: req.session.userId
       };
 
       const marker = await storage.createTraceabilityMarker(markerData);

@@ -440,6 +440,7 @@ class MemStorage implements IStorage {
   private timeSheetFolders: TimeSheetFolder[] = [];
   private customMarkers: CustomMarker[] = [];
   private matrixCells: MatrixCell[] = [];
+  private traceabilityMarkers: any[] = [];
   private notebooks: Notebook[] = [];
   private githubConfigs: GitHubConfig[] = [];
   private githubIssues: any[] = [];
@@ -2724,15 +2725,57 @@ class MemStorage implements IStorage {
   }
 
   async createTraceabilityMarker(marker: any): Promise<any> {
-    return marker; // Placeholder for now
+    const id = this.getNextId();
+    
+    const newMarker = {
+      ...marker,
+      id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Initialize traceabilityMarkers array if it doesn't exist
+    if (!this.traceabilityMarkers) {
+      this.traceabilityMarkers = [];
+    }
+
+    this.traceabilityMarkers.push(newMarker);
+    this.saveToFile();
+    return newMarker;
   }
 
-  async updateTraceabilityMarker(id: number, marker: any): Promise<any> {
-    return marker; // Placeholder for now
+  async updateTraceabilityMarker(id: number, markerUpdates: any): Promise<any> {
+    if (!this.traceabilityMarkers) {
+      this.traceabilityMarkers = [];
+    }
+
+    const index = this.traceabilityMarkers.findIndex((marker: any) => marker.id === id);
+    if (index === -1) return null;
+
+    const updatedMarker = {
+      ...this.traceabilityMarkers[index],
+      ...markerUpdates,
+      updatedAt: new Date().toISOString()
+    };
+
+    this.traceabilityMarkers[index] = updatedMarker;
+    this.saveToFile();
+    return updatedMarker;
   }
 
   async deleteTraceabilityMarker(id: number): Promise<boolean> {
-    return true; // Placeholder for now
+    if (!this.traceabilityMarkers) {
+      this.traceabilityMarkers = [];
+    }
+
+    const initialLength = this.traceabilityMarkers.length;
+    this.traceabilityMarkers = this.traceabilityMarkers.filter((marker: any) => marker.id !== id);
+    
+    if (this.traceabilityMarkers.length < initialLength) {
+      this.saveToFile();
+      return true;
+    }
+    return false;
   }
 
   async getTraceabilityMatrixCells(matrixId: number): Promise<any[]> {
