@@ -4571,16 +4571,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try to get traceability markers first, then fall back to custom markers
       let markers = [];
       try {
-        markers = await getTraceabilityMarkersByProject(projectId);
+        markers = await storage.getCustomMarkersByProject(projectId);
+        console.log(`API: Retrieved ${markers.length} custom markers from storage`);
       } catch (error) {
-        console.log("Traceability markers method not available, trying custom markers");
-        markers = await storage.getTraceabilityMarkers(projectId);
+        console.log('Failed to get custom markers, returning empty array:', error.message);
+        markers = [];
       }
 
       console.log(`API: Returning ${markers.length} markers for project ${projectId}:`, markers);
       res.json(markers);
     } catch (error) {
-      console.error("Get custom markers error:", error);
+      console.error("Get matrix markers error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -4605,16 +4606,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      let cells = [];
       try {
-        // Try to use database storage first
-        const cells = await getMatrixCellsByProject(projectId);
-        res.json(cells);
-      } catch (dbError) {
-        console.log("Failed to get matrix cells from database, using in-memory storage:", dbError);
-        // Fall back to in-memory storage
-        const cells = await storage.getMatrixCellsByProject(projectId);
-        res.json(cells);
+        cells = await storage.getMatrixCellsByProject(projectId);
+        console.log(`API: Retrieved ${cells.length} matrix cells from storage`);
+      } catch (error) {
+        console.log('Failed to get matrix cells from storage:', error.message);
+        cells = [];
       }
+
+      console.log(`API: Returning ${cells.length} matrix cells for project ${projectId}:`, cells);
+      res.json(cells);
     } catch (error) {
       console.error("Get matrix cells error:", error);
       res.status(500).json({ message: "Server error" });
@@ -4624,23 +4626,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create custom marker
   apiRouter.post("/custom-markers", isAuthenticated, async (req, res) => {
     try {
-      const markerData = {
-        ...req.body,
-        createdById: req.session.userId
-      };
+      const markerData = req.body;
+      console.log('API: Creating marker with data:', markerData);
 
-      console.log(`API: Creating marker with data:`, markerData);
-
-      // Try to use traceability marker method first
-      let marker;
-      try {
-        marker = await saveTraceabilityMarker(markerData);
-      } catch (error) {
-        console.log("Traceability marker method not available, using custom marker");
-        marker = await storage.createCustomMarker(markerData);
+      // Validate required fields
+      if (!markerData.markerId || !markerData.label || !markerData.projectId) {
+        return res.status(400).json({ message: "Missing required fields: markerId, label, projectId" });
       }
 
-      console.log(`API: Created marker:`, marker);
+      // Always use storage for consistency - no database dependency
+      const marker = await storage.createCustomMarker({
+        markerId: markerData.markerId,
+        label: markerData.label,
+        color: markerData.color || '#4F46E5',
+        type: markerData.type || 'custom',
+        projectId: markerData.projectId,
+        createdById: markerData.createdById || req.session.userId
+      });
+
+      console.log('API: Created marker:', marker);
       res.status(201).json(marker);
     } catch (error) {
       console.error("Create custom marker error:", error);
@@ -4688,38 +4692,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Save matrix cells
   apiRouter.post("/matrix-cells", isAuthenticated, async (req, res) => {
     try {
-      const { rowModuleId, colModuleId, projectId, value } = req.body;
+      const cellData = req.body;
+      console.log('API: Creating matrix cell with data:', cellData);
 
-      if (!rowModuleId || !colModuleId || !projectId) {
-        return res.status(400).json({ message: "Missing required fields" });
+      // Validate required fields
+      if (!cellData.rowModuleId || !cellData.colModuleId || !cellData.projectId) {
+        return res.status(400).json({ message: "Missing required fields: rowModuleId, colModuleId, projectId" });
       }
 
-      console.log(`API: Creating matrix cell with data:`, { rowModuleId, colModuleId, projectId, value, createdById: req.session.userId });
-
+      // Always use storage for consistency - no database dependency
+      let savedCell;
       try {
-        // Try to save to database first
-        const cell = await saveMatrixCell({
-          rowModuleId,
-          colModuleId,
-          projectId,
-          value,
-          userId: req.session.userId
+        savedCell = await storage.upsertMatrixCell({
+          rowModuleId: cellData.rowModuleId,
+          colModuleId: cellData.colModuleId,
+          projectId: cellData.projectId,
+          value: cellData.value || '',
+          createdById: cellData.createdById || req.session.userId
         });
-        console.log(`API: Saved matrix cell to database:`, cell);
-        res.status(201).json(cell);
-      } catch (dbError) {
-        console.log("Failed to save matrix cell to database, using in-memory storage:", dbError);
-        // Fall back to in-memory storage
-        const cell = await storage.upsertMatrixCell({
-          rowModuleId,
-          colModuleId,
-          projectId,
-          value,
-          createdById: req.session.userId
-        });
-        console.log(`API: Saved matrix cell to memory:`, cell);
-        res.status(200).json(cell);
+        console.log('API: Saved matrix cell to storage:', savedCell);
+      } catch (storageError) {
+        console.error('Failed to save matrix cell to storage:', storageError);
+        return res.status(500).json({ message: "Failed to save matrix cell" });
       }
+
+      res.status(201).json(savedCell);
     } catch (error) {
       console.error("Create matrix cell error:", error);
       res.status(500).json({ message: "Server error" });
@@ -5465,7 +5462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: "document",
         entityId: document.id,
         details: {
-          projectId: numericProjectId,
+          projectId:,
           documentName: name,
           folderId: numericFolderId,
         },

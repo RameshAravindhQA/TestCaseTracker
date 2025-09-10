@@ -106,7 +106,7 @@ export default function TraceabilityMatrixPage() {
     },
   });
 
-  // Initialize with first project if available
+  // Auto-select first project if none selected
   useEffect(() => {
     if (!selectedProjectId && projects && projects.length > 0) {
       console.log('Auto-selecting first project:', projects[0].id);
@@ -114,8 +114,19 @@ export default function TraceabilityMatrixPage() {
     }
   }, [projects, selectedProjectId]);
 
+  // Prevent data loss when switching projects
+  useEffect(() => {
+    if (selectedProjectId) {
+      // Clear previous project data before loading new project data
+      console.log(`Switching to project ${selectedProjectId}, clearing previous data`);
+      setMatrixCells({});
+      setCustomMarkers([]);
+      setModules([]);
+    }
+  }, [selectedProjectId]);
+
   // Fetch modules for selected project
-  const { data: projectModules } = useQuery({
+  const { data: projectModules, refetch: refetchModules } = useQuery({
     queryKey: ["/api/projects", selectedProjectId, "modules"],
     queryFn: async () => {
       if (!selectedProjectId) return [];
@@ -127,7 +138,7 @@ export default function TraceabilityMatrixPage() {
   });
 
   // Fetch custom markers for selected project
-  const { data: projectMarkers } = useQuery({
+  const { data: projectMarkers, refetch: refetchMarkers } = useQuery({
     queryKey: ["/api/projects", selectedProjectId, "matrix/markers"],
     queryFn: async () => {
       if (!selectedProjectId) return [];
@@ -147,7 +158,7 @@ export default function TraceabilityMatrixPage() {
   });
 
   // Fetch matrix cells for selected project
-  const { data: projectCells } = useQuery({
+  const { data: projectCells, refetch: refetchCells } = useQuery({
     queryKey: ["/api/projects", selectedProjectId, "matrix/cells"],
     queryFn: async () => {
       if (!selectedProjectId) return [];
@@ -176,11 +187,11 @@ export default function TraceabilityMatrixPage() {
     onSuccess: (newMarker) => {
       // Immediately update local state for instant UI feedback
       setCustomMarkers(prev => [...prev, newMarker]);
-      
+
       // Invalidate and refetch queries to ensure consistency
       queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/markers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/custom-markers"] });
-      
+
       toast({ title: "Marker created successfully" });
       setIsMarkerDialogOpen(false);
       resetMarkerForm();
@@ -201,11 +212,11 @@ export default function TraceabilityMatrixPage() {
       setCustomMarkers(prev => prev.map(marker => 
         marker.id === updatedMarker.id ? updatedMarker : marker
       ));
-      
+
       // Invalidate queries for consistency
       queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/markers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/custom-markers"] });
-      
+
       toast({ title: "Marker updated successfully" });
       setIsMarkerDialogOpen(false);
       setEditingMarker(null);
@@ -225,11 +236,11 @@ export default function TraceabilityMatrixPage() {
     onSuccess: (_, markerId) => {
       // Immediately update local state
       setCustomMarkers(prev => prev.filter(marker => marker.id !== markerId));
-      
+
       // Invalidate queries for consistency
       queryClient.invalidateQueries({ queryKey: ["/api/projects", selectedProjectId, "matrix/markers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/custom-markers"] });
-      
+
       toast({ title: "Marker deleted successfully" });
     },
     onError: () => {
@@ -574,13 +585,18 @@ export default function TraceabilityMatrixPage() {
     setSelectedProjectId(newProjectId);
 
     // Reset matrix data when project changes
-    setMatrixData({});
-    setCustomMarkers([]);
+    // This is now handled by the useEffect hook that watches selectedProjectId
+    // setMatrixData({}); 
+    // setCustomMarkers([]);
+    // setModules([]);
 
     // Force refetch data for new project
-    setTimeout(() => {
-      refetch();
-    }, 100);
+    // Using queryClient.invalidateQueries is preferred over setTimeout + refetch
+    if (newProjectId !== null) {
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", newProjectId, "modules"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", newProjectId, "matrix/markers"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/projects", newProjectId, "matrix/cells"] });
+    }
   };
 
   if (!selectedProjectId || !projects || projects.length === 0) {

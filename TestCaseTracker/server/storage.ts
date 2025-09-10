@@ -1878,10 +1878,14 @@ class MemStorage implements IStorage {
     );
 
     if (existingCell) {
-      return await this.updateMatrixCell(existingCell.id, cellData);
+      const updatedData = {
+        value: cellData.value,
+        updatedAt: new Date()
+      };
+      return await this.updateMatrixCell(existingCell.id, updatedData);
     } else {
       // Create new matrix cell with proper ID structure
-      const id = Date.now(); // Use timestamp as ID for uniqueness
+      const id = this.getNextId();
       const now = new Date();
       
       const cell: MatrixCell = {
@@ -1889,7 +1893,7 @@ class MemStorage implements IStorage {
         rowModuleId: cellData.rowModuleId,
         colModuleId: cellData.colModuleId, 
         projectId: cellData.projectId,
-        value: cellData.value,
+        value: cellData.value || '',
         createdById: cellData.createdById,
         createdAt: now,
         updatedAt: now
@@ -1897,6 +1901,7 @@ class MemStorage implements IStorage {
 
       this.matrixCells.push(cell);
       console.log(`Storage: Created matrix cell with ID ${id}:`, cell);
+      console.log(`Storage: Total matrix cells now: ${this.matrixCells.length}`);
       return cell;
     }
   }
