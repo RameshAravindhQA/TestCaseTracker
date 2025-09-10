@@ -356,16 +356,16 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
       <div className="w-full rounded-md border">
         <div className="overflow-auto max-h-[calc(100vh-400px)] w-full">
           <Table className="w-full">
-            <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-50 shadow-sm border-b">
+            <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-[100] shadow-md border-b">
               <TableRow className="bg-white dark:bg-gray-900">
-              <TableHead className="w-[40px]">
+              <TableHead className="w-[40px] sticky top-0 bg-white dark:bg-gray-900 z-[101]">
                 <Checkbox 
                   checked={selectedItems.length === testCases.length && testCases.length > 0}
                   onCheckedChange={toggleSelectAll}
                   aria-label="Select all"
                 />
               </TableHead>
-              <TableHead className="cursor-pointer" onClick={toggleSort}>
+              <TableHead className="cursor-pointer sticky top-0 bg-white dark:bg-gray-900 z-[101]" onClick={toggleSort}>
                 <div className="flex items-center space-x-1">
                   <span>ID</span>
                   <ArrowUpDown className="h-4 w-4" />
@@ -375,13 +375,13 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
                   }
                 </div>
               </TableHead>
-              <TableHead>Feature</TableHead>
-              <TableHead>Objective</TableHead>
-              <TableHead>Tags</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>Robot</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
+              <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Feature</TableHead>
+              <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Objective</TableHead>
+              <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Tags</TableHead>
+              <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Status</TableHead>
+              <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Priority</TableHead>
+              <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Robot</TableHead>
+              <TableHead className="w-[100px] sticky top-0 bg-white dark:bg-gray-900 z-[101]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
