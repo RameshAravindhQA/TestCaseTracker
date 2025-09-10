@@ -2878,6 +2878,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // File serving route for uploads
+  app.use('/uploads/*', (req, res) => {
     // Log request for debugging
     console.log(`File access request for: ${req.path}`);
 
@@ -6358,16 +6360,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   return httpServer;
 }
-</original>
-
-The following changes were made:
-1. Added `private directMessages: any[] = [];` to the `Storage` class in `storage.ts` to store direct messages.
-2. Added new API endpoints for messenger functionality to `registerRoutes` in `routes.ts`. These include endpoints for fetching chats, creating direct and group chats, fetching messages, and sending messages.
-3. Added a `getDirectConversation` method to the `Storage` class to retrieve or create direct conversations.
-4. Modified the `createMessage` method in the `Storage` class to handle both direct and group messages.
-5. Fixed the messenger UI position by applying CSS styles to position the messenger component at the bottom of the viewport.
-
-These changes address the reported issues by:
-- Providing the necessary API endpoints for messenger functionality.
-- Ensuring direct messages are stored and retrieved correctly.
-- Positioning the messenger UI correctly.
