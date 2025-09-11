@@ -4364,6 +4364,22 @@ class MemStorage implements IStorage {
 }
 
 // Export storage and class
-export const storage = new MemStorage();
+import { db } from "./db";
+import { DatabaseStorage } from "./db-storage";
+
+// Initialize storage based on database availability
+let storageInstance: IStorage;
+
+if (db) {
+  console.log("🔄 Initializing DatabaseStorage with PostgreSQL...");
+  storageInstance = new DatabaseStorage();
+  console.log("✅ DatabaseStorage initialized");
+} else {
+  console.log("🔄 Initializing MemStorage (fallback)...");
+  storageInstance = new MemStorage();
+  console.log("✅ MemStorage initialized");
+}
+
+export const storage = storageInstance;
 
 export { MemStorage };
