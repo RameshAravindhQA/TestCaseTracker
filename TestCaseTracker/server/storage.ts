@@ -145,7 +145,7 @@ export interface IStorage {
   deleteDocument(id: number): Promise<boolean>;
 
   // Document folder operations
-  getDocumentFolders(): Promise<DocumentFolder[]>;
+  getDocumentFolders(projectId: number): Promise<DocumentFolder[]>;
   getDocumentFoldersByProject(projectId: number): Promise<DocumentFolder[]>;
   getDocumentFolder(id: number): Promise<DocumentFolder | undefined>;
   getDocumentFolderById(id: number): Promise<DocumentFolder | null>;
@@ -2235,8 +2235,8 @@ class MemStorage implements IStorage {
     return [...this.documents];
   }
 
-  async getDocumentFolders(): Promise<DocumentFolder[]> {
-    return [...this.documentFolders];
+  async getDocumentFolders(projectId: number): Promise<DocumentFolder[]> {
+    return this.documentFolders.filter(folder => folder.projectId === projectId);
   }
 
   async getDocumentFolder(id: number): Promise<DocumentFolder | undefined> {

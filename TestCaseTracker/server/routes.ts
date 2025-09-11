@@ -5175,13 +5175,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Invalid folder ID format");
       }
 
-      // Get all available folder IDs for debugging
-      const allFolders = await storage.getDocumentFolders();
-      console.log("Available folder IDs:", allFolders.map(f => f.id));
+      // Get folder for debugging and validation
+      const folder = await storage.getDocumentFolder(folderId);
+      if (folder) {
+        const allFolders = await storage.getDocumentFolders(folder.projectId);
+        console.log("Available folder IDs for project:", allFolders.map(f => f.id));
+      }
 
       // Force success response even if folder notfound - this prevents UI issues
-// when deleting folders that might not exist in the backend but are shown in the UI
-      const folder = await storage.getDocumentFolder(folderId);
+      // when deleting folders that might not exist in the backend but are shown in the UI
       console.log("Found folder:", folder);
 
       if (!folder) {

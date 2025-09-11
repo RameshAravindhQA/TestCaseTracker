@@ -181,20 +181,20 @@ ${bug.comments || 'No comments provided.'}
         )}
       </div>
 
-      <div className="w-full border border-gray-200 dark:border-gray-700 rounded-lg">
-        <div className="max-h-96 overflow-auto custom-scrollbar w-full">
-          <Table className="w-full">
-            <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-[100] shadow-md border-b">
+      <div className="w-full border border-gray-200 dark:border-gray-700 rounded-lg table-container">
+        <div className="max-h-[calc(100vh-400px)] overflow-auto custom-scrollbar w-full relative">
+          <Table className="w-full relative">
+            <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-[100] shadow-sm border-b">
               <TableRow className="bg-white dark:bg-gray-900">
-                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">ID</TableHead>
-                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Title</TableHead>
-                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Tags</TableHead>
-                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Severity</TableHead>
-                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Priority</TableHead>
-                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Status</TableHead>
-                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Reported By</TableHead>
-                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101]">Date</TableHead>
-                <TableHead className="w-[100px] sticky top-0 bg-white dark:bg-gray-900 z-[101]">Actions</TableHead>
+                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101] border-b">ID</TableHead>
+                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101] border-b">Title</TableHead>
+                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101] border-b">Tags</TableHead>
+                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101] border-b">Severity</TableHead>
+                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101] border-b">Priority</TableHead>
+                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101] border-b">Status</TableHead>
+                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101] border-b">Reported By</TableHead>
+                <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101] border-b">Date</TableHead>
+                <TableHead className="w-[100px] sticky top-0 bg-white dark:bg-gray-900 z-[101] border-b">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
