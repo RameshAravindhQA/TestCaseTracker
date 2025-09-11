@@ -605,7 +605,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                   label={item.name}
                   href={item.href}
                   isActive={location.startsWith(item.href)}
-                  badge={item.showBadge ? (item.name === 'Messenger' ? (unreadMessageData ?? 0).toString() : undefined) : undefined}
+                  badge={item.showBadge ? "0" : undefined}
                 />
                 {/* Render submenu if item has children */}
                 {item.children && item.children.length > 0 && (
@@ -630,7 +630,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                   </div>
                 )}
               </motion.div>
-            )), [navItems, location, unreadMessageData])}
+            )), [navItems, location])}
         </motion.div>
 
         {/* User account section */}
