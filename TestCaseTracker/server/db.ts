@@ -1,12 +1,13 @@
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import * as schema from "../shared/schema";
 
 // Create the database connection
 const connectionString = process.env.DATABASE_URL;
 
-// Database instance
+// Database instance and pool
 export let db: ReturnType<typeof drizzle> | null = null;
+export let pool: Pool | null = null;
 
 if (!connectionString) {
   console.log("⚠️  DATABASE_URL not found, using in-memory storage");
@@ -14,16 +15,20 @@ if (!connectionString) {
   console.log("🔄 Connecting to PostgreSQL database...");
   
   try {
-    // Create neon client
-    const sql = neon(connectionString);
+    // Create PostgreSQL connection pool
+    pool = new Pool({
+      connectionString,
+      ssl: connectionString.includes('sslmode=require') ? { rejectUnauthorized: false } : false
+    });
     
     // Create drizzle instance
-    db = drizzle(sql, { schema });
+    db = drizzle(pool, { schema });
     
-    console.log("✅ Database connection established");
+    console.log("✅ Database connection established with PostgreSQL driver");
   } catch (error) {
     console.error("❌ Database connection failed:", error);
     db = null;
+    pool = null;
   }
 }
 
