@@ -12,7 +12,10 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "cd client && npm run preview",
     "setup-playwright": "node setup-playwright.js",
-    "postinstall": "node setup-playwright.js"
+    "postinstall": "node setup-playwright.js",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -125,7 +128,7 @@
     "@vitest/coverage-v8": "^1.6.0",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.2.1",
-    "drizzle-kit": "^0.30.4",
+    "drizzle-kit": "^0.30.6",
     "esbuild": "^0.25.0",
     "playwright": "^1.55.0",
     "postcss": "^8.4.47",
