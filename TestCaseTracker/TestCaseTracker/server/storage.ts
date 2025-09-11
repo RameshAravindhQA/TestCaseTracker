@@ -789,13 +789,454 @@ class MemStorage implements IStorage {
   }
 
   // Enhanced Chat and Messaging methods
-  private conversations = new Map<number, any>();
-  private chatMessagesMap = new Map<number, any>(); // Use Map for better indexing
+  private conversations = new Map<number, { id: number; type: 'direct' | 'group'; participants: number[]; createdAt: Date; updatedAt: Date }>();
+  private chatMessagesMap = new Map<number, ChatMessage>(); // Use Map for better indexing
   private messageReactions = new Map<number, any[]>();
   private messageThreads = new Map<number, number[]>();
   private conversationMembers = new Map<number, Set<number>>();
   private messageReadStatus = new Map<string, Set<number>>(); // messageId-userId -> Set<userId>
   private conversationMessages = new Map<number, any[]>(); // conversationId -> messages array
+  private chatMessages: ChatMessage[] = [];
+  private messages: any[] = [];
+  private nextMessageId = 1;
+  private nextChatId = 1;
+
+  // Helper method for conversation management
+  private async getOrCreateConversationId(userId1: number, userId2: number): Promise<number> {
+    // Check if a direct conversation already exists
+    for (const [id, conversation] of this.conversations.entries()) {
+      if (conversation.type === 'direct' && 
+          conversation.participants.includes(userId1) && 
+          conversation.participants.includes(userId2)) {
+        return id;
+      }
+    }
+    
+    // Create a new conversation
+    const conversation = await this.createDirectConversation(userId1, userId2);
+    return conversation.id;
+  }
+
+  // Chat method implementations
+  async createChatMessage(messageData: any): Promise<any> {
+    try {
+      const id = this.nextMessageId++;
+      const now = new Date();
+      
+      const chatMessage = {
+        id,
+        projectId: messageData.projectId || messageData.conversationId || 1,
+        userId: messageData.userId,
+        userName: messageData.userName,
+        userAvatar: messageData.userAvatar,
+        message: messageData.message,
+        timestamp: now,
+        createdAt: now.toISOString(),
+        type: messageData.type || 'text',
+        mentionedUsers: messageData.mentionedUsers || [],
+        ...messageData
+      };
+
+      this.chatMessages.push(chatMessage);
+      this.chatMessagesMap.set(id, chatMessage);
+      
+      // Also store in project conversation messages
+      const projectConversationId = messageData.projectId || messageData.conversationId || 1;
+      const projectMessages = this.conversationMessages.get(projectConversationId) || [];
+      projectMessages.push(chatMessage);
+      this.conversationMessages.set(projectConversationId, projectMessages);
+      
+      return chatMessage;
+    } catch (error) {
+      console.error('Error creating chat message:', error);
+      throw error;
+    }
+  }
+
+  async createMessage(messageData: any): Promise<any> {
+    try {
+      const id = this.nextMessageId++;
+      const now = new Date();
+      
+      // Get sender information for complete message
+      const sender = await this.getUser(messageData.senderId);
+      
+      const message = {
+        id,
+        senderId: messageData.senderId,
+        receiverId: messageData.receiverId,
+        content: messageData.content,
+        timestamp: now.toISOString(),
+        createdAt: now.toISOString(),
+        isRead: false,
+        type: messageData.type || 'text',
+        attachments: messageData.attachments || [],
+        sender: sender || { 
+          id: messageData.senderId, 
+          firstName: 'Unknown', 
+          lastName: '', 
+          email: '' 
+        },
+        ...messageData
+      };
+
+      this.messages.push(message);
+      
+      // Also store in conversation messages for consistent retrieval
+      const conversationId = await this.getOrCreateConversationId(messageData.senderId, messageData.receiverId);
+      const conversationMessages = this.conversationMessages.get(conversationId) || [];
+      conversationMessages.push(message);
+      this.conversationMessages.set(conversationId, conversationMessages);
+      
+      return message;
+    } catch (error) {
+      console.error('Error creating message:', error);
+      throw error;
+    }
+  }
+
+  async getChatMessages(projectId: number, limit?: number): Promise<any[]> {
+    try {
+      let messages = this.chatMessages.filter(msg => msg.projectId === projectId);
+      messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      
+      if (limit) {
+        messages = messages.slice(-limit);
+      }
+      
+      return messages;
+    } catch (error) {
+      console.error('Error getting chat messages:', error);
+      return [];
+    }
+  }
+
+  async getMessagesByChat(chatId: number): Promise<any[]> {
+    try {
+      return this.conversationMessages.get(chatId) || [];
+    } catch (error) {
+      console.error('Error getting messages by chat:', error);
+      return [];
+    }
+  }
+
+  async getMessagesBetweenUsers(userId1: number, userId2: number): Promise<any[]> {
+    try {
+      const messages = this.messages.filter(msg => 
+        (msg.senderId === userId1 && msg.receiverId === userId2) ||
+        (msg.senderId === userId2 && msg.receiverId === userId1)
+      );
+      
+      return messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    } catch (error) {
+      console.error('Error getting messages between users:', error);
+      return [];
+    }
+  }
+
+  async createDirectConversation(userId1: number, userId2: number): Promise<any> {
+    try {
+      const conversationId = this.nextChatId++;
+      const conversation = {
+        id: conversationId,
+        participants: [userId1, userId2],
+        type: 'direct',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      this.conversations.set(conversationId, conversation);
+      this.conversationMembers.set(conversationId, new Set([userId1, userId2]));
+      this.conversationMessages.set(conversationId, []);
+      
+      return conversation;
+    } catch (error) {
+      console.error('Error creating direct conversation:', error);
+      throw error;
+    }
+  }
+
+  async getDirectConversation(userId1: number, userId2: number): Promise<any | null> {
+    try {
+      for (const [id, conversation] of this.conversations.entries()) {
+        if (conversation.type === 'direct' && 
+            conversation.participants.includes(userId1) && 
+            conversation.participants.includes(userId2)) {
+          return conversation;
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting direct conversation:', error);
+      return null;
+    }
+  }
+
+  async getUserConversations(userId: number): Promise<any[]> {
+    try {
+      const conversations = [];
+      for (const conversation of this.conversations.values()) {
+        if (conversation.participants && conversation.participants.includes(userId)) {
+          conversations.push(conversation);
+        }
+      }
+      return conversations;
+    } catch (error) {
+      console.error('Error getting user conversations:', error);
+      return [];
+    }
+  }
+
+  async updateChatMessage(messageId: number, userId: number, updates: any): Promise<any | null> {
+    try {
+      const message = this.chatMessagesMap.get(messageId);
+      if (!message || message.userId !== userId) {
+        return null;
+      }
+      
+      Object.assign(message, updates, { updatedAt: new Date() });
+      return message;
+    } catch (error) {
+      console.error('Error updating chat message:', error);
+      return null;
+    }
+  }
+
+  async getChatMessage(id: number): Promise<any | null> {
+    try {
+      return this.chatMessagesMap.get(id) || null;
+    } catch (error) {
+      console.error('Error getting chat message:', error);
+      return null;
+    }
+  }
+
+  async createDirectMessage(messageData: any): Promise<any> {
+    return this.createMessage(messageData);
+  }
+
+  async updateDirectMessage(messageId: number, userId: number, updates: any): Promise<any | null> {
+    try {
+      const messageIndex = this.messages.findIndex(msg => msg.id === messageId && msg.senderId === userId);
+      if (messageIndex === -1) {
+        return null;
+      }
+      
+      this.messages[messageIndex] = { ...this.messages[messageIndex], ...updates, updatedAt: new Date() };
+      return this.messages[messageIndex];
+    } catch (error) {
+      console.error('Error updating direct message:', error);
+      return null;
+    }
+  }
+
+  async deleteDirectMessage(messageId: number, userId: number): Promise<boolean> {
+    try {
+      const initialLength = this.messages.length;
+      this.messages = this.messages.filter(msg => !(msg.id === messageId && msg.senderId === userId));
+      return this.messages.length < initialLength;
+    } catch (error) {
+      console.error('Error deleting direct message:', error);
+      return false;
+    }
+  }
+
+  // Additional messaging methods for enhanced functionality
+  async getChatsByUser(userId: number): Promise<any[]> {
+    return this.getUserConversations(userId);
+  }
+
+  async addParticipantToConversation(conversationId: number, userId: number): Promise<boolean> {
+    try {
+      const conversation = this.conversations.get(conversationId);
+      if (!conversation) return false;
+      
+      if (!conversation.participants.includes(userId)) {
+        conversation.participants.push(userId);
+        const members = this.conversationMembers.get(conversationId) || new Set();
+        members.add(userId);
+        this.conversationMembers.set(conversationId, members);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error adding participant to conversation:', error);
+      return false;
+    }
+  }
+
+  async removeParticipantFromConversation(conversationId: number, userId: number): Promise<boolean> {
+    try {
+      const conversation = this.conversations.get(conversationId);
+      if (!conversation) return false;
+      
+      conversation.participants = conversation.participants.filter((id: number) => id !== userId);
+      const members = this.conversationMembers.get(conversationId);
+      if (members) {
+        members.delete(userId);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error removing participant from conversation:', error);
+      return false;
+    }
+  }
+
+  async updateConversation(id: number, updates: any): Promise<any | null> {
+    try {
+      const conversation = this.conversations.get(id);
+      if (!conversation) return null;
+      
+      Object.assign(conversation, updates, { updatedAt: new Date() });
+      return conversation;
+    } catch (error) {
+      console.error('Error updating conversation:', error);
+      return null;
+    }
+  }
+
+  async deleteConversation(id: number): Promise<boolean> {
+    try {
+      return this.conversations.delete(id);
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      return false;
+    }
+  }
+
+  async addConversationMember(conversationId: number, userId: number): Promise<boolean> {
+    return this.addParticipantToConversation(conversationId, userId);
+  }
+
+  async removeConversationMember(conversationId: number, userId: number): Promise<boolean> {
+    return this.removeParticipantFromConversation(conversationId, userId);
+  }
+
+  async getConversationMembers(conversationId: number): Promise<any[]> {
+    try {
+      const conversation = this.conversations.get(conversationId);
+      if (!conversation) return [];
+      
+      return conversation.participants || [];
+    } catch (error) {
+      console.error('Error getting conversation members:', error);
+      return [];
+    }
+  }
+
+  async deleteChatMessage(id: number, userId: number): Promise<boolean> {
+    try {
+      const message = this.chatMessagesMap.get(id);
+      if (!message || message.userId !== userId) {
+        return false;
+      }
+      
+      this.chatMessages = this.chatMessages.filter(msg => msg.id !== id);
+      return this.chatMessagesMap.delete(id);
+    } catch (error) {
+      console.error('Error deleting chat message:', error);
+      return false;
+    }
+  }
+
+  async addMessageReaction(messageId: number, userId: number, emoji: string): Promise<any | null> {
+    try {
+      const reactions = this.messageReactions.get(messageId) || [];
+      const existingReaction = reactions.find(r => r.userId === userId && r.emoji === emoji);
+      
+      if (existingReaction) {
+        return existingReaction;
+      }
+      
+      const reaction = { userId, emoji, timestamp: new Date() };
+      reactions.push(reaction);
+      this.messageReactions.set(messageId, reactions);
+      
+      return reaction;
+    } catch (error) {
+      console.error('Error adding message reaction:', error);
+      return null;
+    }
+  }
+
+  async getMessageThread(parentMessageId: number): Promise<any[]> {
+    try {
+      return this.messageThreads.get(parentMessageId) || [];
+    } catch (error) {
+      console.error('Error getting message thread:', error);
+      return [];
+    }
+  }
+
+  async markMessageAsRead(messageId: number, userId: number): Promise<void> {
+    try {
+      const key = `${messageId}`;
+      const readByUsers = this.messageReadStatus.get(key) || new Set();
+      readByUsers.add(userId);
+      this.messageReadStatus.set(key, readByUsers);
+      
+      // Also update the message's isRead status if it's a direct message
+      const messageIndex = this.messages.findIndex(msg => msg.id === messageId);
+      if (messageIndex !== -1 && this.messages[messageIndex].receiverId === userId) {
+        this.messages[messageIndex].isRead = true;
+      }
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+    }
+  }
+
+  async markConversationAsRead(conversationId: number, userId: number): Promise<void> {
+    try {
+      const messages = this.conversationMessages.get(conversationId) || [];
+      for (const message of messages) {
+        await this.markMessageAsRead(message.id, userId);
+      }
+    } catch (error) {
+      console.error('Error marking conversation as read:', error);
+    }
+  }
+
+  async getUnreadCountForUser(conversationId: number, userId: number): Promise<number> {
+    try {
+      const messages = this.conversationMessages.get(conversationId) || [];
+      let unreadCount = 0;
+      
+      for (const message of messages) {
+        if (message.userId !== userId) {
+          const key = `${message.id}`;
+          const readByUsers = this.messageReadStatus.get(key) || new Set();
+          if (!readByUsers.has(userId)) {
+            unreadCount++;
+          }
+        }
+      }
+      
+      return unreadCount;
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+      return 0;
+    }
+  }
+
+  async searchMessages(query: string, conversationId?: number, userId?: number): Promise<any[]> {
+    try {
+      let messages = conversationId ? 
+        (this.conversationMessages.get(conversationId) || []) : 
+        this.chatMessages;
+      
+      if (userId) {
+        messages = messages.filter(msg => msg.userId === userId);
+      }
+      
+      return messages.filter(msg => 
+        msg.message && msg.message.toLowerCase().includes(query.toLowerCase())
+      );
+    } catch (error) {
+      console.error('Error searching messages:', error);
+      return [];
+    }
+  }
 
   // Todo Management Maps
   private todoListsMap = new Map<number, any>();

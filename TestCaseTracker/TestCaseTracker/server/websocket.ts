@@ -2,14 +2,20 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'http';
 import { storage } from './storage';
 import { logger } from './logger';
+import session from 'express-session';
+import { parse as parseUrl } from 'url';
+import { parse as parseCookie } from 'cookie';
 
 interface ConnectedUser {
   ws: WebSocket;
   userId: number;
   userName: string;
+  userEmail: string;
+  userRole: string;
   lastSeen: Date;
   isTyping: boolean;
   typingInConversation?: number;
+  sessionId?: string;
 }
 
 interface TypingIndicator {
@@ -24,8 +30,10 @@ export class ChatWebSocketServer {
   private connectedUsers = new Map<number, ConnectedUser>();
   private conversations = new Map<number, Set<number>>(); // conversationId -> Set<userId>
   private typingIndicators = new Map<number, Map<number, TypingIndicator>>(); // conversationId -> userId -> TypingIndicator
+  private sessionStore: any;
 
-  constructor(server: any) {
+  constructor(server: any, sessionStore: any) {
+    this.sessionStore = sessionStore;
     this.wss = new WebSocketServer({ 
       server,
       path: '/ws', // Use /ws path to match client connection
@@ -39,6 +47,9 @@ export class ChatWebSocketServer {
   private setupWebSocket() {
     this.wss.on('connection', (ws: WebSocket, request) => {
       logger.info('New WebSocket connection established');
+
+      // Extract session info from request headers
+      this.extractSessionFromRequest(ws, request);
 
       ws.on('message', async (data: Buffer) => {
         try {
@@ -102,26 +113,86 @@ export class ChatWebSocketServer {
     }
   }
 
-  private async handleAuthentication(ws: WebSocket, data: any) {
-    const { userId, userName } = data;
+  private async extractSessionFromRequest(ws: WebSocket, request: any) {
+    try {
+      // Parse cookies from request
+      const cookieHeader = request.headers.cookie;
+      if (!cookieHeader) {
+        this.sendError(ws, 'No session cookie found');
+        return;
+      }
 
-    if (!userId || !userName) {
-      this.sendError(ws, 'Invalid authentication data');
+      const cookies = parseCookie(cookieHeader);
+      const sessionId = cookies['connect.sid'];
+      
+      if (!sessionId) {
+        this.sendError(ws, 'No session ID found');
+        return;
+      }
+
+      // Decode session ID (remove 's:' prefix and signature)
+      const decodedSessionId = sessionId.startsWith('s:') 
+        ? sessionId.slice(2).split('.')[0] 
+        : sessionId;
+
+      // Get session from store
+      this.sessionStore.get(decodedSessionId, (err: any, sessionData: any) => {
+        if (err || !sessionData || !sessionData.userId) {
+          this.sendError(ws, 'Invalid or expired session');
+          return;
+        }
+
+        // Store session info with WebSocket for later use
+        (ws as any).sessionData = {
+          userId: sessionData.userId,
+          userName: sessionData.userName,
+          userEmail: sessionData.userEmail,
+          userRole: sessionData.userRole,
+          sessionId: decodedSessionId
+        };
+
+        logger.info(`WebSocket connected with valid session for user ${sessionData.userName} (${sessionData.userId})`);
+      });
+    } catch (error) {
+      logger.error('Error extracting session from WebSocket request:', error);
+      this.sendError(ws, 'Session validation failed');
+    }
+  }
+
+  private async handleAuthentication(ws: WebSocket, data: any) {
+    // Verify that WebSocket has valid session data
+    const sessionData = (ws as any).sessionData;
+    
+    if (!sessionData || !sessionData.userId) {
+      this.sendError(ws, 'Authentication failed: No valid session found');
       return;
     }
 
-    // Update user connection
+    const { userId, userName, userEmail, userRole } = sessionData;
+
+    // Verify user exists in database
+    const user = await storage.getUser(userId);
+    if (!user) {
+      this.sendError(ws, 'Authentication failed: User not found');
+      return;
+    }
+
+    // Update user connection - close existing connection if any
     const existingUser = this.connectedUsers.get(userId);
     if (existingUser) {
+      logger.info(`Closing existing WebSocket connection for user ${userId}`);
       existingUser.ws.close();
     }
 
     this.connectedUsers.set(userId, {
       ws,
       userId,
-      userName,
+      userName: user.firstName, // Use verified name from database
+      userEmail: user.email,
+      userRole: user.role,
       lastSeen: new Date(),
-      isTyping: false
+      isTyping: false,
+      sessionId: sessionData.sessionId
     });
 
     // Notify about user presence
@@ -130,6 +201,7 @@ export class ChatWebSocketServer {
     this.send(ws, {
       type: 'authenticated',
       userId,
+      userName: user.firstName,
       onlineUsers: Array.from(this.connectedUsers.values()).map(user => ({
         userId: user.userId,
         userName: user.userName,
@@ -137,7 +209,7 @@ export class ChatWebSocketServer {
       }))
     });
 
-    logger.info(`User ${userName} (${userId}) authenticated via WebSocket`);
+    logger.info(`User ${user.firstName} (${userId}) authenticated via WebSocket with verified session`);
   }
 
   private async handleJoinConversation(ws: WebSocket, data: any) {
@@ -229,8 +301,9 @@ export class ChatWebSocketServer {
 
       console.log(`[WebSocket] Message stored successfully: ${chatMessage.id}`);
 
-      // Clear typing indicator
-      this.clearTypingIndicator(user.userId, receiverId);
+      // Clear typing indicator - use proper conversation ID for direct messages
+      const conversationId = await this.getOrCreateDirectConversationId(user.userId, receiverId);
+      this.clearTypingIndicator(user.userId, conversationId);
 
       // Broadcast message to both sender and receiver
       this.broadcastToUsers([user.userId, receiverId], {
@@ -386,6 +459,25 @@ export class ChatWebSocketServer {
     this.broadcastPresenceUpdate(user.userId, false);
 
     logger.info(`User ${user.userName} (${user.userId}) disconnected`);
+  }
+
+  // Helper method to get or create conversation ID for direct messages
+  private async getOrCreateDirectConversationId(userId1: number, userId2: number): Promise<number> {
+    try {
+      // Try to get existing direct conversation
+      let conversation = await storage.getDirectConversation(userId1, userId2);
+      
+      if (!conversation) {
+        // Create new direct conversation if it doesn't exist
+        conversation = await storage.createDirectConversation(userId1, userId2);
+      }
+      
+      return conversation.id;
+    } catch (error) {
+      logger.error('Error getting/creating direct conversation:', error);
+      // Fallback: use a simple hash of both user IDs for conversation ID
+      return Math.abs((userId1 * 1000) + userId2);
+    }
   }
 
   private getUserByWebSocket(ws: WebSocket): ConnectedUser | undefined {

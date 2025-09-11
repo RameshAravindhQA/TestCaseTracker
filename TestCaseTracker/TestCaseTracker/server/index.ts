@@ -9,7 +9,7 @@ import { logger } from "./logger";
 import { initializeDatabase } from "./matrix-fix";
 
 
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || "5000", 10);
 
 async function startServer() {
   try {
@@ -106,16 +106,23 @@ async function startServer() {
       throw err;
     });
 
-    // Setup WebSocket server
+    // Setup WebSocket server with session store
     let chatWsServer;
     try {
       const { ChatWebSocketServer } = await import('./websocket.js');
-      chatWsServer = new ChatWebSocketServer(httpServer);
-      logger.info('Chat WebSocket server initialized');
+      const sessionStore = app.locals.sessionStore;
+      
+      if (!sessionStore) {
+        logger.error('Session store not available for WebSocket server');
+        throw new Error('Session store required for WebSocket authentication');
+      }
+      
+      chatWsServer = new ChatWebSocketServer(httpServer, sessionStore);
+      logger.info('Chat WebSocket server initialized with session store');
 
       // Store reference for user registration notifications
       app.locals.chatWsServer = chatWsServer;
-    } catch (error) {
+    } catch (error: any) {
       logger.warn('ChatWebSocketServer not available:', error.message);
     }
 

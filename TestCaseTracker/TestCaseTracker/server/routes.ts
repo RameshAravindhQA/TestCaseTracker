@@ -443,6 +443,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup session store
   const SessionStore = MemoryStore(session);
+  const sessionStore = new SessionStore({
+    checkPeriod: 86400000 // prune expired entries every 24h
+  });
 
   // Production-ready session configuration with security hardening
   const isProduction = process.env.NODE_ENV === 'production';
@@ -463,9 +466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     secret: sessionSecret || "test-track-secret",
     resave: false,
     saveUninitialized: false,
-    store: new SessionStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    }),
+    store: sessionStore,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       secure: isProduction, // Use secure cookies in production
@@ -473,6 +474,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       sameSite: 'lax' // Lax required for OAuth callbacks to work across domains
     }
   }));
+
+  // Store session store reference for WebSocket access
+  app.locals.sessionStore = sessionStore;
 
   const apiRouter = Router();
 
@@ -6379,16 +6383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Todo routes
-  apiRouter.get("/todos", isAuthenticated, async (req, res) => {
-    try {
-      const todos = await storage.getTodosByUserId(req.session.userId!);
-      res.json(todos);
-    } catch (error) {
-      console.error("Get todos error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
+  // Todo routes - REMOVED DUPLICATE: This route is already defined earlier with better logic
 
   apiRouter.get("/todos/:id", isAuthenticated, async (req, res) => {
     try {
