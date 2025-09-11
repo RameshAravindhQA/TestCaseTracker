@@ -53,6 +53,10 @@ import path from "path";
 import fs from "fs";
 import flowDiagramRoutes from './api/flow-diagram-routes';
 import brdRoutes from "./brd-routes";
+import { OAuthService } from './oauth-service';
+
+// Initialize OAuth service
+const oauthService = new OAuthService();
 
 // Define session interface
 declare module "express-session" {
@@ -61,6 +65,8 @@ declare module "express-session" {
     userRole: string;
     userName: string;
     userEmail: string;
+    oauthState?: string;
+    googleCodeVerifier?: string;
   }
 }
 
@@ -438,8 +444,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup session store
   const SessionStore = MemoryStore(session);
 
+  // Production-ready session configuration with security hardening
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Trust proxy in production (for secure cookies behind Replit proxy)
+  if (isProduction) {
+    app.set('trust proxy', 1);
+  }
+
+  // Enforce secure session secret in production
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (isProduction && (!sessionSecret || sessionSecret.length < 32)) {
+    console.error('FATAL: SESSION_SECRET must be set and at least 32 characters in production');
+    process.exit(1);
+  }
+
   app.use(session({
-    secret: process.env.SESSION_SECRET || "test-track-secret",
+    secret: sessionSecret || "test-track-secret",
     resave: false,
     saveUninitialized: false,
     store: new SessionStore({
@@ -447,9 +468,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }),
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      secure: false, // Set to false for development
+      secure: isProduction, // Use secure cookies in production
       httpOnly: true,
-      sameSite: 'lax' // Add sameSite for better compatibility
+      sameSite: 'lax' // Lax required for OAuth callbacks to work across domains
     }
   }));
 
@@ -1508,6 +1529,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Reset password error:", error);
       res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // OAuth Routes with CSRF protection
+  // Google OAuth URL generation with PKCE and state
+  apiRouter.get("/auth/google/url", async (req, res) => {
+    try {
+      const state = oauthService.generateSecureRandom();
+      const codeVerifier = oauthService.generateSecureRandom();
+      
+      // Store state and code verifier in session for verification
+      req.session.oauthState = state;
+      req.session.googleCodeVerifier = codeVerifier;
+      
+      const authUrl = oauthService.generateGoogleAuthUrl(state, codeVerifier);
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("Google OAuth URL generation error:", error);
+      res.status(500).json({ message: "Failed to generate Google OAuth URL" });
+    }
+  });
+
+  // GitHub OAuth URL generation with state
+  apiRouter.get("/auth/github/url", async (req, res) => {
+    try {
+      const state = oauthService.generateSecureRandom();
+      
+      // Store state in session for verification
+      req.session.oauthState = state;
+      
+      const authUrl = oauthService.generateGitHubAuthUrl(state);
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("GitHub OAuth URL generation error:", error);
+      res.status(500).json({ message: "Failed to generate GitHub OAuth URL" });
+    }
+  });
+
+  // Google OAuth callback with CSRF and PKCE verification
+  apiRouter.get("/auth/google/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+
+      if (!code) {
+        return res.redirect("/login?error=missing_code");
+      }
+
+      // Verify state parameter for CSRF protection
+      if (!state || state !== req.session.oauthState) {
+        console.error("OAuth state mismatch or missing");
+        return res.redirect("/login?error=invalid_state");
+      }
+
+      // Get code verifier from session
+      const codeVerifier = req.session.googleCodeVerifier;
+      if (!codeVerifier) {
+        console.error("Missing code verifier in session");
+        return res.redirect("/login?error=missing_verifier");
+      }
+
+      // Clear OAuth session data
+      delete req.session.oauthState;
+      delete req.session.googleCodeVerifier;
+
+      // Exchange code for user data with PKCE
+      const userData = await oauthService.exchangeGoogleCode(code as string, codeVerifier);
+
+      // Use consolidated user creation/update logic
+      const user = await oauthService.findOrCreateOAuthUser(userData);
+
+      // Regenerate session ID to prevent fixation attacks
+      req.session.regenerate((regenerateErr) => {
+        if (regenerateErr) {
+          console.error("Session regeneration error:", regenerateErr);
+          return res.redirect("/login?error=session_failed");
+        }
+
+        // Set session data
+        req.session.userId = user.id;
+        req.session.userRole = user.role;
+        req.session.userName = user.firstName;
+        req.session.userEmail = user.email;
+
+        // Save session and redirect
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.redirect("/login?error=session_failed");
+          }
+
+          console.log("Google OAuth login successful:", {
+            userId: user.id,
+            email: user.email,
+            provider: userData.provider
+          });
+
+          // Redirect to login with success, which will handle dashboard redirect
+          res.redirect("/login?oauth_success=true");
+        });
+      });
+
+    } catch (error) {
+      console.error("Google OAuth callback error:", error);
+      res.redirect("/login?error=oauth_failed");
+    }
+  });
+
+  // GitHub OAuth callback with CSRF verification
+  apiRouter.get("/auth/github/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+
+      if (!code) {
+        return res.redirect("/login?error=missing_code");
+      }
+
+      // Verify state parameter for CSRF protection
+      if (!state || state !== req.session.oauthState) {
+        console.error("OAuth state mismatch or missing");
+        return res.redirect("/login?error=invalid_state");
+      }
+
+      // Clear OAuth session data
+      delete req.session.oauthState;
+
+      // Exchange code for user data
+      const userData = await oauthService.exchangeGitHubCode(code as string);
+
+      // Use consolidated user creation/update logic
+      const user = await oauthService.findOrCreateOAuthUser(userData);
+
+      // Regenerate session ID to prevent fixation attacks
+      req.session.regenerate((regenerateErr) => {
+        if (regenerateErr) {
+          console.error("Session regeneration error:", regenerateErr);
+          return res.redirect("/login?error=session_failed");
+        }
+
+        // Set session data
+        req.session.userId = user.id;
+        req.session.userRole = user.role;
+        req.session.userName = user.firstName;
+        req.session.userEmail = user.email;
+
+        // Save session and redirect
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.redirect("/login?error=session_failed");
+          }
+
+          console.log("GitHub OAuth login successful:", {
+            userId: user.id,
+            email: user.email,
+            provider: userData.provider
+          });
+
+          // Redirect to login with success, which will handle dashboard redirect
+          res.redirect("/login?oauth_success=true");
+        });
+      });
+
+    } catch (error) {
+      console.error("GitHub OAuth callback error:", error);
+      res.redirect("/login?error=oauth_failed");
     }
   });
 
