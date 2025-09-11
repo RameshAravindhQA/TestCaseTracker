@@ -378,7 +378,7 @@ export class DatabaseStorage implements IStorage {
           console.log(`DB: Extracted module prefix from ID: ${modulePrefix}`);
         }
       } 
-      
+
       // If we couldn't extract from moduleId, generate from module name with smart mapping
       if (modulePrefix === 'MOD' && module.name) {
         const cleanModuleName = module.name.replace(/[^a-zA-Z]/g, '');
@@ -410,7 +410,7 @@ export class DatabaseStorage implements IStorage {
 
       // Use consistent format: PROJECT-MODULE-TC-###
       const testCasePattern = new RegExp(`^${projectPrefix}-${modulePrefix}-TC-(\\d+)$`);
-      
+
       const existingNumbers = existingTestCases
         .map(tc => tc.testCaseId)
         .filter(id => id && testCasePattern.test(id))
@@ -422,10 +422,10 @@ export class DatabaseStorage implements IStorage {
 
       // Start numbering from 1 for each module independently
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      
+
       // Always use the full format: PROJECT-MODULE-TC-###
       testCaseId = `${projectPrefix}-${modulePrefix}-TC-${String(nextNumber).padStart(3, '0')}`;
-      
+
       console.log(`DB: Generated test case ID ${testCaseId} for project ${insertTestCase.projectId}, module ${insertTestCase.moduleId} (${module.name}). Project prefix: ${projectPrefix}, Module prefix: ${modulePrefix}, existing numbers: [${existingNumbers.join(', ')}], next: ${nextNumber}`);
     }
 
@@ -1284,3 +1284,6 @@ export class DatabaseStorage implements IStorage {
     }
   }
 }
+
+// Export storage instance
+export const storage = new DatabaseStorage();

@@ -7,6 +7,7 @@ import path from "path";
 import { createServer } from "http";
 import { logger } from "./logger";
 import { initializeDatabase } from "./matrix-fix";
+import { storage } from "./db-storage";
 
 
 const PORT = parseInt(process.env.PORT || "5000", 10);
@@ -111,12 +112,12 @@ async function startServer() {
     try {
       const { ChatWebSocketServer } = await import('./websocket.js');
       const sessionStore = app.locals.sessionStore;
-      
+
       if (!sessionStore) {
         logger.error('Session store not available for WebSocket server');
         throw new Error('Session store required for WebSocket authentication');
       }
-      
+
       chatWsServer = new ChatWebSocketServer(httpServer, sessionStore);
       logger.info('Chat WebSocket server initialized with session store');
 
