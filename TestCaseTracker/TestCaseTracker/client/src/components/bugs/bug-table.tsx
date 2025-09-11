@@ -183,7 +183,7 @@ ${bug.comments || 'No comments provided.'}
 
       <div className="w-full border border-gray-200 dark:border-gray-700 rounded-lg table-container">
         <div className="max-h-[calc(100vh-400px)] overflow-auto custom-scrollbar w-full relative">
-          <Table className="w-full relative">
+          <Table disableWrapper className="w-full relative">
             <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-[100] shadow-sm border-b">
               <TableRow className="bg-white dark:bg-gray-900">
                 <TableHead className="sticky top-0 bg-white dark:bg-gray-900 z-[101] border-b">ID</TableHead>

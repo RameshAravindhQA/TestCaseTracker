@@ -355,7 +355,7 @@ export function TestCaseTable({ testCases, onEdit, onDelete, onView, onReportBug
 
       <div className="w-full rounded-md border table-container">
         <div className="overflow-auto max-h-[calc(100vh-400px)] w-full relative">
-          <Table className="w-full relative">
+          <Table disableWrapper className="w-full relative">
             <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-[100] shadow-sm border-b">
               <TableRow className="bg-white dark:bg-gray-900">
               <TableHead className="w-[40px] sticky top-0 bg-white dark:bg-gray-900 z-[101] border-b">

@@ -78,13 +78,35 @@ thead th {
   position: sticky !important;
   top: 0 !important;
   z-index: 101 !important;
-  background-color: inherit !important;
+  background: inherit !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1) !important;
 }
 
 .table-container thead {
   position: sticky !important;
   top: 0 !important;
   z-index: 100 !important;
+}
+
+/* Enhanced sticky headers with better visual separation */
+.table-container thead tr {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.dark .table-container thead tr {
+  background: rgba(17, 24, 39, 0.95) !important;
+}
+
+.table-container thead th::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.1), transparent);
 }
 
 /* Custom scrollbar for tables */
