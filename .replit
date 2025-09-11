@@ -17,4 +17,4 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd TestCaseTracker/TestCaseTracker && node start-app.js"
+args = "cd TestCaseTracker/TestCaseTracker && npm run dev"
