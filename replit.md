@@ -1,8 +1,8 @@
-# TestCaseTracker
+# TestCaseTracker - Replit.md
 
 ## Overview
 
-TestCaseTracker is a comprehensive test case management system built with TypeScript, React, and Express. It provides a complete solution for managing test cases, bugs, projects, team collaboration, real-time communication, AI-powered test generation, and functional flow design. The system includes advanced features like traceability matrices, test automation with Playwright, document management, sprint planning with Kanban boards, and integrated GitHub issue reporting.
+TestCaseTracker is a comprehensive test case management system built with TypeScript, React, and Express. It provides a complete solution for managing test cases, bugs, projects, team collaboration, and includes advanced features like AI-powered test case generation, functional flow designer, real-time chat, test automation integration, and GitHub issue tracking.
 
 ## User Preferences
 
@@ -28,11 +28,10 @@ Preferred communication style: Simple, everyday language.
 - **Charts**: Recharts for data visualization and reporting
 - **UI Components**: shadcn/ui component library with consistent design patterns
 - **Build Tool**: Vite with optimized bundling and hot module replacement
-- **Animations**: Framer Motion for smooth UI interactions
 
 #### Backend Architecture
 - **API Design**: RESTful API with Express.js using TypeScript
-- **Authentication**: JWT-based authentication with role-based access control (Admin, Manager, Developer, Tester)
+- **Authentication**: JWT-based authentication with role-based access control
 - **File Handling**: Multer for file uploads with Sharp for image processing
 - **Email Service**: Nodemailer integration for notifications and user management
 - **WebSocket**: Real-time chat and collaboration features on `/ws` path
@@ -48,49 +47,42 @@ Preferred communication style: Simple, everyday language.
   - Sprint planning and Kanban boards
   - Traceability matrices and Custom markers
   - Document management and Chat messages
-  - Automation scripts and execution results
-  - BRD documents with version control
 - **Migration System**: Drizzle Kit for database migrations and schema management
 
-#### AI Integration
-- **Multi-Provider Support**: Google Gemini, OpenAI, Claude, Grok, DeepSeek, HuggingFace, Cohere, Mistral, GitHub Copilot
-- **Test Case Generation**: AI-powered test case generation from text, URLs, or images
-- **Configurable API Keys**: Runtime configuration of AI provider credentials
-- **Mock Fallback**: Graceful degradation to mock service when AI providers are unavailable
+#### AI Integration Layer
+- **Multi-Provider Support**: Google Gemini, OpenAI, Claude, and other AI providers
+- **Test Case Generation**: Automated test case creation from requirements, URLs, or images
+- **Dynamic Configuration**: Runtime API key configuration through admin interface
+- **Fallback System**: Mock service when AI providers are unavailable
 
-#### Test Automation
-- **Playwright Integration**: Browser automation and test recording capabilities
-- **Multi-Browser Support**: Chrome, Firefox, Edge support
-- **Test Execution**: Automated test runs with results tracking
-- **Recording Sessions**: Live test recording with session management
+#### Automation Layer
+- **Playwright Integration**: Browser automation for test recording and execution
+- **Test Recording**: Visual test case recording with browser instrumentation
+- **Execution Engine**: Automated test execution with detailed reporting
+- **Environment Management**: Multiple test environment configurations
 
 ## External Dependencies
 
 ### Core Infrastructure
-- **Database**: PostgreSQL via Neon serverless with Drizzle ORM
-- **Email Service**: Gmail SMTP via Nodemailer for notifications
-- **File Storage**: Local file system with Multer for uploads
+- **Database**: PostgreSQL via Neon serverless (optional, with in-memory fallback)
+- **File Storage**: Local file system with multer for uploads
+- **Email Service**: Nodemailer with Gmail integration
+- **Build System**: Vite for frontend bundling and development server
 
 ### AI Services
 - **Google Gemini**: Primary AI provider for test case generation
 - **OpenAI**: Alternative AI provider with GPT models
-- **Claude**: Anthropic's AI service integration
-- **Multiple Providers**: Support for Grok, DeepSeek, HuggingFace, Cohere, Mistral, GitHub Copilot
+- **Multiple Providers**: Support for Claude, Grok, DeepSeek, Hugging Face, Cohere, Mistral
 
-### Development Tools
-- **Playwright**: Browser automation and testing framework
-- **TypeScript**: Type safety across frontend and backend
-- **Vite**: Fast build tool with HMR for development
+### External Integrations
+- **GitHub**: Issue tracking and repository integration via Octokit
+- **Playwright**: Browser automation and test execution
+- **WebSocket**: Real-time collaboration features
+- **JWT**: Token-based authentication system
 
-### Third-Party Integrations
-- **GitHub API**: Issue creation and repository integration via Octokit
-- **OAuth Providers**: Google and GitHub authentication support
-- **Replit Environment**: Optimized for Replit deployment with runtime error overlay
-
-### UI/UX Libraries
-- **Radix UI**: Headless component primitives
-- **Tailwind CSS**: Utility-first CSS framework
-- **Lucide React**: Icon library
-- **React Flow**: Flow diagram creation and editing
-- **Recharts**: Data visualization and charts
-- **Mermaid**: Diagram generation support
+### UI and Visualization
+- **Radix UI**: Component primitives for consistent design
+- **React Flow**: Interactive flow diagrams and functional flows
+- **Mermaid**: Diagram generation for test case visualization
+- **Recharts**: Data visualization and reporting charts
+- **Framer Motion**: UI animations and transitions
