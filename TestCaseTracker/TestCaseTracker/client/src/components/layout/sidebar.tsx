@@ -45,6 +45,7 @@ import {
   Building2,
   Bell,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,10 +82,20 @@ interface NavItem {
   showBadge?: boolean; // Added for unread count indication
 }
 
+interface SidebarItemProps {
+  icon: LucideIcon;
+  label: string;
+  href: string;
+  isActive: boolean;
+  hasSubmenu?: boolean;
+  submenuItems?: Array<{ label: string; href: string; isActive: boolean }>;
+  badge?: string;
+}
+
+
 // Helper component for sidebar items
-const SidebarItem = ({ icon, label, to, badge, showBadge }: { icon: React.ReactNode; label: string; to: string; badge?: string; showBadge?: boolean }) => {
+const SidebarItem = ({ icon: Icon, label, href, isActive, hasSubmenu, submenuItems, badge }: SidebarItemProps) => {
   const [location] = useLocation();
-  const isActive = location.startsWith(to);
   const { theme } = useColorTheme();
 
   // Fetch unread count for Messenger specifically
@@ -92,7 +103,7 @@ const SidebarItem = ({ icon, label, to, badge, showBadge }: { icon: React.ReactN
     queryKey: ['unread-messages-count'],
     queryFn: async () => {
       // Only fetch if this item is for Messenger and needs a badge
-      if (label === 'Messenger' && showBadge) {
+      if (label === 'Messenger' && badge !== undefined) {
         try {
           const response = await apiRequest("GET", "/api/messages/unread-count");
           if (!response.ok) throw new Error('Failed to fetch unread count');
@@ -106,14 +117,14 @@ const SidebarItem = ({ icon, label, to, badge, showBadge }: { icon: React.ReactN
       return 0; // Return 0 if not Messenger or no badge needed
     },
     refetchInterval: 30000, // Refetch every 30 seconds
-    enabled: label === 'Messenger' && showBadge, // Only enable when needed
+    enabled: label === 'Messenger' && badge !== undefined, // Only enable when needed
   });
 
   const unreadCount = unreadMessageData ?? 0;
 
   return (
     <Link
-      href={to}
+      href={href}
       className={cn(
         "flex items-center px-2 py-2 text-sm font-medium rounded-md group transition-all duration-200",
         isActive
@@ -126,11 +137,11 @@ const SidebarItem = ({ icon, label, to, badge, showBadge }: { icon: React.ReactN
         whileHover={{ scale: 1.1 }}
         transition={{ duration: 0.15 }}
       >
-        {icon}
+        <Icon className="h-5 w-5" />
       </motion.span>
       <div className="flex items-center justify-between w-full">
         <span>{label}</span>
-        {showBadge && label === "Messenger" && unreadCount > 0 && (
+        {badge !== undefined && label === "Messenger" && unreadCount > 0 && (
           <Badge
             variant="destructive"
             className="h-5 w-5 p-0 flex items-center justify-center text-xs ml-2"
@@ -549,7 +560,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
             <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
               {user?.name || (user?.firstName ? `${user?.firstName} ${user?.lastName || ''}`.trim() : "Guest User")}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
               {user?.role || "User"}
             </p>
           </div>
@@ -592,9 +603,9 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                 <SidebarItem
                   icon={item.icon}
                   label={item.name}
-                  to={item.href}
-                  badge={item.badge}
-                  showBadge={item.showBadge}
+                  href={item.href}
+                  isActive={location.startsWith(item.href)}
+                  badge={item.showBadge ? (item.name === 'Messenger' ? (unreadMessageData ?? 0).toString() : undefined) : undefined}
                 />
                 {/* Render submenu if item has children */}
                 {item.children && item.children.length > 0 && (
@@ -619,7 +630,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                   </div>
                 )}
               </motion.div>
-            )), [navItems, location])}
+            )), [navItems, location, unreadMessageData])}
         </motion.div>
 
         {/* User account section */}
@@ -655,7 +666,8 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                   <SidebarItem
                     icon={item.icon}
                     label={item.name}
-                    to={item.href}
+                    href={item.href}
+                    isActive={isActive}
                   />
                 </motion.div>
               )}), [userItems, location, navItems.length])}
@@ -702,7 +714,8 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                       <SidebarItem
                         icon={item.icon}
                         label={item.name}
-                        to={item.href}
+                        href={item.href}
+                        isActive={isActive}
                       />
                     </motion.div>
                   )}), [adminItems, location, navItems.length, userItems.length])}

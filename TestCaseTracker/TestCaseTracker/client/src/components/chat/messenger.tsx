@@ -13,17 +13,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Send, 
-  Users, 
-  MessageCircle, 
-  Phone, 
-  Video, 
-  MoreHorizontal, 
-  Search, 
-  Plus, 
-  Paperclip, 
-  Smile, 
+import {
+  Send,
+  Users,
+  MessageCircle,
+  Phone,
+  Video,
+  MoreHorizontal,
+  Search,
+  Plus,
+  Paperclip,
+  Smile,
   User,
   Edit,
   Trash2,
@@ -47,6 +47,8 @@ interface Contact {
   role: string;
   lastSeen?: string;
   isOnline?: boolean;
+  name?: string; // Added for consistency with schema changes
+  avatar?: string; // Added for consistency with schema changes
 }
 
 interface MessageAttachment {
@@ -107,6 +109,7 @@ export function Messenger() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const [senderUnreadCounts, setSenderUnreadCounts] = useState<{ senderId: number; senderName: string; count: number }[]>([]);
 
   // Fetch all users for contacts
   const { data: contacts = [], isLoading: contactsLoading } = useQuery<Contact[]>({
@@ -155,6 +158,33 @@ export function Messenger() {
     refetchInterval: connectionStatus === 'connected' ? false : 5000, // Only use polling when WebSocket is down
     staleTime: 1000, // Consider data stale after 1 second
   });
+
+  const fetchUsers = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/users/public');
+      if (!response.ok) {
+        throw new Error('Failed to fetch contacts');
+      }
+      const data = await response.json();
+      return data.filter((contact: Contact) => contact.id !== user?.id);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      return [];
+    }
+  };
+
+  const fetchSenderUnreadCounts = async () => {
+    try {
+      const response = await fetch('/api/messages/unread-count-by-sender');
+      if (!response.ok) {
+        throw new Error('Failed to fetch sender unread counts');
+      }
+      const data = await response.json();
+      setSenderUnreadCounts(data.senderCounts || []);
+    } catch (error) {
+      console.error('Error fetching sender unread counts:', error);
+    }
+  };
 
   // WebSocket connection setup
   useEffect(() => {
@@ -226,7 +256,10 @@ export function Messenger() {
                 if (selectedContact && (data.message.senderId === selectedContact.id || data.message.receiverId === selectedContact.id)) {
                   queryClient.invalidateQueries({ queryKey: ['messages', selectedContact.id] });
                 }
-                
+
+                // Refresh unread counts
+                fetchSenderUnreadCounts();
+
                 // Show toast notification only if message is from someone else
                 if (data.message.senderId !== user?.id) {
                   toast({
@@ -328,24 +361,38 @@ export function Messenger() {
     };
   }, [user, queryClient, toast]);
 
+  // Fetch initial data and set up listeners
+  useEffect(() => {
+    fetchUsers();
+    fetchSenderUnreadCounts();
+  }, []);
+
+  // Refresh sender unread counts when messages change or when a conversation is selected
+  useEffect(() => {
+    if (selectedContact) {
+      fetchSenderUnreadCounts();
+    }
+  }, [messages, selectedContact]);
+
+
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: { receiverId: number; content: string; type?: string; attachments?: any[] }) => {
       console.log('[MESSENGER] Sending message via API:', messageData);
-      
+
       try {
         // Send via API for persistence first
         const response = await apiRequest('POST', '/api/messages', messageData);
-        
+
         if (!response.ok) {
           const errorData = await response.text();
           console.error('[MESSENGER] API error response:', response.status, errorData);
           throw new Error(`HTTP ${response.status}: ${errorData}`);
         }
-        
+
         const savedMessage = await response.json();
         console.log('[MESSENGER] Message saved via API:', savedMessage);
-        
+
         // Then send via WebSocket for real-time delivery if connection is open
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && selectedContact) {
           console.log('[MESSENGER] Sending via WebSocket for real-time delivery');
@@ -361,7 +408,7 @@ export function Messenger() {
         } else {
           console.warn('[MESSENGER] WebSocket not available, using API only');
         }
-        
+
         return savedMessage;
       } catch (error) {
         console.error('[MESSENGER] Error in send message mutation:', error);
@@ -373,7 +420,7 @@ export function Messenger() {
       setNewMessage('');
       setAttachments([]);
       setReplyingTo(null);
-      
+
       // Invalidate queries to refresh message list
       queryClient.invalidateQueries({ queryKey: ['messages'] });
       if (selectedContact) {
@@ -405,7 +452,7 @@ export function Messenger() {
     onSuccess: () => {
       setEditingMessageId(null);
       setEditingContent('');
-      queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact?.id] });
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedContact?.id] });
       toast({
         title: "✅ Message updated",
         description: "Your message has been updated successfully",
@@ -428,7 +475,7 @@ export function Messenger() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact?.id] });
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedContact?.id] });
       toast({
         title: "✅ Message deleted",
         description: "Your message has been deleted successfully",
@@ -451,7 +498,7 @@ export function Messenger() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedContact?.id] });
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedContact?.id] });
     },
     onError: () => {
       toast({
@@ -622,8 +669,8 @@ export function Messenger() {
         <div className="space-y-2">
           {message.attachments?.map((attachment, index) => (
             <div key={index} className="relative">
-              <img 
-                src={attachment.fileUrl} 
+              <img
+                src={attachment.fileUrl}
                 alt={attachment.fileName}
                 className="max-w-xs rounded-lg cursor-pointer"
                 onClick={() => window.open(attachment.fileUrl, '_blank')}
@@ -670,6 +717,62 @@ export function Messenger() {
     return <p className="text-sm">{message.content}</p>;
   };
 
+  // Helper to get user avatar
+  const UserAvatar = ({ userId, size }: { userId: number; size: 'sm' | 'md' | 'lg' }) => {
+    const contact = contacts?.find(c => c.id === userId);
+    const initials = contact?.name ?
+      contact.name.split(' ').map(n => n[0]).join('').substring(0, 2) :
+      `${contact?.firstName?.[0] || '?'}${contact?.lastName?.[0] || '?'}`;
+
+    const avatarSize = size === 'sm' ? 'h-8 w-8' : size === 'md' ? 'h-10 w-10' : 'h-12 w-12';
+    const fallbackSize = size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : 'text-base';
+
+    return (
+      <Avatar className={avatarSize}>
+        <AvatarImage src={contact?.avatar || contact?.profilePicture} alt={contact?.name || `${contact?.firstName} ${contact?.lastName}`} />
+        <AvatarFallback className={fallbackSize}>{initials}</AvatarFallback>
+      </Avatar>
+    );
+  };
+
+  const handleUserSelect = async (userId: number) => {
+    setSelectedContact(contacts?.find(c => c.id === userId) || null);
+
+    // Mark messages from this sender as read
+    try {
+      await fetch(`/api/messages/mark-read/${userId}`, {
+        method: 'POST',
+      });
+      // Refresh unread counts after marking as read
+      await fetchSenderUnreadCounts();
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  };
+
+  const fetchMessages = async (userId: number) => {
+    try {
+      const messagesResponse = await fetch(`/api/messages?userId=${userId}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!messagesResponse.ok) {
+        const errorText = await messagesResponse.text();
+        console.error('[MESSENGER] Failed to fetch messages:', messagesResponse.status, errorText);
+        return [];
+      }
+
+      const data = await messagesResponse.json();
+      setMessages(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('[MESSENGER] Error fetching messages:', error);
+    }
+  };
+
   return (
     <div className="h-full flex bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Contacts Sidebar */}
@@ -708,11 +811,13 @@ export function Messenger() {
 
                 // Handle both old format (firstName, lastName) and new format (name)
                 const displayName = contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
-                const initials = contact.name ? 
-                  contact.name.split(' ').map(n => n[0]).join('').substring(0, 2) : 
+                const initials = contact.name ?
+                  contact.name.split(' ').map(n => n[0]).join('').substring(0, 2) :
                   `${contact.firstName?.[0] || '?'}${contact.lastName?.[0] || '?'}`;
 
                 if (!displayName) return null;
+
+                const unreadCount = senderUnreadCounts.find(s => s.senderId === contact.id)?.count || 0;
 
                 return (
                   <motion.div
@@ -723,7 +828,7 @@ export function Messenger() {
                       "flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors",
                       selectedContact?.id === contact.id && "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700"
                     )}
-                    onClick={() => setSelectedContact(contact)}
+                    onClick={() => handleUserSelect(contact.id)}
                   >
                     <div className="relative">
                       <Avatar className="h-10 w-10">
@@ -750,6 +855,11 @@ export function Messenger() {
                         {contact.email || 'No email'}
                       </p>
                     </div>
+                    {unreadCount > 0 && (
+                      <div className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                        {unreadCount}
+                      </div>
+                    )}
                   </motion.div>
                 );
               }).filter(Boolean)
@@ -769,7 +879,7 @@ export function Messenger() {
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={selectedContact.profilePicture} alt={`${selectedContact.firstName} ${selectedContact.lastName}`} />
                     <AvatarFallback>
-                      {selectedContact.firstName[0]}{selectedContact.lastName[0]}
+                      {selectedContact.firstName?.[0]}{selectedContact.lastName?.[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div className="ml-3">
@@ -797,16 +907,16 @@ export function Messenger() {
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="outline"
                       onClick={startVoiceCall}
                       title="Start voice call"
                     >
                       <Phone className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="outline"
                       onClick={startVideoCall}
                       title="Start video call"
@@ -859,8 +969,8 @@ export function Messenger() {
                           </Avatar>
                         <div className={cn(
                           "rounded-lg px-3 py-2",
-                          message.senderId === user?.id 
-                            ? "bg-blue-500 text-white" 
+                          message.senderId === user?.id
+                            ? "bg-blue-500 text-white"
                             : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600"
                         )}>
                           {editingMessageId === message.id ? (
@@ -1019,13 +1129,13 @@ export function Messenger() {
                 <input
                   type="file"
                   ref={fileInputRef}
-onChange={handleFileUpload}
+                  onChange={handleFileUpload}
                   multiple
                   className="hidden"
                   accept="image/*,video/*,.pdf,.doc,.docx,.txt"
                 />
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
                 >
@@ -1073,7 +1183,7 @@ onChange={handleFileUpload}
                     </PopoverContent>
                   </Popover>
                 </div>
-                <Button 
+                <Button
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim() || sendMessageMutation.isPending}
                   size="sm"

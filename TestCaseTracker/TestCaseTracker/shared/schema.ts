@@ -1113,6 +1113,23 @@ export type InsertRequestExtensionHistory = z.infer<typeof insertRequestExtensio
 export type RequestComment = typeof requestComments.$inferSelect;
 export type InsertRequestComment = z.infer<typeof insertRequestCommentSchema>;
 
+// Message Read Status tracking
+export const messageReadStatus = pgTable("message_read_status", {
+  id: serial("id").primaryKey(),
+  messageId: integer("message_id").notNull(),
+  userId: integer("user_id").notNull(),
+  readAt: timestamp("read_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMessageReadStatusSchema = createInsertSchema(messageReadStatus).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type MessageReadStatus = typeof messageReadStatus.$inferSelect;
+export type InsertMessageReadStatus = z.infer<typeof insertMessageReadStatusSchema>;
+
 // Test Sheets schema
 export const insertTestSheetSchema = z.object({
   name: z.string().min(1, "Sheet name is required"),

@@ -805,13 +805,13 @@ class MemStorage implements IStorage {
   private async getOrCreateConversationId(userId1: number, userId2: number): Promise<number> {
     // Check if a direct conversation already exists
     for (const [id, conversation] of this.conversations.entries()) {
-      if (conversation.type === 'direct' && 
-          conversation.participants.includes(userId1) && 
+      if (conversation.type === 'direct' &&
+          conversation.participants.includes(userId1) &&
           conversation.participants.includes(userId2)) {
         return id;
       }
     }
-    
+
     // Create a new conversation
     const conversation = await this.createDirectConversation(userId1, userId2);
     return conversation.id;
@@ -822,7 +822,7 @@ class MemStorage implements IStorage {
     try {
       const id = this.nextMessageId++;
       const now = new Date();
-      
+
       const chatMessage = {
         id,
         projectId: messageData.projectId || messageData.conversationId || 1,
@@ -839,13 +839,13 @@ class MemStorage implements IStorage {
 
       this.chatMessages.push(chatMessage);
       this.chatMessagesMap.set(id, chatMessage);
-      
+
       // Also store in project conversation messages
       const projectConversationId = messageData.projectId || messageData.conversationId || 1;
       const projectMessages = this.conversationMessages.get(projectConversationId) || [];
       projectMessages.push(chatMessage);
       this.conversationMessages.set(projectConversationId, projectMessages);
-      
+
       return chatMessage;
     } catch (error) {
       console.error('Error creating chat message:', error);
@@ -857,10 +857,10 @@ class MemStorage implements IStorage {
     try {
       const id = this.nextMessageId++;
       const now = new Date();
-      
+
       // Get sender information for complete message
       const sender = await this.getUser(messageData.senderId);
-      
+
       const message = {
         id,
         senderId: messageData.senderId,
@@ -871,23 +871,23 @@ class MemStorage implements IStorage {
         isRead: false,
         type: messageData.type || 'text',
         attachments: messageData.attachments || [],
-        sender: sender || { 
-          id: messageData.senderId, 
-          firstName: 'Unknown', 
-          lastName: '', 
-          email: '' 
+        sender: sender || {
+          id: messageData.senderId,
+          firstName: 'Unknown',
+          lastName: '',
+          email: ''
         },
         ...messageData
       };
 
       this.messages.push(message);
-      
+
       // Also store in conversation messages for consistent retrieval
       const conversationId = await this.getOrCreateConversationId(messageData.senderId, messageData.receiverId);
       const conversationMessages = this.conversationMessages.get(conversationId) || [];
       conversationMessages.push(message);
       this.conversationMessages.set(conversationId, conversationMessages);
-      
+
       return message;
     } catch (error) {
       console.error('Error creating message:', error);
@@ -899,11 +899,11 @@ class MemStorage implements IStorage {
     try {
       let messages = this.chatMessages.filter(msg => msg.projectId === projectId);
       messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      
+
       if (limit) {
         messages = messages.slice(-limit);
       }
-      
+
       return messages;
     } catch (error) {
       console.error('Error getting chat messages:', error);
@@ -920,13 +920,13 @@ class MemStorage implements IStorage {
     }
   }
 
-  async getMessagesBetweenUsers(userId1: number, userId2: number): Promise<any[]> {
+  async getMessagesBetweenUsers(userId1: number, userId2: number): Promise<any[]>{
     try {
-      const messages = this.messages.filter(msg => 
+      const messages = this.messages.filter(msg =>
         (msg.senderId === userId1 && msg.receiverId === userId2) ||
         (msg.senderId === userId2 && msg.receiverId === userId1)
       );
-      
+
       return messages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     } catch (error) {
       console.error('Error getting messages between users:', error);
@@ -944,11 +944,11 @@ class MemStorage implements IStorage {
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      
+
       this.conversations.set(conversationId, conversation);
       this.conversationMembers.set(conversationId, new Set([userId1, userId2]));
       this.conversationMessages.set(conversationId, []);
-      
+
       return conversation;
     } catch (error) {
       console.error('Error creating direct conversation:', error);
@@ -959,8 +959,8 @@ class MemStorage implements IStorage {
   async getDirectConversation(userId1: number, userId2: number): Promise<any | null> {
     try {
       for (const [id, conversation] of this.conversations.entries()) {
-        if (conversation.type === 'direct' && 
-            conversation.participants.includes(userId1) && 
+        if (conversation.type === 'direct' &&
+            conversation.participants.includes(userId1) &&
             conversation.participants.includes(userId2)) {
           return conversation;
         }
@@ -993,7 +993,7 @@ class MemStorage implements IStorage {
       if (!message || message.userId !== userId) {
         return null;
       }
-      
+
       Object.assign(message, updates, { updatedAt: new Date() });
       return message;
     } catch (error) {
@@ -1021,7 +1021,7 @@ class MemStorage implements IStorage {
       if (messageIndex === -1) {
         return null;
       }
-      
+
       this.messages[messageIndex] = { ...this.messages[messageIndex], ...updates, updatedAt: new Date() };
       return this.messages[messageIndex];
     } catch (error) {
@@ -1050,14 +1050,14 @@ class MemStorage implements IStorage {
     try {
       const conversation = this.conversations.get(conversationId);
       if (!conversation) return false;
-      
+
       if (!conversation.participants.includes(userId)) {
         conversation.participants.push(userId);
         const members = this.conversationMembers.get(conversationId) || new Set();
         members.add(userId);
         this.conversationMembers.set(conversationId, members);
       }
-      
+
       return true;
     } catch (error) {
       console.error('Error adding participant to conversation:', error);
@@ -1069,13 +1069,13 @@ class MemStorage implements IStorage {
     try {
       const conversation = this.conversations.get(conversationId);
       if (!conversation) return false;
-      
+
       conversation.participants = conversation.participants.filter((id: number) => id !== userId);
       const members = this.conversationMembers.get(conversationId);
       if (members) {
         members.delete(userId);
       }
-      
+
       return true;
     } catch (error) {
       console.error('Error removing participant from conversation:', error);
@@ -1087,7 +1087,7 @@ class MemStorage implements IStorage {
     try {
       const conversation = this.conversations.get(id);
       if (!conversation) return null;
-      
+
       Object.assign(conversation, updates, { updatedAt: new Date() });
       return conversation;
     } catch (error) {
@@ -1117,7 +1117,7 @@ class MemStorage implements IStorage {
     try {
       const conversation = this.conversations.get(conversationId);
       if (!conversation) return [];
-      
+
       return conversation.participants || [];
     } catch (error) {
       console.error('Error getting conversation members:', error);
@@ -1131,7 +1131,7 @@ class MemStorage implements IStorage {
       if (!message || message.userId !== userId) {
         return false;
       }
-      
+
       this.chatMessages = this.chatMessages.filter(msg => msg.id !== id);
       return this.chatMessagesMap.delete(id);
     } catch (error) {
@@ -1144,15 +1144,15 @@ class MemStorage implements IStorage {
     try {
       const reactions = this.messageReactions.get(messageId) || [];
       const existingReaction = reactions.find(r => r.userId === userId && r.emoji === emoji);
-      
+
       if (existingReaction) {
         return existingReaction;
       }
-      
+
       const reaction = { userId, emoji, timestamp: new Date() };
       reactions.push(reaction);
       this.messageReactions.set(messageId, reactions);
-      
+
       return reaction;
     } catch (error) {
       console.error('Error adding message reaction:', error);
@@ -1175,7 +1175,7 @@ class MemStorage implements IStorage {
       const readByUsers = this.messageReadStatus.get(key) || new Set();
       readByUsers.add(userId);
       this.messageReadStatus.set(key, readByUsers);
-      
+
       // Also update the message's isRead status if it's a direct message
       const messageIndex = this.messages.findIndex(msg => msg.id === messageId);
       if (messageIndex !== -1 && this.messages[messageIndex].receiverId === userId) {
@@ -1201,7 +1201,7 @@ class MemStorage implements IStorage {
     try {
       const messages = this.conversationMessages.get(conversationId) || [];
       let unreadCount = 0;
-      
+
       for (const message of messages) {
         if (message.userId !== userId) {
           const key = `${message.id}`;
@@ -1211,7 +1211,7 @@ class MemStorage implements IStorage {
           }
         }
       }
-      
+
       return unreadCount;
     } catch (error) {
       console.error('Error getting unread count:', error);
@@ -1221,15 +1221,15 @@ class MemStorage implements IStorage {
 
   async searchMessages(query: string, conversationId?: number, userId?: number): Promise<any[]> {
     try {
-      let messages = conversationId ? 
-        (this.conversationMessages.get(conversationId) || []) : 
+      let messages = conversationId ?
+        (this.conversationMessages.get(conversationId) || []) :
         this.chatMessages;
-      
+
       if (userId) {
         messages = messages.filter(msg => msg.userId === userId);
       }
-      
-      return messages.filter(msg => 
+
+      return messages.filter(msg =>
         msg.message && msg.message.toLowerCase().includes(query.toLowerCase())
       );
     } catch (error) {
@@ -1243,13 +1243,13 @@ class MemStorage implements IStorage {
     try {
       // Count unread messages for this user
       let unreadCount = 0;
-      
+
       // Count direct messages where user is receiver and not read
-      const directMessages = this.messages.filter(msg => 
+      const directMessages = this.messages.filter(msg =>
         msg.receiverId === userId && !msg.isRead
       );
       unreadCount += directMessages.length;
-      
+
       // Count chat messages in conversations where user participates
       for (const [conversationId, messages] of this.conversationMessages.entries()) {
         const conversation = this.conversations.get(conversationId);
@@ -1265,12 +1265,62 @@ class MemStorage implements IStorage {
           }
         }
       }
-      
+
       console.log(`Storage: User ${userId} has ${unreadCount} unread messages`);
       return unreadCount;
     } catch (error) {
       console.error('Error getting unread message count:', error);
       return 0;
+    }
+  }
+
+  // Get unread message count per sender for a user
+  getUnreadMessageCountBySender(userId: number): { senderId: number; senderName: string; count: number }[] {
+    try {
+      const unreadMessages = this.chatMessages.filter(m => m.receiverId === userId && !m.isRead);
+      const senderCounts = new Map<number, { count: number; senderName: string }>();
+
+      unreadMessages.forEach(message => {
+        const sender = this.users.find(u => u.id === message.senderId);
+        const senderName = sender ? `${sender.firstName} ${sender.lastName || ''}`.trim() : 'Unknown User';
+
+        if (senderCounts.has(message.senderId)) {
+          senderCounts.get(message.senderId)!.count++;
+        } else {
+          senderCounts.set(message.senderId, { count: 1, senderName });
+        }
+      });
+
+      const result = Array.from(senderCounts.entries()).map(([senderId, { count, senderName }]) => ({
+        senderId,
+        senderName,
+        count
+      }));
+
+      console.log(`Storage: User ${userId} unread messages by sender:`, result);
+      return result;
+    } catch (error) {
+      console.error('Error getting unread message count by sender:', error);
+      return [];
+    }
+  }
+
+  // Mark messages as read between two users
+  markMessagesAsRead(receiverId: number, senderId: number): boolean {
+    try {
+      let markedCount = 0;
+      this.chatMessages.forEach(message => {
+        if (message.receiverId === receiverId && message.senderId === senderId && !message.isRead) {
+          message.isRead = true;
+          markedCount++;
+        }
+      });
+
+      console.log(`Storage: Marked ${markedCount} messages as read between sender ${senderId} and receiver ${receiverId}`);
+      return true;
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+      return false;
     }
   }
 
@@ -1282,7 +1332,7 @@ class MemStorage implements IStorage {
           msg.isRead = true;
         }
       });
-      
+
       // Mark conversation messages as read
       for (const [conversationId, messages] of this.conversationMessages.entries()) {
         const conversation = this.conversations.get(conversationId);
@@ -1294,7 +1344,7 @@ class MemStorage implements IStorage {
           }
         }
       }
-      
+
       console.log(`Storage: Marked all messages as read for user ${userId}`);
     } catch (error) {
       console.error('Error marking all messages as read:', error);
@@ -1488,7 +1538,7 @@ class MemStorage implements IStorage {
       console.log(`Storage: Checking module ${module.id} (${module.name}) - projectId: ${module.projectId} vs requested: ${projectId}`);
       return module.projectId === projectId;
     });
-    console.log(`Storage: Returning ${filteredModules.length} modules for project ${projectId}:`, 
+    console.log(`Storage: Returning ${filteredModules.length} modules for project ${projectId}:`,
       filteredModules.map(m => ({ id: m.id, moduleId: m.moduleId, name: m.name, projectId: m.projectId })));
     return filteredModules;
   }
@@ -2345,6 +2395,7 @@ class MemStorage implements IStorage {
       updatedAt: new Date()
     };
     this.traceabilityMarkers[index] = updatedMarker;
+    console.log(`Storage: Updated traceability marker with ID ${id}:`, updatedMarker);
     return updatedMarker;
   }
 
@@ -2382,17 +2433,17 @@ class MemStorage implements IStorage {
   }
 
   async getMatrixCell(rowModuleId: number, colModuleId: number, projectId: number): Promise<MatrixCell | undefined> {
-    return this.matrixCells.find(cell => 
-      cell.rowModuleId === rowModuleId && 
-      cell.colModuleId === colModuleId && 
+    return this.matrixCells.find(cell =>
+      cell.rowModuleId === rowModuleId &&
+      cell.colModuleId === colModuleId &&
       cell.projectId === projectId
     );
   }
 
   async upsertMatrixCell(cellData: any): Promise<any> {
     const existingCell = await this.getMatrixCell(
-      cellData.rowModuleId, 
-      cellData.colModuleId, 
+      cellData.rowModuleId,
+      cellData.colModuleId,
       cellData.projectId
     );
 
@@ -2406,11 +2457,11 @@ class MemStorage implements IStorage {
       // Create new matrix cell with proper ID structure
       const id = this.getNextId();
       const now = new Date();
-      
+
       const cell: MatrixCell = {
         id,
         rowModuleId: cellData.rowModuleId,
-        colModuleId: cellData.colModuleId, 
+        colModuleId: cellData.colModuleId,
         projectId: cellData.projectId,
         value: cellData.value || '',
         createdById: cellData.createdById,
@@ -2429,10 +2480,10 @@ class MemStorage implements IStorage {
     const index = this.matrixCells.findIndex(cell => cell.id === id);
     if (index === -1) return null;
 
-    const updatedCell = { 
-      ...this.matrixCells[index], 
-      ...data, 
-      updatedAt: new Date() 
+    const updatedCell = {
+      ...this.matrixCells[index],
+      ...data,
+      updatedAt: new Date()
     };
     this.matrixCells[index] = updatedCell;
     return updatedCell;
@@ -2444,9 +2495,9 @@ class MemStorage implements IStorage {
     if (colModuleId !== undefined && projectId !== undefined) {
       // Delete by row/col/project combination
       const initialLength = this.matrixCells.length;
-      this.matrixCells = this.matrixCells.filter(cell => 
-        !(cell.rowModuleId === idOrRowModuleId && 
-          cell.colModuleId === colModuleId && 
+      this.matrixCells = this.matrixCells.filter(cell =>
+        !(cell.rowModuleId === idOrRowModuleId &&
+          cell.colModuleId === colModuleId &&
           cell.projectId === projectId)
       );
       return this.matrixCells.length < initialLength;
@@ -2647,14 +2698,14 @@ class MemStorage implements IStorage {
   async createFlowDiagram(diagramData: any): Promise<any> {
     const id = this.nextFlowDiagramId++;
     const now = new Date().toISOString();
-    
+
     const diagram = {
       id: id,
       ...diagramData,
       createdAt: now,
       updatedAt: now,
     };
-    
+
     this.flowDiagrams.set(id.toString(), diagram);
     console.log(`Storage: Created flow diagram with ID ${id}:`, diagram);
     return diagram;
@@ -2672,7 +2723,7 @@ class MemStorage implements IStorage {
       ...updates,
       updatedAt: new Date().toISOString(),
     };
-    
+
     this.flowDiagrams.set(id, updatedDiagram);
     console.log(`Storage: Updated flow diagram ${id}`);
     return updatedDiagram;
@@ -2738,7 +2789,7 @@ class MemStorage implements IStorage {
       totalTestCases: testCases.length,
       totalBugs: bugs.length,
       totalUsers: users.length,
-      testStatusCounts: {
+      testCaseStatusCounts: {
         passed: testCases.filter(tc => tc.status === 'Passed').length,
         failed: testCases.filter(tc => tc.status === 'Failed').length,
         blocked: testCases.filter(tc => tc.status === 'Blocked').length,

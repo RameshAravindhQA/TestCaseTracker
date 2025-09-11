@@ -1542,11 +1542,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const state = oauthService.generateSecureRandom();
       const codeVerifier = oauthService.generateSecureRandom();
-      
+
       // Store state and code verifier in session for verification
       req.session.oauthState = state;
       req.session.googleCodeVerifier = codeVerifier;
-      
+
       const authUrl = oauthService.generateGoogleAuthUrl(state, codeVerifier);
       res.json({ authUrl });
     } catch (error) {
@@ -1559,10 +1559,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/auth/github/url", async (req, res) => {
     try {
       const state = oauthService.generateSecureRandom();
-      
+
       // Store state in session for verification
       req.session.oauthState = state;
-      
+
       const authUrl = oauthService.generateGitHubAuthUrl(state);
       res.json({ authUrl });
     } catch (error) {
@@ -2800,18 +2800,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Mark all messages as read
-  apiRouter.post('/messages/mark-all-read', isAuthenticated, async (req, res) => {
+  // Get unread message count by sender
+  apiRouter.get('/messages/unread-count-by-sender', isAuthenticated, async (req, res) => {
     try {
-      await storage.markAllMessagesAsRead(req.session.userId!);
-      res.json({ success: true });
+      const senderCounts = await storage.getUnreadMessageCountBySender(req.session.userId!);
+      res.json({ senderCounts });
+    } catch (error) {
+      console.error('Error getting unread message count by sender:', error);
+      res.status(500).json({ error: 'Failed to get unread message count by sender' });
+    }
+  });
+
+  // Mark messages as read from a specific sender
+  apiRouter.post('/messages/mark-read/:senderId', isAuthenticated, async (req, res) => {
+    try {
+      const senderId = parseInt(req.params.senderId);
+      if (isNaN(senderId)) {
+        return res.status(400).json({ error: 'Invalid sender ID' });
+      }
+
+      const success = await storage.markMessagesAsRead(req.session.userId!, senderId);
+      if (success) {
+        res.json({ success: true, message: 'Messages marked as read' });
+      } else {
+        // This might happen if the sender ID is invalid or there are no unread messages
+        res.status(404).json({ success: false, error: 'Could not mark messages as read (sender not found or no unread messages)' });
+      }
     } catch (error) {
       console.error('Error marking messages as read:', error);
       res.status(500).json({ error: 'Failed to mark messages as read' });
     }
   });
 
-  // Handle both direct messages and conversation messages
   apiRouter.post('/messages', isAuthenticated, async (req, res) => {
     try {
       console.log('[API] Creating message with data:', req.body);
@@ -5737,7 +5757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Document not found" });
       }
 
-      // Check if user has access to the project containing this document
+      //      // Check if user has access to the project containing this document
       const project = await storage.getProject(document.projectId);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
