@@ -1,8 +1,10 @@
 
-#!/usr/bin/env node
+import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-const { spawn } = require('child_process');
-const path = require('path');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 console.log('🚀 Starting TestCaseTracker Application...');
 
@@ -13,7 +15,7 @@ killCommand.on('close', () => {
     // Start server
     console.log('📡 Starting backend server...');
     const server = spawn('npm', ['run', 'dev'], {
-      cwd: path.join(__dirname, 'server'),
+      cwd: join(__dirname, 'server'),
       stdio: 'inherit',
       detached: false
     });
@@ -22,7 +24,7 @@ killCommand.on('close', () => {
     setTimeout(() => {
       console.log('🎨 Starting frontend client...');
       const client = spawn('npm', ['run', 'dev'], {
-        cwd: path.join(__dirname, 'client'),
+        cwd: join(__dirname, 'client'),
         stdio: 'inherit',
         detached: false
       });
