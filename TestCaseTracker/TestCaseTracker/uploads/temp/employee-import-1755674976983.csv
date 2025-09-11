@@ -1,0 +1,11 @@
+employeeId,firstName,lastName,email,phone,department,designation,joiningDate,status,technologies
+EMP001,Ravi,Kumar,ravi.kumar@example.com,9876543210,Development,Senior Developer,15-06-21,Active,"Java, Spring Boot, MySQL"
+EMP002,Sneha,Reddy,sneha.reddy@example.com,9823456789,Development,UI/UX Designer,10-02-22,Active,"Figma, Adobe XD, HTML, CSS"
+EMP003,Arjun,Mehta,arjun.mehta@example.com,9812345678,Development,Content Strategist,01-11-21,Active,"SEO, Google Analytics, WordPress"
+EMP004,Priya,Sharma,priya.sharma@example.com,9887654321,Development,Frontend Developer,25-01-23,Active,"React, JavaScript, HTML, CSS"
+EMP005,Manoj,Verma,manoj.verma@example.com,9845671230,Development,Accountant,18-09-20,Active,"Tally, Excel, QuickBooks"
+EMP006,Neha,D'Souza,neha.dsouza@example.com,9876540987,Development,HR Manager,20-07-19,Active,"Recruitment, Payroll, Zoho HR"
+EMP007,Ankit,Goyal,ankit.goyal@example.com,9801122334,Development,DevOps Engineer,14-08-22,Active,"Docker, Kubernetes, AWS, Jenkins"
+EMP008,Sara,Khan,sara.khan@example.com,9798765432,Development,Customer Support Executive,11-04-23,Active,"CRM, Zendesk, Communication"
+EMP009,Vikram,Naidu,vikram.naidu@example.com,9765432109,Development,Sales Manager,05-03-21,Active,"CRM, Lead Generation, Negotiation"
+EMP010,Meera,Iyer,meera.iyer@example.com,9856123789,Development,Backend Developer,30-06-22,Active,"Node.js, MongoDB, Express.js"

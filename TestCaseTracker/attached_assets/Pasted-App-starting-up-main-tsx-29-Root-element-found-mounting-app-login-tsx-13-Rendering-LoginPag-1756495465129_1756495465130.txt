@@ -1,0 +1,53 @@
+App starting up...
+main.tsx:29 ✅ Root element found, mounting app
+login.tsx:13 🔄 Rendering LoginPage
+login.tsx:13 🔄 Rendering LoginPage
+main.tsx:15 Global error: ReferenceError: useEffect is not defined
+    at GitHubIssueReporter (github-issue-reporter.tsx:203:3)
+    at renderWithHooks (chunk-MQ6MFIVI.js?v=5c6898fe:11548:26)
+    at mountIndeterminateComponent (chunk-MQ6MFIVI.js?v=5c6898fe:14926:21)
+    at beginWork (chunk-MQ6MFIVI.js?v=5c6898fe:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-MQ6MFIVI.js?v=5c6898fe:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-MQ6MFIVI.js?v=5c6898fe:3699:24)
+    at invokeGuardedCallback (chunk-MQ6MFIVI.js?v=5c6898fe:3733:39)
+    at beginWork$1 (chunk-MQ6MFIVI.js?v=5c6898fe:19765:15)
+    at performUnitOfWork (chunk-MQ6MFIVI.js?v=5c6898fe:19198:20)
+    at workLoopSync (chunk-MQ6MFIVI.js?v=5c6898fe:19137:13)
+(anonymous) @ main.tsx:15
+invokeGuardedCallbackDev @ chunk-MQ6MFIVI.js?v=5c6898fe:3699
+invokeGuardedCallback @ chunk-MQ6MFIVI.js?v=5c6898fe:3733
+beginWork$1 @ chunk-MQ6MFIVI.js?v=5c6898fe:19765
+performUnitOfWork @ chunk-MQ6MFIVI.js?v=5c6898fe:19198
+workLoopSync @ chunk-MQ6MFIVI.js?v=5c6898fe:19137
+renderRootSync @ chunk-MQ6MFIVI.js?v=5c6898fe:19116
+performConcurrentWorkOnRoot @ chunk-MQ6MFIVI.js?v=5c6898fe:18678
+workLoop @ chunk-MQ6MFIVI.js?v=5c6898fe:197
+flushWork @ chunk-MQ6MFIVI.js?v=5c6898fe:176
+performWorkUntilDeadline @ chunk-MQ6MFIVI.js?v=5c6898fe:384Understand this error
+github-issue-reporter.tsx:203 Uncaught ReferenceError: useEffect is not defined
+    at GitHubIssueReporter (github-issue-reporter.tsx:203:3)
+    at renderWithHooks (chunk-MQ6MFIVI.js?v=5c6898fe:11548:26)
+    at mountIndeterminateComponent (chunk-MQ6MFIVI.js?v=5c6898fe:14926:21)
+    at beginWork (chunk-MQ6MFIVI.js?v=5c6898fe:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-MQ6MFIVI.js?v=5c6898fe:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-MQ6MFIVI.js?v=5c6898fe:3699:24)
+    at invokeGuardedCallback (chunk-MQ6MFIVI.js?v=5c6898fe:3733:39)
+    at beginWork$1 (chunk-MQ6MFIVI.js?v=5c6898fe:19765:15)
+    at performUnitOfWork (chunk-MQ6MFIVI.js?v=5c6898fe:19198:20)
+    at workLoopSync (chunk-MQ6MFIVI.js?v=5c6898fe:19137:13)
+GitHubIssueReporter @ github-issue-reporter.tsx:203
+renderWithHooks @ chunk-MQ6MFIVI.js?v=5c6898fe:11548
+mountIndeterminateComponent @ chunk-MQ6MFIVI.js?v=5c6898fe:14926
+beginWork @ chunk-MQ6MFIVI.js?v=5c6898fe:15914
+callCallback2 @ chunk-MQ6MFIVI.js?v=5c6898fe:3674
+invokeGuardedCallbackDev @ chunk-MQ6MFIVI.js?v=5c6898fe:3699
+invokeGuardedCallback @ chunk-MQ6MFIVI.js?v=5c6898fe:3733
+beginWork$1 @ chunk-MQ6MFIVI.js?v=5c6898fe:19765
+performUnitOfWork @ chunk-MQ6MFIVI.js?v=5c6898fe:19198
+workLoopSync @ chunk-MQ6MFIVI.js?v=5c6898fe:19137
+renderRootSync @ chunk-MQ6MFIVI.js?v=5c6898fe:19116
+performConcurrentWorkOnRoot @ chunk-MQ6MFIVI.js?v=5c6898fe:18678
+workLoop @ chunk-MQ6MFIVI.js?v=5c6898fe:197
+flushWork @ chunk-MQ6MFIVI.js?v=5c6898fe:176
+performWorkUntilDeadline @ chunk-MQ6MFIVI.js?v=5c6898fe:384Understand this error
+login.tsx:13 🔄 Rendering LoginPage
