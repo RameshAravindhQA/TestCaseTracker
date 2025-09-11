@@ -76,7 +76,7 @@ interface SidebarProps {
 interface NavItem {
   name: string;
   href: string;
-  icon: React.ReactNode;
+  icon: LucideIcon;
   badge?: string;
   children?: NavItem[];
   showBadge?: boolean; // Added for unread count indication
@@ -208,114 +208,114 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     {
       name: "Dashboard",
       href: "/dashboard",
-      icon: <LayoutDashboard className="h-5 w-5" />,
+      icon: LayoutDashboard,
     },
     {
       name: "Projects",
       href: "/projects",
-      icon: <FolderOpen className="h-5 w-5" />,
+      icon: FolderOpen,
     },
     {
       name: "Kanban Board",
       href: "/kanban",
-      icon: <Kanban className="h-5 w-5" />,
+      icon: Kanban,
     },
     {
       name: "Test Cases",
       href: "/test-cases",
-      icon: <TestTube className="h-5 w-5" />,
+      icon: TestTube,
     },
 
     {
       name: "AI Generator",
       href: "/ai-generator",
-      icon: <Bot className="h-5 w-5" />,
+      icon: Bot,
     },
     {
       name: "Bug Reports",
       href: "/bugs",
-      icon: <Bug className="h-5 w-5" />,
+      icon: Bug,
     },
     {
       name: "Messenger",
       href: "/messenger",
-      icon: <MessageSquare className="h-5 w-5" />,
+      icon: MessageSquare,
       showBadge: true, // Indicate that this item can show a badge
     },
     {
       name: "GitHub Integration",
       href: "/github",
-      icon: <GitBranch className="h-5 w-5" />,
+      icon: GitBranch,
     },
     {
       name: "Functional Flow",
       href: "/functional-flow",
-      icon: <Workflow className="h-5 w-5" />,
+      icon: Workflow,
     },
     {
       name: "Timesheets",
       href: "/timesheets",
-      icon: <Calendar className="h-5 w-5" />,
+      icon: Calendar,
     },
     {
       name: "Documents",
       href: "/documents",
-      icon: <FileText className="h-5 w-5" />,
+      icon: FileText,
     },
     {
       name: "BRD Documents",
       href: "/brd-documents",
-      icon: <FileText className="h-5 w-5" />,
+      icon: FileText,
     },
     {
       name: "Reports",
       href: "/reports",
-      icon: <BarChart className="h-5 w-5" />,
+      icon: BarChart,
     },
     {
       name: "Test Sheets",
       href: "/test-sheets",
-      icon: <FileSpreadsheet className="h-5 w-5" />,
+      icon: FileSpreadsheet,
     },
     {
       name: "Traceability Matrix",
       href: "/traceability-matrix",
-      icon: <Target className="h-5 w-5" />,
+      icon: Target,
     },
     {
       name: "Notebooks",
       href: "/notebooks",
-      icon: <BookOpen className="h-5 w-5" />,
+      icon: BookOpen,
     },
     {
       name: "Todo List",
       href: "/todos",
-      icon: <ClipboardList className="h-5 w-5" />,
+      icon: ClipboardList,
     },
     {
       name: "Test Data Generator",
       href: "/test-data-generator",
-      icon: <FileText className="h-5 w-5" />,
+      icon: FileText,
     },
     {
       name: "Test Automation",
       href: "/automation",
-      icon: <Play className="h-5 w-5" />,
+      icon: Play,
     },
     {
       name: "Employees",
       href: "/employees",
-      icon: <Users className="h-5 w-5" />,
+      icon: Users,
     },
     {
       name: "Navadhiti Projects",
       href: "/navadhiti-projects",
-      icon: <Briefcase className="h-5 w-5" />,
+      icon: Briefcase,
     },
     {
       name: "Request Forms",
       href: "/request-forms",
-      icon: <FileText className="h-5 w-5" />,
+      icon: FileText,
     },
   ], []);
 
@@ -323,12 +323,12 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     {
       name: "Users",
       href: "/users",
-      icon: <Users className="h-5 w-5" />,
+      icon: Users,
     },
     {
       name: "Settings",
       href: "/settings",
-      icon: <Settings className="h-5 w-5" />,
+      icon: Settings,
     },
   ], []);
 
@@ -378,7 +378,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     {
       name: "My Profile",
       href: "/profile",
-      icon: <UserIcon className="h-5 w-5" />,
+      icon: UserIcon,
     },
   ], []);
 
