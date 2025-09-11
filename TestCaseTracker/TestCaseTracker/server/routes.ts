@@ -2789,6 +2789,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get unread message count for current user
+  apiRouter.get('/messages/unread-count', isAuthenticated, async (req, res) => {
+    try {
+      const unreadCount = await storage.getUnreadMessageCount(req.session.userId!);
+      res.json({ count: unreadCount });
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+      res.status(500).json({ error: 'Failed to get unread count' });
+    }
+  });
+
+  // Mark all messages as read
+  apiRouter.post('/messages/mark-all-read', isAuthenticated, async (req, res) => {
+    try {
+      await storage.markAllMessagesAsRead(req.session.userId!);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+      res.status(500).json({ error: 'Failed to mark messages as read' });
+    }
+  });
+
   // Handle both direct messages and conversation messages
   apiRouter.post('/messages', isAuthenticated, async (req, res) => {
     try {

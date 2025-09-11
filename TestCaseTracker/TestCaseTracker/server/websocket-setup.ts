@@ -86,6 +86,21 @@ export function setupWebSocket(server: Server) {
                   type: messageData.messageType || 'text'
                 });
 
+                // Send unread count update to receiver if they're online
+                if (receiverId) {
+                  const receiverUnreadCount = await storage.getUnreadMessageCount(receiverId);
+                  
+                  wss.clients.forEach(client => {
+                    const receiverClientInfo = connectedClients.get(client);
+                    if (receiverClientInfo?.userId === receiverId && client.readyState === client.OPEN) {
+                      client.send(JSON.stringify({
+                        type: 'unread_count_update',
+                        count: receiverUnreadCount
+                      }));
+                    }
+                  });
+                }
+
                 // Broadcast to all connected clients
                 wss.clients.forEach(client => {
                   if (client.readyState === client.OPEN) {

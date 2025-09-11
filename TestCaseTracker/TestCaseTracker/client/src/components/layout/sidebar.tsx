@@ -78,13 +78,38 @@ interface NavItem {
   icon: React.ReactNode;
   badge?: string;
   children?: NavItem[];
+  showBadge?: boolean; // Added for unread count indication
 }
 
 // Helper component for sidebar items
-const SidebarItem = ({ icon, label, to, badge }: { icon: React.ReactNode; label: string; to: string; badge?: string }) => {
+const SidebarItem = ({ icon, label, to, badge, showBadge }: { icon: React.ReactNode; label: string; to: string; badge?: string; showBadge?: boolean }) => {
   const [location] = useLocation();
   const isActive = location.startsWith(to);
   const { theme } = useColorTheme();
+
+  // Fetch unread count for Messenger specifically
+  const { data: unreadMessageData } = useQuery({
+    queryKey: ['unread-messages-count'],
+    queryFn: async () => {
+      // Only fetch if this item is for Messenger and needs a badge
+      if (label === 'Messenger' && showBadge) {
+        try {
+          const response = await apiRequest("GET", "/api/messages/unread-count");
+          if (!response.ok) throw new Error('Failed to fetch unread count');
+          const data = await response.json();
+          return data.count; // Assuming the API returns { count: number }
+        } catch (error) {
+          console.error("Error fetching unread message count:", error);
+          return 0;
+        }
+      }
+      return 0; // Return 0 if not Messenger or no badge needed
+    },
+    refetchInterval: 30000, // Refetch every 30 seconds
+    enabled: label === 'Messenger' && showBadge, // Only enable when needed
+  });
+
+  const unreadCount = unreadMessageData ?? 0;
 
   return (
     <Link
@@ -103,21 +128,17 @@ const SidebarItem = ({ icon, label, to, badge }: { icon: React.ReactNode; label:
       >
         {icon}
       </motion.span>
-      {label}
-      {badge && (
-        <motion.span
-          className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ml-auto"
-          style={{
-            backgroundColor: isActive ? "#ffffff" : theme === "dark" ? "#374151" : "#e5e7eb",
-            color: isActive ? "#111827" : theme === "dark" ? "#d1d5db" : "#1f2937",
-          }}
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          {badge}
-        </motion.span>
-      )}
+      <div className="flex items-center justify-between w-full">
+        <span>{label}</span>
+        {showBadge && label === "Messenger" && unreadCount > 0 && (
+          <Badge
+            variant="destructive"
+            className="h-5 w-5 p-0 flex items-center justify-center text-xs ml-2"
+          >
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </Badge>
+        )}
+      </div>
     </Link>
   );
 };
@@ -208,6 +229,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       name: "Messenger",
       href: "/messenger",
       icon: <MessageSquare className="h-5 w-5" />,
+      showBadge: true, // Indicate that this item can show a badge
     },
     {
       name: "GitHub Integration",
@@ -470,7 +492,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
-  const unreadCount = notifications.filter((n: any) => !n.read).length;
+  const notificationUnreadCount = notifications.filter((n: any) => !n.read).length;
 
   // Helper function to check permissions
   const hasPermission = (resource: string, action: string): boolean => {
@@ -539,9 +561,9 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                 className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50"
               >
                 <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
+                {notificationUnreadCount > 0 && (
                   <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                    {notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}
                   </div>
                 )}
               </Button>
@@ -572,6 +594,7 @@ const SidebarComponent = ({ className }: SidebarProps) => {
                   label={item.name}
                   to={item.href}
                   badge={item.badge}
+                  showBadge={item.showBadge}
                 />
                 {/* Render submenu if item has children */}
                 {item.children && item.children.length > 0 && (

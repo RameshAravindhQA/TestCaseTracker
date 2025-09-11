@@ -155,11 +155,11 @@ function MainLayout({ children }: MainLayoutProps) {
           const scrollHeight = scrollContainer.scrollHeight;
           const clientHeight = scrollContainer.clientHeight;
           const scrollableHeight = scrollHeight - clientHeight;
-          
+
           // Calculate scroll progress
           const progress = scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
           setScrollProgress(progress);
-          
+
           // Show/hide scroll buttons
           setShowScrollTop(scrollTop > 100);
           setShowScrollDown(scrollTop < scrollableHeight - 100);
@@ -198,7 +198,7 @@ function MainLayout({ children }: MainLayoutProps) {
       <>
         {/* Scroll Progress Bar */}
         <div className="fixed top-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700 z-30">
-          <div 
+          <div
             className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-150"
             style={{ width: `${scrollProgress}%` }}
           />

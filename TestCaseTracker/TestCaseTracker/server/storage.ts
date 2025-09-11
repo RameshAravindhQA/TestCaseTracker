@@ -680,7 +680,6 @@ class MemStorage implements IStorage {
   // Initialize data property for compatibility
   private data: any = {
     todoLists: [],
-    flowDiagrams: [], // Added for flow diagram storage
     testCases: [], // Added to ensure testCases array is available in data
     bugs: [],
     activities: [],
@@ -796,6 +795,7 @@ class MemStorage implements IStorage {
   private conversationMembers = new Map<number, Set<number>>();
   private messageReadStatus = new Map<string, Set<number>>(); // messageId-userId -> Set<userId>
   private conversationMessages = new Map<number, any[]>(); // conversationId -> messages array
+  private userUnreadCounts = new Map<number, number>(); // userId -> unread count
   private chatMessages: ChatMessage[] = [];
   private messages: any[] = [];
   private nextMessageId = 1;
@@ -1235,6 +1235,69 @@ class MemStorage implements IStorage {
     } catch (error) {
       console.error('Error searching messages:', error);
       return [];
+    }
+  }
+
+  // Unread message tracking methods
+  async getUnreadMessageCount(userId: number): Promise<number> {
+    try {
+      // Count unread messages for this user
+      let unreadCount = 0;
+      
+      // Count direct messages where user is receiver and not read
+      const directMessages = this.messages.filter(msg => 
+        msg.receiverId === userId && !msg.isRead
+      );
+      unreadCount += directMessages.length;
+      
+      // Count chat messages in conversations where user participates
+      for (const [conversationId, messages] of this.conversationMessages.entries()) {
+        const conversation = this.conversations.get(conversationId);
+        if (conversation && conversation.participants.includes(userId)) {
+          for (const message of messages) {
+            if (message.userId !== userId) { // Not sent by this user
+              const key = `${message.id}`;
+              const readByUsers = this.messageReadStatus.get(key) || new Set();
+              if (!readByUsers.has(userId)) {
+                unreadCount++;
+              }
+            }
+          }
+        }
+      }
+      
+      console.log(`Storage: User ${userId} has ${unreadCount} unread messages`);
+      return unreadCount;
+    } catch (error) {
+      console.error('Error getting unread message count:', error);
+      return 0;
+    }
+  }
+
+  async markAllMessagesAsRead(userId: number): Promise<void> {
+    try {
+      // Mark direct messages as read
+      this.messages.forEach(msg => {
+        if (msg.receiverId === userId) {
+          msg.isRead = true;
+        }
+      });
+      
+      // Mark conversation messages as read
+      for (const [conversationId, messages] of this.conversationMessages.entries()) {
+        const conversation = this.conversations.get(conversationId);
+        if (conversation && conversation.participants.includes(userId)) {
+          for (const message of messages) {
+            if (message.userId !== userId) {
+              this.markMessageAsRead(message.id, userId);
+            }
+          }
+        }
+      }
+      
+      console.log(`Storage: Marked all messages as read for user ${userId}`);
+    } catch (error) {
+      console.error('Error marking all messages as read:', error);
     }
   }
 
@@ -2559,47 +2622,66 @@ class MemStorage implements IStorage {
     return duplicatedSheet;
   }
 
-  // Flow Diagrams methods (placeholder)
+  // Flow diagram storage
+  private flowDiagrams = new Map<string, any>();
+  private nextFlowDiagramId = 1;
+
+  // Flow Diagrams methods
   async getFlowDiagramsByProject(projectId: string): Promise<any[]> {
-    return this.data.flowDiagrams.filter(diagram => diagram.projectId === parseInt(projectId));
+    const results = [];
+    for (const diagram of this.flowDiagrams.values()) {
+      if (diagram.projectId === parseInt(projectId)) {
+        results.push(diagram);
+      }
+    }
+    console.log(`Storage: Found ${results.length} flow diagrams for project ${projectId}`);
+    return results;
   }
 
   async getFlowDiagram(id: string): Promise<any | null> {
-    return this.data.flowDiagrams.find(diagram => diagram.id === parseInt(id));
+    const diagram = this.flowDiagrams.get(id) || null;
+    console.log(`Storage: Getting flow diagram ${id}:`, diagram ? 'found' : 'not found');
+    return diagram;
   }
 
   async createFlowDiagram(diagramData: any): Promise<any> {
+    const id = this.nextFlowDiagramId++;
+    const now = new Date().toISOString();
+    
     const diagram = {
-      id: Date.now(),
+      id: id,
       ...diagramData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
-    this.data.flowDiagrams.push(diagram);
-    this.saveData();
+    
+    this.flowDiagrams.set(id.toString(), diagram);
+    console.log(`Storage: Created flow diagram with ID ${id}:`, diagram);
     return diagram;
   }
 
   async updateFlowDiagram(id: string, updates: any): Promise<any> {
-    const index = this.data.flowDiagrams.findIndex(diagram => diagram.id === parseInt(id));
-    if (index === -1) return null;
+    const existingDiagram = this.flowDiagrams.get(id);
+    if (!existingDiagram) {
+      console.log(`Storage: Flow diagram ${id} not found for update`);
+      return null;
+    }
 
-    this.data.flowDiagrams[index] = {
-      ...this.data.flowDiagrams[index],
+    const updatedDiagram = {
+      ...existingDiagram,
       ...updates,
       updatedAt: new Date().toISOString(),
     };
-    this.saveData();
-    return this.data.flowDiagrams[index];
+    
+    this.flowDiagrams.set(id, updatedDiagram);
+    console.log(`Storage: Updated flow diagram ${id}`);
+    return updatedDiagram;
   }
 
   async deleteFlowDiagram(id: string): Promise<boolean> {
-    const index = this.data.flowDiagrams.findIndex(diagram => diagram.id === parseInt(id));
-    if (index === -1) return false;
-
-    this.data.flowDiagrams.splice(index, 1);
-    this.saveData();
-    return true;
+    const deleted = this.flowDiagrams.delete(id);
+    console.log(`Storage: Flow diagram ${id} ${deleted ? 'deleted' : 'not found'}`);
+    return deleted;
   }
 
   // Method to get test cases by module ID
