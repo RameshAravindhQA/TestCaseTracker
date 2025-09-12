@@ -19,3 +19,7 @@ args = "sleep 2"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node dev.js"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
