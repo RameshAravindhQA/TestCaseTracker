@@ -1,0 +1,20 @@
+modules = ["nodejs-20"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[nix]
+channel = "stable-25_05"
+
+[workflows]
+runButton = "TestCaseTracker"
+
+[[workflows.workflow]]
+name = "TestCaseTracker"
+author = 42390044
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd TestCaseTracker/TestCaseTracker && npm run dev"

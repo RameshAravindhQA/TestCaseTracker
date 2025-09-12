@@ -1,0 +1,158 @@
+{% extends 'layout.html' %}
+
+{% block title %}Test Cases{% endblock %}
+
+{% block content %}
+<div class="row" style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>Test Cases</h1>
+    <div>
+        <button id="import-testcases-btn" class="btn btn-secondary">
+            <i data-feather="upload"></i> Import
+        </button>
+        <button id="add-testcase-btn" class="btn btn-primary">
+            <i data-feather="plus"></i> Add Test Case
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom: 20px;">
+    <div class="card-header">
+        Filters
+    </div>
+    <div class="card-body">
+        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+            <div style="min-width: 200px;">
+                <label for="status-filter">Status:</label>
+                <select id="status-filter" class="status-select">
+                    <option value="All">All Status</option>
+                    <option value="Passed">Passed</option>
+                    <option value="Failed">Failed</option>
+                    <option value="Blocked">Blocked</option>
+                    <option value="Not Run">Not Run</option>
+                </select>
+            </div>
+            <div style="min-width: 200px;">
+                <label for="project-filter">Project:</label>
+                <select id="project-filter" class="form-control">
+                    <option value="All">All Projects</option>
+                    <!-- Projects will be populated via JavaScript -->
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Case List -->
+<div class="card">
+    <div class="card-header">
+        Test Case List
+    </div>
+    <div class="card-body">
+        <div style="overflow-x: auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Project</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="testcases-table-body">
+                    <!-- Test case rows will be populated via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Test Case Modal -->
+<div id="testcase-modal" class="modal">
+    <div class="modal-content">
+        <span class="modal-close">&times;</span>
+        <div class="modal-header">
+            <h2 id="testcase-modal-title">Add New Test Case</h2>
+        </div>
+        <form id="testcase-form">
+            <input type="hidden" id="testcase-id">
+            
+            <div class="form-group">
+                <label for="testcase-title">Title*</label>
+                <input type="text" id="testcase-title" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="testcase-description">Description</label>
+                <textarea id="testcase-description" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="testcase-steps">Steps</label>
+                <textarea id="testcase-steps" class="form-control" rows="5"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="testcase-expected-result">Expected Result</label>
+                <textarea id="testcase-expected-result" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="testcase-status">Status*</label>
+                <select id="testcase-status" class="status-select" required>
+                    <option value="Not Run">Not Run</option>
+                    <option value="Passed">Passed</option>
+                    <option value="Failed">Failed</option>
+                    <option value="Blocked">Blocked</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="testcase-project">Project*</label>
+                <select id="testcase-project" class="form-control" required>
+                    <!-- Projects will be populated via JavaScript -->
+                </select>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Import Test Cases Modal -->
+<div id="import-modal" class="modal">
+    <div class="modal-content">
+        <span class="modal-close">&times;</span>
+        <div class="modal-header">
+            <h2>Import Test Cases</h2>
+        </div>
+        <form id="import-form">
+            <div class="form-group">
+                <label for="import-file">CSV File*</label>
+                <input type="file" id="import-file" class="form-control" accept=".csv" required>
+                <small>CSV file should have columns: title, description, steps, expected_result, status</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="import-project">Project*</label>
+                <select id="import-project" class="form-control" required>
+                    <!-- Projects will be populated via JavaScript -->
+                </select>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary">Import</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/testcases.js') }}"></script>
+{% endblock %}
