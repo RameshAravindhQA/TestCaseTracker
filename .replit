@@ -1,8 +1,11 @@
-modules = ["nodejs-20"]
+[workflows]
+runButton = "Start Application"
 
-[nix]
-channel = "stable-25_05"
+[[workflows.workflow]]
+name = "Start Application"
+author = 42063782
+mode = "sequential"
 
-[[ports]]
-localPort = 5000
-externalPort = 80
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node dev.js"
