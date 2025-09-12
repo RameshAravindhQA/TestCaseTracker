@@ -5,23 +5,47 @@
  * the disappearing markers issue in the traceability matrix.
  */
 
-import { neon } from "@neondatabase/serverless";
+import pkg from 'pg';
+const { Pool } = pkg;
 
-// Create a PostgreSQL connection using Neon
-let sql: any = null;
+// Create a PostgreSQL connection pool
+let pool: any = null;
 
 try {
   if (process.env.DATABASE_URL) {
-    sql = neon(process.env.DATABASE_URL);
-    console.log('✅ Database connection established for matrix operations');
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false } // Always enable SSL for Replit PostgreSQL
+    });
+    console.log('✅ Database connection established for matrix operations with SSL enabled');
   }
 } catch (error) {
   console.log('Database connection not available, running in memory mode');
 }
 
+// SQL helper function to mimic Neon's template literal syntax
+const sql = async (query: TemplateStringsArray, ...values: any[]) => {
+  if (!pool) throw new Error('No database connection');
+  
+  // Convert template literal to parameterized query
+  let parameterizedQuery = '';
+  let paramCount = 0;
+  
+  for (let i = 0; i < query.length; i++) {
+    parameterizedQuery += query[i];
+    if (i < values.length) {
+      paramCount++;
+      parameterizedQuery += `$${paramCount}`;
+    }
+  }
+  
+  const result = await pool.query(parameterizedQuery, values);
+  return result.rows;
+};
+
 // Initialize the database schema if needed
 export async function initializeDatabase(): Promise<boolean> {
-  if (!sql) {
+  if (!pool) {
     console.log('No database connection available, skipping matrix database initialization');
     return true; // Return true to allow app to continue
   }
@@ -73,7 +97,7 @@ export async function initializeDatabase(): Promise<boolean> {
 
     console.log('✅ Database tables initialized successfully');
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.log('Database not available, running without matrix persistence:', error.message);
     return true; // Return true to allow app to continue
   }
@@ -81,7 +105,7 @@ export async function initializeDatabase(): Promise<boolean> {
 
 // Save a matrix cell directly to the database
 export async function saveMatrixCell(rowModuleId: number, colModuleId: number, projectId: number, value: string, userId: number) {
-  if (!sql) {
+  if (!pool) {
     console.log('No database connection, matrix cell not persisted');
     return { id: Date.now(), rowModuleId, colModuleId, projectId, value, userId };
   }
@@ -119,7 +143,7 @@ export async function saveMatrixCell(rowModuleId: number, colModuleId: number, p
       console.log('✅ Inserted new matrix cell:', result[0]);
       return result[0];
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log('Failed to save matrix cell, running without persistence:', error.message);
     return { id: Date.now(), rowModuleId, colModuleId, projectId, value, userId };
   }
@@ -127,7 +151,7 @@ export async function saveMatrixCell(rowModuleId: number, colModuleId: number, p
 
 // Get all matrix cells for a project
 export async function getMatrixCellsByProject(projectId: number) {
-  if (!sql) {
+  if (!pool) {
     console.log('No database connection, returning empty matrix cells');
     return [];
   }
@@ -139,7 +163,7 @@ export async function getMatrixCellsByProject(projectId: number) {
 
     console.log(`✅ Retrieved ${result.length} matrix cells for project ${projectId}`);
     return result;
-  } catch (error) {
+  } catch (error: any) {
     console.log('Failed to get matrix cells for project, returning empty:', error.message);
     return [];
   }
@@ -156,7 +180,7 @@ export async function saveTraceabilityMarker(markerData: {
   icon?: string;
   description?: string;
 }) {
-  if (!sql) {
+  if (!pool) {
     console.log('No database connection, traceability marker not persisted');
     return { id: Date.now(), ...markerData };
   }
@@ -170,7 +194,7 @@ export async function saveTraceabilityMarker(markerData: {
 
     console.log('✅ Traceability marker saved to database:', result[0]);
     return result[0];
-  } catch (error) {
+  } catch (error: any) {
     console.log('Failed to save traceability marker, running without persistence:', error.message);
     return { id: Date.now(), ...markerData };
   }
@@ -178,7 +202,7 @@ export async function saveTraceabilityMarker(markerData: {
 
 // Get traceability markers for a project
 export async function getTraceabilityMarkersByProject(projectId: number) {
-  if (!sql) {
+  if (!pool) {
     console.log('No database connection, returning empty traceability markers');
     return [];
   }
@@ -192,7 +216,7 @@ export async function getTraceabilityMarkersByProject(projectId: number) {
 
     console.log(`✅ Retrieved ${result.length} traceability markers for project ${projectId}`);
     return result;
-  } catch (error) {
+  } catch (error: any) {
     console.log('Failed to get traceability markers for project, returning empty:', error.message);
     return [];
   }
@@ -200,7 +224,7 @@ export async function getTraceabilityMarkersByProject(projectId: number) {
 
 // Delete matrix cell
 export async function deleteMatrixCell(rowModuleId: number, colModuleId: number, projectId: number) {
-  if (!sql) {
+  if (!pool) {
     console.log('No database connection, matrix cell deletion skipped');
     return null;
   }
@@ -216,7 +240,7 @@ export async function deleteMatrixCell(rowModuleId: number, colModuleId: number,
 
     console.log('✅ Matrix cell deleted from database:', result[0]);
     return result[0];
-  } catch (error) {
+  } catch (error: any) {
     console.log('Failed to delete matrix cell:', error.message);
     return null;
   }

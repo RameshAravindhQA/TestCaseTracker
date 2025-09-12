@@ -98,7 +98,19 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 };
 
 // Configure uploads
+// Flag to prevent multiple directory creation
+let directoriesCreated = false;
+
 const createUploadDirectories = () => {
+  if (directoriesCreated) {
+    return {
+      uploadsDir: path.join(process.cwd(), 'uploads'),
+      profilePicturesDir: path.join(process.cwd(), 'uploads', 'profile-pictures'),
+      documentsDir: path.join(process.cwd(), 'uploads', 'documents'),
+      bugAttachmentsDir: path.join(process.cwd(), 'uploads', 'bug-attachment')
+    };
+  }
+  
   const uploadsDir = path.join(process.cwd(), 'uploads');
   const profilePicturesDir = path.join(uploadsDir, 'profile-pictures');
   const documentsDir = path.join(uploadsDir, 'documents');
@@ -146,6 +158,9 @@ const createUploadDirectories = () => {
   } catch (error) {
     console.error(`Error writing test file: ${error}`);
   }
+
+  // Mark directories as created to prevent repetitive runs
+  directoriesCreated = true;
 
   return { uploadsDir, profilePicturesDir, documentsDir, bugAttachmentsDir };
 };
