@@ -2,7 +2,7 @@
 
 ## Overview
 
-TestCaseTracker is a comprehensive test case management system built with TypeScript, React, and Express. It provides a complete solution for managing test cases, bugs, projects, and team collaboration. The application features AI-powered test case generation, real-time messaging, GitHub integration, traceability matrix management, and automated testing capabilities. It supports both in-memory storage for development and PostgreSQL for production deployments.
+TestCaseTracker is a comprehensive test case management system built with TypeScript, React, and Express. It provides a complete solution for managing test cases, bugs, projects, and team collaboration in software testing environments. The application uses an in-memory storage system (with optional PostgreSQL support) and includes features like real-time chat, document management, traceability matrices, and reporting capabilities.
 
 ## User Preferences
 
@@ -13,84 +13,116 @@ Preferred communication style: Simple, everyday language.
 ### Overall Architecture
 - **Frontend**: React 18+ with TypeScript using Vite as the build tool
 - **Backend**: Express.js with TypeScript in ES modules
-- **Database**: Dual storage strategy - in-memory storage with optional PostgreSQL support via Drizzle ORM
-- **Real-time Communication**: WebSocket integration for chat and collaboration
+- **Database**: In-memory storage with optional PostgreSQL support via Drizzle ORM
+- **Real-time Communication**: WebSocket integration for chat functionality
 - **UI Framework**: Tailwind CSS with Radix UI components (shadcn/ui)
 - **State Management**: TanStack Query for server state management
 - **Routing**: Wouter for client-side routing
 
-### Key Architectural Decisions
+### Key Components
 
 #### Frontend Architecture
-- **Component Structure**: Modular React components organized by feature domains
-- **Styling**: Tailwind CSS with a custom design system using CSS variables for theming
-- **Form Handling**: React Hook Form with Zod validation for type-safe form management
-- **Data Visualization**: Recharts for analytics dashboards and reporting
-- **Animations**: Framer Motion for smooth UI interactions and transitions
+- **Component Structure**: Modular React components with TypeScript
+- **Styling**: Tailwind CSS with custom design system variables
+- **Form Handling**: React Hook Form with Zod validation
+- **Charts**: Recharts for data visualization
+- **Animations**: Framer Motion for smooth UI interactions
 
 #### Backend Architecture
-- **API Design**: RESTful API with Express.js following resource-based URL patterns
-- **Authentication**: JWT-based authentication with role-based access control (Admin, Manager, Developer, Tester)
-- **File Handling**: Multer for file uploads with Sharp for image processing and optimization
-- **WebSocket**: Dedicated WebSocket server for real-time features (chat, notifications, live updates)
-- **Middleware**: Custom authentication, error handling, and logging middleware
+- **API Design**: RESTful API with Express.js
+- **Authentication**: JWT-based authentication with role-based access control
+- **File Handling**: Multer for file uploads with Sharp for image processing
+- **Email Service**: Nodemailer integration for notifications
+- **WebSocket**: Real-time chat and collaboration features
 
-#### Database Layer
-- **Primary Storage**: In-memory storage system for rapid development and testing
-- **Production Database**: PostgreSQL with Drizzle ORM for type-safe database operations
-- **Migration Strategy**: Automatic fallback from PostgreSQL to in-memory storage if database is unavailable
-- **Schema Management**: Drizzle Kit for database migrations and schema evolution
+#### Storage Layer
+- **Primary Storage**: In-memory storage system for development
+- **Database Integration**: Optional PostgreSQL with Drizzle ORM
+- **Schema**: Comprehensive schema supporting projects, test cases, bugs, users, and more
+- **Migration System**: Drizzle Kit for database migrations
 
-#### AI Integration Layer
-- **Multi-Provider Support**: Google Gemini (primary), OpenAI, Claude, and other AI providers
-- **Fallback Strategy**: Mock test case generation when AI services are unavailable
-- **Input Methods**: Text prompts, URL analysis, image uploads, and element inspection
-- **Configuration Management**: Runtime API key configuration with secure storage
+## Data Flow
 
-#### Real-time Features
-- **WebSocket Architecture**: Separate WebSocket server on dedicated path (/ws) to avoid conflicts
-- **Chat System**: Project-based messaging with typing indicators and user presence
-- **Live Updates**: Real-time notifications for test case updates, bug reports, and project changes
-- **Session Management**: WebSocket session persistence with automatic reconnection
+### User Authentication Flow
+1. User registers/logs in through React frontend
+2. Backend validates credentials and issues JWT token
+3. Token stored in client and sent with subsequent requests
+4. Role-based access control enforced on API endpoints
 
-#### File Management
-- **Upload Strategy**: Local file storage with organized directory structure
-- **File Types**: Profile pictures, documents, bug attachments, and test artifacts
-- **Processing**: Server-side image optimization and validation
-- **Organization**: Categorized storage by file type and project association
+### Test Case Management Flow
+1. Users create projects and add team members
+2. Modules are created within projects for organization
+3. Test cases are created with auto-generated IDs (TC-001, TC-002, etc.)
+4. Bug reports can be linked to test cases
+5. Real-time updates through WebSocket connections
+
+### Real-time Communication
+1. WebSocket connection established on user login
+2. Chat messages broadcast to project participants
+3. Typing indicators and presence management
+4. File sharing and mentions support
 
 ## External Dependencies
 
-### Core Framework Dependencies
-- **React Ecosystem**: React 18+, React DOM, React Hook Form, React Query
-- **Backend Framework**: Express.js with TypeScript support
-- **Build Tools**: Vite for frontend bundling, tsx for TypeScript execution
-- **Database**: Drizzle ORM with PostgreSQL adapter, Neon serverless connector
+### Core Dependencies
+- **@tanstack/react-query**: Server state management
+- **@radix-ui/react-***: UI component primitives
+- **drizzle-orm**: Database ORM (optional)
+- **express**: Web framework
+- **ws**: WebSocket implementation
+- **jsonwebtoken**: JWT authentication
+- **bcrypt**: Password hashing
+- **multer**: File upload handling
+- **nodemailer**: Email service
+- **recharts**: Data visualization
+- **framer-motion**: Animations
 
-### UI and Styling
-- **Component Library**: Radix UI primitives for accessible components
-- **Styling**: Tailwind CSS with custom configuration and shadcn/ui components
-- **Icons**: Lucide React for consistent iconography
-- **Charts**: Recharts for data visualization and analytics
+### Development Dependencies
+- **vite**: Build tool and dev server
+- **typescript**: Type system
+- **tailwindcss**: CSS framework
+- **vitest**: Testing framework
+- **tsx**: TypeScript execution
 
-### AI and Integration Services
-- **AI Providers**: Google Generative AI SDK, OpenAI API client
-- **GitHub Integration**: Octokit REST client for repository management
-- **Email Service**: Nodemailer for notification emails
-- **File Processing**: Multer, Sharp for image handling
+## Deployment Strategy
 
-### Development and Testing
-- **Testing**: Vitest for unit and integration testing, Playwright for E2E automation
-- **Code Quality**: ESLint, TypeScript compiler for type checking
-- **Development**: Concurrently for running multiple processes, dotenv for configuration
+### Development Setup
+1. Clone repository and install dependencies with `npm install`
+2. Set up environment variables (DATABASE_URL optional)
+3. Run database migrations if using PostgreSQL: `npm run db:migrate`
+4. Start development server: `npm run dev`
+5. Application serves on port 5000 with frontend on port 5173
 
-### Real-time and Communication
-- **WebSocket**: ws library for WebSocket server implementation
-- **Session Management**: Express session with memory store
-- **Security**: JWT for authentication, bcryptjs for password hashing, helmet for security headers
+### Production Deployment
+1. Build application: `npm run build`
+2. Start production server: `npm start`
+3. Configure environment variables for production
+4. Set up PostgreSQL database if not using in-memory storage
 
-### Utilities and Helpers
-- **Date Management**: date-fns for date manipulation
-- **Validation**: Zod for schema validation and type inference
-- **UUID Generation**: nanoid for unique identifier generation
-- **CSV Processing**: PapaParse for import/export functionality
+### Environment Configuration
+- **DATABASE_URL**: PostgreSQL connection string (optional)
+- **JWT_SECRET**: Secret key for JWT tokens
+- **EMAIL_PASSWORD**: App password for email service
+- **NODE_ENV**: Environment mode (development/production)
+
+### Key Features
+- **Project Management**: Create and manage testing projects
+- **Test Case Management**: Comprehensive test case creation and tracking
+- **Bug Tracking**: Bug reporting with severity levels and status tracking
+- **User Management**: Role-based access control (Admin, Manager, Developer, Tester)
+- **Real-time Chat**: Project-based chat with file sharing
+- **Document Management**: File upload and organization system
+- **Reporting**: Consolidated reports and analytics
+- **Traceability Matrix**: Requirements to test case traceability
+- **Kanban Board**: Visual project management
+- **Time Tracking**: Time sheet management for team members
+
+The application is designed to be scalable and maintainable, with clear separation of concerns and comprehensive error handling throughout the system.
+
+## Recent Changes (Latest Session)
+- **Fixed messenger import error** - Resolved named vs default export mismatch preventing component loading
+- **Enhanced WebSocket connections** - Added robust reconnection with exponential backoff, heartbeat system, and offline fallback for reliable real-time messaging
+- **Added Global GitHub Issue Reporter** - Created floating bug icon with screenshot capture, screen recording, comprehensive bug templates, and dual system/GitHub integration
+- **Fixed Replit run configuration** - Created proper workflow setup with clean startup script to prevent duplicate processes
+- **Server Configuration** - Application running on port 5000 with WebSocket support on /ws path, clean startup without duplicate output
+- **Date**: July 9, 2025
