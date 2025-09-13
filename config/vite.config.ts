@@ -33,18 +33,6 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
-  },
-  server: {
-    hmr: {
-      overlay: false,
-      port: 24678 // Use different port for HMR WebSocket
-    }
-  },
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'lucide-react', '@tanstack/react-query', 'wouter'],
-    exclude: ['@replit/vite-plugin-cartographer']
-  },
-  build: {
     target: 'esnext',
     minify: 'esbuild',
     rollupOptions: {
@@ -55,5 +43,34 @@ export default defineConfig({
         }
       }
     }
+  },
+  server: {
+    host: '0.0.0.0',
+    port: 3000,
+    hmr: {
+      overlay: false,
+      port: 24678
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/uploads': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/ws': {
+        target: 'ws://localhost:5000',
+        ws: true,
+        changeOrigin: true,
+      }
+    }
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'lucide-react', '@tanstack/react-query', 'wouter'],
+    exclude: ['@replit/vite-plugin-cartographer']
   }
 });
