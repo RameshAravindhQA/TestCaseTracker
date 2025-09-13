@@ -932,9 +932,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const testCases = await storage.getTestCasesByProject(projectId);
       const bugs = await storage.getBugsByProject(projectId);
 
-      const csvData = [];
-
+      if (format === 'csv') {
         // Add project info
+        const csvData = [];
         csvData.push(['Project Export Report']);
         csvData.push(['Project Name', project.name]);
         csvData.push(['Description', project.description || '']);

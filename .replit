@@ -4,7 +4,7 @@ modules = ["nodejs-20"]
 channel = "stable-25_05"
 
 [workflows]
-runButton = "TestCase Tracker Clean Start"
+runButton = "TestCase Tracker Server"
 
 [[workflows.workflow]]
 name = "Start TestCase Tracker"
@@ -35,6 +35,27 @@ args = "sleep 2"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd TestCaseTracker && npm run dev"
+
+[[workflows.workflow]]
+name = "TestCase Tracker Server"
+author = 41979910
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pkill -f \"tsx server/index.ts\" 2>/dev/null || true"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "lsof -ti:5000 | xargs kill -9 2>/dev/null || true"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "sleep 2"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
 
 [[ports]]
 localPort = 5000
