@@ -442,18 +442,17 @@ export default function FunctionalFlowPage() {
   };
 
   // Function to handle saving a diagram
-  const saveDiagram = () => {
+  const saveDiagram = useCallback(async () => {
     if (!selectedProject) {
       toast({
-        title: "Error",
-        description: "Please select a project first",
+        title: "Error", 
+        description: "Please select a project before saving.",
         variant: "destructive",
       });
       return;
     }
-    const nameToSave = diagramName?.trim() || selectedDiagram?.name?.trim();
 
-    if (!nameToSave) {
+    if (!diagramName.trim()) {
       toast({
         title: "Validation Error",
         description: "Please enter a diagram name.",
@@ -461,8 +460,60 @@ export default function FunctionalFlowPage() {
       });
       return;
     }
-    saveDiagramMutation.mutate();
-  };
+
+    try {
+      const diagramData = {
+        name: diagramName.trim(),
+        description: `Flow diagram for ${selectedProject.name}`,
+        projectId: selectedProject.id,
+        nodes: nodes.map(node => ({
+          id: node.id || `node_${Math.random().toString(36).substr(2, 9)}`,
+          type: node.type || 'default',
+          position: node.position || { x: 0, y: 0 },
+          data: node.data || {},
+        })),
+        edges: edges.map(edge => ({
+          id: edge.id || `edge_${Math.random().toString(36).substr(2, 9)}`,
+          source: edge.source,
+          target: edge.target,
+          type: edge.type || 'default',
+        })),
+      };
+
+      let response;
+      if (selectedDiagramId) {
+        // Update existing diagram
+        response = await apiRequest('PUT', `/api/flow-diagrams/${selectedDiagramId}`, diagramData);
+      } else {
+        // Create new diagram
+        response = await apiRequest('POST', `/api/flow-diagrams`, {
+          projectId: selectedProject,
+          ...diagramData,
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save diagram');
+      }
+      const savedDiagram = await response.json();
+      setHasUnsavedChanges(false);
+      setSelectedDiagramId(savedDiagram.id);
+      setSelectedDiagram(savedDiagram);
+      refetch();
+      toast({
+        title: 'Success',
+        description: 'Flow diagram saved successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to save diagram',
+        variant: 'destructive',
+      });
+    }
+  }, [diagramName, diagramDescription, nodes, edges, selectedProject, selectedDiagramId, refetch, toast, reactFlowInstance]);
+
 
   // Generate flow using Mermaid
   const generateFlowMutation = useMutation({

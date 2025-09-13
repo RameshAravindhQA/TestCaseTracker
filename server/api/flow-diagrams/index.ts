@@ -47,18 +47,34 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Name and project ID are required' });
     }
 
+    // Ensure all nodes have proper IDs
+    const processedNodes = (nodes || []).map((node: any) => ({
+      ...node,
+      id: node.id || `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: node.type || 'default',
+      position: node.position || { x: 0, y: 0 },
+      data: node.data || {}
+    }));
+
+    // Ensure all edges have proper IDs
+    const processedEdges = (edges || []).map((edge: any) => ({
+      ...edge,
+      id: edge.id || `edge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: edge.type || 'default'
+    }));
+
     const diagram = await storage.createFlowDiagram({
-      name,
-      description,
-      projectId,
-      nodes: nodes || [],
-      edges: edges || [],
+      name: name.trim(),
+      description: description || `Flow diagram for project ${projectId}`,
+      projectId: parseInt(projectId),
+      nodes: processedNodes,
+      edges: processedEdges,
     });
 
     res.status(201).json(diagram);
   } catch (error) {
     console.error('Error creating flow diagram:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

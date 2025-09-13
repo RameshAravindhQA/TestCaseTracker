@@ -690,7 +690,6 @@ function RequestFormsPageContent() {
                                     variant="outline"
                                     onClick={async () => {
                                       try {
-                                        // Export the specific request as PDF instead of project
                                         const response = await fetch(`/api/request-forms/${request.id}/export?format=pdf`);
                                         if (!response.ok) {
                                           const errorText = await response.text();
@@ -701,11 +700,12 @@ function RequestFormsPageContent() {
                                         const link = document.createElement('a');
                                         link.href = url;
                                         link.download = `request-${request.id}-${request.title}.pdf`;
+
                                         document.body.appendChild(link);
                                         link.click();
                                         document.body.removeChild(link);
                                         window.URL.revokeObjectURL(url);
-                                        
+
                                         toast({
                                           title: "✅ Export successful",
                                           description: "PDF exported successfully",
@@ -720,21 +720,6 @@ function RequestFormsPageContent() {
                                       }
                                     }}
                                     title="Export to PDF"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                        link.setAttribute('download', `project_${request.projectId}_report.pdf`);
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        link.parentNode?.removeChild(link);
-                                        window.URL.revokeObjectURL(url);
-                                        toast({ title: "PDF Export", description: "Project report downloaded successfully." });
-                                      } catch (error: any) {
-                                        console.error("PDF Export Error:", error);
-                                        toast({ title: "PDF Export Failed", description: error.message, variant: "destructive" });
-                                      }
-                                    }}
-                                    title="Export PDF"
                                   >
                                     <Download className="h-4 w-4" />
                                   </Button>
@@ -939,7 +924,7 @@ function RequestFormsPageContent() {
               onOpenChange={setIsCommentsDialogOpen}
               request={selectedRequest}
             />
-            
+
             <Dialog open={isAttachmentsDialogOpen} onOpenChange={setIsAttachmentsDialogOpen}>
               <DialogContent className="max-w-4xl">
                 <DialogHeader>
