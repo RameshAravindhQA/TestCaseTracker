@@ -1127,7 +1127,6 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
                   )}
                 </TabsContent>
               </Tabs>
-              </Tabs>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button variant="outline" onClick={() => setIsOpen(false)}>
