@@ -139,12 +139,23 @@ async function startServer() {
       serveStatic(app);
     }
 
-    // Start the server on the specified port
+    // Start the server on the specified port with error handling
     httpServer.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://0.0.0.0:${PORT}`);
       console.log(`WebSocket server initialized for real-time chat`);
       logger.info(`Server started on port ${PORT} with WebSocket support`);
       log(`serving on port ${PORT}`);
+    }).on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use. Please run:`);
+        console.error(`   pkill -f "tsx server/index.ts"`);
+        console.error(`   lsof -ti:${PORT} | xargs kill -9`);
+        console.error(`   Then restart the server.`);
+        process.exit(1);
+      } else {
+        console.error('❌ Server startup error:', err);
+        process.exit(1);
+      }
     });
   } catch (error) {
     console.error("Failed to start server:", error);
