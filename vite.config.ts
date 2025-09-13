@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
@@ -33,18 +34,6 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
-  },
-  server: {
-    hmr: {
-      overlay: false,
-      port: 24678 // Use different port for HMR WebSocket
-    }
-  },
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'lucide-react', '@tanstack/react-query', 'wouter'],
-    exclude: ['@replit/vite-plugin-cartographer']
-  },
-  build: {
     target: 'esnext',
     minify: 'esbuild',
     rollupOptions: {
@@ -55,5 +44,15 @@ export default defineConfig({
         }
       }
     }
+  },
+  server: {
+    hmr: {
+      overlay: false,
+      port: 24678
+    }
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'lucide-react', '@tanstack/react-query', 'wouter'],
+    exclude: ['@replit/vite-plugin-cartographer']
   }
 });
