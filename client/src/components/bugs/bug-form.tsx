@@ -33,6 +33,7 @@ const bugSchema = z.object({
   priority: z.enum(["High", "Medium", "Low"]),
   environment: z.string().optional().nullable(),
   status: z.enum(["Open", "In Progress", "Resolved", "Closed"]),
+  dateReported: z.string().optional(),
   preConditions: z.string().optional().nullable(),
   stepsToReproduce: z.string().min(3, { message: "Steps to reproduce must be at least 3 characters" }),
   expectedResult: z.string().min(3, { message: "Expected result must be at least 3 characters" }),
@@ -211,6 +212,7 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
       priority: bug?.priority || "Medium",
       environment: bug?.environment || "",
       status: bug?.status || "Open",
+      dateReported: bug?.dateReported ? new Date(bug.dateReported).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       preConditions: bug?.preConditions || testCase?.preConditions || "",
       stepsToReproduce: bug?.stepsToReproduce || testCase?.testSteps || "",
       expectedResult: bug?.expectedResult || testCase?.expectedResult || "",
@@ -296,7 +298,7 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
             )}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
               control={form.control}
               name="severity"
@@ -345,6 +347,25 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
                       <SelectItem value="Low">Low</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="dateReported"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date Reported</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="date" 
+                      {...field} 
+                      value={field.value ? new Date(field.value).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

@@ -155,35 +155,24 @@ export class GitHubService {
     }
 
     try {
-      // First try with labels, if that fails, try without labels
-      let response;
-      try {
-        response = await this.octokit.rest.issues.create({
-          owner: this.config.owner,
-          repo: this.config.repo,
-          title,
-          body,
-          labels,
-        });
-      } catch (labelError: any) {
-        if (labelError.status === 422 && labels && labels.length > 0) {
-          logger.warn('Labels not found in repository, creating issue without labels');
-          // Retry without labels
-          response = await this.octokit.rest.issues.create({
-            owner: this.config.owner,
-            repo: this.config.repo,
-            title,
-            body,
-          });
-        } else {
-          throw labelError;
-        }
+      // Create labels if they don't exist
+      if (labels && labels.length > 0) {
+        await this.ensureLabelsExist(labels);
       }
+
+      const response = await this.octokit.rest.issues.create({
+        owner: this.config.owner,
+        repo: this.config.repo,
+        title,
+        body,
+        labels: labels || [],
+      });
 
       logger.info('GitHub issue created:', {
         number: response.data.number,
         title: response.data.title,
         url: response.data.html_url,
+        labels: response.data.labels?.map(l => typeof l === 'string' ? l : l.name),
       });
 
       return {
@@ -193,6 +182,7 @@ export class GitHubService {
           number: response.data.number,
           title: response.data.title,
           url: response.data.html_url,
+          labels: response.data.labels?.map(l => typeof l === 'string' ? l : l.name) || [],
         },
       };
 
@@ -216,6 +206,110 @@ export class GitHubService {
       return {
         success: false,
         message: `Failed to create issue: ${error.message}`,
+      };
+    }
+  }
+
+  async ensureLabelsExist(labelNames: string[]): Promise<void> {
+    if (!this.octokit || !this.config) return;
+
+    try {
+      // Get existing labels
+      const existingLabels = await this.octokit.rest.issues.listLabelsForRepo({
+        owner: this.config.owner,
+        repo: this.config.repo,
+      });
+
+      const existingLabelNames = existingLabels.data.map(label => label.name.toLowerCase());
+
+      // Create missing labels
+      for (const labelName of labelNames) {
+        if (!existingLabelNames.includes(labelName.toLowerCase())) {
+          try {
+            await this.octokit.rest.issues.createLabel({
+              owner: this.config.owner,
+              repo: this.config.repo,
+              name: labelName,
+              color: this.getLabelColor(labelName),
+              description: `Auto-created label from Test Case Tracker`,
+            });
+            logger.info(`Created GitHub label: ${labelName}`);
+          } catch (labelError: any) {
+            logger.warn(`Failed to create label ${labelName}:`, labelError.message);
+          }
+        }
+      }
+    } catch (error: any) {
+      logger.warn('Failed to ensure labels exist:', error.message);
+    }
+  }
+
+  private getLabelColor(labelName: string): string {
+    // Generate colors based on label names for consistency
+    const colors = {
+      'critical': 'ff0000',
+      'major': 'ff6600', 
+      'minor': 'ffcc00',
+      'trivial': '99ff99',
+      'high': 'ff3333',
+      'medium': 'ffaa33',
+      'low': '33ff33',
+      'bug': 'd73a4a',
+      'enhancement': 'a2eeef',
+      'documentation': '0075ca',
+      'duplicate': 'cfd3d7',
+      'good first issue': '7057ff',
+      'help wanted': '008672',
+      'invalid': 'e4e669',
+      'question': 'd876e3',
+      'wontfix': 'ffffff'
+    };
+
+    const lowerName = labelName.toLowerCase();
+    if (colors[lowerName as keyof typeof colors]) {
+      return colors[lowerName as keyof typeof colors];
+    }
+
+    // Generate a color based on the label name hash
+    let hash = 0;
+    for (let i = 0; i < labelName.length; i++) {
+      hash = labelName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    const color = Math.abs(hash).toString(16).substring(0, 6).padEnd(6, '0');
+    return color;
+  }
+
+  async addCommentToIssue(issueNumber: number, comment: string): Promise<{ success: boolean; message: string; data?: any }> {
+    if (!this.octokit || !this.config) {
+      return {
+        success: false,
+        message: 'GitHub client not configured',
+      };
+    }
+
+    try {
+      const response = await this.octokit.rest.issues.createComment({
+        owner: this.config.owner,
+        repo: this.config.repo,
+        issue_number: issueNumber,
+        body: comment,
+      });
+
+      return {
+        success: true,
+        message: 'Comment added successfully',
+        data: {
+          id: response.data.id,
+          url: response.data.html_url,
+        },
+      };
+
+    } catch (error: any) {
+      logger.error('Failed to add GitHub comment:', error);
+      return {
+        success: false,
+        message: `Failed to add comment: ${error.message}`,
       };
     }
   }

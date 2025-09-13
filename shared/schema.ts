@@ -152,6 +152,8 @@ export const bugs = pgTable("bugs", {
   moduleId: integer("module_id"),
   testCaseId: integer("test_case_id"),
   assignedToId: integer("assigned_to_id"),
+  githubIssueNumber: text("github_issue_number"), // GitHub issue number
+  githubIssueUrl: text("github_issue_url"), // GitHub issue URL
   updatedAt: timestamp("updated_at"),
 });
 
@@ -844,6 +846,45 @@ export type InsertKanbanColumn = z.infer<typeof insertKanbanColumnSchema>;
 export type KanbanCard = typeof kanbanCards.$inferSelect;
 export type InsertKanbanCard = z.infer<typeof insertKanbanCardSchema>;
 
+// Bug Comments schema
+export const bugComments = pgTable("bug_comments", {
+  id: serial("id").primaryKey(),
+  bugId: integer("bug_id").notNull(),
+  content: text("content").notNull(),
+  authorId: integer("author_id").notNull(),
+  parentId: integer("parent_id"), // For reply threading
+  isPrivate: boolean("is_private").default(false),
+  githubCommentId: text("github_comment_id"), // For GitHub sync
+  githubUrl: text("github_url"), // GitHub comment URL
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+export const bugCommentReactions = pgTable("bug_comment_reactions", {
+  id: serial("id").primaryKey(),
+  commentId: integer("comment_id").notNull(),
+  userId: integer("user_id").notNull(),
+  type: text("type").$type<"like" | "dislike" | "heart" | "laugh" | "confused" | "hooray" | "rocket" | "eyes">().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBugCommentSchema = createInsertSchema(bugComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBugCommentReactionSchema = createInsertSchema(bugCommentReactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type BugComment = typeof bugComments.$inferSelect;
+export type InsertBugComment = z.infer<typeof insertBugCommentSchema>;
+
+export type BugCommentReaction = typeof bugCommentReactions.$inferSelect;
+export type InsertBugCommentReaction = z.infer<typeof insertBugCommentReactionSchema>;
+
 // Traceability Matrix - Custom Markers (already defined above, commented out to avoid duplication)
 // We already have this definition earlier in the file
 
@@ -1025,7 +1066,7 @@ export const resourceRequests = pgTable("resource_requests", {
   requestedById: integer("requested_by_id").notNull(),
   assignedToId: integer("assigned_to_id"),
   priority: text("priority").$type<"Low" | "Medium" | "High" | "Critical">().notNull().default("Medium"),
-  status: text("status").$type<"Draft" | "Pending" | "Approved" | "In Progress" | "Completed" | "Rejected" | "Cancelled">().notNull().default("Draft"),
+  status: text("status").$type<"Draft" | "Pending" | "Approved" | "In Progress" | "Completed" | "Rejected" | "Cancelled" | "Closed" | "Reopened">().notNull().default("Draft"),
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
   actualStartDate: date("actual_start_date"),
@@ -1044,9 +1085,13 @@ export const resourceRequests = pgTable("resource_requests", {
   attachments: json("attachments").default([]),
   approvedById: integer("approved_by_id"),
   approvedAt: timestamp("approved_at"),
+  closedAt: timestamp("closed_at"),
+  closedById: integer("closed_by_id"),
+  reopenedAt: timestamp("reopened_at"),
+  reopenedById: integer("reopened_by_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at"),
-});
+});</old_str>
 
 export const requestExtensionHistory = pgTable("request_extension_history", {
   id: serial("id").primaryKey(),

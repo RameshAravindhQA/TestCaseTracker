@@ -36,7 +36,10 @@ import {
   Github,
   ChevronLeft,
   ChevronRight,
-  Move
+  Move,
+  Clipboard,
+  Link,
+  ExternalLink
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -95,6 +98,8 @@ export function GitHubIssueReporter() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const draggableRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const [formData, setFormData] = useState<GitHubIssueData>({
     title: '',
@@ -112,6 +117,9 @@ export function GitHubIssueReporter() {
     screenshots: [],
     additionalInfo: ''
   });
+
+  const [pastedLinks, setPastedLinks] = useState<string[]>([]);
+  const [clipboardText, setClipboardText] = useState('');
 
   // Fetch projects
   const { data: projectsData } = useQuery<Project[]>({
@@ -346,10 +354,14 @@ export function GitHubIssueReporter() {
         setScreenshots(prev => [...prev, file]);
       } else if (file.type.startsWith('video/')) {
         setScreenRecording(file);
+      } else {
+        setAttachments(prev => [...prev, file]);
       }
     });
 
-    event.target.value = '';
+    if (event.target) {
+      event.target.value = ''; // Clear the input
+    }
   };
 
   // Remove screenshot
@@ -357,9 +369,25 @@ export function GitHubIssueReporter() {
     setScreenshots(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Remove attachment
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const formatIssueDescription = () => {
     const selectedProject = projects.find(p => p.id === formData.projectId);
     const selectedModule = modules.find(m => m.id === formData.moduleId);
+
+    let descriptionContent = formData.description;
+
+    if (clipboardText) {
+      descriptionContent += (descriptionContent ? '\n\n' : '') + '**Clipboard Content:**\n```\n' + clipboardText + '\n```';
+    }
+
+    if (pastedLinks.length > 0) {
+      descriptionContent += (descriptionContent ? '\n\n' : '') + '**Reference Links:**\n' + 
+        pastedLinks.map(link => `- ${link}`).join('\n');
+    }
 
     return `
 ## Project Information
@@ -371,7 +399,7 @@ export function GitHubIssueReporter() {
 - **Environment**: ${formData.environment}
 
 ## Issue Description
-${formData.description}
+${descriptionContent}
 
 ## Steps to Reproduce
 ${formData.reproductionSteps}
@@ -438,32 +466,48 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
       const attachmentPromises = [];
 
       for (const file of screenshots) {
-        const formData = new FormData();
-        formData.append('file', file);
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', file);
 
         const uploadPromise = fetch('/api/uploads/bug-attachment', {
           method: 'POST',
-          body: formData,
+          body: uploadFormData,
         }).then(res => res.json());
 
         attachmentPromises.push(uploadPromise);
       }
 
       if (screenRecording) {
-        const formData = new FormData();
-        formData.append('file', screenRecording);
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', screenRecording);
 
         const uploadPromise = fetch('/api/uploads/bug-attachment', {
           method: 'POST',
-          body: formData,
+          body: uploadFormData,
         }).then(res => res.json());
 
         attachmentPromises.push(uploadPromise);
       }
 
+      // Handle other attachments
+      for (const file of attachments) {
+        // Avoid re-uploading if it's a screenshot or recording already handled
+        if (!screenshots.includes(file) && file !== screenRecording) {
+          const uploadFormData = new FormData();
+          uploadFormData.append('file', file);
+
+          const uploadPromise = fetch('/api/uploads/bug-attachment', {
+            method: 'POST',
+            body: uploadFormData,
+          }).then(res => res.json());
+
+          attachmentPromises.push(uploadPromise);
+        }
+      }
+
       // Wait for all uploads to complete
       const uploadedAttachments = await Promise.all(attachmentPromises);
-      bugPayload.attachments = uploadedAttachments;
+      bugPayload.attachments = uploadedAttachments.map(uploadResult => uploadResult.url); // Assuming the API returns the URL
 
       // Create bug in system
       const bugResponse = await fetch(`/api/projects/${formData.projectId}/bugs`, {
@@ -490,7 +534,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
         body: JSON.stringify({
           title: formData.title,
           body: formatIssueDescription(),
-          labels: [formData.priority, formData.severity, formData.category],
+          labels: formData.priority === 'critical' ? [formData.priority, formData.severity, formData.category] : [formData.priority, formData.severity, formData.category], // Example label mapping
           projectId: formData.projectId,
         }),
       });
@@ -500,13 +544,13 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
 
         toast({
           title: "Issue created successfully",
-          description: `Bug #${bugResult.bugId} created in system and GitHub issue #${githubResult.issueNumber} created`,
+          description: `Bug #${bugResult.id} created in system and GitHub issue #${githubResult.issueNumber} created`,
         });
       } else {
         // GitHub creation failed, but system bug was created
         toast({
           title: "Partial success",
-          description: `Bug #${bugResult.bugId} created in system, but GitHub issue creation failed`,
+          description: `Bug #${bugResult.id} created in system, but GitHub issue creation failed`,
           variant: "destructive"
         });
       }
@@ -530,6 +574,8 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
       });
       setScreenshots([]);
       setScreenRecording(null);
+      setPastedLinks([]);
+      setClipboardText('');
       setIsOpen(false);
 
     } catch (error) {
@@ -537,7 +583,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
       toast({
         title: "Error creating issue",
         description: error instanceof Error ? error.message : "An unexpected error occurred",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -548,6 +594,65 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Clipboard handlers
+  const handlePasteFromClipboard = async () => {
+    try {
+      // Try to read text from clipboard
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        // Check if it's a URL
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const urls = text.match(urlRegex);
+
+        if (urls) {
+          setPastedLinks(prev => [...prev, ...urls.filter(url => !prev.includes(url))]);
+          toast({
+            title: 'Success',
+            description: `${urls.length} link(s) added from clipboard`,
+          });
+        } else {
+          setClipboardText(text);
+          toast({
+            title: 'Success',
+            description: 'Text content pasted from clipboard',
+          });
+        }
+      }
+
+      // Try to read images from clipboard
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        if (item.types.includes('image/png') || item.types.includes('image/jpeg')) {
+          const blob = await item.getType('image/png');
+          const file = new File([blob], `clipboard-image-${Date.now()}.png`, { type: 'image/png' });
+          setScreenshots(prev => [...prev, file]); // Add to screenshots
+          toast({
+            title: 'Success',
+            description: 'Image pasted from clipboard',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Clipboard error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to access clipboard. Please ensure you have granted clipboard permissions.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const removePastedLink = (linkToRemove: string) => {
+    setPastedLinks(prev => prev.filter(link => link !== linkToRemove));
+  };
+
+  const addLinkToDescription = (link: string) => {
+    setFormData(prev => ({
+      ...prev,
+      description: prev.description + (prev.description ? '\n\n' : '') + `Reference: ${link}`
+    }));
   };
 
   return (
@@ -844,7 +949,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
                       <input
                         type="file"
                         multiple
-                        accept="image/*,video/*"
+                        accept="image/*,video/*,.pdf,.doc,.docx,.txt"
                         onChange={handleFileUpload}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
@@ -898,6 +1003,123 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="upload" className="space-y-4">
+                  <div>
+                    <Label htmlFor="file-upload">Upload Files</Label>
+                    <Input
+                      ref={fileInputRef}
+                      id="file-upload"
+                      type="file"
+                      multiple
+                      accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                      onChange={handleFileUpload}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  {/* Clipboard Section */}
+                  <div className="border-t pt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label>Clipboard Content</Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handlePasteFromClipboard}
+                        className="flex items-center gap-2"
+                      >
+                        <Clipboard className="h-4 w-4" />
+                        Paste from Clipboard
+                      </Button>
+                    </div>
+
+                    {/* Pasted Links */}
+                    {pastedLinks.length > 0 && (
+                      <div className="space-y-2 mb-4">
+                        <Label className="text-sm text-blue-600">Pasted Links:</Label>
+                        {pastedLinks.map((link, index) => (
+                          <Card key={index} className="p-2 bg-blue-50 border-blue-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 flex-1">
+                                <Link className="h-4 w-4 text-blue-600" />
+                                <span className="text-sm text-blue-700 truncate">{link}</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => window.open(link, '_blank')}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => addLinkToDescription(link)}
+                                  className="h-6 text-xs px-2"
+                                >
+                                  Add to Description
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => removePastedLink(link)}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Clipboard Text */}
+                    {clipboardText && (
+                      <div className="mb-4">
+                        <Label className="text-sm text-green-600">Pasted Text Content:</Label>
+                        <Card className="p-2 bg-green-50 border-green-200">
+                          <div className="flex items-start justify-between">
+                            <pre className="text-sm text-green-700 whitespace-pre-wrap overflow-auto max-h-32 flex-1">
+                              {clipboardText.length > 200 ? `${clipboardText.substring(0, 200)}...` : clipboardText}
+                            </pre>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setClipboardText('')}
+                              className="h-6 w-6 p-0 ml-2"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </Card>
+                      </div>
+                    )}
+                  </div>
+
+                  {attachments.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Selected Files:</Label>
+                      {attachments.map((file, index) => (
+                        <Card key={index} className="p-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">{file.name}</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => removeAttachment(index)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
                     </div>
                   )}
                 </TabsContent>
