@@ -9,15 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Camera, 
-  Upload, 
-  Trash2, 
-  Download, 
-  MousePointer, 
-  Square, 
-  Circle, 
-  Type, 
+import {
+  Camera,
+  Upload,
+  Trash2,
+  Download,
+  MousePointer,
+  Square,
+  Circle,
+  Type,
   Pencil,
   Undo,
   Redo,
@@ -591,9 +591,9 @@ export function EnhancedIssueReporter() {
                 Capture Screen
               </Button>
 
-              <Button 
-                onClick={() => fileInputRef.current?.click()} 
-                variant="outline" 
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                variant="outline"
                 className="gap-2"
               >
                 <Upload className="h-4 w-4" />

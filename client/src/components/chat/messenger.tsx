@@ -106,10 +106,12 @@ export function Messenger() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+  const [senderUnreadCounts, setSenderUnreadCounts] = useState<{ senderId: number; senderName: string; count: number }[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const [senderUnreadCounts, setSenderUnreadCounts] = useState<{ senderId: number; senderName: string; count: number }[]>([]);
+
 
   // Fetch all users for contacts
   const { data: contacts = [], isLoading: contactsLoading } = useQuery<Contact[]>({
@@ -123,7 +125,7 @@ export function Messenger() {
   });
 
   // Fetch messages for selected contact
-  const { data: messages = [], isLoading: messagesLoading, refetch: refetchMessages } = useQuery({
+  const { data: queryMessages = [], isLoading: messagesLoading, refetch: refetchMessages } = useQuery<Message[]>({
     queryKey: ['messages', selectedContact?.id],
     queryFn: async () => {
       if (!selectedContact) return [];
@@ -148,7 +150,9 @@ export function Messenger() {
 
         const data = await messagesResponse.json();
         console.log(`[MESSENGER] Fetched ${data.length} messages for contact ${selectedContact.id}:`, data);
-        return Array.isArray(data) ? data : [];
+        const fetchedMessages = Array.isArray(data) ? data : [];
+        setMessages(fetchedMessages); // Update local state
+        return fetchedMessages;
       } catch (error) {
         console.error('[MESSENGER] Error fetching messages:', error);
         return [];
@@ -255,6 +259,13 @@ export function Messenger() {
                 queryClient.invalidateQueries({ queryKey: ['messages'] });
                 if (selectedContact && (data.message.senderId === selectedContact.id || data.message.receiverId === selectedContact.id)) {
                   queryClient.invalidateQueries({ queryKey: ['messages', selectedContact.id] });
+                  // Also update local state directly for immediate display
+                  setMessages(prevMessages => {
+                    if (!prevMessages.some(msg => msg.id === data.message.id)) {
+                      return [...prevMessages, data.message];
+                    }
+                    return prevMessages;
+                  });
                 }
 
                 // Refresh unread counts
@@ -275,6 +286,12 @@ export function Messenger() {
                 if (selectedContact) {
                   queryClient.invalidateQueries({ queryKey: ['messages', selectedContact.id] });
                 }
+                // Update local state to reflect sent message with an ID if it was temporary
+                setMessages(prevMessages => prevMessages.map(msg =>
+                  msg.content === data.message.content && msg.senderId === user?.id && !msg.id
+                    ? { ...msg, id: data.message.id, timestamp: data.message.timestamp }
+                    : msg
+                ));
                 break;
               case 'user_typing':
                 if (data.userId !== user?.id) {
@@ -380,6 +397,20 @@ export function Messenger() {
     mutationFn: async (messageData: { receiverId: number; content: string; type?: string; attachments?: any[] }) => {
       console.log('[MESSENGER] Sending message via API:', messageData);
 
+      // Add a temporary message with a placeholder ID to show it immediately
+      const tempMessage: Message = {
+        id: Date.now(), // Temporary ID
+        senderId: user!.id,
+        receiverId: messageData.receiverId,
+        content: messageData.content,
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        type: messageData.type as any,
+        attachments: messageData.attachments?.map(att => ({ ...att, id: Date.now() })), // Temporary attachment IDs
+        sender: { ...user, name: user?.firstName || user?.name, avatar: user?.avatar || user?.profilePicture } as Contact, // Assume current user is sender
+      };
+      setMessages(prev => [...prev, tempMessage]);
+
       try {
         // Send via API for persistence first
         const response = await apiRequest('POST', '/api/messages', messageData);
@@ -387,11 +418,18 @@ export function Messenger() {
         if (!response.ok) {
           const errorData = await response.text();
           console.error('[MESSENGER] API error response:', response.status, errorData);
+          // Remove the temporary message if API call fails
+          setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
           throw new Error(`HTTP ${response.status}: ${errorData}`);
         }
 
         const savedMessage = await response.json();
         console.log('[MESSENGER] Message saved via API:', savedMessage);
+
+        // Update the temporary message with the actual ID and timestamp from the server
+        setMessages(prev => prev.map(msg =>
+          msg.id === tempMessage.id ? { ...savedMessage, sender: { ...user, name: user?.firstName || user?.name, avatar: user?.avatar || user?.profilePicture } as Contact } : msg
+        ));
 
         // Then send via WebSocket for real-time delivery if connection is open
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && selectedContact) {
@@ -412,6 +450,8 @@ export function Messenger() {
         return savedMessage;
       } catch (error) {
         console.error('[MESSENGER] Error in send message mutation:', error);
+        // Ensure temporary message is removed if any error occurs after initial add
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
         throw error;
       }
     },
@@ -421,7 +461,7 @@ export function Messenger() {
       setAttachments([]);
       setReplyingTo(null);
 
-      // Invalidate queries to refresh message list
+      // Invalidate queries to refresh message list (though local state is updated)
       queryClient.invalidateQueries({ queryKey: ['messages'] });
       if (selectedContact) {
         queryClient.invalidateQueries({ queryKey: ['messages', selectedContact.id] });
@@ -449,9 +489,10 @@ export function Messenger() {
       if (!response.ok) throw new Error('Failed to edit message');
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedMessage) => {
       setEditingMessageId(null);
       setEditingContent('');
+      setMessages(prev => prev.map(msg => msg.id === updatedMessage.id ? { ...updatedMessage, sender: msg.sender } : msg));
       queryClient.invalidateQueries({ queryKey: ['messages', selectedContact?.id] });
       toast({
         title: "✅ Message updated",
@@ -474,7 +515,8 @@ export function Messenger() {
       if (!response.ok) throw new Error('Failed to delete message');
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
+      setMessages(prev => prev.filter(msg => msg.id !== id));
       queryClient.invalidateQueries({ queryKey: ['messages', selectedContact?.id] });
       toast({
         title: "✅ Message deleted",
@@ -497,7 +539,8 @@ export function Messenger() {
       if (!response.ok) throw new Error('Failed to react to message');
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedMessage) => {
+      setMessages(prev => prev.map(msg => msg.id === updatedMessage.id ? { ...updatedMessage, sender: msg.sender } : msg));
       queryClient.invalidateQueries({ queryKey: ['messages', selectedContact?.id] });
     },
     onError: () => {
@@ -509,7 +552,7 @@ export function Messenger() {
     },
   });
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive or when the component mounts/updates
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -539,7 +582,7 @@ export function Messenger() {
     const messageData = {
       receiverId: selectedContact.id,
       content: newMessage.trim(),
-      type: attachments.length > 0 ? 'file' : 'text',
+      type: attachments.length > 0 ? (attachments[0].type.startsWith('image') ? 'image' : 'file') : 'text',
       attachments: attachments.map(file => ({
         fileName: file.name,
         fileType: file.type,
@@ -736,20 +779,26 @@ export function Messenger() {
   };
 
   const handleUserSelect = async (userId: number) => {
-    setSelectedContact(contacts?.find(c => c.id === userId) || null);
+    const selected = contacts?.find(c => c.id === userId);
+    setSelectedContact(selected || null);
 
-    // Mark messages from this sender as read
-    try {
-      await fetch(`/api/messages/mark-read/${userId}`, {
-        method: 'POST',
-      });
-      // Refresh unread counts after marking as read
-      await fetchSenderUnreadCounts();
-    } catch (error) {
-      console.error('Error marking messages as read:', error);
+    if (selected) {
+      // Mark messages from this sender as read
+      try {
+        await fetch(`/api/messages/mark-read/${userId}`, {
+          method: 'POST',
+        });
+        // Refresh unread counts after marking as read
+        await fetchSenderUnreadCounts();
+      } catch (error) {
+        console.error('Error marking messages as read:', error);
+      }
     }
   };
 
+  // The refetching of messages is now handled by `useQuery`'s `refetch` or automatic revalidation.
+  // This function is likely redundant or needs to be integrated with the query.
+  // Keeping it for now but marking as potentially unused/refactor needed.
   const fetchMessages = async (userId: number) => {
     try {
       const messagesResponse = await fetch(`/api/messages?userId=${userId}`, {
@@ -768,8 +817,10 @@ export function Messenger() {
 
       const data = await messagesResponse.json();
       setMessages(Array.isArray(data) ? data : []);
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error('[MESSENGER] Error fetching messages:', error);
+      return [];
     }
   };
 
@@ -1080,9 +1131,8 @@ export function Messenger() {
                             </Popover>
                           </div>
                         )}
-                      </div>
-                    </motion.div>
-                  );
+                      </motion.div>
+                    );
                   }).filter(Boolean)
                 )}
                 <div ref={messagesEndRef} />
@@ -1092,16 +1142,19 @@ export function Messenger() {
             {/* Message Input */}
             <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 sticky bottom-0">
               {replyingTo && (
-                <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg relative">
                   <p className="text-xs text-gray-500">Replying to {replyingTo.sender.firstName}</p>
                   <p className="text-sm truncate">{replyingTo.content}</p>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="absolute right-2 top-2"
+                    className="absolute right-1 top-1 h-6 w-6 p-0"
                     onClick={() => setReplyingTo(null)}
                   >
-                    ×
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
                   </Button>
                 </div>
               )}
@@ -1118,7 +1171,10 @@ export function Messenger() {
                         className="h-4 w-4 p-0"
                         onClick={() => removeAttachment(index)}
                       >
-                        ×
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
                       </Button>
                     </div>
                   ))}

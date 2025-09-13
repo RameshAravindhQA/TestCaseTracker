@@ -13,7 +13,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd TestCaseTracker && npx tsx server/index.ts"
+args = "npx tsx server/index.ts"
 
 [[ports]]
 localPort = 5000

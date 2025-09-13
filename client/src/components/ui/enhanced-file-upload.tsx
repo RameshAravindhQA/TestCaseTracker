@@ -264,31 +264,34 @@ export function EnhancedFileUpload({
   // This function is not currently used - copy functionality is disabled
 
   const getFileIcon = (fileName: string, fileType: string) => {
-    if (fileType.startsWith("image/") ||
-        fileName.toLowerCase().endsWith('.png') ||
-        fileName.toLowerCase().endsWith('.jpg') ||
-        fileName.toLowerCase().endsWith('.jpeg') ||
-        fileName.toLowerCase().endsWith('.gif') ||
-        fileName.toLowerCase().endsWith('.webp')) {
+    const safeFileName = fileName || '';
+    const safeFileType = fileType || '';
+    
+    if (safeFileType.startsWith("image/") ||
+        safeFileName.toLowerCase().endsWith('.png') ||
+        safeFileName.toLowerCase().endsWith('.jpg') ||
+        safeFileName.toLowerCase().endsWith('.jpeg') ||
+        safeFileName.toLowerCase().endsWith('.gif') ||
+        safeFileName.toLowerCase().endsWith('.webp')) {
       return <Image className="h-4 w-4" />;
     }
 
-    if (fileType.includes("pdf") ||
-        fileName.toLowerCase().endsWith('.pdf')) {
+    if (safeFileType.includes("pdf") ||
+        safeFileName.toLowerCase().endsWith('.pdf')) {
       return <FileText className="h-4 w-4" />;
     }
 
     // Video file detection
-    if (fileType.startsWith("video/") ||
-        fileName.toLowerCase().endsWith('.mp4') ||
-        fileName.toLowerCase().endsWith('.webm') ||
-        fileName.toLowerCase().endsWith('.avi') ||
-        fileName.toLowerCase().endsWith('.mov') ||
-        fileName.toLowerCase().endsWith('.mkv') ||
-        fileName.toLowerCase().endsWith('.flv') ||
-        fileName.toLowerCase().endsWith('.wmv') ||
-        fileName.toLowerCase().endsWith('.ogv') ||
-        fileName.toLowerCase().endsWith('.3gp')) {
+    if (safeFileType.startsWith("video/") ||
+        safeFileName.toLowerCase().endsWith('.mp4') ||
+        safeFileName.toLowerCase().endsWith('.webm') ||
+        safeFileName.toLowerCase().endsWith('.avi') ||
+        safeFileName.toLowerCase().endsWith('.mov') ||
+        safeFileName.toLowerCase().endsWith('.mkv') ||
+        safeFileName.toLowerCase().endsWith('.flv') ||
+        safeFileName.toLowerCase().endsWith('.wmv') ||
+        safeFileName.toLowerCase().endsWith('.ogv') ||
+        safeFileName.toLowerCase().endsWith('.3gp')) {
       // Using FileText for videos as there's no dedicated video icon in lucide-react
       // You could also import a video icon from react-icons if available
       return <FileText className="h-4 w-4 text-purple-500" />;
@@ -370,7 +373,7 @@ export function EnhancedFileUpload({
                       {getFileIcon(file.fileName, file.fileType)}
                       <div>
                         <p className="text-sm font-medium overflow-hidden text-ellipsis max-w-[200px]" style={{ whiteSpace: 'nowrap' }}>
-                          {file?.fileName || file?.name || 'Unknown file'}
+                          {file?.fileName || file?.name || file?.originalname || 'Unknown file'}
                         </p>
                         <p className="text-xs text-gray-500">
                           {file.fileSize ? `${Math.round(file.fileSize / 1024)} KB` : 'Unknown size'}
