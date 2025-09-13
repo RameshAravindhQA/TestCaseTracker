@@ -1,0 +1,45 @@
+ npm run dev
+
+> rest-express@1.0.0 dev
+> node dev.js
+
+🚀 Starting TestCaseTracker Application...
+📂 Working directory: /home/runner/workspace/TestCaseTracker
+✅ Initialized clean storage with admin user only: { users: 2, projects: 0, modules: 0, testCases: 0, bugs: 0 }
+🔧 Gemini initialization check: { hasKey: false, keyLength: 0, startsWithAIza: false, preview: 'NONE' }
+❌ Gemini API key not configured
+🔧 OpenAI initialization check: { hasKey: false, keyLength: 0, startsWithSk: false, preview: 'NONE' }
+❌ OpenAI API key not configured
+🔧 GitHub Copilot initialization check: { hasKey: false, keyLength: 0, startsWithGhp: false, preview: 'NONE' }
+❌ GitHub Copilot token not configured
+🔍 AI Providers Status: {
+  gemini: {
+    ready: false,
+    error: 'Google Gemini API key is not properly configured'
+  },
+  openai: { ready: false, error: 'OpenAI API key is not properly configured' },
+  githubCopilot: {
+    ready: false,
+    error: 'GitHub Copilot token is not properly configured'
+  }
+}
+✅ Database connection established for matrix operations with SSL enabled
+🔧 Starting to fix existing test case IDs...
+🔧 Finished fixing existing test case IDs
+✅ Test case ID migration completed
+🚀 Starting Test Case Management System...
+📡 Registering API routes...
+Profile pictures directory exists: /home/runner/workspace/TestCaseTracker/uploads/profile-pictures
+Documents directory exists: /home/runner/workspace/TestCaseTracker/uploads/documents
+Bug attachments directory exists: /home/runner/workspace/TestCaseTracker/uploads/bug-attachment
+Test file created successfully: /home/runner/workspace/TestCaseTracker/uploads/profile-pictures/test.txt
+Test file removed successfully
+✅ API routes registered successfully
+✅ Database tables initialized successfully
+✅ Database initialized successfully
+[2025-09-13T06:38:28.096Z] INFO: Chat WebSocket server initialized on /ws/chat
+[2025-09-13T06:38:28.096Z] INFO: Chat WebSocket server initialized with session store
+Server running on http://0.0.0.0:5000
+WebSocket server initialized for real-time chat
+[2025-09-13T06:38:28.247Z] INFO: Server started on port 5000 with WebSocket support
+6:38:28 AM [express] serving on port 5000
