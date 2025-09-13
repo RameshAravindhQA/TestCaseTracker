@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense, startTransition } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Filter, Calendar, Clock, CheckCircle2, AlertCircle, FileText, Settings, History, MessageSquare, Eye, Edit, Trash2, Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { MainLayout } from "@/components/layout/main-layout";
 import { RequestFormForm } from "@/components/request-forms/request-form-form";
 import { RequestFormTypeForm } from "@/components/request-forms/request-form-type-form";
@@ -19,6 +19,7 @@ import { RequestCommentsDialog } from "@/components/request-forms/request-commen
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ErrorBoundary } from "react-error-boundary";
+import { format } from 'date-fns';
 
 // Fallback components for Suspense and Error Boundaries
 const LoadingFallback = () => (
@@ -56,6 +57,7 @@ function RequestFormsPageContent() {
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject">("approve");
   const [approvalComments, setApprovalComments] = useState("");
+  const queryClient = useQueryClient();
 
   // Fetch resource requests
   const { data: requests = [], isLoading: requestsLoading, refetch: refetchRequests } = useQuery({
@@ -115,6 +117,7 @@ function RequestFormsPageContent() {
       const method = editingRequest ? "PUT" : "POST";
       const url = editingRequest ? `/api/resource-requests/${editingRequest.id}` : "/api/resource-requests";
       const res = await apiRequest(method, url, data);
+      if (!res.ok) throw new Error(`Failed to ${editingRequest ? "update" : "create"} request`);
       return res.json();
     },
     onSuccess: () => {
@@ -126,10 +129,10 @@ function RequestFormsPageContent() {
       setIsFormDialogOpen(false);
       setEditingRequest(null);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: `Failed to ${editingRequest ? "update" : "create"} request`,
-        description: `${error}`,
+        description: error.message || "An unexpected error occurred.",
         variant: "destructive",
       });
     },
@@ -142,6 +145,7 @@ function RequestFormsPageContent() {
         status,
         comments
       });
+      if (!res.ok) throw new Error("Failed to update request status");
       return res.json();
     },
     onSuccess: () => {
@@ -154,10 +158,10 @@ function RequestFormsPageContent() {
       setSelectedRequest(null);
       setApprovalComments("");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
-        title: "Failed to update request",
-        description: `${error}`,
+        title: "Failed to update request status",
+        description: error.message || "An unexpected error occurred.",
         variant: "destructive",
       });
     },
@@ -173,7 +177,7 @@ function RequestFormsPageContent() {
     const matchesStatus = statusFilter === "all" || request.status === statusFilter;
     const matchesDepartment = departmentFilter === "all" || request.department === departmentFilter;
     const matchesRequestType = requestTypeFilter === "all" || request.requestType === requestTypeFilter;
-    const matchesProject = projectFilter === "all" || request.projectId.toString() === projectFilter;
+    const matchesProject = projectFilter === "all" || request.projectId?.toString() === projectFilter;
 
     return matchesSearch && matchesStatus && matchesDepartment && matchesRequestType && matchesProject;
   });
@@ -213,6 +217,7 @@ function RequestFormsPageContent() {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -221,11 +226,12 @@ function RequestFormsPageContent() {
   };
 
   const calculateDuration = (startDate: string, endDate: string) => {
+    if (!startDate || !endDate) return 'N/A';
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffTime = end.getTime() - start.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return diffDays >= 0 ? diffDays : 0;
   };
 
   // Dashboard statistics
@@ -663,6 +669,34 @@ function RequestFormsPageContent() {
                                       <History className="h-4 w-4" />
                                     </Button>
                                   )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await fetch(`/api/projects/${request.projectId}/export?format=pdf`);
+                                        if (!response.ok) {
+                                          throw new Error(`PDF export failed: ${response.statusText}`);
+                                        }
+                                        const blob = await response.blob();
+                                        const url = window.URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.setAttribute('download', `project_${request.projectId}_report.pdf`);
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        link.parentNode?.removeChild(link);
+                                        window.URL.revokeObjectURL(url);
+                                        toast({ title: "PDF Export", description: "Project report downloaded successfully." });
+                                      } catch (error: any) {
+                                        console.error("PDF Export Error:", error);
+                                        toast({ title: "PDF Export Failed", description: error.message, variant: "destructive" });
+                                      }
+                                    }}
+                                    title="Export PDF"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -802,7 +836,17 @@ function RequestFormsPageContent() {
                         <DialogTitle>Create New Form Type</DialogTitle>
                       </DialogHeader>
                       <RequestFormTypeForm
-                        onSubmit={() => setIsTypeDialogOpen(false)}
+                        onSubmit={(data) => {
+                          apiRequest("POST", "/api/request-forms/types", data)
+                            .then(() => {
+                              queryClient.invalidateQueries({ queryKey: ["/api/request-forms/types"] });
+                              setIsTypeDialogOpen(false);
+                              toast({ title: "Success", description: "Request type created successfully." });
+                            })
+                            .catch((error) => {
+                              toast({ title: "Error", description: error.message || "Failed to create request type", variant: "destructive" });
+                            });
+                        }}
                         onCancel={() => setIsTypeDialogOpen(false)}
                       />
                     </DialogContent>

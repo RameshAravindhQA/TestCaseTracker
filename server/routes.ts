@@ -584,6 +584,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Project export endpoints
+  apiRouter.get("/projects/:id/export", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const format = req.query.format as string;
+
+      if (!format || !['csv', 'pdf'].includes(format)) {
+        return res.status(400).json({ error: 'Invalid format. Use csv or pdf.' });
+      }
+
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+
+      // Get project data
+      const modules = await storage.getModulesByProject(projectId);
+      const testCases = await storage.getTestCasesByProject(projectId);
+      const bugs = await storage.getBugsByProject(projectId);
+
+      if (format === 'csv') {
+        const csvData = [];
+        
+        // Add project info
+        csvData.push(['Project Export Report']);
+        csvData.push(['Project Name', project.name]);
+        csvData.push(['Description', project.description || '']);
+        csvData.push(['Status', project.status || '']);
+        csvData.push(['Created', project.createdAt ? new Date(project.createdAt).toLocaleDateString() : '']);
+        csvData.push(['']);
+
+        // Add modules
+        csvData.push(['Modules']);
+        csvData.push(['Module ID', 'Name', 'Description', 'Status', 'Created']);
+        modules.forEach(module => {
+          csvData.push([
+            module.moduleId,
+            module.name,
+            module.description || '',
+            module.status || '',
+            module.createdAt ? new Date(module.createdAt).toLocaleDateString() : ''
+          ]);
+        });
+        csvData.push(['']);
+
+        // Add test cases
+        csvData.push(['Test Cases']);
+        csvData.push(['Test Case ID', 'Feature', 'Status', 'Priority', 'Created']);
+        testCases.forEach(tc => {
+          csvData.push([
+            tc.testCaseId,
+            tc.feature || '',
+            tc.status || '',
+            tc.priority || '',
+            tc.createdAt ? new Date(tc.createdAt).toLocaleDateString() : ''
+          ]);
+        });
+        csvData.push(['']);
+
+        // Add bugs
+        csvData.push(['Bugs']);
+        csvData.push(['Bug ID', 'Title', 'Status', 'Severity', 'Priority', 'Created']);
+        bugs.forEach(bug => {
+          csvData.push([
+            bug.bugId,
+            bug.title || '',
+            bug.status || '',
+            bug.severity || '',
+            bug.priority || '',
+            bug.dateReported ? new Date(bug.dateReported).toLocaleDateString() : ''
+          ]);
+        });
+
+        // Convert to CSV string
+        const csvString = csvData.map(row => 
+          row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+        ).join('\n');
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${project.name}-export.csv"`);
+        res.send(csvString);
+      } else if (format === 'pdf') {
+        // For PDF, return JSON data that the client will use to generate PDF
+        res.json({
+          project,
+          modules,
+          testCases,
+          bugs,
+          stats: {
+            totalModules: modules.length,
+            totalTestCases: testCases.length,
+            totalBugs: bugs.length,
+            passedTestCases: testCases.filter(tc => tc.status === 'Pass').length,
+            failedTestCases: testCases.filter(tc => tc.status === 'Fail').length,
+            openBugs: bugs.filter(bug => bug.status === 'Open').length,
+            resolvedBugs: bugs.filter(bug => bug.status === 'Resolved').length
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Project export error:', error);
+      res.status(500).json({ error: 'Failed to export project' });
+    }
+  });
+
   // Test endpoint for AI service functionality
   apiRouter.post("/ai/test-generation", isAuthenticated, async (req, res) => {
     try {

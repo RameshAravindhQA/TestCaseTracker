@@ -549,37 +549,40 @@ export default function NavadhitiProjectsPage() {
 
       doc.text(`Active: ${statusCounts.Active} | Completed: ${statusCounts.Completed} | On Hold: ${statusCounts['On Hold']} | Cancelled: ${statusCounts.Cancelled}`, 14, 45);
 
-      // Prepare table data
+      // Prepare table data based on the exact table headers shown in the interface
       const tableData = projects.map((project: any) => [
-        project.projectName,
-        project.clientName,
-        project.status,
-        project.priority,
-        project.startDate ? format(new Date(project.startDate), 'MMM dd, yyyy') : 'Not set',
-        project.endDate ? format(new Date(project.endDate), 'MMM dd, yyyy') : 'Ongoing',
-        `${project.completionPercentage || 0}%`,
-        `${project.assignedEmployees?.length || 0}`,
-        project.budget ? `$${project.budget.toLocaleString()}` : 'Not set'
+        project.customerName || 'N/A',                    // Customer Name
+        project.projectName || project.name || 'N/A',     // Project Name
+        project.leadName || 'Not Assigned',               // Lead
+        project.status || 'N/A',                          // Overall Project Status
+        project.currentStatus || 'N/A',                   // Current Sprint Status
+        project.currentIssues || 'None',                  // Current Issues
+        project.weeklyComments || 'None',                 // Weekly Comments
+        project.immediateActionItems || 'None',           // Immediate Action Items
+        project.supportRequired || 'None',                // Support Required
+        project.additionalRemarks || 'None'               // Additional Remarks
       ]);
 
-      // Add table
+      // Add table with exact column headers from the interface
       autoTable(doc, {
-        head: [['Project', 'Client', 'Status', 'Priority', 'Start Date', 'End Date', 'Progress', 'Team', 'Budget']],
+        head: [['Customer Name', 'Project Name', 'Lead', 'Overall Project Status', 'Current Sprint Status', 'Current Issues', 'Weekly Comments', 'Immediate Action Items', 'Support Required', 'Additional Remarks']],
         body: tableData,
         startY: 55,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [60, 60, 60] },
+        styles: { fontSize: 7 },
+        headStyles: { fillColor: [60, 60, 60], fontSize: 7 },
         columnStyles: {
-          0: { cellWidth: 30 },
-          1: { cellWidth: 25 },
-          2: { cellWidth: 20 },
-          3: { cellWidth: 15 },
-          4: { cellWidth: 25 },
-          5: { cellWidth: 25 },
-          6: { cellWidth: 15 },
-          7: { cellWidth: 10 },
-          8: { cellWidth: 20 }
-        }
+          0: { cellWidth: 25 },  // Customer Name
+          1: { cellWidth: 30 },  // Project Name
+          2: { cellWidth: 20 },  // Lead
+          3: { cellWidth: 25 },  // Overall Project Status
+          4: { cellWidth: 25 },  // Current Sprint Status
+          5: { cellWidth: 30 },  // Current Issues
+          6: { cellWidth: 30 },  // Weekly Comments
+          7: { cellWidth: 35 },  // Immediate Action Items
+          8: { cellWidth: 25 },  // Support Required
+          9: { cellWidth: 30 }   // Additional Remarks
+        },
+        margin: { left: 10, right: 10 }
       });
 
       // Save PDF
