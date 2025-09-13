@@ -1145,7 +1145,7 @@ export const resourceRequests = pgTable("resource_requests", {
   reopenedById: integer("reopened_by_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at"),
-});</old_str>
+});
 
 export const requestExtensionHistory = pgTable("request_extension_history", {
   id: serial("id").primaryKey(),

@@ -105,16 +105,16 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 let directoriesCreated = false;
 
 const createUploadDirectories = () => {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  
   if (directoriesCreated) {
     return {
-      uploadsDir: path.join(process.cwd(), 'uploads'),
+      uploadsDir,
       profilePicturesDir: path.join(uploadsDir, 'profile-pictures'),
       documentsDir: path.join(uploadsDir, 'documents'),
       bugAttachmentsDir: path.join(uploadsDir, 'bug-attachment')
     };
   }
-
-  const uploadsDir = path.join(process.cwd(), 'uploads');
   const profilePicturesDir = path.join(uploadsDir, 'profile-pictures');
   const documentsDir = path.join(uploadsDir, 'documents');
   const bugAttachmentsDir = path.join(uploadsDir, 'bug-attachment');
