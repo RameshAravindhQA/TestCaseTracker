@@ -1,4 +1,4 @@
-import { Router, type Express, Request, Response, NextFunction } from "express";
+import express, { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject, getTraceabilityMarkersByProject, deleteMatrixCell } from "./matrix-fix";
@@ -91,6 +91,61 @@ const checkRole = (roles: string[]) => {
   };
 };
 
+// Request ownership check middleware
+const canAccessRequestAttachments = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.session.userId!;
+    const userRole = req.session.userRole;
+    
+    // Admins can access everything
+    if (userRole === 'Admin' || userRole === 'Super Admin') {
+      return next();
+    }
+    
+    // For request-level access (GET /request-forms/:requestId/attachments, POST /request-forms/:requestId/attachments)
+    if (req.params.requestId) {
+      const requestId = parseInt(req.params.requestId);
+      const request = await storage.getResourceRequest(requestId);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+      
+      // Allow if user is the request owner
+      if (request.requestedById === userId) {
+        return next();
+      }
+    }
+    
+    // For attachment-level access (DELETE /request-forms/attachments/:attachmentId, GET /request-forms/attachments/:attachmentId/download)
+    if (req.params.attachmentId) {
+      const attachmentId = parseInt(req.params.attachmentId);
+      const attachment = await storage.getRequestAttachment(attachmentId);
+      
+      if (!attachment) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+      
+      // Allow if user uploaded the attachment
+      if (attachment.uploadedById === userId) {
+        return next();
+      }
+      
+      // Also check if user owns the request this attachment belongs to
+      const request = await storage.getResourceRequest(attachment.requestId);
+      if (request && request.requestedById === userId) {
+        return next();
+      }
+    }
+    
+    return res.status(403).json({ message: "Forbidden: You can only access your own request attachments" });
+    
+  } catch (error) {
+    console.error('Authorization check failed:', error);
+    return res.status(500).json({ message: "Server error during authorization check" });
+  }
+};
+
 // Require authentication middleware
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   if (req.session.userId) {
@@ -112,12 +167,14 @@ const createUploadDirectories = () => {
       uploadsDir,
       profilePicturesDir: path.join(uploadsDir, 'profile-pictures'),
       documentsDir: path.join(uploadsDir, 'documents'),
-      bugAttachmentsDir: path.join(uploadsDir, 'bug-attachment')
+      bugAttachmentsDir: path.join(uploadsDir, 'bug-attachment'),
+      requestAttachmentsDir: path.join(uploadsDir, 'request-attachments')
     };
   }
   const profilePicturesDir = path.join(uploadsDir, 'profile-pictures');
   const documentsDir = path.join(uploadsDir, 'documents');
   const bugAttachmentsDir = path.join(uploadsDir, 'bug-attachment');
+  const requestAttachmentsDir = path.join(uploadsDir, 'request-attachments');
 
   // Create uploads directory if it doesn't exist
   if (!fs.existsSync(uploadsDir)) {
@@ -149,6 +206,14 @@ const createUploadDirectories = () => {
     console.log(`Bug attachments directory exists: ${bugAttachmentsDir}`);
   }
 
+  // Create request attachments directory if it doesn't exist
+  if (!fs.existsSync(requestAttachmentsDir)) {
+    console.log(`Creating request attachments directory: ${requestAttachmentsDir}`);
+    fs.mkdirSync(requestAttachmentsDir);
+  } else {
+    console.log(`Request attachments directory exists: ${requestAttachmentsDir}`);
+  }
+
   // Write a test file to verify permissions
   try {
     const testFilePath = path.join(profilePicturesDir, 'test.txt');
@@ -165,7 +230,7 @@ const createUploadDirectories = () => {
   // Mark directories as created to prevent repetitive runs
   directoriesCreated = true;
 
-  return { uploadsDir, profilePicturesDir, documentsDir, bugAttachmentsDir };
+  return { uploadsDir, profilePicturesDir, documentsDir, bugAttachmentsDir, requestAttachmentsDir };
 };
 
 // Helper function to test GitHub connection
@@ -428,6 +493,63 @@ const configureDocumentUpload = () => {
   });
 };
 
+// Configure multer for request attachment uploads
+const configureRequestAttachmentUpload = () => {
+  const { requestAttachmentsDir } = createUploadDirectories();
+
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, requestAttachmentsDir);
+    },
+    filename: (req, file, cb) => {
+      const userId = req.session.userId;
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      const sanitizedOriginalName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+      cb(null, `request-${userId}-${sanitizedOriginalName}-${timestamp}${ext}`);
+    }
+  });
+
+  return multer({ 
+    storage,
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB max file size
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept images, documents, and common file types
+      const acceptedTypes = [
+        // Images
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+        // Documents
+        'application/pdf',
+        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain', 'text/csv',
+        // Archives
+        'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'
+      ];
+
+      console.log(`Request attachment upload attempt: ${file.originalname}, mimetype: ${file.mimetype}`);
+
+      if (acceptedTypes.includes(file.mimetype)) {
+        return cb(null, true);
+      }
+
+      // Check by file extension as fallback
+      const ext = path.extname(file.originalname).toLowerCase();
+      const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.pdf', '.doc', '.docx',
+                          '.xls', '.xlsx', '.txt', '.csv', '.zip', '.rar', '.7z'];
+
+      if (allowedExts.includes(ext)) {
+        return cb(null, true);
+      }
+
+      console.log(`Rejected request attachment: ${file.originalname} with mimetype: ${file.mimetype}`);
+      cb(new Error('File type not supported. Please upload an image, document, or archive file.'));
+    }
+  });
+};
+
 // Backward compatibility function to handle old bug-attachments directory
 const migrateOldDirectories = () => {
   const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -451,12 +573,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   migrateOldDirectories();
 
   // Create upload directories
-  createUploadDirectories();
+  const { uploadsDir } = createUploadDirectories();
 
   // Configure uploads
   const profilePictureUpload = configureProfilePictureUpload();
   const bugAttachmentUpload = configureBugAttachmentUpload();
   const documentUpload = configureDocumentUpload(); // Document upload is configured above with configureDocumentUpload()
+  const requestAttachmentUpload = configureRequestAttachmentUpload();
 
 
   // Setup session store
@@ -492,6 +615,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       sameSite: 'lax' // Lax required for OAuth callbacks to work across domains
     }
   }));
+
+  // Serve static uploads directory
+  app.use('/uploads', express.static(uploadsDir));
 
   // Store session store reference for WebSocket access
   app.locals.sessionStore = sessionStore;
@@ -1269,6 +1395,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Comment deleted successfully" });
     } catch (error) {
       console.error("Delete request comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Request Form Attachments API endpoints
+  apiRouter.get("/request-forms/:requestId/attachments", isAuthenticated, canAccessRequestAttachments, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const attachments = await storage.getRequestAttachments(requestId);
+      res.json(attachments);
+    } catch (error) {
+      console.error("Get request attachments error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/request-forms/:requestId/attachments", isAuthenticated, canAccessRequestAttachments, requestAttachmentUpload.single('file'), async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const publicUrl = `/uploads/request-attachments/${file.filename}`;
+      
+      const attachment = await storage.createRequestAttachment({
+        requestId,
+        fileName: file.filename,
+        originalFileName: file.originalname,
+        filePath: file.path,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        uploadedById: req.session.userId!,
+        publicUrl
+      });
+
+      res.status(201).json(attachment);
+    } catch (error) {
+      console.error("Upload request attachment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/request-forms/attachments/:attachmentId", isAuthenticated, canAccessRequestAttachments, async (req, res) => {
+    try {
+      const attachmentId = parseInt(req.params.attachmentId);
+      
+      // Get attachment details before deletion to clean up file
+      const attachment = await storage.getRequestAttachment(attachmentId);
+      if (!attachment) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      // Delete from storage
+      const success = await storage.deleteRequestAttachment(attachmentId);
+      
+      if (success) {
+        // Clean up file from disk
+        try {
+          if (attachment.filePath && fs.existsSync(attachment.filePath)) {
+            fs.unlinkSync(attachment.filePath);
+            console.log(`Successfully deleted file: ${attachment.filePath}`);
+          }
+        } catch (fileError) {
+          console.error(`Error deleting file ${attachment.filePath}:`, fileError);
+          // Don't fail the request if file deletion fails
+        }
+        
+        res.json({ message: "Attachment deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Attachment not found" });
+      }
+    } catch (error) {
+      console.error("Delete request attachment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Download endpoint for request attachments
+  apiRouter.get("/request-forms/attachments/:attachmentId/download", isAuthenticated, canAccessRequestAttachments, async (req, res) => {
+    try {
+      const attachmentId = parseInt(req.params.attachmentId);
+      const attachment = await storage.getRequestAttachment(attachmentId);
+      
+      if (!attachment) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      if (!fs.existsSync(attachment.filePath)) {
+        return res.status(404).json({ message: "File not found on disk" });
+      }
+
+      // Set proper headers for file download
+      res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${attachment.originalFileName}"`);
+      res.setHeader('Content-Length', attachment.fileSize);
+
+      // Stream the file
+      const fileStream = fs.createReadStream(attachment.filePath);
+      fileStream.pipe(res);
+    } catch (error) {
+      console.error("Download request attachment error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

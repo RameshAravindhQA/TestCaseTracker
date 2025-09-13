@@ -1208,6 +1208,27 @@ export type InsertRequestExtensionHistory = z.infer<typeof insertRequestExtensio
 export type RequestComment = typeof requestComments.$inferSelect;
 export type InsertRequestComment = z.infer<typeof insertRequestCommentSchema>;
 
+// Request Form Attachments
+export const requestAttachments = pgTable("request_attachments", {
+  id: serial("id").primaryKey(),
+  requestId: integer("request_id").notNull(),
+  fileName: text("file_name").notNull(),
+  originalFileName: text("original_file_name").notNull(),
+  filePath: text("file_path").notNull(),
+  fileSize: integer("file_size").notNull(),
+  mimeType: text("mime_type").notNull(),
+  uploadedById: integer("uploaded_by_id").notNull(),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+});
+
+export const insertRequestAttachmentSchema = createInsertSchema(requestAttachments).omit({
+  id: true,
+  uploadedAt: true,
+});
+
+export type RequestAttachment = typeof requestAttachments.$inferSelect;
+export type InsertRequestAttachment = z.infer<typeof insertRequestAttachmentSchema>;
+
 // Message Read Status tracking
 export const messageReadStatus = pgTable("message_read_status", {
   id: serial("id").primaryKey(),

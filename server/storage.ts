@@ -390,6 +390,12 @@ export interface IStorage {
   updateRequestComment(id: number, data: any): Promise<any | null>;
   deleteRequestComment(id: number): Promise<boolean>;
 
+  // Request Form Attachments
+  getRequestAttachments(requestId: number): Promise<any[]>;
+  getRequestAttachment(attachmentId: number): Promise<any | null>;
+  createRequestAttachment(data: any): Promise<any>;
+  deleteRequestAttachment(attachmentId: number): Promise<boolean>;
+
   // Notification methods
   getNotifications(userId: number): Promise<any[]>;
   createNotification(data: any): Promise<any>;
@@ -1398,6 +1404,7 @@ class MemStorage implements IStorage {
   private resourceRequests: any[] = [];
   private requestExtensions: any[] = [];
   private requestComments: any[] = [];
+  private requestAttachments: any[] = [];
   private notifications = new Map<number, any>();
 
   // Flow diagram storage
@@ -4738,6 +4745,32 @@ class MemStorage implements IStorage {
     const initialLength = this.requestComments.length;
     this.requestComments = this.requestComments.filter(comment => comment.id !== id);
     return this.requestComments.length < initialLength;
+  }
+
+  // Request Form Attachments implementation
+  async getRequestAttachments(requestId: number): Promise<any[]> {
+    return this.requestAttachments.filter(attachment => attachment.requestId === requestId);
+  }
+
+  async getRequestAttachment(attachmentId: number): Promise<any | null> {
+    return this.requestAttachments.find(attachment => attachment.id === attachmentId) || null;
+  }
+
+  async createRequestAttachment(data: any): Promise<any> {
+    const id = this.getNextId();
+    const attachment = {
+      id,
+      ...data,
+      uploadedAt: new Date().toISOString()
+    };
+    this.requestAttachments.push(attachment);
+    return attachment;
+  }
+
+  async deleteRequestAttachment(attachmentId: number): Promise<boolean> {
+    const initialLength = this.requestAttachments.length;
+    this.requestAttachments = this.requestAttachments.filter(attachment => attachment.id !== attachmentId);
+    return this.requestAttachments.length < initialLength;
   }
 
   // Notification methods

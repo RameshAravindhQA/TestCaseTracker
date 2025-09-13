@@ -16,6 +16,7 @@ import { RequestFormForm } from "@/components/request-forms/request-form-form";
 import { RequestFormTypeForm } from "@/components/request-forms/request-form-type-form";
 import { RequestExtensionDialog } from "@/components/request-forms/request-extension-dialog";
 import { RequestCommentsDialog } from "@/components/request-forms/request-comments-dialog";
+import { RequestAttachments } from "@/components/request-forms/request-attachments";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ErrorBoundary } from "react-error-boundary";
@@ -47,6 +48,7 @@ function RequestFormsPageContent() {
   const [isTypeDialogOpen, setIsTypeDialogOpen] = useState(false);
   const [isExtensionDialogOpen, setIsExtensionDialogOpen] = useState(false);
   const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(false);
+  const [isAttachmentsDialogOpen, setIsAttachmentsDialogOpen] = useState(false);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<any>(null);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -648,6 +650,20 @@ function RequestFormsPageContent() {
                                     variant="outline"
                                     onClick={() => {
                                       startTransition(() => {
+                                        setSelectedRequest(request);
+                                        setIsAttachmentsDialogOpen(true);
+                                      });
+                                    }}
+                                    title="Attachments"
+                                    data-testid={`button-attachments-${request.id}`}
+                                  >
+                                    <Upload className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      startTransition(() => {
                                         setEditingRequest(request);
                                         setIsFormDialogOpen(true);
                                       });
@@ -898,6 +914,17 @@ function RequestFormsPageContent() {
               onOpenChange={setIsCommentsDialogOpen}
               request={selectedRequest}
             />
+            
+            <Dialog open={isAttachmentsDialogOpen} onOpenChange={setIsAttachmentsDialogOpen}>
+              <DialogContent className="max-w-4xl">
+                <DialogHeader>
+                  <DialogTitle>
+                    Request Attachments - {selectedRequest.title}
+                  </DialogTitle>
+                </DialogHeader>
+                <RequestAttachments requestId={selectedRequest.id} />
+              </DialogContent>
+            </Dialog>
           </>
         )}
 
