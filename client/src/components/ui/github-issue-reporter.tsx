@@ -390,6 +390,22 @@ export function GitHubIssueReporter() {
         pastedLinks.map(link => `- ${link}`).join('\n');
     }
 
+    // Add screenshots as GitHub-compatible image references
+    let screenshotSection = '';
+    if (screenshots.length > 0) {
+      screenshotSection = '\n\n## Screenshots\n';
+      screenshots.forEach((screenshot, index) => {
+        // For GitHub issues, we'll reference uploaded attachments
+        screenshotSection += `\n### Screenshot ${index + 1}\n`;
+        screenshotSection += `<img width="960" height="540" alt="Screenshot ${index + 1}" src="attachment://screenshot-${index + 1}.png" />\n`;
+      });
+    }
+
+    if (screenRecording) {
+      screenshotSection += '\n\n## Screen Recording\n';
+      screenshotSection += 'Screen recording attached: `recording.webm`\n';
+    }
+
     return `
 ## Project Information
 - **Project**: ${selectedProject?.name || 'Unknown'}
@@ -410,6 +426,8 @@ ${formData.expectedBehavior}
 
 ## Actual Behavior
 ${formData.actualBehavior}
+
+${screenshotSection}
 
 ## Browser Information
 ${formData.browserInfo}

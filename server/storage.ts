@@ -726,8 +726,9 @@ class MemStorage implements IStorage {
   }
 
   async createEmployee(data: any): Promise<any> {
+    const id = this.getNextId();
     const employee = {
-      id: this.nextEmployeeId++,
+      id: id,
       employeeId: data.employeeId || `EMP${String(Date.now()).slice(-6)}`,
       firstName: data.firstName,
       lastName: data.lastName || '',

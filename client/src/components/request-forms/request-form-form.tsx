@@ -21,6 +21,7 @@ const requestFormSchema = z.object({
   department: z.string().min(1, { message: "Department is required" }),
   projectId: z.number().min(1, { message: "Project is required" }),
   priority: z.enum(["Low", "Medium", "High", "Critical"]),
+  status: z.enum(["Open", "Closed", "Hold"]).default("Open"),
   startDate: z.string().min(1, { message: "Start date is required" }),
   endDate: z.string().min(1, { message: "End date is required" }),
   estimatedHours: z.number().min(1, { message: "Estimated hours must be at least 1" }),
@@ -59,6 +60,7 @@ export function RequestFormForm({ request, projects, requestTypes, employees = [
       department: request?.department || "",
       projectId: request?.projectId || 0,
       priority: request?.priority || "Medium",
+      status: request?.status || "Open",
       startDate: request?.startDate || "",
       endDate: request?.endDate || "",
       estimatedHours: request?.estimatedHours || 1,
@@ -321,6 +323,44 @@ export function RequestFormForm({ request, projects, requestTypes, employees = [
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-red-500"></div>
                             Critical
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Open">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            Open
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="Hold">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                            Hold
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="Closed">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                            Closed
                           </div>
                         </SelectItem>
                       </SelectContent>

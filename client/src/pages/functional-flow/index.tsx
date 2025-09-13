@@ -438,6 +438,91 @@ export default function FunctionalFlowPage() {
     }
   }, [urlProjectId, selectedProject, diagramId, projects]);
 
+  // Mock loadFlowDiagrams for the saveFlowDiagram function to use
+  const loadFlowDiagrams = async () => {
+    refetch();
+  };
+
+  // Define saveFlowDiagram as it was not part of the mutation
+  const saveFlowDiagram = async (diagramName: string, description: string) => {
+    try {
+      if (!selectedProject) {
+        toast({
+          title: "Error",
+          description: "Please select a project first",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (nodes.length === 0) {
+        toast({
+          title: "Error",
+          description: "No diagram selected. Please create or select a diagram first.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!diagramName.trim()) {
+        toast({
+          title: "Error",
+          description: "Please enter a diagram name",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const response = await fetch('/api/flow-diagrams', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: selectedProject,
+          name: diagramName.trim(),
+          description: description.trim(),
+          diagramData: JSON.stringify({
+            nodes: nodes.map(node => ({
+              id: node.id,
+              type: node.type,
+              position: node.position,
+              data: node.data
+            })),
+            edges: edges.map(edge => ({
+              id: edge.id,
+              source: edge.source,
+              target: edge.target,
+              sourceHandle: edge.sourceHandle,
+              targetHandle: edge.targetHandle
+            }))
+          })
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save flow diagram');
+      }
+
+      toast({
+        title: "Success",
+        description: "Flow diagram saved successfully"
+      });
+
+      setIsSaveDialogOpen(false);
+      loadFlowDiagrams();
+    } catch (error) {
+      console.error('Save error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save flow diagram",
+        variant: "destructive"
+      });
+    }
+  };
+
+
   return (
     <MainLayout>
       <div className="h-screen w-full bg-gray-100 overflow-hidden overflow-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 hover:scrollbar-thumb-gray-600">
@@ -577,7 +662,7 @@ export default function FunctionalFlowPage() {
                           rows={3}
                         />
                       </div>
-                      <Button onClick={handleSaveDiagram} className="w-full" disabled={saveDiagramMutation.isPending}>
+                      <Button onClick={() => saveFlowDiagram(diagramName, diagramDescription)} className="w-full" disabled={saveDiagramMutation.isPending}>
                         {saveDiagramMutation.isPending ? 'Saving...' : 'Save Diagram'}
                       </Button>
                     </div>
@@ -659,7 +744,6 @@ export default function FunctionalFlowPage() {
                   edges={edges}
                   onNodesChange={handleNodesChange}
                   onEdgesChange={handleEdgesChange}
-                  onInit={setReactFlowInstance}
                   nodeTypes={nodeTypes}
                   nodesDraggable={isEditMode}
                   nodesConnectable={isEditMode}

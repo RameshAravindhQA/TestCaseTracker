@@ -960,7 +960,7 @@ export const matrixCells = pgTable("matrix_cells", {
 // These types are already defined earlier in the file
 // export type CustomMarker = typeof customMarkers.$inferSelect;
 // export type InsertCustomMarker = z.infer<typeof insertCustomMarkerSchema>;
-// 
+//
 // export type MatrixCell = typeof matrixCells.$inferSelect;
 // export type InsertMatrixCell = z.infer<typeof insertMatrixCellSchema>;
 
@@ -1120,31 +1120,25 @@ export const resourceRequests = pgTable("resource_requests", {
   requestedById: integer("requested_by_id").notNull(),
   assignedToId: integer("assigned_to_id"),
   priority: text("priority").$type<"Low" | "Medium" | "High" | "Critical">().notNull().default("Medium"),
-  status: text("status").$type<"Draft" | "Pending" | "Approved" | "In Progress" | "Completed" | "Rejected" | "Cancelled" | "Closed" | "Reopened">().notNull().default("Draft"),
+  status: text("status").$type<"Draft" | "Pending" | "Approved" | "In Progress" | "Completed" | "Rejected" | "Cancelled" | "Reopened">().notNull().default("Draft"),
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
   actualStartDate: date("actual_start_date"),
   actualEndDate: date("actual_end_date"),
-  estimatedHours: integer("estimated_hours"),
-  actualHours: integer("actual_hours"),
-  testingType: text("testing_type"),
-  developmentType: text("development_type"),
-  devopsType: text("devops_type"),
-  resourceType: text("resource_type"), // Frontend, Backend, Full Stack, etc.
-  skillsRequired: json("skills_required").default([]),
-  technologies: json("technologies").default([]),
-  deliverables: text("deliverables"),
-  acceptanceCriteria: text("acceptance_criteria"),
-  additionalNotes: text("additional_notes"),
-  attachments: json("attachments").default([]),
-  approvedById: integer("approved_by_id"),
-  approvedAt: timestamp("approved_at"),
-  closedAt: timestamp("closed_at"),
-  closedById: integer("closed_by_id"),
-  reopenedAt: timestamp("reopened_at"),
-  reopenedById: integer("reopened_by_id"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at"),
+  estimatedHours: integer("estimated_hours").notNull(),
+  resourceType: varchar('resource_type', { length: 100 }),
+  testingType: varchar('testing_type', { length: 100 }),
+  developmentType: varchar('development_type', { length: 100 }),
+  devopsType: varchar('devops_type', { length: 100 }),
+  skillsRequired: text('skills_required'),
+  technologies: text('technologies'),
+  deliverables: text('deliverables'),
+  acceptanceCriteria: text('acceptance_criteria'),
+  additionalNotes: text('additional_notes'),
+  leadId: integer('lead_id').references(() => employees.id),
+  status: varchar('status', { length: 50 }).default('Open').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
 });
 
 export const requestExtensionHistory = pgTable("request_extension_history", {
@@ -1159,13 +1153,15 @@ export const requestExtensionHistory = pgTable("request_extension_history", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const requestComments = pgTable("request_comments", {
-  id: serial("id").primaryKey(),
-  requestId: integer("request_id").notNull(),
-  userId: integer("user_id").notNull(),
-  comment: text("comment").notNull(),
-  commentType: text("comment_type").$type<"General" | "Status Update" | "Extension Request" | "Approval" | "Rejection">().notNull().default("General"),
-  createdAt: timestamp("created_at").defaultNow(),
+export const requestComments = pgTable('request_comments', {
+  id: serial('id').primaryKey(),
+  requestId: integer('request_id').notNull().references(() => resourceRequests.id, { onDelete: 'cascade' }),
+  authorId: integer('author_id').notNull().references(() => users.id),
+  content: text('content').notNull(),
+  taggedUsers: text('tagged_users'), // JSON array of user IDs
+  isPrivate: boolean('is_private').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
 });
 
 // Create insert schemas

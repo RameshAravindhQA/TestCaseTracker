@@ -459,6 +459,9 @@ function RequestFormsPageContent() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="Open">Open</SelectItem>
+                        <SelectItem value="Hold">Hold</SelectItem>
+                        <SelectItem value="Closed">Closed</SelectItem>
                         <SelectItem value="Draft">Draft</SelectItem>
                         <SelectItem value="Pending">Pending</SelectItem>
                         <SelectItem value="Approved">Approved</SelectItem>
@@ -617,8 +620,22 @@ function RequestFormsPageContent() {
                                         setIsCommentsDialogOpen(true);
                                       });
                                     }}
+                                    title="View Details"
                                   >
                                     <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      startTransition(() => {
+                                        setSelectedRequest(request);
+                                        setIsCommentsDialogOpen(true);
+                                      });
+                                    }}
+                                    title="Comments"
+                                  >
+                                    <MessageSquare className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     size="sm"

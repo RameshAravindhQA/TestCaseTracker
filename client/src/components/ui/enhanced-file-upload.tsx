@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -43,7 +43,7 @@ export function EnhancedFileUpload({
   const { toast } = useToast();
   // We're setting hasScreenshot to true by default since screenshot is no longer required
   const [hasScreenshot, setHasScreenshot] = useState(true);
-  
+
   const openViewer = (attachment: FileAttachment) => {
     setSelectedAttachment(attachment);
     setViewerOpen(true);
@@ -102,7 +102,7 @@ export function EnhancedFileUpload({
             // If not JSON, try to get text content
             const responseText = await response.text();
             console.log('Raw server response:', responseText);
-            
+
             // Try to see if it's JSON anyway (some servers don't set content-type correctly)
             try {
               if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
@@ -123,7 +123,7 @@ export function EnhancedFileUpload({
             } catch (parseError) {
               console.error('Failed to parse text as JSON:', parseError);
             }
-            
+
             // If we get here, it's not valid JSON, so create a file attachment object manually
             // Get file info from the FormData if available
             const file = formData.get('file') as File;
@@ -147,11 +147,11 @@ export function EnhancedFileUpload({
     },
     onSuccess: (data: FileAttachment) => {
       onChange([...value, data]);
-      
+
       // Always set hasScreenshot to true regardless of file type
       // This ensures validation will pass even if no actual image is attached
       setHasScreenshot(true);
-      
+
       // Success message is now handled in the handleFileChange method
       // to avoid duplicate toast messages
       setIsUploading(false);
@@ -190,18 +190,18 @@ export function EnhancedFileUpload({
 
     // Set uploading state once at the beginning
     setIsUploading(true);
-    
+
     // Always ensure hasScreenshot is true to avoid validation errors
     // This will prevent validation warnings after uploads
     setHasScreenshot(true);
-    
+
     // Keep track of uploaded files for this batch
     let uploadCount = 0;
-    
+
     // Upload each file individually for better error handling
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      
+
       if (file.size > maxSize) {
         toast({
           title: "File too large",
@@ -213,12 +213,12 @@ export function EnhancedFileUpload({
 
       // Always accept the file type - the server can validate this if needed
       // The requiredFileTypes check was too strict and caused issues
-      
+
       try {
         // Create a new FormData instance for each file
         const formData = new FormData();
         formData.append("file", file); // Use file to match the server expected field name
-        
+
         // Use mutateAsync to handle individual file uploads sequentially
         await uploadFileMutation.mutateAsync(formData);
         uploadCount++;
@@ -227,7 +227,7 @@ export function EnhancedFileUpload({
         // Let the mutation onError handle the error display
       }
     }
-    
+
     // Reset the uploading state only if the mutation doesn't handle it
     if (uploadFileMutation.isPending === false) {
       setIsUploading(false);
@@ -237,12 +237,12 @@ export function EnhancedFileUpload({
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    
+
     // If we've uploaded at least one file, show a success message
     if (uploadCount > 0) {
       toast({
         title: uploadCount > 1 ? "Files uploaded" : "File uploaded",
-        description: uploadCount > 1 
+        description: uploadCount > 1
           ? `${uploadCount} files were successfully attached`
           : "Your file was successfully attached",
       });
@@ -251,11 +251,11 @@ export function EnhancedFileUpload({
 
   const handleRemoveFile = (index: number) => {
     const newFiles = [...value];
-    
+
     // Remove the file from the array
     newFiles.splice(index, 1);
     onChange(newFiles);
-    
+
     // Always set hasScreenshot to true if there's at least one file
     // or false if no files left (though we'll keep validation passing anyway)
     setHasScreenshot(newFiles.length > 0 || true);
@@ -264,20 +264,20 @@ export function EnhancedFileUpload({
   // This function is not currently used - copy functionality is disabled
 
   const getFileIcon = (fileName: string, fileType: string) => {
-    if (fileType.startsWith("image/") || 
-        fileName.toLowerCase().endsWith('.png') || 
-        fileName.toLowerCase().endsWith('.jpg') || 
-        fileName.toLowerCase().endsWith('.jpeg') || 
+    if (fileType.startsWith("image/") ||
+        fileName.toLowerCase().endsWith('.png') ||
+        fileName.toLowerCase().endsWith('.jpg') ||
+        fileName.toLowerCase().endsWith('.jpeg') ||
         fileName.toLowerCase().endsWith('.gif') ||
         fileName.toLowerCase().endsWith('.webp')) {
       return <Image className="h-4 w-4" />;
     }
-    
-    if (fileType.includes("pdf") || 
+
+    if (fileType.includes("pdf") ||
         fileName.toLowerCase().endsWith('.pdf')) {
       return <FileText className="h-4 w-4" />;
     }
-    
+
     // Video file detection
     if (fileType.startsWith("video/") ||
         fileName.toLowerCase().endsWith('.mp4') ||
@@ -293,7 +293,7 @@ export function EnhancedFileUpload({
       // You could also import a video icon from react-icons if available
       return <FileText className="h-4 w-4 text-purple-500" />;
     }
-    
+
     return <File className="h-4 w-4" />;
   };
 
@@ -304,7 +304,7 @@ export function EnhancedFileUpload({
           Attachments
         </Label>
       </div>
-      
+
       {isCopyMode && copySourceId && (
         <Button
           type="button"
@@ -318,7 +318,7 @@ export function EnhancedFileUpload({
           Make Copy of Original Attachments
         </Button>
       )}
-      
+
       <div className="flex items-center space-x-2">
         <Button
           type="button"
@@ -331,7 +331,7 @@ export function EnhancedFileUpload({
           <Paperclip className="h-4 w-4 mr-2" />
           {isUploading ? "Uploading..." : "Attach File"}
         </Button>
-        
+
         <Input
           type="file"
           ref={fileInputRef}
@@ -341,23 +341,23 @@ export function EnhancedFileUpload({
           accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.mp4,.webm,.avi,.mov,.mkv,.flv,.wmv,.ogv,.3gp,.video/*"
         />
       </div>
-      
+
       <div className="text-xs text-gray-500 mt-1">
         <strong>Screenshots are helpful</strong> - Adding screenshots helps in understanding the issue better
       </div>
-      
+
       <div className="text-xs text-gray-500">
         <strong>Video files supported</strong> - You can upload videos (.mp4, .webm, .avi, .mov, etc.) up to 50MB
       </div>
-      
+
       <div className="text-xs text-gray-500">
         Max file size: {maxSize / 1024 / 1024}MB, Max files: {maxFiles}
       </div>
-      
+
       {value.length > 0 && (
         <div className="mt-4 space-y-2">
           <h4 className="text-sm font-medium">Uploaded Files ({value.length})</h4>
-          
+
           <Card className="border border-muted">
             <CardHeader className="p-3">
               <CardTitle className="text-sm">Attachments</CardTitle>
@@ -370,7 +370,7 @@ export function EnhancedFileUpload({
                       {getFileIcon(file.fileName, file.fileType)}
                       <div>
                         <p className="text-sm font-medium overflow-hidden text-ellipsis max-w-[200px]" style={{ whiteSpace: 'nowrap' }}>
-                          {file.fileName}
+                          {file?.fileName || file?.name || 'Unknown file'}
                         </p>
                         <p className="text-xs text-gray-500">
                           {file.fileSize ? `${Math.round(file.fileSize / 1024)} KB` : 'Unknown size'}
@@ -414,7 +414,7 @@ export function EnhancedFileUpload({
           </Card>
         </div>
       )}
-      
+
       {/* Bug Attachment Viewer */}
       <BugAttachmentViewer
         attachment={selectedAttachment}

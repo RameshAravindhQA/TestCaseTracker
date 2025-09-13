@@ -106,7 +106,7 @@ let directoriesCreated = false;
 
 const createUploadDirectories = () => {
   const uploadsDir = path.join(process.cwd(), 'uploads');
-  
+
   if (directoriesCreated) {
     return {
       uploadsDir,
@@ -1112,29 +1112,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  apiRouter.post("/resource-requests/:id/comments", isAuthenticated, async (req, res) => {
+  // Request Comments API endpoints
+  apiRouter.get("/request-forms/:requestId/comments", isAuthenticated, async (req, res) => {
     try {
-      const requestId = parseInt(req.params.id);
-      const commentData = {
-        ...req.body,
-        requestId,
-        userId: req.session.userId
-      };
-      const comment = await storage.createRequestComment(commentData);
-      res.status(201).json(comment);
-    } catch (error) {
-      console.error("Create request comment error:", error);
-      res.status(400).json({ message: "Invalid comment data" });
-    }
-  });
-
-  apiRouter.get("/resource-requests/:id/comments", isAuthenticated, async (req, res) => {
-    try {
-      const requestId = parseInt(req.params.id);
+      const requestId = parseInt(req.params.requestId);
       const comments = await storage.getRequestComments(requestId);
       res.json(comments);
     } catch (error) {
       console.error("Get request comments error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/request-forms/:requestId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const { content, taggedUsers, isPrivate } = req.body;
+
+      const comment = await storage.createRequestComment({
+        requestId,
+        content,
+        authorId: req.session.userId!,
+        taggedUsers: taggedUsers ? JSON.stringify(taggedUsers) : null,
+        isPrivate: isPrivate || false
+      });
+
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Create request comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.put("/request-forms/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const { content } = req.body;
+
+      const comment = await storage.updateRequestComment(commentId, { content });
+      res.json(comment);
+    } catch (error) {
+      console.error("Update request comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/request-forms/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      await storage.deleteRequestComment(commentId);
+      res.json({ message: "Comment deleted successfully" });
+    } catch (error) {
+      console.error("Delete request comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Resource Request Comments API endpoints (assuming similar structure as request-forms comments)
+  apiRouter.get("/resource-requests/:requestId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const comments = await storage.getRequestComments(requestId); // Reusing getRequestComments assuming it's generic
+      res.json(comments);
+    } catch (error) {
+      console.error("Get resource request comments error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/resource-requests/:requestId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const { content, taggedUsers, isPrivate } = req.body;
+
+      const comment = await storage.createRequestComment({
+        requestId,
+        content,
+        authorId: req.session.userId!,
+        taggedUsers: taggedUsers ? JSON.stringify(taggedUsers) : null,
+        isPrivate: isPrivate || false
+      });
+
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Create resource request comment error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -4748,6 +4809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Check for circular reference by ensuring the new parent is not a descendant of this folder
           const getDescendantIds = async (parentId: number, visited = new Set<number>()): Promise<number[]> => {
+            if (visited.has(parentId)) return []; // Prevent infinite recursion if there'  function getDescendantIds(parentId: number, visited = new Set<number>()): Promise<number[]> {
             if (visited.has(parentId)) return []; // Prevent infinite recursion if there's a circular reference already
             visited.add(parentId);
             const children = (await storage.getDocumentFolders(folder.projectId))
