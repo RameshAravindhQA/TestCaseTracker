@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { Send, Reply, Edit, Trash, MessageSquare, At } from 'lucide-react';
+import { Send, Reply, Edit, Trash, MessageSquare, AtSign } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface RequestCommentsDialogProps {
@@ -330,7 +330,7 @@ export function RequestCommentsDialog({ open, onOpenChange, request }: RequestCo
             
             <div className="flex justify-between items-center">
               <div className="text-sm text-gray-500">
-                <At className="h-4 w-4 inline mr-1" />
+                <AtSign className="h-4 w-4 inline mr-1" />
                 Use @name to mention team members
               </div>
               <Button
