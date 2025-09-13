@@ -706,10 +706,7 @@ function RequestFormsPageContent() {
                                         document.body.removeChild(link);
                                         window.URL.revokeObjectURL(url);
 
-                                        toast({
-                                          title: "✅ Export successful",
-                                          description: "PDF exported successfully",
-                                        });
+                                        toast({ title: "PDF Export", description: "Project report downloaded successfully." });
                                       } catch (error: any) {
                                         console.error('PDF export error:', error);
                                         toast({

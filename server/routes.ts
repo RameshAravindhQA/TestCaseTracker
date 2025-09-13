@@ -932,44 +932,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const testCases = await storage.getTestCasesByProject(projectId);
       const bugs = await storage.getBugsByProject(projectId);
 
-      if (format === 'csv') {
-        // Return CSV data
-        const csvData = {
-          project,
-          modules,
-          testCases,
-          bugs
-        };
-        
-        res.setHeader('Content-Type', 'application/json');
-        res.json(csvData);
-      } else if (format === 'pdf') {
-        // Return PDF data
-        const pdfData = {
-          project,
-          modules,
-          testCases,
-          bugs,
-          stats: {
-            totalTestCases: testCases.length,
-            passedTestCases: testCases.filter((tc: any) => tc.status === 'Pass').length,
-            failedTestCases: testCases.filter((tc: any) => tc.status === 'Fail').length,
-            pendingTestCases: testCases.filter((tc: any) => tc.status === 'Pending').length,
-            totalBugs: bugs.length,
-            openBugs: bugs.filter((bug: any) => bug.status === 'Open').length,
-            closedBugs: bugs.filter((bug: any) => bug.status === 'Closed').length,
-          }
-        };
-        
-        res.setHeader('Content-Type', 'application/json');
-        res.json(pdfData);
-      }
-    } catch (error) {
-      logger.error('Export project error:', error);
-      res.status(500).json({ error: 'Failed to export project data' });
-    }
-  }); === 'csv') {
-        const csvData = [];
+      const csvData = [];
 
         // Add project info
         csvData.push(['Project Export Report']);
