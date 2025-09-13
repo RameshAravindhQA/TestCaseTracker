@@ -42,7 +42,10 @@ import {
   type InsertCustomMarker,
   type MatrixCell,
   type InsertMatrixCell,
-  type CellValue
+  type CellValue,
+  type Notebook,
+  type NotebookCategory,
+  type NotebookComment
 } from "@shared/schema";
 import * as crypto from "crypto";
 import * as bcrypt from "bcrypt";
@@ -105,12 +108,12 @@ const createUploadDirectories = () => {
   if (directoriesCreated) {
     return {
       uploadsDir: path.join(process.cwd(), 'uploads'),
-      profilePicturesDir: path.join(process.cwd(), 'uploads', 'profile-pictures'),
-      documentsDir: path.join(process.cwd(), 'uploads', 'documents'),
-      bugAttachmentsDir: path.join(process.cwd(), 'uploads', 'bug-attachment')
+      profilePicturesDir: path.join(uploadsDir, 'profile-pictures'),
+      documentsDir: path.join(uploadsDir, 'documents'),
+      bugAttachmentsDir: path.join(uploadsDir, 'bug-attachment')
     };
   }
-  
+
   const uploadsDir = path.join(process.cwd(), 'uploads');
   const profilePicturesDir = path.join(uploadsDir, 'profile-pictures');
   const documentsDir = path.join(uploadsDir, 'documents');
@@ -2613,520 +2616,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve uploaded files (profile pictures and documents)
   app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
-    // Log request for debugging
-    console.log(`File access request for: ${req.path}`);
-
-    // Clean up the path to handle all possible formats
-    let cleanPath = req.path;
-    // Remove any /uploads prefix if it's included and double slashes
-    cleanPath = cleanPath.replace(/^\/uploads\/?/, '').replace(/\/+/g, '/');
-
-    // Make sure bug-attachment path is properly handled
-    if (cleanPath.startsWith('bug-attachment/')) {
-      console.log('Found bug attachment path');
-    } else if (cleanPath.startsWith('bug-attachments/')) {
-      // Handle legacy path format - redirect to new format
-      console.log('Found legacy bug-attachments path, redirecting to bug-attachment');
-      // Extract the filename after bug-attachments/
-      const filename = cleanPath.replace(/^bug-attachments\/?/, '');
-      cleanPath = `bug-attachment/${filename}`;
-      console.log(`Redirected to: ${cleanPath}`);
-    }
-
-    const filePath = path.join(process.cwd(), 'uploads', cleanPath);
-    console.log(`Resolved file path: ${filePath}`);
-
-    // Validate the path to prevent directory traversal attacks
-    if (!filePath.startsWith(path.join(process.cwd(), 'uploads'))) {
-      console.error(`Security protection: Attempted access to unauthorized path: ${filePath}`);
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      console.error(`File not found: ${filePath}`);
-      return res.status(404).json({ message: "File not found" });
-    }
-
-    // Set proper content type based on file extension
-    const ext = path.extname(filePath).toLowerCase();
-
-    // Define a content type mapping
-    const contentTypes: Record<string, string> = {
-      // Images
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
-      '.svg': 'image/svg+xml',
-      '.ico': 'image/x-icon',
-
-      // Videos
-      '.mp4': 'video/mp4',
-      '.webm': 'video/webm',
-      '.ogv': 'video/ogg',
-      '.mov': 'video/quicktime',
-      '.avi': 'video/x-msvideo',
-      '.flv': 'video/x-flv',
-      '.mkv': 'video/x-matroska',
-      '.wmv': 'video/x-ms-wmv',
-      '.3gp': 'video/3gpp',
-      '.mpg': 'video/mpeg',
-      '.mpeg': 'video/mpeg',
-
-      // Documents
-      '.pdf': 'application/pdf',
-      '.doc': 'application/msword',
-      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      '.xls': 'application/vnd.ms-excel',
-      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      '.ppt': 'application/vnd.ms-powerpoint',
-      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-
-      // Text
-      '.txt': 'text/plain',
-      '.csv': 'text/csv',
-      '.html': 'text/html',
-      '.htm': 'text/html',
-      '.css': 'text/css',
-      '.js': 'text/javascript',
-      '.ts': 'text/plain',
-      '.json': 'application/json',
-      '.md': 'text/markdown',
-
-      // Archives
-      '.zip': 'application/zip',
-      '.rar': 'application/x-rar-compressed',
-      '.7z': 'application/x-7z-compressed',
-      '.tar': 'application/x-tar',
-      '.gz': 'application/gzip',
-    };
-
-    // Set the content type if we know it, otherwise let the browser determine it
-    if (contentTypes[ext]) {
-      res.setHeader('Content-Type', contentTypes[ext]);
-    }
-
-    // Add cache control headers to prevent caching issues
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-
-    // Set content disposition to help with downloading files
-    // Use "inline" for files that can be viewed in browser
-    const inlineTypes = [
-      // Images
-      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
-      // Documents that can be viewed in browser
-      '.pdf', '.txt', '.html', '.htm',
-      // Videos that can be viewed in browser
-      '.mp4', '.webm', '.ogv'
-    ];
-    const disposition = inlineTypes.includes(ext) ? 'inline' : 'attachment';
-
-    // Only set filename for attachment disposition
-    if (disposition === 'attachment') {
-      const fileName = path.basename(filePath);
-      res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
-    }
-
-    // Log file access for debugging
-    console.log(`Serving file: ${filePath} with content type: ${contentTypes[ext] || 'auto-determined'}`);
-
-    // Serve the file
-    res.sendFile(filePath);
-  });
-
-  // Comprehensive Chat API for Messenger
-  apiRouter.get("/chats", isAuthenticated, async (req, res) => {
-    try {
-      // Get user's conversations/chats
-      const userChats = await storage.getUserConversations(req.session.userId!);
-      res.json(userChats);
-    } catch (error) {
-      console.error('Get chats error:', error);
-      res.status(500).json({ error: 'Failed to fetch chats' });
-    }
-  });
-
-  apiRouter.get("/chats/:chatId/messages", isAuthenticated, async (req, res) => {
-    try {
-      const chatId = parseInt(req.params.chatId);
-      const messages = await storage.getMessagesByChat(chatId);
-      res.json(messages);
-    } catch (error) {
-      console.error('Get chat messages error:', error);
-      res.status(500).json({ error: 'Failed to fetch chat messages' });
-    }
-  });
-
-  apiRouter.post("/chats/direct", isAuthenticated, async (req, res) => {
-    try {
-      const { targetUserId } = req.body;
-
-      // Check if direct conversation already exists
-      let conversation = await storage.getDirectConversation(req.session.userId!, targetUserId);
-
-      if (!conversation) {
-        // Create new direct conversation
-        const targetUser = await storage.getUser(targetUserId);
-        if (!targetUser) {
-          return res.status(404).json({ error: 'Target user not found' });
-        }
-
-        conversation = await storage.createDirectConversation(req.session.userId!, targetUserId);
-        conversation.name = `${targetUser.firstName} ${targetUser.lastName || ''}`.trim();
-      }
-
-      res.json(conversation);
-    } catch (error) {
-      console.error('Create direct chat error:', error);
-      res.status(500).json({ error: 'Failed to create direct chat' });
-    }
-  });
-
-  apiRouter.post("/chats/group", isAuthenticated, async (req, res) => {
-    try {
-      const { name, description, participants } = req.body;
-
-      const conversation = await storage.createConversation({
-        type: 'group',
-        name,
-        description,
-        participants: [req.session.userId!, ...participants]
-      });
-
-      res.json(conversation);
-    } catch (error) {
-      console.error('Create group chat error:', error);
-      res.status(500).json({ error: 'Failed to create group chat' });
-    }
-  });
-
-  // Get unread message count for current user
-  apiRouter.get('/messages/unread-count', isAuthenticated, async (req, res) => {
-    try {
-      const unreadCount = await storage.getUnreadMessageCount(req.session.userId!);
-      res.json({ count: unreadCount });
-    } catch (error) {
-      console.error('Error getting unread count:', error);
-      res.status(500).json({ error: 'Failed to get unread count' });
-    }
-  });
-
-  // Get unread message count by sender
-  apiRouter.get('/messages/unread-count-by-sender', isAuthenticated, async (req, res) => {
-    try {
-      const senderCounts = await storage.getUnreadMessageCountBySender(req.session.userId!);
-      res.json({ senderCounts });
-    } catch (error) {
-      console.error('Error getting unread message count by sender:', error);
-      res.status(500).json({ error: 'Failed to get unread message count by sender' });
-    }
-  });
-
-  // Mark messages as read from a specific sender
-  apiRouter.post('/messages/mark-read/:senderId', isAuthenticated, async (req, res) => {
-    try {
-      const senderId = parseInt(req.params.senderId);
-      if (isNaN(senderId)) {
-        return res.status(400).json({ error: 'Invalid sender ID' });
-      }
-
-      const success = await storage.markMessagesAsRead(req.session.userId!, senderId);
-      if (success) {
-        res.json({ success: true, message: 'Messages marked as read' });
-      } else {
-        // This might happen if the sender ID is invalid or there are no unread messages
-        res.status(404).json({ success: false, error: 'Could not mark messages as read (sender not found or no unread messages)' });
-      }
-    } catch (error) {
-      console.error('Error marking messages as read:', error);
-      res.status(500).json({ error: 'Failed to mark messages as read' });
-    }
-  });
-
-  apiRouter.post('/messages', isAuthenticated, async (req, res) => {
-    try {
-      console.log('[API] Creating message with data:', req.body);
-
-      const { receiverId, content, conversationId, type, attachments } = req.body;
-
-      if (!content || content.trim() === '') {
-        return res.status(400).json({ error: 'Message content is required' });
-      }
-
-      if (!receiverId && !conversationId) {
-        return res.status(400).json({ error: 'Either receiverId or conversationId is required' });
-      }
-
-      let targetConversationId = conversationId;
-
-      // If no conversation ID but has receiverId, create/find direct conversation
-      if (!targetConversationId && receiverId) {
-        let conversation = await storage.getDirectConversation(req.session.userId!, receiverId);
-
-        if (!conversation) {
-          conversation = await storage.createDirectConversation(req.session.userId!, receiverId);
-        }
-
-        targetConversationId = conversation.id;
-      }
-
-      // Get sender info
-      const sender = await storage.getUser(req.session.userId!);
-
-      // Use the new createMessage method
-      const message = await storage.createMessage({
-        senderId: req.session.userId!,
-        receiverId,
-        content: content.trim(),
-        type: type || 'text',
-        attachments: attachments || [],
-        sender: sender ? {
-          id: sender.id,
-          firstName: sender.firstName,
-          lastName: sender.lastName || '',
-          profilePicture: sender.profilePicture
-        } : null
-      });
-
-      console.log('[API] Message created successfully:', message.id);
-      res.json(message);
-    } catch (error) {
-      console.error('Error creating message:', error);
-      res.status(500).json({ error: 'Failed to create message' });
-    }
-  });
-
-  // Get messages for a user (direct messages)
-  apiRouter.get('/messages', isAuthenticated, async (req, res) => {
-    try {
-      console.log('[API] GET /messages with query:', req.query);
-      const { userId } = req.query;
-
-      if (userId) {
-        // Security check: ensure user can only access their own conversations
-        const targetUserId = parseInt(userId as string);
-        if (targetUserId === req.session.userId) {
-          return res.status(400).json({ error: 'Cannot get messages with yourself' });
-        }
-
-        // Get direct conversation with this user
-        let conversation = await storage.getDirectConversation(req.session.userId!, targetUserId);
-
-        if (!conversation) {
-          // Create conversation if it doesn't exist
-          conversation = await storage.createDirectConversation(req.session.userId!, targetUserId);
-          console.log('[API] Created new conversation:', conversation.id);
-        }
-
-        const messages = await storage.getMessagesByChat(conversation.id);
-        console.log(`[SECURITY] User ${req.session.userId} accessing ${messages.length} messages for conversation ${conversation.id}`);
-        res.json(messages);
-      } else {
-        console.log('[API] No userId provided, returning empty array');
-        res.json([]);
-      }
-    } catch (error) {
-      console.error('Get messages error:', error);
-      res.status(500).json({ error: 'Failed to fetch messages' });
-    }
-  });
-
-  // Project Chat endpoints
-  apiRouter.get("/projects/:projectId/chat", isAuthenticated, async (req, res) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
-      const messages = await storage.getChatMessages(projectId);
-      res.json(messages);
-    } catch (error) {
-      console.error('Get chat messages error:', error);
-      res.status(500).json({ error: 'Failed to fetch chat messages' });
-    }
-  });
-
-  apiRouter.post("/projects/:projectId/chat", isAuthenticated, async (req, res) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
-      const { message, replyToId } = req.body;
-      const userId = req.session.userId!;
-
-      if (!message || !message.trim()) {
-        return res.status(400).json({ error: 'Message is required' });
-      }
-
-      const chatMessage = await storage.createChatMessage({
-        projectId,
-        userId,
-        message: message.trim(),
-        type: 'text',
-        replyToId: replyToId || null
-      });
-
-      res.json(chatMessage);
-    } catch (error) {
-      console.error('Send chat message error:', error);
-      res.status(500).json({ error: 'Failed to send message' });
-    }
-  });
-
-  // Edit chat message
-  apiRouter.put("/chat/messages/:messageId", isAuthenticated, async (req, res) => {
-    try {
-      const messageId = parseInt(req.params.messageId);
-      const { message } = req.body;
-      const userId = req.session.userId!;
-
-      if (!message || !message.trim()) {
-        return res.status(400).json({ error: 'Message is required' });
-      }
-
-      const updatedMessage = await storage.updateChatMessage(messageId, userId, {
-        message: message.trim(),
-        isEdited: true,
-        updatedAt: new Date()
-      });
-
-      if (!updatedMessage) {
-        return res.status(404).json({ error: 'Message not found or access denied' });
-      }
-
-      res.json(updatedMessage);
-    } catch (error) {
-      console.error('Edit chat message error:', error);
-      res.status(500).json({ error: 'Failed to edit message' });
-    }
-  });
-
-  // Edit direct message
-  apiRouter.put("/messages/:messageId", isAuthenticated, async (req, res) => {
-    try {
-      const messageId = parseInt(req.params.messageId);
-      const { content } = req.body;
-      const userId = req.session.userId!;
-
-      if (!content || !content.trim()) {
-        return res.status(400).json({ error: 'Message content is required' });
-      }
-
-      // Find the message
-      const messages = storage.data.messages || [];
-      const messageIndex = messages.findIndex(msg => msg.id === messageId && msg.senderId === userId);
-
-      if (messageIndex === -1) {
-        return res.status(404).json({ error: 'Message not found or access denied' });
-      }
-
-      // Update the message
-      messages[messageIndex] = {
-        ...messages[messageIndex],
-        content: content.trim(),
-        isEdited: true,
-        updatedAt: new Date().toISOString()
-      };
-
-      storage.saveToFile();
-      res.json(messages[messageIndex]);
-    } catch (error) {
-      console.error('Edit message error:', error);
-      res.status(500).json({ error: 'Failed to edit message' });
-    }
-  });
-
-  // Delete direct message
-  apiRouter.delete("/messages/:messageId", isAuthenticated, async (req, res) => {
-    try {
-      const messageId = parseInt(req.params.messageId);
-      const userId = req.session.userId!;
-
-      // Find and remove the message
-      const messages = storage.data.messages || [];
-      const messageIndex = messages.findIndex(msg => msg.id === messageId && msg.senderId === userId);
-
-      if (messageIndex === -1) {
-        return res.status(404).json({ error: 'Message not found or access denied' });
-      }
-
-      messages.splice(messageIndex, 1);
-      storage.saveToFile();
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Delete message error:', error);
-      res.status(500).json({ error: 'Failed to delete message' });
-    }
-  });
-
-  // React to message
-  apiRouter.post("/messages/:messageId/react", isAuthenticated, async (req, res) => {
-    try {
-      const messageId = parseInt(req.params.messageId);
-      const { emoji } = req.body;
-      const userId = req.session.userId!;
-
-      if (!emoji) {
-        return res.status(400).json({ error: 'Emoji is required' });
-      }
-
-      // Find the message
-      const messages = storage.data.messages || [];
-      const message = messages.find(msg => msg.id === messageId);
-
-      if (!message) {
-        return res.status(404).json({ error: 'Message not found' });
-      }
-
-      // Add or update reaction
-      message.reactions = message.reactions || [];
-      const existingReaction = message.reactions.find(r => r.emoji === emoji);
-
-      if (existingReaction) {
-        existingReaction.count = (existingReaction.count || 0) + 1;
-      } else {
-        message.reactions.push({
-          emoji,
-          userId,
-          count: 1
-        });
-      }
-
-      storage.saveToFile();
-      res.json(message);
-    } catch (error) {
-      console.error('React to message error:', error);
-      res.status(500).json({ error: 'Failed to react to message' });
-    }
-  });
-
-  apiRouter.get("/projects/:projectId/users", isAuthenticated, async (req, res) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
-      const projectMembers = await storage.getProjectMembers(projectId);
-
-      // Get user details for each member
-      const users = await Promise.all(
-        projectMembers.map(async (member) => {
-          const user = await storage.getUser(member.userId);
-          return {
-            id: user?.id,
-            name: user?.firstName + ' ' + (user?.lastName || ''),
-            avatar: user?.profilePicture,
-            role: member.role
-          };
-        })
-      );
-
-      res.json(users);
-    } catch (error) {
-      console.error('Get project users error:', error);
-      res.status(500).json({ error: 'Failed to fetch project users' });
-    }
-  });
-
-  // File serving route for uploads
-  app.use('/uploads/*', (req, res) => {
     // Log request for debugging
     console.log(`File access request for: ${req.path}`);
 
@@ -5977,20 +5466,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  apiRouter.get("/notebooks/shared", isAuthenticated, async (req, res) => {
+    try {
+      const sharedNotebooks = await storage.getSharedNotebooks(req.session.userId!);
+      res.json(sharedNotebooks);
+    } catch (error) {
+      console.error("Get shared notebooks error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/notebooks/search", isAuthenticated, async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+
+      const notebooks = await storage.searchNotebooks(req.session.userId!, q);
+      res.json(notebooks);
+    } catch (error) {
+      console.error("Search notebooks error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   apiRouter.get("/notebooks/:id", isAuthenticated, async (req, res) => {
     try {
       const notebookId = parseInt(req.params.id);
-      const notebook = await (storage as any).getNotebook(notebookId);
-
+      const notebook = await storage.getNotebook(notebookId, req.session.userId!); // Pass userId for access check
       if (!notebook) {
         return res.status(404).json({ message: "Notebook not found" });
       }
-
-      // Users can only access their own notebooks unless they're admin
-      if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {
-        return res.status(403).json({ message: "You don't have permission to access this notebook" });
-      }
-
       res.json(notebook);
     } catch (error) {
       console.error("Get notebook error:", error);
@@ -6002,7 +5509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const notebookData = {
         ...req.body,
-        userId: req.session.userId,
+        userId: req.session.userId
       };
 
       const notebook = await storage.createNotebook(notebookData);
@@ -6028,18 +5535,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.put("/notebooks/:id", isAuthenticated, async (req, res) => {
     try {
       const notebookId = parseInt(req.params.id);
-      const notebook = await storage.getNotebook(notebookId);
-
-      if (!notebook) {
-        return res.status(404).json({ message: "Notebook not found" });
+      const updatedNotebook = await storage.updateNotebook(notebookId, req.session.userId!, req.body); // Pass userId for access check and update
+      if (!updatedNotebook) {
+        return res.status(404).json({ message: "Notebook not found or access denied" });
       }
-
-      // Users can only update their own notebooks unless they're admin
-      if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {
-        return res.status(403).json({ message: "You don't have permission to update this notebook" });
-      }
-
-      const updatedNotebook = await (storage as any).updateNotebook(notebookId, req.body);
 
       // Log activity
       await storage.createActivity({
@@ -6048,48 +5547,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType: "notebook",
         entityId: notebookId,
         details: {
-          notebookTitle: updatedNotebook?.title || notebook.title,
+          notebookTitle: updatedNotebook?.title || req.body.title, // Use updated title if available, else from body
         }
       });
 
       res.json(updatedNotebook);
     } catch (error) {
       console.error("Update notebook error:", error);
-      res.status(400).json({ message: "Invalid notebook data" });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
   apiRouter.delete("/notebooks/:id", isAuthenticated, async (req, res) => {
     try {
       const notebookId = parseInt(req.params.id);
-      const notebook = await storage.getNotebook(notebookId);
-
-      if (!notebook) {
-        return res.status(404).json({ message: "Notebook not found" });
+      const success = await storage.deleteNotebook(notebookId, req.session.userId!); // Pass userId for access check
+      if (!success) {
+        return res.status(404).json({ message: "Notebook not found or access denied" });
       }
 
-      // Users can only delete their own notebooks unless they're admin
-      if (notebook.userId !== req.session.userId && req.session.userRole !== "Admin") {        return res.status(403).json({ message: "You don't have permission to delete this notebook" });
-      }
+      // Log activity
+      await storage.createActivity({
+        userId: req.session.userId!,
+        action: "deleted",
+        entityType: "notebook",
+        entityId: notebookId,
+        details: {
+          notebookTitle: req.body.title, // Assuming title might be available in body for logging, or fetch it before delete
+        }
+      });
 
-      const success = await (storage as any).deleteNotebook(notebookId);
-
-      if (success) {
-        // Log activity
-        await storage.createActivity({
-          userId: req.session.userId!,
-          action: "deleted",
-          entityType: "notebook",
-          entityId: notebookId,
-          details: {
-            notebookTitle: notebook.title,
-          }
-        });
-      }
-
-      res.json({ success });
+      res.json({ success: true });
     } catch (error) {
       console.error("Delete notebook error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/notebooks/:id/share", isAuthenticated, async (req, res) => {
+    try {
+      const notebookId = parseInt(req.params.id);
+      const { userIds } = req.body;
+
+      if (!Array.isArray(userIds)) {
+        return res.status(400).json({ message: "userIds must be an array" });
+      }
+
+      const success = await storage.shareNotebook(notebookId, req.session.userId!, userIds);
+      if (!success) {
+        return res.status(404).json({ message: "Notebook not found or access denied" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Share notebook error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Notebook Categories API
+  apiRouter.get("/notebook-categories", isAuthenticated, async (req, res) => {
+    try {
+      const categories = await storage.getNotebookCategories(req.session.userId!);
+      res.json(categories);
+    } catch (error) {
+      console.error("Get notebook categories error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/notebook-categories", isAuthenticated, async (req, res) => {
+    try {
+      const categoryData = {
+        ...req.body,
+        userId: req.session.userId
+      };
+
+      const category = await storage.createNotebookCategory(categoryData);
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Create notebook category error:", error);
+      res.status(400).json({ message: "Invalid category data" });
+    }
+  });
+
+  apiRouter.put("/notebook-categories/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedCategory = await storage.updateNotebookCategory(id, req.session.userId!, req.body);
+      if (!updatedCategory) {
+        return res.status(404).json({ message: "Category not found or access denied" });
+      }
+      res.json(updatedCategory);
+    } catch (error) {
+      console.error("Update notebook category error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/notebook-categories/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteNotebookCategory(id, req.session.userId!);
+      if (!success) {
+        return res.status(404).json({ message: "Category not found or access denied" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete notebook category error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Notebook Comments API
+  apiRouter.get("/notebooks/:id/comments", isAuthenticated, async (req, res) => {
+    try {
+      const notebookId = parseInt(req.params.id);
+
+      // Check if user has access to the notebook
+      const notebook = await storage.getNotebook(notebookId, req.session.userId!);
+      if (!notebook) {
+        return res.status(404).json({ message: "Notebook not found or access denied" });
+      }
+
+      const comments = await storage.getNotebookComments(notebookId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Get notebook comments error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/notebooks/:id/comments", isAuthenticated, async (req, res) => {
+    try {
+      const notebookId = parseInt(req.params.id);
+
+      // Check if user has access to the notebook
+      const notebook = await storage.getNotebook(notebookId, req.session.userId!);
+      if (!notebook) {
+        return res.status(404).json({ message: "Notebook not found or access denied" });
+      }
+
+      const commentData = {
+        ...req.body,
+        notebookId,
+        authorId: req.session.userId
+      };
+
+      const comment = await storage.createNotebookComment(commentData);
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Create notebook comment error:", error);
+      res.status(400).json({ message: "Invalid comment data" });
+    }
+  });
+
+  apiRouter.put("/notebooks/:notebookId/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const updatedComment = await storage.updateNotebookComment(commentId, req.session.userId!, req.body);
+      if (!updatedComment) {
+        return res.status(404).json({ message: "Comment not found or access denied" });
+      }
+      res.json(updatedComment);
+    } catch (error) {
+      console.error("Update notebook comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/notebooks/:notebookId/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const success = await storage.deleteNotebookComment(commentId, req.session.userId!);
+      if (!success) {
+        return res.status(404).json({ message: "Comment not found or access denied" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete notebook comment error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

@@ -495,10 +495,64 @@ export const notebooks = pgTable("notebooks", {
   isPinned: boolean("is_pinned").default(false),
   isArchived: boolean("is_archived").default(false),
   tags: jsonb("tags").$type<string[]>().default([]),
+  attachments: json("attachments").default([]),
+  categoryId: integer("category_id"),
+  isPublic: boolean("is_public").default(false),
+  sharedWith: json("shared_with").$type<number[]>().default([]),
+  lastViewedAt: timestamp("last_viewed_at"),
   userId: integer("user_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Notebook Categories
+export const notebookCategories = pgTable("notebook_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  color: text("color").default("#6B7280"),
+  userId: integer("user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Notebook Comments
+export const notebookComments = pgTable("notebook_comments", {
+  id: serial("id").primaryKey(),
+  notebookId: integer("notebook_id").notNull().references(() => notebooks.id),
+  content: text("content").notNull(),
+  authorId: integer("author_id").notNull().references(() => users.id),
+  parentId: integer("parent_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Notebook insert schemas
+export const insertNotebookSchema = createInsertSchema(notebooks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertNotebookCategorySchema = createInsertSchema(notebookCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNotebookCommentSchema = createInsertSchema(notebookComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Notebook types
+export type Notebook = typeof notebooks.$inferSelect;
+export type InsertNotebook = z.infer<typeof insertNotebookSchema>;
+
+export type NotebookCategory = typeof notebookCategories.$inferSelect;
+export type InsertNotebookCategory = z.infer<typeof insertNotebookCategorySchema>;
+
+export type NotebookComment = typeof notebookComments.$inferSelect;
+export type InsertNotebookComment = z.infer<typeof insertNotebookCommentSchema>;
 
 // Todos model
 export const todos = pgTable("todos", {
