@@ -1,0 +1,149 @@
+{% extends 'layout.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block head %}
+<style>
+    .stats-row {
+        display: flex;
+        flex-wrap: wrap;
+        margin: 0 -15px;
+    }
+    
+    .stats-col {
+        flex: 1;
+        padding: 0 15px;
+        min-width: 200px;
+    }
+    
+    .chart-container {
+        height: 250px;
+        position: relative;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+<!-- Overview Section -->
+<div class="card">
+    <div class="card-header">
+        Overview
+    </div>
+    <div class="card-body">
+        <div class="stats-row">
+            <div class="stats-col">
+                <div class="stats-card">
+                    <i data-feather="file-text" style="width: 40px; height: 40px;"></i>
+                    <h3 id="total-test-cases">0</h3>
+                    <p>Total Test Cases</p>
+                </div>
+            </div>
+            <div class="stats-col">
+                <div class="stats-card">
+                    <i data-feather="alert-circle" style="width: 40px; height: 40px;"></i>
+                    <h3 id="total-bugs">0</h3>
+                    <p>Total Bugs</p>
+                </div>
+            </div>
+            <div class="stats-col">
+                <div class="stats-card">
+                    <i data-feather="check-circle" style="width: 40px; height: 40px;"></i>
+                    <h3 id="resolved-percentage">0%</h3>
+                    <p>Bugs Resolved</p>
+                </div>
+            </div>
+            <div class="stats-col">
+                <div class="stats-card">
+                    <i data-feather="play" style="width: 40px; height: 40px;"></i>
+                    <h3 id="executed-percentage">0%</h3>
+                    <p>Tests Executed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bug Status Section -->
+<div class="card">
+    <div class="card-header">
+        Bug Status
+    </div>
+    <div class="card-body">
+        <div class="stats-row">
+            <div class="stats-col">
+                <div class="stats-card status-open">
+                    <h3 id="open-bugs">0</h3>
+                    <p>Open</p>
+                </div>
+            </div>
+            <div class="stats-col">
+                <div class="stats-card status-in-progress">
+                    <h3 id="in-progress-bugs">0</h3>
+                    <p>In Progress</p>
+                </div>
+            </div>
+            <div class="stats-col">
+                <div class="stats-card status-resolved">
+                    <h3 id="resolved-bugs">0</h3>
+                    <p>Resolved</p>
+                </div>
+            </div>
+            <div class="stats-col">
+                <div class="stats-card status-closed">
+                    <h3 id="closed-bugs">0</h3>
+                    <p>Closed</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container" style="margin-top: 20px;">
+            <canvas id="bug-chart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Test Case Status Section -->
+<div class="card">
+    <div class="card-header">
+        Test Case Status
+    </div>
+    <div class="card-body">
+        <div class="stats-row">
+            <div class="stats-col">
+                <div class="stats-card status-passed">
+                    <h3 id="passed-tests">0</h3>
+                    <p>Passed</p>
+                </div>
+            </div>
+            <div class="stats-col">
+                <div class="stats-card status-failed">
+                    <h3 id="failed-tests">0</h3>
+                    <p>Failed</p>
+                </div>
+            </div>
+            <div class="stats-col">
+                <div class="stats-card status-blocked">
+                    <h3 id="blocked-tests">0</h3>
+                    <p>Blocked</p>
+                </div>
+            </div>
+            <div class="stats-col">
+                <div class="stats-card status-not-run">
+                    <h3 id="not-run-tests">0</h3>
+                    <p>Not Run</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container" style="margin-top: 20px;">
+            <canvas id="test-case-chart"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

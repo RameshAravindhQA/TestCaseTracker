@@ -1,0 +1,33 @@
+ctures
+Documents directory exists: /home/runner/workspace/uploads/documents
+Bug attachments directory exists: /home/runner/workspace/uploads/bug-attachment
+Test file created successfully: /home/runner/workspace/uploads/profile-pictures/test.txt
+Test file removed successfully
+Profile pictures directory exists: /home/runner/workspace/uploads/profile-pictures
+Documents directory exists: /home/runner/workspace/uploads/documents
+Bug attachments directory exists: /home/runner/workspace/uploads/bug-attachment
+Test file created successfully: /home/runner/workspace/uploads/profile-pictures/test.txt
+Test file removed successfully
+Profile pictures directory exists: /home/runner/workspace/uploads/profile-pictures
+Documents directory exists: /home/runner/workspace/uploads/documents
+Bug attachments directory exists: /home/runner/workspace/uploads/bug-attachment
+Test file created successfully: /home/runner/workspace/uploads/profile-pictures/test.txt
+Test file removed successfully
+Profile pictures directory exists: /home/runner/workspace/uploads/profile-pictures
+Documents directory exists: /home/runner/workspace/uploads/documents
+Bug attachments directory exists: /home/runner/workspace/uploads/bug-attachment
+Test file created successfully: /home/runner/workspace/uploads/profile-pictures/test.txt
+Test file removed successfully
+✅ API routes registered successfully
+Database not available, running without matrix persistence: password authentication failed for user 'neondb_owner'
+✅ Database initialized successfully
+[2025-09-12T11:47:28.466Z] INFO: Chat WebSocket server initialized on /ws/chat
+[2025-09-12T11:47:28.467Z] INFO: Chat WebSocket server initialized with session store
+Server running on http://0.0.0.0:5000
+WebSocket server initialized for real-time chat
+[2025-09-12T11:47:28.668Z] INFO: Server started on port 5000 with WebSocket support
+11:47:28 AM [express] serving on port 5000
+11:47:28 AM [vite] Loading client template from: /home/runner/workspace/client/index.html
+11:47:28 AM [express] HEAD /api 200 in 83ms
+11:47:29 AM [vite] Loading client template from: /home/runner/workspace/client/index.html
+11:47:30 AM [express] HEAD /api 200 in 297ms

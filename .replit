@@ -1,1 +1,20 @@
 modules = ["nodejs-20"]
+
+[workflows]
+runButton = "Run Application"
+
+[[workflows.workflow]]
+name = "Run Application"
+author = 41979910
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd TestCaseTracker && npm start"
+
+[nix]
+channel = "stable-25_05"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
