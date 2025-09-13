@@ -94,6 +94,7 @@ export function GitHubIssueReporter() {
   const [screenRecording, setScreenRecording] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [attachments, setAttachments] = useState<File[]>([]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -574,6 +575,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
       });
       setScreenshots([]);
       setScreenRecording(null);
+      setAttachments([]);
       setPastedLinks([]);
       setClipboardText('');
       setIsOpen(false);
@@ -806,10 +808,11 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
               </div>
 
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="basic">Basic Info</TabsTrigger>
                   <TabsTrigger value="details">Details</TabsTrigger>
                   <TabsTrigger value="media">Screenshots & Recording</TabsTrigger>
+                  <TabsTrigger value="upload">Upload & Clipboard</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="basic" className="space-y-4">
@@ -1008,6 +1011,121 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
                 </TabsContent>
 
                 <TabsContent value="upload" className="space-y-4">
+                  <div>
+                    <Label htmlFor="file-upload">Upload Files</Label>
+                    <Input
+                      ref={fileInputRef}
+                      id="file-upload"
+                      type="file"
+                      multiple
+                      accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                      onChange={handleFileUpload}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  {/* Clipboard Section */}
+                  <div className="border-t pt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label>Clipboard Content</Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handlePasteFromClipboard}
+                        className="flex items-center gap-2"
+                      >
+                        <Clipboard className="h-4 w-4" />
+                        Paste from Clipboard
+                      </Button>
+                    </div>
+
+                    {/* Pasted Links */}
+                    {pastedLinks.length > 0 && (
+                      <div className="space-y-2 mb-4">
+                        <Label className="text-sm text-blue-600">Pasted Links:</Label>
+                        {pastedLinks.map((link, index) => (
+                          <Card key={index} className="p-2 bg-blue-50 border-blue-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 flex-1">
+                                <Link className="h-4 w-4 text-blue-600" />
+                                <span className="text-sm text-blue-700 truncate">{link}</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => window.open(link, '_blank')}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => addLinkToDescription(link)}
+                                  className="h-6 text-xs px-2"
+                                >
+                                  Add to Description
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => removePastedLink(link)}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Clipboard Text */}
+                    {clipboardText && (
+                      <div className="mb-4">
+                        <Label className="text-sm text-green-600">Pasted Text Content:</Label>
+                        <Card className="p-2 bg-green-50 border-green-200">
+                          <div className="flex items-start justify-between">
+                            <pre className="text-sm text-green-700 whitespace-pre-wrap overflow-auto max-h-32 flex-1">
+                              {clipboardText.length > 200 ? `${clipboardText.substring(0, 200)}...` : clipboardText}
+                            </pre>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setClipboardText('')}
+                              className="h-6 w-6 p-0 ml-2"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </Card>
+                      </div>
+                    )}
+                  </div>
+
+                  {attachments.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Selected Files:</Label>
+                      {attachments.map((file, index) => (
+                        <Card key={index} className="p-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">{file.name}</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => removeAttachment(index)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
                   <div>
                     <Label htmlFor="file-upload">Upload Files</Label>
                     <Input
