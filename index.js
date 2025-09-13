@@ -1,3 +1,4 @@
+
 // This file is created to work around the npm start issue
 // It changes to TestCaseTracker directory and runs the dev script
 
@@ -11,10 +12,10 @@ const testCaseTrackerPath = path.join(process.cwd(), 'TestCaseTracker');
 console.log('📂 Working directory:', testCaseTrackerPath);
 
 // Start the application from TestCaseTracker directory using npm run dev
-const app = spawn('npm', ['run', 'dev'], {
+// Use direct node execution instead of shell to avoid /bin/sh issues
+const app = spawn('node', ['dev.js'], {
   cwd: testCaseTrackerPath,
   stdio: 'inherit',
-  shell: true,
   env: { 
     ...process.env, 
     NODE_ENV: 'development',
@@ -26,11 +27,10 @@ app.on('error', (error) => {
   console.error('❌ Failed to start application:', error);
   console.log('🔄 Trying alternative approach...');
   
-  // Fallback: try running the dev.js file directly
-  const fallback = spawn('node', ['dev.js'], {
+  // Fallback: try running tsx directly
+  const fallback = spawn('npx', ['tsx', 'server/index.ts'], {
     cwd: testCaseTrackerPath,
     stdio: 'inherit',
-    shell: true,
     env: { 
       ...process.env, 
       NODE_ENV: 'development',

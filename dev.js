@@ -1,3 +1,4 @@
+
 import { spawn } from 'child_process';
 import path from 'path';
 
@@ -6,10 +7,9 @@ console.log('🚀 Starting TestCaseTracker Application...');
 // We're already in the TestCaseTracker directory
 console.log('📂 Working directory:', process.cwd());
 
-// Start the backend server using tsx
+// Start the backend server using tsx directly without shell
 const server = spawn('npx', ['tsx', 'server/index.ts'], {
   stdio: 'inherit',
-  shell: true,
   env: { 
     ...process.env, 
     NODE_ENV: 'development',
