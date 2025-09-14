@@ -1779,7 +1779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tracker Features
   apiRouter.get("/tracker/features", isAuthenticated, async (req, res) => {
     try {
-      const { projectId } = req.query;
+      const {projectId } = req.query;
       const features = await storage.getTrackerFeatures(
         projectId ? parseInt(projectId as string) : undefined
       );
@@ -1936,7 +1936,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/tracker/work-logs", isAuthenticated, async (req, res) => {
     try {
       const { projectId, featureId, subFeatureId, userId, startDate, endDate } = req.query;
-      const workLogs = await storage.getTrackerWorkLogs({
+      const requestingUser = req.session?.userId;
+
+      console.log(`[API] Getting timesheets with filters:`, {
         projectId: projectId ? parseInt(projectId as string) : undefined,
         featureId: featureId ? parseInt(featureId as string) : undefined,
         subFeatureId: subFeatureId ? parseInt(subFeatureId as string) : undefined,
@@ -1944,10 +1946,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         startDate: startDate as string,
         endDate: endDate as string,
       });
-      res.json(workLogs);
+
+      let timeSheets: TimeSheet[];
+
+      if (userId) {
+        // Get timesheets for specific user
+        timeSheets = await storage.getUserTimeSheets(parseInt(userId as string));
+      } else if (projectId) {
+        // Get timesheets for specific project
+        timeSheets = await storage.getProjectTimeSheets(parseInt(projectId as string));
+      } else {
+        // Get all timesheets (admin view)
+        timeSheets = await storage.getTimeSheets();
+      }
+
+      // Apply folder filter if specified
+      if (folderId) {
+        const folderIdNum = parseInt(folderId as string);
+        timeSheets = timeSheets.filter(ts => ts.folderId === folderIdNum);
+      }
+
+      console.log(`[API] Returning ${timeSheets.length} timesheets for user ${requestingUser}:`,
+        timeSheets.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description })));
+
+      res.json(timeSheets);
     } catch (error) {
-      console.error("Get tracker work logs error:", error);
-      res.status(500).json({ message: "Server error" });
+      console.error("Error fetching timesheets:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch timesheets" });
     }
   });
 
@@ -6098,7 +6123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // documentUpload is already configured above
+  // Document upload is already configured above
 
   apiRouter.post("/documents", isAuthenticated, documentUpload.single('file'), async (req, res) => {
     try {

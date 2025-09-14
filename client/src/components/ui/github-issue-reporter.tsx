@@ -562,9 +562,9 @@ export function GitHubIssueReporter() {
     const selectedProject = projects.find(p => p.id === formData.projectId);
     const selectedModule = modules.find(m => m.id === formData.moduleId);
 
-    // Extract custom category ID and name
+    // Extract custom category name
     const categoryParts = formData.category.split('-');
-    const categoryName = categoryParts.length > 1 ? categoryParts[1] : formData.category;
+    const categoryName = categoryParts.length > 1 ? categoryParts.slice(1).join('-') : formData.category;
 
 
     let descriptionContent = formData.description;
