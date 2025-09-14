@@ -173,6 +173,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
 
   const handleEditSubFeature = (subFeature: any) => {
     setSelectedSubFeature(subFeature);
+    setSelectedFeatureId(null); // Clear this when editing
     setShowSubFeatureForm(true);
   };
 
@@ -454,10 +455,10 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
               {selectedSubFeature ? 'Edit Sub-Feature' : 'Create New Sub-Feature'}
             </DialogTitle>
           </DialogHeader>
-          {selectedFeatureId && (
+          {(selectedFeatureId || selectedSubFeature?.featureId) && (
             <TrackerSubFeatureForm
               subFeature={selectedSubFeature}
-              featureId={selectedFeatureId}
+              featureId={selectedFeatureId || selectedSubFeature?.featureId}
               projectId={projectId}
               availableSubFeatures={subFeatures || []}
               onSubmit={handleCreateSubFeature}
