@@ -6,9 +6,8 @@ import cors from "cors";
 import path from "path";
 import { createServer } from "http";
 import { logger } from "./logger";
-import { initializeDatabase } from "./init-db";
+import { initializeDatabase } from "./matrix-fix";
 import { storage } from "./db-storage";
-import { testConnection } from "./db";
 
 
 const PORT = parseInt(process.env.PORT || "5000", 10);
@@ -77,26 +76,26 @@ async function startServer() {
     // Add middleware to protect API routes from being caught by static file serving
     app.use('/api/*', (req, res, next) => {
       console.log(`🚨 API route not found: ${req.method} ${req.path}`);
-      res.status(404).json({
-        success: false,
+      res.status(404).json({ 
+        success: false, 
         error: `API endpoint not found: ${req.method} ${req.path}`,
         timestamp: new Date().toISOString()
       });
     });
 
-    // Test database connection
-    const dbConnected = await testConnection();
-
-    if (!dbConnected) {
-      console.log("⚠️  Database connection failed, using in-memory storage");
-    } else {
-      console.log("✅ Database connection established");
-
-      // Initialize database with default data
+    // Initialize database with retry logic
+    let dbInitialized = false;
+    let retries = 3;
+    while (!dbInitialized && retries > 0) {
       try {
         await initializeDatabase();
+        dbInitialized = true;
+        console.log("✅ Database initialized successfully");
       } catch (error) {
-        console.error("❌ Failed to initialize database:", error);
+        console.log(`❌ Database initialization failed, retries left: ${retries - 1}`);
+        retries--;
+        if (retries === 0) throw error;
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
