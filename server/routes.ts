@@ -1762,6 +1762,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.put("/tracker/sub-features/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const updateData = req.body;
+      const subFeature = await storage.updateTrackerSubFeature(id, updateData);
+      if (!subFeature) {
+        return res.status(404).json({ message: "Sub-feature not found" });
+      }
+      res.json(subFeature);
+    } catch (error) {
+      console.error("Update tracker sub-feature error:", error);
+      res.status(400).json({ message: "Invalid sub-feature data" });
+    }
+  });
+
+  apiRouter.put("/tracker/sub-features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
       const updatedSubFeature = await storage.updateTrackerSubFeature(id, {
         ...req.body,
         updatedAt: new Date().toISOString(),

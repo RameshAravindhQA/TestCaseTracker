@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,6 +83,28 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
     },
   });
 
+  // Update feature mutation
+  const updateFeatureMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await apiRequest('PUT', `/api/tracker/features/${id}`, data);
+      if (!response.ok) throw new Error('Failed to update feature');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Feature updated successfully' });
+      queryClient.invalidateQueries({ queryKey: [`/api/tracker/features`] });
+      setShowFeatureForm(false);
+      setSelectedFeature(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update feature',
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Create sub-feature mutation
   const createSubFeatureMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -92,20 +113,67 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: 'Success', description: 'Sub-feature created successfully' });
-      queryClient.invalidateQueries({ queryKey: [`/api/tracker/sub-features`] });
+      toast({
+        title: 'Success',
+        description: 'Sub-feature created successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tracker/sub-features'] });
       setShowSubFeatureForm(false);
       setSelectedSubFeature(null);
-      setSelectedFeatureId(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to create sub-feature',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Update sub-feature mutation
+  const updateSubFeatureMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await apiRequest('PUT', `/api/tracker/sub-features/${id}`, data);
+      if (!response.ok) throw new Error('Failed to update sub-feature');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Sub-feature updated successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tracker/sub-features'] });
+      setShowSubFeatureForm(false);
+      setSelectedSubFeature(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update sub-feature',
+        variant: 'destructive',
+      });
     },
   });
 
   const handleCreateFeature = (data: any) => {
-    createFeatureMutation.mutate(data);
+    if (selectedFeature) {
+      updateFeatureMutation.mutate({ id: selectedFeature.id, data });
+    } else {
+      createFeatureMutation.mutate(data);
+    }
   };
 
   const handleCreateSubFeature = (data: any) => {
-    createSubFeatureMutation.mutate(data);
+    if (selectedSubFeature) {
+      updateSubFeatureMutation.mutate({ id: selectedSubFeature.id, data });
+    } else {
+      createSubFeatureMutation.mutate(data);
+    }
+  };
+
+  const handleEditSubFeature = (subFeature: any) => {
+    setSelectedSubFeature(subFeature);
+    setShowSubFeatureForm(true);
   };
 
   const toggleFeatureExpansion = (featureId: number) => {
@@ -226,7 +294,10 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Features & Sub-Features</CardTitle>
-                <Button onClick={() => setShowFeatureForm(true)}>
+                <Button onClick={() => {
+                  setSelectedFeature(null);
+                  setShowFeatureForm(true);
+                }}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Feature
                 </Button>
@@ -308,8 +379,12 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                                 <Badge className={statusColors[subFeature.status]}>
                                   {subFeature.status}
                                 </Badge>
-                                <Button variant="ghost" size="sm">
-                                  <Edit className="h-3 w-3" />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditSubFeature(subFeature)}
+                                >
+                                  <Edit className="h-4 w-4" />
                                 </Button>
                               </div>
                             </div>
@@ -333,7 +408,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
               <CardTitle>Timeline View</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Gantt chart and timeline view will be implemented here.</p>
+              <p className="text-muted-foreground">Timeline data will be displayed here.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -366,7 +441,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
               setShowFeatureForm(false);
               setSelectedFeature(null);
             }}
-            isLoading={createFeatureMutation.isPending}
+            isLoading={createFeatureMutation.isPending || updateFeatureMutation.isPending}
           />
         </DialogContent>
       </Dialog>
@@ -391,7 +466,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                 setSelectedSubFeature(null);
                 setSelectedFeatureId(null);
               }}
-              isLoading={createSubFeatureMutation.isPending}
+              isLoading={createSubFeatureMutation.isPending || updateSubFeatureMutation.isPending}
             />
           )}
         </DialogContent>

@@ -31,7 +31,6 @@ const projectSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   ownerId: z.number(),
-  budget: z.number().optional(),
   currency: z.string().default('USD'),
   departmentId: z.number().optional(),
   tags: z.array(z.string()).default([]),
@@ -62,7 +61,6 @@ export function TrackerProjectForm({
       startDate: project?.startDate || '',
       endDate: project?.endDate || '',
       ownerId: project?.ownerId || 1, // TODO: Get from current user
-      budget: project?.budget || undefined,
       currency: project?.currency || 'USD',
       departmentId: project?.departmentId || undefined,
       tags: project?.tags || [],
@@ -168,24 +166,7 @@ export function TrackerProjectForm({
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="budget"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Budget</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    placeholder="Enter budget amount"
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          
         </div>
 
         <FormField
