@@ -82,8 +82,7 @@ export default function FunctionalFlowPage() {
   const [selectedProject, setSelectedProject] = useState<string>(''); // Renamed from selectedProjectId for clarity within component scope
   const [diagramName, setDiagramName] = useState('');
   const [diagramDescription, setDiagramDescription] = useState('');
-  const [selectedDiagram, setSelectedDiagram] = useState<FlowDiagram | undefined>(undefined); // Added state for selected diagram details
-  const [selectedDiagramId, setSelectedDiagramId] = useState<string | undefined>(undefined); // State for diagram selection
+  const [selectedDiagram, setSelectedDiagram] = useState<string>(''); // Renamed from selectedDiagramId
   const [newNodeLabel, setNewNodeLabel] = useState('');
   const [newNodeType, setNewNodeType] = useState('process');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -103,6 +102,7 @@ export default function FunctionalFlowPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(urlProjectId || undefined); // State for project selection, initialized from URL
+  const [selectedDiagramId, setSelectedDiagramId] = useState<string | undefined>(undefined); // State for diagram selection
   const [flowDiagrams, setFlowDiagrams] = useState<FlowDiagram[]>([]); // State to hold fetched diagrams
   const [showDiagramManager, setShowDiagramManager] = useState(false);
 
@@ -136,7 +136,6 @@ export default function FunctionalFlowPage() {
             const diagramData: FlowDiagram = await response.json();
             setSelectedProject(diagramData.projectId);
             setSelectedProjectId(diagramData.projectId); // Also update the managed state
-            setSelectedDiagram(diagramData); // Set selectedDiagram state
           } catch (error) {
             console.error("Error fetching diagram for auto-selection:", error);
             // Fallback: select the first project if fetching diagram fails
@@ -156,7 +155,7 @@ export default function FunctionalFlowPage() {
   }, [diagramId, projects, selectedProject, urlProjectId, selectedProjectId]);
 
   // Fetch flow diagrams for selected project
-  const { data: fetchedDiagrams = [], isLoading: diagramsLoading, refetch } = useQuery<FlowDiagram[]>({
+  const { data: fetchedDiagrams = [], isLoading: diagramsLoading } = useQuery<FlowDiagram[]>({
     queryKey: ['flow-diagrams', selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) return [];
@@ -211,7 +210,6 @@ export default function FunctionalFlowPage() {
 
       setDiagramName(diagram.name || '');
       setDiagramDescription(diagram.description || '');
-      setSelectedDiagram(diagram); // Set selectedDiagram state
       setHasUnsavedChanges(false);
       setSelectedDiagramId(diagram.id); // Set the currently loaded diagram ID
       toast({
@@ -233,20 +231,11 @@ export default function FunctionalFlowPage() {
   const saveDiagramMutation = useMutation({
     mutationFn: async () => {
       if (!selectedProject) throw new Error('No project selected');
-      const nameToSave = diagramName?.trim() || selectedDiagram?.name?.trim();
-
-      if (!nameToSave) {
-        toast({
-          title: "Validation Error",
-          description: "Please enter a diagram name.",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (!diagramName.trim()) throw new Error('Diagram name is required');
 
       const diagramDataPayload = {
-        name: nameToSave, // Use the validated name
-        description: diagramDescription || '',
+        name: diagramName,
+        description: diagramDescription,
         data: {
           nodes,
           edges,
@@ -275,7 +264,6 @@ export default function FunctionalFlowPage() {
     onSuccess: (savedDiagram: FlowDiagram) => {
       setHasUnsavedChanges(false);
       setSelectedDiagramId(savedDiagram.id); // Ensure selectedDiagramId is updated
-      setSelectedDiagram(savedDiagram); // Update selectedDiagram state
       refetch(); // Refresh the list of diagrams
       toast({
         title: 'Success',
@@ -404,8 +392,7 @@ export default function FunctionalFlowPage() {
 
       // Add title
       pdf.setFontSize(16);
-      // Use selectedProject.name for the title, if available, otherwise use a placeholder
-      pdf.text(`Flow Diagram: ${selectedProject?.name || 'Unnamed Project'}`, 20, 20);
+      pdf.text(`Flow Diagram: ${selectedProject.name}`, 20, 20);
       pdf.setFontSize(12);
       pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 30);
 
@@ -415,7 +402,7 @@ export default function FunctionalFlowPage() {
       // Add the flow diagram image
       pdf.addImage(imgData, 'PNG', 20, 40, imgWidth, Math.min(imgHeight, 170));
 
-      const safeName = (selectedProject?.name || 'diagram').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+      const safeName = selectedProject.name.replace(/[^a-z0-9]/gi, '-').toLowerCase();
       pdf.save(`${safeName}-flow-diagram-${Date.now()}.pdf`);
 
       toast({
@@ -442,78 +429,25 @@ export default function FunctionalFlowPage() {
   };
 
   // Function to handle saving a diagram
-  const saveDiagram = useCallback(async () => {
+  const saveDiagram = () => {
     if (!selectedProject) {
       toast({
-        title: "Error", 
-        description: "Please select a project before saving.",
+        title: "Error",
+        description: "Please select a project first",
         variant: "destructive",
       });
       return;
     }
-
     if (!diagramName.trim()) {
       toast({
-        title: "Validation Error",
-        description: "Please enter a diagram name.",
+        title: "Error",
+        description: "Please enter a diagram name",
         variant: "destructive",
       });
       return;
     }
-
-    try {
-      const diagramData = {
-        name: diagramName.trim(),
-        description: `Flow diagram for ${selectedProject.name}`,
-        projectId: selectedProject.id,
-        nodes: nodes.map(node => ({
-          id: node.id || `node_${Math.random().toString(36).substr(2, 9)}`,
-          type: node.type || 'default',
-          position: node.position || { x: 0, y: 0 },
-          data: node.data || {},
-        })),
-        edges: edges.map(edge => ({
-          id: edge.id || `edge_${Math.random().toString(36).substr(2, 9)}`,
-          source: edge.source,
-          target: edge.target,
-          type: edge.type || 'default',
-        })),
-      };
-
-      let response;
-      if (selectedDiagramId) {
-        // Update existing diagram
-        response = await apiRequest('PUT', `/api/flow-diagrams/${selectedDiagramId}`, diagramData);
-      } else {
-        // Create new diagram
-        response = await apiRequest('POST', `/api/flow-diagrams`, {
-          projectId: selectedProject,
-          ...diagramData,
-        });
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save diagram');
-      }
-      const savedDiagram = await response.json();
-      setHasUnsavedChanges(false);
-      setSelectedDiagramId(savedDiagram.id);
-      setSelectedDiagram(savedDiagram);
-      refetch();
-      toast({
-        title: 'Success',
-        description: 'Flow diagram saved successfully',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save diagram',
-        variant: 'destructive',
-      });
-    }
-  }, [diagramName, diagramDescription, nodes, edges, selectedProject, selectedDiagramId, refetch, toast, reactFlowInstance]);
-
+    saveDiagramMutation.mutate();
+  };
 
   // Generate flow using Mermaid
   const generateFlowMutation = useMutation({
@@ -537,7 +471,6 @@ export default function FunctionalFlowPage() {
           setDiagramName(result.diagram.name || 'Generated Flow');
           setDiagramDescription(result.diagram.description || 'Auto-generated flow diagram');
           setSelectedDiagramId(result.diagram.id); // Set the newly generated diagram ID
-          setSelectedDiagram(result.diagram); // Set the selectedDiagram state
 
           // Refresh the diagrams list to show the newly created diagram
           refetch();
@@ -573,6 +506,10 @@ export default function FunctionalFlowPage() {
     }
   });
 
+  const refetch = () => {
+    queryClient.invalidateQueries({ queryKey: ['flow-diagrams', selectedProjectId] });
+  };
+
   // Mock loadFlowDiagrams for the saveFlowDiagram function to use
   const loadFlowDiagrams = async () => {
     refetch();
@@ -604,7 +541,7 @@ export default function FunctionalFlowPage() {
                 <Label htmlFor="project-select" className="text-sm font-medium">
                   Select Project
                 </Label>
-                <Select value={selectedProjectId || ""} onValueChange={(value) => { setSelectedProjectId(value); setSelectedProject(value); setSelectedDiagram(undefined); setDiagramName(''); setDiagramDescription(''); }}>
+                <Select value={selectedProjectId || ""} onValueChange={(value) => { setSelectedProjectId(value); setSelectedProject(value); }}>
                   <SelectTrigger id="project-select">
                     <SelectValue placeholder="Choose a project" />
                   </SelectTrigger>
@@ -691,7 +628,7 @@ export default function FunctionalFlowPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsEditDetailsOpen(true)}
-                  disabled={!selectedDiagramId && !diagramName} // Enable if diagram is loaded or a name is entered
+                  disabled={!selectedDiagramId}
                   title="Edit diagram details"
                 >
                   ✏️ Edit Details
@@ -774,7 +711,7 @@ export default function FunctionalFlowPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setIsEditDetailsOpen(true)}
-                    disabled={!selectedDiagramId && !diagramName} // Enable if diagram is loaded or a name is entered
+                    disabled={!selectedDiagramId}
                     title="Edit diagram details"
                   >
                     ✏️ Edit Details
@@ -892,15 +829,9 @@ export default function FunctionalFlowPage() {
                 </Button>
                 <Button
                   onClick={() => {
-                    if (selectedDiagramId || diagramName) { // Allow saving if diagram is loaded or name is entered
+                    if (selectedDiagramId) {
                       saveDiagramMutation.mutate();
                       setIsEditDetailsOpen(false);
-                    } else {
-                      toast({
-                        title: "Validation Error",
-                        description: "Please enter a diagram name before saving.",
-                        variant: "destructive",
-                      });
                     }
                   }}
                   disabled={saveDiagramMutation.isPending}

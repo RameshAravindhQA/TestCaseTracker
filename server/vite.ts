@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { createServer as createViteDevServer, createLogger } from "vite";
+import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
@@ -20,100 +20,84 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
-  const vite = await createViteDevServer({
-    server: { 
-      middlewareMode: true,
-      hmr: { port: 24678 }
+  const serverOptions = {
+    middlewareMode: true,
+    hmr: { 
+      server,
+      port: 24678 // Use different port for HMR to avoid conflicts with chat WebSocket
     },
-    appType: "spa",
+    allowedHosts: true,
+  };
+
+  const vite = await createViteServer({
+    ...viteConfig,
+    configFile: false,
+    customLogger: {
+      ...viteLogger,
+      error: (msg, options) => {
+        viteLogger.error(msg, options);
+        process.exit(1);
+      },
+    },
+    server: serverOptions,
+    appType: "custom",
   });
 
-  app.use(vite.ssrFixStacktrace);
   app.use(vite.middlewares);
-
-  // Ensure proper handling of client routes
-  app.get('*', async (req, res, next) => {
-    // Skip API routes and static files
-    if (req.path.startsWith('/api') || 
-        req.path.startsWith('/uploads') || 
-        req.path.includes('.')) {
-      return next();
-    }
+  app.use("*", async (req, res, next) => {
+    const url = req.originalUrl;
 
     try {
-      const url = req.originalUrl;
-      const template = await vite.transformIndexHtml(url, `
-        <!DOCTYPE html>
-        <html lang="en">
-          <head>
-            <meta charset="UTF-8" />
-            <link rel="icon" type="image/svg+xml" href="/images/favicon.svg" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <title>TestCase Tracker - Test Case Management System</title>
-          </head>
-          <body>
-            <div id="root"></div>
-            <script type="module" src="/src/main.tsx"></script>
-          </body>
-        </html>
-      `);
+      // Use the CLIENT_ROOT env var if available, or fallback to the standard path
+      let clientPath = process.env.CLIENT_ROOT ? 
+        path.resolve(process.cwd(), process.env.CLIENT_ROOT) :
+        path.resolve(import.meta.dirname, "..", "client");
+      
+      // Handle the case where we're in the TestCaseTracker (1) directory
+      if (!fs.existsSync(path.join(clientPath, 'index.html'))) {
+        clientPath = path.resolve(process.cwd(), 'TestCaseTracker (1)', 'client');
+        log(`Using alternative client path: ${clientPath}`, 'vite');
+      }
+      
+      const clientTemplate = path.join(clientPath, 'index.html');
+      
+      // Log for debugging
+      log(`Loading client template from: ${clientTemplate}`, 'vite');
+      
+      // Check if the file exists
+      if (!fs.existsSync(clientTemplate)) {
+        console.error(`Client template not found at: ${clientTemplate}`);
+        return next(new Error(`Client template not found at: ${clientTemplate}`));
+      }
 
-      res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
-    } catch (error: any) {
-      vite.ssrFixStacktrace(error);
-      next(error);
+      // always reload the index.html file from disk incase it changes
+      let template = await fs.promises.readFile(clientTemplate, "utf-8");
+      template = template.replace(
+        `src="/src/main.tsx"`,
+        `src="/src/main.tsx?v=${nanoid()}"`,
+      );
+      const page = await vite.transformIndexHtml(url, template);
+      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+    } catch (e) {
+      vite.ssrFixStacktrace(e as Error);
+      next(e);
     }
   });
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve("dist/public");
-  const clientDistPath = path.resolve("client/dist");
+  const distPath = path.resolve(import.meta.dirname, "public");
 
-  // Check multiple possible build locations
-  let staticPath = distPath;
-  if (!fs.existsSync(distPath) && fs.existsSync(clientDistPath)) {
-    staticPath = clientDistPath;
+  if (!fs.existsSync(distPath)) {
+    throw new Error(
+      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+    );
   }
 
-  if (!fs.existsSync(staticPath)) {
-    console.warn(`Build directory not found at ${distPath} or ${clientDistPath}. Serving from client/public instead.`);
-    staticPath = path.resolve("client/public");
-  }
+  app.use(express.static(distPath));
 
-  app.use(express.static(staticPath));
-
-  // Serve index.html for all non-API routes
-  app.get("*", (req, res) => {
-    // Skip API routes and file requests
-    if (req.path.startsWith('/api') || 
-        req.path.startsWith('/uploads') || 
-        req.path.includes('.')) {
-      return res.status(404).send('Not found');
-    }
-
-    const indexPath = path.resolve(staticPath, "index.html");
-    if (fs.existsSync(indexPath)) {
-      res.sendFile(indexPath);
-    } else {
-      // Fallback HTML if index.html doesn't exist
-      res.status(200).send(`
-        <!DOCTYPE html>
-        <html lang="en">
-          <head>
-            <meta charset="UTF-8" />
-            <link rel="icon" type="image/svg+xml" href="/images/favicon.svg" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <title>TestCase Tracker - Test Case Management System</title>
-          </head>
-          <body>
-            <div id="root"></div>
-            <script>
-              document.body.innerHTML = '<div style="padding: 20px; text-align: center;"><h1>TestCase Tracker</h1><p>Application is starting...</p><p><a href="/login">Go to Login</a></p></div>';
-            </script>
-          </body>
-        </html>
-      `);
-    }
+  // fall through to index.html if the file doesn't exist
+  app.use("*", (_req, res) => {
+    res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

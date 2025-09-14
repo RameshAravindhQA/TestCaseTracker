@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Download, Upload, File, Image, FileText, Eye } from "lucide-react";
+import { Trash2, Download, Upload, File, Image, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
@@ -29,7 +29,7 @@ export function RequestAttachments({ requestId }: RequestAttachmentsProps) {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-
+      
       return apiRequest('POST', `/api/request-forms/${requestId}/attachments`, formData, { isFormData: true });
     },
     onSuccess: () => {
@@ -85,14 +85,6 @@ export function RequestAttachments({ requestId }: RequestAttachmentsProps) {
 
   const handleDownload = (attachment: RequestAttachment) => {
     window.open(`/api/request-forms/attachments/${attachment.id}/download`, '_blank');
-  };
-
-  const handleView = (attachment: RequestAttachment) => {
-    if (attachment.mimeType.startsWith('image/')) {
-      window.open(`/api/request-forms/attachments/${attachment.id}/view`, '_blank');
-    } else {
-      toast({ title: "Cannot view this file type", description: "Only image files can be viewed directly.", variant: "warning" });
-    }
   };
 
   const getFileIcon = (mimeType: string) => {
@@ -196,16 +188,6 @@ export function RequestAttachments({ requestId }: RequestAttachmentsProps) {
                   >
                     <Download className="h-4 w-4" />
                   </Button>
-                  {attachment.mimeType.startsWith('image/') && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleView(attachment)}
-                      data-testid={`button-view-${attachment.id}`}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  )}
                   <Button
                     size="sm"
                     variant="outline"

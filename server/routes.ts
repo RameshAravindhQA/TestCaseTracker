@@ -96,50 +96,50 @@ const canAccessRequestAttachments = async (req: Request, res: Response, next: Ne
   try {
     const userId = req.session.userId!;
     const userRole = req.session.userRole;
-
+    
     // Admins can access everything
     if (userRole === 'Admin' || userRole === 'Super Admin') {
       return next();
     }
-
+    
     // For request-level access (GET /request-forms/:requestId/attachments, POST /request-forms/:requestId/attachments)
     if (req.params.requestId) {
       const requestId = parseInt(req.params.requestId);
       const request = await storage.getResourceRequest(requestId);
-
+      
       if (!request) {
         return res.status(404).json({ message: "Request not found" });
       }
-
+      
       // Allow if user is the request owner
       if (request.requestedById === userId) {
         return next();
       }
     }
-
+    
     // For attachment-level access (DELETE /request-forms/attachments/:attachmentId, GET /request-forms/attachments/:attachmentId/download)
     if (req.params.attachmentId) {
       const attachmentId = parseInt(req.params.attachmentId);
       const attachment = await storage.getRequestAttachment(attachmentId);
-
+      
       if (!attachment) {
         return res.status(404).json({ message: "Attachment not found" });
       }
-
+      
       // Allow if user uploaded the attachment
       if (attachment.uploadedById === userId) {
         return next();
       }
-
+      
       // Also check if user owns the request this attachment belongs to
       const request = await storage.getResourceRequest(attachment.requestId);
       if (request && request.requestedById === userId) {
         return next();
       }
     }
-
+    
     return res.status(403).json({ message: "Forbidden: You can only access your own request attachments" });
-
+    
   } catch (error) {
     console.error('Authorization check failed:', error);
     return res.status(500).json({ message: "Server error during authorization check" });
@@ -510,7 +510,7 @@ const configureRequestAttachmentUpload = () => {
     }
   });
 
-  return multer({
+  return multer({ 
     storage,
     limits: {
       fileSize: 50 * 1024 * 1024, // 50MB max file size
@@ -617,131 +617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Serve static uploads directory
-  app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
-    // Log request for debugging
-    console.log(`File access request for: ${req.path}`);
-
-    // Clean up the path to handle all possible formats
-    let cleanPath = req.path;
-    // Remove any /uploads prefix if it's included and double slashes
-    cleanPath = cleanPath.replace(/^\/uploads\/?/, '').replace(/\/+/g, '/');
-
-    // Make sure bug-attachment path is properly handled
-    if (cleanPath.startsWith('bug-attachment/')) {
-      console.log('Found bug attachment path');
-    } else if (cleanPath.startsWith('bug-attachments/')) {
-      // Handle legacy path format - redirect to new format
-      console.log('Found legacy bug-attachments path, redirecting to bug-attachment');
-      // Extract the filename after bug-attachments/
-      const filename = cleanPath.replace(/^bug-attachments\/?/, '');
-      cleanPath = `bug-attachment/${filename}`;
-      console.log(`Redirected to: ${cleanPath}`);
-    }
-
-    const filePath = path.join(process.cwd(), 'uploads', cleanPath);
-    console.log(`Resolved file path: ${filePath}`);
-
-    // Validate the path to prevent directory traversal attacks
-    if (!filePath.startsWith(path.join(process.cwd(), 'uploads'))) {
-      console.error(`Security protection: Attempted access to unauthorized path: ${filePath}`);
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      console.error(`File not found: ${filePath}`);
-      return res.status(404).json({ message: "File not found" });
-    }
-
-    // Set proper content type based on file extension
-    const ext = path.extname(filePath).toLowerCase();
-
-    // Define a content type mapping
-    const contentTypes: Record<string, string> = {
-      // Images
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
-      '.svg': 'image/svg+xml',
-      '.ico': 'image/x-icon',
-
-      // Videos
-      '.mp4': 'video/mp4',
-      '.webm': 'video/webm',
-      '.ogv': 'video/ogg',
-      '.mov': 'video/quicktime',
-      '.avi': 'video/x-msvideo',
-      '.flv': 'video/x-flv',
-      '.mkv': 'video/x-matroska',
-      '.wmv': 'video/x-ms-wmv',
-      '.3gp': 'video/3gpp',
-      '.mpg': 'video/mpeg',
-      '.mpeg': 'video/mpeg',
-
-      // Documents
-      '.pdf': 'application/pdf',
-      '.doc': 'application/msword',
-      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      '.xls': 'application/vnd.ms-excel',
-      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      '.ppt': 'application/vnd.ms-powerpoint',
-      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-
-      // Text
-      '.txt': 'text/plain',
-      '.csv': 'text/csv',
-      '.html': 'text/html',
-      '.htm': 'text/html',
-      '.css': 'text/css',
-      '.js': 'text/javascript',
-      '.ts': 'text/plain',
-      '.json': 'application/json',
-      '.md': 'text/markdown',
-
-      // Archives
-      '.zip': 'application/zip',
-      '.rar': 'application/x-rar-compressed',
-      '.7z': 'application/x-7z-compressed',
-      '.tar': 'application/x-tar',
-      '.gz': 'application/gzip',
-    };
-
-    // Set the content type if we know it, otherwise let the browser determine it
-    if (contentTypes[ext]) {
-      res.setHeader('Content-Type', contentTypes[ext]);
-    }
-
-    // Add cache control headers to prevent caching issues
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-
-    // Set content disposition to help with downloading files
-    // Use "inline" for files that can be viewed in browser
-    const inlineTypes = [
-      // Images
-      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
-      // Documents that can be viewed in browser
-      '.pdf', '.txt', '.html', '.htm',
-      // Videos that can be viewed in browser
-      '.mp4', '.webm', '.ogv'
-    ];
-    const disposition = inlineTypes.includes(ext) ? 'inline' : 'attachment';
-
-    // Only set filename for attachment disposition
-    if (disposition === 'attachment') {
-      const fileName = path.basename(filePath);
-      res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
-    }
-
-    // Log file access for debugging
-    console.log(`Serving file: ${filePath} with content type: ${contentTypes[ext] || 'auto-determined'}`);
-
-    // Serve the file
-    res.sendFile(filePath);
-  });
+  app.use('/uploads', express.static(uploadsDir));
 
   // Store session store reference for WebSocket access
   app.locals.sessionStore = sessionStore;
@@ -834,88 +710,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Request PDF export endpoint
-  apiRouter.get('/request-forms/:requestId/export', requireAuth, async (req: Request, res: Response) => {
+  // Project export endpoints
+  apiRouter.get("/projects/:id/export", isAuthenticated, async (req, res) => {
     try {
-      const { requestId } = req.params;
-      const { format } = req.query;
-
-      if (format !== 'pdf') {
-        return res.status(400).json({ message: 'Only PDF format is supported' });
-      }
-
-      const request = await storage.getRequestForm(parseInt(requestId));
-      if (!request) {
-        return res.status(404).json({ message: 'Request form not found' });
-      }
-
-      // Generate PDF content (simple HTML to PDF)
-      const html = `
-        <html>
-          <head>
-            <title>Request Form - ${request.title}</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              .header { background: #f5f5f5; padding: 20px; margin-bottom: 20px; }
-              .field { margin-bottom: 15px; }
-              .label { font-weight: bold; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h1>Request Form</h1>
-              <h2>${request.title || 'Untitled Request'}</h2>
-            </div>
-            <div class="field">
-              <div class="label">Request ID:</div>
-              <div>${request.id}</div>
-            </div>
-            <div class="field">
-              <div class="label">Department:</div>
-              <div>${request.department || 'N/A'}</div>
-            </div>
-            <div class="field">
-              <div class="label">Request Type:</div>
-              <div>${request.requestType || 'N/A'}</div>
-            </div>
-            <div class="field">
-              <div class="label">Priority:</div>
-              <div>${request.priority || 'N/A'}</div>
-            </div>
-            <div class="field">
-              <div class="label">Status:</div>
-              <div>${request.status || 'N/A'}</div>
-            </div>
-            <div class="field">
-              <div class="label">Description:</div>
-              <div>${request.description || 'N/A'}</div>
-            </div>
-            <div class="field">
-              <div class="label">Created At:</div>
-              <div>${new Date(request.createdAt).toLocaleString()}</div>
-            </div>
-          </body>
-        </html>
-      `;
-
-      // Set response headers for PDF
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="request-${requestId}.pdf"`);
-
-      // For now, return HTML (you can integrate a proper PDF library later)
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
-
-    } catch (error) {
-      logger.error('Export request error:', error);
-      res.status(500).json({ message: 'Failed to export request' });
-    }
-  });
-
-  // Export project data
-  apiRouter.get("/projects/:projectId/export", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const projectId = parseInt(req.params.projectId);
+      const projectId = parseInt(req.params.id);
       const format = req.query.format as string;
 
       if (!format || !['csv', 'pdf'].includes(format)) {
@@ -933,8 +731,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bugs = await storage.getBugsByProject(projectId);
 
       if (format === 'csv') {
-        // Add project info
         const csvData = [];
+        
+        // Add project info
         csvData.push(['Project Export Report']);
         csvData.push(['Project Name', project.name]);
         csvData.push(['Description', project.description || '']);
@@ -985,7 +784,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         // Convert to CSV string
-        const csvString = csvData.map(row =>
+        const csvString = csvData.map(row => 
           row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
         ).join('\n');
 
@@ -1622,7 +1421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const publicUrl = `/uploads/request-attachments/${file.filename}`;
-
+      
       const attachment = await storage.createRequestAttachment({
         requestId,
         fileName: file.filename,
@@ -1644,7 +1443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.delete("/request-forms/attachments/:attachmentId", isAuthenticated, canAccessRequestAttachments, async (req, res) => {
     try {
       const attachmentId = parseInt(req.params.attachmentId);
-
+      
       // Get attachment details before deletion to clean up file
       const attachment = await storage.getRequestAttachment(attachmentId);
       if (!attachment) {
@@ -1653,7 +1452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Delete from storage
       const success = await storage.deleteRequestAttachment(attachmentId);
-
+      
       if (success) {
         // Clean up file from disk
         try {
@@ -1665,7 +1464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Error deleting file ${attachment.filePath}:`, fileError);
           // Don't fail the request if file deletion fails
         }
-
+        
         res.json({ message: "Attachment deleted successfully" });
       } else {
         res.status(404).json({ message: "Attachment not found" });
@@ -1681,7 +1480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const attachmentId = parseInt(req.params.attachmentId);
       const attachment = await storage.getRequestAttachment(attachmentId);
-
+      
       if (!attachment) {
         return res.status(404).json({ message: "Attachment not found" });
       }
@@ -5793,7 +5592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileSize,
         fileName: req.file.originalname,
         folderId: numericFolderId,
-        projectId:numericProjectId,
+        projectId: numericProjectId,
         uploadedById: numericUploadedById,
       };
 

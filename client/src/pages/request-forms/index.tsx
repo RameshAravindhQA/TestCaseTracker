@@ -690,33 +690,26 @@ function RequestFormsPageContent() {
                                     variant="outline"
                                     onClick={async () => {
                                       try {
-                                        const response = await fetch(`/api/request-forms/${request.id}/export?format=pdf`);
+                                        const response = await fetch(`/api/projects/${request.projectId}/export?format=pdf`);
                                         if (!response.ok) {
-                                          const errorText = await response.text();
-                                          throw new Error(`PDF export failed: ${response.statusText} - ${errorText}`);
+                                          throw new Error(`PDF export failed: ${response.statusText}`);
                                         }
                                         const blob = await response.blob();
                                         const url = window.URL.createObjectURL(blob);
                                         const link = document.createElement('a');
                                         link.href = url;
-                                        link.download = `request-${request.id}-${request.title}.pdf`;
-
+                                        link.setAttribute('download', `project_${request.projectId}_report.pdf`);
                                         document.body.appendChild(link);
                                         link.click();
-                                        document.body.removeChild(link);
+                                        link.parentNode?.removeChild(link);
                                         window.URL.revokeObjectURL(url);
-
                                         toast({ title: "PDF Export", description: "Project report downloaded successfully." });
                                       } catch (error: any) {
-                                        console.error('PDF export error:', error);
-                                        toast({
-                                          title: "❌ Export failed",
-                                          description: error.message || "Failed to export PDF",
-                                          variant: "destructive",
-                                        });
+                                        console.error("PDF Export Error:", error);
+                                        toast({ title: "PDF Export Failed", description: error.message, variant: "destructive" });
                                       }
                                     }}
-                                    title="Export to PDF"
+                                    title="Export PDF"
                                   >
                                     <Download className="h-4 w-4" />
                                   </Button>
@@ -921,7 +914,7 @@ function RequestFormsPageContent() {
               onOpenChange={setIsCommentsDialogOpen}
               request={selectedRequest}
             />
-
+            
             <Dialog open={isAttachmentsDialogOpen} onOpenChange={setIsAttachmentsDialogOpen}>
               <DialogContent className="max-w-4xl">
                 <DialogHeader>

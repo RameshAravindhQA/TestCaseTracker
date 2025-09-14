@@ -121,9 +121,6 @@ export function GitHubIssueReporter() {
 
   const [pastedLinks, setPastedLinks] = useState<string[]>([]);
   const [clipboardText, setClipboardText] = useState('');
-  const [customLabels, setCustomLabels] = useState<Array<{name: string; color: string}>>([]);
-  const [newLabelName, setNewLabelName] = useState('');
-  const [newLabelColor, setNewLabelColor] = useState('#007bff');
 
   // Fetch projects
   const { data: projectsData } = useQuery<Project[]>({
@@ -398,10 +395,9 @@ export function GitHubIssueReporter() {
     if (screenshots.length > 0) {
       screenshotSection = '\n\n## Screenshots\n';
       screenshots.forEach((screenshot, index) => {
-        // Create a proper GitHub image reference that will be uploaded
+        // For GitHub issues, we'll reference uploaded attachments
         screenshotSection += `\n### Screenshot ${index + 1}\n`;
-        screenshotSection += `![Screenshot ${index + 1}](https://github.com/user-attachments/assets/screenshot-${index + 1})\n`;
-        screenshotSection += `<img width="960" height="540" alt="Screenshot ${index + 1}" src="https://github.com/user-attachments/assets/screenshot-${index + 1}" />\n`;
+        screenshotSection += `<img width="960" height="540" alt="Screenshot ${index + 1}" src="attachment://screenshot-${index + 1}.png" />\n`;
       });
     }
 
@@ -548,9 +544,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
       const bugResult = await bugResponse.json();
       const bugId = bugResult.id;
 
-      // Step 2: Create GitHub issue with custom labels
-      const allLabels = [formData.priority, formData.severity, formData.category, ...customLabels.map(label => label.name)];
-      
+      // Step 2: Create GitHub issue
       const githubResponse = await fetch(`/api/github/create-issue`, {
         method: 'POST',
         headers: {
@@ -559,8 +553,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
         body: JSON.stringify({
           title: formData.title,
           body: formatIssueDescription(),
-          labels: allLabels,
-          customLabels: customLabels, // Include custom labels with colors
+          labels: formData.priority === 'critical' ? [formData.priority, formData.severity, formData.category] : [formData.priority, formData.severity, formData.category], // Example label mapping
           projectId: formData.projectId,
         }),
       });
@@ -680,18 +673,6 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
       ...prev,
       description: prev.description + (prev.description ? '\n\n' : '') + `Reference: ${link}`
     }));
-  };
-
-  const addCustomLabel = () => {
-    if (newLabelName.trim()) {
-      setCustomLabels(prev => [...prev, { name: newLabelName.trim(), color: newLabelColor }]);
-      setNewLabelName('');
-      setNewLabelColor('#007bff');
-    }
-  };
-
-  const removeCustomLabel = (index: number) => {
-    setCustomLabels(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -845,12 +826,11 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
               </div>
 
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="basic">Basic Info</TabsTrigger>
                   <TabsTrigger value="details">Details</TabsTrigger>
                   <TabsTrigger value="media">Screenshots & Recording</TabsTrigger>
                   <TabsTrigger value="upload">Upload & Clipboard</TabsTrigger>
-                  <TabsTrigger value="labels">Labels</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="basic" className="space-y-4">
@@ -1062,61 +1042,6 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
                     />
                   </div>
 
-                  {/* Custom Labels Section */}
-                  <div className="border-t pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <Label>Custom Labels</Label>
-                    </div>
-                    
-                    <div className="flex gap-2 mb-3">
-                      <Input
-                        placeholder="Label name"
-                        value={newLabelName}
-                        onChange={(e) => setNewLabelName(e.target.value)}
-                        className="flex-1"
-                      />
-                      <input
-                        type="color"
-                        value={newLabelColor}
-                        onChange={(e) => setNewLabelColor(e.target.value)}
-                        className="w-12 h-10 rounded border"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={addCustomLabel}
-                        disabled={!newLabelName.trim()}
-                      >
-                        Add Label
-                      </Button>
-                    </div>
-
-                    {customLabels.length > 0 && (
-                      <div className="space-y-2">
-                        <Label className="text-sm">Added Labels:</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {customLabels.map((label, index) => (
-                            <Badge
-                              key={index}
-                              style={{ backgroundColor: label.color, color: 'white' }}
-                              className="flex items-center gap-1"
-                            >
-                              {label.name}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeCustomLabel(index)}
-                                className="h-4 w-4 p-0 ml-1 hover:bg-white/20"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Clipboard Section */}
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-between mb-2">
@@ -1218,69 +1143,6 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
                       ))}
                     </div>
                   )}
-                </TabsContent>
-
-                <TabsContent value="labels" className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label>Custom Labels for GitHub Issue</Label>
-                    </div>
-                    
-                    <div className="flex gap-2 mb-3">
-                      <Input
-                        placeholder="Enter label name"
-                        value={newLabelName}
-                        onChange={(e) => setNewLabelName(e.target.value)}
-                        className="flex-1"
-                        onKeyPress={(e) => e.key === 'Enter' && addCustomLabel()}
-                      />
-                      <input
-                        type="color"
-                        value={newLabelColor}
-                        onChange={(e) => setNewLabelColor(e.target.value)}
-                        className="w-12 h-10 rounded border cursor-pointer"
-                        title="Choose label color"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={addCustomLabel}
-                        disabled={!newLabelName.trim()}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Label
-                      </Button>
-                    </div>
-
-                    {customLabels.length > 0 && (
-                      <div className="space-y-2">
-                        <Label className="text-sm">Custom Labels to be added:</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {customLabels.map((label, index) => (
-                            <Badge
-                              key={index}
-                              style={{ backgroundColor: label.color, color: 'white' }}
-                              className="flex items-center gap-1 px-3 py-1"
-                            >
-                              {label.name}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeCustomLabel(index)}
-                                className="h-4 w-4 p-0 ml-1 hover:bg-white/20"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="text-xs text-gray-500">
-                      <p>Default labels (Priority, Severity, Category) will be automatically added along with your custom labels.</p>
-                    </div>
-                  </div>
                 </TabsContent>
               </Tabs>
 
