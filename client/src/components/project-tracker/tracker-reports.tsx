@@ -23,6 +23,9 @@ interface TrackerReportsProps {
 export function TrackerReports({ projectId, features = [], subFeatures = [] }: TrackerReportsProps) {
   const [reportType, setReportType] = useState('summary');
   const [dateRange, setDateRange] = useState('all');
+  const [selectedFeature, setSelectedFeature] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Fetch work logs for reports
   const { data: workLogs } = useQuery({
@@ -43,6 +46,75 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
       return response.json();
     },
   });
+
+  // Filter data based on selected filters
+  const getFilteredData = () => {
+    let filteredSubFeatures = [...subFeatures];
+    let filteredWorkLogs = workLogs || [];
+
+    // Feature filter
+    if (selectedFeature !== 'all') {
+      filteredSubFeatures = filteredSubFeatures.filter(sf => sf.featureId.toString() === selectedFeature);
+      filteredWorkLogs = filteredWorkLogs.filter(wl => 
+        filteredSubFeatures.some(sf => sf.id === wl.subFeatureId)
+      );
+    }
+
+    // Date range filter
+    if (dateRange !== 'all') {
+      const now = new Date();
+      let filterDate = new Date();
+
+      switch (dateRange) {
+        case 'thisMonth':
+          filterDate.setMonth(now.getMonth());
+          filterDate.setDate(1);
+          break;
+        case 'lastMonth':
+          filterDate.setMonth(now.getMonth() - 1);
+          filterDate.setDate(1);
+          break;
+        case 'thisQuarter':
+          const quarter = Math.floor(now.getMonth() / 3);
+          filterDate.setMonth(quarter * 3);
+          filterDate.setDate(1);
+          break;
+        case 'thisYear':
+          filterDate.setMonth(0);
+          filterDate.setDate(1);
+          break;
+        case 'custom':
+          if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            filteredSubFeatures = filteredSubFeatures.filter(sf => {
+              const createdDate = new Date(sf.createdAt);
+              return createdDate >= start && createdDate <= end;
+            });
+            filteredWorkLogs = filteredWorkLogs.filter(wl => {
+              const logDate = new Date(wl.logDate);
+              return logDate >= start && logDate <= end;
+            });
+          }
+          return { filteredSubFeatures, filteredWorkLogs };
+      }
+
+      if (dateRange !== 'custom') {
+        filteredSubFeatures = filteredSubFeatures.filter(sf => {
+          const createdDate = new Date(sf.createdAt);
+          return createdDate >= filterDate;
+        });
+        filteredWorkLogs = filteredWorkLogs.filter(wl => {
+          const logDate = new Date(wl.logDate);
+          return logDate >= filterDate;
+        });
+      }
+    }
+
+    return { filteredSubFeatures, filteredWorkLogs };
+  };
+
+  const { filteredSubFeatures, filteredWorkLogs } = getFilteredData();
 
   // Calculate delay statistics
   const getDelayStatistics = () => {
@@ -114,8 +186,84 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   };
 
   const exportToPDF = () => {
-    // This would integrate with a PDF library like jsPDF
-    alert('PDF export functionality would be implemented here');
+    try {
+      const { jsPDF } = require('jspdf');
+      require('jspdf-autotable');
+      
+      const doc = new jsPDF();
+      
+      // Add title
+      doc.setFontSize(16);
+      doc.text('Project Tracker Report', 20, 20);
+      doc.setFontSize(12);
+      doc.text(`Project: ${project?.name || 'Unknown'}`, 20, 30);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 40);
+      
+      // Sub-Feature Status Summary Table
+      doc.setFontSize(14);
+      doc.text('Sub-Feature Status Summary', 20, 60);
+      
+      const statusData = ['Planning', 'In Progress', 'Completed', 'On Hold', 'Blocked'].map(status => {
+        const count = subFeatures.filter(sf => sf.status === status).length;
+        const percentage = subFeatures.length > 0 ? Math.round((count / subFeatures.length) * 100) : 0;
+        return [status, count.toString(), `${percentage}%`];
+      });
+      
+      doc.autoTable({
+        startY: 70,
+        head: [['Status', 'Count', 'Percentage']],
+        body: statusData,
+        styles: { fontSize: 10 }
+      });
+      
+      // Work Type Distribution Table
+      const finalY = doc.lastAutoTable.finalY + 20;
+      doc.setFontSize(14);
+      doc.text('Work Type Distribution', 20, finalY);
+      
+      const workTypeData = ['Development', 'QA', 'DevOps', 'Designing', 'Analysis', 'Documentation'].map(workType => {
+        const count = subFeatures.filter(sf => sf.workType === workType).length;
+        const percentage = subFeatures.length > 0 ? Math.round((count / subFeatures.length) * 100) : 0;
+        return [workType, count.toString(), `${percentage}%`];
+      });
+      
+      doc.autoTable({
+        startY: finalY + 10,
+        head: [['Work Type', 'Count', 'Percentage']],
+        body: workTypeData,
+        styles: { fontSize: 10 }
+      });
+      
+      // Work Hours Summary
+      const finalY2 = doc.lastAutoTable.finalY + 20;
+      doc.setFontSize(14);
+      doc.text('Work Hours Summary', 20, finalY2);
+      
+      const estimatedHours = subFeatures.reduce((sum, sf) => sum + (sf.estimatedHours || 0), 0);
+      const actualHours = workLogs?.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0) || 0;
+      const totalLogs = workLogs?.length || 0;
+      
+      const hoursData = [
+        ['Estimated Hours', `${estimatedHours}h`],
+        ['Actual Hours', `${actualHours}h`],
+        ['Total Work Logs', totalLogs.toString()],
+        ['Efficiency', estimatedHours > 0 ? `${Math.round((actualHours / estimatedHours) * 100)}%` : 'N/A']
+      ];
+      
+      doc.autoTable({
+        startY: finalY2 + 10,
+        head: [['Metric', 'Value']],
+        body: hoursData,
+        styles: { fontSize: 10 }
+      });
+      
+      // Save the PDF
+      doc.save(`project-tracker-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      alert('PDF export failed. Please ensure jsPDF is installed.');
+    }
   };
 
   return (
@@ -157,9 +305,45 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                   <SelectItem value="lastMonth">Last Month</SelectItem>
                   <SelectItem value="thisQuarter">This Quarter</SelectItem>
                   <SelectItem value="thisYear">This Year</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Feature:</label>
+              <Select value={selectedFeature} onValueChange={setSelectedFeature}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Features</SelectItem>
+                  {features.map((feature) => (
+                    <SelectItem key={feature.id} value={feature.id.toString()}>
+                      {feature.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {dateRange === 'custom' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="px-3 py-1 border rounded"
+                />
+                <span>to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="px-3 py-1 border rounded"
+                />
+              </div>
+            )}
 
             <div className="flex gap-2 ml-auto">
               <Button variant="outline" onClick={exportToCSV}>
@@ -185,8 +369,8 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
             <CardContent>
               <div className="space-y-4">
                 {['Planning', 'In Progress', 'Completed', 'On Hold', 'Blocked'].map(status => {
-                  const count = subFeatures.filter(sf => sf.status === status).length;
-                  const percentage = subFeatures.length > 0 ? (count / subFeatures.length) * 100 : 0;
+                  const count = filteredSubFeatures.filter(sf => sf.status === status).length;
+                  const percentage = filteredSubFeatures.length > 0 ? (count / filteredSubFeatures.length) * 100 : 0;
                   
                   return (
                     <div key={status} className="flex items-center justify-between">
@@ -212,8 +396,8 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
             <CardContent>
               <div className="space-y-4">
                 {['Development', 'QA', 'DevOps', 'Designing', 'Analysis', 'Documentation'].map(workType => {
-                  const count = subFeatures.filter(sf => sf.workType === workType).length;
-                  const percentage = subFeatures.length > 0 ? (count / subFeatures.length) * 100 : 0;
+                  const count = filteredSubFeatures.filter(sf => sf.workType === workType).length;
+                  const percentage = filteredSubFeatures.length > 0 ? (count / filteredSubFeatures.length) * 100 : 0;
                   
                   return (
                     <div key={workType} className="flex items-center justify-between">
@@ -240,19 +424,19 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-blue-600">
-                    {subFeatures.reduce((sum, sf) => sum + (sf.estimatedHours || 0), 0)}h
+                    {filteredSubFeatures.reduce((sum, sf) => sum + (sf.estimatedHours || 0), 0)}h
                   </p>
                   <p className="text-sm text-muted-foreground">Estimated Hours</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-green-600">
-                    {workLogs?.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0) || 0}h
+                    {filteredWorkLogs?.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0) || 0}h
                   </p>
                   <p className="text-sm text-muted-foreground">Actual Hours</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-purple-600">
-                    {workLogs?.length || 0}
+                    {filteredWorkLogs?.length || 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Total Work Logs</p>
                 </div>

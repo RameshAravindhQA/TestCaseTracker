@@ -733,6 +733,17 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
       const bugId = bugResult.id;
 
       // Step 2: Create GitHub issue
+      // Prepare labels including category and custom labels
+      const categoryParts = formData.category.split('-');
+      const categoryName = categoryParts.length > 1 ? categoryParts[1] : formData.category;
+      
+      const allLabels = [
+        `category: ${categoryName}`, // Add category as label
+        `severity: ${formData.severity}`,
+        `priority: ${formData.priority}`,
+        ...(formData.selectedLabels?.map(labelId => customLabels.find(l => l.id === labelId)?.name).filter(Boolean) || [])
+      ];
+
       const githubResponse = await fetch(`/api/github/create-issue`, {
         method: 'POST',
         headers: {
@@ -741,7 +752,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
         body: JSON.stringify({
           title: formData.title,
           body: formatIssueDescription(),
-          labels: formData.selectedLabels?.map(labelId => customLabels.find(l => l.id === labelId)?.name).filter(Boolean) || [], // Map selected label IDs to names
+          labels: allLabels,
           projectId: formData.projectId,
         }),
       });

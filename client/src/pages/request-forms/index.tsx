@@ -610,9 +610,24 @@ function RequestFormsPageContent() {
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                <Badge className={getStatusColor(request.status)}>
-                                  {request.status}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className={`w-3 h-3 rounded-full ${
+                                      request.status === 'Open' ? 'bg-green-500' :
+                                      request.status === 'Hold' ? 'bg-yellow-500' : 'bg-gray-500'
+                                    }`}
+                                    title={`Status: ${request.status}`}
+                                  />
+                                  <Badge
+                                    variant={
+                                      request.status === 'Open' ? 'default' :
+                                      request.status === 'Hold' ? 'secondary' : 'outline'
+                                    }
+                                    data-testid={`status-badge-${request.id}`}
+                                  >
+                                    {request.status}
+                                  </Badge>
+                                </div>
                               </TableCell>
                               <TableCell>{duration} days</TableCell>
                               <TableCell>{formatDate(request.startDate)}</TableCell>
@@ -690,20 +705,68 @@ function RequestFormsPageContent() {
                                     variant="outline"
                                     onClick={async () => {
                                       try {
-                                        const response = await fetch(`/api/projects/${request.projectId}/export?format=pdf`);
-                                        if (!response.ok) {
-                                          throw new Error(`PDF export failed: ${response.statusText}`);
+                                        // Import jsPDF dynamically
+                                        const jsPDF = (await import('jspdf')).default;
+                                        await import('jspdf-autotable');
+
+                                        const doc = new jsPDF();
+
+                                        // Title
+                                        doc.setFontSize(16);
+                                        doc.text('Resource Request Report', 20, 20);
+
+                                        // Request details
+                                        doc.setFontSize(12);
+                                        let yPos = 40;
+                                        doc.text(`Request ID: ${request.id}`, 20, yPos);
+                                        doc.text(`Title: ${request.title}`, 20, yPos += 10);
+                                        doc.text(`Type: ${request.requestType}`, 20, yPos += 10);
+                                        doc.text(`Department: ${request.department}`, 20, yPos += 10);
+                                        doc.text(`Priority: ${request.priority}`, 20, yPos += 10);
+                                        doc.text(`Status: ${request.status}`, 20, yPos += 10);
+                                        doc.text(`Start Date: ${request.startDate}`, 20, yPos += 10);
+                                        doc.text(`End Date: ${request.endDate}`, 20, yPos += 10);
+                                        doc.text(`Estimated Hours: ${request.estimatedHours}`, 20, yPos += 10);
+
+                                        if (request.description) {
+                                          yPos += 20;
+                                          doc.setFontSize(14);
+                                          doc.text('Description:', 20, yPos);
+                                          doc.setFontSize(12);
+
+                                          // Split long text into multiple lines
+                                          const splitDescription = doc.splitTextToSize(request.description, 170);
+                                          doc.text(splitDescription, 20, yPos + 10);
+                                          yPos += splitDescription.length * 5 + 10;
                                         }
-                                        const blob = await response.blob();
-                                        const url = window.URL.createObjectURL(blob);
-                                        const link = document.createElement('a');
-                                        link.href = url;
-                                        link.setAttribute('download', `project_${request.projectId}_report.pdf`);
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        link.parentNode?.removeChild(link);
-                                        window.URL.revokeObjectURL(url);
-                                        toast({ title: "PDF Export", description: "Project report downloaded successfully." });
+
+                                        if (request.deliverables) {
+                                          yPos += 10;
+                                          doc.setFontSize(14);
+                                          doc.text('Deliverables:', 20, yPos);
+                                          doc.setFontSize(12);
+
+                                          const splitDeliverables = doc.splitTextToSize(request.deliverables, 170);
+                                          doc.text(splitDeliverables, 20, yPos + 10);
+                                          yPos += splitDeliverables.length * 5 + 10;
+                                        }
+
+                                        if (request.acceptanceCriteria) {
+                                          yPos += 10;
+                                          doc.setFontSize(14);
+                                          doc.text('Acceptance Criteria:', 20, yPos);
+                                          doc.setFontSize(12);
+
+                                          const splitCriteria = doc.splitTextToSize(request.acceptanceCriteria, 170);
+                                          doc.text(splitCriteria, 20, yPos + 10);
+                                        }
+
+                                        // Add footer
+                                        doc.setFontSize(10);
+                                        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 280);
+
+                                        doc.save(`request_${request.id}_report.pdf`);
+                                        toast({ title: "PDF Export", description: "Request report downloaded successfully." });
                                       } catch (error: any) {
                                         console.error("PDF Export Error:", error);
                                         toast({ title: "PDF Export Failed", description: error.message, variant: "destructive" });
@@ -914,7 +977,7 @@ function RequestFormsPageContent() {
               onOpenChange={setIsCommentsDialogOpen}
               request={selectedRequest}
             />
-            
+
             <Dialog open={isAttachmentsDialogOpen} onOpenChange={setIsAttachmentsDialogOpen}>
               <DialogContent className="max-w-4xl">
                 <DialogHeader>

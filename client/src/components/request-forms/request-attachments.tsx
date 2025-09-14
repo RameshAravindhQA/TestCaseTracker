@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Download, Upload, File, Image, FileText } from "lucide-react";
+import { Trash2, Download, Upload, File, Image, FileText, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
@@ -85,6 +85,28 @@ export function RequestAttachments({ requestId }: RequestAttachmentsProps) {
 
   const handleDownload = (attachment: RequestAttachment) => {
     window.open(`/api/request-forms/attachments/${attachment.id}/download`, '_blank');
+  };
+
+  const handleView = (attachment: RequestAttachment) => {
+    // For images, show in a modal viewer
+    if (attachment.mimeType.startsWith('image/')) {
+      const imageUrl = `/api/request-forms/attachments/${attachment.id}/download`;
+      // Open in a new window for viewing
+      const viewer = window.open('', '_blank');
+      if (viewer) {
+        viewer.document.write(`
+          <html>
+            <head><title>${attachment.originalFileName}</title></head>
+            <body style="margin:0; display:flex; justify-content:center; align-items:center; background:#000;">
+              <img src="${imageUrl}" style="max-width:100%; max-height:100vh; object-fit:contain;" />
+            </body>
+          </html>
+        `);
+      }
+    } else {
+      // For other files, open in new tab
+      window.open(`/api/request-forms/attachments/${attachment.id}/download`, '_blank');
+    }
   };
 
   const getFileIcon = (mimeType: string) => {
@@ -180,6 +202,15 @@ export function RequestAttachments({ requestId }: RequestAttachmentsProps) {
                   <Badge variant="secondary" className="text-xs" data-testid={`badge-filetype-${attachment.id}`}>
                     {attachment.mimeType.split('/')[0]}
                   </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleView(attachment)}
+                    data-testid={`button-view-${attachment.id}`}
+                    title="View attachment"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
                   <Button
                     size="sm"
                     variant="outline"
