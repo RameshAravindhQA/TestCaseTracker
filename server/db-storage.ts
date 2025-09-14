@@ -27,13 +27,14 @@ import {
   type TraceabilityModule, type InsertTraceabilityModule,
   type TraceabilityMarker, type InsertTraceabilityMarker,
   type TraceabilityMatrixCell, type InsertTraceabilityMatrixCell,
+  type TrackerWorkLog, type InsertTrackerWorkLog,
   users, projects, projectMembers, modules, testCases, bugs, activities,
   documentFolders, documents, tags, customers, customerProjects,
   timeSheets, timeSheetFolders, 
   automationScripts, automationRuns, automationSchedules, automationEnvironments,
   sprints, kanbanColumns, kanbanCards,
   matrixCells, customMarkers,
-  traceabilityMatrix, traceabilityModules, traceabilityMarkers, traceabilityMatrixCells
+  traceabilityMatrix, traceabilityModules, traceabilityMarkers, traceabilityMatrixCells, trackerWorkLogs
 } from '@shared/schema';
 import { type FlowDiagram, type InsertFlowDiagram } from "../shared/functional-flow-types";
 import { IStorage } from './storage';

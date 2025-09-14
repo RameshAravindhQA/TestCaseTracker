@@ -5545,6 +5545,15 @@ class MemStorage implements IStorage {
     return workLog;
   }
 
+  async deleteTrackerWorkLog(id: number): Promise<boolean> {
+    const index = this.trackerWorkLogs.findIndex(wl => wl.id === id);
+    if (index === -1) {
+      return false;
+    }
+    this.trackerWorkLogs.splice(index, 1);
+    return true;
+  }
+
   // Timeline Extensions
   async createTrackerTimelineExtension(data: InsertTrackerTimelineExtension): Promise<TrackerTimelineExtension> {
     const extension: TrackerTimelineExtension = {

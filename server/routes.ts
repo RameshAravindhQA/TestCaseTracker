@@ -1835,6 +1835,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  apiRouter.delete("/tracker/work-logs/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTrackerWorkLog(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete tracker work log error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // Timeline Extensions
   apiRouter.post("/tracker/timeline-extensions", isAuthenticated, async (req, res) => {
     try {

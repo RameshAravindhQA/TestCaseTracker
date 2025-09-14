@@ -1,15 +1,17 @@
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar, Clock, User, Search, Filter, FileText, BarChart3, Download, Edit, Eye } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Calendar, Clock, User, Search, Filter, FileText, BarChart3, Download, Edit, Eye, Trash2 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { format } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 
 interface WorkLogsListProps {
   projectId?: number;
@@ -25,6 +27,8 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
   const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>({});
   const [selectedWorkLog, setSelectedWorkLog] = useState<any>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
+  
+  const queryClient = useQueryClient();
 
   // Fetch work logs
   const { data: workLogs, isLoading } = useQuery({
@@ -52,6 +56,29 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
     },
   });
 
+  // Delete work log mutation
+  const deleteWorkLogMutation = useMutation({
+    mutationFn: async (workLogId: number) => {
+      const response = await apiRequest('DELETE', `/api/tracker/work-logs/${workLogId}`);
+      if (!response.ok) throw new Error('Failed to delete work log');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tracker/work-logs'] });
+      toast({
+        title: "Success",
+        description: "Work log deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete work log",
+        variant: "destructive",
+      });
+    },
+  });
+
   const getSubFeatureName = (subFeatureId: number) => {
     return subFeatures?.find(sf => sf.id === subFeatureId)?.name || 'Unknown';
   };
@@ -75,6 +102,10 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
     if (onEditWorkLog) {
       onEditWorkLog(workLog);
     }
+  };
+
+  const handleDeleteWorkLog = (workLogId: number) => {
+    deleteWorkLogMutation.mutate(workLogId);
   };
 
   const statusColors = {
@@ -259,6 +290,36 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Delete Work Log"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Work Log</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this work log? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteWorkLog(log.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                              disabled={deleteWorkLogMutation.isPending}
+                            >
+                              {deleteWorkLogMutation.isPending ? 'Deleting...' : 'Delete'}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                     <Badge className={statusColors[log.status]}>
                       {log.status}
