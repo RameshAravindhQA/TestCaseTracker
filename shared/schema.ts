@@ -928,35 +928,6 @@ export type InsertBugComment = z.infer<typeof insertBugCommentSchema>;
 export type BugCommentReaction = typeof bugCommentReactions.$inferSelect;
 export type InsertBugCommentReaction = z.infer<typeof insertBugCommentReactionSchema>;
 
-// GitHub Comments Audit table
-export const githubCommentsAudit = pgTable("github_comments_audit", {
-  id: serial("id").primaryKey(),
-  bugId: integer("bug_id").notNull(),
-  githubIssueNumber: integer("github_issue_number").notNull(),
-  githubCommentId: text("github_comment_id").notNull(),
-  githubCommentUrl: text("github_comment_url").notNull(),
-  commentBody: text("comment_body").notNull(),
-  commentAuthor: text("comment_author").notNull(),
-  commentAuthorId: integer("comment_author_id"),
-  githubCreatedAt: timestamp("github_created_at").notNull(),
-  githubUpdatedAt: timestamp("github_updated_at"),
-  syncDirection: text("sync_direction").$type<"github_to_system" | "system_to_github">().notNull(),
-  syncStatus: text("sync_status").$type<"synced" | "failed" | "pending">().notNull().default("pending"),
-  errorMessage: text("error_message"),
-  lastSyncedAt: timestamp("last_synced_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at"),
-});
-
-export const insertGithubCommentsAuditSchema = createInsertSchema(githubCommentsAudit).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type GitHubCommentsAudit = typeof githubCommentsAudit.$inferSelect;
-export type InsertGitHubCommentsAudit = z.infer<typeof insertGithubCommentsAuditSchema>;
-
 // Traceability Matrix - Custom Markers (already defined above, commented out to avoid duplication)
 // We already have this definition earlier in the file
 

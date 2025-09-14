@@ -444,33 +444,24 @@ export async function syncGitHubComments(githubIssueNumber: number, bugId: numbe
   }
 
   try {
-    // Import the GitHub comments service
-    const { githubCommentsService } = await import('./github-comments-service');
-    
-    // Use the new service to sync comments
-    const syncResult = await githubCommentsService.syncGitHubComments(
-      bugId, 
-      githubIssueNumber, 
-      githubConfig
-    );
+    // Fetch GitHub comments
+    const response = await fetch(`https://api.github.com/repos/${githubConfig.githubUsername}/${githubConfig.repositoryName}/issues/${githubIssueNumber}/comments`, {
+      headers: {
+        'Authorization': `Bearer ${githubConfig.personalAccessToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'TestCaseTracker/1.0.0'
+      }
+    });
 
-    if (syncResult.success) {
-      console.log(`Successfully synced ${syncResult.syncedComments} GitHub comments`);
-      
-      // Return the audit records for backward compatibility
-      const auditRecords = await githubCommentsService.getGitHubCommentsAudit(bugId);
-      return auditRecords.map(record => ({
-        id: record.githubCommentId,
-        body: record.commentBody,
-        user: { login: record.commentAuthor },
-        created_at: record.githubCreatedAt,
-        updated_at: record.githubUpdatedAt,
-        html_url: record.githubCommentUrl
-      }));
-    } else {
-      console.error('GitHub comments sync failed:', syncResult.message);
+    if (!response.ok) {
+      console.error(`GitHub API error: ${response.status} ${response.statusText}`);
       return [];
     }
+
+    const githubComments = await response.json();
+    console.log(`Fetched ${githubComments.length} comments from GitHub issue ${githubIssueNumber}`);
+    
+    return githubComments;
   } catch (error: any) {
     console.error('Failed to sync GitHub comments:', error);
     return [];
