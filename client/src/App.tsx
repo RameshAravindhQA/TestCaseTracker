@@ -225,6 +225,9 @@ function Router() {
       <Route path="/test-sheets">
          <ProtectedLazyComponent Component={lazy(() => import("./pages/test-sheets"))} />
       </Route>
+      <Route path="/project-tracker">
+        <ProtectedLazyComponent Component={lazy(() => import("./pages/project-tracker"))} />
+      </Route>
       <Route path="/github">
         <ProtectedLazyComponent Component={lazy(() => import("./pages/github"))} />
       </Route>
