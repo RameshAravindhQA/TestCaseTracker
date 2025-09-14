@@ -1,0 +1,91 @@
+Project Tracker Module– Requirement Document
+
+1. Overview
+
+A Project Tracker System to manage projects, features, and sub-features with full CRUD, timeline history, dependency tracking, and reporting. The system should be usable at both global level (all projects) and project level (individual project), giving management (e.g., CEO) a clear picture of progress, delays, and workloads.
+
+⸻
+
+2. Hierarchy Structure
+    •    Project
+    •    Feature
+    •    Sub-Feature
+         Add work logs Custom create drop down any departments 
+         Type of Work also custom create drop down as badge , Development , QA , Devops , Designing 
+    •    Optional Sub-Feature Parent/Child links (dependency)
+
+⸻
+
+3. Compelled Features (Must-Have)
+
+3.1 CRUD Operations
+    •    Add/Edit/Delete Project, Feature, Sub-Feature, add worklogs 
+    •    Start Date, End Date tracking
+    •    Extend end date with mandatory notes (history log)
+
+3.2 Timeline Tracking
+    •    Track progress through Design → Development → Testing → Deployment
+    •    Each stage stores history when extended
+
+3.3 Custom Fields
+    •    Ability to create custom dropdown values for sub-tasks (e.g., Change Request, Bug, Design Fix, etc.)
+
+3.4 Search & Filters
+    •    Search tasks by:
+    •    Project
+    •    Feature
+    •    Sub-Feature
+    •    Status (Pending, In Progress, Completed, Blocked)
+    •    Date/Month filters
+    •    Export filtered data in CSV/PDF
+
+3.5 Reporting & Export
+    •    Timeline summary (planned vs actual days)
+    •    Delay reports (how many days extended)
+    •    Export reports in CSV & PDF
+    •    Month-wise/Project-wise/Feature-wise summary
+
+3.6 Audit Trail
+    •    Track who made the change, what changed, when
+    •    Keep history logs for all CRUD operations
+
+⸻
+
+4. Expected Features (Good-to-Have)
+
+4.1 Dependency Tracking
+    •    Mark a feature/sub-feature as blocked by or dependent on another
+
+4.2 Status Automation
+    •    Auto-update parent feature status when all child tasks are completed
+
+4.3 Visual Timeline
+    •    Gantt chart view of project
+    •    Kanban board view for quick task management
+
+4.4 Workload Distribution
+    •    Track who is working on which task
+    •    Show workload per developer
+
+4.5 Notifications & Alerts
+    •    Email/Slack/WhatsApp integration for:
+    •    Deadline extensions
+    •    Stage completion
+    •    Blocked tasks
+
+4.6 Milestone Tracking
+    •    Ability to add milestones (e.g., Beta Release, Client Demo, Go-Live)
+
+4.7 Metrics Dashboard
+    •    Widgets showing:
+    •    Avg delay per stage
+    •    % tasks completed on time
+    •    Open bugs count
+    •    Velocity (tasks completed per week/month)
+6. Example Use Case Flow
+    1.    Developer creates a Project.
+    2.    Adds Features under the project.
+    3.    Adds Sub-Features with start/end dates. 
+    4.    If delayed, extends end date → adds notes → system logs in history.
+    5.    CEO searches project → gets timeline summary report (CSV/PDF).
+    6.    CEO views charts/metrics dashboard → sees delays, workloads, and project health.
