@@ -25,7 +25,6 @@ import { TrackerSubFeatureForm } from './tracker-subfeature-form';
 import { TrackerWorkLogForm } from './tracker-work-log-form';
 import WorkLogsList from './tracker-work-logs-list';
 import TimelineView from './tracker-timeline-view';
-import { TrackerReports } from './tracker-reports';
 import { format } from 'date-fns';
 
 interface TrackerProjectDetailsProps {

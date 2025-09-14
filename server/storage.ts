@@ -439,33 +439,6 @@ export interface IStorage {
   updateEmployeePermissions(employeeId: number, permissions: any[]): Promise<void>;
   getEmployeePermissions(employeeId: number): Promise<any[]>;
 
-  // Bug History Methods
-  private bugHistories: BugHistory[] = [];
-  private nextBugHistoryId = 1;
-
-  async getBugHistory(bugId: number): Promise<BugHistory[]> {
-    return this.bugHistories
-      .filter(history => history.bugId === bugId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-
-  async createBugHistory(data: InsertBugHistory): Promise<BugHistory> {
-    const id = this.nextBugHistoryId++;
-    const history: BugHistory = {
-      id,
-      ...data,
-      createdAt: new Date(),
-    };
-    this.bugHistories.push(history);
-    return history;
-  }
-
-  async getBugHistoryByAction(bugId: number, action: string): Promise<BugHistory[]> {
-    return this.bugHistories
-      .filter(history => history.bugId === bugId && history.action === action)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-
   // BRD Document operations (added methods)
   getBrdDocuments(projectId?: number): Promise<any[]>;
   getBrdDocument(id: number): Promise<any | null>;
@@ -486,11 +459,6 @@ export interface IStorage {
   updateBrdTestCase(id: number, data: any): Promise<any | null>;
   deleteBrdTestCase(id: number): Promise<boolean>;
 
-  // Bug History Methods
-  getBugHistory(bugId: number): Promise<BugHistory[]>;
-  createBugHistory(data: InsertBugHistory): Promise<BugHistory>;
-  getBugHistoryByAction(bugId: number, action: string): Promise<BugHistory[]>;
-  
   // Project Tracker Storage Methods
   getTrackerProjects(): Promise<TrackerProject[]>;
   getTrackerProject(id: number): Promise<TrackerProject | null>;

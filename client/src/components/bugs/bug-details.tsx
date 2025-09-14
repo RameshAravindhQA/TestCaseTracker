@@ -2,11 +2,10 @@ import { Bug, User } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Bug } from "@/types";
 import { format } from "date-fns";
-import { Calendar, User as UserIcon, AlertTriangle, Flag, Settings, FileText, List, Target, Zap, Clock } from "lucide-react";
+import { Calendar, User, AlertTriangle, Flag, Settings, FileText, List, Target, Zap } from "lucide-react";
 import { BugComments } from "./bug-comments";
-import { BugHistory } from "./bug-history";
 
 interface BugDetailsProps {
   bug: Bug;
@@ -28,102 +27,82 @@ export function BugDetails({ bug, users = [] }: BugDetailsProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{bug.bugId} - {bug.title}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="text-sm font-medium">Severity</h3>
-              <Badge variant="outline" className="mt-1">
-                {bug.severity}
-              </Badge>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium">Priority</h3>
-              <Badge variant="outline" className="mt-1">
-                {bug.priority}
-              </Badge>
-            </div>
-          </div>
-
+    <Card>
+      <CardHeader>
+        <CardTitle>{bug.bugId} - {bug.title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <h3 className="text-sm font-medium">Status</h3>
-            <Badge variant="outline" className={`mt-1 ${getStatusColor(bug.status)}`}>
-              {bug.status}
+            <h3 className="text-sm font-medium">Severity</h3>
+            <Badge variant="outline" className="mt-1">
+              {bug.severity}
             </Badge>
           </div>
 
-          {bug.environment && (
-            <div>
-              <h3 className="text-sm font-medium">Environment</h3>
-              <p className="text-sm text-gray-700 mt-1">{bug.environment}</p>
-            </div>
-          )}
-
           <div>
-            <h3 className="text-sm font-medium">Pre-Conditions</h3>
-            <p className="text-sm text-gray-700 mt-1">{bug.preConditions || "None specified"}</p>
+            <h3 className="text-sm font-medium">Priority</h3>
+            <Badge variant="outline" className="mt-1">
+              {bug.priority}
+            </Badge>
           </div>
+        </div>
 
+        <div>
+          <h3 className="text-sm font-medium">Status</h3>
+          <Badge variant="outline" className={`mt-1 ${getStatusColor(bug.status)}`}>
+            {bug.status}
+          </Badge>
+        </div>
+
+        {bug.environment && (
           <div>
-            <h3 className="text-sm font-medium">Steps to Reproduce</h3>
-            <pre className="text-sm text-gray-700 mt-1 whitespace-pre-wrap font-sans border border-gray-200 rounded-md p-3 bg-gray-50">
-              {bug.stepsToReproduce}
-            </pre>
+            <h3 className="text-sm font-medium">Environment</h3>
+            <p className="text-sm text-gray-700 mt-1">{bug.environment}</p>
           </div>
+        )}
 
+        <div>
+          <h3 className="text-sm font-medium">Pre-Conditions</h3>
+          <p className="text-sm text-gray-700 mt-1">{bug.preConditions || "None specified"}</p>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-medium">Steps to Reproduce</h3>
+          <pre className="text-sm text-gray-700 mt-1 whitespace-pre-wrap font-sans border border-gray-200 rounded-md p-3 bg-gray-50">
+            {bug.stepsToReproduce}
+          </pre>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-medium">Expected Result</h3>
+          <p className="text-sm text-gray-700 mt-1">{bug.expectedResult}</p>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-medium">Actual Result</h3>
+          <p className="text-sm text-gray-700 mt-1">{bug.actualResult}</p>
+        </div>
+
+        {bug.comments && (
           <div>
-            <h3 className="text-sm font-medium">Expected Result</h3>
-            <p className="text-sm text-gray-700 mt-1">{bug.expectedResult}</p>
+            <h3 className="text-sm font-medium">Comments</h3>
+            <p className="text-sm text-gray-700 mt-1">{bug.comments}</p>
           </div>
+        )}
+      </CardContent>
+    </Card>
 
-          <div>
-            <h3 className="text-sm font-medium">Actual Result</h3>
-            <p className="text-sm text-gray-700 mt-1">{bug.actualResult}</p>
-          </div>
-
-          {bug.comments && (
-            <div>
-              <h3 className="text-sm font-medium">Comments</h3>
-              <p className="text-sm text-gray-700 mt-1">{bug.comments}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="comments" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="comments" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Comments
-          </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Activity Timeline
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="comments">
-          <Card>
-            <CardContent className="pt-6">
-              <BugComments 
+    {/* Comments Section */}
+    <Card>
+      <CardContent className="pt-6">
+        <BugComments 
                 bugId={bug.id} 
                 projectId={bug.projectId}
                 githubIssueNumber={bug.githubIssueNumber}
                 githubRepoUrl={githubConfig?.repoUrl}
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="history">
-          <BugHistory bugId={bug.id} />
-        </TabsContent>
-      </Tabs>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -46,7 +46,7 @@ import {
   type Notebook,
   type NotebookCategory,
   type NotebookComment,
-
+  
   // Project Tracker imports
   type TrackerProject,
   type InsertTrackerProject,
@@ -122,50 +122,50 @@ const canAccessRequestAttachments = async (req: Request, res: Response, next: Ne
   try {
     const userId = req.session.userId!;
     const userRole = req.session.userRole;
-
+    
     // Admins can access everything
     if (userRole === 'Admin' || userRole === 'Super Admin') {
       return next();
     }
-
+    
     // For request-level access (GET /request-forms/:requestId/attachments, POST /request-forms/:requestId/attachments)
     if (req.params.requestId) {
       const requestId = parseInt(req.params.requestId);
       const request = await storage.getResourceRequest(requestId);
-
+      
       if (!request) {
         return res.status(404).json({ message: "Request not found" });
       }
-
+      
       // Allow if user is the request owner
       if (request.requestedById === userId) {
         return next();
       }
     }
-
+    
     // For attachment-level access (DELETE /request-forms/attachments/:attachmentId, GET /request-forms/attachments/:attachmentId/download)
     if (req.params.attachmentId) {
       const attachmentId = parseInt(req.params.attachmentId);
       const attachment = await storage.getRequestAttachment(attachmentId);
-
+      
       if (!attachment) {
         return res.status(404).json({ message: "Attachment not found" });
       }
-
+      
       // Allow if user uploaded the attachment
       if (attachment.uploadedById === userId) {
         return next();
       }
-
+      
       // Also check if user owns the request this attachment belongs to
       const request = await storage.getResourceRequest(attachment.requestId);
       if (request && request.requestedById === userId) {
         return next();
       }
     }
-
+    
     return res.status(403).json({ message: "Forbidden: You can only access your own request attachments" });
-
+    
   } catch (error) {
     console.error('Authorization check failed:', error);
     return res.status(500).json({ message: "Server error during authorization check" });
@@ -536,7 +536,7 @@ const configureRequestAttachmentUpload = () => {
     }
   });
 
-  return multer({
+  return multer({ 
     storage,
     limits: {
       fileSize: 50 * 1024 * 1024, // 50MB max file size
@@ -643,131 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Serve static uploads directory
-  app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
-    // Log request for debugging
-    console.log(`File access request for: ${req.path}`);
-
-    // Clean up the path to handle all possible formats
-    let cleanPath = req.path;
-    // Remove any /uploads prefix if it's included and double slashes
-    cleanPath = cleanPath.replace(/^\/uploads\/?/, '').replace(/\/+/g, '/');
-
-    // Make sure bug-attachment path is properly handled
-    if (cleanPath.startsWith('bug-attachment/')) {
-      console.log('Found bug attachment path');
-    } else if (cleanPath.startsWith('bug-attachments/')) {
-      // Handle legacy path format - redirect to new format
-      console.log('Found legacy bug-attachments path, redirecting to bug-attachment');
-      // Extract the filename after bug-attachments/
-      const filename = cleanPath.replace(/^bug-attachments\/?/, '');
-      cleanPath = `bug-attachment/${filename}`;
-      console.log(`Redirected to: ${cleanPath}`);
-    }
-
-    const filePath = path.join(process.cwd(), 'uploads', cleanPath);
-    console.log(`Resolved file path: ${filePath}`);
-
-    // Validate the path to prevent directory traversal attacks
-    if (!filePath.startsWith(path.join(process.cwd(), 'uploads'))) {
-      console.error(`Security protection: Attempted access to unauthorized path: ${filePath}`);
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      console.error(`File not found: ${filePath}`);
-      return res.status(404).json({ message: "File not found" });
-    }
-
-    // Set proper content type based on file extension
-    const ext = path.extname(filePath).toLowerCase();
-
-    // Define a content type mapping
-    const contentTypes: Record<string, string> = {
-      // Images
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
-      '.svg': 'image/svg+xml',
-      '.ico': 'image/x-icon',
-
-      // Videos
-      '.mp4': 'video/mp4',
-      '.webm': 'video/webm',
-      '.ogv': 'video/ogg',
-      '.mov': 'video/quicktime',
-      '.avi': 'video/x-msvideo',
-      '.flv': 'video/x-flv',
-      '.mkv': 'video/x-matroska',
-      '.wmv': 'video/x-ms-wmv',
-      '.3gp': 'video/3gpp',
-      '.mpg': 'video/mpeg',
-      '.mpeg': 'video/mpeg',
-
-      // Documents
-      '.pdf': 'application/pdf',
-      '.doc': 'application/msword',
-      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      '.xls': 'application/vnd.ms-excel',
-      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      '.ppt': 'application/vnd.ms-powerpoint',
-      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-
-      // Text
-      '.txt': 'text/plain',
-      '.csv': 'text/csv',
-      '.html': 'text/html',
-      '.htm': 'text/html',
-      '.css': 'text/css',
-      '.js': 'text/javascript',
-      '.ts': 'text/plain',
-      '.json': 'application/json',
-      '.md': 'text/markdown',
-
-      // Archives
-      '.zip': 'application/zip',
-      '.rar': 'application/x-rar-compressed',
-      '.7z': 'application/x-7z-compressed',
-      '.tar': 'application/x-tar',
-      '.gz': 'application/gzip',
-    };
-
-    // Set the content type if we know it, otherwise let the browser determine it
-    if (contentTypes[ext]) {
-      res.setHeader('Content-Type', contentTypes[ext]);
-    }
-
-    // Add cache control headers to prevent caching issues
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-
-    // Set content disposition to help with downloading files
-    // Use "inline" for files that can be viewed in browser
-    const inlineTypes = [
-      // Images
-      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
-      // Documents that can be viewed in browser
-      '.pdf', '.txt', '.html', '.htm',
-      // Videos that can be viewed in browser
-      '.mp4', '.webm', '.ogv'
-    ];
-    const disposition = inlineTypes.includes(ext) ? 'inline' : 'attachment';
-
-    // Only set filename for attachment disposition
-    if (disposition === 'attachment') {
-      const fileName = path.basename(filePath);
-      res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
-    }
-
-    // Log file access for debugging
-    console.log(`Serving file: ${filePath} with content type: ${contentTypes[ext] || 'auto-determined'}`);
-
-    // Serve the file
-    res.sendFile(filePath);
-  });
+  app.use('/uploads', express.static(uploadsDir));
 
   // Store session store reference for WebSocket access
   app.locals.sessionStore = sessionStore;
@@ -882,7 +758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (format === 'csv') {
         const csvData = [];
-
+        
         // Add project info
         csvData.push(['Project Export Report']);
         csvData.push(['Project Name', project.name]);
@@ -934,7 +810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         // Convert to CSV string
-        const csvString = csvData.map(row =>
+        const csvString = csvData.map(row => 
           row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
         ).join('\n');
 
@@ -1619,7 +1495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const publicUrl = `/uploads/request-attachments/${file.filename}`;
-
+      
       const attachment = await storage.createRequestAttachment({
         requestId,
         fileName: file.filename,
@@ -1641,7 +1517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.delete("/request-forms/attachments/:attachmentId", isAuthenticated, canAccessRequestAttachments, async (req, res) => {
     try {
       const attachmentId = parseInt(req.params.attachmentId);
-
+      
       // Get attachment details before deletion to clean up file
       const attachment = await storage.getRequestAttachment(attachmentId);
       if (!attachment) {
@@ -1650,7 +1526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Delete from storage
       const success = await storage.deleteRequestAttachment(attachmentId);
-
+      
       if (success) {
         // Clean up file from disk
         try {
@@ -1662,7 +1538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Error deleting file ${attachment.filePath}:`, fileError);
           // Don't fail the request if file deletion fails
         }
-
+        
         res.json({ message: "Attachment deleted successfully" });
       } else {
         res.status(404).json({ message: "Attachment not found" });
@@ -1678,7 +1554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const attachmentId = parseInt(req.params.attachmentId);
       const attachment = await storage.getRequestAttachment(attachmentId);
-
+      
       if (!attachment) {
         return res.status(404).json({ message: "Attachment not found" });
       }
@@ -1702,7 +1578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Project Tracker API Routes
-
+  
   // Tracker Projects
   apiRouter.get("/tracker/projects", isAuthenticated, async (req, res) => {
     try {
@@ -1773,7 +1649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tracker Features
   apiRouter.get("/tracker/features", isAuthenticated, async (req, res) => {
     try {
-      const {projectId } = req.query;
+      const { projectId } = req.query;
       const features = await storage.getTrackerFeatures(
         projectId ? parseInt(projectId as string) : undefined
       );
@@ -2382,6 +2258,292 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get current user
+  apiRouter.get("/auth/user", async (req, res) => {
+    try {
+      console.log("GET /api/auth/user - Session data:", {
+        sessionId: req.sessionID,
+        userId: req.session?.userId,
+        userRole: req.session?.userRole,
+        userEmail: req.session?.userEmail,
+        hasSession: !!req.session,
+        sessionKeys: req.session ? Object.keys(req.session) : []
+      });
+
+      // Check if session exists
+      if (!req.session) {
+        console.log("No session found");
+        return res.status(401).json({ message: "No session found" });
+      }
+
+      // Check if user is logged in
+      if (!req.session.userId) {
+        console.log("No userId in session");
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      // Get user from storage
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        console.log(`User not found for ID: ${req.session.userId}`);
+        // Clear invalid session
+        req.session.destroy((err) => {
+          if (err) console.error("Error destroying session:", err);
+        });
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      console.log(`User authenticated successfully: ${user.email}`);
+
+      // Return user without sensitive data
+      const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutPassword } = user;
+
+      // Set proper cache headers to prevent caching
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal that the user doesn't exist
+        return res.json({ message: "If your email exists, you will receive a password reset link" });
+      }
+
+      // Generate token with expiry
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await storage.updateUser(user.id, {
+        resetToken,
+        resetTokenExpires,
+      });
+
+      // In a real app, send reset email here
+
+      res.json({ message: "If your email exists, you will receive a password reset link" });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/auth/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body;
+
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token and password are required" });
+      }
+
+      // Find user with this token
+      // NOTE: This lookup might be inefficient if the users table is large.
+      // Consider a dedicated 'password_reset_tokens' table or optimizing the find logic.
+      const users = await storage.getUsers(); // Assuming storage.getUsers() retrieves all users
+      const user = users.find((user: any) => user.resetToken === token && user.resetTokenExpires > new Date());
+
+
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired token" });
+      }
+
+      // Hash new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      // Update user
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpires: null,
+      });
+
+      res.json({ message: "Password reset successful" });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // OAuth Routes with CSRF protection
+  // Google OAuth URL generation with PKCE and state
+  apiRouter.get("/auth/google/url", async (req, res) => {
+    try {
+      const state = oauthService.generateSecureRandom();
+      const codeVerifier = oauthService.generateSecureRandom();
+
+      // Store state and code verifier in session for verification
+      req.session.oauthState = state;
+      req.session.googleCodeVerifier = codeVerifier;
+
+      const authUrl = oauthService.generateGoogleAuthUrl(state, codeVerifier);
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("Google OAuth URL generation error:", error);
+      res.status(500).json({ message: "Failed to generate Google OAuth URL" });
+    }
+  });
+
+  // GitHub OAuth URL generation with state
+  apiRouter.get("/auth/github/url", async (req, res) => {
+    try {
+      const state = oauthService.generateSecureRandom();
+
+      // Store state in session for verification
+      req.session.oauthState = state;
+
+      const authUrl = oauthService.generateGitHubAuthUrl(state);
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("GitHub OAuth URL generation error:", error);
+      res.status(500).json({ message: "Failed to generate GitHub OAuth URL" });
+    }
+  });
+
+  // Google OAuth callback with CSRF and PKCE verification
+  apiRouter.get("/auth/google/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+
+      if (!code) {
+        return res.redirect("/login?error=missing_code");
+      }
+
+      // Verify state parameter for CSRF protection
+      if (!state || state !== req.session.oauthState) {
+        console.error("OAuth state mismatch or missing");
+        return res.redirect("/login?error=invalid_state");
+      }
+
+      // Get code verifier from session
+      const codeVerifier = req.session.googleCodeVerifier;
+      if (!codeVerifier) {
+        console.error("Missing code verifier in session");
+        return res.redirect("/login?error=missing_verifier");
+      }
+
+      // Clear OAuth session data
+      delete req.session.oauthState;
+      delete req.session.googleCodeVerifier;
+
+      // Exchange code for user data with PKCE
+      const userData = await oauthService.exchangeGoogleCode(code as string, codeVerifier);
+
+      // Use consolidated user creation/update logic
+      const user = await oauthService.findOrCreateOAuthUser(userData);
+
+      // Regenerate session ID to prevent fixation attacks
+      req.session.regenerate((regenerateErr) => {
+        if (regenerateErr) {
+          console.error("Session regeneration error:", regenerateErr);
+          return res.redirect("/login?error=session_failed");
+        }
+
+        // Set session data
+        req.session.userId = user.id;
+        req.session.userRole = user.role;
+        req.session.userName = user.firstName;
+        req.session.userEmail = user.email;
+
+        // Save session and redirect
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.redirect("/login?error=session_failed");
+          }
+
+          console.log("Google OAuth login successful:", {
+            userId: user.id,
+            email: user.email,
+            provider: userData.provider
+          });
+
+          // Redirect to login with success, which will handle dashboard redirect
+          res.redirect("/login?oauth_success=true");
+        });
+      });
+
+    } catch (error) {
+      console.error("Google OAuth callback error:", error);
+      res.redirect("/login?error=oauth_failed");
+    }
+  });
+
+  // GitHub OAuth callback with CSRF verification
+  apiRouter.get("/auth/github/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+
+      if (!code) {
+        return res.redirect("/login?error=missing_code");
+      }
+
+      // Verify state parameter for CSRF protection
+      if (!state || state !== req.session.oauthState) {
+        console.error("OAuth state mismatch or missing");
+        return res.redirect("/login?error=invalid_state");
+      }
+
+      // Clear OAuth session data
+      delete req.session.oauthState;
+
+      // Exchange code for user data
+      const userData = await oauthService.exchangeGitHubCode(code as string);
+
+      // Use consolidated user creation/update logic
+      const user = await oauthService.findOrCreateOAuthUser(userData);
+
+      // Regenerate session ID to prevent fixation attacks
+      req.session.regenerate((regenerateErr) => {
+        if (regenerateErr) {
+          console.error("Session regeneration error:", regenerateErr);
+          return res.redirect("/login?error=session_failed");
+        }
+
+        // Set session data
+        req.session.userId = user.id;
+        req.session.userRole = user.role;
+        req.session.userName = user.firstName;
+        req.session.userEmail = user.email;
+
+        // Save session and redirect
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.redirect("/login?error=session_failed");
+          }
+
+          console.log("GitHub OAuth login successful:", {
+            userId: user.id,
+            email: user.email,
+            provider: userData.provider
+          });
+
+          // Redirect to login with success, which will handle dashboard redirect
+          res.redirect("/login?oauth_success=true");
+        });
+      });
+
+    } catch (error) {
+      console.error("GitHub OAuth callback error:", error);
+      res.redirect("/login?error=oauth_failed");
+    }
+  });
+
+  // User profile
   apiRouter.get("/user/current", isAuthenticated, async (req, res) => {
     try {
       const user = await storage.getUser(req.session.userId!);
@@ -3274,6 +3436,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('AI Chat error:', error);
       res.status(500).json({ error: 'Failed to process chat message' });
     }
+  });
+
+  // Serve uploaded files (profile pictures and documents)
+  app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
+    // Log request for debugging
+    console.log(`File access request for: ${req.path}`);
+
+    // Clean up the path to handle all possible formats
+    let cleanPath = req.path;
+    // Remove any /uploads prefix if it's included and double slashes
+    cleanPath = cleanPath.replace(/^\/uploads\/?/, '').replace(/\/+/g, '/');
+
+    // Make sure bug-attachment path is properly handled
+    if (cleanPath.startsWith('bug-attachment/')) {
+      console.log('Found bug attachment path');
+    } else if (cleanPath.startsWith('bug-attachments/')) {
+      // Handle legacy path format - redirect to new format
+      console.log('Found legacy bug-attachments path, redirecting to bug-attachment');
+      // Extract the filename after bug-attachments/
+      const filename = cleanPath.replace(/^bug-attachments\/?/, '');
+      cleanPath = `bug-attachment/${filename}`;
+      console.log(`Redirected to: ${cleanPath}`);
+    }
+
+    const filePath = path.join(process.cwd(), 'uploads', cleanPath);
+    console.log(`Resolved file path: ${filePath}`);
+
+    // Validate the path to prevent directory traversal attacks
+    if (!filePath.startsWith(path.join(process.cwd(), 'uploads'))) {
+      console.error(`Security protection: Attempted access to unauthorized path: ${filePath}`);
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      console.error(`File not found: ${filePath}`);
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    // Set proper content type based on file extension
+    const ext = path.extname(filePath).toLowerCase();
+
+    // Define a content type mapping
+    const contentTypes: Record<string, string> = {
+      // Images
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+      '.ico': 'image/x-icon',
+
+      // Videos
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.ogv': 'video/ogg',
+      '.mov': 'video/quicktime',
+      '.avi': 'video/x-msvideo',
+      '.flv': 'video/x-flv',
+      '.mkv': 'video/x-matroska',
+      '.wmv': 'video/x-ms-wmv',
+      '.3gp': 'video/3gpp',
+      '.mpg': 'video/mpeg',
+      '.mpeg': 'video/mpeg',
+
+      // Documents
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.ppt': 'application/vnd.ms-powerpoint',
+      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+
+      // Text
+      '.txt': 'text/plain',
+      '.csv': 'text/csv',
+      '.html': 'text/html',
+      '.htm': 'text/html',
+      '.css': 'text/css',
+      '.js': 'text/javascript',
+      '.ts': 'text/plain',
+      '.json': 'application/json',
+      '.md': 'text/markdown',
+
+      // Archives
+      '.zip': 'application/zip',
+      '.rar': 'application/x-rar-compressed',
+      '.7z': 'application/x-7z-compressed',
+      '.tar': 'application/x-tar',
+      '.gz': 'application/gzip',
+    };
+
+    // Set the content type if we know it, otherwise let the browser determine it
+    if (contentTypes[ext]) {
+      res.setHeader('Content-Type', contentTypes[ext]);
+    }
+
+    // Add cache control headers to prevent caching issues
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    // Set content disposition to help with downloading files
+    // Use "inline" for files that can be viewed in browser
+    const inlineTypes = [
+      // Images
+      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+      // Documents that can be viewed in browser
+      '.pdf', '.txt', '.html', '.htm',
+      // Videos that can be viewed in browser
+      '.mp4', '.webm', '.ogv'
+    ];
+    const disposition = inlineTypes.includes(ext) ? 'inline' : 'attachment';
+
+    // Only set filename for attachment disposition
+    if (disposition === 'attachment') {
+      const fileName = path.basename(filePath);
+      res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
+    }
+
+    // Log file access for debugging
+    console.log(`Serving file: ${filePath} with content type: ${contentTypes[ext] || 'auto-determined'}`);
+
+    // Serve the file
+    res.sendFile(filePath);
   });
 
   // Projects routes
@@ -4655,19 +4944,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Create bug history entry
-      await storage.createBugHistory({
-        bugId: bug.id,
-        userId: userId,
-        action: 'created',
-        description: `Bug ${bug.bugId} was created`,
-        metadata: {
-          severity: bug.severity,
-          priority: bug.priority,
-          status: bug.status
-        }
-      });
-
       res.status(201).json(bug);
     } catch (error) {
       console.error("Create bug error:", error);
@@ -4745,16 +5021,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             newStatus: req.body.status
           }
         });
-        // Create bug history entry for status change
-        await storage.createBugHistory({
-          bugId: bug.id,
-          userId: req.session.userId!,
-          action: 'updated',
-          field: 'status',
-          oldValue: bug.status,
-          newValue: req.body.status,
-          description: `Bug status changed from ${bug.status} to ${req.body.status}`,
-        });
       } else if (req.body.severity && req.body.severity !== bug.severity) {
         await storage.createActivity({
           userId: req.session.userId!,
@@ -4769,16 +5035,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             prevSeverity: bug.severity,
             newSeverity: req.body.severity
           }
-        });
-        // Create bug history entry for severity change
-        await storage.createBugHistory({
-          bugId: bug.id,
-          userId: req.session.userId!,
-          action: 'updated',
-          field: 'severity',
-          oldValue: bug.severity,
-          newValue: req.body.severity,
-          description: `Bug severity changed from ${bug.severity} to ${req.body.severity}`,
         });
       } else {
         // General update activity
@@ -4848,13 +5104,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             bugId: bug.bugId,
             title: bug.title
           }
-        });
-        // Create bug history entry for deletion
-        await storage.createBugHistory({
-          bugId: bug.id,
-          userId: req.session.userId!,
-          action: 'deleted',
-          description: `Bug ${bug.bugId} was deleted`,
         });
       }
 
@@ -5195,9 +5444,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/projects/:projectId/document-folders", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
-      const folderId = req.query.folderId ? parseInt(req.query.folderId as string) : undefined;
-
       const project = await storage.getProject(projectId);
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
@@ -5212,7 +5460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const folders = await storage.getDocumentFolders(projectId, folderId);
+      const folders = await storage.getDocumentFolders(projectId);
       res.json(folders);
     } catch (error) {
       console.error("Get document folders error:", error);
@@ -5423,7 +5671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Check for circular reference
         const getDescendantIds = async (parentId: number, visited = new Set<number>()): Promise<number[]> => {
-          if (visited.has(parentId)) return []; // Prevent infinite recursion if there's a circular reference already
+          if (visited.has(parentId)) return [];
           visited.add(parentId);
 
           const children = (await storage.getDocumentFolders(folder.projectId))
@@ -6073,7 +6321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const notebookId = parseInt(req.params.id);
       const notebook = await storage.getNotebook(notebookId, req.session.userId!); // Pass userId for access check
       if (!notebook) {
-        return res.status(404).json({ message: "Notebook notfound" });
+        return res.status(404).json({ message: "Notebook not found" });
       }
       res.json(notebook);
     } catch (error) {

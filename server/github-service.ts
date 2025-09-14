@@ -146,7 +146,7 @@ export class GitHubService {
     }
   }
 
-  async createIssue(title: string, body: string, labels?: string[], screenshots?: any[]): Promise<{ success: boolean; message: string; data?: any }> {
+  async createIssue(title: string, body: string, labels?: string[]): Promise<{ success: boolean; message: string; data?: any }> {
     if (!this.octokit || !this.config) {
       return {
         success: false,
@@ -160,47 +160,11 @@ export class GitHubService {
         await this.ensureLabelsExist(labels);
       }
 
-      let finalBody = body;
-
-      // Upload screenshots and add to issue body
-      if (screenshots && screenshots.length > 0) {
-        finalBody += '\n\n## Screenshots\n\n';
-        
-        for (const [index, screenshot] of screenshots.entries()) {
-          try {
-            // Convert base64 to buffer
-            const base64Data = screenshot.dataUrl.replace(/^data:image\/\w+;base64,/, '');
-            const buffer = Buffer.from(base64Data, 'base64');
-            
-            // Upload to GitHub as asset (using GitHub's asset upload API)
-            // Note: For public repos, we can use GitHub's user content API
-            const filename = `screenshot_${Date.now()}_${index + 1}.png`;
-            
-            // Create a temporary commit with the image to get a GitHub URL
-            const uploadResponse = await this.uploadScreenshotAsAsset(buffer, filename);
-            
-            if (uploadResponse.success && uploadResponse.url) {
-              finalBody += `### Screenshot ${index + 1}\n`;
-              finalBody += `<img width="960" alt="Screenshot ${index + 1}" src="${uploadResponse.url}" />\n\n`;
-            } else {
-              // Fallback: Include base64 data with proper formatting
-              finalBody += `### Screenshot ${index + 1}\n`;
-              finalBody += `![Screenshot ${index + 1}](${screenshot.dataUrl})\n\n`;
-            }
-          } catch (uploadError: any) {
-            logger.warn(`Failed to upload screenshot ${index + 1}:`, uploadError.message);
-            // Fallback to base64
-            finalBody += `### Screenshot ${index + 1}\n`;
-            finalBody += `![Screenshot ${index + 1}](${screenshot.dataUrl})\n\n`;
-          }
-        }
-      }
-
       const response = await this.octokit.rest.issues.create({
         owner: this.config.owner,
         repo: this.config.repo,
         title,
-        body: finalBody,
+        body,
         labels: labels || [],
       });
 
@@ -244,69 +208,6 @@ export class GitHubService {
         message: `Failed to create issue: ${error.message}`,
       };
     }
-  }
-
-  private async uploadScreenshotAsAsset(buffer: Buffer, filename: string): Promise<{ success: boolean; url?: string; message?: string }> {
-    if (!this.octokit || !this.config) {
-      return { success: false, message: 'GitHub client not configured' };
-    }
-
-    try {
-      // Create a unique branch for the asset
-      const branchName = `asset-upload-${Date.now()}`;
-      
-      // Get the default branch reference
-      const defaultBranchRef = await this.octokit.rest.git.getRef({
-        owner: this.config.owner,
-        repo: this.config.repo,
-        ref: 'heads/main'
-      });
-
-      // Create new branch
-      await this.octokit.rest.git.createRef({
-        owner: this.config.owner,
-        repo: this.config.repo,
-        ref: `refs/heads/${branchName}`,
-        sha: defaultBranchRef.data.object.sha
-      });
-
-      // Upload file to the new branch
-      const uploadResponse = await this.octokit.rest.repos.createOrUpdateFileContents({
-        owner: this.config.owner,
-        repo: this.config.repo,
-        path: `assets/${filename}`,
-        message: `Add screenshot: ${filename}`,
-        content: buffer.toString('base64'),
-        branch: branchName
-      });
-
-      // Get the raw URL for the uploaded file
-      const rawUrl = `https://github.com/${this.config.owner}/${this.config.repo}/raw/${branchName}/assets/${filename}`;
-      
-      // For GitHub user-attachments style URL, we need to use the content API
-      const assetUrl = `https://github.com/user-attachments/assets/${this.generateAssetId()}-${filename}`;
-
-      return {
-        success: true,
-        url: rawUrl // Use the raw GitHub URL
-      };
-
-    } catch (error: any) {
-      logger.warn('Failed to upload screenshot as asset:', error.message);
-      return { 
-        success: false, 
-        message: error.message 
-      };
-    }
-  }
-
-  private generateAssetId(): string {
-    // Generate a UUID-like string for GitHub assets
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
   }
 
   async ensureLabelsExist(labelNames: string[]): Promise<void> {
