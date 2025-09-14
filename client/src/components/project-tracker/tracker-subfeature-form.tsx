@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DialogFooter } from '@/components/ui/dialog';
+import { ColorPicker } from '@/components/ui/color-picker';
 
 const subFeatureSchema = z.object({
   name: z.string().min(1, 'Sub-feature name is required'),
@@ -51,7 +52,19 @@ interface TrackerSubFeatureFormProps {
   isLoading?: boolean;
 }
 
-const workTypes = ['Development', 'QA', 'DevOps', 'Designing', 'Analysis', 'Documentation'];
+const defaultWorkTypes = [
+  { name: 'Development', color: '#3b82f6' },
+  { name: 'QA', color: '#10b981' },
+  { name: 'DevOps', color: '#8b5cf6' },
+  { name: 'Designing', color: '#f59e0b' },
+  { name: 'Analysis', color: '#ef4444' },
+  { name: 'Documentation', color: '#6b7280' },
+  { name: 'User Story', color: '#06b6d4' },
+  { name: 'Change Request', color: '#ec4899' },
+  { name: 'Bug Fix', color: '#dc2626' },
+  { name: 'Feature Request', color: '#059669' }
+];
+
 const departments = ['Frontend', 'Backend', 'Mobile', 'Quality Assurance', 'DevOps', 'UI/UX', 'Business Analysis'];
 
 export function TrackerSubFeatureForm({ 
@@ -63,6 +76,9 @@ export function TrackerSubFeatureForm({
   onCancel, 
   isLoading = false 
 }: TrackerSubFeatureFormProps) {
+  const [customWorkTypes, setCustomWorkTypes] = React.useState(defaultWorkTypes);
+  const [showAddWorkType, setShowAddWorkType] = React.useState(false);
+  const [newWorkType, setNewWorkType] = React.useState({ name: '', color: '#3b82f6' });
   const form = useForm<SubFeatureFormData>({
     resolver: zodResolver(subFeatureSchema),
     defaultValues: {
@@ -162,18 +178,80 @@ export function TrackerSubFeatureForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Type of Work</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select work type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {workTypes.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select work type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {customWorkTypes.map((type) => (
+                        <SelectItem key={type.name} value={type.name}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: type.color }}
+                            />
+                            {type.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                      <div className="border-t pt-2">
+                        <button
+                          type="button"
+                          className="w-full text-left px-2 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                          onClick={() => setShowAddWorkType(true)}
+                        >
+                          + Add Custom Work Type
+                        </button>
+                      </div>
+                    </SelectContent>
+                  </Select>
+                  
+                  {showAddWorkType && (
+                    <div className="border rounded-lg p-3 space-y-3 bg-gray-50">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Work type name"
+                          value={newWorkType.name}
+                          onChange={(e) => setNewWorkType({ ...newWorkType, name: e.target.value })}
+                        />
+                        <ColorPicker
+                          value={newWorkType.color}
+                          onChange={(color) => setNewWorkType({ ...newWorkType, color })}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            if (newWorkType.name) {
+                              setCustomWorkTypes([...customWorkTypes, newWorkType]);
+                              field.onChange(newWorkType.name);
+                              setNewWorkType({ name: '', color: '#3b82f6' });
+                              setShowAddWorkType(false);
+                            }
+                          }}
+                        >
+                          Add
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setShowAddWorkType(false);
+                            setNewWorkType({ name: '', color: '#3b82f6' });
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <FormMessage />
               </FormItem>
             )}

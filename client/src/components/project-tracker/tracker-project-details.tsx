@@ -22,6 +22,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { TrackerFeatureForm } from './tracker-feature-form';
 import { TrackerSubFeatureForm } from './tracker-subfeature-form';
+import { TrackerWorkLogForm } from './tracker-work-log-form';
 import { format } from 'date-fns';
 
 interface TrackerProjectDetailsProps {
@@ -37,6 +38,8 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
   const [selectedSubFeature, setSelectedSubFeature] = useState<any>(null);
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
   const [expandedFeatures, setExpandedFeatures] = useState<Set<number>>(new Set());
+  const [showSubFeatureViewDialog, setShowSubFeatureViewDialog] = useState(false);
+  const [showWorkLogForm, setShowWorkLogForm] = useState(false);
 
   // Fetch project details
   const { data: project } = useQuery({
@@ -175,6 +178,16 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
     setSelectedSubFeature(subFeature);
     setSelectedFeatureId(null); // Clear this when editing
     setShowSubFeatureForm(true);
+  };
+
+  const handleViewSubFeature = (subFeature: any) => {
+    setSelectedSubFeature(subFeature);
+    setShowSubFeatureViewDialog(true);
+  };
+
+  const handleAddWorkLog = (subFeature: any) => {
+    setSelectedSubFeature(subFeature);
+    setShowWorkLogForm(true);
   };
 
   const toggleFeatureExpansion = (featureId: number) => {
@@ -383,9 +396,26 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  onClick={() => handleViewSubFeature(subFeature)}
+                                  title="View Sub-Feature"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => handleEditSubFeature(subFeature)}
+                                  title="Edit Sub-Feature"
                                 >
                                   <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleAddWorkLog(subFeature)}
+                                  title="Add Work Log"
+                                >
+                                  <Plus className="h-4 w-4" />
                                 </Button>
                               </div>
                             </div>
@@ -468,6 +498,85 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                 setSelectedFeatureId(null);
               }}
               isLoading={createSubFeatureMutation.isPending || updateSubFeatureMutation.isPending}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Sub-Feature View Dialog */}
+      <Dialog open={showSubFeatureViewDialog} onOpenChange={setShowSubFeatureViewDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Sub-Feature Details: {selectedSubFeature?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedSubFeature && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Description</h4>
+                  <p className="mt-1">{selectedSubFeature.description || 'No description provided'}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Status</h4>
+                  <Badge className={statusColors[selectedSubFeature.status]} variant="outline">
+                    {selectedSubFeature.status}
+                  </Badge>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Priority</h4>
+                  <Badge variant="outline">{selectedSubFeature.priority}</Badge>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Work Type</h4>
+                  <Badge 
+                    variant="outline" 
+                    style={{ borderLeftColor: workTypeColors[selectedSubFeature.workType], borderLeftWidth: '4px' }}
+                  >
+                    {selectedSubFeature.workType}
+                  </Badge>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Department</h4>
+                  <p className="mt-1">{selectedSubFeature.department || 'Not assigned'}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Estimated Hours</h4>
+                  <p className="mt-1">{selectedSubFeature.estimatedHours || 'Not estimated'}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Start Date</h4>
+                  <p className="mt-1">{selectedSubFeature.startDate || 'Not set'}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">End Date</h4>
+                  <p className="mt-1">{selectedSubFeature.endDate || 'Not set'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Work Log Form Dialog */}
+      <Dialog open={showWorkLogForm} onOpenChange={setShowWorkLogForm}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add Work Log: {selectedSubFeature?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedSubFeature && (
+            <TrackerWorkLogForm
+              subFeature={selectedSubFeature}
+              projectId={projectId}
+              onSubmit={(data) => {
+                // Handle work log submission
+                console.log('Work log data:', data);
+                setShowWorkLogForm(false);
+                setSelectedSubFeature(null);
+              }}
+              onCancel={() => {
+                setShowWorkLogForm(false);
+                setSelectedSubFeature(null);
+              }}
             />
           )}
         </DialogContent>
