@@ -35,8 +35,8 @@ if (!connectionString) {
 // Connection test function
 export async function testConnection() {
   if (!db) {
-    console.log("✅ In-memory storage ready");
-    return true;
+    console.log("❌ Database not available - using fallback storage");
+    return false;
   }
   
   try {

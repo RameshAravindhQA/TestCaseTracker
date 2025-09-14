@@ -46,7 +46,7 @@ import {
   type Notebook,
   type NotebookCategory,
   type NotebookComment,
-  
+
   // Project Tracker imports
   type TrackerProject,
   type InsertTrackerProject,
@@ -83,6 +83,7 @@ import fs from "fs";
 import flowDiagramRoutes from './api/flow-diagram-routes';
 import brdRoutes from "./brd-routes";
 import { OAuthService } from './oauth-service';
+import { testConnection } from "./utils/db"; // Assuming testConnection is available here
 
 // Initialize OAuth service
 const oauthService = new OAuthService();
@@ -122,50 +123,50 @@ const canAccessRequestAttachments = async (req: Request, res: Response, next: Ne
   try {
     const userId = req.session.userId!;
     const userRole = req.session.userRole;
-    
+
     // Admins can access everything
     if (userRole === 'Admin' || userRole === 'Super Admin') {
       return next();
     }
-    
+
     // For request-level access (GET /request-forms/:requestId/attachments, POST /request-forms/:requestId/attachments)
     if (req.params.requestId) {
       const requestId = parseInt(req.params.requestId);
       const request = await storage.getResourceRequest(requestId);
-      
+
       if (!request) {
         return res.status(404).json({ message: "Request not found" });
       }
-      
+
       // Allow if user is the request owner
       if (request.requestedById === userId) {
         return next();
       }
     }
-    
+
     // For attachment-level access (DELETE /request-forms/attachments/:attachmentId, GET /request-forms/attachments/:attachmentId/download)
     if (req.params.attachmentId) {
       const attachmentId = parseInt(req.params.attachmentId);
       const attachment = await storage.getRequestAttachment(attachmentId);
-      
+
       if (!attachment) {
         return res.status(404).json({ message: "Attachment not found" });
       }
-      
+
       // Allow if user uploaded the attachment
       if (attachment.uploadedById === userId) {
         return next();
       }
-      
+
       // Also check if user owns the request this attachment belongs to
       const request = await storage.getResourceRequest(attachment.requestId);
       if (request && request.requestedById === userId) {
         return next();
       }
     }
-    
+
     return res.status(403).json({ message: "Forbidden: You can only access your own request attachments" });
-    
+
   } catch (error) {
     console.error('Authorization check failed:', error);
     return res.status(500).json({ message: "Server error during authorization check" });
@@ -536,7 +537,7 @@ const configureRequestAttachmentUpload = () => {
     }
   });
 
-  return multer({ 
+  return multer({
     storage,
     limits: {
       fileSize: 50 * 1024 * 1024, // 50MB max file size
@@ -650,6 +651,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const apiRouter = Router();
 
+  // Health check endpoint
+  app.get("/api/health", async (req, res) => {
+    const dbStatus = await testConnection();
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      version: "1.0.0",
+      database: dbStatus ? "connected" : "disconnected",
+      storage: dbStatus ? "postgresql" : "in-memory"
+    });
+  });
+
   // AI Provider Diagnostic endpoint
   apiRouter.get("/ai/diagnose", isAuthenticated, async (req, res) => {
     try {
@@ -758,7 +771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (format === 'csv') {
         const csvData = [];
-        
+
         // Add project info
         csvData.push(['Project Export Report']);
         csvData.push(['Project Name', project.name]);
@@ -810,7 +823,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         // Convert to CSV string
-        const csvString = csvData.map(row => 
+        const csvString = csvData.map(row =>
           row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
         ).join('\n');
 
@@ -1495,7 +1508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const publicUrl = `/uploads/request-attachments/${file.filename}`;
-      
+
       const attachment = await storage.createRequestAttachment({
         requestId,
         fileName: file.filename,
@@ -1517,7 +1530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.delete("/request-forms/attachments/:attachmentId", isAuthenticated, canAccessRequestAttachments, async (req, res) => {
     try {
       const attachmentId = parseInt(req.params.attachmentId);
-      
+
       // Get attachment details before deletion to clean up file
       const attachment = await storage.getRequestAttachment(attachmentId);
       if (!attachment) {
@@ -1526,7 +1539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Delete from storage
       const success = await storage.deleteRequestAttachment(attachmentId);
-      
+
       if (success) {
         // Clean up file from disk
         try {
@@ -1538,7 +1551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Error deleting file ${attachment.filePath}:`, fileError);
           // Don't fail the request if file deletion fails
         }
-        
+
         res.json({ message: "Attachment deleted successfully" });
       } else {
         res.status(404).json({ message: "Attachment not found" });
@@ -1554,7 +1567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const attachmentId = parseInt(req.params.attachmentId);
       const attachment = await storage.getRequestAttachment(attachmentId);
-      
+
       if (!attachment) {
         return res.status(404).json({ message: "Attachment not found" });
       }
@@ -1578,7 +1591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Project Tracker API Routes
-  
+
   // Tracker Projects
   apiRouter.get("/tracker/projects", isAuthenticated, async (req, res) => {
     try {
@@ -5400,7 +5413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
 
-      // Check if user has access to this project
+      // Check if user has access to this project (unless admin)
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
         const isMember = projectMembers.some(member => member.userId === req.session.userId);
@@ -5572,7 +5585,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Check for circular reference by ensuring the new parent is not a descendant of this folder
           const getDescendantIds = async (parentId: number, visited = new Set<number>()): Promise<number[]> => {
-            if (visited.has(parentId)) return []; // Prevent infinite recursion if there'  function getDescendantIds(parentId: number, visited = new Set<number>()): Promise<number[]> {
             if (visited.has(parentId)) return []; // Prevent infinite recursion if there's a circular reference already
             visited.add(parentId);
             const children = (await storage.getDocumentFolders(folder.projectId))

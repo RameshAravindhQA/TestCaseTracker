@@ -43,10 +43,15 @@ import { eq, and, desc, asc } from 'drizzle-orm';
  * Complete PostgreSQL database storage implementation
  */
 export class DatabaseStorage implements IStorage {
-  private db: Database | null = null;
   private isInitialized = false;
   private githubConfigs: any[] = [];
   private githubIssues: any[] = [];
+
+  constructor() {
+    if (!db) {
+      throw new Error("Database connection not established. Please check DATABASE_URL environment variable.");
+    }
+  }
 
   // User operations
   async getUser(id: number): Promise<User | undefined> {
