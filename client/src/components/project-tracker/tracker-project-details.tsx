@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { TrackerFeatureForm } from './tracker-feature-form';
 import { TrackerSubFeatureForm } from './tracker-subfeature-form';
 import { TrackerWorkLogForm } from './tracker-work-log-form';
+import WorkLogsList from './tracker-work-logs-list';
 import { format } from 'date-fns';
 
 interface TrackerProjectDetailsProps {
@@ -153,6 +154,31 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
       toast({
         title: 'Error',
         description: 'Failed to update sub-feature',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Create work log mutation
+  const createWorkLogMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/tracker/work-logs', data);
+      if (!response.ok) throw new Error('Failed to create work log');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Work log added successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/tracker/work-logs'] });
+      setShowWorkLogForm(false);
+      setSelectedSubFeature(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to add work log',
         variant: 'destructive',
       });
     },
@@ -300,6 +326,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
         <TabsList>
           <TabsTrigger value="hierarchy">Project Hierarchy</TabsTrigger>
           <TabsTrigger value="timeline">Timeline View</TabsTrigger>
+          <TabsTrigger value="work-logs">Work Logs</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
 
@@ -444,6 +471,25 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
           </Card>
         </TabsContent>
 
+        <TabsContent value="work-logs">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Work Logs</CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export Logs
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <WorkLogsList projectId={projectId} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="reports">
           <Card>
             <CardHeader>
@@ -568,11 +614,15 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
               subFeature={selectedSubFeature}
               projectId={projectId}
               onSubmit={(data) => {
-                // Handle work log submission
-                console.log('Work log data:', data);
-                setShowWorkLogForm(false);
-                setSelectedSubFeature(null);
+                const workLogData = {
+                  ...data,
+                  projectId: projectId,
+                  subFeatureId: selectedSubFeature.id,
+                  featureId: selectedSubFeature.featureId,
+                };
+                createWorkLogMutation.mutate(workLogData);
               }}
+              isLoading={createWorkLogMutation.isPending}
               onCancel={() => {
                 setShowWorkLogForm(false);
                 setSelectedSubFeature(null);
