@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { TrackerFeatureForm } from './tracker-feature-form';
 import { TrackerSubFeatureForm } from './tracker-subfeature-form';
 import { TrackerWorkLogForm } from './tracker-work-log-form';
+import { TrackerReports } from './tracker-reports';
 import WorkLogsList from './tracker-work-logs-list';
 import TimelineView from './tracker-timeline-view';
 import { format } from 'date-fns';
