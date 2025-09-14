@@ -215,6 +215,27 @@ export const insertTestingTypeFieldSchema = createInsertSchema(testingTypeFields
   createdAt: true,
 });
 
+// Bug history/activity log
+export const bugHistory = pgTable("bug_history", {
+  id: serial("id").primaryKey(),
+  bugId: integer("bug_id").notNull(),
+  userId: integer("user_id").notNull(),
+  action: text("action").notNull(), // 'created', 'updated', 'commented', 'status_changed', 'assigned', 'github_synced'
+  field: text("field"), // field that was changed (e.g., 'status', 'priority', 'assignedTo')
+  oldValue: text("old_value"), // previous value
+  newValue: text("new_value"), // new value
+  description: text("description"), // human-readable description
+  metadata: json("metadata").default({}), // additional data (e.g., GitHub issue number, comment ID)
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBugHistorySchema = createInsertSchema(bugHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types based on schemas
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -237,6 +258,9 @@ export type InsertBug = z.infer<typeof insertBugSchema>;
 
 export type Activity = typeof activities.$inferSelect;
 export type InsertActivity = z.infer<typeof insertActivitySchema>;
+
+export type BugHistory = typeof bugHistory.$inferSelect;
+export type InsertBugHistory = z.infer<typeof insertBugHistorySchema>;
 
 // Document Folders model
 export const documentFolders = pgTable("document_folders", {

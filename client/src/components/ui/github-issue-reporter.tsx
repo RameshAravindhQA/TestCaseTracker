@@ -9,15 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Camera, 
-  Upload, 
-  Trash2, 
-  Download, 
-  MousePointer, 
-  Square, 
-  Circle, 
-  Type, 
+import {
+  Camera,
+  Upload,
+  Trash2,
+  Download,
+  MousePointer,
+  Square,
+  Circle,
+  Type,
   Pencil,
   Undo,
   Redo,
@@ -76,6 +76,7 @@ interface GitHubIssueData {
   screenshots: File[];
   screenRecording?: File;
   additionalInfo?: string;
+  customLabels?: string; // Added for custom labels
 }
 
 export function GitHubIssueReporter() {
@@ -116,7 +117,8 @@ export function GitHubIssueReporter() {
     environment: getBrowserInfo(),
     browserInfo: getBrowserInfo(),
     screenshots: [],
-    additionalInfo: ''
+    additionalInfo: '',
+    customLabels: '' // Initialize customLabels
   });
 
   const [pastedLinks, setPastedLinks] = useState<string[]>([]);
@@ -153,8 +155,8 @@ export function GitHubIssueReporter() {
 
   // Handle project change
   const handleProjectChange = (projectId: string) => {
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData(prev => ({
+      ...prev,
       projectId: parseInt(projectId),
       moduleId: undefined // Reset module when project changes
     }));
@@ -246,8 +248,8 @@ export function GitHubIssueReporter() {
 
           canvas.toBlob((blob) => {
             if (blob) {
-              const file = new File([blob], `screenshot-${Date.now()}.png`, { 
-                type: 'image/png' 
+              const file = new File([blob], `screenshot-${Date.now()}.png`, {
+                type: 'image/png'
               });
               setScreenshots(prev => [...prev, file]);
               toast({
@@ -297,8 +299,8 @@ export function GitHubIssueReporter() {
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'video/webm' });
-        const file = new File([blob], `recording-${Date.now()}.webm`, { 
-          type: 'video/webm' 
+        const file = new File([blob], `recording-${Date.now()}.webm`, {
+          type: 'video/webm'
         });
         setScreenRecording(file);
         setRecordingTime(0);
@@ -386,7 +388,7 @@ export function GitHubIssueReporter() {
     }
 
     if (pastedLinks.length > 0) {
-      descriptionContent += (descriptionContent ? '\n\n' : '') + '**Reference Links:**\n' + 
+      descriptionContent += (descriptionContent ? '\n\n' : '') + '**Reference Links:**\n' +
         pastedLinks.map(link => `- ${link}`).join('\n');
     }
 
@@ -464,11 +466,11 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
       // Step 1: Create bug in the system first
       const bugPayload = {
         title: formData.title,
-        severity: formData.severity === 'low' ? 'Trivial' : 
-                 formData.severity === 'medium' ? 'Minor' : 
+        severity: formData.severity === 'low' ? 'Trivial' :
+                 formData.severity === 'medium' ? 'Minor' :
                  formData.severity === 'high' ? 'Major' : 'Critical',
-        priority: formData.priority === 'low' ? 'Low' : 
-                 formData.priority === 'medium' ? 'Medium' : 
+        priority: formData.priority === 'low' ? 'Low' :
+                 formData.priority === 'medium' ? 'Medium' :
                  formData.priority === 'high' ? 'High' : 'Critical',
         status: 'Open',
         stepsToReproduce: formData.reproductionSteps,
@@ -553,7 +555,13 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
         body: JSON.stringify({
           title: formData.title,
           body: formatIssueDescription(),
-          labels: formData.priority === 'critical' ? [formData.priority, formData.severity, formData.category] : [formData.priority, formData.severity, formData.category], // Example label mapping
+          // Map existing priorities/severities to GitHub labels, and add custom labels
+          labels: [
+            formData.priority,
+            formData.severity,
+            formData.category,
+            ...(formData.customLabels ? formData.customLabels.split(',').map(label => label.trim()).filter(label => label) : [])
+          ],
           projectId: formData.projectId,
         }),
       });
@@ -589,7 +597,8 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
         environment: getBrowserInfo(),
         browserInfo: getBrowserInfo(),
         screenshots: [],
-        additionalInfo: ''
+        additionalInfo: '',
+        customLabels: '' // Reset customLabels
       });
       setScreenshots([]);
       setScreenRecording(null);
@@ -780,8 +789,8 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="project">Project *</Label>
-                  <Select 
-                    value={formData.projectId.toString()} 
+                  <Select
+                    value={formData.projectId.toString()}
                     onValueChange={handleProjectChange}
                   >
                     <SelectTrigger>
@@ -799,11 +808,11 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
 
                 <div className="space-y-2">
                   <Label htmlFor="module">Module</Label>
-                  <Select 
-                    value={formData.moduleId?.toString() || ""} 
-                    onValueChange={(value) => setFormData(prev => ({ 
-                      ...prev, 
-                      moduleId: value ? parseInt(value) : undefined 
+                  <Select
+                    value={formData.moduleId?.toString() || ""}
+                    onValueChange={(value) => setFormData(prev => ({
+                      ...prev,
+                      moduleId: value ? parseInt(value) : undefined
                     }))}
                     disabled={!formData.projectId || modules.length === 0}
                   >
@@ -837,8 +846,8 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Priority</label>
-                      <Select 
-                        value={formData.priority} 
+                      <Select
+                        value={formData.priority}
                         onValueChange={(value: any) => setFormData(prev => ({ ...prev, priority: value }))}
                       >
                         <SelectTrigger>
@@ -855,8 +864,8 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Category</label>
-                      <Select 
-                        value={formData.category} 
+                      <Select
+                        value={formData.category}
                         onValueChange={(value: any) => setFormData(prev => ({ ...prev, category: value }))}
                       >
                         <SelectTrigger>
@@ -928,12 +937,26 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Environment</label>
+                    <Label htmlFor="environment">Environment</Label>
                     <Input
+                      id="environment"
                       value={formData.environment}
                       onChange={(e) => setFormData(prev => ({ ...prev, environment: e.target.value }))}
-                      placeholder="Browser, OS, screen resolution"
+                      placeholder="Browser, OS, device, etc."
                     />
+                  </div>
+                  {/* Custom Labels Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="customLabels">GitHub Labels</Label>
+                    <Input
+                      id="customLabels"
+                      value={formData.customLabels || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, customLabels: e.target.value }))}
+                      placeholder="e.g., bug, high-priority, frontend (comma-separated)"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Custom labels to add to the GitHub issue. Separate multiple labels with commas.
+                    </p>
                   </div>
 
                   <div className="space-y-2">
