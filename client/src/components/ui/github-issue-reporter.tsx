@@ -67,7 +67,7 @@ interface GitHubIssueData {
   description: string;
   priority: 'low' | 'medium' | 'high' | 'critical';
   severity: 'low' | 'medium' | 'high' | 'critical';
-  category: 'ui' | 'api' | 'performance' | 'security' | 'data' | 'integration';
+  category: string; // Changed to string to accommodate custom categories
   projectId: number;
   moduleId?: number;
   reproductionSteps: string;
@@ -86,6 +86,150 @@ interface CustomLabel {
   name: string;
   color: string;
 }
+
+// Interface for Custom Category
+interface CustomCategory {
+  id: number;
+  name: string;
+}
+
+// Component for Custom Category Management
+function CategoryManagement({
+  categories,
+  onCategoriesChange,
+  selectedCategory,
+  onCategorySelect,
+}: {
+  categories: CustomCategory[];
+  onCategoriesChange: (categories: CustomCategory[]) => void;
+  selectedCategory: string;
+  onCategorySelect: (category: string) => void;
+}) {
+  const { toast } = useToast();
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [nextCategoryId, setNextCategoryId] = useState(1);
+
+  // Load categories from local storage on mount
+  useEffect(() => {
+    const savedCategories = localStorage.getItem('githubIssueCustomCategories');
+    if (savedCategories) {
+      const parsedCategories: CustomCategory[] = JSON.parse(savedCategories);
+      onCategoriesChange(parsedCategories);
+      if (parsedCategories.length > 0) {
+        setNextCategoryId(Math.max(...parsedCategories.map(cat => cat.id)) + 1);
+      }
+    } else {
+      // Set default categories if none are found
+      const defaultCategories: CustomCategory[] = [
+        { id: 1, name: 'UI/UX' },
+        { id: 2, name: 'API' },
+        { id: 3, name: 'Performance' },
+        { id: 4, name: 'Security' },
+        { id: 5, name: 'Data' },
+        { id: 6, name: 'Integration' },
+      ];
+      onCategoriesChange(defaultCategories);
+      setNextCategoryId(defaultCategories.length + 1);
+    }
+  }, []);
+
+  // Save categories to local storage whenever they change
+  useEffect(() => {
+    localStorage.setItem('githubIssueCustomCategories', JSON.stringify(categories));
+  }, [categories]);
+
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) {
+      toast({ title: "Category name is required", variant: "destructive" });
+      return;
+    }
+    const newCategory: CustomCategory = { id: nextCategoryId, name: newCategoryName.trim() };
+    onCategoriesChange([...categories, newCategory]);
+    setNewCategoryName('');
+    setNextCategoryId(prev => prev + 1);
+    setShowAddCategory(false);
+    toast({ title: "Category added successfully" });
+  };
+
+  const handleDeleteCategory = (id: number) => {
+    const updatedCategories = categories.filter(cat => cat.id !== id);
+    onCategoriesChange(updatedCategories);
+    // If the deleted category was selected, reset to the first available or empty
+    if (selectedCategory.split('-')[0] === 'custom' && parseInt(selectedCategory.split('-')[1]) === id) {
+      onCategorySelect(updatedCategories.length > 0 ? `${updatedCategories[0].id}-${updatedCategories[0].name}` : '');
+    } else if (selectedCategory === categories.find(cat => cat.id === id)?.name) {
+       onCategorySelect(updatedCategories.length > 0 ? `${updatedCategories[0].id}-${updatedCategories[0].name}` : '');
+    }
+    toast({ title: "Category deleted successfully" });
+  };
+
+  const handleSelectCategory = (value: string) => {
+    onCategorySelect(value);
+  };
+
+  return (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor="category">Category</Label>
+        <Select value={selectedCategory} onValueChange={handleSelectCategory}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select category" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((category) => (
+              <SelectItem key={`custom-${category.id}`} value={`${category.id}-${category.name}`}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="mt-2">
+        <Button onClick={() => setShowAddCategory(true)} variant="outline" size="sm" className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Manage Categories
+        </Button>
+
+        {showAddCategory && (
+          <div className="mt-3 p-3 border rounded flex items-center gap-2">
+            <Input
+              placeholder="New category name"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              className="flex-grow"
+            />
+            <Button onClick={handleAddCategory} size="sm">Add</Button>
+            <Button variant="outline" onClick={() => setShowAddCategory(false)} size="sm">Cancel</Button>
+          </div>
+        )}
+      </div>
+
+      {categories.length > 0 && (
+        <div className="mt-3 space-y-2 max-h-32 overflow-y-auto">
+          <h4 className="text-sm font-medium">Custom Categories:</h4>
+          {categories.map((category) => (
+            <Card key={category.id} className="p-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">{category.name}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDeleteCategory(category.id)}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </Card>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 
 export function GitHubIssueReporter() {
   const { user } = useAuth();
@@ -112,6 +256,10 @@ export function GitHubIssueReporter() {
   const [newLabel, setNewLabel] = useState<Omit<CustomLabel, 'id'>>({ name: '', color: '#3b82f6' });
   const [nextLabelId, setNextLabelId] = useState(1);
 
+  // Custom Categories State
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
+
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const draggableRef = useRef<HTMLDivElement>(null);
@@ -123,7 +271,7 @@ export function GitHubIssueReporter() {
     description: '',
     priority: 'medium',
     severity: 'medium',
-    category: 'ui',
+    category: 'ui', // Default category
     projectId: 0,
     moduleId: undefined,
     reproductionSteps: '',
@@ -414,6 +562,11 @@ export function GitHubIssueReporter() {
     const selectedProject = projects.find(p => p.id === formData.projectId);
     const selectedModule = modules.find(m => m.id === formData.moduleId);
 
+    // Extract custom category ID and name
+    const categoryParts = formData.category.split('-');
+    const categoryName = categoryParts.length > 1 ? categoryParts[1] : formData.category;
+
+
     let descriptionContent = formData.description;
 
     if (clipboardText) {
@@ -447,7 +600,7 @@ export function GitHubIssueReporter() {
 - **Module**: ${selectedModule?.name || 'Not specified'}
 - **Priority**: ${formData.priority}
 - **Severity**: ${formData.severity}
-- **Category**: ${formData.category}
+- **Category**: ${categoryName} 
 - **Environment**: ${formData.environment}
 
 ## Issue Description
@@ -615,7 +768,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
         description: '',
         priority: 'medium',
         severity: 'medium',
-        category: 'ui',
+        category: 'ui', // Reset to default
         projectId: formData.projectId, // Keep the same project
         moduleId: undefined,
         reproductionSteps: '',
@@ -929,23 +1082,12 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Category</label>
-                      <Select 
-                        value={formData.category} 
-                        onValueChange={(value: any) => setFormData(prev => ({ ...prev, category: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ui">UI/UX</SelectItem>
-                          <SelectItem value="api">API</SelectItem>
-                          <SelectItem value="performance">Performance</SelectItem>
-                          <SelectItem value="security">Security</SelectItem>
-                          <SelectItem value="data">Data</SelectItem>
-                          <SelectItem value="integration">Integration</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <CategoryManagement
+                        categories={customCategories}
+                        onCategoriesChange={setCustomCategories}
+                        selectedCategory={formData.category}
+                        onCategorySelect={(category) => setFormData(prev => ({ ...prev, category }))}
+                      />
                     </div>
                   </div>
 

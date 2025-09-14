@@ -214,6 +214,8 @@ export class GitHubService {
     if (!this.octokit || !this.config) return;
 
     try {
+      console.log('Ensuring labels exist:', labelNames);
+      
       // Get existing labels
       const existingLabels = await this.octokit.rest.issues.listLabelsForRepo({
         owner: this.config.owner,
@@ -221,25 +223,31 @@ export class GitHubService {
       });
 
       const existingLabelNames = existingLabels.data.map(label => label.name.toLowerCase());
+      console.log('Existing labels:', existingLabelNames);
 
       // Create missing labels
       for (const labelName of labelNames) {
         if (!existingLabelNames.includes(labelName.toLowerCase())) {
           try {
-            await this.octokit.rest.issues.createLabel({
+            const createdLabel = await this.octokit.rest.issues.createLabel({
               owner: this.config.owner,
               repo: this.config.repo,
               name: labelName,
               color: this.getLabelColor(labelName),
               description: `Auto-created label from Test Case Tracker`,
             });
+            console.log(`Created GitHub label: ${labelName}`, createdLabel.data);
             logger.info(`Created GitHub label: ${labelName}`);
           } catch (labelError: any) {
+            console.warn(`Failed to create label ${labelName}:`, labelError);
             logger.warn(`Failed to create label ${labelName}:`, labelError.message);
           }
+        } else {
+          console.log(`Label already exists: ${labelName}`);
         }
       }
     } catch (error: any) {
+      console.error('Failed to ensure labels exist:', error);
       logger.warn('Failed to ensure labels exist:', error.message);
     }
   }
@@ -262,12 +270,33 @@ export class GitHubService {
       'help wanted': '008672',
       'invalid': 'e4e669',
       'question': 'd876e3',
-      'wontfix': 'ffffff'
+      'wontfix': 'ffffff',
+      'ui/ux': '3b82f6',
+      'api': '22c55e',
+      'performance': 'f97316',
+      'security': 'ef4444',
+      'data': '8b5cf6',
+      'integration': 'ec4899',
+      'severity: critical': 'dc2626',
+      'severity: high': 'ea580c',
+      'severity: medium': 'f59e0b',
+      'severity: low': '84cc16',
+      'priority: critical': 'dc2626',
+      'priority: high': 'ea580c',
+      'priority: medium': 'f59e0b',
+      'priority: low': '84cc16'
     };
 
     const lowerName = labelName.toLowerCase();
     if (colors[lowerName as keyof typeof colors]) {
       return colors[lowerName as keyof typeof colors];
+    }
+
+    // Check for partial matches
+    for (const [key, color] of Object.entries(colors)) {
+      if (lowerName.includes(key.toLowerCase()) || key.toLowerCase().includes(lowerName)) {
+        return color;
+      }
     }
 
     // Generate a color based on the label name hash

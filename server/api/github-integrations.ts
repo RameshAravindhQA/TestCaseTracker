@@ -376,14 +376,18 @@ router.post('/create-issue', requireAuth, async (req, res) => {
       webhookSecret: integration.webhookSecret,
     });
 
-    // Create issue
+    // Create issue with label creation
+    console.log('Creating GitHub issue with labels:', labels);
     const result = await githubService.createIssue(title, body, labels);
+
+    console.log('GitHub issue creation result:', result);
 
     if (result.success) {
       res.json({
         ...result,
         issueNumber: result.data?.number,
-        githubUrl: result.data?.url
+        githubUrl: result.data?.url,
+        labels: result.data?.labels || labels
       });
     } else {
       res.status(400).json(result);

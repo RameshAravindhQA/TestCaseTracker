@@ -24,6 +24,7 @@ import { TrackerFeatureForm } from './tracker-feature-form';
 import { TrackerSubFeatureForm } from './tracker-subfeature-form';
 import { TrackerWorkLogForm } from './tracker-work-log-form';
 import { TrackerReports } from './tracker-reports';
+import { TrackerAnalytics } from './tracker-analytics';
 import WorkLogsList from './tracker-work-logs-list';
 import TimelineView from './tracker-timeline-view';
 import { format } from 'date-fns';
@@ -471,17 +472,12 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
         </TabsContent>
 
         <TabsContent value="analytics">
-          {/* Placeholder for Analytics & Charts, replacing TimelineView */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Analytics & Charts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>This section will display various charts and analytics for the project.</p>
-              {/* Example: Add a simple chart component here */}
-              {/* <ProjectProgressChart subFeatures={subFeatures} /> */}
-            </CardContent>
-          </Card>
+          <TrackerAnalytics 
+            projectId={projectId} 
+            features={features || []} 
+            subFeatures={subFeatures || []} 
+            workLogs={[]} 
+          />
         </TabsContent>
 
         <TabsContent value="work-logs">
