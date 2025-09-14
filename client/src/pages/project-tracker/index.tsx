@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Search, Filter, FileDown, Calendar, Users, Target, Activity } from 'lucide-react';
@@ -166,7 +165,7 @@ export default function ProjectTrackerPage() {
                          project.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filters.status === 'all' || project.status === filters.status;
     const matchesPriority = filters.priority === 'all' || project.priority === filters.priority;
-    
+
     return matchesSearch && matchesStatus && matchesPriority;
   }) || [];
 
@@ -217,7 +216,7 @@ export default function ProjectTrackerPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
               Dashboard
@@ -225,10 +224,6 @@ export default function ProjectTrackerPage() {
             <TabsTrigger value="projects" className="flex items-center gap-2">
               <Target className="h-4 w-4" />
               Projects
-            </TabsTrigger>
-            <TabsTrigger value="timeline" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Timeline
             </TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <FileDown className="h-4 w-4" />
@@ -307,19 +302,6 @@ export default function ProjectTrackerPage() {
                 onViewDetails={handleViewDetails}
               />
             </div>
-          </TabsContent>
-
-          <TabsContent value="timeline">
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Timeline</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Timeline view will be implemented here showing Gantt chart of all projects.
-                </p>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="reports">

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Calendar, Clock, User, Search, Filter, FileText, BarChart3, Download, Edit, Eye, Trash2 } from 'lucide-react';
+import { Calendar, Clock, User, Search, Filter, FileText, BarChart3, Download, Edit, Eye, Trash2, FileDown } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
@@ -27,7 +26,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
   const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>({});
   const [selectedWorkLog, setSelectedWorkLog] = useState<any>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
-  
+
   const queryClient = useQueryClient();
 
   // Fetch work logs
@@ -38,7 +37,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
       if (projectId) params.append('projectId', projectId.toString());
       if (featureId) params.append('featureId', featureId.toString());
       if (subFeatureId) params.append('subFeatureId', subFeatureId.toString());
-      
+
       const response = await apiRequest('GET', `/api/tracker/work-logs?${params}`);
       if (!response.ok) throw new Error('Failed to fetch work logs');
       return response.json();
@@ -52,6 +51,17 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
       if (!projectId) return [];
       const response = await apiRequest('GET', `/api/tracker/sub-features?projectId=${projectId}`);
       if (!response.ok) throw new Error('Failed to fetch sub-features');
+      return response.json();
+    },
+  });
+
+  // Fetch features for context (needed for CSV export)
+  const { data: features } = useQuery({
+    queryKey: ['/api/tracker/features', projectId],
+    queryFn: async () => {
+      if (!projectId) return [];
+      const response = await apiRequest('GET', `/api/tracker/features?projectId=${projectId}`);
+      if (!response.ok) throw new Error('Failed to fetch features');
       return response.json();
     },
   });
@@ -206,10 +216,52 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                 <SelectItem value="Bug Fix">Bug Fix</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  try {
+                    const csvData = workLogs.map(log => ({
+                      'Log ID': log.id,
+                      'Sub-Feature': subFeatures.find(sf => sf.id === log.subFeatureId)?.name || 'Unknown',
+                      'Work Type': log.workType || 'N/A',
+                      'Hours Worked': log.hoursWorked || 0,
+                      'Date': new Date(log.logDate).toLocaleDateString(),
+                      'Description': log.description || 'N/A',
+                      'Created': new Date(log.createdAt).toLocaleDateString()
+                    }));
+
+                    const csv = [
+                      Object.keys(csvData[0] || {}).join(','),
+                      ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+                    ].join('\n');
+
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `work-logs-${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+
+                    toast({
+                      title: "Export successful",
+                      description: "Work logs exported to CSV",
+                    });
+                  } catch (error) {
+                    toast({
+                      title: "Export failed",
+                      description: "Failed to export work logs",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                Export Logs
+              </Button>
           </div>
         </CardContent>
       </Card>

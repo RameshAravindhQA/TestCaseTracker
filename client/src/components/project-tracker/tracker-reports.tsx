@@ -187,82 +187,104 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
 
   const exportToPDF = () => {
     try {
-      const { jsPDF } = require('jspdf');
-      require('jspdf-autotable');
-      
-      const doc = new jsPDF();
-      
-      // Add title
-      doc.setFontSize(16);
-      doc.text('Project Tracker Report', 20, 20);
-      doc.setFontSize(12);
-      doc.text(`Project: ${project?.name || 'Unknown'}`, 20, 30);
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 40);
-      
-      // Sub-Feature Status Summary Table
-      doc.setFontSize(14);
-      doc.text('Sub-Feature Status Summary', 20, 60);
-      
-      const statusData = ['Planning', 'In Progress', 'Completed', 'On Hold', 'Blocked'].map(status => {
-        const count = subFeatures.filter(sf => sf.status === status).length;
-        const percentage = subFeatures.length > 0 ? Math.round((count / subFeatures.length) * 100) : 0;
-        return [status, count.toString(), `${percentage}%`];
-      });
-      
-      doc.autoTable({
-        startY: 70,
-        head: [['Status', 'Count', 'Percentage']],
-        body: statusData,
-        styles: { fontSize: 10 }
-      });
-      
-      // Work Type Distribution Table
-      const finalY = doc.lastAutoTable.finalY + 20;
-      doc.setFontSize(14);
-      doc.text('Work Type Distribution', 20, finalY);
-      
-      const workTypeData = ['Development', 'QA', 'DevOps', 'Designing', 'Analysis', 'Documentation'].map(workType => {
-        const count = subFeatures.filter(sf => sf.workType === workType).length;
-        const percentage = subFeatures.length > 0 ? Math.round((count / subFeatures.length) * 100) : 0;
-        return [workType, count.toString(), `${percentage}%`];
-      });
-      
-      doc.autoTable({
-        startY: finalY + 10,
-        head: [['Work Type', 'Count', 'Percentage']],
-        body: workTypeData,
-        styles: { fontSize: 10 }
-      });
-      
-      // Work Hours Summary
-      const finalY2 = doc.lastAutoTable.finalY + 20;
-      doc.setFontSize(14);
-      doc.text('Work Hours Summary', 20, finalY2);
-      
+      // Create a printable HTML version
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast({
+          title: "PDF Export Failed",
+          description: "Please allow pop-ups to export PDF",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const estimatedHours = subFeatures.reduce((sum, sf) => sum + (sf.estimatedHours || 0), 0);
       const actualHours = workLogs?.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0) || 0;
       const totalLogs = workLogs?.length || 0;
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Project Tracker Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1, h2 { color: #333; }
+            table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .summary { margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <h1>Project Tracker Report</h1>
+          <p><strong>Project:</strong> ${project?.name || 'Unknown'}</p>
+          <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
+          
+          <h2>Sub-Feature Status Summary</h2>
+          <table>
+            <thead>
+              <tr><th>Status</th><th>Count</th><th>Percentage</th></tr>
+            </thead>
+            <tbody>
+              ${['Planning', 'In Progress', 'Completed', 'On Hold', 'Blocked'].map(status => {
+                const count = subFeatures.filter(sf => sf.status === status).length;
+                const percentage = subFeatures.length > 0 ? Math.round((count / subFeatures.length) * 100) : 0;
+                return `<tr><td>${status}</td><td>${count}</td><td>${percentage}%</td></tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+
+          <h2>Work Type Distribution</h2>
+          <table>
+            <thead>
+              <tr><th>Work Type</th><th>Count</th><th>Percentage</th></tr>
+            </thead>
+            <tbody>
+              ${['Development', 'QA', 'DevOps', 'Designing', 'Analysis', 'Documentation'].map(workType => {
+                const count = subFeatures.filter(sf => sf.workType === workType).length;
+                const percentage = subFeatures.length > 0 ? Math.round((count / subFeatures.length) * 100) : 0;
+                return `<tr><td>${workType}</td><td>${count}</td><td>${percentage}%</td></tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+
+          <h2>Work Hours Summary</h2>
+          <table>
+            <thead>
+              <tr><th>Metric</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Estimated Hours</td><td>${estimatedHours}h</td></tr>
+              <tr><td>Actual Hours</td><td>${actualHours}h</td></tr>
+              <tr><td>Total Work Logs</td><td>${totalLogs}</td></tr>
+              <tr><td>Efficiency</td><td>${estimatedHours > 0 ? Math.round((actualHours / estimatedHours) * 100) : 'N/A'}%</td></tr>
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
       
-      const hoursData = [
-        ['Estimated Hours', `${estimatedHours}h`],
-        ['Actual Hours', `${actualHours}h`],
-        ['Total Work Logs', totalLogs.toString()],
-        ['Efficiency', estimatedHours > 0 ? `${Math.round((actualHours / estimatedHours) * 100)}%` : 'N/A']
-      ];
-      
-      doc.autoTable({
-        startY: finalY2 + 10,
-        head: [['Metric', 'Value']],
-        body: hoursData,
-        styles: { fontSize: 10 }
+      // Wait for content to load then print
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+
+      toast({
+        title: "PDF Export",
+        description: "Print dialog opened. Use 'Save as PDF' option in print dialog.",
       });
-      
-      // Save the PDF
-      doc.save(`project-tracker-report-${new Date().toISOString().split('T')[0]}.pdf`);
       
     } catch (error) {
       console.error('PDF generation error:', error);
-      alert('PDF export failed. Please ensure jsPDF is installed.');
+      toast({
+        title: "PDF Export Failed",
+        description: "Failed to generate PDF report",
+        variant: "destructive",
+      });
     }
   };
 

@@ -736,7 +736,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
       // Prepare labels including category and custom labels
       const categoryParts = formData.category.split('-');
       const categoryName = categoryParts.length > 1 ? categoryParts[1] : formData.category;
-      
+
       const allLabels = [
         `category: ${categoryName}`, // Add category as label
         `severity: ${formData.severity}`,

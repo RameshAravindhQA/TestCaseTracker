@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +22,7 @@ interface TrackerProject {
   endDate?: string;
   budget?: number;
   currency?: string;
+  createdAt?: string; // Added for sorting recent projects
 }
 
 interface TrackerDashboardProps {
@@ -36,9 +36,9 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
   const inProgressProjects = projects.filter(p => p.status === 'In Progress').length;
   const onHoldProjects = projects.filter(p => p.status === 'On Hold').length;
   const highPriorityProjects = projects.filter(p => p.priority === 'High' || p.priority === 'Critical').length;
-  
+
   const completionRate = totalProjects > 0 ? (completedProjects / totalProjects) * 100 : 0;
-  
+
   const totalBudget = projects.reduce((sum, project) => sum + (project.budget || 0), 0);
 
   // Get overdue projects (projects with end date in the past and not completed)
@@ -104,7 +104,7 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-grid-cols-2 gap-6">
         {/* Project Completion Overview */}
         <Card>
           <CardHeader>
@@ -121,7 +121,7 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
               </div>
               <Progress value={completionRate} className="h-2" />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="space-y-1">
                 <div className="flex justify-between">
@@ -147,7 +147,8 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
           </CardContent>
         </Card>
 
-        {/* Budget Overview */}
+        {/* Budget Overview - REMOVED */}
+        {/*
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -163,7 +164,7 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
                 </p>
                 <p className="text-sm text-muted-foreground">Total Budget Allocated</p>
               </div>
-              
+
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Projects with Budget:</span>
@@ -179,6 +180,7 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
             </div>
           </CardContent>
         </Card>
+        */}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -227,14 +229,19 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
           <CardContent>
             <div className="space-y-3">
               {projects
-                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .sort((a, b) => {
+                  // Ensure createdAt is valid before comparison
+                  const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                  const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                  return dateB - dateA;
+                })
                 .slice(0, 5)
                 .map((project) => (
                   <div key={project.id} className="flex items-center justify-between p-2 border rounded">
                     <div>
                       <p className="font-medium">{project.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        Created: {new Date(project.createdAt).toLocaleDateString()}
+                        Created: {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : 'N/A'}
                       </p>
                     </div>
                     <Badge className={

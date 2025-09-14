@@ -648,7 +648,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Serve static uploads directory
-  app.use('/uploads', express.static(uploadsDir));
+  app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
+    // Log request for debugging
+    console.log(`File access request for: ${req.path}`);
+
+    // Clean up the path to handle all possible formats
+    let cleanPath = req.path;
+    // Remove any /uploads prefix if it's included and double slashes
+    cleanPath = cleanPath.replace(/^\/uploads\/?/, '').replace(/\/+/g, '/');
+
+    // Make sure bug-attachment path is properly handled
+    if (cleanPath.startsWith('bug-attachment/')) {
+      console.log('Found bug attachment path');
+    } else if (cleanPath.startsWith('bug-attachments/')) {
+      // Handle legacy path format - redirect to new format
+      console.log('Found legacy bug-attachments path, redirecting to bug-attachment');
+      // Extract the filename after bug-attachments/
+      const filename = cleanPath.replace(/^bug-attachments\/?/, '');
+      cleanPath = `bug-attachment/${filename}`;
+      console.log(`Redirected to: ${cleanPath}`);
+    }
+
+    const filePath = path.join(process.cwd(), 'uploads', cleanPath);
+    console.log(`Resolved file path: ${filePath}`);
+
+    // Validate the path to prevent directory traversal attacks
+    if (!filePath.startsWith(path.join(process.cwd(), 'uploads'))) {
+      console.error(`Security protection: Attempted access to unauthorized path: ${filePath}`);
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      console.error(`File not found: ${filePath}`);
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    // Set proper content type based on file extension
+    const ext = path.extname(filePath).toLowerCase();
+
+    // Define a content type mapping
+    const contentTypes: Record<string, string> = {
+      // Images
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+      '.ico': 'image/x-icon',
+
+      // Videos
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.ogv': 'video/ogg',
+      '.mov': 'video/quicktime',
+      '.avi': 'video/x-msvideo',
+      '.flv': 'video/x-flv',
+      '.mkv': 'video/x-matroska',
+      '.wmv': 'video/x-ms-wmv',
+      '.3gp': 'video/3gpp',
+      '.mpg': 'video/mpeg',
+      '.mpeg': 'video/mpeg',
+
+      // Documents
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.ppt': 'application/vnd.ms-powerpoint',
+      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+
+      // Text
+      '.txt': 'text/plain',
+      '.csv': 'text/csv',
+      '.html': 'text/html',
+      '.htm': 'text/html',
+      '.css': 'text/css',
+      '.js': 'text/javascript',
+      '.ts': 'text/plain',
+      '.json': 'application/json',
+      '.md': 'text/markdown',
+
+      // Archives
+      '.zip': 'application/zip',
+      '.rar': 'application/x-rar-compressed',
+      '.7z': 'application/x-7z-compressed',
+      '.tar': 'application/x-tar',
+      '.gz': 'application/gzip',
+    };
+
+    // Set the content type if we know it, otherwise let the browser determine it
+    if (contentTypes[ext]) {
+      res.setHeader('Content-Type', contentTypes[ext]);
+    }
+
+    // Add cache control headers to prevent caching issues
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    // Set content disposition to help with downloading files
+    // Use "inline" for files that can be viewed in browser
+    const inlineTypes = [
+      // Images
+      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+      // Documents that can be viewed in browser
+      '.pdf', '.txt', '.html', '.htm',
+      // Videos that can be viewed in browser
+      '.mp4', '.webm', '.ogv'
+    ];
+    const disposition = inlineTypes.includes(ext) ? 'inline' : 'attachment';
+
+    // Only set filename for attachment disposition
+    if (disposition === 'attachment') {
+      const fileName = path.basename(filePath);
+      res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
+    }
+
+    // Log file access for debugging
+    console.log(`Serving file: ${filePath} with content type: ${contentTypes[ext] || 'auto-determined'}`);
+
+    // Serve the file
+    res.sendFile(filePath);
+  });
+
 
   // Store session store reference for WebSocket access
   app.locals.sessionStore = sessionStore;
@@ -6730,38 +6855,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  apiRouter.put("/employees/:id", isAuthenticated, async (req, res) => {
-    try {
-      const employeeId = parseInt(req.params.id);
-      const updatedEmployee = await storage.updateEmployee(employeeId, req.body);
-
-      if (!updatedEmployee) {
-        return res.status(404).json({ message: "Employee not found" });
-      }
-
-      res.json(updatedEmployee);
-    } catch (error) {
-      console.error("Update employee error:", error);
-      res.status(400).json({ message: "Invalid employee data" });
-    }
-  });
-
-  apiRouter.delete("/employees/:id", isAuthenticated, async (req, res) => {
-    try {
-      const employeeId = parseInt(req.params.id);
-      const success = await storage.deleteEmployee(employeeId);
-
-      if (!success) {
-        return res.status(404).json({ message: "Employee not found" });
-      }
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Delete employee error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
   // Configure multer for employee import (CSV/Excel files)
   const configureEmployeeImportUpload = () => {
     const { uploadsDir } = createUploadDirectories();
@@ -7093,6 +7186,218 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to create message' });
     }
   });
+
+  // GitHub sync route
+  apiRouter.post("/github/sync/:bugId", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      if (!bugId) {
+        return res.status(400).json({ success: false, error: 'Invalid bug ID' });
+      }
+
+      const bug = await storage.getBug(bugId);
+      if (!bug) {
+        return res.status(404).json({ success: false, error: 'Bug not found' });
+      }
+
+      // Get GitHub configuration for the project
+      const githubConfig = await storage.getGitHubIntegration(bug.projectId);
+      if (!githubConfig || !githubConfig.isEnabled) {
+        return res.status(400).json({
+          success: false,
+          error: 'GitHub integration not configured for this project'
+        });
+      }
+
+      // Configure GitHub service
+      githubService.setConfig({
+        owner: githubConfig.githubUsername,
+        repo: githubConfig.repositoryName,
+        token: githubConfig.personalAccessToken
+      });
+
+      // Check if bug has a GitHub issue number
+      if (!bug.githubIssueNumber) {
+        return res.status(400).json({
+          success: false,
+          error: 'Bug is not linked to a GitHub issue'
+        });
+      }
+
+      // Sync comments from GitHub to system
+      try {
+        const githubComments = await syncGitHubComments(bug.githubIssueNumber, bugId, githubConfig);
+
+        res.json({
+          success: true,
+          message: 'Successfully synced with GitHub',
+          syncedComments: githubComments?.length || 0
+        });
+      } catch (syncError) {
+        console.error('GitHub sync error:', syncError);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to sync with GitHub: ' + syncError.message
+        });
+      }
+
+    } catch (error) {
+      console.error('GitHub sync route error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+      });
+    }
+  });
+
+  // Sync GitHub comments to bug comments
+  apiRouter.post("/bugs/:bugId/sync-github-comments", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const bug = await storage.getBug(bugId);
+
+      if (!bug) {
+        return res.status(404).json({ success: false, message: 'Bug not found' });
+      }
+
+      if (!bug.githubIssueNumber) {
+        return res.status(400).json({
+          success: false,
+          message: 'Bug is not linked to a GitHub issue'
+        });
+      }
+
+      // Get GitHub configuration
+      const githubConfig = await storage.getGitHubIntegration(bug.projectId);
+      if (!githubConfig || !githubConfig.isEnabled) {
+        return res.status(400).json({
+          success: false,
+          message: 'GitHub integration not configured'
+        });
+      }
+
+      // Configure GitHub service
+      githubService.setConfig({
+        owner: githubConfig.githubUsername,
+        repo: githubConfig.repositoryName,
+        token: githubConfig.personalAccessToken
+      });
+
+      // Fetch GitHub comments
+      const response = await fetch(`https://api.github.com/repos/${githubConfig.githubUsername}/${githubConfig.repositoryName}/issues/${bug.githubIssueNumber}/comments`, {
+        headers: {
+          'Authorization': `Bearer ${githubConfig.personalAccessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'TestCaseTracker/1.0.0'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+      }
+
+      const githubComments = await response.json();
+      let syncedCount = 0;
+
+      // Get existing comments to avoid duplicates
+      const existingComments = await storage.getBugComments(bugId);
+      const existingGithubIds = existingComments
+        .filter(c => c.githubCommentId)
+        .map(c => c.githubCommentId);
+
+      // Sync each GitHub comment
+      for (const ghComment of githubComments) {
+        if (!existingGithubIds.includes(ghComment.id.toString())) {
+          await storage.createBugComment({
+            bugId: bugId,
+            content: ghComment.body,
+            authorId: req.session.userId!, // Use current user as author
+            githubCommentId: ghComment.id.toString(),
+            githubUrl: ghComment.html_url,
+            isPrivate: false
+          });
+          syncedCount++;
+        }
+      }
+
+      res.json({
+        success: true,
+        syncedCount,
+        message: `${syncedCount} new comments synced from GitHub`
+      });
+
+    } catch (error) {
+      console.error('GitHub comments sync error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to sync GitHub comments'
+      });
+    }
+  });
+
+  // GitHub sync route
+  apiRouter.post("/github/sync/:bugId", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      if (!bugId) {
+        return res.status(400).json({ success: false, error: 'Invalid bug ID' });
+      }
+
+      const bug = await storage.getBug(bugId);
+      if (!bug) {
+        return res.status(404).json({ success: false, error: 'Bug not found' });
+      }
+
+      // Get GitHub configuration for the project
+      const githubConfig = await storage.getGitHubIntegration(bug.projectId);
+      if (!githubConfig || !githubConfig.isEnabled) {
+        return res.status(400).json({
+          success: false,
+          error: 'GitHub integration not configured for this project'
+        });
+      }
+
+      // Configure GitHub service
+      githubService.setConfig({
+        owner: githubConfig.githubUsername,
+        repo: githubConfig.repositoryName,
+        token: githubConfig.personalAccessToken
+      });
+
+      // Check if bug has a GitHub issue number
+      if (!bug.githubIssueNumber) {
+        return res.status(400).json({
+          success: false,
+          error: 'Bug is not linked to a GitHub issue'
+        });
+      }
+
+      // Sync comments from GitHub to system
+      try {
+        const githubComments = await syncGitHubComments(bug.githubIssueNumber, bugId, githubConfig);
+
+        res.json({
+          success: true,
+          message: 'Successfully synced with GitHub',
+          syncedComments: githubComments?.length || 0
+        });
+      } catch (syncError) {
+        console.error('GitHub sync error:', syncError);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to sync with GitHub: ' + syncError.message
+        });
+      }
+
+    } catch (error) {
+      console.error('GitHub sync route error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+      });
+    }
+  });
+
 
   // Register the main API router
   app.use("/api", apiRouter);
