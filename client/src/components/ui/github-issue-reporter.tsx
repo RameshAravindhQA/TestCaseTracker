@@ -39,7 +39,9 @@ import {
   Move,
   Clipboard,
   Link,
-  ExternalLink
+  ExternalLink,
+  Settings,
+  Plus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -76,6 +78,13 @@ interface GitHubIssueData {
   screenshots: File[];
   screenRecording?: File;
   additionalInfo?: string;
+  selectedLabels?: number[]; // Array of label IDs
+}
+
+interface CustomLabel {
+  id: number;
+  name: string;
+  color: string;
 }
 
 export function GitHubIssueReporter() {
@@ -95,6 +104,13 @@ export function GitHubIssueReporter() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [attachments, setAttachments] = useState<File[]>([]);
+
+  // Label Management State
+  const [showLabelManagement, setShowLabelManagement] = useState(false);
+  const [showAddLabel, setShowAddLabel] = useState(false);
+  const [customLabels, setCustomLabels] = useState<CustomLabel[]>([]);
+  const [newLabel, setNewLabel] = useState<Omit<CustomLabel, 'id'>>({ name: '', color: '#3b82f6' });
+  const [nextLabelId, setNextLabelId] = useState(1);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -116,7 +132,8 @@ export function GitHubIssueReporter() {
     environment: getBrowserInfo(),
     browserInfo: getBrowserInfo(),
     screenshots: [],
-    additionalInfo: ''
+    additionalInfo: '',
+    selectedLabels: []
   });
 
   const [pastedLinks, setPastedLinks] = useState<string[]>([]);
@@ -133,6 +150,24 @@ export function GitHubIssueReporter() {
     queryKey: [`/api/projects/${formData.projectId}/modules`],
     enabled: isOpen && formData.projectId > 0,
   });
+
+  // Load custom labels from local storage on mount
+  useEffect(() => {
+    const savedLabels = localStorage.getItem('githubIssueCustomLabels');
+    if (savedLabels) {
+      const parsedLabels: CustomLabel[] = JSON.parse(savedLabels);
+      setCustomLabels(parsedLabels);
+      // Find the highest ID to ensure new labels get unique IDs
+      if (parsedLabels.length > 0) {
+        setNextLabelId(Math.max(...parsedLabels.map(label => label.id)) + 1);
+      }
+    }
+  }, []);
+
+  // Save custom labels to local storage whenever they change
+  useEffect(() => {
+    localStorage.setItem('githubIssueCustomLabels', JSON.stringify(customLabels));
+  }, [customLabels]);
 
   React.useEffect(() => {
     if (projectsData) {
@@ -553,7 +588,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
         body: JSON.stringify({
           title: formData.title,
           body: formatIssueDescription(),
-          labels: formData.priority === 'critical' ? [formData.priority, formData.severity, formData.category] : [formData.priority, formData.severity, formData.category], // Example label mapping
+          labels: formData.selectedLabels?.map(labelId => customLabels.find(l => l.id === labelId)?.name).filter(Boolean) || [], // Map selected label IDs to names
           projectId: formData.projectId,
         }),
       });
@@ -589,13 +624,16 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
         environment: getBrowserInfo(),
         browserInfo: getBrowserInfo(),
         screenshots: [],
-        additionalInfo: ''
+        additionalInfo: '',
+        selectedLabels: []
       });
       setScreenshots([]);
       setScreenRecording(null);
       setAttachments([]);
       setPastedLinks([]);
       setClipboardText('');
+      setCustomLabels([]); // Clear labels after submission
+      setNextLabelId(1);
       setIsOpen(false);
 
     } catch (error) {
@@ -672,6 +710,43 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
     setFormData(prev => ({
       ...prev,
       description: prev.description + (prev.description ? '\n\n' : '') + `Reference: ${link}`
+    }));
+  };
+
+  // Label Management Handlers
+  const handleAddLabel = () => {
+    if (!newLabel.name.trim()) {
+      toast({ title: "Label name is required", variant: "destructive" });
+      return;
+    }
+    const labelWithId = { ...newLabel, id: nextLabelId };
+    setCustomLabels(prev => [...prev, labelWithId]);
+    setNewLabel({ name: '', color: '#3b82f6' });
+    setNextLabelId(prev => prev + 1);
+    setShowAddLabel(false);
+    toast({ title: "Label added successfully" });
+  };
+
+  const handleDeleteLabel = (id: number) => {
+    setCustomLabels(prev => prev.filter(label => label.id !== id));
+    setFormData(prev => ({
+      ...prev,
+      selectedLabels: prev.selectedLabels?.filter(labelId => labelId !== id)
+    }));
+    toast({ title: "Label deleted successfully" });
+  };
+
+  const handleAddSelectedLabel = (labelId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedLabels: [...(prev.selectedLabels || []), labelId]
+    }));
+  };
+
+  const handleRemoveLabel = (labelId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedLabels: prev.selectedLabels?.filter(id => id !== labelId)
     }));
   };
 
@@ -936,12 +1011,173 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
                     />
                   </div>
 
+                  {/* Labels Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Labels</Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowLabelManagement(!showLabelManagement)}
+                      >
+                        <Settings className="h-4 w-4 mr-1" />
+                        Manage Labels
+                      </Button>
+                    </div>
+
+                    {/* Label Management Panel */}
+                    {showLabelManagement && (
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-medium">Custom Labels</h4>
+                              <Button onClick={() => setShowAddLabel(true)} size="sm" variant="outline">
+                                <Plus className="h-4 w-4 mr-1" />
+                                Add Label
+                              </Button>
+                            </div>
+
+                            {/* Existing Labels */}
+                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                              {customLabels.map((label) => (
+                                <div key={label.id} className="flex items-center justify-between p-2 border rounded">
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="w-3 h-3 rounded"
+                                      style={{ backgroundColor: label.color }}
+                                    />
+                                    <span className="text-sm">{label.name}</span>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteLabel(label.id)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Add Label Form */}
+                            {showAddLabel && (
+                              <div className="space-y-3 border-t pt-3">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Input
+                                    placeholder="Label name"
+                                    value={newLabel.name}
+                                    onChange={(e) => setNewLabel(prev => ({ ...prev, name: e.target.value }))}
+                                  />
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="color"
+                                      value={newLabel.color}
+                                      onChange={(e) => setNewLabel(prev => ({ ...prev, color: e.target.value }))}
+                                      className="w-12 h-8"
+                                    />
+                                    <Input
+                                      value={newLabel.color}
+                                      onChange={(e) => setNewLabel(prev => ({ ...prev, color: e.target.value }))}
+                                      className="font-mono text-xs"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  {['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'].map((color) => (
+                                    <button
+                                      key={color}
+                                      type="button"
+                                      className="w-5 h-5 rounded border hover:scale-110 transition-transform"
+                                      style={{ backgroundColor: color }}
+                                      onClick={() => setNewLabel(prev => ({ ...prev, color }))}
+                                    />
+                                  ))}
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button onClick={handleAddLabel} size="sm">Save</Button>
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                      setShowAddLabel(false);
+                                      setNewLabel({ name: '', color: '#3b82f6' });
+                                    }}
+                                    size="sm"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Selected Labels Display */}
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {formData.selectedLabels?.map((labelId) => {
+                          const label = customLabels.find(l => l.id === labelId);
+                          if (!label) return null;
+                          return (
+                            <Badge
+                              key={labelId}
+                              variant="secondary"
+                              className="flex items-center gap-1"
+                              style={{ backgroundColor: label.color + '20', borderColor: label.color, color: label.color }}
+                            >
+                              <div
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: label.color }}
+                              />
+                              {label.name}
+                              <button
+                                onClick={() => handleRemoveLabel(labelId)}
+                                className="ml-1 hover:text-red-600"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          );
+                        })}
+                      </div>
+
+                      {/* Available Labels */}
+                      {customLabels.length > 0 && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-2">Available labels:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {customLabels
+                              .filter(label => !formData.selectedLabels?.includes(label.id))
+                              .map((label) => (
+                                <button
+                                  key={label.id}
+                                  onClick={() => handleAddSelectedLabel(label.id)}
+                                  className="text-xs px-2 py-1 rounded border hover:bg-gray-50 flex items-center gap-1"
+                                  style={{ borderColor: label.color + '40' }}
+                                >
+                                  <div
+                                    className="w-2 h-2 rounded-full"
+                                    style={{ backgroundColor: label.color }}
+                                  />
+                                  {label.name}
+                                </button>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Additional Information</label>
                     <Textarea
-                      value={formData.additionalInfo}
+                      id="additionalInfo"
+                      value={formData.additionalInfo || ''}
                       onChange={(e) => setFormData(prev => ({ ...prev, additionalInfo: e.target.value }))}
-                      placeholder="Any additional context, logs, or information"
+                      placeholder="Any additional information, logs, or context that might be helpful"
                       rows={3}
                     />
                   </div>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Table,
@@ -103,7 +102,6 @@ export function TrackerProjectTable({
               <TableHead>Status</TableHead>
               <TableHead>Priority</TableHead>
               <TableHead>Timeline</TableHead>
-              <TableHead>Budget</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="w-[50px]">Actions</TableHead>
             </TableRow>
@@ -144,15 +142,6 @@ export function TrackerProjectTable({
                       <span className="text-gray-400">No timeline set</span>
                     )}
                   </div>
-                </TableCell>
-                <TableCell>
-                  {project.budget ? (
-                    <div className="text-sm">
-                      {project.currency} {project.budget.toLocaleString()}
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
                 </TableCell>
                 <TableCell>
                   <div className="text-sm text-gray-500">

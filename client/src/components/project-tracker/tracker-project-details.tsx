@@ -335,7 +335,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
       <Tabs defaultValue="hierarchy" className="space-y-6">
         <TabsList>
           <TabsTrigger value="hierarchy">Project Hierarchy</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline View</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics & Charts</TabsTrigger>
           <TabsTrigger value="work-logs">Work Logs</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
@@ -470,8 +470,18 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
           </Card>
         </TabsContent>
 
-        <TabsContent value="timeline">
-          <TimelineView projectId={projectId} />
+        <TabsContent value="analytics">
+          {/* Placeholder for Analytics & Charts, replacing TimelineView */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Analytics & Charts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>This section will display various charts and analytics for the project.</p>
+              {/* Example: Add a simple chart component here */}
+              {/* <ProjectProgressChart subFeatures={subFeatures} /> */}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="work-logs">
