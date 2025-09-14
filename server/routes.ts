@@ -1041,6 +1041,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User permissions endpoint
+  apiRouter.get("/user/permissions", isAuthenticated, async (req, res) => {
+    try {
+      // For now, return basic permissions based on user role
+      const userRole = req.session.userRole;
+      let permissions = [];
+
+      if (userRole === "Admin") {
+        permissions = [
+          "projects:read", "projects:write", "projects:delete",
+          "users:read", "users:write", "users:delete",
+          "testcases:read", "testcases:write", "testcases:delete",
+          "bugs:read", "bugs:write", "bugs:delete",
+          "settings:read", "settings:write"
+        ];
+      } else if (userRole === "Developer") {
+        permissions = [
+          "projects:read", "projects:write",
+          "testcases:read", "testcases:write",
+          "bugs:read", "bugs:write"
+        ];
+      } else {
+        permissions = [
+          "projects:read",
+          "testcases:read", "testcases:write",
+          "bugs:read", "bugs:write"
+        ];
+      }
+
+      res.json(permissions);
+    } catch (error) {
+      console.error("Get user permissions error:", error);
+      res.status(500).json({ success: false, error: "Failed to get user permissions" });
+    }
+  });
+
+  // Unread messages count endpoint
+  apiRouter.get("/messages/unread-count", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      // For now, return 0 as placeholder - this would be implemented with actual message counting logic
+      res.json({ count: 0 });
+    } catch (error) {
+      console.error("Get unread messages count error:", error);
+      res.status(500).json({ success: false, error: "Failed to get unread messages count" });
+    }
+  });
+
   apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, async (req, res) => {
     try {
       console.log("🚀 AI Test Case Generation Request:", req.body);
