@@ -1,7 +1,7 @@
 import express, { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { createGitHubIssue, addCommentToIssue, syncBugComments, syncGitHubComments } from "./github-service";
+import { GitHubService, githubService } from "./github-service";
 import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject, getTraceabilityMarkersByProject, deleteMatrixCell } from "./matrix-fix";
 import { automationService } from "./automation-service";
 import { logger } from "./logger";

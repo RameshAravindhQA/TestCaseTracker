@@ -395,5 +395,78 @@ export class GitHubService {
   }
 }
 
+// Helper functions for GitHub integration
+export async function createGitHubIssue(title: string, body: string, labels?: string[], githubConfig?: any): Promise<{ success: boolean; message: string; data?: any }> {
+  if (!githubConfig) {
+    return {
+      success: false,
+      message: 'GitHub configuration not provided',
+    };
+  }
+
+  const service = new GitHubService({
+    owner: githubConfig.githubUsername,
+    repo: githubConfig.repositoryName,
+    token: githubConfig.personalAccessToken,
+  });
+
+  return await service.createIssue(title, body, labels);
+}
+
+export async function addCommentToIssue(issueNumber: number, comment: string, githubConfig?: any): Promise<{ success: boolean; message: string; data?: any }> {
+  if (!githubConfig) {
+    return {
+      success: false,
+      message: 'GitHub configuration not provided',
+    };
+  }
+
+  const service = new GitHubService({
+    owner: githubConfig.githubUsername,
+    repo: githubConfig.repositoryName,
+    token: githubConfig.personalAccessToken,
+  });
+
+  return await service.addCommentToIssue(issueNumber, comment);
+}
+
+export async function syncBugComments(bugId: number, githubIssueNumber: number, githubConfig?: any): Promise<any[]> {
+  // This function would sync comments from bug system to GitHub
+  // For now, return empty array as placeholder
+  console.log(`Syncing bug ${bugId} comments to GitHub issue ${githubIssueNumber}`);
+  return [];
+}
+
+export async function syncGitHubComments(githubIssueNumber: number, bugId: number, githubConfig?: any): Promise<any[]> {
+  if (!githubConfig) {
+    console.warn('GitHub configuration not provided for syncing comments');
+    return [];
+  }
+
+  try {
+    // Fetch GitHub comments
+    const response = await fetch(`https://api.github.com/repos/${githubConfig.githubUsername}/${githubConfig.repositoryName}/issues/${githubIssueNumber}/comments`, {
+      headers: {
+        'Authorization': `Bearer ${githubConfig.personalAccessToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'TestCaseTracker/1.0.0'
+      }
+    });
+
+    if (!response.ok) {
+      console.error(`GitHub API error: ${response.status} ${response.statusText}`);
+      return [];
+    }
+
+    const githubComments = await response.json();
+    console.log(`Fetched ${githubComments.length} comments from GitHub issue ${githubIssueNumber}`);
+    
+    return githubComments;
+  } catch (error: any) {
+    console.error('Failed to sync GitHub comments:', error);
+    return [];
+  }
+}
+
 // Singleton instance
 export const githubService = new GitHubService();
