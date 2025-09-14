@@ -208,14 +208,14 @@ export function TrackerSubFeatureForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Parent Sub-Feature (Dependency)</FormLabel>
-                <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString() || ''}>
+                <Select onValueChange={(value) => field.onChange(value === 'none' ? undefined : parseInt(value))} value={field.value?.toString() || 'none'}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select parent sub-feature" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {availableSubFeatures.filter(sf => sf.id !== subFeature?.id).map((sf) => (
                       <SelectItem key={sf.id} value={sf.id.toString()}>{sf.name}</SelectItem>
                     ))}
