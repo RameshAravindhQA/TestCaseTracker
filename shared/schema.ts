@@ -363,12 +363,6 @@ export const traceabilityMatrix = pgTable("traceability_matrix", {
   updatedAt: timestamp("updated_at"),
 });
 
-export const insertTraceabilityMatrixSchema = createInsertSchema(traceabilityMatrix).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 // Traceability Matrix Modules model
 export const traceabilityModules = pgTable("traceability_modules", {
   id: serial("id").primaryKey(),
@@ -376,11 +370,6 @@ export const traceabilityModules = pgTable("traceability_modules", {
   moduleId: integer("module_id").notNull(),
   displayOrder: integer("display_order").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertTraceabilityModuleSchema = createInsertSchema(traceabilityModules).omit({
-  id: true,
-  createdAt: true,
 });
 
 // Traceability Matrix Markers model
@@ -1394,28 +1383,22 @@ export const insertTrackerCustomDropdownSchema = createInsertSchema(trackerCusto
 
 // Types
 export type TrackerProject = typeof trackerProjects.$inferSelect;
-export type InsertTrackerProject = z.infer<typeof insertTrackerProjectSchema>;
-
+export type InsertTrackerProject = typeof trackerProjects.$inferInsert;
 export type TrackerFeature = typeof trackerFeatures.$inferSelect;
-export type InsertTrackerFeature = z.infer<typeof insertTrackerFeatureSchema>;
-
+export type InsertTrackerFeature = typeof trackerFeatures.$inferInsert;
 export type TrackerSubFeature = typeof trackerSubFeatures.$inferSelect;
-export type InsertTrackerSubFeature = z.infer<typeof insertTrackerSubFeatureSchema>;
-
+export type InsertTrackerSubFeature = typeof trackerSubFeatures.$inferInsert;
 export type TrackerWorkLog = typeof trackerWorkLogs.$inferSelect;
-export type InsertTrackerWorkLog = z.infer<typeof insertTrackerWorkLogSchema>;
-
+export type InsertTrackerWorkLog = typeof trackerWorkLogs.$inferInsert;
 export type TrackerTimelineExtension = typeof trackerTimelineExtensions.$inferSelect;
-export type InsertTrackerTimelineExtension = z.infer<typeof insertTrackerTimelineExtensionSchema>;
-
+export type InsertTrackerTimelineExtension = typeof trackerTimelineExtensions.$inferInsert;
 export type TrackerDependency = typeof trackerDependencies.$inferSelect;
-export type InsertTrackerDependency = z.infer<typeof insertTrackerDependencySchema>;
-
-export type TrackerAuditLog = typeof trackerAuditLogs.$inferSelect;
-export type InsertTrackerAuditLog = z.infer<typeof insertTrackerAuditLogSchema>;
-
+export type InsertTrackerDependency = typeof trackerDependencies.$inferInsert;
 export type TrackerCustomDropdown = typeof trackerCustomDropdowns.$inferSelect;
-export type InsertTrackerCustomDropdown = z.infer<typeof insertTrackerCustomDropdownSchema>;
+export type InsertTrackerCustomDropdown = typeof trackerCustomDropdowns.$inferInsert;
+export type TrackerAuditLog = typeof trackerAuditLogs.$inferSelect;
+export type InsertTrackerAuditLog = typeof trackerAuditLogs.$inferInsert;
+
 
 // Request Form Attachments
 export const requestAttachments = pgTable("request_attachments", {
