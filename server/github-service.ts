@@ -146,43 +146,7 @@ export class GitHubService {
     }
   }
 
-  async uploadFile(file: Buffer, filename: string): Promise<{ success: boolean; data?: any; message?: string }> {
-    if (!this.octokit || !this.config) {
-      return {
-        success: false,
-        message: 'GitHub client not configured',
-      };
-    }
-
-    try {
-      const content = file.toString('base64');
-      
-      const response = await this.octokit.rest.repos.createOrUpdateFileContents({
-        owner: this.config.owner,
-        repo: this.config.repo,
-        path: `assets/${filename}`,
-        message: `Upload ${filename}`,
-        content: content,
-      });
-
-      return {
-        success: true,
-        data: {
-          downloadUrl: response.data.content?.download_url,
-          htmlUrl: response.data.content?.html_url,
-          sha: response.data.content?.sha,
-        },
-      };
-    } catch (error: any) {
-      logger.error('Failed to upload file to GitHub:', error);
-      return {
-        success: false,
-        message: `Failed to upload file: ${error.message}`,
-      };
-    }
-  }
-
-  async createIssue(title: string, body: string, labels?: string[], attachments?: Array<{name: string, buffer: Buffer}>): Promise<{ success: boolean; message: string; data?: any }> {
+  async createIssue(title: string, body: string, labels?: string[]): Promise<{ success: boolean; message: string; data?: any }> {
     if (!this.octokit || !this.config) {
       return {
         success: false,
@@ -196,40 +160,11 @@ export class GitHubService {
         await this.ensureLabelsExist(labels);
       }
 
-      let finalBody = body;
-
-      // Upload attachments and add them to the issue body
-      if (attachments && attachments.length > 0) {
-        const uploadedFiles = [];
-        
-        for (const attachment of attachments) {
-          const uploadResult = await this.uploadFile(attachment.buffer, attachment.name);
-          if (uploadResult.success && uploadResult.data?.downloadUrl) {
-            uploadedFiles.push({
-              name: attachment.name,
-              url: uploadResult.data.downloadUrl
-            });
-          }
-        }
-
-        if (uploadedFiles.length > 0) {
-          finalBody += '\n\n## Screenshots\n';
-          uploadedFiles.forEach((file, index) => {
-            if (file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-              finalBody += `\n### Screenshot ${index + 1}\n`;
-              finalBody += `<img width="960" alt="${file.name}" src="${file.url}" />\n`;
-            } else {
-              finalBody += `\n- [${file.name}](${file.url})\n`;
-            }
-          });
-        }
-      }
-
       const response = await this.octokit.rest.issues.create({
         owner: this.config.owner,
         repo: this.config.repo,
         title,
-        body: finalBody,
+        body,
         labels: labels || [],
       });
 

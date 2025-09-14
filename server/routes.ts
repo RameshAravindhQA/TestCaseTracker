@@ -46,7 +46,7 @@ import {
   type Notebook,
   type NotebookCategory,
   type NotebookComment,
-
+  
   // Project Tracker imports
   type TrackerProject,
   type InsertTrackerProject,
@@ -122,50 +122,50 @@ const canAccessRequestAttachments = async (req: Request, res: Response, next: Ne
   try {
     const userId = req.session.userId!;
     const userRole = req.session.userRole;
-
+    
     // Admins can access everything
     if (userRole === 'Admin' || userRole === 'Super Admin') {
       return next();
     }
-
+    
     // For request-level access (GET /request-forms/:requestId/attachments, POST /request-forms/:requestId/attachments)
     if (req.params.requestId) {
       const requestId = parseInt(req.params.requestId);
       const request = await storage.getResourceRequest(requestId);
-
+      
       if (!request) {
         return res.status(404).json({ message: "Request not found" });
       }
-
+      
       // Allow if user is the request owner
       if (request.requestedById === userId) {
         return next();
       }
     }
-
+    
     // For attachment-level access (DELETE /request-forms/attachments/:attachmentId, GET /request-forms/attachments/:attachmentId/download)
     if (req.params.attachmentId) {
       const attachmentId = parseInt(req.params.attachmentId);
       const attachment = await storage.getRequestAttachment(attachmentId);
-
+      
       if (!attachment) {
         return res.status(404).json({ message: "Attachment not found" });
       }
-
+      
       // Allow if user uploaded the attachment
       if (attachment.uploadedById === userId) {
         return next();
       }
-
+      
       // Also check if user owns the request this attachment belongs to
       const request = await storage.getResourceRequest(attachment.requestId);
       if (request && request.requestedById === userId) {
         return next();
       }
     }
-
+    
     return res.status(403).json({ message: "Forbidden: You can only access your own request attachments" });
-
+    
   } catch (error) {
     console.error('Authorization check failed:', error);
     return res.status(500).json({ message: "Server error during authorization check" });
@@ -536,7 +536,7 @@ const configureRequestAttachmentUpload = () => {
     }
   });
 
-  return multer({
+  return multer({ 
     storage,
     limits: {
       fileSize: 50 * 1024 * 1024, // 50MB max file size
@@ -758,7 +758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (format === 'csv') {
         const csvData = [];
-
+        
         // Add project info
         csvData.push(['Project Export Report']);
         csvData.push(['Project Name', project.name]);
@@ -810,7 +810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         // Convert to CSV string
-        const csvString = csvData.map(row =>
+        const csvString = csvData.map(row => 
           row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
         ).join('\n');
 
@@ -1495,7 +1495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const publicUrl = `/uploads/request-attachments/${file.filename}`;
-
+      
       const attachment = await storage.createRequestAttachment({
         requestId,
         fileName: file.filename,
@@ -1517,7 +1517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.delete("/request-forms/attachments/:attachmentId", isAuthenticated, canAccessRequestAttachments, async (req, res) => {
     try {
       const attachmentId = parseInt(req.params.attachmentId);
-
+      
       // Get attachment details before deletion to clean up file
       const attachment = await storage.getRequestAttachment(attachmentId);
       if (!attachment) {
@@ -1526,7 +1526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Delete from storage
       const success = await storage.deleteRequestAttachment(attachmentId);
-
+      
       if (success) {
         // Clean up file from disk
         try {
@@ -1538,7 +1538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error(`Error deleting file ${attachment.filePath}:`, fileError);
           // Don't fail the request if file deletion fails
         }
-
+        
         res.json({ message: "Attachment deleted successfully" });
       } else {
         res.status(404).json({ message: "Attachment not found" });
@@ -1554,7 +1554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const attachmentId = parseInt(req.params.attachmentId);
       const attachment = await storage.getRequestAttachment(attachmentId);
-
+      
       if (!attachment) {
         return res.status(404).json({ message: "Attachment not found" });
       }
@@ -1578,7 +1578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Project Tracker API Routes
-
+  
   // Tracker Projects
   apiRouter.get("/tracker/projects", isAuthenticated, async (req, res) => {
     try {
@@ -1649,7 +1649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tracker Features
   apiRouter.get("/tracker/features", isAuthenticated, async (req, res) => {
     try {
-      const {projectId } = req.query;
+      const { projectId } = req.query;
       const features = await storage.getTrackerFeatures(
         projectId ? parseInt(projectId as string) : undefined
       );
@@ -1806,52 +1806,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/tracker/work-logs", isAuthenticated, async (req, res) => {
     try {
       const { projectId, featureId, subFeatureId, userId, startDate, endDate } = req.query;
-      const requestingUser = req.session?.userId;
-
-      console.log(`[API] Getting timesheets with filters:`, {
+      const workLogs = await storage.getTrackerWorkLogs({
         projectId: projectId ? parseInt(projectId as string) : undefined,
         featureId: featureId ? parseInt(featureId as string) : undefined,
         subFeatureId: subFeatureId ? parseInt(subFeatureId as string) : undefined,
         userId: userId ? parseInt(userId as string) : undefined,
         startDate: startDate as string,
         endDate: endDate as string,
-        requestingUser
       });
-
-      let workLogs: TrackerWorkLog[];
-
-      if (userId) {
-        // Get work logs for specific user
-        workLogs = await storage.getUserWorkLogs(parseInt(userId as string));
-      } else if (projectId) {
-        // Get work logs for specific project
-        workLogs = await storage.getProjectWorkLogs(parseInt(projectId as string));
-      } else {
-        // Get all work logs (admin view)
-        workLogs = await storage.getWorkLogs();
-      }
-
-      // Apply other filters if specified
-      if (featureId) {
-        const featureIdNum = parseInt(featureId as string);
-        workLogs = workLogs.filter(wl => wl.featureId === featureIdNum);
-      }
-      if (subFeatureId) {
-        const subFeatureIdNum = parseInt(subFeatureId as string);
-        workLogs = workLogs.filter(wl => wl.subFeatureId === subFeatureIdNum);
-      }
-      if (startDate) {
-        const startDateObj = new Date(startDate as string);
-        workLogs = workLogs.filter(wl => new Date(wl.date) >= startDateObj);
-      }
-      if (endDate) {
-        const endDateObj = new Date(endDate as string);
-        workLogs = workLogs.filter(wl => new Date(wl.date) <= endDateObj);
-      }
-
-      console.log(`[API] Returning ${workLogs.length} work logs for user ${requestingUser}:`,
-        workLogs.slice(0, 3).map(wl => ({ id: wl.id, projectId: wl.projectId, userId: wl.userId, description: wl.description })));
-
       res.json(workLogs);
     } catch (error) {
       console.error("Get tracker work logs error:", error);
@@ -3967,9 +3929,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user has access to this project
       if (req.session.userRole !== "Admin") {
         const projectMembers = await storage.getProjectMembers(projectId);
-        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+        const userMembership = projectMembers.find(member => member.userId === req.session.userId);
 
-        if (!isMember && project.createdById !== req.session.userId) {
+        if ((!userMembership || userMembership.role !== "Admin") && project.createdById !== req.session.userId) {
           return res.status(403).json({ message: "You don't have permission to add members to this project" });
         }
       }
@@ -4965,32 +4927,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse with schema that allows empty bugId (will be auto-generated)
       const bugData = insertBugSchema.parse(formData);
 
-      const newBug = await storage.createBug(bugData);
-
-      // Create initial history entry
-      await storage.createBugHistory({
-        bugId: newBug.id,
-        action: 'created',
-        description: `Bug "${newBug.title}" was created`,
-        userId: req.session.userId!,
-      });
+      const bug = await storage.createBug(bugData);
 
       // Log activity
       await storage.createActivity({
         userId: req.session.userId!,
-        action: "created",
+        action: "reported",
         entityType: "bug",
-        entityId: newBug.id,
+        entityId: bug.id,
         details: {
           projectId,
           projectName: project.name,
-          bugId: newBug.bugId,
-          title: newBug.title,
-          severity: newBug.severity
+          bugId: bug.bugId,
+          title: bug.title,
+          severity: bug.severity
         }
       });
 
-      res.status(201).json(newBug);
+      res.status(201).json(bug);
     } catch (error) {
       console.error("Create bug error:", error);
       if (error instanceof Error) {
@@ -5003,101 +4957,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.put("/bugs/:id", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const oldBug = await storage.getBug(id);
-      const updatedBug = await storage.updateBug(id, req.body);
+      const bugId = parseInt(req.params.id);
+      const bug = await storage.getBug(bugId);
 
-      if (!updatedBug) {
+      if (!bug) {
         return res.status(404).json({ message: "Bug not found" });
       }
 
-      // Create history entry for the update
-      if (oldBug) {
-        const changes = [];
-        Object.keys(req.body).forEach(key => {
-          // Check if the key exists in oldBug and if the value has changed
-          if (oldBug.hasOwnProperty(key) && oldBug[key] !== updatedBug[key]) {
-            changes.push({
-              field: key,
-              oldValue: oldBug[key],
-              newValue: updatedBug[key]
-            });
-          }
-        });
+      const project = await storage.getProject(bug.projectId);
 
-        if (changes.length > 0) {
-          for (const change of changes) {
-            await storage.createBugHistory({
-              bugId: id,
-              action: change.field === 'status' ? 'status_changed' : 'updated',
-              field: change.field,
-              oldValue: String(change.oldValue || ''),
-              newValue: String(change.newValue || ''),
-              description: `${change.field} changed from "${change.oldValue}" to "${change.newValue}"`,
-              userId: req.session.userId,
-            });
-          }
+      // Check if user has access to this project
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(bug.projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
+
+        if (!isMember && project?.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this bug" });
         }
       }
+
+      // Prevent changing project ID
+      if (req.body.projectId && req.body.projectId !== bug.projectId) {
+        return res.status(400).json({ message: "Cannot change project ID" });
+      }
+
+      // Check if module exists if changed
+      if (req.body.moduleId && req.body.moduleId !== bug.moduleId) {
+        const module = await storage.getModule(req.body.moduleId);
+        if (!module || module.projectId !== bug.projectId) {
+          return res.status(400).json({ message: "Invalid module ID" });
+        }
+      }
+
+      // Check if test case exists if changed
+      if (req.body.testCaseId && req.body.testCaseId !== bug.testCaseId) {
+        const testCase = await storage.getTestCase(req.body.testCaseId);
+        if (!testCase || testCase.projectId !== bug.projectId) {
+          return res.status(400).json({ message: "Invalid test case ID" });
+        }
+      }
+
+      // Process the update data with proper updatedAt timestamp
+      const updateData = {
+        ...req.body,
+        updatedAt: new Date()
+      };
+
+      const updatedBug = await storage.updateBug(bugId, updateData);
+
+      // Log status change activity specifically
+      if (req.body.status && req.body.status !== bug.status) {
+        await storage.createActivity({
+          userId: req.session.userId!,
+          action: `status changed to ${req.body.status}`,
+          entityType: "bug",
+          entityId: bugId,
+          details: {
+            projectId: bug.projectId,
+            projectName: project?.name,
+            bugId: bug.bugId,
+            title: bug.title,
+            prevStatus: bug.status,
+            newStatus: req.body.status
+          }
+        });
+      } else if (req.body.severity && req.body.severity !== bug.severity) {
+        await storage.createActivity({
+          userId: req.session.userId!,
+          action: `severity changed to ${req.body.severity}`,
+          entityType: "bug",
+          entityId: bugId,
+          details: {
+            projectId: bug.projectId,
+            projectName: project?.name,
+            bugId: bug.bugId,
+            title: bug.title,
+            prevSeverity: bug.severity,
+            newSeverity: req.body.severity
+          }
+        });
+      } else {
+        // General update activity
+        await storage.createActivity({
+          userId: req.session.userId!,
+          action: "updated",
+          entityType: "bug",
+          entityId: bugId,
+          details: {
+            projectId: bug.projectId,
+            projectName: project?.name,
+            bugId: bug.bugId,
+            title: bug.title
+          }
+        });
+      }
+
+      // Set cache headers to prevent caching
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
 
       res.json(updatedBug);
     } catch (error) {
       console.error("Update bug error:", error);
-      res.status(500).json({ message: "Server error" });
+      if (error instanceof Error) {
+        res.status(400).json({ message: `Invalid bug data: ${error.message}` });
+      } else {
+        res.status(400).json({ message: "Invalid bug data" });
+      }
     }
   });
 
-  // Get bug history
-  apiRouter.get("/bugs/:id/history", isAuthenticated, async (req, res) => {
-    try {
-      const bugId = parseInt(req.params.id);
-      const history = await storage.getBugHistory(bugId);
-
-      // Fetch user details for each history entry
-      const historyWithUsers = await Promise.all(
-        history.map(async (entry) => {
-          const user = await storage.getUser(entry.userId);
-          return {
-            ...entry,
-            user: user ? {
-              firstName: user.firstName,
-              lastName: user.lastName,
-              email: user.email
-            } : null
-          };
-        })
-      );
-
-      res.json(historyWithUsers);
-    } catch (error) {
-      console.error("Get bug history error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  // Sync bug history with GitHub
-  apiRouter.post("/bugs/:id/sync-github-history", isAuthenticated, async (req, res) => {
+  apiRouter.delete("/bugs/:id", isAuthenticated, async (req, res) => {
     try {
       const bugId = parseInt(req.params.id);
       const bug = await storage.getBug(bugId);
 
-      if (!bug || !bug.githubIssueNumber) {
-        return res.status(404).json({ message: "Bug not found or not linked to GitHub" });
+      if (!bug) {
+        return res.status(404).json({ message: "Bug not found" });
       }
 
-      // This would fetch GitHub events and sync them
-      // Implementation depends on your GitHub integration
-      const githubEvents = []; // Fetch from GitHub API
+      const project = await storage.getProject(bug.projectId);
 
-      await storage.syncBugHistoryWithGitHub(bugId, githubEvents);
+      // Check if user has access to this project
+      if (req.session.userRole !== "Admin") {
+        const projectMembers = await storage.getProjectMembers(bug.projectId);
+        const isMember = projectMembers.some(member => member.userId === req.session.userId);
 
-      res.json({ success: true, message: "GitHub history synced successfully" });
+        if (!isMember && project?.createdById !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have access to this bug" });
+        }
+      }
+
+      const success = await storage.deleteBug(bugId);
+
+      if (success) {
+        // Log activity
+        await storage.createActivity({
+          userId: req.session.userId!,
+          action: "deleted",
+          entityType: "bug",
+          entityId: bugId,
+          details: {
+            projectId: bug.projectId,
+            projectName: project?.name,
+            bugId: bug.bugId,
+            title: bug.title
+          }
+        });
+      }
+
+      res.json({ success });
     } catch (error) {
-      console.error("Sync GitHub history error:", error);
+      console.error("Delete bug error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
-
 
   // Traceability Matrix API endpoints
 
@@ -5429,9 +5444,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/projects/:projectId/document-folders", isAuthenticated, async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
-      const folderId = req.query.folderId ? parseInt(req.query.folderId as string) : undefined;
-
       const project = await storage.getProject(projectId);
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
@@ -5446,7 +5460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const folders = await storage.getDocumentFolders(projectId, folderId);
+      const folders = await storage.getDocumentFolders(projectId);
       res.json(folders);
     } catch (error) {
       console.error("Get document folders error:", error);
@@ -5558,9 +5572,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Check for circular reference by ensuring the new parent is not a descendant of this folder
           const getDescendantIds = async (parentId: number, visited = new Set<number>()): Promise<number[]> => {
+            if (visited.has(parentId)) return []; // Prevent infinite recursion if there'  function getDescendantIds(parentId: number, visited = new Set<number>()): Promise<number[]> {
             if (visited.has(parentId)) return []; // Prevent infinite recursion if there's a circular reference already
             visited.add(parentId);
-
             const children = (await storage.getDocumentFolders(folder.projectId))
               .filter(f => f.parentFolderId === parentId)
               .map(f => f.id);
@@ -5657,7 +5671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Check for circular reference
         const getDescendantIds = async (parentId: number, visited = new Set<number>()): Promise<number[]> => {
-          if (visited.has(parentId)) return []; // Prevent infinite recursion if there's a circular reference already
+          if (visited.has(parentId)) return [];
           visited.add(parentId);
 
           const children = (await storage.getDocumentFolders(folder.projectId))
@@ -5720,7 +5734,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const folderId = Number(req.params.id);
       if (isNaN(folderId)) {
         console.error("Invalid folder ID format");
-        return res.status(400).json({ message: "Invalid folder ID format" });
       }
 
       // Get folder for debugging and validation
@@ -5732,6 +5745,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Force success response even if folder notfound - this prevents UI issues
       // when deleting folders that might not exist in the backend but are shown in the UI
+      console.log("Found folder:", folder);
+
       if (!folder) {
         console.log(`Folder with ID ${folderId} not found but returning success anyway`);
         // Return success even when folder doesn't exist to ensure UI consistency
@@ -6168,7 +6183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(201).json(testSheet);
     } catch (error) {
-      console.error("Create test sheet error:", error);
+      console.error("Createtest sheet error:", error);
       res.status(400).json({ message: "Invalid test sheet data" });
     }
   });

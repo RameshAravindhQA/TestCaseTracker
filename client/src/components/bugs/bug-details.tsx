@@ -6,7 +6,6 @@ import { Bug } from "@/types";
 import { format } from "date-fns";
 import { Calendar, User, AlertTriangle, Flag, Settings, FileText, List, Target, Zap } from "lucide-react";
 import { BugComments } from "./bug-comments";
-import { BugHistory } from "./bug-history";
 
 interface BugDetailsProps {
   bug: Bug;
@@ -93,9 +92,6 @@ export function BugDetails({ bug, users = [] }: BugDetailsProps) {
         )}
       </CardContent>
     </Card>
-
-    {/* History Section */}
-    <BugHistory bugId={bug.id} />
 
     {/* Comments Section */}
     <Card>

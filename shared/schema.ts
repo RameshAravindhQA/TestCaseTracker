@@ -928,30 +928,6 @@ export type InsertBugComment = z.infer<typeof insertBugCommentSchema>;
 export type BugCommentReaction = typeof bugCommentReactions.$inferSelect;
 export type InsertBugCommentReaction = z.infer<typeof insertBugCommentReactionSchema>;
 
-// Bug History schema
-export const bugHistory = pgTable("bug_history", {
-  id: serial("id").primaryKey(),
-  bugId: integer("bug_id").notNull(),
-  action: text("action").notNull(), // 'created', 'updated', 'status_changed', 'assigned', 'commented', 'github_synced'
-  field: text("field"), // field that was changed
-  oldValue: text("old_value"), // previous value
-  newValue: text("new_value"), // new value
-  description: text("description"), // human readable description
-  userId: integer("user_id").notNull(),
-  githubEventId: text("github_event_id"), // GitHub event ID for sync
-  githubUrl: text("github_url"), // GitHub comment/event URL
-  metadata: json("metadata").default({}), // additional data
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const insertBugHistorySchema = createInsertSchema(bugHistory).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type BugHistory = typeof bugHistory.$inferSelect;
-export type InsertBugHistory = z.infer<typeof insertBugHistorySchema>;
-
 // Traceability Matrix - Custom Markers (already defined above, commented out to avoid duplication)
 // We already have this definition earlier in the file
 

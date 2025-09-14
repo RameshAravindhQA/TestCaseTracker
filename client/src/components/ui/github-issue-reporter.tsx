@@ -116,14 +116,8 @@ export function GitHubIssueReporter() {
     environment: getBrowserInfo(),
     browserInfo: getBrowserInfo(),
     screenshots: [],
-    additionalInfo: '',
-    customLabels: []
+    additionalInfo: ''
   });
-
-  const [customLabels, setCustomLabels] = useState<string[]>([
-    'bug', 'enhancement', 'documentation', 'question', 'help wanted',
-    'good first issue', 'wontfix', 'duplicate', 'invalid'
-  ]);
 
   const [pastedLinks, setPastedLinks] = useState<string[]>([]);
   const [clipboardText, setClipboardText] = useState('');
@@ -551,9 +545,6 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
       const bugId = bugResult.id;
 
       // Step 2: Create GitHub issue
-      const defaultLabels = [formData.priority, formData.severity, formData.category];
-      const allLabels = [...defaultLabels, ...(formData.customLabels || [])].filter(Boolean);
-      
       const githubResponse = await fetch(`/api/github/create-issue`, {
         method: 'POST',
         headers: {
@@ -562,7 +553,7 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
         body: JSON.stringify({
           title: formData.title,
           body: formatIssueDescription(),
-          labels: allLabels,
+          labels: formData.priority === 'critical' ? [formData.priority, formData.severity, formData.category] : [formData.priority, formData.severity, formData.category], // Example label mapping
           projectId: formData.projectId,
         }),
       });
@@ -900,52 +891,6 @@ ${formData.additionalInfo ? `## Additional Information\n${formData.additionalInf
                       placeholder="Detailed description of the issue"
                       rows={4}
                     />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">GitHub Labels</label>
-                    <Select 
-                      value={formData.customLabels?.[0] || ""} 
-                      onValueChange={(value) => {
-                        const currentLabels = formData.customLabels || [];
-                        if (value && !currentLabels.includes(value)) {
-                          setFormData(prev => ({ 
-                            ...prev, 
-                            customLabels: [...currentLabels, value]
-                          }));
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select labels for GitHub issue" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customLabels.map((label) => (
-                          <SelectItem key={label} value={label}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    {formData.customLabels && formData.customLabels.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {formData.customLabels.map((label, index) => (
-                          <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                            {label}
-                            <X 
-                              className="h-3 w-3 cursor-pointer" 
-                              onClick={() => {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  customLabels: prev.customLabels?.filter((_, i) => i !== index) || []
-                                }));
-                              }}
-                            />
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </TabsContent>
 
