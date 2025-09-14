@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,28 +35,30 @@ const workLogSchema = z.object({
 type WorkLogFormData = z.infer<typeof workLogSchema>;
 
 interface TrackerWorkLogFormProps {
+  workLog?: any;
   subFeature: any;
   projectId: number;
   onSubmit: (data: WorkLogFormData) => void;
   onCancel: () => void;
-  isLoading?: boolean;
+  isLoading: boolean;
 }
 
 export function TrackerWorkLogForm({
+  workLog,
   subFeature,
   projectId,
   onSubmit,
   onCancel,
-  isLoading = false
+  isLoading,
 }: TrackerWorkLogFormProps) {
   const form = useForm<WorkLogFormData>({
     resolver: zodResolver(workLogSchema),
     defaultValues: {
-      workDate: new Date().toISOString().split('T')[0],
-      hoursWorked: 1,
-      description: '',
-      workType: subFeature.workType || 'Development',
-      status: 'In Progress',
+      workDate: workLog?.workDate || new Date().toISOString().split('T')[0],
+      hoursWorked: workLog?.hoursWorked || 1,
+      description: workLog?.description || '',
+      workType: workLog?.workType || 'Development',
+      status: workLog?.status || 'In Progress',
     },
   });
 
@@ -69,8 +70,8 @@ export function TrackerWorkLogForm({
   const getDateInfo = () => {
     const startDate = subFeature.startDate || 'Not set';
     const endDate = subFeature.endDate || 'Not set';
-    const lastWorkDate = 'No previous logs'; // This would come from actual work logs
-    
+    const lastWorkDate = workLog?.workDate || 'No previous logs'; // This would come from actual work logs
+
     return { startDate, endDate, lastWorkDate };
   };
 
@@ -84,7 +85,7 @@ export function TrackerWorkLogForm({
           <User className="h-4 w-4" />
           Sub-Feature: {subFeature.name}
         </h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-blue-500" />
@@ -93,7 +94,7 @@ export function TrackerWorkLogForm({
               <p className="font-medium">{startDate}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-red-500" />
             <div>
@@ -101,7 +102,7 @@ export function TrackerWorkLogForm({
               <p className="font-medium">{endDate}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-green-500" />
             <div>
@@ -144,8 +145,8 @@ export function TrackerWorkLogForm({
                 <FormItem>
                   <FormLabel>Hours Worked *</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
+                    <Input
+                      type="number"
                       step="0.25"
                       min="0.25"
                       max="24"
@@ -219,7 +220,7 @@ export function TrackerWorkLogForm({
               <FormItem>
                 <FormLabel>Work Description *</FormLabel>
                 <FormControl>
-                  <Textarea 
+                  <Textarea
                     placeholder="Describe the work completed, issues encountered, next steps, etc."
                     className="min-h-[100px]"
                     {...field}
@@ -235,7 +236,7 @@ export function TrackerWorkLogForm({
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Adding...' : 'Add Work Log'}
+              {isLoading ? 'Saving...' : (workLog ? 'Save Changes' : 'Add Work Log')}
             </Button>
           </DialogFooter>
         </form>

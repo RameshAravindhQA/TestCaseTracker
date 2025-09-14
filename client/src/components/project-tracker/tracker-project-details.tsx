@@ -24,6 +24,7 @@ import { TrackerFeatureForm } from './tracker-feature-form';
 import { TrackerSubFeatureForm } from './tracker-subfeature-form';
 import { TrackerWorkLogForm } from './tracker-work-log-form';
 import WorkLogsList from './tracker-work-logs-list';
+import TimelineView from './tracker-timeline-view';
 import { format } from 'date-fns';
 
 interface TrackerProjectDetailsProps {
@@ -41,6 +42,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
   const [expandedFeatures, setExpandedFeatures] = useState<Set<number>>(new Set());
   const [showSubFeatureViewDialog, setShowSubFeatureViewDialog] = useState(false);
   const [showWorkLogForm, setShowWorkLogForm] = useState(false);
+  const [selectedWorkLog, setSelectedWorkLog] = useState<any>(null);
 
   // Fetch project details
   const { data: project } = useQuery({
@@ -213,6 +215,13 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
 
   const handleAddWorkLog = (subFeature: any) => {
     setSelectedSubFeature(subFeature);
+    setSelectedWorkLog(null);
+    setShowWorkLogForm(true);
+  };
+
+  const handleEditWorkLog = (workLog: any) => {
+    setSelectedWorkLog(workLog);
+    setSelectedSubFeature({ id: workLog.subFeatureId });
     setShowWorkLogForm(true);
   };
 
@@ -461,14 +470,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
         </TabsContent>
 
         <TabsContent value="timeline">
-          <Card>
-            <CardHeader>
-              <CardTitle>Timeline View</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Timeline data will be displayed here.</p>
-            </CardContent>
-          </Card>
+          <TimelineView projectId={projectId} />
         </TabsContent>
 
         <TabsContent value="work-logs">
@@ -485,20 +487,13 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
               </div>
             </CardHeader>
             <CardContent>
-              <WorkLogsList projectId={projectId} />
+              <WorkLogsList projectId={projectId} onEditWorkLog={handleEditWorkLog} />
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="reports">
-          <Card>
-            <CardHeader>
-              <CardTitle>Project Reports</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Detailed reports and analytics will be implemented here.</p>
-            </CardContent>
-          </Card>
+          <TrackerReports projectId={projectId} features={features} subFeatures={subFeatures} />
         </TabsContent>
       </Tabs>
 
@@ -607,10 +602,13 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
       <Dialog open={showWorkLogForm} onOpenChange={setShowWorkLogForm}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Add Work Log: {selectedSubFeature?.name}</DialogTitle>
+            <DialogTitle>
+              {selectedWorkLog ? 'Edit Work Log' : `Add Work Log: ${selectedSubFeature?.name}`}
+            </DialogTitle>
           </DialogHeader>
           {selectedSubFeature && (
             <TrackerWorkLogForm
+              workLog={selectedWorkLog}
               subFeature={selectedSubFeature}
               projectId={projectId}
               onSubmit={(data) => {
@@ -626,6 +624,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
               onCancel={() => {
                 setShowWorkLogForm(false);
                 setSelectedSubFeature(null);
+                setSelectedWorkLog(null);
               }}
             />
           )}

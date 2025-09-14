@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, User, Search, Filter, FileText, BarChart3, Download } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Calendar, Clock, User, Search, Filter, FileText, BarChart3, Download, Edit, Eye } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { format } from 'date-fns';
 
@@ -14,13 +15,16 @@ interface WorkLogsListProps {
   projectId?: number;
   featureId?: number;
   subFeatureId?: number;
+  onEditWorkLog?: (workLog: any) => void;
 }
 
-export function WorkLogsList({ projectId, featureId, subFeatureId }: WorkLogsListProps) {
+export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog }: WorkLogsListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
   const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>({});
+  const [selectedWorkLog, setSelectedWorkLog] = useState<any>(null);
+  const [showViewDialog, setShowViewDialog] = useState(false);
 
   // Fetch work logs
   const { data: workLogs, isLoading } = useQuery({
@@ -61,6 +65,17 @@ export function WorkLogsList({ projectId, featureId, subFeatureId }: WorkLogsLis
   }) || [];
 
   const totalHours = filteredWorkLogs.reduce((sum: number, log: any) => sum + (log.hoursWorked || 0), 0);
+
+  const handleViewWorkLog = (workLog: any) => {
+    setSelectedWorkLog(workLog);
+    setShowViewDialog(true);
+  };
+
+  const handleEditWorkLog = (workLog: any) => {
+    if (onEditWorkLog) {
+      onEditWorkLog(workLog);
+    }
+  };
 
   const statusColors = {
     'In Progress': 'bg-yellow-100 text-yellow-800',
@@ -225,8 +240,26 @@ export function WorkLogsList({ projectId, featureId, subFeatureId }: WorkLogsLis
                     </div>
                   </div>
 
-                  {/* Status and Work Type */}
+                  {/* Status, Work Type and Actions */}
                   <div className="flex flex-col items-end gap-2">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewWorkLog(log)}
+                        title="View Work Log"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditWorkLog(log)}
+                        title="Edit Work Log"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <Badge className={statusColors[log.status]}>
                       {log.status}
                     </Badge>
@@ -240,6 +273,71 @@ export function WorkLogsList({ projectId, featureId, subFeatureId }: WorkLogsLis
           ))
         )}
       </div>
+
+      {/* Work Log View Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Work Log Details</DialogTitle>
+          </DialogHeader>
+          {selectedWorkLog && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Sub-Feature</h4>
+                  <p className="mt-1">{getSubFeatureName(selectedWorkLog.subFeatureId)}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Work Date</h4>
+                  <p className="mt-1">{format(new Date(selectedWorkLog.workDate), 'MMMM dd, yyyy')}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Hours Worked</h4>
+                  <p className="mt-1 font-medium">{selectedWorkLog.hoursWorked} hours</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Work Type</h4>
+                  <Badge 
+                    variant="outline" 
+                    style={{ borderLeftColor: workTypeColors[selectedWorkLog.workType], borderLeftWidth: '4px' }}
+                  >
+                    {selectedWorkLog.workType}
+                  </Badge>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Status</h4>
+                  <Badge className={statusColors[selectedWorkLog.status]}>
+                    {selectedWorkLog.status}
+                  </Badge>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Created</h4>
+                  <p className="mt-1">{format(new Date(selectedWorkLog.createdAt), 'MMM dd, yyyy HH:mm')}</p>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm text-muted-foreground mb-2">Description</h4>
+                <div className="p-3 bg-gray-50 rounded border">
+                  <p className="text-sm leading-relaxed">{selectedWorkLog.description}</p>
+                </div>
+              </div>
+              {selectedWorkLog.attachments && selectedWorkLog.attachments.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground mb-2">Attachments</h4>
+                  <div className="space-y-2">
+                    {selectedWorkLog.attachments.map((attachment: any, index: number) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                        <FileText className="h-4 w-4" />
+                        <span className="text-sm">{attachment.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

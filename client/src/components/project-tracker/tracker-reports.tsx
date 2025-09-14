@@ -1,6 +1,8 @@
 
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -12,46 +14,54 @@ import {
 } from '@/components/ui/select';
 import { FileDown, Calendar, TrendingUp, Clock, Target } from 'lucide-react';
 
-interface TrackerProject {
-  id: number;
-  name: string;
-  status: 'Planning' | 'In Progress' | 'Completed' | 'On Hold' | 'Cancelled';
-  priority: 'Low' | 'Medium' | 'High' | 'Critical';
-  startDate?: string;
-  endDate?: string;
-  actualStartDate?: string;
-  actualEndDate?: string;
-  budget?: number;
-  currency?: string;
-  createdAt: string;
-}
-
 interface TrackerReportsProps {
-  projects: TrackerProject[];
+  projectId: number;
+  features?: any[];
+  subFeatures?: any[];
 }
 
-export function TrackerReports({ projects }: TrackerReportsProps) {
+export function TrackerReports({ projectId, features = [], subFeatures = [] }: TrackerReportsProps) {
   const [reportType, setReportType] = useState('summary');
   const [dateRange, setDateRange] = useState('all');
 
+  // Fetch work logs for reports
+  const { data: workLogs } = useQuery({
+    queryKey: [`/api/tracker/work-logs`, projectId],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/tracker/work-logs?projectId=${projectId}`);
+      if (!response.ok) throw new Error('Failed to fetch work logs');
+      return response.json();
+    },
+  });
+
+  // Fetch project data
+  const { data: project } = useQuery({
+    queryKey: [`/api/tracker/projects/${projectId}`],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/tracker/projects/${projectId}`);
+      if (!response.ok) throw new Error('Failed to fetch project');
+      return response.json();
+    },
+  });
+
   // Calculate delay statistics
   const getDelayStatistics = () => {
-    const projectsWithDelay = projects.filter(project => {
-      if (!project.endDate || !project.actualEndDate) return false;
-      return new Date(project.actualEndDate) > new Date(project.endDate);
+    const delayedSubFeatures = subFeatures.filter(subFeature => {
+      if (!subFeature.endDate || subFeature.status === 'Completed') return false;
+      return new Date() > new Date(subFeature.endDate);
     });
 
-    const totalDelayDays = projectsWithDelay.reduce((total, project) => {
-      const planned = new Date(project.endDate!);
-      const actual = new Date(project.actualEndDate!);
-      const diffTime = Math.abs(actual.getTime() - planned.getTime());
+    const totalDelayDays = delayedSubFeatures.reduce((total, subFeature) => {
+      const planned = new Date(subFeature.endDate);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - planned.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return total + diffDays;
     }, 0);
 
     return {
-      delayedProjects: projectsWithDelay.length,
-      averageDelay: projectsWithDelay.length > 0 ? Math.round(totalDelayDays / projectsWithDelay.length) : 0,
+      delayedProjects: delayedSubFeatures.length,
+      averageDelay: delayedSubFeatures.length > 0 ? Math.round(totalDelayDays / delayedSubFeatures.length) : 0,
       totalDelayDays,
     };
   };
@@ -61,28 +71,36 @@ export function TrackerReports({ projects }: TrackerReportsProps) {
   // Export functions
   const exportToCSV = () => {
     const headers = [
-      'Project Name',
+      'Sub-Feature Name',
+      'Feature',
       'Status',
-      'Priority',
+      'Work Type',
+      'Department',
       'Start Date',
       'End Date',
-      'Actual Start',
-      'Actual End',
-      'Budget',
+      'Estimated Hours',
+      'Total Work Hours',
       'Created Date',
     ];
 
-    const csvData = projects.map(project => [
-      project.name,
-      project.status,
-      project.priority,
-      project.startDate || '',
-      project.endDate || '',
-      project.actualStartDate || '',
-      project.actualEndDate || '',
-      project.budget ? `${project.currency} ${project.budget}` : '',
-      new Date(project.createdAt).toLocaleDateString(),
-    ]);
+    const csvData = subFeatures.map(subFeature => {
+      const feature = features.find(f => f.id === subFeature.featureId);
+      const logs = workLogs?.filter(wl => wl.subFeatureId === subFeature.id) || [];
+      const totalHours = logs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
+      
+      return [
+        subFeature.name,
+        feature?.name || 'Unknown',
+        subFeature.status,
+        subFeature.workType,
+        subFeature.department || '',
+        subFeature.startDate || '',
+        subFeature.endDate || '',
+        subFeature.estimatedHours || '',
+        totalHours,
+        new Date(subFeature.createdAt).toLocaleDateString(),
+      ];
+    });
 
     const csvContent = [headers, ...csvData]
       .map(row => row.map(cell => `"${cell}"`).join(','))
@@ -159,22 +177,22 @@ export function TrackerReports({ projects }: TrackerReportsProps) {
 
       {reportType === 'summary' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Project Status Summary */}
+          {/* Sub-Feature Status Summary */}
           <Card>
             <CardHeader>
-              <CardTitle>Project Status Summary</CardTitle>
+              <CardTitle>Sub-Feature Status Summary</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {['Planning', 'In Progress', 'Completed', 'On Hold', 'Cancelled'].map(status => {
-                  const count = projects.filter(p => p.status === status).length;
-                  const percentage = projects.length > 0 ? (count / projects.length) * 100 : 0;
+                {['Planning', 'In Progress', 'Completed', 'On Hold', 'Blocked'].map(status => {
+                  const count = subFeatures.filter(sf => sf.status === status).length;
+                  const percentage = subFeatures.length > 0 ? (count / subFeatures.length) * 100 : 0;
                   
                   return (
                     <div key={status} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline">{status}</Badge>
-                        <span className="text-sm">{count} projects</span>
+                        <span className="text-sm">{count} sub-features</span>
                       </div>
                       <span className="text-sm text-muted-foreground">
                         {Math.round(percentage)}%
@@ -186,31 +204,22 @@ export function TrackerReports({ projects }: TrackerReportsProps) {
             </CardContent>
           </Card>
 
-          {/* Priority Distribution */}
+          {/* Work Type Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle>Priority Distribution</CardTitle>
+              <CardTitle>Work Type Distribution</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {['Critical', 'High', 'Medium', 'Low'].map(priority => {
-                  const count = projects.filter(p => p.priority === priority).length;
-                  const percentage = projects.length > 0 ? (count / projects.length) * 100 : 0;
+                {['Development', 'QA', 'DevOps', 'Designing', 'Analysis', 'Documentation'].map(workType => {
+                  const count = subFeatures.filter(sf => sf.workType === workType).length;
+                  const percentage = subFeatures.length > 0 ? (count / subFeatures.length) * 100 : 0;
                   
                   return (
-                    <div key={priority} className="flex items-center justify-between">
+                    <div key={workType} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Badge 
-                          className={
-                            priority === 'Critical' ? 'bg-red-100 text-red-800' :
-                            priority === 'High' ? 'bg-orange-100 text-orange-800' :
-                            priority === 'Medium' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                          }
-                        >
-                          {priority}
-                        </Badge>
-                        <span className="text-sm">{count} projects</span>
+                        <Badge variant="outline">{workType}</Badge>
+                        <span className="text-sm">{count} sub-features</span>
                       </div>
                       <span className="text-sm text-muted-foreground">
                         {Math.round(percentage)}%
@@ -218,6 +227,35 @@ export function TrackerReports({ projects }: TrackerReportsProps) {
                     </div>
                   );
                 })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Work Hours Summary */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Work Hours Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">
+                    {subFeatures.reduce((sum, sf) => sum + (sf.estimatedHours || 0), 0)}h
+                  </p>
+                  <p className="text-sm text-muted-foreground">Estimated Hours</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">
+                    {workLogs?.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0) || 0}h
+                  </p>
+                  <p className="text-sm text-muted-foreground">Actual Hours</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600">
+                    {workLogs?.length || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Total Work Logs</p>
+                </div>
               </div>
             </CardContent>
           </Card>
