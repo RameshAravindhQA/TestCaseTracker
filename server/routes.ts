@@ -1303,6 +1303,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GitHub integrations routes
   apiRouter.use("/github", githubIntegrationsRouter);
 
+  // Register GitHub comments routes
+  const githubCommentsRoutes = (await import('./api/github-comments')).default;
+  app.use('/api/github/comments', githubCommentsRoutes);
+
   // Flow diagram routes
   apiRouter.use("/flow-diagrams", flowDiagramRoutes);
 
@@ -1849,7 +1853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tracker Sub-Features
   apiRouter.get("/tracker/sub-features", isAuthenticated, async (req, res) => {
     try {
-      const { featureId, projectId } = req.query;
+      const {featureId, projectId } = req.query;
       const subFeatures = await storage.getTrackerSubFeatures(
         featureId ? parseInt(featureId as string) : undefined,
         projectId ? parseInt(projectId as string) : undefined
@@ -1935,7 +1939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Work Logs
   apiRouter.get("/tracker/work-logs", isAuthenticated, async (req, res) => {
     try {
-      const { projectId, featureId, subFeatureId, userId, startDate, endDate } = req.query;
+      const {projectId, featureId, subFeatureId, userId, startDate, endDate } = req.query;
       const requestingUser = req.session?.userId;
 
       console.log(`[API] Getting timesheets with filters:`, {
@@ -3603,6 +3607,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to process chat message' });
     }
   });
+
+  // GitHub sync route
+  apiRouter.post("/github/sync/:bugId", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      if (!bugId) {
+        return res.status(400).json({ success: false, error: 'Invalid bug ID' });
+      }
+
+      const bug = await storage.getBug(bugId);
+      if (!bug) {
+        return res.status(404).json({ success: false, error: 'Bug not found' });
+      }
+
+      // Get GitHub configuration for the project
+      const githubConfig = await storage.getGitHubIntegration(bug.projectId);
+      if (!githubConfig || !githubConfig.isEnabled) {
+        return res.status(400).json({
+          success: false,
+          error: 'GitHub integration not configured for this project'
+        });
+      }
+
+      // Configure GitHub service
+      githubService.setConfig({
+        owner: githubConfig.githubUsername,
+        repo: githubConfig.repositoryName,
+        token: githubConfig.personalAccessToken
+      });
+
+      // Check if bug has a GitHub issue number
+      if (!bug.githubIssueNumber) {
+        return res.status(400).json({
+          success: false,
+          error: 'Bug is not linked to a GitHub issue'
+        });
+      }
+
+      // Sync comments from GitHub to system
+      try {
+        const githubComments = await syncGitHubComments(bug.githubIssueNumber, bugId, githubConfig);
+
+        res.json({
+          success: true,
+          message: 'Successfully synced with GitHub',
+          syncedComments: githubComments?.length || 0
+        });
+      } catch (syncError) {
+        console.error('GitHub sync error:', syncError);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to sync with GitHub: ' + syncError.message
+        });
+      }
+
+    } catch (error) {
+      console.error('GitHub sync route error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+      });
+    }
+  });
+
 
   // Serve uploaded files (profile pictures and documents)
   app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
@@ -7357,6 +7425,3689 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         message: 'Failed to sync GitHub comments'
       });
+    }
+  });
+
+  // GitHub sync route
+  apiRouter.post("/github/sync/:bugId", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      if (!bugId) {
+        return res.status(400).json({ success: false, error: 'Invalid bug ID' });
+      }
+
+      const bug = await storage.getBug(bugId);
+      if (!bug) {
+        return res.status(404).json({ success: false, error: 'Bug not found' });
+      }
+
+      // Get GitHub configuration for the project
+      const githubConfig = await storage.getGitHubIntegration(bug.projectId);
+      if (!githubConfig || !githubConfig.isEnabled) {
+        return res.status(400).json({
+          success: false,
+          error: 'GitHub integration not configured for this project'
+        });
+      }
+
+      // Configure GitHub service
+      githubService.setConfig({
+        owner: githubConfig.githubUsername,
+        repo: githubConfig.repositoryName,
+        token: githubConfig.personalAccessToken
+      });
+
+      // Check if bug has a GitHub issue number
+      if (!bug.githubIssueNumber) {
+        return res.status(400).json({
+          success: false,
+          error: 'Bug is not linked to a GitHub issue'
+        });
+      }
+
+      // Sync comments from GitHub to system
+      try {
+        const githubComments = await syncGitHubComments(bug.githubIssueNumber, bugId, githubConfig);
+
+        res.json({
+          success: true,
+          message: 'Successfully synced with GitHub',
+          syncedComments: githubComments?.length || 0
+        });
+      } catch (syncError) {
+        console.error('GitHub sync error:', syncError);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to sync with GitHub: ' + syncError.message
+        });
+      }
+
+    } catch (error) {
+      console.error('GitHub sync route error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+      });
+    }
+  });
+
+
+  // Register the main API router
+  app.use("/api", apiRouter);
+
+  // Create HTTP server
+  const httpServer = createServer(app);
+
+  return httpServer;
+}
+<replit_final_file>
+import express, { Router, type Express, Request, Response, NextFunction } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { GitHubService, githubService } from "./github-service";
+import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject, getTraceabilityMarkersByProject, deleteMatrixCell } from "./matrix-fix";
+import { automationService } from "./automation-service";
+import { logger } from "./logger";
+import { emailService } from "./email-service";
+import githubIntegrationsRouter from "./api/github-integrations";
+import { geminiService } from "./gemini-service";
+import { EnhancedAIService } from "./enhanced-ai-service";
+import { aiConfigStorage } from "./ai-config-storage";
+import {
+  insertUserSchema,
+  insertProjectSchema,
+  insertProjectMemberSchema,
+  insertModuleSchema,
+  insertTestCaseSchema,
+  insertBugSchema,
+  insertActivitySchema,
+  insertDocumentFolderSchema,
+  insertDocumentSchema,
+  insertTimeSheetSchema,
+  type TimeSheet,
+  type InsertTimeSheet,
+  type TimeSheetFolder,
+  type InsertTimeSheetFolder,
+  type Customer,
+  type InsertCustomer,
+  type CustomerProject,
+  type InsertCustomerProject,
+
+  type Sprint,
+  type InsertSprint,
+  type KanbanColumn,
+  type InsertKanbanColumn,
+  type KanbanCard,
+  type InsertKanbanCard,
+  insertCustomMarkerSchema,
+  insertMatrixCellSchema,
+  cellValueSchema,
+  type CustomMarker,
+  type InsertCustomMarker,
+  type MatrixCell,
+  type InsertMatrixCell,
+  type CellValue,
+  type Notebook,
+  type NotebookCategory,
+  type NotebookComment,
+
+  // Project Tracker imports
+  type TrackerProject,
+  type InsertTrackerProject,
+  type TrackerFeature,
+  type InsertTrackerFeature,
+  type TrackerSubFeature,
+  type InsertTrackerSubFeature,
+  type TrackerWorkLog,
+  type InsertTrackerWorkLog,
+  type TrackerTimelineExtension,
+  type InsertTrackerTimelineExtension,
+  type TrackerDependency,
+  type InsertTrackerDependency,
+  type TrackerAuditLog,
+  type InsertTrackerAuditLog,
+  type TrackerCustomDropdown,
+  type InsertTrackerCustomDropdown,
+  insertTrackerProjectSchema,
+  insertTrackerFeatureSchema,
+  insertTrackerSubFeatureSchema,
+  insertTrackerWorkLogSchema,
+  insertTrackerTimelineExtensionSchema,
+  insertTrackerDependencySchema,
+  insertTrackerAuditLogSchema,
+  insertTrackerCustomDropdownSchema
+} from "@shared/schema";
+import * as crypto from "crypto";
+import * as bcrypt from "bcrypt";
+import session from "express-session";
+import MemoryStore from "memorystore";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import flowDiagramRoutes from './api/flow-diagram-routes';
+import brdRoutes from "./brd-routes";
+import { OAuthService } from './oauth-service';
+import { GitHubService } from './github-service';
+
+// Initialize GitHub service
+const githubService = new GitHubService();
+
+// Initialize OAuth service
+const oauthService = new OAuthService();
+
+// Define session interface
+declare module "express-session" {
+  interface SessionData {
+    userId: number;
+    userRole: string;
+    userName: string;
+    userEmail: string;
+    oauthState?: string;
+    googleCodeVerifier?: string;
+  }
+}
+
+// Auth middleware
+const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+  if (req.session.userId) {
+    return next();
+  }
+  return res.status(401).json({ message: "Unauthorized" });
+};
+
+// Role check middleware
+const checkRole = (roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (req.session.userRole && roles.includes(req.session.userRole)) {
+      return next();
+    }
+    return res.status(403).json({ message: "Forbidden: Insufficient permissions" });
+  };
+};
+
+// Request ownership check middleware
+const canAccessRequestAttachments = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.session.userId!;
+    const userRole = req.session.userRole;
+
+    // Admins can access everything
+    if (userRole === 'Admin' || userRole === 'Super Admin') {
+      return next();
+    }
+
+    // For request-level access (GET /request-forms/:requestId/attachments, POST /request-forms/:requestId/attachments)
+    if (req.params.requestId) {
+      const requestId = parseInt(req.params.requestId);
+      const request = await storage.getResourceRequest(requestId);
+
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+
+      // Allow if user is the request owner
+      if (request.requestedById === userId) {
+        return next();
+      }
+    }
+
+    // For attachment-level access (DELETE /request-forms/attachments/:attachmentId, GET /request-forms/attachments/:attachmentId/download)
+    if (req.params.attachmentId) {
+      const attachmentId = parseInt(req.params.attachmentId);
+      const attachment = await storage.getRequestAttachment(attachmentId);
+
+      if (!attachment) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      // Allow if user uploaded the attachment
+      if (attachment.uploadedById === userId) {
+        return next();
+      }
+
+      // Also check if user owns the request this attachment belongs to
+      const request = await storage.getResourceRequest(attachment.requestId);
+      if (request && request.requestedById === userId) {
+        return next();
+      }
+    }
+
+    return res.status(403).json({ message: "Forbidden: You can only access your own request attachments" });
+
+  } catch (error) {
+    console.error('Authorization check failed:', error);
+    return res.status(500).json({ message: "Server error during authorization check" });
+  }
+};
+
+// Require authentication middleware
+const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  if (req.session.userId) {
+    next();
+  } else {
+    res.status(401).json({ message: "Unauthorized" });
+  }
+};
+
+// Configure uploads
+// Flag to prevent multiple directory creation
+let directoriesCreated = false;
+
+const createUploadDirectories = () => {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+
+  if (directoriesCreated) {
+    return {
+      uploadsDir,
+      profilePicturesDir: path.join(uploadsDir, 'profile-pictures'),
+      documentsDir: path.join(uploadsDir, 'documents'),
+      bugAttachmentsDir: path.join(uploadsDir, 'bug-attachment'),
+      requestAttachmentsDir: path.join(uploadsDir, 'request-attachments')
+    };
+  }
+  const profilePicturesDir = path.join(uploadsDir, 'profile-pictures');
+  const documentsDir = path.join(uploadsDir, 'documents');
+  const bugAttachmentsDir = path.join(uploadsDir, 'bug-attachment');
+  const requestAttachmentsDir = path.join(uploadsDir, 'request-attachments');
+
+  // Create uploads directory if it doesn't exist
+  if (!fs.existsSync(uploadsDir)) {
+    console.log(`Creating uploads directory: ${uploadsDir}`);
+    fs.mkdirSync(uploadsDir);
+  }
+
+  // Create profile pictures directory if it doesn't exist
+  if (!fs.existsSync(profilePicturesDir)) {
+    console.log(`Creating profile pictures directory: ${profilePicturesDir}`);
+    fs.mkdirSync(profilePicturesDir);
+  } else {
+    console.log(`Profile pictures directory exists: ${profilePicturesDir}`);
+  }
+
+  // Create documents directory if it doesn't exist
+  if (!fs.existsSync(documentsDir)) {
+    console.log(`Creating documents directory: ${documentsDir}`);
+    fs.mkdirSync(documentsDir);
+  } else {
+    console.log(`Documents directory exists: ${documentsDir}`);
+  }
+
+  // Create bug attachments directory if it doesn't exist
+  if (!fs.existsSync(bugAttachmentsDir)) {
+    console.log(`Creating bug attachments directory: ${bugAttachmentsDir}`);
+    fs.mkdirSync(bugAttachmentsDir);
+  } else {
+    console.log(`Bug attachments directory exists: ${bugAttachmentsDir}`);
+  }
+
+  // Create request attachments directory if it doesn't exist
+  if (!fs.existsSync(requestAttachmentsDir)) {
+    console.log(`Creating request attachments directory: ${requestAttachmentsDir}`);
+    fs.mkdirSync(requestAttachmentsDir);
+  } else {
+    console.log(`Request attachments directory exists: ${requestAttachmentsDir}`);
+  }
+
+  // Write a test file to verify permissions
+  try {
+    const testFilePath = path.join(profilePicturesDir, 'test.txt');
+    fs.writeFileSync(testFilePath, 'Test file to verify write permissions');
+    console.log(`Test file created successfully: ${testFilePath}`);
+
+    // Clean up test file
+    fs.unlinkSync(testFilePath);
+    console.log(`Test file removed successfully`);
+  } catch (error) {
+    console.error(`Error writing test file: ${error}`);
+  }
+
+  // Mark directories as created to prevent repetitive runs
+  directoriesCreated = true;
+
+  return { uploadsDir, profilePicturesDir, documentsDir, bugAttachmentsDir, requestAttachmentsDir };
+};
+
+// Helper function to test GitHub connection
+async function testGitHubConnection(owner: string, repo: string, token: string) {
+  try {
+    console.log(`🔗 Testing GitHub connection for ${owner}/${repo}`);
+
+    // Test 1: Verify token by getting user info
+    console.log('📋 Step 1: Verifying GitHub token...');
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'User-Agent': 'TestCaseTracker/1.0.0',
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!userResponse.ok) {
+      const errorText = await userResponse.text();
+      console.error('❌ GitHub user API error:', userResponse.status, errorText);
+
+      if (userResponse.status === 401) {
+        return {
+          success: false,
+          message: 'Invalid GitHub token. Please check your Personal Access Token and ensure it has the correct permissions.',
+          step: 'token_verification'
+        };
+      }
+
+      return {
+        success: false,
+        message: `GitHub API error: ${userResponse.status} ${userResponse.statusText}`,
+        step: 'token_verification'
+      };
+    }
+
+    const user = await userResponse.json();
+    console.log('✅ GitHub user authenticated:', user.login);
+
+    // Test 2: Check if repository exists and is accessible
+    console.log('📋 Step 2: Checking repository access...');
+    const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'User-Agent': 'TestCaseTracker/1.0.0',
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!repoResponse.ok) {
+      const errorText = await repoResponse.text();
+      console.error('❌ GitHub repo API error:', repoResponse.status, errorText);
+
+      if (repoResponse.status === 404) {
+        return {
+          success: false,
+          message: 'Repository not found. Please check the owner/repository name or ensure the repository exists and is accessible.',
+          step: 'repository_access'
+        };
+      }
+
+      if (repoResponse.status === 403) {
+        return {
+          success: false,
+          message: 'Access forbidden. Your token may lack required permissions. Please generate a new token with "repo" scope.',
+          step: 'repository_access'
+        };
+      }
+
+      return {
+        success: false,
+        message: `Failed to access repository: ${repoResponse.status} ${repoResponse.statusText}`,
+        step: 'repository_access'
+      };
+    }
+
+    const repoData = await repoResponse.json();
+    console.log('✅ GitHub repository accessible:', repoData.full_name);
+
+    // Test 3: Check if we can create issues (requires appropriate permissions)
+    console.log('📋 Step 3: Checking issue creation permissions...');
+    const hasIssuesPermission = repoData.permissions?.admin || repoData.permissions?.push || repoData.permissions?.maintain;
+
+    console.log('🔒 Repository permissions:', repoData.permissions);
+
+    if (!hasIssuesPermission) {
+      return {
+        success: false,
+        message: 'Token does not have sufficient permissions to create issues. Please ensure the token has "repo" or "public_repo" scope.',
+        step: 'permissions_check',
+        data: {
+          user: user.login,
+          repo: repoData.full_name,
+          permissions: repoData.permissions,
+          hasIssues: repoData.has_issues,
+        }
+      };
+    }
+
+    console.log('✅ All GitHub connection tests passed!');
+
+    return {
+      success: true,
+      message: 'GitHub connection successful! Repository is accessible and token has required permissions.',
+      step: 'complete',
+      data: {
+        user: user.login,
+        repo: repoData.full_name,
+        permissions: repoData.permissions,
+        hasIssues: repoData.has_issues,
+        tokenScopes: userResponse.headers.get('x-oauth-scopes') || 'unknown'
+      }
+    };
+
+  } catch (error: any) {
+    console.error('❌ GitHub connection test failed:', error);
+
+    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+      return {
+        success: false,
+        message: 'Network error. Please check your internet connection and try again.',
+        step: 'network_error'
+      };
+    }
+
+    return {
+      success: false,
+      message: `GitHub API Error: ${error.message || 'Unknown error occurred'}`,
+      step: 'unknown_error'
+    };
+  }
+}
+
+// Configure multer for profile picture uploads
+const configureProfilePictureUpload = () => {
+  const { profilePicturesDir } = createUploadDirectories();
+
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, profilePicturesDir);
+    },
+    filename: (req, file, cb) => {
+      // Generate unique filename with user ID and timestamp
+      const userId = req.session.userId;
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      cb(null, `user-${userId}-${timestamp}${ext}`);
+    }
+  });
+
+  return multer({
+    storage,
+    limits: {
+      fileSize: 2 * 1024 * 1024, // 2MB max file size
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept only images
+      if (!file.mimetype.startsWith('image/')) {
+        return cb(new Error('Only image files are allowed'));
+      }
+      cb(null, true);
+    }
+  });
+};
+
+// Configure multer for bug attachment uploads
+const configureBugAttachmentUpload = () => {
+  const { bugAttachmentsDir } = createUploadDirectories();
+
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, bugAttachmentsDir);
+    },
+    filename: (req, file, cb) => {
+      // Generate unique filename with bug ID (if available) and timestamp
+      const userId = req.session.userId;
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      const sanitizedOriginalName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+      cb(null, `bug-${userId}-${sanitizedOriginalName}-${timestamp}${ext}`);
+    }
+  });
+
+  return multer({
+    storage,
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB max file size to accommodate videos
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept images, videos, PDFs, and common document types
+      const acceptedTypes = [
+        // Images
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+        // Videos - expanded list
+        'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-flv',
+        'video/x-matroska', 'video/x-ms-wmv', 'video/3gpp', 'video/mpeg', 'video/avi', 'video/x-ms-asf',
+        // Documents
+        'application/pdf',
+        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // Word
+        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // Excel
+        'text/plain', 'text/csv',
+        // Archives
+        'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'
+      ];
+
+      console.log(`Received file upload attempt: ${file.originalname}, mimetype: ${file.mimetype}`);
+
+      // Accept all files for now - mimetype detection can be unreliable
+      // particularly with video files and different browser implementations
+      if (!file.mimetype || acceptedTypes.includes(file.mimetype)) {
+        return cb(null, true);
+      }
+
+      // For files with unrecognized mime types, check file extensions
+      const ext = path.extname(file.originalname).toLowerCase();
+      const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.pdf', '.doc', '.docx',
+                          '.xls', '.xlsx', '.txt', '.csv', '.zip', '.mp4', '.webm', '.avi', '.mov',
+                          '.mkv', '.flv', '.wmv', '.ogv', '.3gp'];
+
+      if (allowedExts.includes(ext)) {
+        return cb(null, true);
+      }
+
+      // If we get here, the file type is not supported
+      console.log(`Rejected file: ${file.originalname} with mimetype: ${file.mimetype} and extension: ${ext}`);
+      cb(new Error('File type not supported. Please upload an image, video, or document.'));
+    }
+  });
+};
+
+// Configure multer for document uploads
+const configureDocumentUpload = () => {
+  const { uploadsDir } = createUploadDirectories();
+  const documentsDir = path.join(uploadsDir, 'documents');
+
+  // Create documents directory if it doesn't exist
+  if (!fs.existsSync(documentsDir)) {
+    fs.mkdirSync(documentsDir);
+  }
+
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, documentsDir);
+    },
+    filename: (req, file, cb) => {
+      // Generate unique filename with document details and timestamp
+      const uniqueId = crypto.randomBytes(8).toString('hex');
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      const baseName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+      cb(null, `${baseName}-${timestamp}${ext}`);
+    }
+  });
+
+  return multer({
+    storage,
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB max file size
+    }
+  });
+};
+
+// Configure multer for request attachment uploads
+const configureRequestAttachmentUpload = () => {
+  const { requestAttachmentsDir } = createUploadDirectories();
+
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, requestAttachmentsDir);
+    },
+    filename: (req, file, cb) => {
+      const userId = req.session.userId;
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      const sanitizedOriginalName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
+      cb(null, `request-${userId}-${sanitizedOriginalName}-${timestamp}${ext}`);
+    }
+  });
+
+  return multer({
+    storage,
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB max file size
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept images, documents, and common file types
+      const acceptedTypes = [
+        // Images
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+        // Documents
+        'application/pdf',
+        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain', 'text/csv',
+        // Archives
+        'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'
+      ];
+
+      console.log(`Request attachment upload attempt: ${file.originalname}, mimetype: ${file.mimetype}`);
+
+      if (acceptedTypes.includes(file.mimetype)) {
+        return cb(null, true);
+      }
+
+      // Check by file extension as fallback
+      const ext = path.extname(file.originalname).toLowerCase();
+      const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.pdf', '.doc', '.docx',
+                          '.xls', '.xlsx', '.txt', '.csv', '.zip', '.rar', '.7z'];
+
+      if (allowedExts.includes(ext)) {
+        return cb(null, true);
+      }
+
+      console.log(`Rejected request attachment: ${file.originalname} with mimetype: ${file.mimetype}`);
+      cb(new Error('File type not supported. Please upload an image, document, or archive file.'));
+    }
+  });
+};
+
+// Backward compatibility function to handle old bug-attachments directory
+const migrateOldDirectories = () => {
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  const oldBugAttachmentsDir = path.join(uploadsDir, 'bug-attachments');
+  const newBugAttachmentDir = path.join(uploadsDir, 'bug-attachment');
+
+  // If the old directory exists and the new one doesn't, rename it
+  if (fs.existsSync(oldBugAttachmentsDir) && !fs.existsSync(newBugAttachmentDir)) {
+    console.log(`Migrating bug attachments directory from ${oldBugAttachmentsDir} to ${newBugAttachmentDir}`);
+    try {
+      fs.renameSync(oldBugAttachmentsDir, newBugAttachmentDir);
+      console.log('Directory migration completed successfully');
+    } catch (error) {
+      console.error('Error migrating bug attachments directory:', error);
+    }
+  }
+};
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Handle any directory migrations first
+  migrateOldDirectories();
+
+  // Create upload directories
+  const { uploadsDir } = createUploadDirectories();
+
+  // Configure uploads
+  const profilePictureUpload = configureProfilePictureUpload();
+  const bugAttachmentUpload = configureBugAttachmentUpload();
+  const documentUpload = configureDocumentUpload(); // Document upload is configured above with configureDocumentUpload()
+  const requestAttachmentUpload = configureRequestAttachmentUpload();
+
+
+  // Setup session store
+  const SessionStore = MemoryStore(session);
+  const sessionStore = new SessionStore({
+    checkPeriod: 86400000 // prune expired entries every 24h
+  });
+
+  // Production-ready session configuration with security hardening
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Trust proxy in production (for secure cookies behind Replit proxy)
+  if (isProduction) {
+    app.set('trust proxy', 1);
+  }
+
+  // Enforce secure session secret in production
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (isProduction && (!sessionSecret || sessionSecret.length < 32)) {
+    console.error('FATAL: SESSION_SECRET must be set and at least 32 characters in production');
+    process.exit(1);
+  }
+
+  app.use(session({
+    secret: sessionSecret || "test-track-secret",
+    resave: false,
+    saveUninitialized: false,
+    store: sessionStore,
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      secure: isProduction, // Use secure cookies in production
+      httpOnly: true,
+      sameSite: 'lax' // Lax required for OAuth callbacks to work across domains
+    }
+  }));
+
+  // Serve static uploads directory
+  app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
+    // Log request for debugging
+    console.log(`File access request for: ${req.path}`);
+
+    // Clean up the path to handle all possible formats
+    let cleanPath = req.path;
+    // Remove any /uploads prefix if it's included and double slashes
+    cleanPath = cleanPath.replace(/^\/uploads\/?/, '').replace(/\/+/g, '/');
+
+    // Make sure bug-attachment path is properly handled
+    if (cleanPath.startsWith('bug-attachment/')) {
+      console.log('Found bug attachment path');
+    } else if (cleanPath.startsWith('bug-attachments/')) {
+      // Handle legacy path format - redirect to new format
+      console.log('Found legacy bug-attachments path, redirecting to bug-attachment');
+      // Extract the filename after bug-attachments/
+      const filename = cleanPath.replace(/^bug-attachments\/?/, '');
+      cleanPath = `bug-attachment/${filename}`;
+      console.log(`Redirected to: ${cleanPath}`);
+    }
+
+    const filePath = path.join(process.cwd(), 'uploads', cleanPath);
+    console.log(`Resolved file path: ${filePath}`);
+
+    // Validate the path to prevent directory traversal attacks
+    if (!filePath.startsWith(path.join(process.cwd(), 'uploads'))) {
+      console.error(`Security protection: Attempted access to unauthorized path: ${filePath}`);
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      console.error(`File not found: ${filePath}`);
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    // Set proper content type based on file extension
+    const ext = path.extname(filePath).toLowerCase();
+
+    // Define a content type mapping
+    const contentTypes: Record<string, string> = {
+      // Images
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+      '.ico': 'image/x-icon',
+
+      // Videos
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.ogv': 'video/ogg',
+      '.mov': 'video/quicktime',
+      '.avi': 'video/x-msvideo',
+      '.flv': 'video/x-flv',
+      '.mkv': 'video/x-matroska',
+      '.wmv': 'video/x-ms-wmv',
+      '.3gp': 'video/3gpp',
+      '.mpg': 'video/mpeg',
+      '.mpeg': 'video/mpeg',
+
+      // Documents
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.ppt': 'application/vnd.ms-powerpoint',
+      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+
+      // Text
+      '.txt': 'text/plain',
+      '.csv': 'text/csv',
+      '.html': 'text/html',
+      '.htm': 'text/html',
+      '.css': 'text/css',
+      '.js': 'text/javascript',
+      '.ts': 'text/plain',
+      '.json': 'application/json',
+      '.md': 'text/markdown',
+
+      // Archives
+      '.zip': 'application/zip',
+      '.rar': 'application/x-rar-compressed',
+      '.7z': 'application/x-7z-compressed',
+      '.tar': 'application/x-tar',
+      '.gz': 'application/gzip',
+    };
+
+    // Set the content type if we know it, otherwise let the browser determine it
+    if (contentTypes[ext]) {
+      res.setHeader('Content-Type', contentTypes[ext]);
+    }
+
+    // Add cache control headers to prevent caching issues
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    // Set content disposition to help with downloading files
+    // Use "inline" for files that can be viewed in browser
+    const inlineTypes = [
+      // Images
+      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+      // Documents that can be viewed in browser
+      '.pdf', '.txt', '.html', '.htm',
+      // Videos that can be viewed in browser
+      '.mp4', '.webm', '.ogv'
+    ];
+    const disposition = inlineTypes.includes(ext) ? 'inline' : 'attachment';
+
+    // Only set filename for attachment disposition
+    if (disposition === 'attachment') {
+      const fileName = path.basename(filePath);
+      res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
+    }
+
+    // Log file access for debugging
+    console.log(`Serving file: ${filePath} with content type: ${contentTypes[ext] || 'auto-determined'}`);
+
+    // Serve the file
+    res.sendFile(filePath);
+  });
+
+
+  // Store session store reference for WebSocket access
+  app.locals.sessionStore = sessionStore;
+
+  const apiRouter = Router();
+
+  // AI Provider Diagnostic endpoint
+  apiRouter.get("/ai/diagnose", isAuthenticated, async (req, res) => {
+    try {
+      console.log('🔍 Starting AI provider diagnosis...');
+
+      const diagnosis = {
+        timestamp: new Date().toISOString(),
+        environment: {
+          nodeEnv: process.env.NODE_ENV,
+          hasGoogleApiKey: !!process.env.GOOGLE_API_KEY,
+          hasOpenaiApiKey: !!process.env.OPENAI_API_KEY,
+          googleKeyValid: process.env.GOOGLE_API_KEY?.startsWith('AIza') || false,
+          openaiKeyValid: process.env.OPENAI_API_KEY?.startsWith('sk-') || false
+        },
+        providerStatus: EnhancedAIService.getProviderStatus(),
+        availableProviders: EnhancedAIService.getAvailableProviders(),
+        testResults: {}
+      };
+
+      // Test each provider with a simple request
+      const testRequest = {
+        requirement: 'Simple login test',
+        testType: 'functional',
+        priority: 'Medium',
+        inputType: 'text' as const
+      };
+
+      // Test Gemini
+      try {
+        console.log('🧪 Testing Gemini provider...');
+        const geminiResult = await EnhancedAIService.generateTestCases({ ...testRequest, aiProvider: 'gemini' });
+        diagnosis.testResults.gemini = {
+          success: true,
+          testCasesGenerated: geminiResult.testCases.length,
+          source: geminiResult.source,
+          isRealAI: !geminiResult.source.includes('mock')
+        };
+      } catch (error: any) {
+        diagnosis.testResults.gemini = {
+          success: false,
+          error: error.message,
+          isRealAI: false
+        };
+      }
+
+      // Test OpenAI
+      try {
+        console.log('🧪 Testing OpenAI provider...');
+        const openaiResult = await EnhancedAIService.generateTestCases({ ...testRequest, aiProvider: 'openai' });
+        diagnosis.testResults.openai = {
+          success: true,
+          testCasesGenerated: openaiResult.testCases.length,
+          source: openaiResult.source,
+          isRealAI: !openaiResult.source.includes('mock')
+        };
+      } catch (error: any) {
+        diagnosis.testResults.openai = {
+          success: false,
+          error: error.message,
+          isRealAI: false
+        };
+      }
+
+      console.log('🔍 Diagnosis complete:', diagnosis.testResults);
+
+      res.json({
+        success: true,
+        diagnosis,
+        summary: {
+          workingRealProviders: Object.entries(diagnosis.testResults)
+            .filter(([_, result]: [string, any]) => result.success && result.isRealAI)
+            .map(([provider, _]) => provider),
+          totalProviders: Object.keys(diagnosis.testResults).length
+        }
+      });
+
+    } catch (error: any) {
+      console.error('❌ AI diagnosis failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Diagnosis failed',
+        details: error.message
+      });
+    }
+  });
+
+  // Project export endpoints
+  apiRouter.get("/projects/:id/export", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const format = req.query.format as string;
+
+      if (!format || !['csv', 'pdf'].includes(format)) {
+        return res.status(400).json({ error: 'Invalid format. Use csv or pdf.' });
+      }
+
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+
+      // Get project data
+      const modules = await storage.getModulesByProject(projectId);
+      const testCases = await storage.getTestCasesByProject(projectId);
+      const bugs = await storage.getBugsByProject(projectId);
+
+      if (format === 'csv') {
+        const csvData = [];
+
+        // Add project info
+        csvData.push(['Project Export Report']);
+        csvData.push(['Project Name', project.name]);
+        csvData.push(['Description', project.description || '']);
+        csvData.push(['Status', project.status || '']);
+        csvData.push(['Created', project.createdAt ? new Date(project.createdAt).toLocaleDateString() : '']);
+        csvData.push(['']);
+
+        // Add modules
+        csvData.push(['Modules']);
+        csvData.push(['Module ID', 'Name', 'Description', 'Status', 'Created']);
+        modules.forEach(module => {
+          csvData.push([
+            module.moduleId,
+            module.name,
+            module.description || '',
+            module.status || '',
+            module.createdAt ? new Date(module.createdAt).toLocaleDateString() : ''
+          ]);
+        });
+        csvData.push(['']);
+
+        // Add test cases
+        csvData.push(['Test Cases']);
+        csvData.push(['Test Case ID', 'Feature', 'Status', 'Priority', 'Created']);
+        testCases.forEach(tc => {
+          csvData.push([
+            tc.testCaseId,
+            tc.feature || '',
+            tc.status || '',
+            tc.priority || '',
+            tc.createdAt ? new Date(tc.createdAt).toLocaleDateString() : ''
+          ]);
+        });
+        csvData.push(['']);
+
+        // Add bugs
+        csvData.push(['Bugs']);
+        csvData.push(['Bug ID', 'Title', 'Status', 'Severity', 'Priority', 'Created']);
+        bugs.forEach(bug => {
+          csvData.push([
+            bug.bugId,
+            bug.title || '',
+            bug.status || '',
+            bug.severity || '',
+            bug.priority || '',
+            bug.dateReported ? new Date(bug.dateReported).toLocaleDateString() : ''
+          ]);
+        });
+
+        // Convert to CSV string
+        const csvString = csvData.map(row =>
+          row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+        ).join('\n');
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${project.name}-export.csv"`);
+        res.send(csvString);
+      } else if (format === 'pdf') {
+        // For PDF, return JSON data that the client will use to generate PDF
+        res.json({
+          project,
+          modules,
+          testCases,
+          bugs,
+          stats: {
+            totalModules: modules.length,
+            totalTestCases: testCases.length,
+            totalBugs: bugs.length,
+            passedTestCases: testCases.filter(tc => tc.status === 'Pass').length,
+            failedTestCases: testCases.filter(tc => tc.status === 'Fail').length,
+            openBugs: bugs.filter(bug => bug.status === 'Open').length,
+            resolvedBugs: bugs.filter(bug => bug.status === 'Resolved').length
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Project export error:', error);
+      res.status(500).json({ error: 'Failed to export project' });
+    }
+  });
+
+  // Test endpoint for AI service functionality
+  apiRouter.post("/ai/test-generation", isAuthenticated, async (req, res) => {
+    try {
+      console.log('🧪 Testing AI generation service...');
+
+      const testRequest = {
+        requirement: req.body.requirement || 'Test user registration form with email validation',
+        projectContext: 'Test Project',
+        moduleContext: 'Registration Module',
+        testType: req.body.testType || 'functional',
+        priority: req.body.priority || 'High',
+        inputType: 'text' as const,
+        aiProvider: req.body.aiProvider || 'gemini' as const
+      };
+
+      console.log('🔮 Calling EnhancedAIService.generateTestCases with test request...');
+      const result = await EnhancedAIService.generateTestCases(testRequest);
+
+      console.log('✅ AI generation test completed:', {
+        success: result.success,
+        testCasesCount: result.testCases?.length || 0,
+        source: result.source,
+        provider: result.provider,
+        isRealAI: !result.source.includes('mock') && !result.source.includes('fallback')
+      });
+
+      res.json({
+        success: true,
+        result,
+        testInfo: {
+          testCasesGenerated: result.testCases?.length || 0,
+          source: result.source,
+          provider: result.provider,
+          message: result.message,
+          isRealAI: !result.source.includes('mock') && !result.source.includes('fallback'),
+          aiStatus: EnhancedAIService.getProviderStatus()
+        }
+      });
+
+    } catch (error: any) {
+      console.error('❌ AI generation test failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'AI generation test failed',
+        details: error.message,
+        aiStatus: EnhancedAIService.getProviderStatus()
+      });
+    }
+  });
+
+  // Simple AI provider test endpoint
+  apiRouter.get("/ai/test-providers", isAuthenticated, async (req, res) => {
+    try {
+      console.log('🔍 Testing AI providers individually...');
+
+      const results = {
+        gemini: { available: false, error: null, tested: false },
+        openai: { available: false, error: null, tested: false }
+      };
+
+      // Test Gemini
+      if (EnhancedAIService.getProviderStatus().gemini.ready) {
+        try {
+          results.gemini.tested = true;
+          await EnhancedAIService.testProvider('gemini');
+          results.gemini.available = true;
+          console.log('✅ Gemini test passed');
+        } catch (error: any) {
+          results.gemini.error = error.message;
+          console.log('❌ Gemini test failed:', error.message);
+        }
+      } else {
+        results.gemini.error = EnhancedAIService.getProviderStatus().gemini.error;
+      }
+
+      // Test OpenAI
+      if (EnhancedAIService.getProviderStatus().openai.ready) {
+        try {
+          results.openai.tested = true;
+          await EnhancedAIService.testProvider('openai');
+          results.openai.available = true;
+          console.log('✅ OpenAI test passed');
+        } catch (error: any) {
+          results.openai.error = error.message;
+          console.log('❌ OpenAI test failed:', error.message);
+        }
+      } else {
+        results.openai.error = EnhancedAIService.getProviderStatus().openai.error;
+      }
+
+      res.json({
+        success: true,
+        results,
+        summary: {
+          workingProviders: Object.entries(results).filter(([_, r]) => r.available).map(([name, _]) => name),
+          availableProviders: Object.keys(results).length,
+          mockServiceStatus: 'Available'
+        },
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error('❌ Provider test failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Provider test failed',
+        details: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Add comprehensive AI debugging endpoint
+  apiRouter.get("/ai/debug-comprehensive", isAuthenticated, async (req, res) => {
+    try {
+      console.log('🔍 Comprehensive AI Debug Check Started');
+
+      const debugInfo = {
+        timestamp: new Date().toISOString(),
+        environment: {
+          nodeEnv: process.env.NODE_ENV,
+          platform: process.platform,
+          nodeVersion: process.version
+        },
+        availableProviders: EnhancedAIService.getAvailableProviders(),
+        testGeneration: {
+          mockServiceWorking: true,
+          fallbackMechanism: true
+        }
+      };
+
+      // Test mock generation
+      try {
+        const testRequest = {
+          requirement: 'Test debug generation',
+          testType: 'functional',
+          priority: 'Medium',
+          inputType: 'text' as const,
+          aiProvider: 'gemini' as const
+        };
+
+        console.log('🧪 Testing mock generation...');
+        const mockResult = await EnhancedAIService.generateTestCases(testRequest);
+        debugInfo.testGeneration = {
+          mockServiceWorking: mockResult.testCases.length > 0,
+          fallbackMechanism: mockResult.source === 'mock-service',
+          testCasesGenerated: mockResult.testCases.length,
+          source: mockResult.source,
+          provider: mockResult.provider
+        };
+        console.log('✅ Mock generation test successful');
+      } catch (testError: any) {
+        console.error('❌ Mock generation test failed:', testError);
+        debugInfo.testGeneration = {
+          mockServiceWorking: false,
+          fallbackMechanism: false,
+          error: testError.message
+        };
+      }
+
+      res.json({
+        success: true,
+        debug: debugInfo,
+        recommendations: [
+          '✅ Gemini API key configured',
+          '✅ OpenAI API key configured',
+          debugInfo.testGeneration.mockServiceWorking ? '✅ Mock service working' : '❌ Mock service failed',
+          '💡 Mock service should always work as fallback',
+          '💡 At least one AI provider should be configured for best results'
+        ]
+      });
+
+    } catch (error: any) {
+      console.error('❌ Debug endpoint failed:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Debug check failed',
+        details: error.message
+      });
+    }
+  });
+
+  // AI API key status endpoint
+  apiRouter.get("/ai/api-key-status", isAuthenticated, async (req, res) => {
+    try {
+      const status = EnhancedAIService.getProviderStatus();
+      const availableProviders = EnhancedAIService.getAvailableProviders();
+
+      res.json({
+        success: true,
+        providers: status,
+        available: availableProviders,
+        hasConfiguredProviders: availableProviders.some(p => p.available)
+      });
+    } catch (error) {
+      console.error("AI API key status error:", error);
+      res.status(500).json({ success: false, error: "Failed to check API key status" });
+    }
+  });
+
+  // User permissions endpoint
+  apiRouter.get("/user/permissions", isAuthenticated, async (req, res) => {
+    try {
+      // For now, return basic permissions based on user role
+      const userRole = req.session.userRole;
+      let permissions = [];
+
+      if (userRole === "Admin") {
+        permissions = [
+          "projects:read", "projects:write", "projects:delete",
+          "users:read", "users:write", "users:delete",
+          "testcases:read", "testcases:write", "testcases:delete",
+          "bugs:read", "bugs:write", "bugs:delete",
+          "settings:read", "settings:write"
+        ];
+      } else if (userRole === "Developer") {
+        permissions = [
+          "projects:read", "projects:write",
+          "testcases:read", "testcases:write",
+          "bugs:read", "bugs:write"
+        ];
+      } else {
+        permissions = [
+          "projects:read",
+          "testcases:read", "testcases:write",
+          "bugs:read", "bugs:write"
+        ];
+      }
+
+      res.json(permissions);
+    } catch (error) {
+      console.error("Get user permissions error:", error);
+      res.status(500).json({ success: false, error: "Failed to get user permissions" });
+    }
+  });
+
+  // Unread messages count endpoint
+  apiRouter.get("/messages/unread-count", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      // For now, return 0 as placeholder - this would be implemented with actual message counting logic
+      res.json({ count: 0 });
+    } catch (error) {
+      console.error("Get unread messages count error:", error);
+      res.status(500).json({ success: false, error: "Failed to get unread messages count" });
+    }
+  });
+
+  apiRouter.post("/ai/generate-enhanced-test-cases", isAuthenticated, async (req, res) => {
+    try {
+      console.log("🚀 AI Test Case Generation Request:", req.body);
+
+      const {
+        requirement,
+        projectId,
+        moduleId,
+        testType = 'functional',
+        priority = 'Medium',
+        aiProvider = 'gemini',
+        testCaseCount = 20
+      } = req.body;
+
+      if (!requirement || requirement.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          error: 'Requirement is required for test case generation'
+        });
+      }
+
+      // Get project and module context if provided
+      let projectContext = '';
+      let moduleContext = '';
+
+      if (projectId) {
+        try {
+          const project = await storage.getProject(parseInt(projectId));
+          if (project) {
+            projectContext = project.name;
+          }
+        } catch (error) {
+          console.warn("Could not fetch project context:", error);
+        }
+      }
+
+      if (moduleId) {
+        try {
+          const module = await storage.getModule(parseInt(moduleId));
+          if (module) {
+            moduleContext = module.name;
+          }
+        } catch (error) {
+          console.warn("Could not fetch module context:", error);
+        }
+      }
+
+      const generationRequest = {
+        requirement,
+        projectContext,
+        moduleContext,
+        testType,
+        priority,
+        inputType: 'text' as const,
+        aiProvider,
+        testCaseCount
+      };
+
+      const result = await EnhancedAIService.generateTestCases(generationRequest);
+
+      console.log("✅ AI Test Case Generation Successful:", {
+        testCasesGenerated: result.testCases.length,
+        provider: result.provider,
+        source: result.source
+      });
+
+      res.json({
+        success: true,
+        ...result
+      });
+
+    } catch (error: any) {
+      console.error("❌ AI Test Case Generation Error:", error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate test cases',
+        details: error.message
+      });
+    }
+  });
+
+  // GitHub integrations routes
+  apiRouter.use("/github", githubIntegrationsRouter);
+
+  // Register GitHub comments routes
+  const githubCommentsRoutes = (await import('./api/github-comments')).default;
+  app.use('/api/github/comments', githubCommentsRoutes);
+
+  // Flow diagram routes
+  apiRouter.use("/flow-diagrams", flowDiagramRoutes);
+
+  // BRD Documents routes
+  apiRouter.use("/brd-documents", brdRoutes);
+
+  // Navadhiti Projects routes
+  apiRouter.get("/navadhiti-projects", isAuthenticated, async (req, res) => {
+    try {
+      const projects = await storage.getNavadhitiProjects();
+      res.json(projects);
+    } catch (error) {
+      console.error("Get navadhiti projects error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const project = await storage.getNavadhitiProject(id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      console.error("Get navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/navadhiti-projects", isAuthenticated, async (req, res) => {
+    try {
+      const projectData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+      const project = await storage.createNavadhitiProject(projectData);
+      res.status(201).json(project);
+    } catch (error) {
+      console.error("Create navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.put("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedProject = await storage.updateNavadhitiProject(id, req.body);
+      if (!updatedProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(updatedProject);
+    } catch (error) {
+      console.error("Update navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/navadhiti-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteNavadhitiProject(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete navadhiti project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Request Forms API Routes
+  apiRouter.get("/request-forms/types", isAuthenticated, async (req, res) => {
+    try {
+      const types = await storage.getRequestFormTypes();
+      res.json(types);
+    } catch (error) {
+      console.error("Get request form types error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/request-forms/types", isAuthenticated, async (req, res) => {
+    try {
+      const typeData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+      const type = await storage.createRequestFormType(typeData);
+      res.status(201).json(type);
+    } catch (error) {
+      console.error("Create request form type error:", error);
+      res.status(400).json({ message: "Invalid type data" });
+    }
+  });
+
+  apiRouter.get("/request-forms/options/:formTypeId", isAuthenticated, async (req, res) => {
+    try {
+      const formTypeId = parseInt(req.params.formTypeId);
+      const options = await storage.getRequestFormOptions(formTypeId);
+      res.json(options);
+    } catch (error) {
+      console.error("Get request form options error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/request-forms/options", isAuthenticated, async (req, res) => {
+    try {
+      const option = await storage.createRequestFormOption(req.body);
+      res.status(201).json(option);
+    } catch (error) {
+      console.error("Create request form option error:", error);
+      res.status(400).json({ message: "Invalid option data" });
+    }
+  });
+
+  apiRouter.get("/resource-requests", isAuthenticated, async (req, res) => {
+    try {
+      const {projectId, status, department, requestType } = req.query;
+      const requests = await storage.getResourceRequests({
+        projectId: projectId ? parseInt(projectId as string) : undefined,
+        status: status as string,
+        department: department as string,
+        requestType: requestType as string,
+        userId: req.session.userId,
+        userRole: req.session.userRole
+      });
+      res.json(requests);
+    } catch (error) {
+      console.error("Get resource requests error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/resource-requests/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const request = await storage.getResourceRequest(id);
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+      res.json(request);
+    } catch (error) {
+      console.error("Get resource request error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/resource-requests", isAuthenticated, async (req, res) => {
+    try {
+      const requestData = {
+        ...req.body,
+        createdById: req.session.userId,
+        status: req.body.status || 'Draft'
+      };
+
+      // Generate request ID if not provided
+      if (!requestData.requestId) {
+        const prefix = requestData.requestType ?
+          requestData.requestType.split(' ')[0].toUpperCase() : 'REQ';
+        const timestamp = Date.now().toString().slice(-6);
+        requestData.requestId = `${prefix}-${timestamp}`;
+      }
+
+      const request = await storage.createResourceRequest(requestData);
+
+      // Send notification to lead if specified
+      if (request.leadId) {
+        await storage.createNotification({
+          userId: request.leadId,
+          type: 'resource_request',
+          title: 'New Resource Request Assigned',
+          message: `You have been assigned a new ${request.requestType}: ${request.title}`,
+          entityType: 'resource_request',
+          entityId: request.id,
+          requestId: request.id,
+        });
+      }
+
+      res.status(201).json(request);
+    } catch (error) {
+      console.error("Create resource request error:", error);
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
+
+  apiRouter.put("/resource-requests/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedRequest = await storage.updateResourceRequest(id, req.body);
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error("Update resource request error:", error);
+      res.status(400).json({ message: "Invalid request data" });
+    }
+  });
+
+  apiRouter.post("/resource-requests/:id/extend", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { newEndDate, extensionReason } = req.body;
+      const extension = await storage.createRequestExtension({
+        requestId: id,
+        newEndDate,
+        extensionReason,
+        requestedById: req.session.userId
+      });
+      res.status(201).json(extension);
+    } catch (error) {
+      console.error("Create request extension error:", error);
+      res.status(400).json({ message: "Invalid extension data" });
+    }
+  });
+
+  apiRouter.get("/resource-requests/:id/extensions", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const extensions = await storage.getRequestExtensions(id);
+      res.json(extensions);
+    } catch (error) {
+      console.error("Get request extensions error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.put("/resource-requests/:id/approve", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status, comments } = req.body;
+      const request = await storage.approveResourceRequest(id, {
+        status,
+        approvedById: req.session.userId,
+        comments
+      });
+      res.json(request);
+    } catch (error) {
+      console.error("Approve resource request error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Request Comments API endpoints
+  apiRouter.get("/request-forms/:requestId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const comments = await storage.getRequestComments(requestId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Get request comments error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/request-forms/:requestId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const { content, taggedUsers, isPrivate } = req.body;
+
+      const comment = await storage.createRequestComment({
+        requestId,
+        content,
+        authorId: req.session.userId!,
+        taggedUsers: taggedUsers ? JSON.stringify(taggedUsers) : null,
+        isPrivate: isPrivate || false
+      });
+
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Create request comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.put("/request-forms/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const { content } = req.body;
+
+      const comment = await storage.updateRequestComment(commentId, { content });
+      res.json(comment);
+    } catch (error) {
+      console.error("Update request comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/request-forms/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      await storage.deleteRequestComment(commentId);
+      res.json({ message: "Comment deleted successfully" });
+    } catch (error) {
+      console.error("Delete request comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Request Form Attachments API endpoints
+  apiRouter.get("/request-forms/:requestId/attachments", isAuthenticated, canAccessRequestAttachments, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const attachments = await storage.getRequestAttachments(requestId);
+      res.json(attachments);
+    } catch (error) {
+      console.error("Get request attachments error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/request-forms/:requestId/attachments", isAuthenticated, canAccessRequestAttachments, requestAttachmentUpload.single('file'), async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const publicUrl = `/uploads/request-attachments/${file.filename}`;
+
+      const attachment = await storage.createRequestAttachment({
+        requestId,
+        fileName: file.filename,
+        originalFileName: file.originalname,
+        filePath: file.path,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        uploadedById: req.session.userId!,
+        publicUrl
+      });
+
+      res.status(201).json(attachment);
+    } catch (error) {
+      console.error("Upload request attachment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/request-forms/attachments/:attachmentId", isAuthenticated, canAccessRequestAttachments, async (req, res) => {
+    try {
+      const attachmentId = parseInt(req.params.attachmentId);
+
+      // Get attachment details before deletion to clean up file
+      const attachment = await storage.getRequestAttachment(attachmentId);
+      if (!attachment) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      // Delete from storage
+      const success = await storage.deleteRequestAttachment(attachmentId);
+
+      if (success) {
+        // Clean up file from disk
+        try {
+          if (attachment.filePath && fs.existsSync(attachment.filePath)) {
+            fs.unlinkSync(attachment.filePath);
+            console.log(`Successfully deleted file: ${attachment.filePath}`);
+          }
+        } catch (fileError) {
+          console.error(`Error deleting file ${attachment.filePath}:`, fileError);
+          // Don't fail the request if file deletion fails
+        }
+
+        res.json({ message: "Attachment deleted successfully" });
+      } else {
+        res.status(404).json({ message: "Attachment not found" });
+      }
+    } catch (error) {
+      console.error("Delete request attachment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Download endpoint for request attachments
+  apiRouter.get("/request-forms/attachments/:attachmentId/download", isAuthenticated, canAccessRequestAttachments, async (req, res) => {
+    try {
+      const attachmentId = parseInt(req.params.attachmentId);
+      const attachment = await storage.getRequestAttachment(attachmentId);
+
+      if (!attachment) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      if (!fs.existsSync(attachment.filePath)) {
+        return res.status(404).json({ message: "File not found on disk" });
+      }
+
+      // Set proper headers for file download
+      res.setHeader('Content-Type', attachment.mimeType || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${attachment.originalFileName}"`);
+      res.setHeader('Content-Length', attachment.fileSize);
+
+      // Stream the file
+      const fileStream = fs.createReadStream(attachment.filePath);
+      fileStream.pipe(res);
+    } catch (error) {
+      console.error("Download request attachment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Project Tracker API Routes
+
+  // Tracker Projects
+  apiRouter.get("/tracker/projects", isAuthenticated, async (req, res) => {
+    try {
+      const projects = await storage.getTrackerProjects();
+      res.json(projects);
+    } catch (error) {
+      console.error("Get tracker projects error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/tracker/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const project = await storage.getTrackerProject(id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      console.error("Get tracker project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/tracker/projects", isAuthenticated, async (req, res) => {
+    try {
+      const projectData = insertTrackerProjectSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+      const project = await storage.createTrackerProject(projectData);
+      res.status(201).json(project);
+    } catch (error) {
+      console.error("Create tracker project error:", error);
+      res.status(400).json({ message: "Invalid project data" });
+    }
+  });
+
+  apiRouter.put("/tracker/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedProject = await storage.updateTrackerProject(id, {
+        ...req.body,
+        updatedAt: new Date().toISOString(),
+      });
+      if (!updatedProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(updatedProject);
+    } catch (error) {
+      console.error("Update tracker project error:", error);
+      res.status(400).json({ message: "Invalid project data" });
+    }
+  });
+
+  apiRouter.delete("/tracker/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTrackerProject(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete tracker project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Tracker Features
+  apiRouter.get("/tracker/features", isAuthenticated, async (req, res) => {
+    try {
+      const {projectId } = req.query;
+      const features = await storage.getTrackerFeatures(
+        projectId ? parseInt(projectId as string) : undefined
+      );
+      res.json(features);
+    } catch (error) {
+      console.error("Get tracker features error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/tracker/features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const feature = await storage.getTrackerFeature(id);
+      if (!feature) {
+        return res.status(404).json({ message: "Feature not found" });
+      }
+      res.json(feature);
+    } catch (error) {
+      console.error("Get tracker feature error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/tracker/features", isAuthenticated, async (req, res) => {
+    try {
+      const featureData = insertTrackerFeatureSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+      const feature = await storage.createTrackerFeature(featureData);
+      res.status(201).json(feature);
+    } catch (error) {
+      console.error("Create tracker feature error:", error);
+      res.status(400).json({ message: "Invalid feature data" });
+    }
+  });
+
+  apiRouter.put("/tracker/features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedFeature = await storage.updateTrackerFeature(id, {
+        ...req.body,
+        updatedAt: new Date().toISOString(),
+      });
+      if (!updatedFeature) {
+        return res.status(404).json({ message: "Feature not found" });
+      }
+      res.json(updatedFeature);
+    } catch (error) {
+      console.error("Update tracker feature error:", error);
+      res.status(400).json({ message: "Invalid feature data" });
+    }
+  });
+
+  apiRouter.delete("/tracker/features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTrackerFeature(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete tracker feature error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Tracker Sub-Features
+  apiRouter.get("/tracker/sub-features", isAuthenticated, async (req, res) => {
+    try {
+      const {featureId, projectId } = req.query;
+      const subFeatures = await storage.getTrackerSubFeatures(
+        featureId ? parseInt(featureId as string) : undefined,
+        projectId ? parseInt(projectId as string) : undefined
+      );
+      res.json(subFeatures);
+    } catch (error) {
+      console.error("Get tracker sub-features error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/tracker/sub-features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const subFeature = await storage.getTrackerSubFeature(id);
+      if (!subFeature) {
+        return res.status(404).json({ message: "Sub-feature not found" });
+      }
+      res.json(subFeature);
+    } catch (error) {
+      console.error("Get tracker sub-feature error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/tracker/sub-features", isAuthenticated, async (req, res) => {
+    try {
+      const subFeatureData = insertTrackerSubFeatureSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+      const subFeature = await storage.createTrackerSubFeature(subFeatureData);
+      res.status(201).json(subFeature);
+    } catch (error) {
+      console.error("Create tracker sub-feature error:", error);
+      res.status(400).json({ message: "Invalid sub-feature data" });
+    }
+  });
+
+  apiRouter.put("/tracker/sub-features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      const subFeature = await storage.updateTrackerSubFeature(id, updateData);
+      if (!subFeature) {
+        return res.status(404).json({ message: "Sub-feature not found" });
+      }
+      res.json(subFeature);
+    } catch (error) {
+      console.error("Update tracker sub-feature error:", error);
+      res.status(400).json({ message: "Invalid sub-feature data" });
+    }
+  });
+
+  apiRouter.put("/tracker/sub-features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedSubFeature = await storage.updateTrackerSubFeature(id, {
+        ...req.body,
+        updatedAt: new Date().toISOString(),
+      });
+      if (!updatedSubFeature) {
+        return res.status(404).json({ message: "Sub-feature not found" });
+      }
+      res.json(updatedSubFeature);
+    } catch (error) {
+      console.error("Update tracker sub-feature error:", error);
+      res.status(400).json({ message: "Invalid sub-feature data" });
+    }
+  });
+
+  apiRouter.delete("/tracker/sub-features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTrackerSubFeature(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete tracker sub-feature error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Work Logs
+  apiRouter.get("/tracker/work-logs", isAuthenticated, async (req, res) => {
+    try {
+      const {projectId, featureId, subFeatureId, userId, startDate, endDate } = req.query;
+      const requestingUser = req.session?.userId;
+
+      console.log(`[API] Getting timesheets with filters:`, {
+        projectId: projectId ? parseInt(projectId as string) : undefined,
+        featureId: featureId ? parseInt(featureId as string) : undefined,
+        subFeatureId: subFeatureId ? parseInt(subFeatureId as string) : undefined,
+        userId: userId ? parseInt(userId as string) : undefined,
+        startDate: startDate as string,
+        endDate: endDate as string,
+      });
+
+      let timeSheets: TimeSheet[];
+
+      if (userId) {
+        // Get timesheets for specific user
+        timeSheets = await storage.getUserTimeSheets(parseInt(userId as string));
+      } else if (projectId) {
+        // Get timesheets for specific project
+        timeSheets = await storage.getProjectTimeSheets(parseInt(projectId as string));
+      } else {
+        // Get all timesheets (admin view)
+        timeSheets = await storage.getTimeSheets();
+      }
+
+      // Apply folder filter if specified
+      if (folderId) {
+        const folderIdNum = parseInt(folderId as string);
+        timeSheets = timeSheets.filter(ts => ts.folderId === folderIdNum);
+      }
+
+      console.log(`[API] Returning ${timeSheets.length} timesheets for user ${requestingUser}:`,
+        timeSheets.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description })));
+
+      res.json(timeSheets);
+    } catch (error) {
+      console.error("Error fetching timesheets:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch timesheets" });
+    }
+  });
+
+  apiRouter.post("/tracker/work-logs", isAuthenticated, async (req, res) => {
+    try {
+      const workLogData = insertTrackerWorkLogSchema.parse({
+        ...req.body,
+        userId: req.session.userId,
+      });
+      const workLog = await storage.createTrackerWorkLog(workLogData);
+      res.status(201).json(workLog);
+    } catch (error) {
+      console.error("Create tracker work log error:", error);
+      res.status(400).json({ message: "Invalid work log data" });
+    }
+  });
+
+  apiRouter.delete("/tracker/work-logs/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTrackerWorkLog(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete tracker work log error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Timeline Extensions
+  apiRouter.post("/tracker/timeline-extensions", isAuthenticated, async (req, res) => {
+    try {
+      const extensionData = insertTrackerTimelineExtensionSchema.parse({
+        ...req.body,
+        requestedById: req.session.userId,
+      });
+      const extension = await storage.createTrackerTimelineExtension(extensionData);
+      res.status(201).json(extension);
+    } catch (error) {
+      console.error("Create tracker timeline extension error:", error);
+      res.status(400).json({ message: "Invalid extension data" });
+    }
+  });
+
+  apiRouter.get("/tracker/timeline-extensions/:entityType/:entityId", isAuthenticated, async (req, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      const extensions = await storage.getTrackerTimelineExtensions(entityType, parseInt(entityId));
+      res.json(extensions);
+    } catch (error) {
+      console.error("Get tracker timeline extensions error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Dependencies
+  apiRouter.post("/tracker/dependencies", isAuthenticated, async (req, res) => {
+    try {
+      const dependencyData = insertTrackerDependencySchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+      const dependency = await storage.createTrackerDependency(dependencyData);
+      res.status(201).json(dependency);
+    } catch (error) {
+      console.error("Create tracker dependency error:", error);
+      res.status(400).json({ message: "Invalid dependency data" });
+    }
+  });
+
+  apiRouter.get("/tracker/dependencies", isAuthenticated, async (req, res) => {
+    try {
+      const { entityType, entityId } = req.query;
+      const dependencies = await storage.getTrackerDependencies(
+        entityType as string,
+        entityId ? parseInt(entityId as string) : undefined
+      );
+      res.json(dependencies);
+    } catch (error) {
+      console.error("Get tracker dependencies error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Custom Dropdowns
+  apiRouter.get("/tracker/custom-dropdowns", isAuthenticated, async (req, res) => {
+    try {
+      const { type } = req.query;
+      const dropdowns = await storage.getTrackerCustomDropdowns(type as string);
+      res.json(dropdowns);
+    } catch (error) {
+      console.error("Get tracker custom dropdowns error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/tracker/custom-dropdowns", isAuthenticated, async (req, res) => {
+    try {
+      const dropdownData = insertTrackerCustomDropdownSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+      const dropdown = await storage.createTrackerCustomDropdown(dropdownData);
+      res.status(201).json(dropdown);
+    } catch (error) {
+      console.error("Create tracker custom dropdown error:", error);
+      res.status(400).json({ message: "Invalid dropdown data" });
+    }
+  });
+
+  // Audit Logs
+  apiRouter.get("/tracker/audit-logs", isAuthenticated, async (req, res) => {
+    try {
+      const { entityType, entityId } = req.query;
+      const logs = await storage.getTrackerAuditLogs(
+        entityType as string,
+        entityId ? parseInt(entityId as string) : undefined
+      );
+      res.json(logs);
+    } catch (error) {
+      console.error("Get tracker audit logs error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Resource Request Comments API endpoints (assuming similar structure as request-forms comments)
+  apiRouter.get("/resource-requests/:requestId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const comments = await storage.getRequestComments(requestId); // Reusing getRequestComments assuming it's generic
+      res.json(comments);
+    } catch (error) {
+      console.error("Get resource request comments error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/resource-requests/:requestId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const { content, taggedUsers, isPrivate } = req.body;
+
+      const comment = await storage.createRequestComment({
+        requestId,
+        content,
+        authorId: req.session.userId!,
+        taggedUsers: taggedUsers ? JSON.stringify(taggedUsers) : null,
+        isPrivate: isPrivate || false
+      });
+
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Create resource request comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Notifications API routes
+  apiRouter.get("/notifications/:userId", isAuthenticated, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const notifications = await storage.getNotifications(userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Get notifications error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/notifications", isAuthenticated, async (req, res) => {
+    try {
+      const notification = await storage.createNotification(req.body);
+      res.status(201).json(notification);
+    } catch (error) {
+      console.error("Create notification error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.patch("/notifications/:id/read", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const notification = await storage.markNotificationAsRead(id);
+      res.json(notification);
+    } catch (error) {
+      console.error("Mark notification as read error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Status Review endpoints
+  apiRouter.get("/navadhiti-projects/status-reviews", isAuthenticated, async (req, res) => {
+    try {
+      const {date} = req.query;
+      const reviews = await storage.getStatusReviews(date as string);
+      res.json(reviews);
+    } catch (error) {
+      console.error("Get status reviews error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Employee-Project Mapping endpoints
+  apiRouter.get("/employee-projects", isAuthenticated, async (req, res) => {
+    try {
+      const {employeeId} = req.query;
+      const employeeProjects = await storage.getEmployeeProjects(employeeId ? parseInt(employeeId as string) : undefined);
+      res.json(employeeProjects);
+    } catch (error) {
+      console.error("Get employee projects error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/employee-projects", isAuthenticated, async (req, res) => {
+    try {
+      const mappingData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+      const mapping = await storage.createEmployeeProject(mappingData);
+      res.status(201).json(mapping);
+    } catch (error) {
+      console.error("Create employee project mapping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.put("/employee-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      const updated = await storage.updateEmployeeProject(id, updateData);
+      res.json(updated);
+    } catch (error) {
+      console.error("Update employee project mapping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/employee-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteEmployeeProject(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete employee project mapping error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get employee project history (all employees)
+  apiRouter.get("/employee-projects-history", isAuthenticated, async (req, res) => {
+    try {
+      const history = await storage.getAllEmployeeProjectHistory();
+      res.json(history);
+    } catch (error) {
+      console.error("Get employee project history error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get employee project history for specific employee
+  apiRouter.get("/employee-projects-history/:employeeId", isAuthenticated, async (req, res) => {
+    try {
+      const employeeId = parseInt(req.params.employeeId);
+      const history = await storage.getEmployeeProjectHistory(employeeId);
+      res.json(history);
+    } catch (error) {
+      console.error("Get employee project history error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Add extend project duration route for history management
+  apiRouter.post("/employee-projects/:id/extend", isAuthenticated, async (req, res) => {
+    try {
+      const allocationId = parseInt(req.params.id);
+      const { newEndDate, extensionDays } = req.body;
+
+      // Get current allocation
+      const currentAllocation = await storage.getEmployeeProjectAllocation(allocationId);
+      if (!currentAllocation) {
+        return res.status(404).json({ message: "Project allocation not found" });
+      }
+
+      // Calculate new end date if extension days provided
+      let finalEndDate = newEndDate;
+      if (extensionDays && !newEndDate) {
+        const currentEnd = new Date(currentAllocation.endDate || new Date());
+        currentEnd.setDate(currentEnd.getDate() + parseInt(extensionDays));
+        finalEndDate = currentEnd.toISOString().split('T')[0];
+      }
+
+      // Update the allocation with new end date
+      const updatedAllocation = await storage.updateEmployeeProject(allocationId, {
+        endDate: finalEndDate,
+        updatedAt: new Date(),
+        updatedById: req.session.userId
+      });
+
+      // Create history record for the extension
+      await storage.createEmployeeProjectHistory({
+        employeeProjectId: allocationId,
+        action: 'extended',
+        previousEndDate: currentAllocation.endDate,
+        newEndDate: finalEndDate,
+        extensionDays: extensionDays || null,
+        createdById: req.session.userId,
+        createdAt: new Date()
+      });
+
+      res.json({
+        success: true,
+        message: "Project duration extended successfully",
+        allocation: updatedAllocation
+      });
+    } catch (error) {
+      console.error("Extend project duration error:", error);
+      res.status(500).json({ message: "Failed to extend project duration" });
+    }
+  });
+
+  apiRouter.post("/navadhiti-projects/status-review", isAuthenticated, async (req, res) => {
+    try {
+      const reviewData = {
+        ...req.body,
+        createdById: req.session.userId
+      };
+      const review = await storage.createStatusReview(reviewData);
+      res.status(201).json(review);
+    } catch (error) {
+      console.error("Create status review error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Auth routes
+  apiRouter.post("/auth/register", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(userData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email already exists" });
+      }
+
+      // Hash password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(userData.password, salt);
+
+      // Create user with hashed password
+      const user = await storage.createUser({
+        ...userData,
+        password: hashedPassword,
+      });
+
+      // Create verification token
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+      await storage.updateUser(user.id, { verificationToken });
+
+      // Send welcome email
+      try {
+        await emailService.sendWelcomeEmail(user.email, user.firstName);
+        logger.info(`Welcome email sent to ${user.email}`);
+      } catch (emailError) {
+        logger.error('Failed to send welcome email:', emailError);
+        // Don't fail registration if email fails
+      }
+
+      // Return user without sensitive data
+      const { password, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(400).json({ message: "Invalid user data" });
+    }
+  });
+
+  apiRouter.post("/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      // Find user
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Check if user is verified (in a production app)
+      // if (!user.verified) {
+      //   return res.status(401).json({ message: "Please verify your email before logging in" });
+      // }
+
+      // Set session data directly without regeneration to avoid session issues
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      req.session.userName = user.firstName; // Use firstName since name might not exist
+      req.session.userEmail = user.email;
+
+      // Save session explicitly and ensure it's properly committed
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("Session save error:", saveErr);
+          return res.status(500).json({ message: "Session save failed" });
+        }
+
+        console.log("Login successful - Session set and saved:", {
+          sessionId: req.sessionID,
+          userId: req.session.userId,
+          userRole: req.session.userRole,
+          userName: req.session.userName,
+          userEmail: req.session.userEmail
+        });
+
+        // Verify session data is set
+        if (!req.session.userId) {
+          console.error("Session userId not set after save");
+          return res.status(500).json({ message: "Session initialization failed" });
+        }
+
+        // Return user without sensitive data
+        const { password: _, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  // Get current user
+  apiRouter.get("/auth/user", async (req, res) => {
+    try {
+      console.log("GET /api/auth/user - Session data:", {
+        sessionId: req.sessionID,
+        userId: req.session?.userId,
+        userRole: req.session?.userRole,
+        userEmail: req.session?.userEmail,
+        hasSession: !!req.session,
+        sessionKeys: req.session ? Object.keys(req.session) : []
+      });
+
+      // Check if session exists
+      if (!req.session) {
+        console.log("No session found");
+        return res.status(401).json({ message: "No session found" });
+      }
+
+      // Check if user is logged in
+      if (!req.session.userId) {
+        console.log("No userId in session");
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      // Get user from storage
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        console.log(`User not found for ID: ${req.session.userId}`);
+        // Clear invalid session
+        req.session.destroy((err) => {
+          if (err) console.error("Error destroying session:", err);
+        });
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      console.log(`User authenticated successfully: ${user.email}`);
+
+      // Return user without sensitive data
+      const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutPassword } = user;
+
+      // Set proper cache headers to prevent caching
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal that the user doesn't exist
+        return res.json({ message: "If your email exists, you will receive a password reset link" });
+      }
+
+      // Generate token with expiry
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await storage.updateUser(user.id, {
+        resetToken,
+        resetTokenExpires,
+      });
+
+      // In a real app, send reset email here
+
+      res.json({ message: "If your email exists, you will receive a password reset link" });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/auth/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body;
+
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token and password are required" });
+      }
+
+      // Find user with this token
+      // NOTE: This lookup might be inefficient if the users table is large.
+      // Consider a dedicated 'password_reset_tokens' table or optimizing the find logic.
+      const users = await storage.getUsers(); // Assuming storage.getUsers() retrieves all users
+      const user = users.find((user: any) => user.resetToken === token && user.resetTokenExpires > new Date());
+
+
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired token" });
+      }
+
+      // Hash new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      // Update user
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpires: null,
+      });
+
+      res.json({ message: "Password reset successful" });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // OAuth Routes with CSRF protection
+  // Google OAuth URL generation with PKCE and state
+  apiRouter.get("/auth/google/url", async (req, res) => {
+    try {
+      const state = oauthService.generateSecureRandom();
+      const codeVerifier = oauthService.generateSecureRandom();
+
+      // Store state and code verifier in session for verification
+      req.session.oauthState = state;
+      req.session.googleCodeVerifier = codeVerifier;
+
+      const authUrl = oauthService.generateGoogleAuthUrl(state, codeVerifier);
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("Google OAuth URL generation error:", error);
+      res.status(500).json({ message: "Failed to generate Google OAuth URL" });
+    }
+  });
+
+  // GitHub OAuth URL generation with state
+  apiRouter.get("/auth/github/url", async (req, res) => {
+    try {
+      const state = oauthService.generateSecureRandom();
+
+      // Store state in session for verification
+      req.session.oauthState = state;
+
+      const authUrl = oauthService.generateGitHubAuthUrl(state);
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("GitHub OAuth URL generation error:", error);
+      res.status(500).json({ message: "Failed to generate GitHub OAuth URL" });
+    }
+  });
+
+  // Google OAuth callback with CSRF and PKCE verification
+  apiRouter.get("/auth/google/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+
+      if (!code) {
+        return res.redirect("/login?error=missing_code");
+      }
+
+      // Verify state parameter for CSRF protection
+      if (!state || state !== req.session.oauthState) {
+        console.error("OAuth state mismatch or missing");
+        return res.redirect("/login?error=invalid_state");
+      }
+
+      // Get code verifier from session
+      const codeVerifier = req.session.googleCodeVerifier;
+      if (!codeVerifier) {
+        console.error("Missing code verifier in session");
+        return res.redirect("/login?error=missing_verifier");
+      }
+
+      // Clear OAuth session data
+      delete req.session.oauthState;
+      delete req.session.googleCodeVerifier;
+
+      // Exchange code for user data with PKCE
+      const userData = await oauthService.exchangeGoogleCode(code as string, codeVerifier);
+
+      // Use consolidated user creation/update logic
+      const user = await oauthService.findOrCreateOAuthUser(userData);
+
+      // Regenerate session ID to prevent fixation attacks
+      req.session.regenerate((regenerateErr) => {
+        if (regenerateErr) {
+          console.error("Session regeneration error:", regenerateErr);
+          return res.redirect("/login?error=session_failed");
+        }
+
+        // Set session data
+        req.session.userId = user.id;
+        req.session.userRole = user.role;
+        req.session.userName = user.firstName;
+        req.session.userEmail = user.email;
+
+        // Save session and redirect
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.redirect("/login?error=session_failed");
+          }
+
+          console.log("Google OAuth login successful:", {
+            userId: user.id,
+            email: user.email,
+            provider: userData.provider
+          });
+
+          // Redirect to login with success, which will handle dashboard redirect
+          res.redirect("/login?oauth_success=true");
+        });
+      });
+
+    } catch (error) {
+      console.error("Google OAuth callback error:", error);
+      res.redirect("/login?error=oauth_failed");
+    }
+  });
+
+  // GitHub OAuth callback with CSRF verification
+  apiRouter.get("/auth/github/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+
+      if (!code) {
+        return res.redirect("/login?error=missing_code");
+      }
+
+      // Verify state parameter for CSRF protection
+      if (!state || state !== req.session.oauthState) {
+        console.error("OAuth state mismatch or missing");
+        return res.redirect("/login?error=invalid_state");
+      }
+
+      // Clear OAuth session data
+      delete req.session.oauthState;
+
+      // Exchange code for user data
+      const userData = await oauthService.exchangeGitHubCode(code as string);
+
+      // Use consolidated user creation/update logic
+      const user = await oauthService.findOrCreateOAuthUser(userData);
+
+      // Regenerate session ID to prevent fixation attacks
+      req.session.regenerate((regenerateErr) => {
+        if (regenerateErr) {
+          console.error("Session regeneration error:", regenerateErr);
+          return res.redirect("/login?error=session_failed");
+        }
+
+        // Set session data
+        req.session.userId = user.id;
+        req.session.userRole = user.role;
+        req.session.userName = user.firstName;
+        req.session.userEmail = user.email;
+
+        // Save session and redirect
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.redirect("/login?error=session_failed");
+          }
+
+          console.log("GitHub OAuth login successful:", {
+            userId: user.id,
+            email: user.email,
+            provider: userData.provider
+          });
+
+          // Redirect to login with success, which will handle dashboard redirect
+          res.redirect("/login?oauth_success=true");
+        });
+      });
+
+    } catch (error) {
+      console.error("GitHub OAuth callback error:", error);
+      res.redirect("/login?error=oauth_failed");
+    }
+  });
+
+  // User profile
+  apiRouter.get("/user/current", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Get profile error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Update user profile
+  apiRouter.patch("/user/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+
+      // Users can only update their own profile unless they're an admin
+      if (userId !== req.session.userId && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "You can only update your own profile" });
+      }
+
+      const { firstName, lastName, email, role, status, phoneNumber, theme } = req.body;
+
+      // Only admins can change roles
+      if (role && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "Only admins can change roles" });
+      }
+
+      // Only admins can change status
+      if (status && req.session.userRole !== "Admin") {
+        return res.status(403).json({ message: "Only admins can change status" });
+      }
+
+      const updateData: any = {};
+      if (firstName) updateData.firstName = firstName;
+      if (lastName !== undefined) updateData.lastName = lastName;
+      if (email) updateData.email = email;
+      if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+      if (theme) updateData.theme = theme;
+      if (role && req.session.userRole === "Admin") updateData.role = role;
+      if (status && req.session.userRole === "Admin") updateData.status = status;
+
+      const updatedUser = await storage.updateUser(userId, updateData);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Update session if user is updating their own profile
+      if (userId === req.session.userId) {
+        if (firstName) req.session.userName = firstName; // Using firstName as userName for now
+        if (email) req.session.userEmail = email;
+      }
+
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+
+
+  // Users management endpoints - available only to admins
+  apiRouter.get("/users", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+
+      // Remove sensitive data
+      const sanitizedUsers = users.map(user => {
+        const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutSensitiveData } = user;
+        return userWithoutSensitiveData;
+      });
+
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error("Get users error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Public users endpoint for messenger (limited data)
+  apiRouter.get("/users/public", isAuthenticated, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+
+      // Return minimal user info for messenger functionality
+      const publicUsers = users
+        .filter(user => user.id !== req.session.userId) // Exclude current user
+        .map(user => ({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          name: `${user.firstName} ${user.lastName || ''}`.trim(),
+          email: user.email,
+          avatar: user.profilePicture,
+          profilePicture: user.profilePicture,
+          role: user.role,
+          isOnline: false, // Will be updated by WebSocket
+          lastSeen: user.lastLoginAt || user.createdAt
+        }));
+
+      console.log(`[API] Returning ${publicUsers.length} public users for messenger:`, publicUsers.map(u => ({ id: u.id, name: u.name, email: u.email })));
+
+      res.json(publicUsers);
+    } catch (error) {
+      console.error("Get public users error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/users", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const { firstName, lastName, email, role, phoneNumber, status } = req.body;
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email already exists" });
+      }
+
+      // Generate a temporary password
+      const tempPassword = crypto.randomBytes(8).toString("hex");
+
+      // Hash the temporary password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(tempPassword, salt);
+
+      // Create user with temporary password
+      const newUser = await storage.createUser({
+        firstName,
+        lastName,
+        email,
+        password: hashedPassword,
+        role: role || "Tester",
+        phoneNumber,
+        status: status || "Active",
+        tempPassword: tempPassword, // Store plain temp password for response
+        tempPasswordUsed: false
+      });
+
+      // Send welcome email with temporary password
+      try {
+        await emailService.sendWelcomeEmail(newUser.email, newUser.firstName, tempPassword);
+        logger.info(`Welcome email with temp password sent to ${newUser.email}`);
+      } catch (emailError) {
+        logger.error('Failed to send welcome email:', emailError);
+        // Don't fail user creation if email fails
+      }
+
+      // Return user without sensitive data, but include the temporary password
+      const { password, ...userResponse } = newUser;
+
+      res.status(201).json(userResponse);
+    } catch (error) {
+      console.error("Create user error:", error);
+      res.status(400).json({ message: "Invalid user data" });
+    }
+  });
+
+  apiRouter.get("/users/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+
+      // Regular users can only view their own profile
+      if (req.session.userRole !== "Admin" && userId !== req.session.userId) {
+        return res.status(403).json({ message: "You can only view your own profile" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Remove sensitive data
+      const { password, tempPassword, resetToken, resetTokenExpires, verificationToken, ...userWithoutSensitiveData } = user;
+
+      res.json(userWithoutSensitiveData);
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/users/:id", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+
+      // Prevent admin from deleting themselves
+      if (userId === req.session.userId) {
+        return res.status(400).json({ message: "You cannot delete your own account" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const deleted = await storage.deleteUser(userId);
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete user" });
+      }
+
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Delete user error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Generate temporary password for user
+  apiRouter.post("/users/:id/generate-temp-password", isAuthenticated, checkRole(["Admin"]), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Generate a temporary password
+      const tempPassword = crypto.randomBytes(8).toString("hex");
+
+      // Hash the temporary password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(tempPassword, salt);
+
+      // Update user with temporary password
+      const updatedUser = await storage.updateUser(userId, {
+        password: hashedPassword,
+        tempPassword,
+        tempPasswordUsed: false
+      });
+
+      // In a real app, send email with temp password to the user
+
+      res.json({ tempPassword, message: "Temporary password generated successfully" });
+    } catch (error) {
+      console.error("Generate temp password error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Reset password (for first-time login with temporary password)
+  apiRouter.post("/auth/reset-temp-password", isAuthenticated, async (req, res) => {
+    try {
+      const { newPassword } = req.body;
+
+      if (!newPassword) {
+        return res.status(400).json({ message: "New password is required" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if user is using a temporary password
+      if (!user.tempPassword || user.tempPasswordUsed) {
+        return res.status(400).json({ message: "Invalid request - no temporary password active" });
+      }
+
+      // Hash the new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+      // Update user with new password
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        tempPasswordUsed: true
+      });
+
+      res.json({ message: "Password reset successful" });
+    } catch (error) {
+      console.error("Reset temp password error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Upload profile picture is already configured at the top of the function
+
+  // Handle multer errors for uploads globally
+  const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          message: 'File too large. Maximum size is 50MB.',
+          error: err.message
+        });
+      }
+      return res.status(400).json({
+        message: 'File upload error',
+        error: err.message
+      });
+    }
+    if (err) {
+      return res.status(500).json({
+        message: 'Error during file upload',
+        error: err.message
+      });
+    }
+    next();
+  };
+
+  // Add the uploads endpoint for bug attachments with error handling
+  apiRouter.post("/uploads/bug-attachment", isAuthenticated,
+    (req, res, next) => {
+      console.log("Starting bug attachment upload request");
+      console.log("Request headers:", req.headers);
+      console.log("Request content type:", req.headers['content-type']);
+
+      bugAttachmentUpload.single('file')(req, res, (err) => {
+        if (err) {
+          console.error("Multer error during file upload:", err);
+          return handleMulterError(err, req, res, next);
+        }
+        console.log("File upload middleware processed successfully");
+        next();
+      });
+    },
+    async (req, res) => {
+      try {
+        console.log("Processing bug attachment upload request");
+
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        // Get file path relative to the server root for serving in the browser
+        const fileName = path.basename(req.file.path);
+
+        // Ensure we use consistent path format for the URL
+        const fileUrl = `/uploads/bug-attachment/${fileName}`;
+
+        // Return file attachment details with all fields required by the FileAttachment interface
+        const fileAttachment = {
+          id: parseInt(crypto.randomBytes(4).toString('hex'), 16), // Convert to number for id
+          fileName: req.file.originalname,
+          fileUrl: fileUrl,
+          fileType: req.file.mimetype,
+          fileSize: req.file.size,
+          uploadedById: req.session.userId,
+          uploadedAt: new Date().toISOString(),
+          entityType: 'bug',  // Default to bug since this is for bug attachments
+          entityId: 0         // This will be updated when the bug is created or updated
+        };
+
+        console.log("Uploaded file details:", fileAttachment);
+
+        res.status(201).json(fileAttachment);
+      } catch (error) {
+        console.error("Bug attachment upload error:", error);
+        res.status(500).json({ message: "Failed to upload attachment" });
+      }
+    });
+
+  // Bug Comments API endpoints
+  apiRouter.get("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const comments = await storage.getBugComments(bugId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Get bug comments error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/bugs/:bugId/comments", isAuthenticated, async (req, res) => {
+    try {
+      const bugId = parseInt(req.params.bugId);
+      const { content, parentId, isPrivate, syncToGithub } = req.body;
+
+      const comment = await storage.createBugComment({
+        bugId,
+        content,
+        authorId: req.session.userId!,
+        parentId,
+        isPrivate: isPrivate || false
+      });
+
+      // If sync to GitHub is requested and we have GitHub integration
+      if (syncToGithub && req.body.githubIssueNumber) {
+        // GitHub sync logic here
+      }
+
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Create bug comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.put("/bugs/:bugId/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const { content } = req.body;
+
+      const comment = await storage.updateBugComment(commentId, { content });
+      res.json(comment);
+    } catch (error) {
+      console.error("Update bug comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/bugs/:bugId/comments/:commentId", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      await storage.deleteBugComment(commentId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete bug comment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/bugs/:bugId/comments/:commentId/reactions", isAuthenticated, async (req, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const { type } = req.body;
+
+      const reaction = await storage.addCommentReaction({
+        commentId,
+        userId: req.session.userId!,
+        type
+      });
+
+      res.json(reaction);
+    } catch (error) {
+      console.error("Add comment reaction error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Automation API routes
+  apiRouter.get("/automation/scripts", isAuthenticated, async (req, res) => {
+    try {
+      // Return empty array for now since automation service is not fully implemented
+      res.json([]);
+    } catch (error) {
+      console.error("Get automation scripts error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/automation/scripts", isAuthenticated, async (req, res) => {
+    try {
+      // Mock script creation for now
+      const script = {
+        id: `script_${Date.now()}`,
+        name: req.body.name || 'New Script',
+        description: req.body.description || '',
+        projectId: req.body.projectId,
+        moduleId: req.body.moduleId,
+        testCaseIds: req.body.testCaseIds || [],
+        script: '',
+        status: 'draft',
+        createdAt: new Date().toISOString()
+      };
+
+      res.status(201).json(script);
+    } catch (error) {
+      console.error("Create automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/automation/start-recording", isAuthenticated, async (req, res) => {
+    try {
+      // Mock recording start
+      const recordingId = `recording_${Date.now()}`;
+      res.json({ recordingId, message: "Recording started" });
+    } catch (error) {
+      console.error("Start recording error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/automation/stop-recording", isAuthenticated, async (req, res) => {
+    try {
+      // Mock recording stop
+      const script = {
+        id: `script_${Date.now()}`,
+        name: `Recorded Script - ${new Date().toLocaleDateString()}`,
+        description: 'Automatically recorded script',
+        status: 'ready',
+        script: '// Generated automation script\nconsole.log("Script executed");'
+      };
+
+      res.json(script);
+    } catch (error) {
+      console.error("Stop recording error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.delete("/automation/scripts/:id", isAuthenticated, async (req, res) => {
+    try {
+      // Mock script deletion
+      res.json({ message: "Script deleted successfully" });
+    } catch (error) {
+      console.error("Delete automation script error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // TimeSheet API endpoints
+  apiRouter.get("/timesheets", isAuthenticated, async (req, res) => {
+    try {
+      const {projectId, userId, folderId } = req.query;
+      const requestingUser = req.session?.userId;
+
+      console.log(`[API] Getting timesheets with filters:`, {
+        projectId: projectId ? parseInt(projectId as string) : undefined,
+        userId: userId ? parseInt(userId as string) : undefined,
+        folderId: folderId ? parseInt(folderId as string) : undefined,
+        requestingUser
+      });
+
+      let timeSheets: TimeSheet[];
+
+      if (userId) {
+        // Get timesheets for specific user
+        timeSheets = await storage.getUserTimeSheets(parseInt(userId as string));
+      } else if (projectId) {
+        // Get timesheets for specific project
+        timeSheets = await storage.getProjectTimeSheets(parseInt(projectId as string));
+      } else {
+        // Get all timesheets (admin view)
+        timeSheets = await storage.getTimeSheets();
+      }
+
+      // Apply folder filter if specified
+      if (folderId) {
+        const folderIdNum = parseInt(folderId as string);
+        timeSheets = timeSheets.filter(ts => ts.folderId === folderIdNum);
+      }
+
+      console.log(`[API] Returning ${timeSheets.length} timesheets for user ${requestingUser}:`,
+        timeSheets.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description })));
+
+      res.json(timeSheets);
+    } catch (error) {
+      console.error("Error fetching timesheets:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch timesheets" });
+    }
+  });
+
+  // Get individual timesheet by ID
+  apiRouter.get("/timesheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const timesheetId = parseInt(req.params.id);
+      const timesheet = await storage.getTimeSheet(timesheetId);
+
+      if (!timesheet) {
+        return res.status(404).json({ success: false, error: "Timesheet not found" });
+      }
+
+      console.log(`[API] Returning timesheet ${timesheetId}:`, timesheet);
+      res.json(timesheet);
+    } catch (error) {
+      console.error("Error fetching timesheet:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch timesheet" });
+    }
+  });
+
+  apiRouter.post("/timesheets", isAuthenticated, async (req, res) => {
+    try {
+      console.log('Creating timesheet with request body:', req.body);
+
+      const timesheetData = insertTimeSheetSchema.parse({
+        ...req.body,
+        userId: req.session.userId,
+      });
+
+      console.log('Parsed timesheet data:', timesheetData);
+
+      const timesheet = await storage.createTimeSheet(timesheetData);
+
+      console.log('Created timesheet:', timesheet);
+
+      res.status(201).json(timesheet);
+    } catch (error) {
+      console.error("Create timesheet error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: "Server error" });
+      }
+    }
+  });
+
+  apiRouter.patch("/timesheets/:id", isAuthenticated, async (req, res) => {
+    try {
+      const timesheetId = parseInt(req.params.id);
+      const { status, comments, approvedById, approvalDate } = req.body;
+      const requestingUserId = req.session?.userId;
+
+      console.log(`[API] PATCH timesheet ${timesheetId} with status: ${status}`, {
+        status,
+        comments,
+        approvedById,
+        approvalDate,
+        requestingUserId
+      });
+
+      // Get current timesheet
+      const currentTimesheet = await storage.getTimeSheet(timesheetId);
+      if (!currentTimesheet) {
+        return res.status(404).json({ success: false, error: "Timesheet not found" });
+      }
+
+      // Update with new status and approval info
+      const updateData = {
+        ...req.body,
+        updatedAt: new Date(),
+      };
+
+      // Ensure approval fields are set for status changes
+      if (status === "Approved" || status === "Rejected") {
+        updateData.approvedById = approvedById || requestingUserId;
+        updateData.approvalDate = approvalDate || new Date();
+        if (status === "Rejected" && comments) {
+          updateData.comments = comments;
+        }
+      }
+
+      const updatedTimeSheet = await storage.updateTimeSheet(timesheetId, updateData);
+
+      if (!updatedTimeSheet) {
+        return res.status(404).json({ success: false, error: "Failed to update timesheet" });
+      }
+
+      console.log(`[API] Successfully updated timesheet ${timesheetId} to status: ${status}`);
+      res.json({ success: true, timesheet: updatedTimeSheet });
+    } catch (error) {
+      console.error("Error updating timesheet status:", error);
+      res.status(500).json({ success: false, error: "Failed to update timesheet status" });
+    }
+  });
+
+
+  // TimeSheet Folders API endpoints
+  apiRouter.get("/timesheet-folders", isAuthenticated, async (req, res) => {
+    try {
+      const folders = await storage.getTimeSheetFolders(req.session.userId!);
+      res.json(folders);
+    } catch (error) {
+      console.error("Get timesheet folders error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/timesheet-folders", isAuthenticated, async (req, res) => {
+    try {
+      const folderData = insertTimeSheetFolderSchema.parse({
+        ...req.body,
+        userId: req.session.userId,
+      });
+
+      const folder = await storage.createTimeSheetFolder(folderData);
+      res.status(201).json(folder);
+    } catch (error) {
+      console.error("Create timesheet folder error:", error);
+      res.status(400).json({ message: "Invalid folder data" });
+    }
+  });
+
+  apiRouter.patch("/timesheet-folders/:id", isAuthenticated, async (req, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      const updatedFolder = await storage.updateTimeSheetFolder(folderId, req.body);
+      res.json(updatedFolder);
+    } catch (error) {
+      console.error("Update timesheet folder error:", error);
+      res.status(400).json({ message: "Invalid folder data" });
+    }
+  });
+
+  apiRouter.delete("/timesheet-folders/:id", isAuthenticated, async (req, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      const success = await storage.deleteTimeSheetFolder(folderId);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete timesheet folder error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Customers API endpoints
+  apiRouter.get("/customers", isAuthenticated, async (req, res) => {
+    try {
+      const customers = await storage.getCustomers();
+      res.json(customers);
+    } catch (error) {
+      console.error("Get customers error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/customers", isAuthenticated, async (req, res) => {
+    try {
+      const customerData = insertCustomerSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+
+      const customer = await storage.createCustomer(customerData);
+      res.status(201).json(customer);
+    } catch (error) {
+      console.error("Create customer error:", error);
+      res.status(400).json({ message: "Invalid customer data" });
+    }
+  });
+
+  // Employee import endpoint
+  apiRouter.post("/employees/import", isAuthenticated, checkRole(["Admin"]),
+    documentUpload.single('file'),
+    async (req, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({
+            success: false,
+            message: "No file uploaded"
+          });
+        }
+
+        const csv = await import('csv-parser');
+        const fs = await import('fs');
+
+        const results: any[] = [];
+        const filePath = req.file.path;
+
+        const stream = fs.createReadStream(filePath)
+          .pipe(csv.default())
+          .on('data', (data: any) => results.push(data))
+          .on('end', async () => {
+            try {
+              // Process the CSV data
+              const employeesToImport = results.map((row, index) => ({
+                employeeId: row.employeeId || row.emp_id || `EMP${String(Date.now() + index).slice(-6)}`,
+                firstName: row.firstName || row.first_name || row.name?.split(' ')[0] || '',
+                lastName: row.lastName || row.last_name || row.name?.split(' ').slice(1).join(' ') || '',
+                email: row.email || '',
+                phone: row.phone || row.phoneNumber || '',
+                department: row.department || 'Development',
+                designation: row.designation || row.title || 'Developer',
+                joiningDate: row.joiningDate || row.joining_date || new Date().toISOString(),
+                status: row.status || 'Active',
+                technologies: typeof row.technologies === 'string'
+                  ? row.technologies.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0)
+                  : Array.isArray(row.technologies) ? row.technologies : [],
+                locality: row.locality || '',
+                overallExperience: row.overallExperience || '',
+                createdById: req.session.userId
+              }));
+
+              const result = await storage.importEmployees(employeesToImport);
+
+              // Clean up uploaded file
+              fs.unlinkSync(filePath);
+
+              res.json({
+                success: true,
+                imported: result.successCount,
+                errors: result.errors,
+                message: `Successfully imported ${result.successCount} employees${result.errorCount > 0 ? ` with ${result.errorCount} errors` : ''}`
+              });
+
+            } catch (error: any) {
+              // Clean up file on error
+              if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+              }
+
+              console.error("Employee import processing error:", error);
+              res.status(500).json({
+                success: false,
+                message: "Failed to process employee data",
+                error: error.message
+              });
+            }
+          })
+          .on('error', (error: any) => {
+            console.error("CSV parsing error:", error);
+
+            // Clean up file on error
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+            }
+
+            res.status(400).json({
+              success: false,
+              message: "Failed to parse CSV file",
+              error: error.message
+            });
+          });
+
+      } catch (error: any) {
+        console.error("Employee import error:", error);
+        res.status(500).json({
+          success: false,
+          message: "Failed to import employees",
+          error: error.message
+        });
+      }
+    }
+  );
+
+  // Chat file upload endpoint
+  apiRouter.post("/chat/upload", isAuthenticated,
+    (req, res, next) => {
+      bugAttachmentUpload.array('files', 10)(req, res, (err) => {
+        if (err) {
+          console.error("Chat file upload error:", err);
+          return handleMulterError(err, req, res, next);
+        }
+        next();
+      });
+    },
+    async (req, res) => {
+      try {
+        if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
+          return res.status(400).json({ message: "No files uploaded" });
+        }
+
+        const uploadedFiles = req.files.map((file: any) => ({
+          id: parseInt(crypto.randomBytes(4).toString('hex'), 16),
+          fileName: file.originalname,
+          fileUrl: `/uploads/bug-attachment/${path.basename(file.path)}`,
+          fileType: file.mimetype,
+          fileSize: file.size,
+          uploadedById: req.session.userId,
+          uploadedAt: new Date().toISOString(),
+          entityType: 'chat',
+          entityId: 0
+        }));
+
+        res.status(201).json(uploadedFiles);
+      } catch (error) {
+        console.error("Chat file upload processing error:", error);
+        res.status(500).json({ message: "Failed to process uploaded files" });
+      }
+    }
+  );
+
+  apiRouter.post("/chat/ai", isAuthenticated, async (req, res) => {
+    try {
+      const { message, context } = req.body;
+
+      if (!message) {
+        return res.status(400).json({ error: 'Message is required' });
+      }
+
+      // Simple AI response logic (you can enhance this with actual AI integration)
+      const responses = {
+        'test-management': [
+          "I can help you create test cases, manage bugs, and organize your testing workflow. What specific area would you like assistance with?",
+          "For test case management, I recommend organizing your test cases by modules and using clear naming conventions. Would you like me to help you create a test case?",
+          "Bug reporting should include clear steps to reproduce, expected vs actual results, and severity level. Need help with a specific bug?",
+          "I can help you generate test reports, analyze test coverage, and track project progress. What metrics are you interested in?",
+          "For automation, consider starting with your most repetitive test cases. Would you like guidance on automation strategy?"
+        ]
+      };
+
+      const contextResponses = responses[context as keyof typeof responses] || responses['test-management'];
+      const randomResponse = contextResponses[Math.floor(Math.random() * contextResponses.length)];
+
+      // Add some intelligence based on message content
+      let response = randomResponse;
+
+      if (message.toLowerCase().includes('test case')) {
+        response = "I can help you create test cases! Test cases should include: 1) Clear test objectives, 2) Preconditions, 3) Test steps, 4) Expected results. Would you like me to guide you through creating a specific test case?";
+      } else if (message.toLowerCase().includes('bug')) {
+        response = "For effective bug reporting, include: 1) Steps to reproduce, 2) Expected behavior, 3) Actual behavior, 4) Environment details, 5) Screenshots if applicable. Need help reporting a specific bug?";
+      } else if (message.toLowerCase().includes('report')) {
+        response = "I can help you generate various reports including test execution reports, bug summary reports, and project progress reports. Which type of report are you looking for?";
+      } else if (message.toLowerCase().includes('automation')) {
+        response = "Test automation is great for repetitive tests! Start by identifying stable test cases, then consider tools like Selenium for web testing. What type of testing are you looking to automate?";
+      }
+
+      res.json({ response });
+    } catch (error) {
+      console.error('AI Chat error:', error);
+      res.status(500).json({ error: 'Failed to process chat message' });
     }
   });
 
