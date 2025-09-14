@@ -1208,6 +1208,215 @@ export type InsertRequestExtensionHistory = z.infer<typeof insertRequestExtensio
 export type RequestComment = typeof requestComments.$inferSelect;
 export type InsertRequestComment = z.infer<typeof insertRequestCommentSchema>;
 
+// Project Tracker Schema
+export const trackerProjects = pgTable("tracker_projects", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").$type<"Planning" | "In Progress" | "Completed" | "On Hold" | "Cancelled">().notNull().default("Planning"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  actualStartDate: date("actual_start_date"),
+  actualEndDate: date("actual_end_date"),
+  priority: text("priority").$type<"Low" | "Medium" | "High" | "Critical">().notNull().default("Medium"),
+  ownerId: integer("owner_id").notNull(),
+  departmentId: integer("department_id"),
+  budget: integer("budget"),
+  currency: text("currency").default("USD"),
+  tags: json("tags").default([]),
+  customFields: json("custom_fields").default({}),
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+export const trackerFeatures = pgTable("tracker_features", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  projectId: integer("project_id").notNull(),
+  status: text("status").$type<"Planning" | "In Progress" | "Completed" | "On Hold" | "Cancelled">().notNull().default("Planning"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  actualStartDate: date("actual_start_date"),
+  actualEndDate: date("actual_end_date"),
+  priority: text("priority").$type<"Low" | "Medium" | "High" | "Critical">().notNull().default("Medium"),
+  assignedToId: integer("assigned_to_id"),
+  estimatedHours: integer("estimated_hours"),
+  actualHours: integer("actual_hours"),
+  progressPercentage: integer("progress_percentage").default(0),
+  tags: json("tags").default([]),
+  customFields: json("custom_fields").default({}),
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+export const trackerSubFeatures = pgTable("tracker_sub_features", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  featureId: integer("feature_id").notNull(),
+  projectId: integer("project_id").notNull(),
+  parentSubFeatureId: integer("parent_sub_feature_id"), // For dependency tracking
+  status: text("status").$type<"Planning" | "Design" | "Development" | "Testing" | "Deployment" | "Completed" | "Blocked" | "On Hold">().notNull().default("Planning"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  actualStartDate: date("actual_start_date"),
+  actualEndDate: date("actual_end_date"),
+  priority: text("priority").$type<"Low" | "Medium" | "High" | "Critical">().notNull().default("Medium"),
+  assignedToId: integer("assigned_to_id"),
+  estimatedHours: integer("estimated_hours"),
+  actualHours: integer("actual_hours"),
+  progressPercentage: integer("progress_percentage").default(0),
+  workType: text("work_type").notNull().default("Development"), // Development, QA, DevOps, Designing
+  department: text("department"),
+  tags: json("tags").default([]),
+  customFields: json("custom_fields").default({}),
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+export const trackerWorkLogs = pgTable("tracker_work_logs", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id"),
+  featureId: integer("feature_id"),
+  subFeatureId: integer("sub_feature_id"),
+  userId: integer("user_id").notNull(),
+  workDate: date("work_date").notNull(),
+  hoursWorked: integer("hours_worked").notNull(),
+  description: text("description").notNull(),
+  workType: text("work_type").notNull(), // Development, QA, DevOps, Designing
+  status: text("status").$type<"In Progress" | "Completed" | "Blocked">().notNull().default("In Progress"),
+  attachments: json("attachments").default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+export const trackerTimelineExtensions = pgTable("tracker_timeline_extensions", {
+  id: serial("id").primaryKey(),
+  entityType: text("entity_type").$type<"project" | "feature" | "sub_feature">().notNull(),
+  entityId: integer("entity_id").notNull(),
+  originalEndDate: date("original_end_date").notNull(),
+  newEndDate: date("new_end_date").notNull(),
+  extensionDays: integer("extension_days").notNull(),
+  reason: text("reason").notNull(),
+  stage: text("stage"), // Design, Development, Testing, Deployment
+  approvedById: integer("approved_by_id"),
+  requestedById: integer("requested_by_id").notNull(),
+  status: text("status").$type<"Pending" | "Approved" | "Rejected">().notNull().default("Pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const trackerDependencies = pgTable("tracker_dependencies", {
+  id: serial("id").primaryKey(),
+  dependentType: text("dependent_type").$type<"feature" | "sub_feature">().notNull(),
+  dependentId: integer("dependent_id").notNull(),
+  blockerType: text("blocker_type").$type<"feature" | "sub_feature">().notNull(),
+  blockerId: integer("blocker_id").notNull(),
+  dependencyType: text("dependency_type").$type<"blocks" | "depends_on">().notNull(),
+  status: text("status").$type<"Active" | "Resolved">().notNull().default("Active"),
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const trackerAuditLogs = pgTable("tracker_audit_logs", {
+  id: serial("id").primaryKey(),
+  entityType: text("entity_type").$type<"project" | "feature" | "sub_feature" | "work_log">().notNull(),
+  entityId: integer("entity_id").notNull(),
+  action: text("action").$type<"created" | "updated" | "deleted" | "status_changed" | "extended">().notNull(),
+  oldValues: json("old_values"),
+  newValues: json("new_values"),
+  changedFields: json("changed_fields"),
+  userId: integer("user_id").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const trackerCustomDropdowns = pgTable("tracker_custom_dropdowns", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").$type<"work_type" | "department" | "custom_field">().notNull(),
+  options: json("options").notNull(), // Array of {value, label, color?}
+  isActive: boolean("is_active").default(true),
+  createdById: integer("created_by_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+// Insert schemas
+export const insertTrackerProjectSchema = createInsertSchema(trackerProjects).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTrackerFeatureSchema = createInsertSchema(trackerFeatures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTrackerSubFeatureSchema = createInsertSchema(trackerSubFeatures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTrackerWorkLogSchema = createInsertSchema(trackerWorkLogs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTrackerTimelineExtensionSchema = createInsertSchema(trackerTimelineExtensions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTrackerDependencySchema = createInsertSchema(trackerDependencies).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTrackerAuditLogSchema = createInsertSchema(trackerAuditLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTrackerCustomDropdownSchema = createInsertSchema(trackerCustomDropdowns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types
+export type TrackerProject = typeof trackerProjects.$inferSelect;
+export type InsertTrackerProject = z.infer<typeof insertTrackerProjectSchema>;
+
+export type TrackerFeature = typeof trackerFeatures.$inferSelect;
+export type InsertTrackerFeature = z.infer<typeof insertTrackerFeatureSchema>;
+
+export type TrackerSubFeature = typeof trackerSubFeatures.$inferSelect;
+export type InsertTrackerSubFeature = z.infer<typeof insertTrackerSubFeatureSchema>;
+
+export type TrackerWorkLog = typeof trackerWorkLogs.$inferSelect;
+export type InsertTrackerWorkLog = z.infer<typeof insertTrackerWorkLogSchema>;
+
+export type TrackerTimelineExtension = typeof trackerTimelineExtensions.$inferSelect;
+export type InsertTrackerTimelineExtension = z.infer<typeof insertTrackerTimelineExtensionSchema>;
+
+export type TrackerDependency = typeof trackerDependencies.$inferSelect;
+export type InsertTrackerDependency = z.infer<typeof insertTrackerDependencySchema>;
+
+export type TrackerAuditLog = typeof trackerAuditLogs.$inferSelect;
+export type InsertTrackerAuditLog = z.infer<typeof insertTrackerAuditLogSchema>;
+
+export type TrackerCustomDropdown = typeof trackerCustomDropdowns.$inferSelect;
+export type InsertTrackerCustomDropdown = z.infer<typeof insertTrackerCustomDropdownSchema>;
+
 // Request Form Attachments
 export const requestAttachments = pgTable("request_attachments", {
   id: serial("id").primaryKey(),

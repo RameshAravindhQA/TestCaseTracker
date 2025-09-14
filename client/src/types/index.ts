@@ -75,8 +75,18 @@ export interface TestSheet {
   id: number;
   name: string;
   projectId: number;
-  data: SheetData;
-  metadata: SheetMetadata;
+  data: {
+    cells: Record<string, Cell>;
+    rows: number;
+    cols: number;
+  };
+  metadata: {
+    version: number;
+    lastModifiedBy: number;
+    collaborators: number[];
+    chartConfigs: ChartConfig[];
+    namedRanges: NamedRange[];
+  };
   createdById: number;
   createdAt: string;
   updatedAt: string;
@@ -184,4 +194,90 @@ export interface Notebook {
   userId: number;
   createdAt: string;
   updatedAt: string;
+}
+
+// Project Tracker Types
+export interface TrackerProject {
+  id: number;
+  name: string;
+  description?: string;
+  status: 'Planning' | 'In Progress' | 'Completed' | 'On Hold' | 'Cancelled';
+  startDate?: string;
+  endDate?: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  ownerId: number;
+  departmentId?: number;
+  budget?: number;
+  currency?: string;
+  tags?: string[];
+  customFields?: Record<string, any>;
+  createdById: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TrackerFeature {
+  id: number;
+  name: string;
+  description?: string;
+  projectId: number;
+  status: 'Planning' | 'In Progress' | 'Completed' | 'On Hold' | 'Cancelled';
+  startDate?: string;
+  endDate?: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  assignedToId?: number;
+  estimatedHours?: number;
+  actualHours?: number;
+  progressPercentage?: number;
+  tags?: string[];
+  customFields?: Record<string, any>;
+  createdById: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TrackerSubFeature {
+  id: number;
+  name: string;
+  description?: string;
+  featureId: number;
+  projectId: number;
+  parentSubFeatureId?: number;
+  status: 'Planning' | 'Design' | 'Development' | 'Testing' | 'Deployment' | 'Completed' | 'Blocked' | 'On Hold';
+  startDate?: string;
+  endDate?: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  assignedToId?: number;
+  estimatedHours?: number;
+  actualHours?: number;
+  progressPercentage?: number;
+  workType: string;
+  department?: string;
+  tags?: string[];
+  customFields?: Record<string, any>;
+  createdById: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TrackerWorkLog {
+  id: number;
+  projectId?: number;
+  featureId?: number;
+  subFeatureId?: number;
+  userId: number;
+  workDate: string;
+  hoursWorked: number;
+  description: string;
+  workType: string;
+  status: 'In Progress' | 'Completed' | 'Blocked';
+  attachments?: any[];
+  createdAt: string;
+  updatedAt?: string;
 }

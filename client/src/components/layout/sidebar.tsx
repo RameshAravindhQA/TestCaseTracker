@@ -221,6 +221,11 @@ const SidebarComponent = ({ className }: SidebarProps) => {
       icon: Kanban,
     },
     {
+      name: "Project Tracker",
+      href: "/project-tracker",
+      icon: Target,
+    },
+    {
       name: "Test Cases",
       href: "/test-cases",
       icon: TestTube,

@@ -45,7 +45,33 @@ import {
   type CellValue,
   type Notebook,
   type NotebookCategory,
-  type NotebookComment
+  type NotebookComment,
+  
+  // Project Tracker imports
+  type TrackerProject,
+  type InsertTrackerProject,
+  type TrackerFeature,
+  type InsertTrackerFeature,
+  type TrackerSubFeature,
+  type InsertTrackerSubFeature,
+  type TrackerWorkLog,
+  type InsertTrackerWorkLog,
+  type TrackerTimelineExtension,
+  type InsertTrackerTimelineExtension,
+  type TrackerDependency,
+  type InsertTrackerDependency,
+  type TrackerAuditLog,
+  type InsertTrackerAuditLog,
+  type TrackerCustomDropdown,
+  type InsertTrackerCustomDropdown,
+  insertTrackerProjectSchema,
+  insertTrackerFeatureSchema,
+  insertTrackerSubFeatureSchema,
+  insertTrackerWorkLogSchema,
+  insertTrackerTimelineExtensionSchema,
+  insertTrackerDependencySchema,
+  insertTrackerAuditLogSchema,
+  insertTrackerCustomDropdownSchema
 } from "@shared/schema";
 import * as crypto from "crypto";
 import * as bcrypt from "bcrypt";
@@ -1499,6 +1525,345 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fileStream.pipe(res);
     } catch (error) {
       console.error("Download request attachment error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Project Tracker API Routes
+  
+  // Tracker Projects
+  apiRouter.get("/tracker/projects", isAuthenticated, async (req, res) => {
+    try {
+      const projects = await storage.getTrackerProjects();
+      res.json(projects);
+    } catch (error) {
+      console.error("Get tracker projects error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/tracker/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const project = await storage.getTrackerProject(id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      console.error("Get tracker project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/tracker/projects", isAuthenticated, async (req, res) => {
+    try {
+      const projectData = insertTrackerProjectSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+      const project = await storage.createTrackerProject(projectData);
+      res.status(201).json(project);
+    } catch (error) {
+      console.error("Create tracker project error:", error);
+      res.status(400).json({ message: "Invalid project data" });
+    }
+  });
+
+  apiRouter.put("/tracker/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedProject = await storage.updateTrackerProject(id, {
+        ...req.body,
+        updatedAt: new Date().toISOString(),
+      });
+      if (!updatedProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(updatedProject);
+    } catch (error) {
+      console.error("Update tracker project error:", error);
+      res.status(400).json({ message: "Invalid project data" });
+    }
+  });
+
+  apiRouter.delete("/tracker/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTrackerProject(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete tracker project error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Tracker Features
+  apiRouter.get("/tracker/features", isAuthenticated, async (req, res) => {
+    try {
+      const { projectId } = req.query;
+      const features = await storage.getTrackerFeatures(
+        projectId ? parseInt(projectId as string) : undefined
+      );
+      res.json(features);
+    } catch (error) {
+      console.error("Get tracker features error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/tracker/features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const feature = await storage.getTrackerFeature(id);
+      if (!feature) {
+        return res.status(404).json({ message: "Feature not found" });
+      }
+      res.json(feature);
+    } catch (error) {
+      console.error("Get tracker feature error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/tracker/features", isAuthenticated, async (req, res) => {
+    try {
+      const featureData = insertTrackerFeatureSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+      const feature = await storage.createTrackerFeature(featureData);
+      res.status(201).json(feature);
+    } catch (error) {
+      console.error("Create tracker feature error:", error);
+      res.status(400).json({ message: "Invalid feature data" });
+    }
+  });
+
+  apiRouter.put("/tracker/features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedFeature = await storage.updateTrackerFeature(id, {
+        ...req.body,
+        updatedAt: new Date().toISOString(),
+      });
+      if (!updatedFeature) {
+        return res.status(404).json({ message: "Feature not found" });
+      }
+      res.json(updatedFeature);
+    } catch (error) {
+      console.error("Update tracker feature error:", error);
+      res.status(400).json({ message: "Invalid feature data" });
+    }
+  });
+
+  apiRouter.delete("/tracker/features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTrackerFeature(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete tracker feature error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Tracker Sub-Features
+  apiRouter.get("/tracker/sub-features", isAuthenticated, async (req, res) => {
+    try {
+      const { featureId, projectId } = req.query;
+      const subFeatures = await storage.getTrackerSubFeatures(
+        featureId ? parseInt(featureId as string) : undefined,
+        projectId ? parseInt(projectId as string) : undefined
+      );
+      res.json(subFeatures);
+    } catch (error) {
+      console.error("Get tracker sub-features error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.get("/tracker/sub-features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const subFeature = await storage.getTrackerSubFeature(id);
+      if (!subFeature) {
+        return res.status(404).json({ message: "Sub-feature not found" });
+      }
+      res.json(subFeature);
+    } catch (error) {
+      console.error("Get tracker sub-feature error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/tracker/sub-features", isAuthenticated, async (req, res) => {
+    try {
+      const subFeatureData = insertTrackerSubFeatureSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+      const subFeature = await storage.createTrackerSubFeature(subFeatureData);
+      res.status(201).json(subFeature);
+    } catch (error) {
+      console.error("Create tracker sub-feature error:", error);
+      res.status(400).json({ message: "Invalid sub-feature data" });
+    }
+  });
+
+  apiRouter.put("/tracker/sub-features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedSubFeature = await storage.updateTrackerSubFeature(id, {
+        ...req.body,
+        updatedAt: new Date().toISOString(),
+      });
+      if (!updatedSubFeature) {
+        return res.status(404).json({ message: "Sub-feature not found" });
+      }
+      res.json(updatedSubFeature);
+    } catch (error) {
+      console.error("Update tracker sub-feature error:", error);
+      res.status(400).json({ message: "Invalid sub-feature data" });
+    }
+  });
+
+  apiRouter.delete("/tracker/sub-features/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTrackerSubFeature(id);
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete tracker sub-feature error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Work Logs
+  apiRouter.get("/tracker/work-logs", isAuthenticated, async (req, res) => {
+    try {
+      const { projectId, featureId, subFeatureId, userId, startDate, endDate } = req.query;
+      const workLogs = await storage.getTrackerWorkLogs({
+        projectId: projectId ? parseInt(projectId as string) : undefined,
+        featureId: featureId ? parseInt(featureId as string) : undefined,
+        subFeatureId: subFeatureId ? parseInt(subFeatureId as string) : undefined,
+        userId: userId ? parseInt(userId as string) : undefined,
+        startDate: startDate as string,
+        endDate: endDate as string,
+      });
+      res.json(workLogs);
+    } catch (error) {
+      console.error("Get tracker work logs error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/tracker/work-logs", isAuthenticated, async (req, res) => {
+    try {
+      const workLogData = insertTrackerWorkLogSchema.parse({
+        ...req.body,
+        userId: req.session.userId,
+      });
+      const workLog = await storage.createTrackerWorkLog(workLogData);
+      res.status(201).json(workLog);
+    } catch (error) {
+      console.error("Create tracker work log error:", error);
+      res.status(400).json({ message: "Invalid work log data" });
+    }
+  });
+
+  // Timeline Extensions
+  apiRouter.post("/tracker/timeline-extensions", isAuthenticated, async (req, res) => {
+    try {
+      const extensionData = insertTrackerTimelineExtensionSchema.parse({
+        ...req.body,
+        requestedById: req.session.userId,
+      });
+      const extension = await storage.createTrackerTimelineExtension(extensionData);
+      res.status(201).json(extension);
+    } catch (error) {
+      console.error("Create tracker timeline extension error:", error);
+      res.status(400).json({ message: "Invalid extension data" });
+    }
+  });
+
+  apiRouter.get("/tracker/timeline-extensions/:entityType/:entityId", isAuthenticated, async (req, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      const extensions = await storage.getTrackerTimelineExtensions(entityType, parseInt(entityId));
+      res.json(extensions);
+    } catch (error) {
+      console.error("Get tracker timeline extensions error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Dependencies
+  apiRouter.post("/tracker/dependencies", isAuthenticated, async (req, res) => {
+    try {
+      const dependencyData = insertTrackerDependencySchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+      const dependency = await storage.createTrackerDependency(dependencyData);
+      res.status(201).json(dependency);
+    } catch (error) {
+      console.error("Create tracker dependency error:", error);
+      res.status(400).json({ message: "Invalid dependency data" });
+    }
+  });
+
+  apiRouter.get("/tracker/dependencies", isAuthenticated, async (req, res) => {
+    try {
+      const { entityType, entityId } = req.query;
+      const dependencies = await storage.getTrackerDependencies(
+        entityType as string,
+        entityId ? parseInt(entityId as string) : undefined
+      );
+      res.json(dependencies);
+    } catch (error) {
+      console.error("Get tracker dependencies error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Custom Dropdowns
+  apiRouter.get("/tracker/custom-dropdowns", isAuthenticated, async (req, res) => {
+    try {
+      const { type } = req.query;
+      const dropdowns = await storage.getTrackerCustomDropdowns(type as string);
+      res.json(dropdowns);
+    } catch (error) {
+      console.error("Get tracker custom dropdowns error:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  apiRouter.post("/tracker/custom-dropdowns", isAuthenticated, async (req, res) => {
+    try {
+      const dropdownData = insertTrackerCustomDropdownSchema.parse({
+        ...req.body,
+        createdById: req.session.userId,
+      });
+      const dropdown = await storage.createTrackerCustomDropdown(dropdownData);
+      res.status(201).json(dropdown);
+    } catch (error) {
+      console.error("Create tracker custom dropdown error:", error);
+      res.status(400).json({ message: "Invalid dropdown data" });
+    }
+  });
+
+  // Audit Logs
+  apiRouter.get("/tracker/audit-logs", isAuthenticated, async (req, res) => {
+    try {
+      const { entityType, entityId } = req.query;
+      const logs = await storage.getTrackerAuditLogs(
+        entityType as string,
+        entityId ? parseInt(entityId as string) : undefined
+      );
+      res.json(logs);
+    } catch (error) {
+      console.error("Get tracker audit logs error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });

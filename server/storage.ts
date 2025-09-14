@@ -82,7 +82,25 @@ import {
   TestCaseStatus,
   BugStatus,
   TestCaseStatusCounts,
-  BugStatusCounts
+  BugStatusCounts,
+  InsertMessageReadStatus,
+  MessageReadStatus,
+  TrackerProject,
+  TrackerFeature,
+  TrackerSubFeature,
+  TrackerWorkLog,
+  TrackerTimelineExtension,
+  TrackerDependency,
+  TrackerAuditLog,
+  TrackerCustomDropdown,
+  InsertTrackerProject,
+  InsertTrackerFeature,
+  InsertTrackerSubFeature,
+  InsertTrackerWorkLog,
+  InsertTrackerTimelineExtension,
+  InsertTrackerDependency,
+  InsertTrackerAuditLog,
+  InsertTrackerCustomDropdown
 } from "@shared/schema";
 
 import { desc, eq } from "drizzle-orm"; // Assuming drizzle-orm is used for schema operations
@@ -440,6 +458,192 @@ export interface IStorage {
   createBrdTestCase(data: any): Promise<any>;
   updateBrdTestCase(id: number, data: any): Promise<any | null>;
   deleteBrdTestCase(id: number): Promise<boolean>;
+
+  // Project Tracker Storage Methods
+  getTrackerProjects(): Promise<TrackerProject[]>;
+  getTrackerProject(id: number): Promise<TrackerProject | null>;
+  createTrackerProject(data: InsertTrackerProject): Promise<TrackerProject>;
+  updateTrackerProject(id: number, data: Partial<TrackerProject>): Promise<TrackerProject | null>;
+  deleteTrackerProject(id: number): Promise<boolean>;
+
+  getTrackerFeatures(projectId?: number): Promise<TrackerFeature[]>;
+  getTrackerFeature(id: number): Promise<TrackerFeature | null>;
+  createTrackerFeature(data: InsertTrackerFeature): Promise<TrackerFeature>;
+  updateTrackerFeature(id: number, data: Partial<TrackerFeature>): Promise<TrackerFeature | null>;
+  deleteTrackerFeature(id: number): Promise<boolean>;
+
+  getTrackerSubFeatures(featureId?: number, projectId?: number): Promise<TrackerSubFeature[]>;
+  getTrackerSubFeature(id: number): Promise<TrackerSubFeature | null>;
+  createTrackerSubFeature(data: InsertTrackerSubFeature): Promise<TrackerSubFeature>;
+  updateTrackerSubFeature(id: number, data: Partial<TrackerSubFeature>): Promise<TrackerSubFeature | null>;
+  deleteTrackerSubFeature(id: number): Promise<boolean>;
+
+  getTrackerWorkLogs(filters?: {
+    projectId?: number;
+    featureId?: number;
+    subFeatureId?: number;
+    userId?: number;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<TrackerWorkLog[]>;
+  createTrackerWorkLog(data: InsertTrackerWorkLog): Promise<TrackerWorkLog>;
+
+  createTrackerTimelineExtension(data: InsertTrackerTimelineExtension): Promise<TrackerTimelineExtension>;
+  getTrackerTimelineExtensions(entityType: string, entityId: number): Promise<TrackerTimelineExtension[]>;
+
+  createTrackerDependency(data: InsertTrackerDependency): Promise<TrackerDependency>;
+  getTrackerDependencies(entityType?: string, entityId?: number): Promise<TrackerDependency[]>;
+
+  getTrackerCustomDropdowns(type?: string): Promise<TrackerCustomDropdown[]>;
+  createTrackerCustomDropdown(data: InsertTrackerCustomDropdown): Promise<TrackerCustomDropdown>;
+
+  createTrackerAuditLog(data: InsertTrackerAuditLog): Promise<TrackerAuditLog>;
+  getTrackerAuditLogs(entityType?: string, entityId?: number): Promise<TrackerAuditLog[]>;
+
+  // Activity logging
+  createActivity(activity: InsertActivity): Promise<Activity>;
+  getActivities(limit?: number): Promise<Activity[]>;
+  getProjectActivities(projectId: number, limit?: number): Promise<Activity[]>;
+
+  // Dashboard stats
+  getDashboardStats(userId?: number): Promise<{
+    totalProjects: number;
+    totalTestCases: number;
+    openBugs: number;
+    passRate: number;
+    testCaseStatusCounts?: TestCaseStatusCounts;
+    bugStatusCounts?: BugStatusCounts;
+    totalUsers?: number;
+  }>;
+
+  // Test Case Status operations
+  updateTestCaseStatus(id: number, status: TestCaseStatus): Promise<TestCase | null>;
+
+  // Bug Status operations
+  updateBugStatus(id: number, status: BugStatus): Promise<Bug | null>;
+
+  // Test Sheet operations (re-declared for consistency)
+  getTestSheets(projectId?: number): Promise<TestSheet[]>;
+  getTestSheet(id: number): Promise<TestSheet | undefined>;
+  createTestSheet(sheet: InsertTestSheet): Promise<TestSheet>;
+  updateTestSheet(id: number, sheetData: Partial<TestSheet>): Promise<TestSheet | undefined>;
+  deleteTestSheet(id: number): Promise<boolean>;
+  duplicateTestSheet(id: number, name: string, userId: number): Promise<TestSheet>;
+
+  // Project operations (re-declared for consistency)
+  getProjects(): Promise<Project[]>;
+  getProject(id: number): Promise<Project | undefined>;
+  createProject(project: InsertProject): Promise<Project>;
+  updateProject(id: number, projectData: Partial<Project>): Promise<Project | undefined>;
+  deleteProject(id: number): Promise<boolean>;
+
+  // Document operations (re-declared for consistency)
+  getDocuments(): Promise<Document[]>;
+  getDocument(id: number): Promise<Document | undefined>;
+  createDocument(document: InsertDocument): Promise<Document>;
+  updateDocument(id: number, documentData: Partial<Document>): Promise<Document | undefined>;
+  deleteDocument(id: number): Promise<boolean>;
+
+  // Document Folder operations (re-declared for consistency)
+  getDocumentFolders(projectId?: number): Promise<DocumentFolder[]>;
+  getDocumentFolder(id: number): Promise<DocumentFolder | undefined>;
+  createDocumentFolder(folder: InsertDocumentFolder): Promise<DocumentFolder>;
+  updateDocumentFolder(id: number, folderData: Partial<DocumentFolder>): Promise<DocumentFolder | undefined>;
+  deleteDocumentFolder(id: number): Promise<boolean>;
+
+  // Customer operations (re-declared for consistency)
+  getCustomers(): Promise<Customer[]>;
+  getCustomer(id: number): Promise<Customer | undefined>;
+  getCustomersByStatus(status: string): Promise<Customer[]>;
+  createCustomer(customer: InsertCustomer): Promise<Customer>;
+  updateCustomer(id: number, customerData: Partial<Customer>): Promise<Customer | undefined>;
+  deleteCustomer(id: number): Promise<boolean>;
+
+  // Customer Project operations
+  getCustomerProjects(): Promise<CustomerProject[]>;
+  getProjectsByCustomerId(customerId: number): Promise<Project[]>;
+  getCustomersByProjectId(projectId: number): Promise<Customer[]>;
+  createCustomerProject(customerProject: InsertCustomerProject): Promise<CustomerProject>;
+  deleteCustomerProject(id: number): Promise<boolean>;
+
+  // TimeSheet operations
+  getTimeSheets(projectId?: number, userId?: number): Promise<TimeSheet[]>;
+  getUserTimeSheets(userId: number): Promise<TimeSheet[]>;
+  getProjectTimeSheets(projectId: number): Promise<TimeSheet[]>;
+  getTimeSheet(id: number): Promise<TimeSheet | undefined>;
+  createTimeSheet(timeSheet: InsertTimeSheet): Promise<TimeSheet>;
+  updateTimeSheet(id: number, timeSheetData: Partial<TimeSheet>): Promise<TimeSheet | undefined>;
+  deleteTimeSheet(id: number): Promise<boolean>;
+
+  // TimeSheet Folder operations
+  getTimeSheetFolders(userId: number): Promise<TimeSheetFolder[]>;
+  getTimeSheetFolder(id: number): Promise<TimeSheetFolder | undefined>;
+  createTimeSheetFolder(timeSheetFolder: InsertTimeSheetFolder): Promise<TimeSheetFolder>;
+  updateTimeSheetFolder(id: number, timeSheetFolderData: Partial<TimeSheetFolder>): Promise<TimeSheetFolder | undefined>;
+  deleteTimeSheetFolder(id: number): Promise<boolean>;
+  getTimesheetsByFolder(folderId: number): Promise<TimeSheet[]>;
+
+  // Sprint operations
+  getSprints(projectId?: number): Promise<Sprint[]>;
+  getSprint(id: number): Promise<Sprint | undefined>;
+  createSprint(sprint: InsertSprint): Promise<Sprint>;
+  updateSprint(id: number, sprintData: Partial<Sprint>): Promise<Sprint | undefined>;
+  deleteSprint(id: number): Promise<boolean>;
+
+  // Kanban operations (re-declared for consistency)
+  getKanbanColumns(projectId?: number, sprintId?: number): Promise<KanbanColumn[]>;
+  getKanbanColumn(id: number): Promise<KanbanColumn | undefined>;
+  createKanbanColumn(column: InsertKanbanColumn): Promise<KanbanColumn>;
+  updateKanbanColumn(id: number, columnData: Partial<KanbanColumn>): Promise<KanbanColumn | undefined>;
+  deleteKanbanColumn(id: number): Promise<boolean>;
+
+  getKanbanCards(columnId?: number, sprintId?: number, projectId?: number): Promise<KanbanCard[]>;
+  getKanbanSubCards(parentId: number): Promise<KanbanCard[]>;
+  getKanbanCard(id: number): Promise<KanbanCard | undefined>;
+  createKanbanCard(card: InsertKanbanCard): Promise<KanbanCard>;
+  updateKanbanCard(id: number, cardData: Partial<KanbanCard>): Promise<KanbanCard | undefined>;
+  deleteKanbanCard(id: number): Promise<boolean>;
+
+  // Custom Marker operations (re-declared for consistency)
+  createCustomMarker(data: InsertCustomMarker): Promise<CustomMarker>;
+  getCustomMarkers(): Promise<CustomMarker[]>;
+  getCustomMarkersByProject(projectId: number): Promise<CustomMarker[]>;
+  updateCustomMarker(id: number, data: Partial<CustomMarker>): Promise<CustomMarker | null>;
+  deleteCustomMarker(id: number): Promise<boolean>;
+
+  // Matrix Cell operations (re-declared for consistency)
+  createMatrixCell(data: InsertMatrixCell): Promise<MatrixCell>;
+  getMatrixCells(): Promise<MatrixCell[]>;
+  getMatrixCellsByProject(projectId: number): Promise<MatrixCell[]>;
+  updateMatrixCell(id: number, data: Partial<MatrixCell>): Promise<MatrixCell | null>;
+
+  // Traceability operations (re-declared for consistency)
+  getTraceabilityMatrix(projectId: number): Promise<any>;
+  saveTraceabilityMatrix(projectId: number, matrixData: any[]): Promise<any>;
+  getTraceabilityMatrixById(id: number): Promise<any | undefined>;
+  createTraceabilityMatrix(matrix: any): Promise<any>;
+  updateTraceabilityMatrix(id: number, matrix: any): Promise<any>;
+  deleteTraceabilityMatrix(id: number): Promise<boolean>;
+  getTraceabilityMarkers(projectId: number): Promise<any[]>;
+  getTraceabilityMarker(id: number): Promise<any | undefined>;
+  createTraceabilityMarker(marker: any): Promise<any>;
+  updateTraceabilityMarker(id: number, marker: any): Promise<any>;
+  deleteTraceabilityMarker(id: number): Promise<boolean>;
+  getTraceabilityMatrixCells(matrixId: number): Promise<any[]>;
+  createTraceabilityMatrixCell(cell: any): Promise<any>;
+  updateTraceabilityMatrixCell(id: number, cell: any): Promise<any>;
+
+  // Helper methods for ID generation and activity logging
+  createActivity(activity: InsertActivity): Promise<Activity>;
+  recordActivity(entityType: string, action: string, entityId: number, userId: number): void;
+
+  // Method to fix existing test case IDs
+  fixExistingTestCaseIds(): Promise<void>;
+
+  // Message Read Status tracking
+  createMessageReadStatus(data: InsertMessageReadStatus): Promise<MessageReadStatus>;
+  getMessageReadStatuses(messageId: number): Promise<MessageReadStatus[]>;
+  markMessageAsRead(messageId: number, userId: number): Promise<void>;
 }
 
 /**
@@ -735,7 +939,7 @@ class MemStorage implements IStorage {
     const id = this.getNextId();
     const employee = {
       id: id,
-      employeeId: data.employeeId || `EMP${String(Date.now()).slice(-6)}`,
+      employeeId: data.employeeId || `EMP-${String(Date.now()).slice(-6)}`,
       firstName: data.firstName,
       lastName: data.lastName || '',
       email: data.email,
@@ -1409,6 +1613,7 @@ class MemStorage implements IStorage {
 
   // Flow diagram storage
   private flowDiagrams = new Map<string, any>();
+  private nextFlowDiagramId = 1;
 
   // ID counters
   private nextUserId = 1;
@@ -2424,7 +2629,7 @@ class MemStorage implements IStorage {
     if (index === -1) return null;
 
     const updatedMarker = {
-      ...this.traceabilityMatrixes[index], // <-- This looks like a typo, should be this.traceabilityMarkers
+      ...this.traceabilityMarkers[index], // <-- This looks like a typo, should be this.traceabilityMarkers
       ...data,
       updatedAt: new Date()
     };
@@ -2708,8 +2913,8 @@ class MemStorage implements IStorage {
   }
 
   // Flow diagram storage
-  private flowDiagrams = new Map<string, any>();
-  private nextFlowDiagramId = 1;
+  // private flowDiagrams = new Map<string, any>();
+  // private nextFlowDiagramId = 1;
 
   // Flow Diagrams methods
   async getFlowDiagramsByProject(projectId: string): Promise<any[]> {
@@ -3249,7 +3454,7 @@ class MemStorage implements IStorage {
     return this.kanbanCards.length < initialLength;
   }
 
-// Matrix operations
+  // Matrix operations
   async upsertMatrixCell(cell: any): Promise<any> {
     const key = `${cell.rowModuleId}-${cell.colModuleId}-${cell.projectId}`;
     const existingCellIndex = this.matrixCells.findIndex(c => c.rowModuleId === cell.rowModuleId && c.colModuleId === cell.colModuleId && c.projectId === cell.projectId);
@@ -3617,7 +3822,7 @@ class MemStorage implements IStorage {
 
       // Update the test case
       testCase.testCaseId = newTestCaseId;
-      testcase.updatedAt = new Date();
+      testCase.updatedAt = new Date();
 
       console.log(`✅ Fixed test case ID ${testCase.id}: ${testCase.testCaseId} (module: ${module.name}, modulePrefix: ${modulePrefix})`);
     }
@@ -5143,6 +5348,416 @@ class MemStorage implements IStorage {
     const initialLength = this.brdTestCases.length;
     this.brdTestCases = this.brdTestCases.filter(testCase => testCase.id !== id);
     return this.brdTestCases.length < initialLength;
+  }
+
+  // Project Tracker Storage Methods
+  private trackerProjects: TrackerProject[] = [];
+  private trackerFeatures: TrackerFeature[] = [];
+  private trackerSubFeatures: TrackerSubFeature[] = [];
+  private trackerWorkLogs: TrackerWorkLog[] = [];
+  private trackerTimelineExtensions: TrackerTimelineExtension[] = [];
+  private trackerDependencies: TrackerDependency[] = [];
+  private trackerAuditLogs: TrackerAuditLog[] = [];
+  private trackerCustomDropdowns: TrackerCustomDropdown[] = [];
+  private nextTrackerProjectId = 1;
+  private nextTrackerFeatureId = 1;
+  private nextTrackerSubFeatureId = 1;
+  private nextTrackerWorkLogId = 1;
+  private nextTrackerTimelineExtensionId = 1;
+  private nextTrackerDependencyId = 1;
+  private nextTrackerAuditLogId = 1;
+  private nextTrackerCustomDropdownId = 1;
+
+  // Tracker Projects
+  async getTrackerProjects(): Promise<TrackerProject[]> {
+    return this.trackerProjects.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getTrackerProject(id: number): Promise<TrackerProject | null> {
+    return this.trackerProjects.find(p => p.id === id) || null;
+  }
+
+  async createTrackerProject(data: InsertTrackerProject): Promise<TrackerProject> {
+    const newProject = {
+      ...data,
+      id: this.nextTrackerProjectId++,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.trackerProjects.push(newProject);
+
+    // Log audit
+    await this.createTrackerAuditLog({
+      entityType: 'project',
+      entityId: newProject.id,
+      action: 'created',
+      newValues: newProject,
+      changedFields: Object.keys(newProject),
+      userId: data.createdById,
+    });
+
+    return newProject;
+  }
+
+  async updateTrackerProject(id: number, data: Partial<TrackerProject>): Promise<TrackerProject | null> {
+    const index = this.trackerProjects.findIndex(p => p.id === id);
+    if (index === -1) return null;
+
+    const oldProject = { ...this.trackerProjects[index] };
+    const updatedProject = {
+      ...this.trackerProjects[index],
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.trackerProjects[index] = updatedProject;
+
+    // Log audit
+    await this.createTrackerAuditLog({
+      entityType: 'project',
+      entityId: id,
+      action: 'updated',
+      oldValues: oldProject,
+      newValues: updatedProject,
+      changedFields: Object.keys(data),
+      userId: data.createdById || oldProject.createdById,
+    });
+
+    return updatedProject;
+  }
+
+  async deleteTrackerProject(id: number): Promise<boolean> {
+    const index = this.trackerProjects.findIndex(p => p.id === id);
+    if (index === -1) return false;
+
+    const project = this.trackerProjects[index];
+    this.trackerProjects.splice(index, 1);
+
+    // Delete related features and sub-features
+    this.trackerFeatures = this.trackerFeatures.filter(f => f.projectId !== id);
+    this.trackerSubFeatures = this.trackerSubFeatures.filter(sf => sf.projectId !== id);
+    this.trackerWorkLogs = this.trackerWorkLogs.filter(wl => wl.projectId !== id);
+
+    // Log audit
+    await this.createTrackerAuditLog({
+      entityType: 'project',
+      entityId: id,
+      action: 'deleted',
+      oldValues: project,
+      changedFields: ['deleted'],
+      userId: project.createdById,
+    });
+
+    return true;
+  }
+
+  // Tracker Features
+  async getTrackerFeatures(projectId?: number): Promise<TrackerFeature[]> {
+    let features = this.trackerFeatures;
+    if (projectId) {
+      features = features.filter(f => f.projectId === projectId);
+    }
+    return features.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getTrackerFeature(id: number): Promise<TrackerFeature | null> {
+    return this.trackerFeatures.find(f => f.id === id) || null;
+  }
+
+  async createTrackerFeature(data: InsertTrackerFeature): Promise<TrackerFeature> {
+    const newFeature = {
+      ...data,
+      id: this.nextTrackerFeatureId++,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.trackerFeatures.push(newFeature);
+
+    // Log audit
+    await this.createTrackerAuditLog({
+      entityType: 'feature',
+      entityId: newFeature.id,
+      action: 'created',
+      newValues: newFeature,
+      changedFields: Object.keys(newFeature),
+      userId: data.createdById,
+    });
+
+    return newFeature;
+  }
+
+  async updateTrackerFeature(id: number, data: Partial<TrackerFeature>): Promise<TrackerFeature | null> {
+    const index = this.trackerFeatures.findIndex(f => f.id === id);
+    if (index === -1) return null;
+
+    const oldFeature = { ...this.trackerFeatures[index] };
+    const updatedFeature = {
+      ...this.trackerFeatures[index],
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.trackerFeatures[index] = updatedFeature;
+
+    // Log audit
+    await this.createTrackerAuditLog({
+      entityType: 'feature',
+      entityId: id,
+      action: 'updated',
+      oldValues: oldFeature,
+      newValues: updatedFeature,
+      changedFields: Object.keys(data),
+      userId: data.createdById || oldFeature.createdById,
+    });
+
+    return updatedFeature;
+  }
+
+  async deleteTrackerFeature(id: number): Promise<boolean> {
+    const index = this.trackerFeatures.findIndex(f => f.id === id);
+    if (index === -1) return false;
+
+    const feature = this.trackerFeatures[index];
+    this.trackerFeatures.splice(index, 1);
+
+    // Delete related sub-features
+    this.trackerSubFeatures = this.trackerSubFeatures.filter(sf => sf.featureId !== id);
+    this.trackerWorkLogs = this.trackerWorkLogs.filter(wl => wl.featureId !== id);
+
+    // Log audit
+    await this.createTrackerAuditLog({
+      entityType: 'feature',
+      entityId: id,
+      action: 'deleted',
+      oldValues: feature,
+      changedFields: ['deleted'],
+      userId: feature.createdById,
+    });
+
+    return true;
+  }
+
+  // Tracker Sub-Features
+  async getTrackerSubFeatures(featureId?: number, projectId?: number): Promise<TrackerSubFeature[]> {
+    let subFeatures = this.trackerSubFeatures;
+    if (featureId) {
+      subFeatures = subFeatures.filter(sf => sf.featureId === featureId);
+    }
+    if (projectId) {
+      subFeatures = subFeatures.filter(sf => sf.projectId === projectId);
+    }
+    return subFeatures.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getTrackerSubFeature(id: number): Promise<TrackerSubFeature | null> {
+    return this.trackerSubFeatures.find(sf => sf.id === id) || null;
+  }
+
+  async createTrackerSubFeature(data: InsertTrackerSubFeature): Promise<TrackerSubFeature> {
+    const newSubFeature = {
+      ...data,
+      id: this.nextTrackerSubFeatureId++,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.trackerSubFeatures.push(newSubFeature);
+
+    // Log audit
+    await this.createTrackerAuditLog({
+      entityType: 'sub_feature',
+      entityId: newSubFeature.id,
+      action: 'created',
+      newValues: newSubFeature,
+      changedFields: Object.keys(newSubFeature),
+      userId: data.createdById,
+    });
+
+    return newSubFeature;
+  }
+
+  async updateTrackerSubFeature(id: number, data: Partial<TrackerSubFeature>): Promise<TrackerSubFeature | null> {
+    const index = this.trackerSubFeatures.findIndex(sf => sf.id === id);
+    if (index === -1) return null;
+
+    const oldSubFeature = { ...this.trackerSubFeatures[index] };
+    const updatedSubFeature = {
+      ...this.trackerSubFeatures[index],
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.trackerSubFeatures[index] = updatedSubFeature;
+
+    // Log audit
+    await this.createTrackerAuditLog({
+      entityType: 'sub_feature',
+      entityId: id,
+      action: 'updated',
+      oldValues: oldSubFeature,
+      newValues: updatedSubFeature,
+      changedFields: Object.keys(data),
+      userId: data.createdById || oldSubFeature.createdById,
+    });
+
+    return updatedSubFeature;
+  }
+
+  async deleteTrackerSubFeature(id: number): Promise<boolean> {
+    const index = this.trackerSubFeatures.findIndex(sf => sf.id === id);
+    if (index === -1) return false;
+
+    const subFeature = this.trackerSubFeatures[index];
+    this.trackerSubFeatures.splice(index, 1);
+
+    // Delete related work logs
+    this.trackerWorkLogs = this.trackerWorkLogs.filter(wl => wl.subFeatureId !== id);
+
+    // Log audit
+    await this.createTrackerAuditLog({
+      entityType: 'sub_feature',
+      entityId: id,
+      action: 'deleted',
+      oldValues: subFeature,
+      changedFields: ['deleted'],
+      userId: subFeature.createdById,
+    });
+
+    return true;
+  }
+
+  // Work Logs
+  async getTrackerWorkLogs(filters?: {
+    projectId?: number;
+    featureId?: number;
+    subFeatureId?: number;
+    userId?: number;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<TrackerWorkLog[]> {
+    let workLogs = this.trackerWorkLogs;
+
+    if (filters) {
+      if (filters.projectId) workLogs = workLogs.filter(wl => wl.projectId === filters.projectId);
+      if (filters.featureId) workLogs = workLogs.filter(wl => wl.featureId === filters.featureId);
+      if (filters.subFeatureId) workLogs = workLogs.filter(wl => wl.subFeatureId === filters.subFeatureId);
+      if (filters.userId) workLogs = workLogs.filter(wl => wl.userId === filters.userId);
+      if (filters.startDate) workLogs = workLogs.filter(wl => wl.workDate >= filters.startDate!);
+      if (filters.endDate) workLogs = workLogs.filter(wl => wl.workDate <= filters.endDate!);
+    }
+
+    return workLogs.sort((a, b) => new Date(b.workDate).getTime() - new Date(a.workDate).getTime());
+  }
+
+  async createTrackerWorkLog(data: InsertTrackerWorkLog): Promise<TrackerWorkLog> {
+    const newWorkLog = {
+      ...data,
+      id: this.nextTrackerWorkLogId++,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.trackerWorkLogs.push(newWorkLog);
+
+    // Log audit
+    await this.createTrackerAuditLog({
+      entityType: 'work_log',
+      entityId: newWorkLog.id,
+      action: 'created',
+      newValues: newWorkLog,
+      changedFields: Object.keys(newWorkLog),
+      userId: data.userId,
+    });
+
+    return newWorkLog;
+  }
+
+  // Timeline Extensions
+  async createTrackerTimelineExtension(data: InsertTrackerTimelineExtension): Promise<TrackerTimelineExtension> {
+    const newExtension = {
+      ...data,
+      id: this.nextTrackerTimelineExtensionId++,
+      createdAt: new Date().toISOString(),
+    };
+    this.trackerTimelineExtensions.push(newExtension);
+
+    // Log audit
+    await this.createTrackerAuditLog({
+      entityType: data.entityType,
+      entityId: data.entityId,
+      action: 'extended',
+      newValues: { extensionDays: data.extensionDays, reason: data.reason },
+      changedFields: ['endDate', 'extensionDays'],
+      userId: data.requestedById,
+    });
+
+    return newExtension;
+  }
+
+  async getTrackerTimelineExtensions(entityType: string, entityId: number): Promise<TrackerTimelineExtension[]> {
+    return this.trackerTimelineExtensions
+      .filter(ext => ext.entityType === entityType && ext.entityId === entityId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  // Dependencies
+  async createTrackerDependency(data: InsertTrackerDependency): Promise<TrackerDependency> {
+    const newDependency = {
+      ...data,
+      id: this.nextTrackerDependencyId++,
+      createdAt: new Date().toISOString(),
+    };
+    this.trackerDependencies.push(newDependency);
+
+    return newDependency;
+  }
+
+  async getTrackerDependencies(entityType?: string, entityId?: number): Promise<TrackerDependency[]> {
+    let dependencies = this.trackerDependencies;
+    if (entityType && entityId) {
+      dependencies = dependencies.filter(d => 
+        (d.dependentType === entityType && d.dependentId === entityId) ||
+        (d.blockerType === entityType && d.blockerId === entityId)
+      );
+    }
+    return dependencies;
+  }
+
+  // Custom Dropdowns
+  async getTrackerCustomDropdowns(type?: string): Promise<TrackerCustomDropdown[]> {
+    let dropdowns = this.trackerCustomDropdowns.filter(d => d.isActive);
+    if (type) {
+      dropdowns = dropdowns.filter(d => d.type === type);
+    }
+    return dropdowns.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async createTrackerCustomDropdown(data: InsertTrackerCustomDropdown): Promise<TrackerCustomDropdown> {
+    const newDropdown = {
+      ...data,
+      id: this.nextTrackerCustomDropdownId++,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.trackerCustomDropdowns.push(newDropdown);
+    return newDropdown;
+  }
+
+  // Audit Logs
+  async createTrackerAuditLog(data: InsertTrackerAuditLog): Promise<TrackerAuditLog> {
+    const newLog = {
+      ...data,
+      id: this.nextTrackerAuditLogId++,
+      createdAt: new Date().toISOString(),
+    };
+    this.trackerAuditLogs.push(newLog);
+    return newLog;
+  }
+
+  async getTrackerAuditLogs(entityType?: string, entityId?: number): Promise<TrackerAuditLog[]> {
+    let logs = this.trackerAuditLogs;
+    if (entityType && entityId) {
+      logs = logs.filter(log => log.entityType === entityType && log.entityId === entityId);
+    }
+    return logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 }
 
