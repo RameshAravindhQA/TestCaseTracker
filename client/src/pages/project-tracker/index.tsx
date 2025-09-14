@@ -14,6 +14,7 @@ import { TrackerProjectForm } from '@/components/project-tracker/tracker-project
 import { TrackerProjectTable } from '@/components/project-tracker/tracker-project-table';
 import { TrackerDashboard } from '@/components/project-tracker/tracker-dashboard';
 import { TrackerReports } from '@/components/project-tracker/tracker-reports';
+import { TrackerProjectDetails } from '@/components/project-tracker/tracker-project-details';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface TrackerProject {
@@ -43,6 +44,8 @@ export default function ProjectTrackerPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [selectedProject, setSelectedProject] = useState<TrackerProject | null>(null);
+  const [showProjectDetails, setShowProjectDetails] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [filters, setFilters] = useState({
     status: 'all',
     priority: 'all',
@@ -153,6 +156,11 @@ export default function ProjectTrackerPage() {
     setShowProjectForm(true);
   };
 
+  const handleViewDetails = (projectId: number) => {
+    setSelectedProjectId(projectId);
+    setShowProjectDetails(true);
+  };
+
   const filteredProjects = projects?.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          project.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -161,6 +169,23 @@ export default function ProjectTrackerPage() {
     
     return matchesSearch && matchesStatus && matchesPriority;
   }) || [];
+
+  // Show project details if selected
+  if (showProjectDetails && selectedProjectId) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto py-6 px-4">
+          <TrackerProjectDetails
+            projectId={selectedProjectId}
+            onBack={() => {
+              setShowProjectDetails(false);
+              setSelectedProjectId(null);
+            }}
+          />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -279,6 +304,7 @@ export default function ProjectTrackerPage() {
                 isLoading={projectsLoading}
                 onEdit={handleEditProject}
                 onDelete={handleDeleteProject}
+                onViewDetails={handleViewDetails}
               />
             </div>
           </TabsContent>

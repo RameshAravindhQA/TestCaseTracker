@@ -38,6 +38,7 @@ interface TrackerProjectTableProps {
   isLoading: boolean;
   onEdit: (project: TrackerProject) => void;
   onDelete: (id: number) => void;
+  onViewDetails: (projectId: number) => void;
 }
 
 const statusColors = {
@@ -60,6 +61,7 @@ export function TrackerProjectTable({
   isLoading,
   onEdit,
   onDelete,
+  onViewDetails,
 }: TrackerProjectTableProps) {
   if (isLoading) {
     return (
@@ -165,7 +167,7 @@ export function TrackerProjectTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => {}}>
+                      <DropdownMenuItem onClick={() => onViewDetails(project.id)}>
                         <Eye className="mr-2 h-4 w-4" />
                         View Details
                       </DropdownMenuItem>
