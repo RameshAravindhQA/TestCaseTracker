@@ -5613,7 +5613,11 @@ class MemStorage implements IStorage {
       logs = logs.filter(log => log.entityType === entityType && log.entityId === entityId);
     }
 
-    return logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());= id) || null;
+    return logs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getTrackerProject(id: number): Promise<TrackerProject | null> {
+    return this.trackerProjects.find(p => p.id === id) || null;
   }
 
   async createTrackerProject(data: InsertTrackerProject): Promise<TrackerProject> {
