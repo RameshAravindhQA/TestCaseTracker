@@ -18,7 +18,7 @@ import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { autoTable } from 'jspdf-autotable';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 interface TrackerReportsProps {
