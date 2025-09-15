@@ -369,10 +369,10 @@ export default function AutomationPage() {
       return;
     }
 
-    if (launchMode === 'system-browser' && !preferredBrowser) {
+    if (launchMode === 'system-browser' && !preferredBrowser && !customBrowserPath.trim()) {
       toast({
         title: "Browser Selection Required",
-        description: "Please select a browser for system launch mode",
+        description: "Please select a browser or provide a custom browser path for system launch mode",
         variant: "destructive"
       });
       return;

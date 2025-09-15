@@ -302,6 +302,41 @@ runTest();`;
   private async launchSystemBrowser(url: string, browserName?: string, customBrowserPath?: string): Promise<{ success: boolean; process?: ChildProcess; message?: string }> {
     const availableBrowsers = await this.detectSystemBrowsers();
 
+    // Prioritize custom browser path if provided
+    if (customBrowserPath && customBrowserPath.trim()) {
+      try {
+        logger.info(`🚀 Attempting to launch browser from custom path: ${customBrowserPath} with URL: ${url}`);
+        const browserProcess = spawn(customBrowserPath, ['--new-window', url], {
+          stdio: 'ignore',
+          detached: true,
+          env: {
+            ...process.env,
+            DISPLAY: process.env.DISPLAY || ':0'
+          }
+        });
+
+        browserProcess.unref();
+
+        // Wait a moment to see if process starts successfully
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        if (!browserProcess.killed) {
+          logger.info(`✅ Successfully launched browser from custom path`);
+          return {
+            success: true,
+            process: browserProcess,
+            message: `Browser launched successfully from custom path: ${customBrowserPath}`
+          };
+        }
+      } catch (error) {
+        logger.warn(`Failed to launch browser from custom path ${customBrowserPath}:`, error);
+        return {
+          success: false,
+          message: `Failed to launch browser from custom path: ${error.message}`
+        };
+      }
+    }
+
     // For Replit environment, try xdg-open first
     if (process.env.REPL_ID || process.env.REPLIT) {
       try {
@@ -327,35 +362,7 @@ runTest();`;
       }
     }
 
-    if (customBrowserPath) {
-      try {
-        logger.info(`🚀 Attempting to launch browser from custom path: ${customBrowserPath} with URL: ${url}`);
-        const browserProcess = spawn(customBrowserPath, ['--new-window', url], {
-          stdio: 'ignore',
-          detached: true,
-          env: {
-            ...process.env,
-            DISPLAY: process.env.DISPLAY || ':0'
-          }
-        });
-
-        browserProcess.unref();
-
-        // Wait a moment to see if process starts successfully
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        if (!browserProcess.killed) {
-          logger.info(`✅ Successfully launched browser from custom path`);
-          return {
-            success: true,
-            process: browserProcess,
-            message: `Browser launched successfully from custom path`
-          };
-        }
-      } catch (error) {
-        logger.warn(`Failed to launch browser from custom path ${customBrowserPath}:`, error);
-      }
-    }
+    
 
     if (availableBrowsers.length === 0) {
       // Try to launch with common browser commands even if not detected
