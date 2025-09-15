@@ -483,20 +483,32 @@ runTest();`;
         };
       }
 
-      // Ensure virtual display is running
-      try {
-        logger.info(`🖥️ Setting up virtual display...`);
-        const xvfbProcess = spawn('Xvfb', [':99', '-screen', '0', '1920x1080x24'], {
-          stdio: 'pipe',
-          detached: true
-        });
-        xvfbProcess.unref();
-        
-        // Wait a moment for Xvfb to start
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        logger.info(`🖥️ Virtual display setup completed`);
-      } catch (xvfbError: any) {
-        logger.warn(`⚠️ Virtual display setup failed: ${xvfbError.message}`);
+      // Check if we're in a headless environment (like Replit)
+      const isHeadlessEnvironment = !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
+      
+      if (isHeadlessEnvironment) {
+        logger.info(`🖥️ Detected headless environment, using Playwright's built-in headless mode`);
+        // Set environment variables for headless operation
+        process.env.PLAYWRIGHT_HEADLESS = 'true';
+        process.env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '0';
+      } else {
+        // Try to set up virtual display for environments that support it
+        try {
+          logger.info(`🖥️ Setting up virtual display...`);
+          const xvfbProcess = spawn('Xvfb', [':99', '-screen', '0', '1920x1080x24'], {
+            stdio: 'pipe',
+            detached: true
+          });
+          xvfbProcess.unref();
+          
+          // Wait a moment for Xvfb to start
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          logger.info(`🖥️ Virtual display setup completed`);
+          process.env.DISPLAY = ':99';
+        } catch (xvfbError: any) {
+          logger.warn(`⚠️ Virtual display setup failed, using headless mode: ${xvfbError.message}`);
+          process.env.PLAYWRIGHT_HEADLESS = 'true';
+        }
       }
 
       // Generate filename based on test case
@@ -524,6 +536,9 @@ runTest();`;
       logger.info(`Output path: ${outputPath}`);
       logger.info(`Recording ID: ${recordingId}`);
       
+      // Determine if we should run in headless mode
+      const shouldRunHeadless = process.env.PLAYWRIGHT_HEADLESS === 'true' || isHeadlessEnvironment;
+      
       // Log the exact command being executed
       const codegenArgs = [
         'playwright',
@@ -535,6 +550,13 @@ runTest();`;
         '--browser=chromium',
         '--viewport-size=1280,720'
       ];
+      
+      // Add headless flag if needed
+      if (shouldRunHeadless) {
+        codegenArgs.push('--headed=false');
+        logger.info(`🖥️ Running in headless mode for Replit environment`);
+      }
+      
       logger.info(`Executing command: npx ${codegenArgs.join(' ')}`);
       
       // Log environment variables
@@ -599,6 +621,9 @@ runTest();`;
       logger.info(`📁 Recording output: ${outputPath}`);
       logger.info(`🖥️ Display: ${process.env.DISPLAY || ':99'}`);
       
+      // Determine if we should run in headless mode
+      const shouldRunHeadless = process.env.PLAYWRIGHT_HEADLESS === 'true' || isHeadlessEnvironment;
+      
       const codegenProcess = spawn('npx', codegenArgs, {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { 
@@ -606,11 +631,14 @@ runTest();`;
           PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
           NODE_ENV: 'development',
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0',
-          DISPLAY: process.env.DISPLAY || ':0',
-          XVFB_WHD: '1920x1080x24',
-          PLAYWRIGHT_HEADLESS: 'false',
+          DISPLAY: process.env.DISPLAY || (shouldRunHeadless ? undefined : ':0'),
+          XVFB_WHD: shouldRunHeadless ? undefined : '1920x1080x24',
+          PLAYWRIGHT_HEADLESS: shouldRunHeadless ? 'true' : 'false',
           CHROME_DEVEL_SANDBOX: '/proc/self/ns',
-          CHROME_NO_SANDBOX: '1'
+          CHROME_NO_SANDBOX: '1',
+          // Additional flags for Replit environment
+          PLAYWRIGHT_CHROMIUM_USE_HEADLESS_NEW: 'true',
+          PLAYWRIGHT_DISABLE_DEV_SHM_USAGE: 'true'
         }
       });
 

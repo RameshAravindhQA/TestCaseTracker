@@ -3417,6 +3417,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get automation session status
+  apiRouter.get("/automation/sessions", isAuthenticated, async (req, res) => {
+    try {
+      // Return list of active sessions (simplified for now)
+      const sessions = []; // In a real implementation, you'd get this from automationService
+      
+      res.json({
+        success: true,
+        data: sessions,
+        count: sessions.length
+      });
+    } catch (error) {
+      console.error('Failed to get automation sessions:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error while getting sessions',
+        error: error.message
+      });
+    }
+  });
+
   // Get automation health status
   apiRouter.get("/automation/health", isAuthenticated, async (req, res) => {
     try {
