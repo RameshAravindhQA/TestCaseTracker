@@ -384,7 +384,7 @@ export function TrackerDashboard({ projects }: TrackerDashboardProps) {
             >
               Add Project
             </button>
-          </CardHeader>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {/* This is where the project table with pagination will be rendered */}
