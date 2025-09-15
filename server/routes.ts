@@ -5720,7 +5720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // If parent folder is being changed, validate it
-      if (req.body.parentFolderId !== undefined && req.body.parentFolderId !== folder.parentFolderId) {
+      if (req.body.parentFolderId !==undefined && req.body.parentFolderId !== folder.parentFolderId) {
         // Cannot set folder as its own parent
         if (req.body.parentFolderId === folderId) {
           return res.status(400).json({ message: "Folder cannot be its own parent" });
@@ -7216,29 +7216,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/github/sync/:bugId", isAuthenticated, async (req, res) => {
     try {
       const bugId = parseInt(req.params.bugId);
-      if (!bugId) {
-        return res.status(400).json({ success: false, error: 'Invalid bug ID' });
-      }
+      console.log(`GitHub sync route called for bug ID: ${bugId}`);
 
-      const bug = await storage.getBug(bugId);
-      if (!bug) {
-        return res.status(404).json({ success: false, error: 'Bug not found' });
-      }
-
-      // Get GitHub configuration for the project
-      const githubConfig = await storage.getGitHubIntegration(bug.projectId);
-      if (!githubConfig || !githubConfig.isEnabled) {
+      if (!bugId || isNaN(bugId)) {
         return res.status(400).json({
           success: false,
-          error: 'GitHub integration not configured for this project'
+          error: 'Invalid bug ID'
+        });
+      }
+
+      // Get the bug
+      const bug = await storage.getBugById(bugId);
+      if (!bug) {
+        return res.status(404).json({
+          success: false,
+          error: 'Bug not found'
+        });
+      }
+
+      console.log(`Found bug for sync: ${bug.bugId} - ${bug.title}`);
+
+      // Get GitHub integration for this project
+      let integration;
+      try {
+        integration = await storage.getGitHubIntegration(bug.projectId);
+      } catch (error) {
+        console.error('Error getting GitHub integration:', error);
+        return res.status(500).json({
+          success: false,
+          error: "Failed to get GitHub integration configuration"
+        });
+      }
+
+      if (!integration || !integration.isEnabled) {
+        return res.status(400).json({
+          success: false,
+          error: 'GitHub integration not configured or disabled for this project'
         });
       }
 
       // Configure GitHub service
       githubService.setConfig({
-        owner: githubConfig.githubUsername,
-        repo: githubConfig.repositoryName,
-        token: githubConfig.personalAccessToken
+        owner: integration.githubUsername,
+        repo: integration.repositoryName,
+        token: integration.personalAccessToken
       });
 
       // Check if bug has a GitHub issue number
@@ -7251,155 +7272,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Sync comments from GitHub to system
       try {
-        const githubComments = await syncGitHubComments(bug.githubIssueNumber, bugId, githubConfig);
+        const githubComments = await syncGitHubComments(bug.githubIssueNumber, bugId, integration);
 
-        res.json({
-          success: true,
-          message: 'Successfully synced with GitHub',
-          syncedComments: githubComments?.length || 0
-        });
-      } catch (syncError) {
-        console.error('GitHub sync error:', syncError);
-        res.status(500).json({
-          success: false,
-          error: 'Failed to sync with GitHub: ' + syncError.message
-        });
-      }
-
-    } catch (error) {
-      console.error('GitHub sync route error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error'
-      });
-    }
-  });
-
-  // Sync GitHub comments to bug comments
-  apiRouter.post("/bugs/:bugId/sync-github-comments", isAuthenticated, async (req, res) => {
-    try {
-      const bugId = parseInt(req.params.bugId);
-      const bug = await storage.getBug(bugId);
-
-      if (!bug) {
-        return res.status(404).json({ success: false, message: 'Bug not found' });
-      }
-
-      if (!bug.githubIssueNumber) {
-        return res.status(400).json({
-          success: false,
-          message: 'Bug is not linked to a GitHub issue'
-        });
-      }
-
-      // Get GitHub configuration
-      const githubConfig = await storage.getGitHubIntegration(bug.projectId);
-      if (!githubConfig || !githubConfig.isEnabled) {
-        return res.status(400).json({
-          success: false,
-          message: 'GitHub integration not configured'
-        });
-      }
-
-      // Configure GitHub service
-      githubService.setConfig({
-        owner: githubConfig.githubUsername,
-        repo: githubConfig.repositoryName,
-        token: githubConfig.personalAccessToken
-      });
-
-      // Fetch GitHub comments
-      const response = await fetch(`https://api.github.com/repos/${githubConfig.githubUsername}/${githubConfig.repositoryName}/issues/${bug.githubIssueNumber}/comments`, {
-        headers: {
-          'Authorization': `Bearer ${githubConfig.personalAccessToken}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'TestCaseTracker/1.0.0'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
-      }
-
-      const githubComments = await response.json();
-      let syncedCount = 0;
-
-      // Get existing comments to avoid duplicates
-      const existingComments = await storage.getBugComments(bugId);
-      const existingGithubIds = existingComments
-        .filter(c => c.githubCommentId)
-        .map(c => c.githubCommentId);
-
-      // Sync each GitHub comment
-      for (const ghComment of githubComments) {
-        if (!existingGithubIds.includes(ghComment.id.toString())) {
-          await storage.createBugComment({
-            bugId: bugId,
-            content: ghComment.body,
-            authorId: req.session.userId!, // Use current user as author
-            githubCommentId: ghComment.id.toString(),
-            githubUrl: ghComment.html_url,
-            isPrivate: false
-          });
-          syncedCount++;
-        }
-      }
-
-      res.json({
-        success: true,
-        syncedCount,
-        message: `${syncedCount} new comments synced from GitHub`
-      });
-
-    } catch (error) {
-      console.error('GitHub comments sync error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to sync GitHub comments'
-      });
-    }
-  });
-
-  // GitHub sync route
-  apiRouter.post("/github/sync/:bugId", isAuthenticated, async (req, res) => {
-    try {
-      const bugId = parseInt(req.params.bugId);
-      if (!bugId) {
-        return res.status(400).json({ success: false, error: 'Invalid bug ID' });
-      }
-
-      const bug = await storage.getBug(bugId);
-      if (!bug) {
-        return res.status(404).json({ success: false, error: 'Bug not found' });
-      }
-
-      // Get GitHub configuration for the project
-      const githubConfig = await storage.getGitHubIntegration(bug.projectId);
-      if (!githubConfig || !githubConfig.isEnabled) {
-        return res.status(400).json({
-          success: false,
-          error: 'GitHub integration not configured for this project'
-        });
-      }
-
-      // Configure GitHub service
-      githubService.setConfig({
-        owner: githubConfig.githubUsername,
-        repo: githubConfig.repositoryName,
-        token: githubConfig.personalAccessToken
-      });
-
-      // Check if bug has a GitHub issue number
-      if (!bug.githubIssueNumber) {
-        return res.status(400).json({
-          success: false,
-          error: 'Bug is not linked to a GitHub issue'
-        });
-      }
-
-      // Sync comments from GitHub to system
-      try {
-        const githubComments = await syncGitHubComments(bug.githubIssueNumber, bugId, githubConfig);
+        // The button name change is handled client-side based on the API response or a separate config.
+        // This backend route focuses on the sync operation.
 
         res.json({
           success: true,

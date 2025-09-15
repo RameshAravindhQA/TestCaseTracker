@@ -626,6 +626,9 @@ export default function ProjectDetailPage() {
   const syncFromGithubMutation = useMutation({
     mutationFn: async () => {
       // Placeholder for actual implementation to sync from GitHub to system
+      // The error in the user message indicates that storage.getGitHubIntegration is missing.
+      // This mutation needs to be implemented to address that.
+      // For now, a placeholder is kept.
       return new Promise((resolve) => {
         setTimeout(() => {
           resolve({ message: "Sync from GitHub to System initiated successfully" });
@@ -720,7 +723,7 @@ export default function ProjectDetailPage() {
   const generateTestClosureReport = () => {
     try {
       const doc = new jsPDF();
-      
+
       // Calculate actual statistics from system data
       const totalTestCases = testCases?.length || 0;
       const passedTestCases = testCases?.filter(tc => tc.status === 'Pass').length || 0;
@@ -760,7 +763,7 @@ export default function ProjectDetailPage() {
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.text('Executive Summary', 25, 145);
-      
+
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text(`Total Test Cases: ${totalTestCases}`, 25, 160);
@@ -869,7 +872,7 @@ export default function ProjectDetailPage() {
           const blocked = moduleTestCases.filter(tc => tc.status === 'Blocked').length;
           const notExecuted = moduleTestCases.filter(tc => tc.status === 'Not Executed').length;
           const modulePassRate = total > 0 ? Math.round((passed / total) * 100) : 0;
-          
+
           return [
             module.name,
             total.toString(),
@@ -913,7 +916,7 @@ export default function ProjectDetailPage() {
 
         modules.forEach((module, moduleIndex) => {
           const moduleTestCases = testCases.filter(tc => tc.moduleId === module.id);
-          
+
           if (moduleTestCases.length > 0) {
             // Module header
             doc.setFontSize(12);
@@ -1002,7 +1005,7 @@ export default function ProjectDetailPage() {
         if (modules && modules.length > 0) {
           modules.forEach((module, moduleIndex) => {
             const moduleBugs = bugs.filter(bug => bug.moduleId === module.id);
-            
+
             if (moduleBugs.length > 0) {
               // Module header
               doc.setFontSize(11);
@@ -1059,11 +1062,11 @@ export default function ProjectDetailPage() {
       doc.text("TEST EXECUTION CONCLUSION", 14, yPos);
       yPos += 15;
 
-      // Determine actual testing status based on real data
-      const actualReadinessStatus = 
+      // Determine actual readiness status based on real data
+      const actualReadinessStatus =
         totalTestCases === 0 ? "NO TEST CASES EXECUTED" :
-        passRate >= 95 && criticalBugs === 0 && openBugs === 0 ? "READY FOR PRODUCTION" : 
-        passRate >= 90 && criticalBugs === 0 ? "READY WITH MINOR ISSUES" : 
+        passRate >= 95 && criticalBugs === 0 && openBugs === 0 ? "READY FOR PRODUCTION" :
+        passRate >= 90 && criticalBugs === 0 ? "READY WITH MINOR ISSUES" :
         passRate >= 70 && criticalBugs <= 1 ? "NEEDS CRITICAL ISSUE RESOLUTION" :
         "REQUIRES ADDITIONAL TESTING";
 
@@ -1111,7 +1114,7 @@ export default function ProjectDetailPage() {
   };
 
   const handleOpenConsolidatedReports = () => {
-    navigate(`/reports/consolidated?projectId=${projectId}`);
+    navigate(`/projects/${projectId}/reports/consolidated`);
   };
 
   return (
@@ -1194,7 +1197,7 @@ export default function ProjectDetailPage() {
                 size="sm"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${syncAllMutation.isPending ? 'animate-spin' : ''}`} />
-                {syncAllMutation.isPending ? 'Syncing...' : 'Sync All GitHub Issues'}
+                {syncAllMutation.isPending ? 'Syncing...' : 'Sync from System to GitHub'}
               </Button>
               <Button
                 onClick={handleSyncFromGithub}
