@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Calendar, Clock, User, Search, Filter, FileText, BarChart3, Download, Edit, Eye, Trash2, FileDown } from 'lucide-react';
+import { TrackerWorkLogForm } from './tracker-work-log-form';
 import { apiRequest } from '@/lib/queryClient';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
@@ -27,6 +28,8 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
   const [dateRange, setDateRange] = useState<{ start?: string; end?: string }>({});
   const [selectedWorkLog, setSelectedWorkLog] = useState<any>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingWorkLog, setEditingWorkLog] = useState<any>(null);
 
   const queryClient = useQueryClient();
 
@@ -64,6 +67,31 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
       const response = await apiRequest('GET', `/api/tracker/features?projectId=${projectId}`);
       if (!response.ok) throw new Error('Failed to fetch features');
       return response.json();
+    },
+  });
+
+  // Update work log mutation
+  const updateWorkLogMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await apiRequest('PUT', `/api/tracker/work-logs/${id}`, data);
+      if (!response.ok) throw new Error('Failed to update work log');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tracker/work-logs'] });
+      setShowEditDialog(false);
+      setEditingWorkLog(null);
+      toast({
+        title: "Success",
+        description: "Work log updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update work log",
+        variant: "destructive",
+      });
     },
   });
 
@@ -116,9 +144,8 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
   };
 
   const handleEditWorkLog = (workLog: any) => {
-    if (onEditWorkLog) {
-      onEditWorkLog(workLog);
-    }
+    setEditingWorkLog(workLog);
+    setShowEditDialog(true);
   };
 
   const handleDeleteWorkLog = (workLogId: number) => {
@@ -237,283 +264,6 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
               </SelectContent>
             </Select>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  try {
-                    const csvData = filteredWorkLogs.map(log => ({
-                      'Log ID': log.id,
-                      'Feature': getFeatureName(log.featureId),
-                      'Sub-Feature': getSubFeatureName(log.subFeatureId),
-                      'Work Type': log.workType || 'N/A',
-                      'Hours Worked': log.hoursWorked || 0,
-                      'Date': new Date(log.workDate).toLocaleDateString(),
-                      'Description': log.description || 'N/A',
-                      'Status': log.status || 'N/A',
-                      'User': `User #${log.userId}`,
-                      'Created': new Date(log.createdAt).toLocaleDateString()
-                    }));
-
-                    if (csvData.length === 0) {
-                      toast({
-                        title: "No data to export",
-                        description: "No work logs match the current filters",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-
-                    const csv = [
-                      Object.keys(csvData[0]).join(','),
-                      ...csvData.map(row => Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
-                    ].join('\n');
-
-                    const blob = new Blob([csv], { type: 'text/csv' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `work-logs-filtered-${new Date().toISOString().split('T')[0]}.csv`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-
-                    toast({
-                      title: "CSV Export successful",
-                      description: `${csvData.length} work logs exported to CSV`,
-                    });
-                  } catch (error) {
-                    console.error('CSV Export error:', error);
-                    toast({
-                      title: "CSV Export failed",
-                      description: "Failed to export work logs to CSV",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-              >
-                <FileDown className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  try {
-                    if (filteredWorkLogs.length === 0) {
-                      toast({
-                        title: "No data to export",
-                        description: "No work logs match the current filters",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-
-                    // Create a printable HTML version for PDF
-                    const printWindow = window.open('', '_blank');
-                    if (!printWindow) {
-                      toast({
-                        title: "PDF Export Failed",
-                        description: "Please allow pop-ups to export PDF",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-
-                    const projectName = projectId ? 'Project Work Logs' : 'All Work Logs';
-                    const currentDate = new Date().toLocaleDateString();
-                    
-                    const htmlContent = `
-                      <!DOCTYPE html>
-                      <html>
-                        <head>
-                          <title>Work Logs Report</title>
-                          <style>
-                            body { font-family: Arial, sans-serif; margin: 20px; }
-                            .header { text-align: center; margin-bottom: 30px; }
-                            .stats { display: flex; gap: 20px; margin-bottom: 20px; }
-                            .stat-card { border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
-                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-                            th { background-color: #f5f5f5; font-weight: bold; }
-                            .work-type { padding: 2px 6px; border-radius: 3px; font-size: 10px; }
-                            .status-badge { padding: 2px 6px; border-radius: 3px; font-size: 10px; }
-                            .in-progress { background-color: #fef3c7; color: #92400e; }
-                            .completed { background-color: #d1fae5; color: #065f46; }
-                            .blocked { background-color: #fee2e2; color: #991b1b; }
-                            @media print {
-                              body { margin: 0; }
-                              .no-print { display: none; }
-                            }
-                          </style>
-                        </head>
-                        <body>
-                          <div class="header">
-                            <h1>Work Logs Report</h1>
-                            <h2>${projectName}</h2>
-                            <p>Generated on: ${currentDate}</p>
-                            <p>Total Records: ${filteredWorkLogs.length}</p>
-                          </div>
-                          
-                          <div class="stats">
-                            <div class="stat-card">
-                              <h3>Total Logs</h3>
-                              <p style="font-size: 24px; font-weight: bold;">${filteredWorkLogs.length}</p>
-                            </div>
-                            <div class="stat-card">
-                              <h3>Total Hours</h3>
-                              <p style="font-size: 24px; font-weight: bold;">${totalHours.toFixed(1)}h</p>
-                            </div>
-                            <div class="stat-card">
-                              <h3>Avg Hours/Log</h3>
-                              <p style="font-size: 24px; font-weight: bold;">
-                                ${filteredWorkLogs.length > 0 ? (totalHours / filteredWorkLogs.length).toFixed(1) : '0'}h
-                              </p>
-                            </div>
-                          </div>
-
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>Log ID</th>
-                                <th>Feature</th>
-                                <th>Sub-Feature</th>
-                                <th>Work Type</th>
-                                <th>Hours</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                                <th>Description</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              ${filteredWorkLogs.map(log => `
-                                <tr>
-                                  <td>${log.id}</td>
-                                  <td>${getFeatureName(log.featureId)}</td>
-                                  <td>${getSubFeatureName(log.subFeatureId)}</td>
-                                  <td><span class="work-type">${log.workType || 'N/A'}</span></td>
-                                  <td>${log.hoursWorked || 0}h</td>
-                                  <td>${new Date(log.workDate).toLocaleDateString()}</td>
-                                  <td><span class="status-badge ${log.status?.toLowerCase().replace(' ', '-') || ''}">${log.status || 'N/A'}</span></td>
-                                  <td>${(log.description || 'N/A').substring(0, 100)}${log.description && log.description.length > 100 ? '...' : ''}</td>
-                                </tr>
-                              `).join('')}
-                            </tbody>
-                          </table>
-                          
-                          <div class="no-print" style="margin-top: 30px; text-align: center;">
-                            <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px;">Print / Save as PDF</button>
-                            <button onclick="window.close()" style="padding: 10px 20px; font-size: 16px; margin-left: 10px;">Close</button>
-                          </div>
-                        </body>
-                      </html>
-                    `;
-
-                    printWindow.document.write(htmlContent);
-                    printWindow.document.close();
-                    
-                    // Auto-trigger print dialog after a short delay
-                    setTimeout(() => {
-                      printWindow.print();
-                    }, 500);
-
-                    toast({
-                      title: "PDF Export initiated",
-                      description: `Opening print dialog for ${filteredWorkLogs.length} work logs`,
-                    });
-                  } catch (error) {
-                    console.error('PDF Export error:', error);
-                    toast({
-                      title: "PDF Export failed",
-                      description: "Failed to export work logs to PDF",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-              >
-                <FileDown className="h-4 w-4 mr-2" />
-                Export PDF
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Export Actions */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-500" />
-              <span className="font-medium">Export Work Logs</span>
-              <span className="text-sm text-muted-foreground">
-                ({filteredWorkLogs.length} records, {totalHours.toFixed(1)} total hours)
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  try {
-                    const csvData = filteredWorkLogs.map(log => ({
-                      'Log ID': log.id,
-                      'Feature': getFeatureName(log.featureId),
-                      'Sub-Feature': getSubFeatureName(log.subFeatureId),
-                      'Work Type': log.workType || 'N/A',
-                      'Hours Worked': log.hoursWorked || 0,
-                      'Date': new Date(log.workDate).toLocaleDateString(),
-                      'Description': log.description || 'N/A',
-                      'Status': log.status || 'N/A',
-                      'User': `User #${log.userId}`,
-                      'Created': new Date(log.createdAt).toLocaleDateString()
-                    }));
-
-                    if (csvData.length === 0) {
-                      toast({
-                        title: "No data to export",
-                        description: "No work logs match the current filters",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-
-                    const csv = [
-                      Object.keys(csvData[0]).join(','),
-                      ...csvData.map(row => Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
-                    ].join('\n');
-
-                    const blob = new Blob([csv], { type: 'text/csv' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `work-logs-${new Date().toISOString().split('T')[0]}.csv`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-
-                    toast({
-                      title: "CSV Export successful",
-                      description: `${csvData.length} work logs exported to CSV`,
-                    });
-                  } catch (error) {
-                    console.error('CSV Export error:', error);
-                    toast({
-                      title: "CSV Export failed",
-                      description: "Failed to export work logs to CSV",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-                disabled={filteredWorkLogs.length === 0}
-              >
-                <FileDown className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-              
               <Button
                 variant="outline"
                 size="sm"
@@ -650,7 +400,6 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                     });
                   }
                 }}
-                disabled={filteredWorkLogs.length === 0}
               >
                 <FileDown className="h-4 w-4 mr-2" />
                 Export PDF
@@ -659,6 +408,8 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
           </div>
         </CardContent>
       </Card>
+
+      
 
       {/* Work Logs List */}
       <div className="space-y-4">
@@ -845,6 +596,38 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                 </div>
               )}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Work Log Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Work Log</DialogTitle>
+          </DialogHeader>
+          {editingWorkLog && (
+            <TrackerWorkLogForm
+              workLog={editingWorkLog}
+              subFeature={subFeatures?.find(sf => sf.id === editingWorkLog.subFeatureId)}
+              projectId={projectId}
+              onSubmit={(data) => {
+                updateWorkLogMutation.mutate({
+                  id: editingWorkLog.id,
+                  data: {
+                    ...data,
+                    projectId: projectId,
+                    subFeatureId: editingWorkLog.subFeatureId,
+                    featureId: editingWorkLog.featureId,
+                  }
+                });
+              }}
+              isLoading={updateWorkLogMutation.isPending}
+              onCancel={() => {
+                setShowEditDialog(false);
+                setEditingWorkLog(null);
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>

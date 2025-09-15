@@ -1,5 +1,5 @@
 import { db } from './db';
-import { 
+import {
   type User, type InsertUser,
   type Project, type InsertProject,
   type ProjectMember, type InsertProjectMember,
@@ -30,7 +30,7 @@ import {
   type TrackerWorkLog, type InsertTrackerWorkLog,
   users, projects, projectMembers, modules, testCases, bugs, activities,
   documentFolders, documents, tags, customers, customerProjects,
-  timeSheets, timeSheetFolders, 
+  timeSheets, timeSheetFolders,
   automationScripts, automationRuns, automationSchedules, automationEnvironments,
   sprints, kanbanColumns, kanbanCards,
   matrixCells, customMarkers,
@@ -330,7 +330,7 @@ export class DatabaseStorage implements IStorage {
     if (moduleId) {
       return await db.select().from(testCases)
         .where(and(
-          eq(testCases.projectId, projectId), 
+          eq(testCases.projectId, projectId),
           eq(testCases.moduleId, moduleId),
           eq(testCases.isDeleted, false)
         ));
@@ -378,7 +378,7 @@ export class DatabaseStorage implements IStorage {
           modulePrefix = moduleIdParts[1]; // Get REG from BEG-REG-MOD-01
           console.log(`DB: Extracted module prefix from ID: ${modulePrefix}`);
         }
-      } 
+      }
 
       // If we couldn't extract from moduleId, generate from module name with smart mapping
       if (modulePrefix === 'MOD' && module.name) {
@@ -405,7 +405,7 @@ export class DatabaseStorage implements IStorage {
         .select({ testCaseId: testCases.testCaseId })
         .from(testCases)
         .where(and(
-          eq(testCases.projectId, insertTestCase.projectId), 
+          eq(testCases.projectId, insertTestCase.projectId),
           eq(testCases.moduleId, insertTestCase.moduleId)
         ));
 
@@ -450,8 +450,8 @@ export class DatabaseStorage implements IStorage {
   async deleteTestCase(id: number): Promise<boolean> {
     // Soft delete - mark as deleted instead of removing
     await db.update(testCases)
-      .set({ 
-        isDeleted: true, 
+      .set({
+        isDeleted: true,
         deletedAt: new Date(),
         updatedAt: new Date()
       })
@@ -480,8 +480,8 @@ export class DatabaseStorage implements IStorage {
 
   async restoreTestCase(id: number): Promise<TestCase | undefined> {
     const [restoredTestCase] = await db.update(testCases)
-      .set({ 
-        isDeleted: false, 
+      .set({
+        isDeleted: false,
         deletedAt: null,
         updatedAt: new Date()
       })
@@ -1283,6 +1283,38 @@ export class DatabaseStorage implements IStorage {
       console.error("Error saving GitHub issue:", error);
       throw error;
     }
+  }
+
+  // Tracker Work Log operations
+  async getTrackerWorkLogs(projectId: number): Promise<TrackerWorkLog[]> {
+    return await db.select().from(trackerWorkLogs).where(eq(trackerWorkLogs.projectId, projectId));
+  }
+
+  async getTrackerWorkLog(id: number): Promise<TrackerWorkLog | undefined> {
+    const result = await db.select().from(trackerWorkLogs).where(eq(trackerWorkLogs.id, id));
+    return result[0];
+  }
+
+  async createTrackerWorkLog(insertWorkLog: InsertTrackerWorkLog): Promise<TrackerWorkLog> {
+    const [newWorkLog] = await db.insert(trackerWorkLogs).values({
+      ...insertWorkLog,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return newWorkLog;
+  }
+
+  async updateTrackerWorkLog(id: number, workLogData: Partial<TrackerWorkLog>): Promise<TrackerWorkLog | undefined> {
+    const [updatedWorkLog] = await db.update(trackerWorkLogs)
+      .set({ ...workLogData, updatedAt: new Date() })
+      .where(eq(trackerWorkLogs.id, id))
+      .returning();
+    return updatedWorkLog;
+  }
+
+  async deleteTrackerWorkLog(id: number): Promise<boolean> {
+    await db.delete(trackerWorkLogs).where(eq(trackerWorkLogs.id, id));
+    return true;
   }
 }
 

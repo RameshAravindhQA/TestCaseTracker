@@ -1980,6 +1980,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  apiRouter.put("/tracker/work-logs/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedWorkLog = await storage.updateTrackerWorkLog(id, req.body);
+      if (!updatedWorkLog) {
+        return res.status(404).json({ message: "Work log not found" });
+      }
+      res.json(updatedWorkLog);
+    } catch (error) {
+      console.error("Update tracker work log error:", error);
+      res.status(400).json({ message: "Invalid work log data" });
+    }
+  });
+
   apiRouter.delete("/tracker/work-logs/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
