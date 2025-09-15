@@ -20,6 +20,7 @@ import 'jspdf-autotable';
 import { autoTable } from 'jspdf-autotable';
 import { toast } from '@/hooks/use-toast';
 import { StatusBadge } from '@/components/ui/status-badge';
+import _ from 'lodash'; // Import lodash
 
 // Define interfaces for clarity
 interface TrackerSubFeature {
@@ -225,7 +226,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
       );
       filteredWLs = filteredWLs.filter(wl => 
         wl.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        wl.workType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (wl.workType && wl.workType.toLowerCase().includes(searchQuery.toLowerCase())) ||
         wl.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (wl.subFeature?.name && wl.subFeature.name.toLowerCase().includes(searchQuery.toLowerCase()))
       );
@@ -473,14 +474,14 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
     }
   };
 
-  // Pagination logic
+  // Pagination logic for the overall work logs table
   const logsPerPage = 10;
   const totalPages = Math.ceil(filteredWorkLogs.length / logsPerPage);
   const startIndex = (currentPage - 1) * logsPerPage;
   const endIndex = startIndex + logsPerPage;
   const paginatedWorkLogs = filteredWorkLogs.slice(startIndex, endIndex);
 
-  // Handle pagination change
+  // Handle pagination change for the overall table
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -801,34 +802,67 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedWorkLogs.map((wl) => {
-                        const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
-                        return (
-                          <tr key={wl.id}>
-                            <td className="border border-gray-200 px-4 py-2">#{wl.id}</td>
-                            <td className="border border-gray-200 px-4 py-2">{subFeature?.name || 'Unknown'}</td>
-                            <td className="border border-gray-200 px-4 py-2">{wl.workDate}</td>
-                            <td className="border border-gray-200 px-4 py-2">{wl.hoursWorked}h</td>
-                            <td className="border border-gray-200 px-4 py-2">
-                              <StatusBadge status={wl.workType} />
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2">
-                              <StatusBadge status={wl.status} />
-                            </td>
-                            <td className="border border-gray-200 px-4 py-2">{wl.description}</td>
-                          </tr>
-                        );
-                      })}
+                      {(() => {
+                        // Apply pagination to this group's work logs
+                        const groupWorkLogs = group.workLogs;
+                        const startIdx = (currentPage - 1) * logsPerPage;
+                        const endIdx = startIdx + logsPerPage;
+                        const paginatedGroupLogs = groupWorkLogs.slice(startIdx, endIdx);
+
+                        return paginatedGroupLogs.map((wl) => {
+                          const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
+                          return (
+                            <tr key={wl.id}>
+                              <td className="border border-gray-200 px-4 py-2">#{wl.id}</td>
+                              <td className="border border-gray-200 px-4 py-2">{subFeature?.name || 'Unknown'}</td>
+                              <td className="border border-gray-200 px-4 py-2">{wl.workDate}</td>
+                              <td className="border border-gray-200 px-4 py-2">{wl.hoursWorked}h</td>
+                              <td className="border border-gray-200 px-4 py-2">
+                                <StatusBadge status={wl.workType} />
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2">
+                                <StatusBadge status={wl.status} />
+                              </td>
+                              <td className="border border-gray-200 px-4 py-2">{wl.description}</td>
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
+
+                {/* Pagination for this group's work logs */}
+                {group.workLogs.length > logsPerPage && (
+                  <div className="flex justify-center mt-4 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-gray-600 flex items-center">
+                      Page {currentPage} of {Math.ceil(group.workLogs.length / logsPerPage)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.min(currentPage + 1, Math.ceil(group.workLogs.length / logsPerPage)))}
+                      disabled={currentPage === Math.ceil(group.workLogs.length / logsPerPage)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Pagination for Work Logs */}
+      {/* Pagination for the overall work logs table */}
       {filteredWorkLogs.length > logsPerPage && (
         <div className="flex justify-center mt-4">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -979,7 +1013,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                         .groupBy('department')
                         .map((items, department) => {
                           const completed = items.filter(item => item.status === 'Completed').length;
-                          const inProgress = items.filter(item => ['Development', 'Testing'].includes(item.status)).length;
+                          const inProgress = items.filter(item => ['Planning', 'Design', 'Development', 'Testing'].includes(item.status)).length;
                           const pending = items.filter(item => ['Planning', 'Design'].includes(item.status)).length;
                           const progress = items.length > 0 ? Math.round((completed / items.length) * 100) : 0;
                           return {

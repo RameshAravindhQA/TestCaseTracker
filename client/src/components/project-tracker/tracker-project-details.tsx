@@ -454,24 +454,24 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                   return (
                     <>
                       {/* Feature Pagination */}
-                      {features && features.length > featuresPerPage && (
+                      {filteredFeatures && filteredFeatures.length > hierarchyItemsPerPage && (
                         <div className="flex justify-center items-center gap-2 mb-4">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setFeatureCurrentPage(Math.max(featureCurrentPage - 1, 1))}
-                            disabled={featureCurrentPage === 1}
+                            onClick={() => setHierarchyCurrentPage(Math.max(hierarchyCurrentPage - 1, 1))}
+                            disabled={hierarchyCurrentPage === 1}
                           >
                             Previous
                           </Button>
                           <span className="text-sm text-gray-600">
-                            Page {featureCurrentPage} of {Math.ceil((features?.length || 0) / featuresPerPage)}
+                            Page {hierarchyCurrentPage} of {Math.ceil(filteredFeatures.length / hierarchyItemsPerPage)} ({filteredFeatures.length} features)
                           </span>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setFeatureCurrentPage(Math.min(featureCurrentPage + 1, Math.ceil((features?.length || 0) / featuresPerPage)))}
-                            disabled={featureCurrentPage === Math.ceil((features?.length || 0) / featuresPerPage)}
+                            onClick={() => setHierarchyCurrentPage(Math.min(hierarchyCurrentPage + 1, Math.ceil(filteredFeatures.length / hierarchyItemsPerPage)))}
+                            disabled={hierarchyCurrentPage === Math.ceil(filteredFeatures.length / hierarchyItemsPerPage)}
                           >
                             Next
                           </Button>

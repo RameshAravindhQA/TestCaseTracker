@@ -102,7 +102,7 @@ export function TrackerSubFeatureForm({
   React.useEffect(() => {
     if (subFeature) {
       // Editing existing sub-feature
-      form.reset({
+      const formData = {
         name: subFeature.name || '',
         description: subFeature.description || '',
         featureId: featureId,
@@ -116,7 +116,16 @@ export function TrackerSubFeatureForm({
         endDate: subFeature.endDate || '',
         assignedToId: subFeature.assignedToId || undefined,
         estimatedHours: subFeature.estimatedHours || undefined,
-      });
+      };
+      form.reset(formData);
+      
+      // Force set individual field values to ensure they're displayed
+      setTimeout(() => {
+        form.setValue('status', subFeature.status || 'Planning');
+        form.setValue('department', subFeature.department || '');
+        form.setValue('priority', subFeature.priority || 'Medium');
+        form.setValue('workType', subFeature.workType || 'Development');
+      }, 0);
     } else {
       // Creating new sub-feature
       form.reset({
@@ -165,7 +174,7 @@ export function TrackerSubFeatureForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
@@ -302,7 +311,7 @@ export function TrackerSubFeatureForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Department</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select department" />
