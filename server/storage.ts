@@ -248,6 +248,7 @@ export interface IStorage {
   getGitHubIssueByBugId(bugId: number): Promise<any | undefined>;
   getGitHubIssueByGitHubId(githubId: number): Promise<any | undefined>;
   updateGitHubIssue(id: number, data: any): Promise<any | null>;
+  getGitHubIntegration(projectId: number): Promise<any | undefined>;
 
   // Notebook operations
   getNotebooks(userId: number): Promise<Notebook[]>;
@@ -377,7 +378,7 @@ export interface IStorage {
   deleteTodoList(id: number): Promise<boolean>;
   getTodosByListId(listId: number): Promise<any[]>;
 
-  // Request Forms Module Methods
+  // Request Forms Module Methods Methods
   getRequestFormTypes(): Promise<any[]>;
   getRequestFormType(id: number): Promise<any | undefined>;
   createRequestFormType(data: any): Promise<any>;
@@ -487,6 +488,7 @@ export interface IStorage {
     endDate?: string;
   }): Promise<TrackerWorkLog[]>;
   createTrackerWorkLog(data: InsertTrackerWorkLog): Promise<TrackerWorkLog>;
+  deleteTrackerWorkLog(id: number): Promise<boolean>;
 
   createTrackerTimelineExtension(data: InsertTrackerTimelineExtension): Promise<TrackerTimelineExtension>;
   getTrackerTimelineExtensions(entityType: string, entityId: number): Promise<TrackerTimelineExtension[]>;
@@ -3466,17 +3468,19 @@ class MemStorage implements IStorage {
         updatedAt: new Date().toISOString()
       };
       this.matrixCells[existingCellIndex] = updatedCell;
+      console.log(`Storage: Updated matrix cell ${key} with value ${cell.value}`);
       return updatedCell;
     } else {
       const id = this.getNextId().toString();
-      const newCell: MatrixCell = {
-        id,
+      const cell: MatrixCell = {
         ...cell,
+        id: id,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      this.matrixCells.push(newCell);
-      return newCell;
+      this.matrixCells.push(cell);
+      console.log(`Storage: Created matrix cell ${key} with value ${cell.value}`);
+      return cell;
     }
   }
 
@@ -3551,7 +3555,7 @@ class MemStorage implements IStorage {
         updatedAt: new Date().toISOString()
       };
       this.matrixCells[existingCellIndex] = updatedCell;
-      console.log(`Storage: Updated matrix cell ${key} with value ${data.value}`);
+      console.log(`Storage: Created matrix cell ${key} with value ${data.value}`);
       return updatedCell;
     } else {
       const id = this.getNextId().toString();
@@ -5375,9 +5379,7 @@ class MemStorage implements IStorage {
 
   async getTrackerProject(id: number): Promise<TrackerProject | null> {
     return this.trackerProjects.find(p => p.id === id) || null;
-  }
-
-  async createTrackerProject(data: InsertTrackerProject): Promise<TrackerProject> {
+  }async createTrackerProject(data: InsertTrackerProject): Promise<TrackerProject> {
     const project: TrackerProject = {
       id: this.nextTrackerProjectId++,
       ...data,
@@ -5453,14 +5455,14 @@ class MemStorage implements IStorage {
   // Tracker Sub-Features
   async getTrackerSubFeatures(featureId?: number, projectId?: number): Promise<TrackerSubFeature[]> {
     let subFeatures = this.trackerSubFeatures;
-    
+
     if (featureId) {
       subFeatures = subFeatures.filter(sf => sf.featureId === featureId);
     }
     if (projectId) {
       subFeatures = subFeatures.filter(sf => sf.projectId === projectId);
     }
-    
+
     return subFeatures;
   }
 

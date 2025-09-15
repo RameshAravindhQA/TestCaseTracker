@@ -177,19 +177,19 @@ function TestCaseSelector({ value, onChange, projectId, onTestCaseSelect }: Test
 export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }: BugFormProps) {
   const { toast } = useToast();
   const isEditing = !!bug;
-  
+
   // New state for tag creation
   const [isTagCreatorOpen, setIsTagCreatorOpen] = useState(false);
   const [newTags, setNewTags] = useState<Tag[]>([]);
-  
+
   // Listen for tag creator events
   useEffect(() => {
     const handleOpenTagCreator = () => {
       setIsTagCreatorOpen(true);
     };
-    
+
     window.addEventListener('openTagCreator', handleOpenTagCreator);
-    
+
     return () => {
       window.removeEventListener('openTagCreator', handleOpenTagCreator);
     };
@@ -222,7 +222,7 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
       testCaseId: bug?.testCaseId || testCase?.id || null,
       assignedToId: bug?.assignedToId || null,
       tags: bug?.tags || [],
-      attachments: bug?.attachments || [],
+      attachments: (bug?.attachments || []).filter(file => file !== null && file !== undefined),
     },
   });
 
@@ -596,7 +596,7 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   You can link this bug to a test case to automatically populate related fields, or create a standalone bug report.
                 </p>
-                
+
                 {/* Test Case Selection */}
                 <FormField
                   control={form.control}
@@ -673,7 +673,7 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="attachments"
@@ -709,7 +709,7 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
         </DialogFooter>
       </form>
     </Form>
-    
+
     {/* Tag Creator Dialog */}
     <Dialog open={isTagCreatorOpen} onOpenChange={setIsTagCreatorOpen}>
       <DialogContent className="sm:max-w-[425px]">
@@ -741,7 +741,7 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
                       name: tag.name,
                       color: tag.color
                     }));
-                    
+
                     const response = await fetch(
                       `/api/projects/${projectId}/tags`,
                       {
@@ -752,31 +752,31 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
                         body: JSON.stringify(validTags)
                       }
                     );
-                    
+
                     if (response.ok) {
                       const savedTags = await response.json();
-                      
+
                       // Update form with new tags
                       const currentTags = form.getValues("tags") || [];
                       form.setValue("tags", [...currentTags, ...savedTags]);
-                      
+
                       // Invalidate tags cache
                       queryClient.invalidateQueries({ 
                         queryKey: [`/api/projects/${projectId}/tags`]
                       });
-                      
+
                       // Reset new tags
                       setNewTags([]);
-                      
+
                       // Close dialog
                       setIsTagCreatorOpen(false);
-                      
+
                       // Show success message
                       toast({
                         title: "Tags created",
                         description: `${savedTags.length} ${savedTags.length === 1 ? 'tag has' : 'tags have'} been created successfully.`,
                       });
-                      
+
                       // Dispatch event to notify other components that tags were updated
                       window.dispatchEvent(new Event('tagsUpdated'));
                     } else {
@@ -790,7 +790,7 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
                     });
                   }
                 };
-                
+
                 createTagsMutation();
               } else {
                 setIsTagCreatorOpen(false);
@@ -800,7 +800,7 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
             Save Tags
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </Dialog>
     </Dialog>
     </>
   );

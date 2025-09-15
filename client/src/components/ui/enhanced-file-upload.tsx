@@ -364,16 +364,16 @@ export function EnhancedFileUpload({
             </CardHeader>
             <CardContent className="p-3 pt-0">
               <ul className="space-y-2">
-                {value.map((file, index) => (
+                {value.filter(file => file !== null && file !== undefined).map((file, index) => (
                   <li key={index} className="flex items-center justify-between py-1 border-b last:border-0">
                     <div className="flex items-center space-x-2 cursor-pointer" onClick={() => openViewer(file)}>
-                      {getFileIcon(file.fileName, file.fileType)}
+                      {getFileIcon(file?.fileName || file?.name || '', file?.fileType || file?.type || '')}
                       <div>
                         <p className="text-sm font-medium overflow-hidden text-ellipsis max-w-[200px]" style={{ whiteSpace: 'nowrap' }}>
                           {file?.fileName || file?.name || 'Unknown file'}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {file.fileSize ? `${Math.round(file.fileSize / 1024)} KB` : 'Unknown size'}
+                          {file?.fileSize ? `${Math.round(file.fileSize / 1024)} KB` : 'Unknown size'}
                         </p>
                       </div>
                     </div>

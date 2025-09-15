@@ -155,11 +155,15 @@ export class GitHubService {
     }
 
     try {
+      console.log('Creating GitHub issue with labels:', labels);
+
       // Create labels if they don't exist
       if (labels && labels.length > 0) {
         await this.ensureLabelsExist(labels);
+        console.log('Labels ensured, now creating issue...');
       }
 
+      // Create the issue with labels
       const response = await this.octokit.rest.issues.create({
         owner: this.config.owner,
         repo: this.config.repo,
@@ -167,6 +171,24 @@ export class GitHubService {
         body,
         labels: labels || [],
       });
+
+      console.log('GitHub issue created successfully:', response.data.number);
+      console.log('Issue labels from response:', response.data.labels);
+
+      // If labels were provided but not attached, try to add them manually
+      if (labels && labels.length > 0) {
+        try {
+          await this.octokit.rest.issues.addLabels({
+            owner: this.config.owner,
+            repo: this.config.repo,
+            issue_number: response.data.number,
+            labels: labels,
+          });
+          console.log('Labels added manually to issue:', labels);
+        } catch (labelError) {
+          console.warn('Failed to add labels manually:', labelError);
+        }
+      }
 
       logger.info('GitHub issue created:', {
         number: response.data.number,
@@ -182,7 +204,7 @@ export class GitHubService {
           number: response.data.number,
           title: response.data.title,
           url: response.data.html_url,
-          labels: response.data.labels?.map(l => typeof l === 'string' ? l : l.name) || [],
+          labels: response.data.labels?.map(l => typeof l === 'string' ? l : l.name) || labels || [],
         },
       };
 
