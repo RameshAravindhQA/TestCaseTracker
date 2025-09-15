@@ -713,6 +713,50 @@ export function RequestFormForm({ request, projects, requestTypes, employees = [
                   </FormItem>
                 )}
               />
+
+              {/* Extensions and Reopen History */}
+              {request?.extensions && request.extensions.length > 0 && (
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Extension History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {request.extensions.map((ext: any, index: number) => (
+                        <div key={index} className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded">
+                          <span>Extended by {ext.extensionDays} days</span>
+                          <span className="text-muted-foreground">{format(new Date(ext.createdAt), 'MMM dd, yyyy')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Reopen History */}
+              {request?.reopenHistory && request.reopenHistory.length > 0 && (
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Reopen History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {request.reopenHistory.map((reopen: any, index: number) => (
+                        <div key={index} className="text-sm p-2 bg-gray-50 rounded">
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">Reopened</span>
+                            <span className="text-muted-foreground">{format(new Date(reopen.createdAt), 'MMM dd, yyyy')}</span>
+                          </div>
+                          <p className="text-muted-foreground mt-1">{reopen.reason}</p>
+                          {reopen.newStartDate && (
+                            <p className="text-xs text-muted-foreground">New dates: {format(new Date(reopen.newStartDate), 'MMM dd')} - {format(new Date(reopen.newEndDate), 'MMM dd')}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </CardContent>
           </Card>
         </div>

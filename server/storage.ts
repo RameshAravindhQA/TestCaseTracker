@@ -495,7 +495,7 @@ export interface IStorage {
     endDate?: string;
   }): Promise<TrackerWorkLog[]>;
   createTrackerWorkLog(data: InsertTrackerWorkLog): Promise<TrackerWorkLog>;
-  updateTrackerWorkLog(id: number, data: any): Promise<any>;
+  updateTrackerWorkLog(id: number, data: Partial<TrackerWorkLog>): Promise<TrackerWorkLog | null>;
   deleteTrackerWorkLog(id: number): Promise<boolean>;
 
   createTrackerTimelineExtension(data: InsertTrackerTimelineExtension): Promise<TrackerTimelineExtension>;
@@ -3219,7 +3219,7 @@ class MemStorage implements IStorage {
     }
 
     console.log(`Storage: getTimeSheets(${projectId}, ${userId}) returning ${results.length} timesheets:`,
-      results.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description })));
+      results.map(ts => ({ id: ts.id, projectId: ts.projectId, userId: ts.userId, description: ts.description.substring(0, 50) })));
 
     return results;
   }
@@ -5211,8 +5211,7 @@ class MemStorage implements IStorage {
   }
 
   async createBrdDocument(data: any): Promise<any> {
-    const id = this.nextBrdId++;
-    const now = new Date();
+    const id = this.nextBrdId++;    const now = new Date();
 
     const document = {
       id,
@@ -5432,7 +5431,8 @@ class MemStorage implements IStorage {
 
   async getTrackerProject(id: number): Promise<TrackerProject | null> {
     return this.trackerProjects.find(p => p.id === id) || null;
-  }async createTrackerProject(data: InsertTrackerProject): Promise<TrackerProject> {
+  }
+  async createTrackerProject(data: InsertTrackerProject): Promise<TrackerProject> {
     const project: TrackerProject = {
       id: this.nextTrackerProjectId++,
       ...data,
@@ -5590,14 +5590,35 @@ class MemStorage implements IStorage {
   }
 
   async createTrackerWorkLog(data: InsertTrackerWorkLog): Promise<TrackerWorkLog> {
-    const workLog: TrackerWorkLog = {
-      id: this.nextTrackerWorkLogId++,
-      ...data,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    const id = this.getNextId();
+    const workLog = {
+      id,
+      projectId: data.projectId,
+      featureId: data.featureId,
+      subFeatureId: data.subFeatureId,
+      userId: data.userId,
+      workDate: data.workDate,
+      hoursWorked: data.hoursWorked,
+      description: data.description,
+      workType: data.workType,
+      status: data.status,
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     this.trackerWorkLogs.push(workLog);
     return workLog;
+  }
+
+  async updateTrackerWorkLog(id: number, data: Partial<TrackerWorkLog>): Promise<TrackerWorkLog | null> {
+    const index = this.trackerWorkLogs.findIndex(log => log.id === id);
+    if (index === -1) return null;
+
+    this.trackerWorkLogs[index] = {
+      ...this.trackerWorkLogs[index],
+      ...data,
+      updatedAt: new Date()
+    };
+    return this.trackerWorkLogs[index];
   }
 
   async deleteTrackerWorkLog(id: number): Promise<boolean> {

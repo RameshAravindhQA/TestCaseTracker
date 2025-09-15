@@ -777,180 +777,154 @@ function RequestFormsPageContent() {
                                     variant="outline"
                                     onClick={async () => {
                                       try {
-                                        // Import jsPDF dynamically
-                                        const jsPDF = (await import('jspdf')).default;
-                                        await import('jspdf-autotable');
+                                        // Import jsPDF dynamically with proper error handling
+                                        const { jsPDF } = await import('jspdf');
+                                        const jsPDFInstance = new jsPDF();
+                                        
+                                        // Try to import jspdf-autotable
+                                        try {
+                                          await import('jspdf-autotable');
+                                        } catch (autoTableError) {
+                                          console.warn('jspdf-autotable not available, using basic PDF generation');
+                                        }
 
-                                        const doc = new jsPDF();
+                                        const doc = jsPDFInstance;
                                         const project = projects.find((p: any) => p.id === request.projectId);
 
                                         // Get audit logs for this request
-                                        const auditResponse = await apiRequest('GET', `/api/resource-requests/${request.id}/audit-logs`);
-                                        const auditLogs = auditResponse.ok ? await auditResponse.json() : [];
+                                        let auditLogs: any[] = [];
+                                        try {
+                                          const auditResponse = await apiRequest('GET', `/api/resource-requests/${request.id}/audit-logs`);
+                                          auditLogs = auditResponse.ok ? await auditResponse.json() : [];
+                                        } catch (error) {
+                                          console.warn('Could not fetch audit logs:', error);
+                                        }
 
                                         // Title and Header
                                         doc.setFontSize(18);
-                                        doc.setFont(undefined, 'bold');
+                                        doc.setFont('helvetica', 'bold');
                                         doc.text('Resource Request Report', 105, 20, { align: 'center' });
 
                                         doc.setFontSize(12);
-                                        doc.setFont(undefined, 'normal');
+                                        doc.setFont('helvetica', 'normal');
                                         doc.text(`Generated on: ${format(new Date(), 'MMMM dd, yyyy HH:mm')}`, 105, 30, { align: 'center' });
 
-                                        // Request Summary Table
+                                        // Request Summary
                                         let yPos = 50;
                                         doc.setFontSize(14);
-                                        doc.setFont(undefined, 'bold');
+                                        doc.setFont('helvetica', 'bold');
                                         doc.text('Request Summary', 20, yPos);
 
-                                        const summaryData = [
-                                          ['Request ID', request.requestId || `REQ-${request.id}`],
-                                          ['Title', request.title],
-                                          ['Type', request.requestType],
-                                          ['Department', request.department],
-                                          ['Project', project?.projectName || project?.name || 'N/A'],
-                                          ['Priority', request.priority],
-                                          ['Status', request.status],
-                                          ['Estimated Hours', `${request.estimatedHours} hours`],
-                                          ['Duration', `${calculateDuration(request.startDate, request.endDate)} days`],
+                                        yPos += 10;
+                                        doc.setFontSize(10);
+                                        doc.setFont('helvetica', 'normal');
+
+                                        const summaryItems = [
+                                          ['Request ID:', request.requestId || `REQ-${request.id}`],
+                                          ['Title:', request.title],
+                                          ['Type:', request.requestType],
+                                          ['Department:', request.department],
+                                          ['Project:', project?.projectName || project?.name || 'N/A'],
+                                          ['Priority:', request.priority],
+                                          ['Status:', request.status],
+                                          ['Estimated Hours:', `${request.estimatedHours} hours`],
+                                          ['Duration:', `${calculateDuration(request.startDate, request.endDate)} days`],
                                         ];
 
-                                        (doc as any).autoTable({
-                                          startY: yPos + 10,
-                                          head: [['Field', 'Value']],
-                                          body: summaryData,
-                                          theme: 'grid',
-                                          headStyles: { fillColor: [41, 128, 185] },
-                                          columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
+                                        summaryItems.forEach(([label, value]) => {
+                                          doc.text(label, 20, yPos);
+                                          doc.text(String(value), 80, yPos);
+                                          yPos += 8;
                                         });
 
-                                        yPos = (doc as any).lastAutoTable.finalY + 20;
-
                                         // Timeline Information
+                                        yPos += 10;
                                         doc.setFontSize(14);
-                                        doc.setFont(undefined, 'bold');
+                                        doc.setFont('helvetica', 'bold');
                                         doc.text('Timeline Information', 20, yPos);
 
-                                        const timelineData = [
-                                          ['Planned Start Date', formatDate(request.startDate)],
-                                          ['Planned End Date', formatDate(request.endDate)],
-                                          ['Actual Start Date', request.actualStartDate ? formatDate(request.actualStartDate) : 'Not started'],
-                                          ['Actual End Date', request.actualEndDate ? formatDate(request.actualEndDate) : 'Not completed'],
-                                          ['Created Date', formatDate(request.createdAt)],
-                                          ['Last Updated', formatDate(request.updatedAt)],
+                                        yPos += 10;
+                                        doc.setFontSize(10);
+                                        doc.setFont('helvetica', 'normal');
+
+                                        const timelineItems = [
+                                          ['Planned Start Date:', formatDate(request.startDate)],
+                                          ['Planned End Date:', formatDate(request.endDate)],
+                                          ['Created Date:', formatDate(request.createdAt)],
+                                          ['Last Updated:', formatDate(request.updatedAt)],
                                         ];
 
                                         if (request.reopenedDate) {
-                                          timelineData.push(['Reopened Date', formatDate(request.reopenedDate)]);
-                                          timelineData.push(['Reopen Reason', request.reopenReason || 'Not specified']);
+                                          timelineItems.push(['Reopened Date:', formatDate(request.reopenedDate)]);
+                                          timelineItems.push(['Reopen Reason:', request.reopenReason || 'Not specified']);
                                         }
 
-                                        (doc as any).autoTable({
-                                          startY: yPos + 10,
-                                          head: [['Timeline Event', 'Date/Status']],
-                                          body: timelineData,
-                                          theme: 'grid',
-                                          headStyles: { fillColor: [52, 152, 219] },
-                                          columnStyles: { 0: { fontStyle: 'bold', cellWidth: 70 } },
+                                        timelineItems.forEach(([label, value]) => {
+                                          doc.text(label, 20, yPos);
+                                          doc.text(String(value), 80, yPos);
+                                          yPos += 8;
                                         });
 
-                                        yPos = (doc as any).lastAutoTable.finalY + 20;
-
-                                        // Detailed Information
+                                        // Description
                                         if (request.description) {
-                                          if (yPos > 250) {
-                                            doc.addPage();
-                                            yPos = 20;
-                                          }
+                                          yPos += 10;
                                           doc.setFontSize(14);
-                                          doc.setFont(undefined, 'bold');
+                                          doc.setFont('helvetica', 'bold');
                                           doc.text('Description', 20, yPos);
-                                          doc.setFontSize(11);
-                                          doc.setFont(undefined, 'normal');
+                                          yPos += 10;
+                                          doc.setFontSize(10);
+                                          doc.setFont('helvetica', 'normal');
                                           const splitDescription = doc.splitTextToSize(request.description, 170);
-                                          doc.text(splitDescription, 20, yPos + 10);
-                                          yPos += splitDescription.length * 5 + 20;
+                                          doc.text(splitDescription, 20, yPos);
+                                          yPos += splitDescription.length * 5 + 10;
                                         }
 
+                                        // Deliverables
                                         if (request.deliverables) {
                                           if (yPos > 250) {
                                             doc.addPage();
                                             yPos = 20;
                                           }
                                           doc.setFontSize(14);
-                                          doc.setFont(undefined, 'bold');
+                                          doc.setFont('helvetica', 'bold');
                                           doc.text('Deliverables', 20, yPos);
-                                          doc.setFontSize(11);
-                                          doc.setFont(undefined, 'normal');
+                                          yPos += 10;
+                                          doc.setFontSize(10);
+                                          doc.setFont('helvetica', 'normal');
                                           const splitDeliverables = doc.splitTextToSize(request.deliverables, 170);
-                                          doc.text(splitDeliverables, 20, yPos + 10);
-                                          yPos += splitDeliverables.length * 5 + 20;
+                                          doc.text(splitDeliverables, 20, yPos);
+                                          yPos += splitDeliverables.length * 5 + 10;
                                         }
 
+                                        // Acceptance Criteria
                                         if (request.acceptanceCriteria) {
                                           if (yPos > 250) {
                                             doc.addPage();
                                             yPos = 20;
                                           }
                                           doc.setFontSize(14);
-                                          doc.setFont(undefined, 'bold');
+                                          doc.setFont('helvetica', 'bold');
                                           doc.text('Acceptance Criteria', 20, yPos);
-                                          doc.setFontSize(11);
-                                          doc.setFont(undefined, 'normal');
+                                          yPos += 10;
+                                          doc.setFontSize(10);
+                                          doc.setFont('helvetica', 'normal');
                                           const splitCriteria = doc.splitTextToSize(request.acceptanceCriteria, 170);
-                                          doc.text(splitCriteria, 20, yPos + 10);
-                                          yPos += splitCriteria.length * 5 + 20;
+                                          doc.text(splitCriteria, 20, yPos);
                                         }
 
-                                        // Audit Trail
-                                        if (auditLogs.length > 0) {
-                                          if (yPos > 200) {
-                                            doc.addPage();
-                                            yPos = 20;
-                                          }
-                                          doc.setFontSize(14);
-                                          doc.setFont(undefined, 'bold');
-                                          doc.text('Audit Trail', 20, yPos);
-
-                                          const auditData = auditLogs.map((log: any) => [
-                                            format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm'),
-                                            log.action,
-                                            log.details || log.action
-                                          ]);
-
-                                          (doc as any).autoTable({
-                                            startY: yPos + 10,
-                                            head: [['Date & Time', 'Action', 'Details']],
-                                            body: auditData,
-                                            theme: 'grid',
-                                            headStyles: { fillColor: [155, 89, 182] },
-                                            columnStyles: {
-                                              0: { cellWidth: 40 },
-                                              1: { cellWidth: 30, fontStyle: 'bold' },
-                                              2: { cellWidth: 120 }
-                                            },
-                                            styles: { fontSize: 9 }
-                                          });
-                                        }
-
-                                        // Footer
-                                        const pageCount = doc.getNumberOfPages();
-                                        for (let i = 1; i <= pageCount; i++) {
-                                          doc.setPage(i);
-                                          doc.setFontSize(8);
-                                          doc.setFont(undefined, 'normal');
-                                          doc.text(`Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
-                                          doc.text('Confidential - Internal Use Only', 20, 290);
-                                        }
-
-                                        doc.save(`${request.requestId || `REQ-${request.id}`}_detailed_report.pdf`);
-                                        toast({ title: "PDF Export", description: "Detailed request report downloaded successfully." });
+                                        // Save the PDF
+                                        doc.save(`${request.requestId || `REQ-${request.id}`}_report.pdf`);
+                                        toast({ title: "PDF Export", description: "Request report downloaded successfully." });
                                       } catch (error: any) {
                                         console.error("PDF Export Error:", error);
-                                        toast({ title: "PDF Export Failed", description: error.message, variant: "destructive" });
+                                        toast({ 
+                                          title: "PDF Export Failed", 
+                                          description: error.message || "Failed to generate PDF report", 
+                                          variant: "destructive" 
+                                        });
                                       }
                                     }}
-                                    title="Export Detailed PDF"
+                                    title="Export PDF"
                                   >
                                     <Download className="h-4 w-4" />
                                   </Button>
