@@ -77,7 +77,24 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
 
   // Growth/Trend Analysis
   const generateTrendData = () => {
-    if (!workLogs || workLogs.length === 0) return [];
+    if (!workLogs || workLogs.length === 0) {
+      // Generate sample data for the last 7 days if no work logs exist
+      const sampleData = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        sampleData.push({
+          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          dailyHours: 0,
+          cumulativeHours: 0,
+          dailyLogs: 0,
+          cumulativeLogs: 0,
+          growth: 0,
+          velocity: 0
+        });
+      }
+      return sampleData;
+    }
     
     // Group work logs by date and calculate cumulative hours
     const dateGroups = workLogs.reduce((acc, log) => {
@@ -104,12 +121,12 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
 
       return {
         date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        dailyHours: item.hours,
-        cumulativeHours,
+        dailyHours: Math.round(item.hours * 10) / 10,
+        cumulativeHours: Math.round(cumulativeHours * 10) / 10,
         dailyLogs: item.count,
         cumulativeLogs: cumulativeCount,
         growth: parseFloat(growth.toFixed(1)),
-        velocity: item.hours / (item.count || 1) // Hours per log
+        velocity: Math.round((item.hours / (item.count || 1)) * 10) / 10 // Hours per log
       };
     });
   };
@@ -118,23 +135,47 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
 
   // Status progression over time
   const generateStatusProgression = () => {
-    if (!subFeatures || subFeatures.length === 0) return [];
+    if (!subFeatures || subFeatures.length === 0) {
+      // Generate sample data for the last 7 days if no sub-features exist
+      const sampleData = [];
+      for (let i = 0; i < 7; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - i));
+        
+        sampleData.push({
+          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          Planning: 0,
+          Design: 0,
+          Development: 0,
+          Testing: 0,
+          Completed: 0
+        });
+      }
+      return sampleData;
+    }
     
-    // Create mock progression data based on creation dates
+    // Create progression data based on actual sub-features
     const statusProgression = [];
     const statuses = ['Planning', 'Design', 'Development', 'Testing', 'Completed'];
+    
+    // Get actual status counts
+    const statusCounts = subFeatures.reduce((acc, sf) => {
+      acc[sf.status] = (acc[sf.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
     
     for (let i = 0; i < 7; i++) {
       const date = new Date();
       date.setDate(date.getDate() - (6 - i));
       
+      // Simulate progression over time
       const dayData = {
         date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        Planning: Math.max(0, totalSubFeatures - (i * 2)),
-        Design: Math.min(totalSubFeatures, i * 3),
-        Development: Math.min(totalSubFeatures, Math.max(0, i * 2 - 2)),
-        Testing: Math.min(totalSubFeatures, Math.max(0, i - 3)),
-        Completed: Math.min(totalSubFeatures, Math.max(0, i - 4))
+        Planning: Math.max(0, (statusCounts['Planning'] || 0) - Math.floor(i * 0.3)),
+        Design: Math.min(totalSubFeatures, (statusCounts['Design'] || 0) + Math.floor(i * 0.2)),
+        Development: Math.min(totalSubFeatures, (statusCounts['Development'] || 0) + Math.floor(i * 0.4)),
+        Testing: Math.min(totalSubFeatures, (statusCounts['Testing'] || 0) + Math.floor(i * 0.2)),
+        Completed: Math.min(totalSubFeatures, (statusCounts['Completed'] || 0) + Math.floor(i * 0.1))
       };
       
       statusProgression.push(dayData);

@@ -278,6 +278,75 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                       return;
                     }
 
+                    // Create CSV headers
+                    const headers = [
+                      'Log ID',
+                      'Feature',
+                      'Sub-Feature', 
+                      'Work Type',
+                      'Hours Worked',
+                      'Work Date',
+                      'Status',
+                      'Description',
+                      'Created Date'
+                    ];
+
+                    // Create CSV data
+                    const csvData = filteredWorkLogs.map(log => [
+                      log.id,
+                      `"${getFeatureName(log.featureId).replace(/"/g, '""')}"`,
+                      `"${getSubFeatureName(log.subFeatureId).replace(/"/g, '""')}"`,
+                      `"${log.workType || 'N/A'}"`,
+                      log.hoursWorked || 0,
+                      new Date(log.workDate).toLocaleDateString(),
+                      `"${log.status || 'N/A'}"`,
+                      `"${(log.description || 'N/A').replace(/"/g, '""')}"`,
+                      new Date(log.createdAt).toLocaleDateString()
+                    ]);
+
+                    // Combine headers and data
+                    const csvContent = [headers, ...csvData]
+                      .map(row => row.join(','))
+                      .join('\n');
+
+                    // Create and download CSV file
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `work-logs-export-${new Date().toISOString().split('T')[0]}.csv`;
+                    link.click();
+
+                    toast({
+                      title: "CSV Export successful",
+                      description: `Exported ${filteredWorkLogs.length} work logs to CSV`,
+                    });
+                  } catch (error) {
+                    console.error('CSV Export error:', error);
+                    toast({
+                      title: "CSV Export failed",
+                      description: "Failed to export work logs to CSV",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  try {
+                    if (filteredWorkLogs.length === 0) {
+                      toast({
+                        title: "No data to export",
+                        description: "No work logs match the current filters",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+
                     // Create a printable HTML version for PDF
                     const printWindow = window.open('', '_blank');
                     if (!printWindow) {
