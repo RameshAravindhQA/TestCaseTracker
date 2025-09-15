@@ -3308,30 +3308,285 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/automation/start-recording", isAuthenticated, async (req, res) => {
     try {
-      // Mock recording start
-      const recordingId = `recording_${Date.now()}`;
-      res.json({ recordingId, message: "Recording started" });
+      const { url, projectId, moduleId, testCaseId, launchMode, preferredBrowser } = req.body;
+
+      if (!url) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'URL is required' 
+        });
+      }
+
+      // Validate URL format
+      try {
+        new URL(url);
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid URL format. Please provide a valid URL (e.g., https://example.com)',
+        });
+      }
+
+      const result = await automationService.startRecording({
+        url,
+        projectId,
+        moduleId,
+        testCaseId,
+        launchMode,
+        preferredBrowser
+      });
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
     } catch (error) {
       console.error("Start recording error:", error);
-      res.status(500).json({ message: "Server error" });
+      res.status(500).json({ 
+        success: false,
+        message: "Internal server error while starting recording",
+        error: error.message
+      });
     }
   });
 
   apiRouter.post("/automation/stop-recording", isAuthenticated, async (req, res) => {
     try {
-      // Mock recording stop
-      const script = {
-        id: `script_${Date.now()}`,
-        name: `Recorded Script - ${new Date().toLocaleDateString()}`,
-        description: 'Automatically recorded script',
-        status: 'ready',
-        script: '// Generated automation script\nconsole.log("Script executed");'
-      };
+      const { sessionId } = req.body;
 
-      res.json(script);
+      if (!sessionId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Session ID is required',
+        });
+      }
+
+      const result = await automationService.stopRecording(sessionId);
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
     } catch (error) {
       console.error("Stop recording error:", error);
-      res.status(500).json({ message: "Server error" });
+      res.status(500).json({ 
+        success: false,
+        message: "Internal server error while stopping recording",
+        error: error.message
+      });
+    }
+  });
+
+  // Get automation session status
+  apiRouter.get("/automation/session/:sessionId", isAuthenticated, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const session = automationService.getSession(sessionId);
+
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Session not found',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: {
+          id: session.id,
+          status: session.status,
+          filename: session.filename,
+          startTime: session.startTime,
+          endTime: session.endTime,
+          url: session.url,
+          projectId: session.projectId,
+          moduleId: session.moduleId,
+          testCaseId: session.testCaseId,
+        },
+      });
+
+    } catch (error) {
+      console.error('Failed to get session:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error while getting session',
+        error: error.message,
+      });
+    }
+  });
+
+  // Get automation health status
+  apiRouter.get("/automation/health", isAuthenticated, async (req, res) => {
+    try {
+      // Check Playwright availability
+      const { spawn } = await import('child_process');
+      let playwrightStatus = 'not available';
+      
+      try {
+        const testProcess = spawn('npx', ['playwright', '--version'], { 
+          stdio: 'pipe',
+          timeout: 5000
+        });
+        
+        await new Promise((resolve, reject) => {
+          testProcess.on('close', (code) => {
+            if (code === 0) {
+              playwrightStatus = 'available';
+            }
+            resolve(code);
+          });
+          testProcess.on('error', () => {
+            playwrightStatus = 'not available';
+            resolve(1);
+          });
+          setTimeout(() => {
+            testProcess.kill();
+            resolve(1);
+          }, 5000);
+        });
+      } catch (error) {
+        playwrightStatus = 'not available';
+      }
+
+      res.json({
+        success: true,
+        status: 'healthy',
+        details: {
+          playwright: playwrightStatus,
+          service: 'running',
+          timestamp: new Date().toISOString()
+        }
+      });
+
+    } catch (error) {
+      console.error('Automation health check failed:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Health check failed',
+        error: error.message
+      });
+    }
+  });
+
+  // Execute automation test
+  apiRouter.post("/automation/execute-test", isAuthenticated, async (req, res) => {
+    try {
+      const { filename } = req.body;
+
+      if (!filename) {
+        return res.status(400).json({
+          success: false,
+          message: 'Filename is required',
+        });
+      }
+
+      const result = await automationService.executeTest(filename);
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+
+    } catch (error) {
+      console.error('Failed to execute test:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error while executing test',
+        error: error.message,
+      });
+    }
+  });
+
+  // Get execution status
+  apiRouter.get("/automation/execution/:executionId", isAuthenticated, async (req, res) => {
+    try {
+      const { executionId } = req.params;
+      const execution = automationService.getExecution(executionId);
+
+      if (!execution) {
+        return res.status(404).json({
+          success: false,
+          message: 'Execution not found',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: {
+          id: execution.id,
+          status: execution.status,
+          filename: execution.filename,
+          startTime: execution.startTime,
+          endTime: execution.endTime,
+          results: execution.results,
+          report: execution.report,
+        },
+      });
+
+    } catch (error) {
+      console.error('Failed to get execution:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error while getting execution',
+        error: error.message,
+      });
+    }
+  });
+
+  // Get recordings list
+  apiRouter.get("/automation/recordings", isAuthenticated, async (req, res) => {
+    try {
+      const recordings = await automationService.getRecordings();
+      
+      res.json({
+        success: true,
+        data: recordings.map(filename => ({
+          filename,
+          created: new Date(), // In a real app, you'd get this from file stats
+        })),
+      });
+
+    } catch (error) {
+      console.error('Failed to get recordings:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error while getting recordings',
+        error: error.message,
+      });
+    }
+  });
+
+  // Get recording content
+  apiRouter.get("/automation/recording/:filename", isAuthenticated, async (req, res) => {
+    try {
+      const { filename } = req.params;
+      const content = await automationService.getRecordingContent(filename);
+
+      if (!content) {
+        return res.status(404).json({
+          success: false,
+          message: 'Recording not found',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: {
+          filename,
+          content,
+        },
+      });
+
+    } catch (error) {
+      console.error('Failed to get recording content:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error while getting recording content',
+        error: error.message,
+      });
     }
   });
 
