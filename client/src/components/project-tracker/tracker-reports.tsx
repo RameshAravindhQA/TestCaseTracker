@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileDown, Calendar, TrendingUp, Clock, Target, Filter } from 'lucide-react';
+import { FileDown, Calendar, TrendingUp, Clock, Target, Filter, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
