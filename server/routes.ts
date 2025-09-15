@@ -1529,17 +1529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Approval mutation
-  const approvalMutation = useMutation({
-    mutationFn: async ({ id, status, comments }: { id: number; status: string; comments: string }) => {
-      const res = await apiRequest("PUT", `/api/resource-requests/${id}/approve`, {
-        status,
-        comments
-      });
-      if (!res.ok) throw new Error("Failed to update request status");
-      return res.json();
-    },
-  });
+  // Note: Approval logic is handled by the PUT endpoint below
 
   // Update request status for approval/rejection
   apiRouter.put("/resource-requests/:id/approve", isAuthenticated, async (req, res) => {
