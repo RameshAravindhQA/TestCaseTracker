@@ -7214,13 +7214,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/github/sync/:bugId", isAuthenticated, async (req, res) => {
     try {
       const bugId = parseInt(req.params.bugId);
-      if (!bugId) {
-        return res.status(400).json({ success: false, error: 'Invalid bug ID' });
+      if (!bugId || isNaN(bugId)) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Invalid bug ID provided',
+          step: 'validation'
+        });
       }
 
       const bug = await storage.getBug(bugId);
       if (!bug) {
-        return res.status(404).json({ success: false, error: 'Bug not found' });
+        return res.status(404).json({ 
+          success: false, 
+          error: 'Bug not found',
+          step: 'bug_lookup'
+        });
       }
 
       // Get GitHub configuration for the project
@@ -7228,22 +7236,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!githubConfig || !githubConfig.isEnabled) {
         return res.status(400).json({
           success: false,
-          error: 'GitHub integration not configured for this project'
+          error: 'GitHub integration not configured or disabled for this project. Please configure GitHub integration first.',
+          step: 'github_config'
         });
       }
 
-      // Configure GitHub service
-      githubService.setConfig({
-        owner: githubConfig.githubUsername,
-        repo: githubConfig.repositoryName,
-        token: githubConfig.personalAccessToken
-      });
+      // Validate GitHub configuration completeness
+      if (!githubConfig.githubUsername || !githubConfig.repositoryName || !githubConfig.personalAccessToken) {
+        return res.status(422).json({
+          success: false,
+          error: 'Incomplete GitHub configuration. Please ensure GitHub username, repository name, and access token are all configured.',
+          step: 'github_config_validation'
+        });
+      }
 
       // Check if bug has a GitHub issue number
       if (!bug.githubIssueNumber) {
         return res.status(400).json({
           success: false,
-          error: 'Bug is not linked to a GitHub issue'
+          error: 'Bug is not linked to a GitHub issue. Please create a GitHub issue for this bug first.',
+          step: 'github_issue_link'
+        });
+      }
+
+      // Configure GitHub service
+      try {
+        githubService.setConfig({
+          owner: githubConfig.githubUsername,
+          repo: githubConfig.repositoryName,
+          token: githubConfig.personalAccessToken
+        });
+      } catch (configError) {
+        console.error('GitHub service configuration error:', configError);
+        return res.status(422).json({
+          success: false,
+          error: 'Failed to configure GitHub service. Please check your GitHub settings.',
+          step: 'github_service_config'
         });
       }
 
@@ -7256,19 +7284,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Successfully synced with GitHub',
           syncedComments: githubComments?.length || 0
         });
-      } catch (syncError) {
+      } catch (syncError: any) {
         console.error('GitHub sync error:', syncError);
-        res.status(500).json({
+        
+        // Handle specific GitHub API errors
+        if (syncError.message?.includes('404')) {
+          return res.status(404).json({
+            success: false,
+            error: 'GitHub issue not found. The issue may have been deleted or the repository access may have changed.',
+            step: 'github_api_call'
+          });
+        }
+        
+        if (syncError.message?.includes('403') || syncError.message?.includes('401')) {
+          return res.status(403).json({
+            success: false,
+            error: 'GitHub access denied. Please check your access token permissions.',
+            step: 'github_api_auth'
+          });
+        }
+
+        if (syncError.message?.includes('rate limit')) {
+          return res.status(429).json({
+            success: false,
+            error: 'GitHub API rate limit exceeded. Please try again later.',
+            step: 'github_api_rate_limit'
+          });
+        }
+
+        // Generic sync error
+        return res.status(422).json({
           success: false,
-          error: 'Failed to sync with GitHub: ' + syncError.message
+          error: `Failed to sync with GitHub: ${syncError.message || 'Unknown sync error'}`,
+          step: 'github_sync'
         });
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('GitHub sync route error:', error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error'
+        error: 'Internal server error occurred during GitHub sync',
+        step: 'internal_error'
       });
     }
   });
