@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Edit, Trash, Eye, Calendar, Users, Filter, FileDown } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash, Eye, Calendar, Users } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface TrackerProject {
@@ -62,11 +62,6 @@ export function TrackerProjectTable({
   onDelete,
   onViewDetails,
 }: TrackerProjectTableProps) {
-  // Dummy state for filter visibility, as per the change snippet,
-  // assuming a parent component manages actual filtering logic.
-  const [showMoreFilters, setShowMoreFilters] = React.useState(false);
-
-
   if (isLoading) {
     return (
       <Card>
@@ -98,13 +93,6 @@ export function TrackerProjectTable({
           <Users className="h-5 w-5" />
           Projects ({projects.length})
         </CardTitle>
-        {/* Placeholder for filter controls, actual implementation would be here */}
-        <div className="flex gap-2">
-            <Button onClick={() => setShowMoreFilters(!showMoreFilters)}>
-              <Filter className="h-4 w-4 mr-2" />
-              More Filters
-            </Button>
-          </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -176,7 +164,7 @@ export function TrackerProjectTable({
                         <Edit className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem
+                      <DropdownMenuItem 
                         onClick={() => onDelete(project.id)}
                         className="text-red-600"
                       >
