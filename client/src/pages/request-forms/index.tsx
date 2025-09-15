@@ -62,6 +62,8 @@ function RequestFormsPageContent() {
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject">("approve");
   const [approvalComments, setApprovalComments] = useState("");
   const [reopenReason, setReopenReason] = useState('');
+  const [newStartDate, setNewStartDate] = useState(''); // State for new start date
+  const [newEndDate, setNewEndDate] = useState(''); // State for new end date
   const queryClient = useQueryClient();
 
   // Fetch resource requests
@@ -189,8 +191,11 @@ function RequestFormsPageContent() {
 
   // Reopen request mutation
   const reopenMutation = useMutation({
-    mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
-      const res = await apiRequest("POST", `/api/resource-requests/${id}/reopen`, { reason });
+    mutationFn: async ({ id, reason, newStartDate, newEndDate }: { id: number; reason: string; newStartDate?: string; newEndDate?: string }) => {
+      const payload: any = { reason };
+      if (newStartDate) payload.startDate = newStartDate;
+      if (newEndDate) payload.endDate = newEndDate;
+      const res = await apiRequest("POST", `/api/resource-requests/${id}/reopen`, payload);
       if (!res.ok) throw new Error("Failed to reopen request");
       return res.json();
     },
@@ -202,6 +207,8 @@ function RequestFormsPageContent() {
       queryClient.invalidateQueries({ queryKey: ["/api/resource-requests"] });
       setIsReopenDialogOpen(false);
       setReopenReason('');
+      setNewStartDate('');
+      setNewEndDate('');
       setSelectedRequest(null);
     },
     onError: (error: any) => {
@@ -689,7 +696,7 @@ function RequestFormsPageContent() {
                                     onClick={() => {
                                       startTransition(() => {
                                         setSelectedRequest(request);
-                                        setIsCommentsDialogOpen(true);
+                                        setIsViewDialogOpen(true);
                                       });
                                     }}
                                     title="View Details"
@@ -1010,7 +1017,7 @@ function RequestFormsPageContent() {
                               onClick={() => {
                                 startTransition(() => {
                                   setSelectedRequest(request);
-                                  setIsCommentsDialogOpen(true);
+                                  setIsViewDialogOpen(true);
                                 });
                               }}
                             >
@@ -1151,31 +1158,199 @@ function RequestFormsPageContent() {
 
             {/* Request Attachments Dialog */}
             <Dialog open={isAttachmentsDialogOpen} onOpenChange={setIsAttachmentsDialogOpen}>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Request Attachments</DialogTitle>
                   <DialogDescription>
-                    View and manage attachments for this request
+                    Manage attachments for this request
                   </DialogDescription>
                 </DialogHeader>
                 {selectedRequest && (
-                  <RequestAttachments requestId={selectedRequest.id} />
+                  <RequestAttachments
+                    requestId={selectedRequest.id}
+                    onClose={() => setIsAttachmentsDialogOpen(false)}
+                  />
                 )}
               </DialogContent>
             </Dialog>
 
+            {/* Request View Dialog */}
+            <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Request Details</DialogTitle>
+                </DialogHeader>
+                {selectedRequest && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            Basic Information
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Request ID</label>
+                            <p className="mt-1">{selectedRequest.requestId}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Title</label>
+                            <p className="mt-1">{selectedRequest.title}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Description</label>
+                            <p className="mt-1">{selectedRequest.description}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Department</label>
+                            <Badge variant="secondary">{selectedRequest.department}</Badge>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Request Type</label>
+                            <Badge variant="outline">{selectedRequest.requestType}</Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Calendar className="h-5 w-5" />
+                            Timeline & Status
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Priority</label>
+                            <Badge className={getPriorityColor(selectedRequest.priority)}>
+                              {selectedRequest.priority}
+                            </Badge>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Status</label>
+                            <Badge className={getStatusColor(selectedRequest.status)}>
+                              {selectedRequest.status}
+                            </Badge>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Start Date</label>
+                            <p className="mt-1">{formatDate(selectedRequest.startDate)}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">End Date</label>
+                            <p className="mt-1">{formatDate(selectedRequest.endDate)}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Estimated Hours</label>
+                            <p className="mt-1">{selectedRequest.estimatedHours} hours</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Duration</label>
+                            <p className="mt-1">{calculateDuration(selectedRequest.startDate, selectedRequest.endDate)} days</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {(selectedRequest.deliverables || selectedRequest.acceptanceCriteria || selectedRequest.additionalNotes) && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Additional Details</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {selectedRequest.deliverables && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-500">Deliverables</label>
+                              <p className="mt-1 whitespace-pre-wrap">{selectedRequest.deliverables}</p>
+                            </div>
+                          )}
+                          {selectedRequest.acceptanceCriteria && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-500">Acceptance Criteria</label>
+                              <p className="mt-1 whitespace-pre-wrap">{selectedRequest.acceptanceCriteria}</p>
+                            </div>
+                          )}
+                          {selectedRequest.additionalNotes && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-500">Additional Notes</label>
+                              <p className="mt-1 whitespace-pre-wrap">{selectedRequest.additionalNotes}</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {(selectedRequest.skillsRequired?.length > 0 || selectedRequest.technologies?.length > 0) && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Skills & Technologies</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {selectedRequest.skillsRequired?.length > 0 && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-500">Required Skills</label>
+                              <div className="mt-1 flex flex-wrap gap-2">
+                                {selectedRequest.skillsRequired.map((skill: string, index: number) => (
+                                  <Badge key={index} variant="outline">{skill}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {selectedRequest.technologies?.length > 0 && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-500">Technologies</label>
+                              <div className="mt-1 flex flex-wrap gap-2">
+                                {selectedRequest.technologies.map((tech: string, index: number) => (
+                                  <Badge key={index} variant="secondary">{tech}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {(selectedRequest.reopenedDate || selectedRequest.reopenReason) && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-orange-600">Reopen Information</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {selectedRequest.reopenedDate && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-500">Reopened Date</label>
+                              <p className="mt-1">{formatDate(selectedRequest.reopenedDate)}</p>
+                            </div>
+                          )}
+                          {selectedRequest.reopenReason && (
+                            <div>
+                              <label className="text-sm font-medium text-gray-500">Reopen Reason</label>
+                              <p className="mt-1 whitespace-pre-wrap">{selectedRequest.reopenReason}</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+
+
             {/* Reopen Request Dialog */}
             <Dialog open={isReopenDialogOpen} onOpenChange={setIsReopenDialogOpen}>
-              <DialogContent>
+              <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Reopen Request</DialogTitle>
                   <DialogDescription>
-                    Provide a reason for reopening this request
+                    Provide a reason for reopening this request and optionally update the timeline
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="reopenReason">Reason for Reopening</Label>
+                    <Label htmlFor="reopenReason">Reason for Reopening *</Label>
                     <Textarea
                       id="reopenReason"
                       placeholder="Please provide a detailed reason for reopening this request..."
@@ -1184,30 +1359,60 @@ function RequestFormsPageContent() {
                       rows={4}
                     />
                   </div>
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setIsReopenDialogOpen(false);
-                        setReopenReason('');
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        if (selectedRequest && reopenReason.trim()) {
-                          reopenMutation.mutate({
-                            id: selectedRequest.id,
-                            reason: reopenReason
-                          });
-                        }
-                      }}
-                      disabled={!reopenReason.trim() || reopenMutation.isPending}
-                    >
-                      {reopenMutation.isPending ? "Reopening..." : "Reopen Request"}
-                    </Button>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="newStartDate">New Start Date (Optional)</Label>
+                      <Input
+                        id="newStartDate"
+                        type="date"
+                        value={newStartDate}
+                        onChange={(e) => setNewStartDate(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="newEndDate">New End Date (Optional)</Label>
+                      <Input
+                        id="newEndDate"
+                        type="date"
+                        value={newEndDate}
+                        onChange={(e) => setNewEndDate(e.target.value)}
+                      />
+                    </div>
                   </div>
+                  {selectedRequest && (
+                    <div className="bg-gray-50 p-3 rounded text-sm">
+                      <p><strong>Current Start Date:</strong> {formatDate(selectedRequest.startDate)}</p>
+                      <p><strong>Current End Date:</strong> {formatDate(selectedRequest.endDate)}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsReopenDialogOpen(false);
+                      setReopenReason('');
+                      setNewStartDate('');
+                      setNewEndDate('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (selectedRequest && reopenReason.trim()) {
+                        reopenMutation.mutate({
+                          id: selectedRequest.id,
+                          reason: reopenReason,
+                          newStartDate: newStartDate || undefined,
+                          newEndDate: newEndDate || undefined
+                        });
+                      }
+                    }}
+                    disabled={!reopenReason.trim() || reopenMutation.isPending}
+                  >
+                    {reopenMutation.isPending ? 'Reopening...' : 'Reopen Request'}
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>

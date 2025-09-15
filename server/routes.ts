@@ -1547,7 +1547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update the request
       const updatedRequest = await storage.updateResourceRequest(id, {
         status,
-        approvedById: req.session.userId,
+        approvedById: req.session.userId!,
         approvalDate: new Date().toISOString(),
         approvalComments: comments,
         updatedAt: new Date().toISOString()
@@ -1565,7 +1565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create audit log
       await storage.createRequestAuditLog({
         requestId: id,
-        userId: req.session.userId,
+        userId: req.session.userId!,
         action: status === 'Approved' ? 'APPROVED' : 'REJECTED',
         details: comments || `Request ${status.toLowerCase()}`,
         timestamp: new Date().toISOString()
@@ -1581,55 +1581,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reopen request endpoint
   apiRouter.post("/resource-requests/:id/reopen", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const { reason } = req.body;
+      const requestId = parseInt(req.params.id);
+      const { reason, newStartDate, newEndDate } = req.body;
+      const userId = req.session.userId!;
 
       if (!reason || reason.trim() === '') {
-        return res.status(400).json({ message: "Reason is required to reopen request" });
+        return res.status(400).json({ message: "Reason for reopening is required" });
       }
 
-      const request = await storage.getResourceRequest(id);
-      if (!request) {
+      // Use the new reopen method
+      const updatedRequest = await storage.reopenResourceRequest(requestId, reason, userId, newStartDate, newEndDate);
+
+      if (!updatedRequest) {
         return res.status(404).json({ message: "Request not found" });
       }
 
-      // Check if request can be reopened (must be closed/rejected/completed)
-      if (!['Closed', 'Rejected', 'Completed', 'Cancelled'].includes(request.status)) {
-        return res.status(400).json({ message: "Only closed, rejected, completed, or cancelled requests can be reopened" });
-      }
-
-      const previousStatus = request.status;
-
-      // Update the request status to Reopened
-      const updatedRequest = await storage.updateResourceRequest(id, {
-        status: 'Reopened',
-        reopenedById: req.session.userId,
-        reopenedDate: new Date().toISOString(),
-        reopenReason: reason,
-        updatedAt: new Date().toISOString()
-      });
-
-      // Create activity log
-      await storage.createActivity({
-        userId: req.session.userId!,
-        entityType: "resource_request",
-        entityId: id,
-        action: 'reopened',
-        details: `Request reopened from ${previousStatus}. Reason: ${reason}`
-      });
-
-      // Create audit log
-      await storage.createRequestAuditLog({
-        requestId: id,
-        userId: req.session.userId,
-        action: 'REOPENED',
-        details: `Request reopened from ${previousStatus}. Reason: ${reason}`,
-        timestamp: new Date().toISOString()
-      });
-
       res.json(updatedRequest);
     } catch (error) {
-      console.error("Reopen request error:", error);
+      console.error('Reopen request error:', error);
       res.status(500).json({ message: "Failed to reopen request" });
     }
   });
@@ -1652,7 +1621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { status, comments } = req.body;
       const request = await storage.approveResourceRequest(id, {
         status,
-        approvedById: req.session.userId,
+        approvedById: req.session.userId!,
         comments
       });
       res.json(request);
@@ -1964,7 +1933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tracker Sub-Features
   apiRouter.get("/tracker/sub-features", isAuthenticated, async (req, res) => {
     try {
-      const { featureId, projectId } = req.query;
+      const {featureId, projectId } = req.query;
       const subFeatures = await storage.getTrackerSubFeatures(
         featureId ? parseInt(featureId as string) : undefined,
         projectId ? parseInt(projectId as string) : undefined
@@ -2097,17 +2066,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update work log
   apiRouter.put("/tracker/work-logs/:id", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const updatedWorkLog = await storage.updateTrackerWorkLog(id, req.body);
+      const workLogId = parseInt(req.params.id);
+      const workLogData = req.body;
+      const userId = req.session.userId!;
+
+      console.log(`Updating work log ${workLogId} with data:`, workLogData);
+
+      // Validate required fields
+      if (!workLogData.workDate || workLogData.hoursWorked === undefined || !workLogData.description) {
+        console.error('Validation failed:', {
+          hasWorkDate: !!workLogData.workDate,
+          hasHoursWorked: workLogData.hoursWorked !== undefined,
+          hasDescription: !!workLogData.description
+        });
+        return res.status(400).json({
+          message: "Missing required fields",
+          required: ['workDate', 'hoursWorked', 'description'],
+          received: Object.keys(workLogData)
+        });
+      }
+
+      // Ensure numeric fields are properly parsed
+      if (typeof workLogData.hoursWorked === 'string') {
+        workLogData.hoursWorked = parseFloat(workLogData.hoursWorked);
+      }
+
+      // Add user ID for audit trail
+      workLogData.userId = userId;
+
+      const updatedWorkLog = await storage.updateTrackerWorkLog(workLogId, workLogData);
+
       if (!updatedWorkLog) {
         return res.status(404).json({ message: "Work log not found" });
       }
+
+      console.log('Work log updated successfully:', updatedWorkLog);
       res.json(updatedWorkLog);
     } catch (error) {
-      console.error("Update tracker work log error:", error);
-      res.status(400).json({ message: "Invalid work log data" });
+      console.error('Update tracker work log error:', error);
+      res.status(500).json({
+        message: "Failed to update work log",
+        error: error.message
+      });
     }
   });
 
@@ -4723,7 +4726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[API] Returning ${testCases.length} test cases for project ${projectId}:`,
         testCases.slice(0, 3).map(tc => ({ id: tc.id, testCaseId: tc.testCaseId, feature: tc.feature, projectId: tc.projectId })));
 
-      // Add cache headers for real-time data
+      // Add cache headers to prevent caching
       res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
@@ -5404,7 +5407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if module exists if changed
-      if (req.body.body.moduleId && req.body.moduleId !== bug.moduleId) {
+      if (req.body.moduleId && req.body.moduleId !== bug.moduleId) {
         const module = await storage.getModule(req.body.moduleId);
         if (!module || module.projectId !== bug.projectId) {
           return res.status(400).json({ message: "Invalid module ID" });
@@ -7625,6 +7628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
 
   // Sync GitHub comments to bug comments
   apiRouter.post("/bugs/:bugId/sync-github-comments", isAuthenticated, async (req, res) => {
