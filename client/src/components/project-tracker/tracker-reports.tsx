@@ -61,6 +61,10 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   const [selectedWorkType, setSelectedWorkType] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState(''); // State for search input
+  const [currentPage, setCurrentPage] = useState(1); // State for pagination
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false); // State for loading indicator
+  const [showSummaryReport, setShowSummaryReport] = useState(false); // State to show summary report
 
   // Fetch project details
   const { data: project } = useQuery({
@@ -87,10 +91,46 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   // Cast workLogsData to the correct type
   const workLogs: TrackerWorkLog[] = workLogsData || [];
 
-  // Get unique departments and work types from the provided subFeatures and workLogs
-  const departments = [...new Set(subFeatures.map(sf => sf.department).filter(Boolean))];
-  const workTypes = [...new Set(subFeatures.map(sf => sf.workType).filter(Boolean))];
+  // Get all available departments and work types (not just from existing data)
+  const allDepartments = ['Frontend', 'Backend', 'Mobile', 'Quality Assurance', 'DevOps', 'UI/UX', 'Business Analysis', 'Testing'];
+  const allWorkTypes = ['Development', 'QA', 'DevOps', 'Designing', 'Analysis', 'Documentation', 'User Story', 'Change Request', 'Bug Fix', 'Feature Request'];
+
+  // Also include departments and work types from existing data
+  const existingDepartments = [...new Set(subFeatures.map(sf => sf.department).filter(Boolean))];
+  const existingWorkTypes = [...new Set(subFeatures.map(sf => sf.workType).filter(Boolean))];
+
+  // Include work types from work logs
+  const workLogWorkTypes = [...new Set(workLogs.map(wl => wl.workType).filter(Boolean))];
+
+  // Combine all departments and work types
+  const departments = [...new Set([...allDepartments, ...existingDepartments])];
+  const workTypes = [...new Set([...allWorkTypes, ...existingWorkTypes, ...workLogWorkTypes])];
   const statuses = ['Planning', 'Design', 'Development', 'Testing', 'Deployment', 'Completed', 'Blocked', 'On Hold'];
+
+  // Reset filters function
+  const resetFilters = () => {
+    setSelectedFeature('all');
+    setSelectedSubFeature('all');
+    setSelectedDepartment('all');
+    setSelectedStatus('all');
+    setSelectedWorkType('all');
+    setDateRange('all');
+    setStartDate('');
+    setEndDate('');
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
+
+  const generateSummaryReport = async () => {
+    setIsGeneratingReport(true);
+
+    // Simulate report generation process
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    setIsGeneratingReport(false);
+    setShowSummaryReport(true);
+  };
+
 
   // Apply all filters to get filtered data
   const getFilteredData = () => {
@@ -175,6 +215,22 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
         });
       }
     }
+
+    // Search filter
+    if (searchQuery) {
+      filteredSFs = filteredSFs.filter(sf => 
+        sf.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (sf.department && sf.department.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        sf.status.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      filteredWLs = filteredWLs.filter(wl => 
+        wl.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        wl.workType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        wl.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (wl.subFeature?.name && wl.subFeature.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
 
     return { filteredSubFeatures: filteredSFs, filteredWorkLogs: filteredWLs };
   };
@@ -417,6 +473,18 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
     }
   };
 
+  // Pagination logic
+  const logsPerPage = 10;
+  const totalPages = Math.ceil(filteredWorkLogs.length / logsPerPage);
+  const startIndex = (currentPage - 1) * logsPerPage;
+  const endIndex = startIndex + logsPerPage;
+  const paginatedWorkLogs = filteredWorkLogs.slice(startIndex, endIndex);
+
+  // Handle pagination change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
   return (
     <div className="space-y-6">
       {/* Report Controls */}
@@ -540,28 +608,28 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               </Select>
             </div>
 
-            {/* Report Type */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Report Type:</Label>
-              <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="summary">Summary</SelectItem>
-                  <SelectItem value="detailed">Detailed</SelectItem>
-                  <SelectItem value="timeline">Timeline</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Search Input */}
+            <div className="space-y-2 col-span-1 md:col-span-2 lg:col-span-3">
+              <Label className="text-sm font-medium">Search:</Label>
+              <Input
+                type="text"
+                placeholder="Search by description, work type, status, or sub-feature name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
 
-            {/* Export Buttons */}
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={exportToCSV}>
+            {/* Reset and Export Buttons */}
+            <div className="flex items-end gap-2 col-span-1 md:col-span-2 lg:col-span-1">
+              <Button variant="secondary" onClick={resetFilters} className="flex-1">
+                <Filter className="h-4 w-4 mr-2" />
+                Reset Filters
+              </Button>
+              <Button onClick={exportToCSV} className="flex-1">
                 <FileDown className="h-4 w-4 mr-2" />
                 Export CSV
               </Button>
-              <Button variant="outline" onClick={exportToPDF}>
+              <Button onClick={exportToPDF} className="flex-1">
                 <FileDown className="h-4 w-4 mr-2" />
                 Export PDF
               </Button>
@@ -714,7 +782,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                       </tr>
                     </thead>
                     <tbody>
-                      {group.workLogs.map((wl) => {
+                      {paginatedWorkLogs.map((wl) => {
                         const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
                         return (
                           <tr key={wl.id}>
@@ -740,6 +808,22 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
           </Card>
         ))}
       </div>
+
+      {/* Pagination for Work Logs */}
+      {filteredWorkLogs.length > logsPerPage && (
+        <div className="flex justify-center mt-4">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <Button
+              key={page}
+              variant={page === currentPage ? 'default' : 'outline'}
+              onClick={() => handlePageChange(page)}
+              className="mx-1"
+            >
+              {page}
+            </Button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -30,6 +30,8 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingWorkLog, setEditingWorkLog] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const queryClient = useQueryClient();
 
@@ -127,9 +129,10 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
   };
 
   const filteredWorkLogs = workLogs?.filter((log: any) => {
-    const matchesSearch = log.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         getSubFeatureName(log.subFeatureId).toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         getFeatureName(log.featureId).toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = searchTerm === '' ||
+                          log.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          getSubFeatureName(log.subFeatureId).toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          getFeatureName(log.featureId).toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || log.status === statusFilter;
     const matchesWorkType = workTypeFilter === 'all' || log.workType === workTypeFilter;
     const matchesFeature = featureFilter === 'all' || log.featureId?.toString() === featureFilter;
@@ -168,6 +171,22 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
     'User Story': 'bg-indigo-500',
     'Change Request': 'bg-cyan-500',
     'Bug Fix': 'bg-red-500',
+  };
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredWorkLogs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedWorkLogs = filteredWorkLogs.slice(startIndex, startIndex + itemsPerPage);
+
+  // Highlight search terms
+  const highlightText = (text: string, highlight: string) => {
+    if (!highlight) return text;
+
+    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+    return parts.map((part, index) =>
+      part.toLowerCase() === highlight.toLowerCase() ?
+        <mark key={index} className="bg-yellow-200 px-1 rounded">{part}</mark> : part
+    );
   };
 
   if (isLoading) {
@@ -218,7 +237,10 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
               <Input
                 placeholder="Search work logs..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // Reset to first page when searching
+                }}
                 className="pl-9"
               />
             </div>
@@ -282,7 +304,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                     const headers = [
                       'Log ID',
                       'Feature',
-                      'Sub-Feature', 
+                      'Sub-Feature',
                       'Work Type',
                       'Hours Worked',
                       'Work Date',
@@ -360,7 +382,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
 
                     const projectName = projectId ? 'Project Work Logs' : 'All Work Logs';
                     const currentDate = new Date().toLocaleDateString();
-                    
+
                     const htmlContent = `
                       <!DOCTYPE html>
                       <html>
@@ -393,7 +415,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                             <p>Generated on: ${currentDate}</p>
                             <p>Total Records: ${filteredWorkLogs.length}</p>
                           </div>
-                          
+
                           <div class="stats">
                             <div class="stat-card">
                               <h3>Total Logs</h3>
@@ -439,7 +461,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                               `).join('')}
                             </tbody>
                           </table>
-                          
+
                           <div class="no-print" style="margin-top: 30px; text-align: center;">
                             <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; background-color: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer;">Print / Save as PDF</button>
                             <button onclick="window.close()" style="padding: 10px 20px; font-size: 16px; margin-left: 10px; background-color: #6b7280; color: white; border: none; border-radius: 5px; cursor: pointer;">Close</button>
@@ -450,7 +472,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
 
                     printWindow.document.write(htmlContent);
                     printWindow.document.close();
-                    
+
                     // Auto-trigger print dialog after a short delay
                     setTimeout(() => {
                       printWindow.print();
@@ -478,25 +500,24 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
         </CardContent>
       </Card>
 
-      
 
       {/* Work Logs List */}
       <div className="space-y-4">
-        {filteredWorkLogs.length === 0 ? (
+        {paginatedWorkLogs.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Work Logs Found</h3>
               <p className="text-muted-foreground">
-                {workLogs?.length === 0 
-                  ? 'No work logs have been created yet.'
-                  : 'No work logs match your current filters.'
+                {filteredWorkLogs.length === 0 && searchTerm
+                  ? 'No work logs match your current search criteria.'
+                  : 'No work logs have been created yet.'
                 }
               </p>
             </CardContent>
           </Card>
         ) : (
-          filteredWorkLogs.map((log: any) => (
+          paginatedWorkLogs.map((log: any) => (
             <Card key={log.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -504,7 +525,7 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                     {/* Header */}
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
-                        <div 
+                        <div
                           className="w-1 h-6 rounded"
                           style={{ backgroundColor: workTypeColors[log.workType] || '#gray' }}
                         />
@@ -521,7 +542,9 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                     </div>
 
                     {/* Description */}
-                    <p className="text-sm leading-relaxed">{log.description}</p>
+                    <p className="text-sm leading-relaxed">
+                      {highlightText(log.description, searchTerm)}
+                    </p>
 
                     {/* Metadata */}
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -604,6 +627,34 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
         )}
       </div>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+
+          <span className="text-sm text-gray-600">
+            Page {currentPage} of {totalPages}
+          </span>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
+
       {/* Work Log View Dialog */}
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
         <DialogContent className="max-w-2xl">
@@ -627,8 +678,8 @@ export function WorkLogsList({ projectId, featureId, subFeatureId, onEditWorkLog
                 </div>
                 <div>
                   <h4 className="font-semibold text-sm text-muted-foreground">Work Type</h4>
-                  <Badge 
-                    variant="outline" 
+                  <Badge
+                    variant="outline"
                     style={{ borderLeftColor: workTypeColors[selectedWorkLog.workType], borderLeftWidth: '4px' }}
                   >
                     {selectedWorkLog.workType}

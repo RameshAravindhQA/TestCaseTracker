@@ -34,6 +34,16 @@ interface TrackerProjectDetailsProps {
   onBack: () => void;
 }
 
+// Mock interfaces for types that are not fully defined in the provided code
+interface TrackerProject {
+  id: number;
+  name: string;
+  description: string | null;
+  status: string;
+  startDate: string | null;
+  endDate: string | null;
+}
+
 export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetailsProps) {
   const { toast } = useToast();
   const [showFeatureForm, setShowFeatureForm] = useState(false);
@@ -47,7 +57,7 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
   const [selectedWorkLog, setSelectedWorkLog] = useState<any>(null);
 
   // Fetch project details
-  const { data: project } = useQuery({
+  const { data: project } = useQuery<TrackerProject>({
     queryKey: [`/api/tracker/projects/${projectId}`],
     queryFn: async () => {
       const response = await apiRequest('GET', `/api/tracker/projects/${projectId}`);
@@ -108,6 +118,29 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
       toast({
         title: 'Error',
         description: 'Failed to update feature',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Delete feature mutation
+  const deleteFeatureMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest('DELETE', `/api/tracker/features/${id}`);
+      if (!response.ok) throw new Error('Failed to delete feature');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Feature deleted successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/tracker/features`] });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete feature',
         variant: 'destructive',
       });
     },
@@ -398,6 +431,22 @@ export function TrackerProjectDetails({ projectId, onBack }: TrackerProjectDetai
                           >
                             <Plus className="h-3 w-3 mr-1" />
                             Add Sub-Feature
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditFeature(feature)}
+                            title="Edit Feature"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteFeature(feature.id)}
+                            title="Delete Feature"
+                          >
+                            <Trash className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>

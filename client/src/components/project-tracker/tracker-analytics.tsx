@@ -98,6 +98,7 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
         efficiency: efficiency
       };
     })
+    .filter(item => item.logsCount > 0) // Only show work types with actual data
     .value();
 
   // Time-based completion trends
@@ -374,13 +375,13 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
       {/* Risk Analysis and Funnel Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Risk Analysis Radar */}
-        <Card>
+        <Card className="h-full">
           <CardHeader>
             <CardTitle>Project Risk Analysis</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" data={riskAnalysis}>
+          <CardContent className="h-[350px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadialBarChart cx="50%" cy="50%" innerRadius="20%" outerRadius="90%" data={riskAnalysis}>
                 <RadialBar 
                   minAngle={15} 
                   label={{ position: 'insideStart', fill: '#fff' }}
@@ -388,7 +389,7 @@ export function TrackerAnalytics({ projectId, features, subFeatures, workLogs }:
                   clockWise 
                   dataKey="value" 
                 />
-                <Legend iconSize={10} width={120} height={140} layout="vertical" verticalAlign="middle" />
+                <Legend iconSize={10} width={120} height={140} layout="vertical" verticalAlign="middle" wrapperStyle={{ paddingLeft: '20px' }} />
                 <Tooltip />
               </RadialBarChart>
             </ResponsiveContainer>
