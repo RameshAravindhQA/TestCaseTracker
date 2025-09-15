@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiRequest } from '@/lib/queryClient';
@@ -21,10 +21,34 @@ import { autoTable } from 'jspdf-autotable';
 import { toast } from '@/hooks/use-toast';
 import { StatusBadge } from '@/components/ui/status-badge';
 
+// Define interfaces for clarity
+interface TrackerSubFeature {
+  id: number;
+  featureId: number;
+  name: string;
+  department: string | null;
+  status: string;
+  workType: string | null;
+  estimatedHours: number | null;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+interface TrackerWorkLog {
+  id: number;
+  subFeatureId: number;
+  workDate: string;
+  hoursWorked: number;
+  workType: string | null;
+  status: string;
+  description: string;
+  subFeature?: TrackerSubFeature; // Optional: to access sub-feature details directly
+}
+
 interface TrackerReportsProps {
   projectId?: number;
   features?: any[];
-  subFeatures?: any[];
+  subFeatures?: TrackerSubFeature[]; // Use the defined interface
 }
 
 export function TrackerReports({ projectId, features = [], subFeatures = [] }: TrackerReportsProps) {
@@ -51,7 +75,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   });
 
   // Fetch work logs for reports
-  const { data: workLogs } = useQuery({
+  const { data: workLogsData } = useQuery({
     queryKey: [`/api/tracker/work-logs`, projectId],
     queryFn: async () => {
       const response = await apiRequest('GET', `/api/tracker/work-logs?projectId=${projectId || ''}`);
@@ -60,7 +84,10 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
     },
   });
 
-  // Get unique departments and work types
+  // Cast workLogsData to the correct type
+  const workLogs: TrackerWorkLog[] = workLogsData || [];
+
+  // Get unique departments and work types from the provided subFeatures and workLogs
   const departments = [...new Set(subFeatures.map(sf => sf.department).filter(Boolean))];
   const workTypes = [...new Set(subFeatures.map(sf => sf.workType).filter(Boolean))];
   const statuses = ['Planning', 'Design', 'Development', 'Testing', 'Deployment', 'Completed', 'Blocked', 'On Hold'];

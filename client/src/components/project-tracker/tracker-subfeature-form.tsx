@@ -65,7 +65,7 @@ const defaultWorkTypes = [
   { name: 'Feature Request', color: '#059669' }
 ];
 
-const departments = ['Frontend', 'Backend', 'Mobile', 'Quality Assurance', 'DevOps', 'UI/UX', 'Business Analysis'];
+const departments = ['Frontend', 'Backend', 'Mobile', 'Quality Assurance', 'DevOps', 'UI/UX', 'Business Analysis', 'Testing'];
 
 export function TrackerSubFeatureForm({ 
   subFeature, 
