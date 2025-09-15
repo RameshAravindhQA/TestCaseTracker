@@ -369,10 +369,10 @@ export default function AutomationPage() {
       return;
     }
 
-    if (launchMode === 'system-browser' && !preferredBrowser && !customBrowserPath.trim()) {
+    if (launchMode === 'system-browser' && availableBrowsers.length === 0 && !customBrowserPath.trim()) {
       toast({
-        title: "Browser Selection Required",
-        description: "Please select a browser or provide a custom browser path for system launch mode",
+        title: "Custom Browser Path Required",
+        description: "No system browsers detected. Please provide a custom browser path.",
         variant: "destructive"
       });
       return;
@@ -860,10 +860,10 @@ export default function AutomationPage() {
                                     )}
 
                                     {launchMode === 'system-browser' && availableBrowsers.length === 0 && (
-                                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                        <p className="text-sm text-blue-800 font-medium mb-1">✅ Replit Environment Detected</p>
-                                        <p className="text-sm text-blue-700">
-                                          In Replit, the URL will automatically open in a new browser tab when you start recording. No browser selection needed!
+                                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                        <p className="text-sm text-yellow-800 font-medium mb-1">⚠️ No System Browsers Detected</p>
+                                        <p className="text-sm text-yellow-700">
+                                          Please provide a custom browser path below. Note: Windows executables cannot run in Replit's Linux environment.
                                         </p>
                                       </div>
                                     )}
@@ -878,7 +878,7 @@ export default function AutomationPage() {
                                           onChange={(e) => setCustomBrowserPath(e.target.value)}
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
-                                          Leave empty to use system browser. Example: C:\Program Files\Google\Chrome\Application\chrome.exe
+                                          Required when no system browsers are available. Example: /usr/bin/google-chrome (Linux) or C:\Program Files\Google\Chrome\Application\chrome.exe (Windows - local only)
                                         </p>
                                       </div>
                                     )}

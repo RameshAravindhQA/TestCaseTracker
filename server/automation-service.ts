@@ -64,8 +64,8 @@ export class AutomationService {
       { name: 'chrome', command: 'google-chrome' },
       { name: 'firefox', command: 'firefox' },
       { name: 'chrome-stable', command: 'google-chrome-stable' },
-      { name: 'chromium-snap', command: 'chromium' },
-      { name: 'replit-browser', command: 'xdg-open' } // For Replit environment
+      { name: 'chromium-snap', command: 'chromium' }
+      // Removed replit-browser from auto-detection
     ];
 
     for (const browser of browserCommands) {
@@ -93,10 +93,10 @@ export class AutomationService {
       }
     }
 
-    // If no browsers found via which, add some defaults for Replit
+    // If no browsers found via which, only add system-default as fallback
     if (browsers.length === 0) {
-      logger.info('No browsers detected via which, adding Replit defaults...');
-      browsers.push('replit-browser', 'system-default');
+      logger.info('No browsers detected via which, adding system-default as fallback...');
+      browsers.push('system-default');
     }
 
     return browsers;
@@ -300,12 +300,20 @@ runTest();`;
 
   // Launch browser with system command instead of Playwright
   private async launchSystemBrowser(url: string, browserName?: string, customBrowserPath?: string): Promise<{ success: boolean; process?: ChildProcess; message?: string }> {
-    const availableBrowsers = await this.detectSystemBrowsers();
-
-    // Prioritize custom browser path if provided
+    // Prioritize custom browser path if provided - handle cross-platform issue
     if (customBrowserPath && customBrowserPath.trim()) {
       try {
         logger.info(`🚀 Attempting to launch browser from custom path: ${customBrowserPath} with URL: ${url}`);
+        
+        // Check if we're in a Replit environment trying to run Windows executable
+        if ((process.env.REPL_ID || process.env.REPLIT) && customBrowserPath.includes('C:\\')) {
+          logger.warn(`⚠️ Windows executable path detected in Replit environment: ${customBrowserPath}`);
+          return {
+            success: false,
+            message: `Cannot run Windows executable in Replit environment. Please use system browser mode or provide a Linux-compatible browser path.`
+          };
+        }
+
         const browserProcess = spawn(customBrowserPath, ['--new-window', url], {
           stdio: 'ignore',
           detached: true,
@@ -332,10 +340,12 @@ runTest();`;
         logger.warn(`Failed to launch browser from custom path ${customBrowserPath}:`, error);
         return {
           success: false,
-          message: `Failed to launch browser from custom path: ${error.message}`
+          message: `Failed to launch browser from custom path: ${error.message}. Note: Windows executables cannot run in Replit's Linux environment.`
         };
       }
     }
+
+    const availableBrowsers = await this.detectSystemBrowsers();
 
     // For Replit environment, try xdg-open first
     if (process.env.REPL_ID || process.env.REPLIT) {
