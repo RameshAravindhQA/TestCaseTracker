@@ -309,6 +309,82 @@ export class GitHubService {
     return color;
   }
 
+  async uploadImageToGitHub(filePath: string, fileName: string): Promise<{ success: boolean; message: string; data?: any }> {
+    if (!this.octokit || !this.config) {
+      return {
+        success: false,
+        message: 'GitHub client not configured',
+      };
+    }
+
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        return {
+          success: false,
+          message: 'File not found',
+        };
+      }
+
+      // Read file content
+      const fileContent = fs.readFileSync(filePath);
+      const base64Content = fileContent.toString('base64');
+
+      // Create a unique path in the repository
+      const timestamp = Date.now();
+      const repoPath = `uploads/bug-attachments/${timestamp}-${fileName}`;
+
+      // Get repository info to use the default branch
+      const repoInfo = await this.octokit.rest.repos.get({
+        owner: this.config.owner,
+        repo: this.config.repo,
+      });
+      const defaultBranch = repoInfo.data.default_branch || 'main';
+
+      // Upload file to GitHub repository
+      const response = await this.octokit.rest.repos.createOrUpdateFileContents({
+        owner: this.config.owner,
+        repo: this.config.repo,
+        path: repoPath,
+        message: `Upload bug attachment: ${fileName}`,
+        content: base64Content,
+        branch: defaultBranch,
+      });
+
+      // Get the raw URL for the uploaded file using the default branch
+      const rawUrl = `https://raw.githubusercontent.com/${this.config.owner}/${this.config.repo}/${defaultBranch}/${repoPath}`;
+      const githubUrl = `https://github.com/${this.config.owner}/${this.config.repo}/blob/${defaultBranch}/${repoPath}`;
+
+      logger.info('File uploaded to GitHub:', {
+        fileName,
+        repoPath,
+        githubUrl,
+        rawUrl
+      });
+
+      return {
+        success: true,
+        message: 'File uploaded successfully',
+        data: {
+          githubUrl,
+          rawUrl,
+          repoPath,
+          sha: response.data.content?.sha
+        },
+      };
+
+    } catch (error: any) {
+      logger.error('Failed to upload file to GitHub:', error);
+      return {
+        success: false,
+        message: `Failed to upload file: ${error.message}`,
+      };
+    }
+  }
+
   async addCommentToIssue(issueNumber: number, comment: string): Promise<{ success: boolean; message: string; data?: any }> {
     if (!this.octokit || !this.config) {
       return {

@@ -2,10 +2,11 @@ import { Bug, User } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Bug } from "@/types";
 import { format } from "date-fns";
-import { Calendar, User, AlertTriangle, Flag, Settings, FileText, List, Target, Zap } from "lucide-react";
+import { Calendar, User as UserIcon, AlertTriangle, Flag, Settings, FileText, List, Target, Zap } from "lucide-react";
 import { BugComments } from "./bug-comments";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface BugDetailsProps {
   bug: Bug;
@@ -13,6 +14,16 @@ interface BugDetailsProps {
 }
 
 export function BugDetails({ bug, users = [] }: BugDetailsProps) {
+  // Fetch GitHub configuration for this project
+  const { data: githubConfig } = useQuery({
+    queryKey: [`/api/github/config/${bug.projectId}`],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/github/config/${bug.projectId}`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+  });
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Open":

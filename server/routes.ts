@@ -5093,6 +5093,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const bug = await storage.createBug(bugData);
 
+      // Try to automatically create GitHub issue if GitHub integration is configured
+      try {
+        const githubConfig = await storage.getGitHubIntegration(projectId);
+        if (githubConfig && githubConfig.isEnabled) {
+          console.log('GitHub integration found, creating GitHub issue for bug:', bug.bugId);
+          
+          // Configure GitHub service
+          githubService.setConfig({
+            owner: githubConfig.githubUsername,
+            repo: githubConfig.repositoryName,
+            token: githubConfig.personalAccessToken
+          });
+
+          // Prepare GitHub issue content
+          const issueTitle = `[${bug.bugId}] ${bug.title}`;
+          let issueBody = `**Bug Report from TestCase Tracker**\n\n`;
+          issueBody += `**Bug ID:** ${bug.bugId}\n`;
+          issueBody += `**Title:** ${bug.title}\n`;
+          issueBody += `**Severity:** ${bug.severity}\n`;
+          issueBody += `**Priority:** ${bug.priority}\n`;
+          issueBody += `**Status:** ${bug.status}\n\n`;
+          issueBody += `**Description:**\n${bug.description}\n\n`;
+          
+          if (bug.stepsToReproduce) {
+            issueBody += `**Steps to Reproduce:**\n${bug.stepsToReproduce}\n\n`;
+          }
+          
+          if (bug.expectedResult) {
+            issueBody += `**Expected Result:**\n${bug.expectedResult}\n\n`;
+          }
+          
+          if (bug.actualResult) {
+            issueBody += `**Actual Result:**\n${bug.actualResult}\n\n`;
+          }
+
+          // Handle attachments - upload images to GitHub and convert URLs
+          if (bug.attachments && bug.attachments.length > 0) {
+            issueBody += `**Attachments:**\n`;
+            
+            for (const attachment of bug.attachments) {
+              // Check if attachment is a local file that needs to be uploaded to GitHub
+              if (typeof attachment === 'string' && attachment.startsWith('attachment://')) {
+                const filename = attachment.replace('attachment://', '');
+                
+                try {
+                  // Try to find the file in the uploads directory
+                  const path = require('path');
+                  const fs = require('fs');
+                  
+                  // Check common upload directories
+                  const possiblePaths = [
+                    path.join(process.cwd(), 'uploads', 'bug-attachment', filename),
+                    path.join(process.cwd(), 'uploads', filename),
+                    path.join(process.cwd(), 'attached_assets', filename)
+                  ];
+                  
+                  let foundPath = null;
+                  for (const possiblePath of possiblePaths) {
+                    if (fs.existsSync(possiblePath)) {
+                      foundPath = possiblePath;
+                      break;
+                    }
+                  }
+                  
+                  if (foundPath) {
+                    // Upload to GitHub
+                    const uploadResult = await githubService.uploadImageToGitHub(foundPath, filename);
+                    
+                    if (uploadResult.success && uploadResult.data) {
+                      // Use the GitHub raw URL for images to display properly
+                      const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(filename);
+                      if (isImage) {
+                        issueBody += `- ![${filename}](${uploadResult.data.rawUrl})\n`;
+                      } else {
+                        issueBody += `- [${filename}](${uploadResult.data.githubUrl})\n`;
+                      }
+                      console.log(`✅ Uploaded ${filename} to GitHub: ${uploadResult.data.githubUrl}`);
+                    } else {
+                      issueBody += `- ${filename} (Upload failed: ${uploadResult.message})\n`;
+                      console.warn(`⚠️ Failed to upload ${filename}:`, uploadResult.message);
+                    }
+                  } else {
+                    issueBody += `- ${filename} (File not found for upload)\n`;
+                    console.warn(`⚠️ File not found for upload: ${filename}`);
+                  }
+                } catch (uploadError) {
+                  console.error('Error uploading attachment:', uploadError);
+                  issueBody += `- ${filename} (Upload error)\n`;
+                }
+              } else if (typeof attachment === 'object' && attachment.filePath) {
+                // This is a file object with path
+                issueBody += `- [${attachment.fileName || 'Attachment'}](${attachment.filePath})\n`;
+              } else {
+                issueBody += `- ${attachment}\n`;
+              }
+            }
+            issueBody += `\n`;
+          }
+
+          issueBody += `---\n*Created automatically from TestCase Tracker*`;
+
+          // Create labels based on bug properties
+          const labels = ['bug'];
+          if (bug.severity) {
+            labels.push(`severity: ${bug.severity.toLowerCase()}`);
+          }
+          if (bug.priority) {
+            labels.push(`priority: ${bug.priority.toLowerCase()}`);
+          }
+
+          // Create the GitHub issue
+          const githubResult = await githubService.createIssue(issueTitle, issueBody, labels);
+          
+          if (githubResult.success && githubResult.data) {
+            // Update the bug with the GitHub issue number
+            await storage.updateBug(bug.id, {
+              githubIssueNumber: githubResult.data.number,
+              githubIssueUrl: githubResult.data.url
+            });
+            
+            console.log(`✅ GitHub issue #${githubResult.data.number} created for bug ${bug.bugId}`);
+            
+            // Update the bug object to return the GitHub info
+            bug.githubIssueNumber = githubResult.data.number;
+            bug.githubIssueUrl = githubResult.data.url;
+          } else {
+            console.warn(`⚠️ Failed to create GitHub issue for bug ${bug.bugId}:`, githubResult.message);
+          }
+        }
+      } catch (githubError) {
+        console.error('GitHub issue creation failed:', githubError);
+        // Don't fail the entire bug creation if GitHub fails
+      }
+
       // Log activity
       await storage.createActivity({
         userId: req.session.userId!,
@@ -5104,7 +5238,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           projectName: project.name,
           bugId: bug.bugId,
           title: bug.title,
-          severity: bug.severity
+          severity: bug.severity,
+          githubIssueNumber: bug.githubIssueNumber || null
         }
       });
 
@@ -7207,6 +7342,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating message:', error);
       res.status(500).json({ error: 'Failed to create message' });
+    }
+  });
+
+  // GitHub comments endpoint
+  apiRouter.get("/github/issues/:issueNumber/comments", isAuthenticated, async (req, res) => {
+    try {
+      const issueNumber = req.params.issueNumber;
+      const projectId = parseInt(req.query.projectId as string);
+      
+      if (!projectId || !issueNumber) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Project ID and issue number are required',
+          step: 'validation'
+        });
+      }
+
+      // Get GitHub configuration for the project
+      const githubConfig = await storage.getGitHubIntegration(projectId);
+      if (!githubConfig || !githubConfig.isEnabled) {
+        return res.status(400).json({
+          success: false,
+          error: 'GitHub integration not configured for this project',
+          step: 'github_config'
+        });
+      }
+
+      // Fetch GitHub comments using the service
+      const githubComments = await syncGitHubComments(parseInt(issueNumber), 0, githubConfig);
+      
+      res.json(githubComments);
+    } catch (error: any) {
+      console.error('GitHub comments fetch error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch GitHub comments',
+        step: 'internal_error'
+      });
     }
   });
 
