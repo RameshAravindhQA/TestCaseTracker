@@ -1,7 +1,7 @@
 import express, { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { GitHubService, githubService } from "./github-service";
+import { GitHubService, githubService, syncGitHubComments } from "./github-service";
 import { initializeDatabase, saveMatrixCell, getMatrixCellsByProject, getTraceabilityMarkersByProject, deleteMatrixCell } from "./matrix-fix";
 import { automationService } from "./automation-service";
 import { logger } from "./logger";
@@ -84,10 +84,8 @@ import fs from "fs";
 import flowDiagramRoutes from './api/flow-diagram-routes';
 import brdRoutes from "./brd-routes";
 import { OAuthService } from './oauth-service';
-import { GitHubService } from './github-service';
 
-// Initialize GitHub service
-const githubService = new GitHubService();
+// GitHub service is already imported and initialized above
 
 // Initialize OAuth service
 const oauthService = new OAuthService();
@@ -7356,69 +7354,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: 'Failed to sync GitHub comments'
-      });
-    }
-  });
-
-  // GitHub sync route
-  apiRouter.post("/github/sync/:bugId", isAuthenticated, async (req, res) => {
-    try {
-      const bugId = parseInt(req.params.bugId);
-      if (!bugId) {
-        return res.status(400).json({ success: false, error: 'Invalid bug ID' });
-      }
-
-      const bug = await storage.getBug(bugId);
-      if (!bug) {
-        return res.status(404).json({ success: false, error: 'Bug not found' });
-      }
-
-      // Get GitHub configuration for the project
-      const githubConfig = await storage.getGitHubIntegration(bug.projectId);
-      if (!githubConfig || !githubConfig.isEnabled) {
-        return res.status(400).json({
-          success: false,
-          error: 'GitHub integration not configured for this project'
-        });
-      }
-
-      // Configure GitHub service
-      githubService.setConfig({
-        owner: githubConfig.githubUsername,
-        repo: githubConfig.repositoryName,
-        token: githubConfig.personalAccessToken
-      });
-
-      // Check if bug has a GitHub issue number
-      if (!bug.githubIssueNumber) {
-        return res.status(400).json({
-          success: false,
-          error: 'Bug is not linked to a GitHub issue'
-        });
-      }
-
-      // Sync comments from GitHub to system
-      try {
-        const githubComments = await syncGitHubComments(bug.githubIssueNumber, bugId, githubConfig);
-
-        res.json({
-          success: true,
-          message: 'Successfully synced with GitHub',
-          syncedComments: githubComments?.length || 0
-        });
-      } catch (syncError) {
-        console.error('GitHub sync error:', syncError);
-        res.status(500).json({
-          success: false,
-          error: 'Failed to sync with GitHub: ' + syncError.message
-        });
-      }
-
-    } catch (error) {
-      console.error('GitHub sync route error:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error'
       });
     }
   });
