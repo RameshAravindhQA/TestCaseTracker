@@ -542,14 +542,14 @@ runTest();`;
       logger.info(`🚀 Attempting to launch browser in HEADED instrumented mode...`);
       logger.info(`🔍 Pre-launch browser check starting...`);
       
-      // Ensure browsers are installed first with system dependencies
+      // Install browsers without system dependencies (Replit-compatible)
       try {
-        logger.info(`🔧 Installing Playwright browsers with dependencies...`);
+        logger.info(`🔧 Installing Playwright browsers (Replit-compatible mode)...`);
         
-        // Install browsers with system dependencies
-        const installProcess = spawn('npx', ['playwright', 'install', '--with-deps', 'chromium'], { 
+        // Install browsers without system dependencies
+        const installProcess = spawn('npx', ['playwright', 'install', 'chromium'], { 
           stdio: 'pipe',
-          timeout: 120000 // Increase timeout for dependency installation
+          timeout: 60000
         });
         
         let installOutput = '';
@@ -562,67 +562,25 @@ runTest();`;
           logger.warn(`📦 Install warning: ${data.toString().trim()}`);
         });
         
-        await new Promise((resolve, reject) => {
+        await new Promise((resolve) => {
           installProcess.on('close', (code) => {
             logger.info(`🔧 Browser installation completed with code: ${code}`);
             if (code === 0) {
               logger.info(`✅ Playwright browsers installed successfully`);
-              resolve(code);
             } else {
-              logger.error(`❌ Browser installation failed with code: ${code}`);
-              // Try alternative installation method
-              logger.info(`🔄 Attempting alternative installation method...`);
-              resolve(code); // Continue anyway, let fallback methods handle it
+              logger.warn(`⚠️ Browser installation returned code: ${code}, continuing...`);
             }
+            resolve(code);
           });
           
           installProcess.on('error', (error) => {
             logger.error(`❌ Browser installation process error: ${error.message}`);
-            resolve(1); // Continue with fallback
+            resolve(1);
           });
         });
         
-        // Verify browser installation
-        try {
-          const verifyProcess = spawn('npx', ['playwright', 'install', '--dry-run', 'chromium'], {
-            stdio: 'pipe',
-            timeout: 10000
-          });
-          
-          await new Promise((resolve) => {
-            verifyProcess.on('close', (code) => {
-              if (code === 0) {
-                logger.info(`✅ Browser installation verified successfully`);
-              } else {
-                logger.warn(`⚠️ Browser verification returned code: ${code}`);
-              }
-              resolve(code);
-            });
-          });
-        } catch (verifyError) {
-          logger.warn(`⚠️ Browser verification failed: ${verifyError}`);
-        }
-        
       } catch (installError: any) {
         logger.warn(`⚠️ Browser installation failed: ${installError.message}`);
-        
-        // Try manual installation as fallback
-        logger.info(`🔄 Attempting manual browser installation...`);
-        try {
-          const manualInstall = spawn('npm', ['run', 'postinstall'], { 
-            stdio: 'pipe',
-            timeout: 60000
-          });
-          
-          await new Promise((resolve) => {
-            manualInstall.on('close', (code) => {
-              logger.info(`🔧 Manual installation completed with code: ${code}`);
-              resolve(code);
-            });
-          });
-        } catch (manualError) {
-          logger.error(`❌ Manual installation also failed: ${manualError}`);
-        }
       }
       
       // Verify browser binary exists
