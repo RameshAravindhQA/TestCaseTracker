@@ -12,10 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { FileDown, Calendar, TrendingUp, Clock, Target } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { FileDown, Calendar, TrendingUp, Clock, Target, Filter } from 'lucide-react';
+import { format } from 'date-fns';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 interface TrackerReportsProps {
-  projectId: number;
+  projectId?: number;
   features?: any[];
   subFeatures?: any[];
 }
@@ -24,40 +29,84 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   const [reportType, setReportType] = useState('summary');
   const [dateRange, setDateRange] = useState('all');
   const [selectedFeature, setSelectedFeature] = useState('all');
+  const [selectedSubFeature, setSelectedSubFeature] = useState('all');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedWorkType, setSelectedWorkType] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  // Fetch project details
+  const { data: project } = useQuery({
+    queryKey: [`/api/tracker/projects/${projectId}`],
+    queryFn: async () => {
+      if (!projectId) return null;
+      const response = await apiRequest('GET', `/api/tracker/projects/${projectId}`);
+      if (!response.ok) throw new Error('Failed to fetch project');
+      return response.json();
+    },
+    enabled: !!projectId,
+  });
 
   // Fetch work logs for reports
   const { data: workLogs } = useQuery({
     queryKey: [`/api/tracker/work-logs`, projectId],
     queryFn: async () => {
-      const response = await apiRequest('GET', `/api/tracker/work-logs?projectId=${projectId}`);
+      const response = await apiRequest('GET', `/api/tracker/work-logs?projectId=${projectId || ''}`);
       if (!response.ok) throw new Error('Failed to fetch work logs');
       return response.json();
     },
   });
 
-  // Fetch project data
-  const { data: project } = useQuery({
-    queryKey: [`/api/tracker/projects/${projectId}`],
-    queryFn: async () => {
-      const response = await apiRequest('GET', `/api/tracker/projects/${projectId}`);
-      if (!response.ok) throw new Error('Failed to fetch project');
-      return response.json();
-    },
-  });
+  // Get filtered sub-features based on selected feature
+  const filteredSubFeatures = selectedFeature === 'all' 
+    ? subFeatures 
+    : subFeatures.filter(sf => sf.featureId.toString() === selectedFeature);
 
-  // Filter data based on selected filters
+  // Get unique departments and work types
+  const departments = [...new Set(subFeatures.map(sf => sf.department).filter(Boolean))];
+  const workTypes = [...new Set(subFeatures.map(sf => sf.workType).filter(Boolean))];
+  const statuses = ['Planning', 'Design', 'Development', 'Testing', 'Deployment', 'Completed', 'Blocked', 'On Hold'];
+
+  // Apply all filters to get filtered data
   const getFilteredData = () => {
-    let filteredSubFeatures = [...subFeatures];
-    let filteredWorkLogs = workLogs || [];
+    let filteredSFs = [...subFeatures];
+    let filteredWLs = workLogs || [];
 
     // Feature filter
     if (selectedFeature !== 'all') {
-      filteredSubFeatures = filteredSubFeatures.filter(sf => sf.featureId.toString() === selectedFeature);
-      filteredWorkLogs = filteredWorkLogs.filter(wl => 
-        filteredSubFeatures.some(sf => sf.id === wl.subFeatureId)
+      filteredSFs = filteredSFs.filter(sf => sf.featureId.toString() === selectedFeature);
+      filteredWLs = filteredWLs.filter(wl => 
+        filteredSFs.some(sf => sf.id === wl.subFeatureId)
       );
+    }
+
+    // Sub-feature filter
+    if (selectedSubFeature !== 'all') {
+      filteredSFs = filteredSFs.filter(sf => sf.id.toString() === selectedSubFeature);
+      filteredWLs = filteredWLs.filter(wl => wl.subFeatureId.toString() === selectedSubFeature);
+    }
+
+    // Department filter
+    if (selectedDepartment !== 'all') {
+      filteredSFs = filteredSFs.filter(sf => sf.department === selectedDepartment);
+      filteredWLs = filteredWLs.filter(wl => 
+        filteredSFs.some(sf => sf.id === wl.subFeatureId)
+      );
+    }
+
+    // Status filter
+    if (selectedStatus !== 'all') {
+      filteredSFs = filteredSFs.filter(sf => sf.status === selectedStatus);
+      filteredWLs = filteredWLs.filter(wl => 
+        filteredSFs.some(sf => sf.id === wl.subFeatureId)
+      );
+    }
+
+    // Work Type filter
+    if (selectedWorkType !== 'all') {
+      filteredSFs = filteredSFs.filter(sf => sf.workType === selectedWorkType);
+      filteredWLs = filteredWLs.filter(wl => wl.workType === selectedWorkType);
     }
 
     // Date range filter
@@ -87,205 +136,230 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
           if (startDate && endDate) {
             const start = new Date(startDate);
             const end = new Date(endDate);
-            filteredSubFeatures = filteredSubFeatures.filter(sf => {
-              const createdDate = new Date(sf.createdAt);
-              return createdDate >= start && createdDate <= end;
-            });
-            filteredWorkLogs = filteredWorkLogs.filter(wl => {
-              const logDate = new Date(wl.logDate);
+            filteredWLs = filteredWLs.filter(wl => {
+              const logDate = new Date(wl.workDate);
               return logDate >= start && logDate <= end;
             });
           }
-          return { filteredSubFeatures, filteredWorkLogs };
+          return { filteredSubFeatures: filteredSFs, filteredWorkLogs: filteredWLs };
       }
 
       if (dateRange !== 'custom') {
-        filteredSubFeatures = filteredSubFeatures.filter(sf => {
-          const createdDate = new Date(sf.createdAt);
-          return createdDate >= filterDate;
-        });
-        filteredWorkLogs = filteredWorkLogs.filter(wl => {
-          const logDate = new Date(wl.logDate);
+        filteredWLs = filteredWLs.filter(wl => {
+          const logDate = new Date(wl.workDate);
           return logDate >= filterDate;
         });
       }
     }
 
-    return { filteredSubFeatures, filteredWorkLogs };
+    return { filteredSubFeatures: filteredSFs, filteredWorkLogs: filteredWLs };
   };
 
   const { filteredSubFeatures, filteredWorkLogs } = getFilteredData();
 
-  // Calculate delay statistics
-  const getDelayStatistics = () => {
-    const delayedSubFeatures = subFeatures.filter(subFeature => {
-      if (!subFeature.endDate || subFeature.status === 'Completed') return false;
-      return new Date() > new Date(subFeature.endDate);
+  // Group data by features for structured reports
+  const getGroupedData = () => {
+    const grouped = {};
+    
+    features.forEach(feature => {
+      const featureSubFeatures = filteredSubFeatures.filter(sf => sf.featureId === feature.id);
+      const featureWorkLogs = filteredWorkLogs.filter(wl => 
+        featureSubFeatures.some(sf => sf.id === wl.subFeatureId)
+      );
+      
+      if (featureSubFeatures.length > 0 || featureWorkLogs.length > 0) {
+        grouped[feature.id] = {
+          feature,
+          subFeatures: featureSubFeatures,
+          workLogs: featureWorkLogs
+        };
+      }
     });
-
-    const totalDelayDays = delayedSubFeatures.reduce((total, subFeature) => {
-      const planned = new Date(subFeature.endDate);
-      const now = new Date();
-      const diffTime = Math.abs(now.getTime() - planned.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return total + diffDays;
-    }, 0);
-
-    return {
-      delayedProjects: delayedSubFeatures.length,
-      averageDelay: delayedSubFeatures.length > 0 ? Math.round(totalDelayDays / delayedSubFeatures.length) : 0,
-      totalDelayDays,
-    };
+    
+    return grouped;
   };
-
-  const delayStats = getDelayStatistics();
 
   // Export functions
   const exportToCSV = () => {
-    const headers = [
-      'Sub-Feature Name',
-      'Feature',
-      'Status',
-      'Work Type',
-      'Department',
-      'Start Date',
-      'End Date',
-      'Estimated Hours',
-      'Total Work Hours',
-      'Created Date',
-    ];
+    const groupedData = getGroupedData();
+    
+    const csvData = [];
+    
+    // Add header information
+    csvData.push([`Project: ${project?.name || 'Unknown Project'}`]);
+    csvData.push([`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`]);
+    csvData.push([`Date Range: ${dateRange === 'custom' && startDate && endDate ? 
+      `${startDate} to ${endDate}` : dateRange}`]);
+    csvData.push([`Filters Applied: Feature(${selectedFeature}), Department(${selectedDepartment}), Status(${selectedStatus}), Work Type(${selectedWorkType})`]);
+    csvData.push([]);
 
-    const csvData = subFeatures.map(subFeature => {
-      const feature = features.find(f => f.id === subFeature.featureId);
-      const logs = workLogs?.filter(wl => wl.subFeatureId === subFeature.id) || [];
-      const totalHours = logs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
+    Object.values(groupedData).forEach((group: any) => {
+      csvData.push([`FEATURE: ${group.feature.name}`]);
+      csvData.push(['Sub-Feature', 'Department', 'Status', 'Work Type', 'Estimated Hours', 'Total Work Hours', 'Start Date', 'End Date']);
       
-      return [
-        subFeature.name,
-        feature?.name || 'Unknown',
-        subFeature.status,
-        subFeature.workType,
-        subFeature.department || '',
-        subFeature.startDate || '',
-        subFeature.endDate || '',
-        subFeature.estimatedHours || '',
-        totalHours,
-        new Date(subFeature.createdAt).toLocaleDateString(),
-      ];
+      group.subFeatures.forEach(sf => {
+        const subFeatureWorkLogs = group.workLogs.filter(wl => wl.subFeatureId === sf.id);
+        const totalHours = subFeatureWorkLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
+        
+        csvData.push([
+          sf.name,
+          sf.department || '',
+          sf.status,
+          sf.workType,
+          sf.estimatedHours || 0,
+          totalHours,
+          sf.startDate || '',
+          sf.endDate || ''
+        ]);
+      });
+      
+      csvData.push([]);
+      csvData.push(['Work Logs for this Feature:']);
+      csvData.push(['Log ID', 'Sub-Feature', 'Date', 'Hours', 'Work Type', 'Status', 'Description']);
+      
+      group.workLogs.forEach(wl => {
+        const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
+        csvData.push([
+          wl.id,
+          subFeature?.name || 'Unknown',
+          wl.workDate,
+          wl.hoursWorked,
+          wl.workType,
+          wl.status,
+          wl.description
+        ]);
+      });
+      
+      csvData.push([]);
     });
 
-    const csvContent = [headers, ...csvData]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
-      .join('\n');
+    const csvContent = csvData.map(row => 
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `project-tracker-report-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `${project?.name || 'project'}-tracker-report-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     link.click();
   };
 
   const exportToPDF = () => {
-    try {
-      // Create a printable HTML version
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        toast({
-          title: "PDF Export Failed",
-          description: "Please allow pop-ups to export PDF",
-          variant: "destructive",
-        });
-        return;
+    const doc = new jsPDF();
+    const groupedData = getGroupedData();
+    
+    // Add title and project info
+    doc.setFontSize(18);
+    doc.text(`${project?.name || 'Project'} - Work Logs Report`, 14, 20);
+    
+    doc.setFontSize(10);
+    doc.text(`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`, 14, 30);
+    doc.text(`Date Range: ${dateRange === 'custom' && startDate && endDate ? 
+      `${startDate} to ${endDate}` : dateRange}`, 14, 35);
+    doc.text(`Applied Filters:`, 14, 40);
+    doc.text(`• Feature: ${selectedFeature === 'all' ? 'All Features' : features.find(f => f.id.toString() === selectedFeature)?.name || 'Unknown'}`, 20, 45);
+    doc.text(`• Sub-Feature: ${selectedSubFeature === 'all' ? 'All Sub-Features' : filteredSubFeatures.find(sf => sf.id.toString() === selectedSubFeature)?.name || 'Unknown'}`, 20, 50);
+    doc.text(`• Department: ${selectedDepartment === 'all' ? 'All Departments' : selectedDepartment}`, 20, 55);
+    doc.text(`• Status: ${selectedStatus === 'all' ? 'All Statuses' : selectedStatus}`, 20, 60);
+    doc.text(`• Work Type: ${selectedWorkType === 'all' ? 'All Work Types' : selectedWorkType}`, 20, 65);
+
+    let yPosition = 75;
+
+    // Summary statistics
+    const totalHours = filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+    const totalLogs = filteredWorkLogs.length;
+    const totalSubFeatures = filteredSubFeatures.length;
+
+    doc.setFontSize(14);
+    doc.text('Summary Statistics', 14, yPosition);
+    yPosition += 10;
+
+    doc.setFontSize(10);
+    doc.text(`Total Sub-Features: ${totalSubFeatures}`, 14, yPosition);
+    doc.text(`Total Work Logs: ${totalLogs}`, 14, yPosition + 5);
+    doc.text(`Total Hours Logged: ${totalHours}h`, 14, yPosition + 10);
+    yPosition += 25;
+
+    // Feature-wise detailed report
+    Object.values(groupedData).forEach((group: any) => {
+      // Check if we need a new page
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
       }
 
-      const estimatedHours = subFeatures.reduce((sum, sf) => sum + (sf.estimatedHours || 0), 0);
-      const actualHours = workLogs?.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0) || 0;
-      const totalLogs = workLogs?.length || 0;
+      doc.setFontSize(14);
+      doc.text(`Feature: ${group.feature.name}`, 14, yPosition);
+      yPosition += 10;
 
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Project Tracker Report</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            h1, h2 { color: #333; }
-            table { border-collapse: collapse; width: 100%; margin: 20px 0; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            .summary { margin: 20px 0; }
-          </style>
-        </head>
-        <body>
-          <h1>Project Tracker Report</h1>
-          <p><strong>Project:</strong> ${project?.name || 'Unknown'}</p>
-          <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
+      // Sub-features table
+      if (group.subFeatures.length > 0) {
+        const subFeatureTableData = group.subFeatures.map(sf => {
+          const subFeatureWorkLogs = group.workLogs.filter(wl => wl.subFeatureId === sf.id);
+          const totalHours = subFeatureWorkLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
           
-          <h2>Sub-Feature Status Summary</h2>
-          <table>
-            <thead>
-              <tr><th>Status</th><th>Count</th><th>Percentage</th></tr>
-            </thead>
-            <tbody>
-              ${['Planning', 'In Progress', 'Completed', 'On Hold', 'Blocked'].map(status => {
-                const count = subFeatures.filter(sf => sf.status === status).length;
-                const percentage = subFeatures.length > 0 ? Math.round((count / subFeatures.length) * 100) : 0;
-                return `<tr><td>${status}</td><td>${count}</td><td>${percentage}%</td></tr>`;
-              }).join('')}
-            </tbody>
-          </table>
+          return [
+            sf.name,
+            sf.department || '',
+            sf.status,
+            sf.workType,
+            `${sf.estimatedHours || 0}h`,
+            `${totalHours}h`
+          ];
+        });
 
-          <h2>Work Type Distribution</h2>
-          <table>
-            <thead>
-              <tr><th>Work Type</th><th>Count</th><th>Percentage</th></tr>
-            </thead>
-            <tbody>
-              ${['Development', 'QA', 'DevOps', 'Designing', 'Analysis', 'Documentation'].map(workType => {
-                const count = subFeatures.filter(sf => sf.workType === workType).length;
-                const percentage = subFeatures.length > 0 ? Math.round((count / subFeatures.length) * 100) : 0;
-                return `<tr><td>${workType}</td><td>${count}</td><td>${percentage}%</td></tr>`;
-              }).join('')}
-            </tbody>
-          </table>
+        doc.autoTable({
+          startY: yPosition,
+          head: [['Sub-Feature', 'Department', 'Status', 'Work Type', 'Estimated', 'Actual']],
+          body: subFeatureTableData,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [41, 128, 185] },
+          margin: { left: 14 }
+        });
 
-          <h2>Work Hours Summary</h2>
-          <table>
-            <thead>
-              <tr><th>Metric</th><th>Value</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>Estimated Hours</td><td>${estimatedHours}h</td></tr>
-              <tr><td>Actual Hours</td><td>${actualHours}h</td></tr>
-              <tr><td>Total Work Logs</td><td>${totalLogs}</td></tr>
-              <tr><td>Efficiency</td><td>${estimatedHours > 0 ? Math.round((actualHours / estimatedHours) * 100) : 'N/A'}%</td></tr>
-            </tbody>
-          </table>
-        </body>
-        </html>
-      `;
+        yPosition = doc.lastAutoTable.finalY + 10;
+      }
 
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      
-      // Wait for content to load then print
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
+      // Work logs table
+      if (group.workLogs.length > 0) {
+        // Check if we need a new page for work logs
+        if (yPosition > 220) {
+          doc.addPage();
+          yPosition = 20;
+        }
 
-      toast({
-        title: "PDF Export",
-        description: "Print dialog opened. Use 'Save as PDF' option in print dialog.",
-      });
-      
-    } catch (error) {
-      console.error('PDF generation error:', error);
-      toast({
-        title: "PDF Export Failed",
-        description: "Failed to generate PDF report",
-        variant: "destructive",
-      });
-    }
+        doc.setFontSize(12);
+        doc.text('Work Logs:', 14, yPosition);
+        yPosition += 5;
+
+        const workLogTableData = group.workLogs.map(wl => {
+          const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
+          return [
+            wl.id.toString(),
+            subFeature?.name || 'Unknown',
+            wl.workDate,
+            `${wl.hoursWorked}h`,
+            wl.workType,
+            wl.status,
+            wl.description.substring(0, 30) + (wl.description.length > 30 ? '...' : '')
+          ];
+        });
+
+        doc.autoTable({
+          startY: yPosition,
+          head: [['Log ID', 'Sub-Feature', 'Date', 'Hours', 'Work Type', 'Status', 'Description']],
+          body: workLogTableData,
+          styles: { fontSize: 7 },
+          headStyles: { fillColor: [46, 125, 50] },
+          margin: { left: 14 }
+        });
+
+        yPosition = doc.lastAutoTable.finalY + 15;
+      }
+    });
+
+    // Save the PDF
+    doc.save(`${project?.name || 'project'}-tracker-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
   };
 
   return (
@@ -299,43 +373,15 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Report Type:</label>
-              <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="summary">Summary</SelectItem>
-                  <SelectItem value="timeline">Timeline</SelectItem>
-                  <SelectItem value="delay">Delay Analysis</SelectItem>
-                  <SelectItem value="budget">Budget Analysis</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Date Range:</label>
-              <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="thisMonth">This Month</SelectItem>
-                  <SelectItem value="lastMonth">Last Month</SelectItem>
-                  <SelectItem value="thisQuarter">This Quarter</SelectItem>
-                  <SelectItem value="thisYear">This Year</SelectItem>
-                  <SelectItem value="custom">Custom Range</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Feature:</label>
-              <Select value={selectedFeature} onValueChange={setSelectedFeature}>
-                <SelectTrigger className="w-40">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {/* Feature Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Feature:</Label>
+              <Select value={selectedFeature} onValueChange={(value) => {
+                setSelectedFeature(value);
+                setSelectedSubFeature('all'); // Reset sub-feature when feature changes
+              }}>
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -349,25 +395,113 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               </Select>
             </div>
 
-            {dateRange === 'custom' && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="px-3 py-1 border rounded"
-                />
-                <span>to</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="px-3 py-1 border rounded"
-                />
-              </div>
-            )}
+            {/* Sub-Feature Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Sub-Feature:</Label>
+              <Select value={selectedSubFeature} onValueChange={setSelectedSubFeature}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sub-Features</SelectItem>
+                  {filteredSubFeatures.map((subFeature) => (
+                    <SelectItem key={subFeature.id} value={subFeature.id.toString()}>
+                      {subFeature.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <div className="flex gap-2 ml-auto">
+            {/* Department Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Department:</Label>
+              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Status:</Label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  {statuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Work Type Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Work Type:</Label>
+              <Select value={selectedWorkType} onValueChange={setSelectedWorkType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Work Types</SelectItem>
+                  {workTypes.map((workType) => (
+                    <SelectItem key={workType} value={workType}>
+                      {workType}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date Range Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Date Range:</Label>
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="thisMonth">This Month</SelectItem>
+                  <SelectItem value="lastMonth">Last Month</SelectItem>
+                  <SelectItem value="thisQuarter">This Quarter</SelectItem>
+                  <SelectItem value="thisYear">This Year</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Report Type */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Report Type:</Label>
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="summary">Summary</SelectItem>
+                  <SelectItem value="detailed">Detailed</SelectItem>
+                  <SelectItem value="timeline">Timeline</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Export Buttons */}
+            <div className="flex gap-2">
               <Button variant="outline" onClick={exportToCSV}>
                 <FileDown className="h-4 w-4 mr-2" />
                 Export CSV
@@ -378,252 +512,175 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
               </Button>
             </div>
           </div>
+
+          {/* Custom Date Range Inputs */}
+          {dateRange === 'custom' && (
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Start Date:</Label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">End Date:</Label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {reportType === 'summary' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Sub-Feature Status Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Sub-Feature Status Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {['Planning', 'In Progress', 'Completed', 'On Hold', 'Blocked'].map(status => {
-                  const count = filteredSubFeatures.filter(sf => sf.status === status).length;
-                  const percentage = filteredSubFeatures.length > 0 ? (count / filteredSubFeatures.length) * 100 : 0;
-                  
-                  return (
-                    <div key={status} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{status}</Badge>
-                        <span className="text-sm">{count} sub-features</span>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {Math.round(percentage)}%
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+      {/* Summary Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-blue-500" />
+              <span className="text-sm font-medium">Filtered Sub-Features</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">{filteredSubFeatures.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium">Total Work Logs</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">{filteredWorkLogs.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-orange-500" />
+              <span className="text-sm font-medium">Total Hours</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">
+              {filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0)}h
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-purple-500" />
+              <span className="text-sm font-medium">Active Features</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">
+              {Object.keys(getGroupedData()).length}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-          {/* Work Type Distribution */}
-          <Card>
+      {/* Detailed Reports by Feature */}
+      <div className="space-y-6">
+        {Object.values(getGroupedData()).map((group: any) => (
+          <Card key={group.feature.id}>
             <CardHeader>
-              <CardTitle>Work Type Distribution</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {['Development', 'QA', 'DevOps', 'Designing', 'Analysis', 'Documentation'].map(workType => {
-                  const count = filteredSubFeatures.filter(sf => sf.workType === workType).length;
-                  const percentage = filteredSubFeatures.length > 0 ? (count / filteredSubFeatures.length) * 100 : 0;
-                  
-                  return (
-                    <div key={workType} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{workType}</Badge>
-                        <span className="text-sm">{count} sub-features</span>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {Math.round(percentage)}%
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Work Hours Summary */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Work Hours Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">
-                    {filteredSubFeatures.reduce((sum, sf) => sum + (sf.estimatedHours || 0), 0)}h
-                  </p>
-                  <p className="text-sm text-muted-foreground">Estimated Hours</p>
+              <CardTitle className="flex items-center justify-between">
+                <span>Feature: {group.feature.name}</span>
+                <div className="flex gap-2">
+                  <Badge variant="outline">
+                    {group.subFeatures.length} Sub-Features
+                  </Badge>
+                  <Badge variant="outline">
+                    {group.workLogs.length} Work Logs
+                  </Badge>
+                  <Badge variant="outline">
+                    {group.workLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0)}h Total
+                  </Badge>
                 </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">
-                    {filteredWorkLogs?.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0) || 0}h
-                  </p>
-                  <p className="text-sm text-muted-foreground">Actual Hours</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-purple-600">
-                    {filteredWorkLogs?.length || 0}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Total Work Logs</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {reportType === 'delay' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Delay Statistics
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-2xl font-bold text-red-600">{delayStats.delayedProjects}</p>
-                  <p className="text-sm text-muted-foreground">Delayed Projects</p>
+              {/* Sub-Features Table */}
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold mb-3">Sub-Features</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-200">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="border border-gray-200 px-4 py-2 text-left">Name</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Department</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Status</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Work Type</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Est. Hours</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Actual Hours</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.subFeatures.map((sf) => {
+                        const subFeatureWorkLogs = group.workLogs.filter(wl => wl.subFeatureId === sf.id);
+                        const totalHours = subFeatureWorkLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
+                        
+                        return (
+                          <tr key={sf.id}>
+                            <td className="border border-gray-200 px-4 py-2">{sf.name}</td>
+                            <td className="border border-gray-200 px-4 py-2">{sf.department || '-'}</td>
+                            <td className="border border-gray-200 px-4 py-2">
+                              <Badge variant="outline">{sf.status}</Badge>
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2">{sf.workType}</td>
+                            <td className="border border-gray-200 px-4 py-2">{sf.estimatedHours || 0}h</td>
+                            <td className="border border-gray-200 px-4 py-2">{totalHours}h</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{delayStats.averageDelay}</p>
-                  <p className="text-sm text-muted-foreground">Average Delay (days)</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{delayStats.totalDelayDays}</p>
-                  <p className="text-sm text-muted-foreground">Total Delay Days</p>
+              </div>
+
+              {/* Work Logs Table */}
+              <div>
+                <h4 className="text-lg font-semibold mb-3">Work Logs</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-200">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="border border-gray-200 px-4 py-2 text-left">Log ID</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Sub-Feature</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Date</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Hours</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Work Type</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Status</th>
+                        <th className="border border-gray-200 px-4 py-2 text-left">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.workLogs.map((wl) => {
+                        const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
+                        return (
+                          <tr key={wl.id}>
+                            <td className="border border-gray-200 px-4 py-2">#{wl.id}</td>
+                            <td className="border border-gray-200 px-4 py-2">{subFeature?.name || 'Unknown'}</td>
+                            <td className="border border-gray-200 px-4 py-2">{wl.workDate}</td>
+                            <td className="border border-gray-200 px-4 py-2">{wl.hoursWorked}h</td>
+                            <td className="border border-gray-200 px-4 py-2">{wl.workType}</td>
+                            <td className="border border-gray-200 px-4 py-2">
+                              <Badge variant="outline">{wl.status}</Badge>
+                            </td>
+                            <td className="border border-gray-200 px-4 py-2">{wl.description}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Timeline vs Actual Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {projects
-                  .filter(p => p.endDate && p.actualEndDate)
-                  .slice(0, 10)
-                  .map(project => {
-                    const planned = new Date(project.endDate!);
-                    const actual = new Date(project.actualEndDate!);
-                    const isDelayed = actual > planned;
-                    const diffTime = Math.abs(actual.getTime() - planned.getTime());
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                    return (
-                      <div key={project.id} className="flex items-center justify-between p-3 border rounded">
-                        <div>
-                          <p className="font-medium">{project.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Planned: {planned.toLocaleDateString()} | 
-                            Actual: {actual.toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant={isDelayed ? "destructive" : "default"}>
-                            {isDelayed ? `+${diffDays} days` : `On time`}
-                          </Badge>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {reportType === 'timeline' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Project Timeline Report
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {projects
-                .filter(p => p.startDate && p.endDate)
-                .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime())
-                .map(project => (
-                  <div key={project.id} className="p-4 border rounded">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">{project.name}</h4>
-                      <Badge className={
-                        project.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                        project.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-blue-100 text-blue-800'
-                      }>
-                        {project.status}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Planned Timeline:</p>
-                        <p>{new Date(project.startDate!).toLocaleDateString()} - {new Date(project.endDate!).toLocaleDateString()}</p>
-                      </div>
-                      {project.actualStartDate && project.actualEndDate && (
-                        <div>
-                          <p className="text-muted-foreground">Actual Timeline:</p>
-                          <p>{new Date(project.actualStartDate).toLocaleDateString()} - {new Date(project.actualEndDate).toLocaleDateString()}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {reportType === 'budget' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Budget Overview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-2xl font-bold">
-                    ${projects.reduce((sum, p) => sum + (p.budget || 0), 0).toLocaleString()}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Total Budget Allocated</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">
-                    {projects.filter(p => p.budget && p.budget > 0).length}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Projects with Budget</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Budget by Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {['Planning', 'In Progress', 'Completed', 'On Hold'].map(status => {
-                  const statusProjects = projects.filter(p => p.status === status);
-                  const statusBudget = statusProjects.reduce((sum, p) => sum + (p.budget || 0), 0);
-                  
-                  return (
-                    <div key={status} className="flex items-center justify-between">
-                      <Badge variant="outline">{status}</Badge>
-                      <span className="font-medium">${statusBudget.toLocaleString()}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }
