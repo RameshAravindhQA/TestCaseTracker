@@ -800,7 +800,7 @@ export function BugForm({ bug, projectId, testCase, module, modules, onSuccess }
             Save Tags
           </Button>
         </DialogFooter>
-      </Dialog>
+      </DialogContent>
     </Dialog>
     </>
   );
