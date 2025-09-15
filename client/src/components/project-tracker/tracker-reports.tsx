@@ -58,11 +58,6 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
     },
   });
 
-  // Get filtered sub-features based on selected feature
-  const filteredSubFeatures = selectedFeature === 'all' 
-    ? subFeatures 
-    : subFeatures.filter(sf => sf.featureId.toString() === selectedFeature);
-
   // Get unique departments and work types
   const departments = [...new Set(subFeatures.map(sf => sf.department).filter(Boolean))];
   const workTypes = [...new Set(subFeatures.map(sf => sf.workType).filter(Boolean))];
@@ -156,6 +151,11 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   };
 
   const { filteredSubFeatures, filteredWorkLogs } = getFilteredData();
+
+  // Get filtered sub-features based on selected feature for the dropdown
+  const filteredSubFeaturesForDropdown = selectedFeature === 'all' 
+    ? subFeatures 
+    : subFeatures.filter(sf => sf.featureId.toString() === selectedFeature);
 
   // Group data by features for structured reports
   const getGroupedData = () => {
@@ -404,7 +404,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sub-Features</SelectItem>
-                  {filteredSubFeatures.map((subFeature) => (
+                  {filteredSubFeaturesForDropdown.map((subFeature) => (
                     <SelectItem key={subFeature.id} value={subFeature.id.toString()}>
                       {subFeature.name}
                     </SelectItem>
