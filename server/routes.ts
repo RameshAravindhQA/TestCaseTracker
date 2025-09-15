@@ -1,5 +1,3 @@
-Added `customBrowserPath` to the `automationService.startRecording` call.
-
 import express, { Router, type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
