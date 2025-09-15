@@ -864,6 +864,7 @@ export default function AutomationPage() {
                                         </p>
                                       </div>
                                     )}
+                                  </div>
 
                                   <div className="flex justify-end gap-2">
                                     <Button
