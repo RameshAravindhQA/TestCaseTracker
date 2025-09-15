@@ -1,0 +1,36 @@
+Global error: ReferenceError: FileText is not defined
+    at TrackerReports (tracker-reports.tsx:649:24)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=6b559d77:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=6b559d77:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=6b559d77:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=6b559d77:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=6b559d77:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=6b559d77:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=6b559d77:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=6b559d77:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=6b559d77:19137:13)
+(anonymous) @ main.tsx:15Understand this error
+tracker-reports.tsx:649 Uncaught ReferenceError: FileText is not defined
+    at TrackerReports (tracker-reports.tsx:649:24)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=6b559d77:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=6b559d77:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=6b559d77:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=6b559d77:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=6b559d77:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=6b559d77:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=6b559d77:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=6b559d77:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=6b559d77:19137:13)Understand this error
+main.tsx:15 Global error: ReferenceError: FileText is not defined
+    at TrackerReports (tracker-reports.tsx:649:24)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=6b559d77:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=6b559d77:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=6b559d77:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=6b559d77:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=6b559d77:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=6b559d77:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=6b559d77:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=6b559d77:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=6b559d77:19137:13)
+(anonymous) @ main.tsx:15Understand this error
+tracker-reports.tsx:649 Uncaught ReferenceError: FileText is not defined
