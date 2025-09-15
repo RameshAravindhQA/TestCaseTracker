@@ -1,0 +1,50 @@
+[2025-09-15T10:51:36.574Z] INFO: Available system browsers: []
+[2025-09-15T10:51:36.574Z] INFO: Checking Playwright availability...
+[2025-09-15T10:51:37.737Z] INFO: Playwright version check successful: Version 1.55.0
+[2025-09-15T10:51:37.737Z] INFO: 🖥️ Running in true headed mode without virtual display...
+[2025-09-15T10:51:37.737Z] INFO: Starting Playwright codegen in HEADED mode for URL: https://www.google.com/?zx=1757931539822&no_sw_cr=1
+[2025-09-15T10:51:37.737Z] INFO: Output path: /home/runner/workspace/recordings/test-7-1757933497737.spec.ts
+[2025-09-15T10:51:37.737Z] INFO: Recording ID: rec_1757933496532
+[2025-09-15T10:51:37.737Z] INFO: Display: :0
+[2025-09-15T10:51:37.737Z] INFO: 🖥️ Running in HEADED mode with visible browser window
+[2025-09-15T10:51:37.737Z] INFO: Executing command: npx playwright codegen https://www.google.com/?zx=1757931539822&no_sw_cr=1 --target=typescript --output=/home/runner/workspace/recordings/test-7-1757933497737.spec.ts --save-storage=state.json --browser=chromium --viewport-size=1280,720
+[2025-09-15T10:51:37.737Z] INFO: Environment variables for Playwright: {
+  PLAYWRIGHT_BROWSERS_PATH: '0',
+  NODE_ENV: 'development',
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0',
+  DISPLAY: ':0'
+}
+[2025-09-15T10:51:37.737Z] INFO: 🚀 Attempting to launch browser in HEADED instrumented mode...
+[2025-09-15T10:51:37.737Z] INFO: 🔍 Pre-launch browser check starting...
+[2025-09-15T10:51:37.737Z] INFO: 🔧 Installing Playwright browsers...
+[2025-09-15T10:51:39.167Z] INFO: 🔧 Browser installation completed with code: 0
+[2025-09-15T10:51:39.167Z] INFO: 🌐 Initiating Chromium browser launch in HEADED mode...
+[2025-09-15T10:51:39.167Z] INFO: 🎯 Target URL: https://www.google.com/?zx=1757931539822&no_sw_cr=1
+[2025-09-15T10:51:39.167Z] INFO: 📁 Recording output: /home/runner/workspace/recordings/test-7-1757933497737.spec.ts
+[2025-09-15T10:51:39.167Z] INFO: 🖥️ Display: :0
+[2025-09-15T10:51:39.167Z] INFO: 👁️ Browser will be VISIBLE with recording interface
+[2025-09-15T10:51:39.177Z] INFO: 🚀 Codegen process spawned successfully for session rec_1757933496532
+[2025-09-15T10:51:39.177Z] INFO: 📋 Process PID: 16968
+10:51:39 AM [express] POST /api/automation/start-recording 200 in 2647ms :: {"success":true,"message"…
+[2025-09-15T10:51:40.412Z] WARN: 📥 Codegen stderr [rec_1757933496532]: node:internal/process/promises:391
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+i.parse: Executable doesn't exist at /home/runner/workspace/node_modules/playwright-core/.local-browsers/chromium-1187/chrome-linux/chrome
+╔═════════════════════════════════════════════════════════════════════════╗
+║ Looks like Playwright Test or Playwright was just installed or updated. ║
+║ Please run the following command to download new browsers:              ║
+║                                                                         ║
+║     npx playwright install                                              ║
+║                                                                         ║
+║ <3 Playwright Team                                                      ║
+╚═════════════════════════════════════════════════════════════════════════╝
+    at Object.<anonymous> (/home/runner/workspace/node_modules/playwright/cli.js:19:9) {
+  name: 'Error'
+}
+
+[2025-09-15T10:51:40.412Z] ERROR: ❌ Browser installation required for session rec_1757933496532
+[2025-09-15T10:51:40.412Z] WARN: 📥 Codegen stderr [rec_1757933496532]: 
+Node.js v20.19.3
+
+[2025-09-15T10:51:40.441Z] INFO: 🏁 Codegen process cl
