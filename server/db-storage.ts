@@ -240,7 +240,7 @@ export class DatabaseStorage implements IStorage {
 
           // Use raw SQL to insert with specific ID
           const [insertedModule] = await db.execute({
-            sql: `INSERT INTO modules (id, module_id, name, description, project_id, status, created_at, updated_at) 
+            sql: `INSERT INTO modules (id, module_id, name, description, project_id, status, created_at, updated_at)
                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
             args: [
               desiredDbId,
@@ -1286,8 +1286,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Tracker Work Log operations
-  async getTrackerWorkLogs(projectId: number): Promise<TrackerWorkLog[]> {
-    return await db.select().from(trackerWorkLogs).where(eq(trackerWorkLogs.projectId, projectId));
+  async getTrackerWorkLogs(filters: any = {}): Promise<TrackerWorkLog[]> {
+    let query = db.select().from(trackerWorkLogs);
+
+    const conditions = [];
+    if (filters.projectId) conditions.push(eq(trackerWorkLogs.projectId, filters.projectId));
+    if (filters.featureId) conditions.push(eq(trackerWorkLogs.featureId, filters.featureId));
+    if (filters.subFeatureId) conditions.push(eq(trackerWorkLogs.subFeatureId, filters.subFeatureId));
+    if (filters.userId) conditions.push(eq(trackerWorkLogs.userId, filters.userId));
+
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions));
+    }
+
+    return await query;
   }
 
   async getTrackerWorkLog(id: number): Promise<TrackerWorkLog | undefined> {
@@ -1310,11 +1322,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(trackerWorkLogs.id, id))
       .returning();
     return updatedWorkLog;
-  }
-
-  async deleteTrackerWorkLog(id: number): Promise<boolean> {
-    await db.delete(trackerWorkLogs).where(eq(trackerWorkLogs.id, id));
-    return true;
   }
 }
 

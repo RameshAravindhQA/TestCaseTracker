@@ -1529,6 +1529,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Approval mutation
+  const approvalMutation = useMutation({
+    mutationFn: async ({ id, status, comments }: { id: number; status: string; comments: string }) => {
+      const res = await apiRequest("PUT", `/api/resource-requests/${id}/approve`, {
+        status,
+        comments
+      });
+      if (!res.ok) throw new Error("Failed to update request status");
+      return res.json();
+    },
+  });
+
+  // Update request status for approval/rejection
+  apiRouter.put("/resource-requests/:id/approve", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const { status, comments } = req.body;
+      const userId = req.session.userId;
+
+      // Update the request status
+      const updatedRequest = await storage.updateResourceRequest(requestId, {
+        status,
+        comments,
+        reviewedBy: userId,
+        reviewDate: new Date()
+      });
+
+      if (!updatedRequest) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      // Create audit log
+      await storage.createRequestAuditLog({
+        requestId,
+        userId,
+        action: `Status changed to ${status}`,
+        oldValue: null,
+        newValue: status,
+        comments,
+        timestamp: new Date()
+      });
+
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error("Update request status error:", error);
+      res.status(500).json({ error: "Failed to update request status" });
+    }
+  });
+
+  // Reopen request endpoint
+  apiRouter.put("/resource-requests/:id/reopen", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const { reason } = req.body;
+      const userId = req.session.userId;
+
+      // Get current request
+      const currentRequest = await storage.getResourceRequest(requestId);
+      if (!currentRequest) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      const oldStatus = currentRequest.status;
+
+      // Update the request status to Open
+      const updatedRequest = await storage.updateResourceRequest(requestId, {
+        status: 'Open',
+        reopenedBy: userId,
+        reopenDate: new Date(),
+        reopenReason: reason
+      });
+
+      // Create audit log for reopening
+      await storage.createRequestAuditLog({
+        requestId,
+        userId,
+        action: 'Request Reopened',
+        oldValue: oldStatus,
+        newValue: 'Open',
+        comments: reason,
+        timestamp: new Date()
+      });
+
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error("Reopen request error:", error);
+      res.status(500).json({ error: "Failed to reopen request" });
+    }
+  });
+
+  // Get request audit logs
+  apiRouter.get("/resource-requests/:id/audit-logs", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const auditLogs = await storage.getRequestAuditLogs(requestId);
+      res.json(auditLogs);
+    } catch (error) {
+      console.error("Get audit logs error:", error);
+      res.status(500).json({ error: "Failed to fetch audit logs" });
+    }
+  });
+
   apiRouter.put("/resource-requests/:id/approve", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -1933,7 +2035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Work Logs
   apiRouter.get("/tracker/work-logs", isAuthenticated, async (req, res) => {
     try {
-      const { projectId, featureId, subFeatureId, userId, startDate, endDate } = req.query;
+      const {projectId, featureId, subFeatureId, userId, startDate, endDate } = req.query;
       const requestingUser = req.session?.userId;
 
       console.log(`[API] Getting work logs with filters:`, {
@@ -4513,7 +4615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test cases routes
   apiRouter.get("/test-cases", isAuthenticated, async (req, res) => {
     try {
-      // Get all test cases for user's accessible projects with proper security
+      // Get all test cases        // Get all test cases for user's accessible projects with proper security
       let testCases = [];
 
       if (req.session.userRole === "Admin") {
@@ -5104,7 +5206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const githubConfig = await storage.getGitHubIntegration(projectId);
         if (githubConfig && githubConfig.isEnabled) {
           console.log('GitHub integration found, creating GitHub issue for bug:', bug.bugId);
-          
+
           // Configure GitHub service
           githubService.setConfig({
             owner: githubConfig.githubUsername,
@@ -5121,15 +5223,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           issueBody += `**Priority:** ${bug.priority}\n`;
           issueBody += `**Status:** ${bug.status}\n\n`;
           issueBody += `**Description:**\n${bug.description}\n\n`;
-          
+
           if (bug.stepsToReproduce) {
             issueBody += `**Steps to Reproduce:**\n${bug.stepsToReproduce}\n\n`;
           }
-          
+
           if (bug.expectedResult) {
             issueBody += `**Expected Result:**\n${bug.expectedResult}\n\n`;
           }
-          
+
           if (bug.actualResult) {
             issueBody += `**Actual Result:**\n${bug.actualResult}\n\n`;
           }
@@ -5137,24 +5239,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Handle attachments - upload images to GitHub and convert URLs
           if (bug.attachments && bug.attachments.length > 0) {
             issueBody += `**Attachments:**\n`;
-            
+
             for (const attachment of bug.attachments) {
               // Check if attachment is a local file that needs to be uploaded to GitHub
               if (typeof attachment === 'string' && attachment.startsWith('attachment://')) {
                 const filename = attachment.replace('attachment://', '');
-                
+
                 try {
                   // Try to find the file in the uploads directory
                   const path = require('path');
                   const fs = require('fs');
-                  
+
                   // Check common upload directories
                   const possiblePaths = [
                     path.join(process.cwd(), 'uploads', 'bug-attachment', filename),
                     path.join(process.cwd(), 'uploads', filename),
                     path.join(process.cwd(), 'attached_assets', filename)
                   ];
-                  
+
                   let foundPath = null;
                   for (const possiblePath of possiblePaths) {
                     if (fs.existsSync(possiblePath)) {
@@ -5162,11 +5264,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       break;
                     }
                   }
-                  
+
                   if (foundPath) {
                     // Upload to GitHub
                     const uploadResult = await githubService.uploadImageToGitHub(foundPath, filename);
-                    
+
                     if (uploadResult.success && uploadResult.data) {
                       // Use the GitHub raw URL for images to display properly
                       const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(filename);
@@ -5211,16 +5313,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Create the GitHub issue
           const githubResult = await githubService.createIssue(issueTitle, issueBody, labels);
-          
+
           if (githubResult.success && githubResult.data) {
             // Update the bug with the GitHub issue number
             await storage.updateBug(bug.id, {
               githubIssueNumber: githubResult.data.number,
               githubIssueUrl: githubResult.data.url
             });
-            
+
             console.log(`✅ GitHub issue #${githubResult.data.number} created for bug ${bug.bugId}`);
-            
+
             // Update the bug object to return the GitHub info
             bug.githubIssueNumber = githubResult.data.number;
             bug.githubIssueUrl = githubResult.data.url;
@@ -7356,10 +7458,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const issueNumber = req.params.issueNumber;
       const projectId = parseInt(req.query.projectId as string);
-      
+
       if (!projectId || !issueNumber) {
-        return res.status(400).json({ 
-          success: false, 
+        return res.status(400).json({
+          success: false,
           error: 'Project ID and issue number are required',
           step: 'validation'
         });
@@ -7377,7 +7479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch GitHub comments using the service
       const githubComments = await syncGitHubComments(parseInt(issueNumber), 0, githubConfig);
-      
+
       res.json(githubComments);
     } catch (error: any) {
       console.error('GitHub comments fetch error:', error);
@@ -7394,8 +7496,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const bugId = parseInt(req.params.bugId);
       if (!bugId || isNaN(bugId)) {
-        return res.status(400).json({ 
-          success: false, 
+        return res.status(400).json({
+          success: false,
           error: 'Invalid bug ID provided',
           step: 'validation'
         });
@@ -7403,8 +7505,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const bug = await storage.getBug(bugId);
       if (!bug) {
-        return res.status(404).json({ 
-          success: false, 
+        return res.status(404).json({
+          success: false,
           error: 'Bug not found',
           step: 'bug_lookup'
         });
@@ -7465,7 +7567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (syncError: any) {
         console.error('GitHub sync error:', syncError);
-        
+
         // Handle specific GitHub API errors
         if (syncError.message?.includes('404')) {
           return res.status(404).json({
@@ -7474,7 +7576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             step: 'github_api_call'
           });
         }
-        
+
         if (syncError.message?.includes('403') || syncError.message?.includes('401')) {
           return res.status(403).json({
             success: false,
