@@ -64,7 +64,8 @@ export class AutomationService {
       { name: 'chrome', command: 'google-chrome' },
       { name: 'firefox', command: 'firefox' },
       { name: 'chrome-stable', command: 'google-chrome-stable' },
-      { name: 'chromium-snap', command: 'chromium' }
+      { name: 'chromium-snap', command: 'chromium' },
+      { name: 'replit-browser', command: 'xdg-open' } // For Replit environment
     ];
 
     for (const browser of browserCommands) {
@@ -78,10 +79,24 @@ export class AutomationService {
             }
             resolve(code);
           });
+          testProcess.on('error', () => {
+            resolve(1);
+          });
+          // Timeout after 2 seconds
+          setTimeout(() => {
+            testProcess.kill();
+            resolve(1);
+          }, 2000);
         });
       } catch (error) {
         // Browser not found, continue
       }
+    }
+
+    // If no browsers found via which, add some defaults for Replit
+    if (browsers.length === 0) {
+      logger.info('No browsers detected via which, adding Replit defaults...');
+      browsers.push('replit-browser', 'system-default');
     }
 
     return browsers;
@@ -287,15 +302,41 @@ runTest();`;
   private async launchSystemBrowser(url: string, browserName?: string): Promise<{ success: boolean; process?: ChildProcess; message?: string }> {
     const availableBrowsers = await this.detectSystemBrowsers();
     
+    // For Replit environment, try xdg-open first
+    if (process.env.REPL_ID || process.env.REPLIT) {
+      try {
+        logger.info(`🚀 Replit environment detected, using xdg-open for URL: ${url}`);
+        const browserProcess = spawn('xdg-open', [url], {
+          stdio: 'ignore',
+          detached: true,
+          env: {
+            ...process.env,
+            DISPLAY: process.env.DISPLAY || ':0'
+          }
+        });
+
+        browserProcess.unref();
+        
+        return {
+          success: true,
+          process: browserProcess,
+          message: `Browser opened via xdg-open in Replit environment`
+        };
+      } catch (error) {
+        logger.warn('xdg-open failed in Replit, trying other methods:', error);
+      }
+    }
+    
     if (availableBrowsers.length === 0) {
       // Try to launch with common browser commands even if not detected
       logger.info('No browsers detected via "which", attempting direct launch...');
-      const fallbackBrowsers = ['google-chrome', 'chrome', 'chromium-browser', 'chromium', 'firefox'];
+      const fallbackBrowsers = ['google-chrome', 'chrome', 'chromium-browser', 'chromium', 'firefox', 'xdg-open'];
       
       for (const browser of fallbackBrowsers) {
         try {
           logger.info(`🚀 Attempting to launch ${browser} directly with URL: ${url}`);
-          const browserProcess = spawn(browser, ['--new-window', url], {
+          const args = browser === 'xdg-open' ? [url] : ['--new-window', url];
+          const browserProcess = spawn(browser, args, {
             stdio: 'ignore',
             detached: true,
             env: {
@@ -325,7 +366,7 @@ runTest();`;
       
       return {
         success: false,
-        message: "No system browsers found. Please install Chrome, Chromium, or Firefox."
+        message: "No system browsers found. In Replit, the URL will open in a new tab automatically when you click 'Start Recording'."
       };
     }
 

@@ -831,69 +831,39 @@ export default function AutomationPage() {
                                       </Button>
                                     </div>
 
-                                    {launchMode === 'system-browser' && (
-                                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                                        <p className="text-sm text-green-800 font-medium mb-1">✅ Recommended for Local Testing</p>
-                                        <p className="text-sm text-green-700">
-                                          Opens your installed browser (Chrome, Firefox, etc.) directly on your machine. Perfect for manual testing and exploration.
-                                        </p>
+                                    {launchMode === 'system-browser' && availableBrowsers.length > 0 && (
+                                      <div>
+                                        <Label className="text-sm font-medium mb-2">Select Browser</Label>
+                                        <Select value={preferredBrowser} onValueChange={setPreferredBrowser}>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Choose a browser" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {availableBrowsers.map((browser) => (
+                                              <SelectItem key={browser} value={browser}>
+                                                <div className="flex items-center">
+                                                  <Chrome className="h-4 w-4 mr-2" />
+                                                  {browser === 'replit-browser' ? 'Replit Browser' : 
+                                                   browser === 'system-default' ? 'System Default' :
+                                                   browser.charAt(0).toUpperCase() + browser.slice(1)}
+                                                  {browser.includes('chrome') && <Badge variant="secondary" className="ml-2">Recommended</Badge>}
+                                                  {browser.includes('replit') && <Badge variant="secondary" className="ml-2">Replit</Badge>}
+                                                </div>
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
                                       </div>
                                     )}
 
-                                    {launchMode === 'playwright' && (
-                                      <div className="p-3 bg-blue-50 rounded-md">
+                                    {launchMode === 'system-browser' && availableBrowsers.length === 0 && (
+                                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <p className="text-sm text-blue-800 font-medium mb-1">✅ Replit Environment Detected</p>
                                         <p className="text-sm text-blue-700">
-                                          Playwright provides automated recording and code generation. May require additional setup.
+                                          In Replit, the URL will automatically open in a new browser tab when you start recording. No browser selection needed!
                                         </p>
                                       </div>
                                     )}
-
-                                    {launchMode === 'selenium' && (
-                                      <div className="p-3 bg-blue-50 rounded-md">
-                                        <p className="text-sm text-blue-700">
-                                          Selenium mode generates a script template you can run locally with Node.js and selenium-webdriver.
-                                        </p>
-                                      </div>
-                                    )}
-
-                                    {launchMode === 'manual-recorder' && (
-                                      <div className="p-3 bg-yellow-50 rounded-md">
-                                        <p className="text-sm text-yellow-700">
-                                          Manual mode creates a guided test document with steps to follow and record manually.
-                                        </p>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {launchMode === 'system-browser' && availableBrowsers.length > 0 && (
-                                    <div>
-                                      <Label className="text-sm font-medium mb-2">Select Browser</Label>
-                                      <Select value={preferredBrowser} onValueChange={setPreferredBrowser}>
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Choose a browser" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {availableBrowsers.map((browser) => (
-                                            <SelectItem key={browser} value={browser}>
-                                              <div className="flex items-center">
-                                                <Chrome className="h-4 w-4 mr-2" />
-                                                {browser.charAt(0).toUpperCase() + browser.slice(1)}
-                                                {browser.includes('chrome') && <Badge variant="secondary" className="ml-2">Recommended</Badge>}
-                                              </div>
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  )}
-
-                                  {launchMode === 'system-browser' && availableBrowsers.length === 0 && (
-                                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                      <p className="text-sm text-yellow-800">
-                                        No system browsers detected. Please install Chrome, Chromium, or Firefox.
-                                      </p>
-                                    </div>
-                                  )}
 
                                   <div className="flex justify-end gap-2">
                                     <Button
