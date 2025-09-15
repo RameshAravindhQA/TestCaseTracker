@@ -288,6 +288,41 @@ runTest();`;
     const availableBrowsers = await this.detectSystemBrowsers();
     
     if (availableBrowsers.length === 0) {
+      // Try to launch with common browser commands even if not detected
+      logger.info('No browsers detected via "which", attempting direct launch...');
+      const fallbackBrowsers = ['google-chrome', 'chrome', 'chromium-browser', 'chromium', 'firefox'];
+      
+      for (const browser of fallbackBrowsers) {
+        try {
+          logger.info(`🚀 Attempting to launch ${browser} directly with URL: ${url}`);
+          const browserProcess = spawn(browser, ['--new-window', url], {
+            stdio: 'ignore',
+            detached: true,
+            env: {
+              ...process.env,
+              DISPLAY: process.env.DISPLAY || ':0'
+            }
+          });
+
+          browserProcess.unref();
+          
+          // Wait a moment to see if process starts successfully
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          if (!browserProcess.killed) {
+            logger.info(`✅ Successfully launched ${browser}`);
+            return {
+              success: true,
+              process: browserProcess,
+              message: `Browser ${browser} launched successfully`
+            };
+          }
+        } catch (error) {
+          logger.warn(`Failed to launch ${browser}:`, error);
+          continue;
+        }
+      }
+      
       return {
         success: false,
         message: "No system browsers found. Please install Chrome, Chromium, or Firefox."
@@ -318,7 +353,7 @@ runTest();`;
     try {
       logger.info(`🚀 Launching system browser: ${selectedBrowser} with URL: ${url}`);
       const browserProcess = spawn(command[0], [...command.slice(1), url], {
-        stdio: 'pipe',
+        stdio: 'ignore',
         detached: true,
         env: {
           ...process.env,
@@ -391,13 +426,14 @@ runTest();`;
         }
 
         // Create recording session for system browser
+        const timestamp = Date.now();
         const recordingSession: RecordingSession = {
           id: recordingId,
           projectId: config.projectId,
           moduleId: config.moduleId,
           testCaseId: config.testCaseId,
           url: config.url,
-          filename: `manual-test-${config.testCaseId}-${Date.now()}.md`,
+          filename: `manual-test-${config.testCaseId}-${timestamp}.md`,
           status: 'recording',
           startTime: new Date(),
           process: browserResult.process

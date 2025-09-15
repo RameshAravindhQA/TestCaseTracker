@@ -73,7 +73,7 @@ export default function AutomationPage() {
   const [healthStatus, setHealthStatus] = useState<any>(null);
   const [availableBrowsers, setAvailableBrowsers] = useState<string[]>([]);
   const [recordings, setRecordings] = useState<RecordingSession[]>([]);
-  const [launchMode, setLaunchMode] = useState<string>('playwright');
+  const [launchMode, setLaunchMode] = useState<string>('system-browser');
   const [preferredBrowser, setPreferredBrowser] = useState<string>('');
   const { toast } = useToast();
 
@@ -798,6 +798,15 @@ export default function AutomationPage() {
                                     <div className="grid grid-cols-2 gap-2">
                                       <Button
                                         type="button"
+                                        variant={launchMode === 'system-browser' ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setLaunchMode('system-browser')}
+                                      >
+                                        <Monitor className="h-4 w-4 mr-1" />
+                                        Local Browser
+                                      </Button>
+                                      <Button
+                                        type="button"
                                         variant={launchMode === 'playwright' ? 'default' : 'outline'}
                                         size="sm"
                                         onClick={() => setLaunchMode('playwright')}
@@ -820,15 +829,24 @@ export default function AutomationPage() {
                                       >
                                         Manual Guide
                                       </Button>
-                                      <Button
-                                        type="button"
-                                        variant={launchMode === 'system-browser' ? 'default' : 'outline'}
-                                        size="sm"
-                                        onClick={() => setLaunchMode('system-browser')}
-                                      >
-                                        System Browser
-                                      </Button>
                                     </div>
+
+                                    {launchMode === 'system-browser' && (
+                                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                        <p className="text-sm text-green-800 font-medium mb-1">✅ Recommended for Local Testing</p>
+                                        <p className="text-sm text-green-700">
+                                          Opens your installed browser (Chrome, Firefox, etc.) directly on your machine. Perfect for manual testing and exploration.
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {launchMode === 'playwright' && (
+                                      <div className="p-3 bg-blue-50 rounded-md">
+                                        <p className="text-sm text-blue-700">
+                                          Playwright provides automated recording and code generation. May require additional setup.
+                                        </p>
+                                      </div>
+                                    )}
 
                                     {launchMode === 'selenium' && (
                                       <div className="p-3 bg-blue-50 rounded-md">
@@ -839,8 +857,8 @@ export default function AutomationPage() {
                                     )}
 
                                     {launchMode === 'manual-recorder' && (
-                                      <div className="p-3 bg-green-50 rounded-md">
-                                        <p className="text-sm text-green-700">
+                                      <div className="p-3 bg-yellow-50 rounded-md">
+                                        <p className="text-sm text-yellow-700">
                                           Manual mode creates a guided test document with steps to follow and record manually.
                                         </p>
                                       </div>

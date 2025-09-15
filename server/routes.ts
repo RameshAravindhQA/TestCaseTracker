@@ -3438,6 +3438,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get available browsers
+  apiRouter.get("/automation/browsers", isAuthenticated, async (req, res) => {
+    try {
+      const { spawn } = await import('child_process');
+      const browsers: string[] = [];
+      const browserCommands = [
+        { name: 'chromium', command: 'chromium-browser' },
+        { name: 'chrome', command: 'google-chrome' },
+        { name: 'firefox', command: 'firefox' },
+        { name: 'chrome-stable', command: 'google-chrome-stable' },
+        { name: 'chromium-snap', command: 'chromium' }
+      ];
+
+      for (const browser of browserCommands) {
+        try {
+          const testProcess = spawn('which', [browser.command], { stdio: 'pipe' });
+          await new Promise((resolve) => {
+            testProcess.on('close', (code) => {
+              if (code === 0) {
+                browsers.push(browser.name);
+              }
+              resolve(code);
+            });
+          });
+        } catch (error) {
+          // Browser not found, continue
+        }
+      }
+
+      const recommended = browsers.find(b => ['chrome', 'google-chrome', 'chromium'].includes(b)) || browsers[0] || 'none';
+
+      res.json({
+        success: true,
+        browsers,
+        recommended,
+        count: browsers.length
+      });
+
+    } catch (error) {
+      console.error('Browser detection failed:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Browser detection failed',
+        error: error.message
+      });
+    }
+  });
+
   // Get automation health status
   apiRouter.get("/automation/health", isAuthenticated, async (req, res) => {
     try {
