@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +17,8 @@ import { FileDown, Calendar, TrendingUp, Clock, Target, Filter } from 'lucide-re
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { autoTable } from 'jspdf-autotable';
+import { toast } from '@/components/ui/use-toast';
 
 interface TrackerReportsProps {
   projectId?: number;
@@ -160,13 +161,13 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   // Group data by features for structured reports
   const getGroupedData = () => {
     const grouped = {};
-    
+
     features.forEach(feature => {
       const featureSubFeatures = filteredSubFeatures.filter(sf => sf.featureId === feature.id);
       const featureWorkLogs = filteredWorkLogs.filter(wl => 
         featureSubFeatures.some(sf => sf.id === wl.subFeatureId)
       );
-      
+
       if (featureSubFeatures.length > 0 || featureWorkLogs.length > 0) {
         grouped[feature.id] = {
           feature,
@@ -175,16 +176,16 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
         };
       }
     });
-    
+
     return grouped;
   };
 
   // Export functions
   const exportToCSV = () => {
     const groupedData = getGroupedData();
-    
+
     const csvData = [];
-    
+
     // Add header information
     csvData.push([`Project: ${project?.name || 'Unknown Project'}`]);
     csvData.push([`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`]);
@@ -196,11 +197,11 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
     Object.values(groupedData).forEach((group: any) => {
       csvData.push([`FEATURE: ${group.feature.name}`]);
       csvData.push(['Sub-Feature', 'Department', 'Status', 'Work Type', 'Estimated Hours', 'Total Work Hours', 'Start Date', 'End Date']);
-      
+
       group.subFeatures.forEach(sf => {
         const subFeatureWorkLogs = group.workLogs.filter(wl => wl.subFeatureId === sf.id);
         const totalHours = subFeatureWorkLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
-        
+
         csvData.push([
           sf.name,
           sf.department || '',
@@ -212,11 +213,11 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
           sf.endDate || ''
         ]);
       });
-      
+
       csvData.push([]);
       csvData.push(['Work Logs for this Feature:']);
       csvData.push(['Log ID', 'Sub-Feature', 'Date', 'Hours', 'Work Type', 'Status', 'Description']);
-      
+
       group.workLogs.forEach(wl => {
         const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
         csvData.push([
@@ -229,7 +230,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
           wl.description
         ]);
       });
-      
+
       csvData.push([]);
     });
 
@@ -245,121 +246,147 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
   };
 
   const exportToPDF = () => {
-    const doc = new jsPDF();
-    const groupedData = getGroupedData();
-    
-    // Add title and project info
-    doc.setFontSize(18);
-    doc.text(`${project?.name || 'Project'} - Work Logs Report`, 14, 20);
-    
-    doc.setFontSize(10);
-    doc.text(`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`, 14, 30);
-    doc.text(`Date Range: ${dateRange === 'custom' && startDate && endDate ? 
-      `${startDate} to ${endDate}` : dateRange}`, 14, 35);
-    doc.text(`Applied Filters:`, 14, 40);
-    doc.text(`• Feature: ${selectedFeature === 'all' ? 'All Features' : features.find(f => f.id.toString() === selectedFeature)?.name || 'Unknown'}`, 20, 45);
-    doc.text(`• Sub-Feature: ${selectedSubFeature === 'all' ? 'All Sub-Features' : filteredSubFeatures.find(sf => sf.id.toString() === selectedSubFeature)?.name || 'Unknown'}`, 20, 50);
-    doc.text(`• Department: ${selectedDepartment === 'all' ? 'All Departments' : selectedDepartment}`, 20, 55);
-    doc.text(`• Status: ${selectedStatus === 'all' ? 'All Statuses' : selectedStatus}`, 20, 60);
-    doc.text(`• Work Type: ${selectedWorkType === 'all' ? 'All Work Types' : selectedWorkType}`, 20, 65);
+    try {
+      const groupedData = getGroupedData();
 
-    let yPosition = 75;
-
-    // Summary statistics
-    const totalHours = filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
-    const totalLogs = filteredWorkLogs.length;
-    const totalSubFeatures = filteredSubFeatures.length;
-
-    doc.setFontSize(14);
-    doc.text('Summary Statistics', 14, yPosition);
-    yPosition += 10;
-
-    doc.setFontSize(10);
-    doc.text(`Total Sub-Features: ${totalSubFeatures}`, 14, yPosition);
-    doc.text(`Total Work Logs: ${totalLogs}`, 14, yPosition + 5);
-    doc.text(`Total Hours Logged: ${totalHours}h`, 14, yPosition + 10);
-    yPosition += 25;
-
-    // Feature-wise detailed report
-    Object.values(groupedData).forEach((group: any) => {
-      // Check if we need a new page
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 20;
+      if (Object.keys(groupedData).length === 0) {
+        toast({
+          title: "No Data",
+          description: "There is no data to export. Please add some work logs first.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      const doc = new jsPDF();
+
+      // Add title and project info
+      doc.setFontSize(18);
+      doc.text(`${project?.name || 'Project'} - Work Logs Report`, 14, 20);
+
+      doc.setFontSize(10);
+      doc.text(`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`, 14, 30);
+      doc.text(`Date Range: ${dateRange === 'custom' && startDate && endDate ? 
+        `${startDate} to ${endDate}` : dateRange}`, 14, 35);
+      doc.text(`Applied Filters:`, 14, 40);
+      doc.text(`• Feature: ${selectedFeature === 'all' ? 'All Features' : features.find(f => f.id.toString() === selectedFeature)?.name || 'Unknown'}`, 20, 45);
+      doc.text(`• Sub-Feature: ${selectedSubFeature === 'all' ? 'All Sub-Features' : filteredSubFeatures.find(sf => sf.id.toString() === selectedSubFeature)?.name || 'Unknown'}`, 20, 50);
+      doc.text(`• Department: ${selectedDepartment === 'all' ? 'All Departments' : selectedDepartment}`, 20, 55);
+      doc.text(`• Status: ${selectedStatus === 'all' ? 'All Statuses' : selectedStatus}`, 20, 60);
+      doc.text(`• Work Type: ${selectedWorkType === 'all' ? 'All Work Types' : selectedWorkType}`, 20, 65);
+
+      let yPosition = 75;
+
+      // Summary statistics
+      const totalHours = filteredWorkLogs.reduce((sum, wl) => sum + (wl.hoursWorked || 0), 0);
+      const totalLogs = filteredWorkLogs.length;
+      const totalSubFeatures = filteredSubFeatures.length;
 
       doc.setFontSize(14);
-      doc.text(`Feature: ${group.feature.name}`, 14, yPosition);
+      doc.text('Summary Statistics', 14, yPosition);
       yPosition += 10;
 
-      // Sub-features table
-      if (group.subFeatures.length > 0) {
-        const subFeatureTableData = group.subFeatures.map(sf => {
-          const subFeatureWorkLogs = group.workLogs.filter(wl => wl.subFeatureId === sf.id);
-          const totalHours = subFeatureWorkLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
-          
-          return [
-            sf.name,
-            sf.department || '',
-            sf.status,
-            sf.workType,
-            `${sf.estimatedHours || 0}h`,
-            `${totalHours}h`
-          ];
-        });
+      doc.setFontSize(10);
+      doc.text(`Total Sub-Features: ${totalSubFeatures}`, 14, yPosition);
+      doc.text(`Total Work Logs: ${totalLogs}`, 14, yPosition + 5);
+      doc.text(`Total Hours Logged: ${totalHours}h`, 14, yPosition + 10);
+      yPosition += 25;
 
-        doc.autoTable({
-          startY: yPosition,
-          head: [['Sub-Feature', 'Department', 'Status', 'Work Type', 'Estimated', 'Actual']],
-          body: subFeatureTableData,
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [41, 128, 185] },
-          margin: { left: 14 }
-        });
-
-        yPosition = doc.lastAutoTable.finalY + 10;
-      }
-
-      // Work logs table
-      if (group.workLogs.length > 0) {
-        // Check if we need a new page for work logs
-        if (yPosition > 220) {
+      // Feature-wise detailed report
+      Object.values(groupedData).forEach((group: any) => {
+        // Check if we need a new page
+        if (yPosition > 250) {
           doc.addPage();
           yPosition = 20;
         }
 
-        doc.setFontSize(12);
-        doc.text('Work Logs:', 14, yPosition);
-        yPosition += 5;
+        doc.setFontSize(14);
+        doc.text(`Feature: ${group.feature.name}`, 14, yPosition);
+        yPosition += 10;
 
-        const workLogTableData = group.workLogs.map(wl => {
-          const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
-          return [
-            wl.id.toString(),
-            subFeature?.name || 'Unknown',
-            wl.workDate,
-            `${wl.hoursWorked}h`,
-            wl.workType,
-            wl.status,
-            wl.description.substring(0, 30) + (wl.description.length > 30 ? '...' : '')
-          ];
-        });
+        // Sub-features table
+        if (group.subFeatures.length > 0) {
+          const subFeatureTableData = group.subFeatures.map(sf => {
+            const subFeatureWorkLogs = group.workLogs.filter(wl => wl.subFeatureId === sf.id);
+            const totalHours = subFeatureWorkLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
 
-        doc.autoTable({
-          startY: yPosition,
-          head: [['Log ID', 'Sub-Feature', 'Date', 'Hours', 'Work Type', 'Status', 'Description']],
-          body: workLogTableData,
-          styles: { fontSize: 7 },
-          headStyles: { fillColor: [46, 125, 50] },
-          margin: { left: 14 }
-        });
+            return [
+              sf.name,
+              sf.department || '',
+              sf.status,
+              sf.workType,
+              `${sf.estimatedHours || 0}h`,
+              `${totalHours}h`
+            ];
+          });
 
-        yPosition = doc.lastAutoTable.finalY + 15;
-      }
-    });
+          autoTable(doc, {
+            startY: yPosition,
+            head: [['Sub-Feature', 'Department', 'Status', 'Work Type', 'Estimated', 'Actual']],
+            body: subFeatureTableData,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [41, 128, 185] },
+            margin: { left: 14 }
+          });
 
-    // Save the PDF
-    doc.save(`${project?.name || 'project'}-tracker-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+          yPosition = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        // Work logs table
+        if (group.workLogs.length > 0) {
+          // Check if we need a new page for work logs
+          if (yPosition > 220) {
+            doc.addPage();
+            yPosition = 20;
+          }
+
+          doc.setFontSize(12);
+          doc.text('Work Logs:', 14, yPosition);
+          yPosition += 5;
+
+          const workLogTableData = group.workLogs.map(wl => {
+            const subFeature = group.subFeatures.find(sf => sf.id === wl.subFeatureId);
+            return [
+              wl.id.toString(),
+              subFeature?.name || 'Unknown',
+              wl.workDate,
+              `${wl.hoursWorked}h`,
+              wl.workType,
+              wl.status,
+              wl.description.substring(0, 30) + (wl.description.length > 30 ? '...' : '')
+            ];
+          });
+
+          autoTable(doc, {
+            startY: yPosition,
+            head: [['Log ID', 'Sub-Feature', 'Date', 'Hours', 'Work Type', 'Status', 'Description']],
+            body: workLogTableData,
+            styles: { fontSize: 7 },
+            headStyles: { fillColor: [46, 125, 50] },
+            margin: { left: 14 }
+          });
+
+          yPosition = (doc as any).lastAutoTable.finalY + 15;
+        }
+      });
+
+      // Save the PDF
+      const filename = `${project?.name || 'project'}-tracker-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      doc.save(filename);
+
+      toast({
+        title: "Export Successful",
+        description: `PDF report has been downloaded as ${filename}`,
+      });
+
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate PDF report. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -621,7 +648,7 @@ export function TrackerReports({ projectId, features = [], subFeatures = [] }: T
                       {group.subFeatures.map((sf) => {
                         const subFeatureWorkLogs = group.workLogs.filter(wl => wl.subFeatureId === sf.id);
                         const totalHours = subFeatureWorkLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
-                        
+
                         return (
                           <tr key={sf.id}>
                             <td className="border border-gray-200 px-4 py-2">{sf.name}</td>
