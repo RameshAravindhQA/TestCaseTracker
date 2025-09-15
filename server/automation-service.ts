@@ -483,32 +483,25 @@ runTest();`;
         };
       }
 
-      // Check if we're in a headless environment (like Replit)
-      const isHeadlessEnvironment = !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
-      
-      if (isHeadlessEnvironment) {
-        logger.info(`🖥️ Detected headless environment, using Playwright's built-in headless mode`);
-        // Set environment variables for headless operation
-        process.env.PLAYWRIGHT_HEADLESS = 'true';
-        process.env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '0';
-      } else {
-        // Try to set up virtual display for environments that support it
-        try {
-          logger.info(`🖥️ Setting up virtual display...`);
-          const xvfbProcess = spawn('Xvfb', [':99', '-screen', '0', '1920x1080x24'], {
-            stdio: 'pipe',
-            detached: true
-          });
-          xvfbProcess.unref();
-          
-          // Wait a moment for Xvfb to start
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          logger.info(`🖥️ Virtual display setup completed`);
-          process.env.DISPLAY = ':99';
-        } catch (xvfbError: any) {
-          logger.warn(`⚠️ Virtual display setup failed, using headless mode: ${xvfbError.message}`);
-          process.env.PLAYWRIGHT_HEADLESS = 'true';
-        }
+      // Set up virtual display for headed mode
+      try {
+        logger.info(`🖥️ Setting up virtual display for headed mode...`);
+        const xvfbProcess = spawn('Xvfb', [':99', '-screen', '0', '1920x1080x24'], {
+          stdio: 'pipe',
+          detached: true
+        });
+        xvfbProcess.unref();
+        
+        // Wait a moment for Xvfb to start
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        process.env.DISPLAY = ':99';
+        logger.info(`🖥️ Virtual display setup completed on :99`);
+      } catch (xvfbError: any) {
+        logger.error(`❌ Virtual display setup failed: ${xvfbError.message}`);
+        return {
+          success: false,
+          message: `Failed to setup virtual display for headed mode: ${xvfbError.message}`
+        };
       }
 
       // Generate filename based on test case
@@ -531,13 +524,14 @@ runTest();`;
 
       this.activeSessions.set(recordingId, recordingSession);
 
-      // Launch Playwright Codegen
-      logger.info(`Starting Playwright codegen for URL: ${config.url}`);
+      // Launch Playwright Codegen in headed mode
+      logger.info(`Starting Playwright codegen in HEADED mode for URL: ${config.url}`);
       logger.info(`Output path: ${outputPath}`);
       logger.info(`Recording ID: ${recordingId}`);
+      logger.info(`Display: ${process.env.DISPLAY}`);
       
-      // Determine if we should run in headless mode
-      const shouldRunHeadless = process.env.PLAYWRIGHT_HEADLESS === 'true' || isHeadlessEnvironment;
+      // Force headed mode - no headless operation
+      const shouldRunHeadless = false;
       
       // Log the exact command being executed
       const codegenArgs = [
@@ -548,26 +542,24 @@ runTest();`;
         `--output=${outputPath}`,
         '--save-storage=state.json',
         '--browser=chromium',
-        '--viewport-size=1280,720'
+        '--viewport-size=1280,720',
+        '--headed=true'  // Force headed mode
       ];
       
-      // Add headless flag if needed
-      if (shouldRunHeadless) {
-        codegenArgs.push('--headed=false');
-        logger.info(`🖥️ Running in headless mode for Replit environment`);
-      }
+      logger.info(`🖥️ Running in HEADED mode with visible browser window`);
       
       logger.info(`Executing command: npx ${codegenArgs.join(' ')}`);
       
       // Log environment variables
-      logger.info(`Environment variables:`, {
+      logger.info(`Environment variables for HEADED mode:`, {
         PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
         NODE_ENV: 'development',
         PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0',
-        DISPLAY: ':99'
+        DISPLAY: process.env.DISPLAY || ':99',
+        PLAYWRIGHT_HEADLESS: 'false'
       });
       
-      logger.info(`🚀 Attempting to launch browser in instrumented mode...`);
+      logger.info(`🚀 Attempting to launch browser in HEADED instrumented mode...`);
       logger.info(`🔍 Pre-launch browser check starting...`);
       
       // Ensure browsers are installed first
@@ -588,41 +580,11 @@ runTest();`;
         logger.warn(`⚠️ Browser installation failed: ${installError.message}`);
       }
       
-      // Check if browser binary exists
-      try {
-        const { spawn: checkSpawn } = await import('child_process');
-        const browserCheckProcess = checkSpawn('npx', ['playwright', 'install', '--dry-run'], { 
-          stdio: 'pipe',
-          timeout: 10000
-        });
-        
-        let browserCheckOutput = '';
-        browserCheckProcess.stdout?.on('data', (data) => {
-          browserCheckOutput += data.toString();
-        });
-        
-        browserCheckProcess.stderr?.on('data', (data) => {
-          browserCheckOutput += data.toString();
-        });
-        
-        await new Promise((resolve) => {
-          browserCheckProcess.on('close', (code) => {
-            logger.info(`🔍 Browser installation check completed with code: ${code}`);
-            logger.info(`🔍 Browser check output: ${browserCheckOutput}`);
-            resolve(code);
-          });
-        });
-      } catch (browserCheckError: any) {
-        logger.warn(`⚠️ Browser check failed: ${browserCheckError.message}`);
-      }
-      
-      logger.info(`🌐 Initiating Chromium browser launch...`);
+      logger.info(`🌐 Initiating Chromium browser launch in HEADED mode...`);
       logger.info(`🎯 Target URL: ${config.url}`);
       logger.info(`📁 Recording output: ${outputPath}`);
-      logger.info(`🖥️ Display: ${process.env.DISPLAY || ':99'}`);
-      
-      // Determine if we should run in headless mode
-      const shouldRunHeadless = process.env.PLAYWRIGHT_HEADLESS === 'true' || isHeadlessEnvironment;
+      logger.info(`🖥️ Display: ${process.env.DISPLAY}`);
+      logger.info(`👁️ Browser will be VISIBLE with recording interface`);
       
       const codegenProcess = spawn('npx', codegenArgs, {
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -631,14 +593,14 @@ runTest();`;
           PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH || '0',
           NODE_ENV: 'development',
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '0',
-          DISPLAY: process.env.DISPLAY || (shouldRunHeadless ? undefined : ':0'),
-          XVFB_WHD: shouldRunHeadless ? undefined : '1920x1080x24',
-          PLAYWRIGHT_HEADLESS: shouldRunHeadless ? 'true' : 'false',
+          DISPLAY: process.env.DISPLAY || ':99',
+          XVFB_WHD: '1920x1080x24',
+          PLAYWRIGHT_HEADLESS: 'false',
           CHROME_DEVEL_SANDBOX: '/proc/self/ns',
           CHROME_NO_SANDBOX: '1',
-          // Additional flags for Replit environment
-          PLAYWRIGHT_CHROMIUM_USE_HEADLESS_NEW: 'true',
-          PLAYWRIGHT_DISABLE_DEV_SHM_USAGE: 'true'
+          // Force headed mode flags
+          PLAYWRIGHT_CHROMIUM_USE_HEADLESS_NEW: 'false',
+          PLAYWRIGHT_DISABLE_DEV_SHM_USAGE: 'false'
         }
       });
 
